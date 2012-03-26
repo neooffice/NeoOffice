@@ -33,23 +33,13 @@
  *
  ************************************************************************/
 
-#define _SV_SALBMP_CXX
-
-#ifndef _SV_SALBMP_H
 #include <salbmp.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALGDI_HXX
 #include <vcl/salgdi.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_BMPACC_HXX
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <vcl/bmpacc.hxx>
-#endif
 
 using namespace vcl;
 
@@ -88,7 +78,9 @@ JavaSalBitmap::JavaSalBitmap() :
 	mnBitCount( 0 ),
 	mpBits( NULL ),
 	mpBuffer( NULL ),
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	mpVCLGraphics( NULL ),
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	mpGraphics( NULL )
 {
 	GetSalData()->maBitmapList.push_back( this );
@@ -101,6 +93,8 @@ JavaSalBitmap::~JavaSalBitmap()
 	GetSalData()->maBitmapList.remove( this );
 	Destroy();
 }
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 // ------------------------------------------------------------------
 
@@ -263,11 +257,14 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 	return pVCLBitmap;
 }
 
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+
 // ------------------------------------------------------------------
 
 void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 {
 	// Force copying of the buffer if it has not already been done
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->removeGraphicsChangeListener( this );
@@ -311,10 +308,17 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 		mpVCLGraphics = NULL;
 	}
 	else if ( mpGraphics )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	if ( mpGraphics )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	{
 		mpGraphics->removeGraphicsChangeListener( this );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( !bDisposed && !mpBits && mpGraphics->useNativeDrawing() )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+		if ( !bDisposed && !mpBits )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		{
 			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 			if ( aColorSpace )
@@ -345,9 +349,11 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 		}
 	}
 
-	maPoint = Point( 0, 0 );
 	mpGraphics = NULL;
+	maPoint = Point( 0, 0 );
 }
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 // ------------------------------------------------------------------
 
@@ -359,6 +365,8 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap )
 		delete pVCLBitmap;
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // ------------------------------------------------------------------
 
@@ -400,6 +408,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	long nWidth = rSize.Width();
 	long nHeight = rSize.Height();
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Fix bug 3642 by ensuring that the origin is not negative
 	if ( !pGraphics->useNativeDrawing() )
 	{
@@ -414,6 +423,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 			nY = 0;
 		}
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	maPoint = Point( nX, nY );
 	maSize = Size( nWidth, nHeight );
@@ -421,10 +431,13 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	if ( maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( pGraphics->useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		mpGraphics = pGraphics;
 		mnBitCount = mpGraphics->GetBitCount();
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( pGraphics->mpVCLGraphics )
 	{
@@ -437,6 +450,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	{
 		return false;
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -446,9 +460,11 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 		maPalette.SetEntryCount( nColors );
 	}
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpVCLGraphics )
 		mpVCLGraphics->addGraphicsChangeListener( this );
 	else if ( mpGraphics )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		NotifyGraphicsChanged( false );
 
 	return true;
@@ -563,12 +579,14 @@ void JavaSalBitmap::Destroy()
 
 	maPalette.SetEntryCount( 0 );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->removeGraphicsChangeListener( this );
 		delete mpVCLGraphics;
 		mpVCLGraphics = NULL;
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	if ( mpGraphics )
 	{

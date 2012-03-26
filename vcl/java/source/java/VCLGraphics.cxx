@@ -38,36 +38,20 @@
 #include <list>
 #include <map>
 
-#ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
-#endif
-#ifndef _SV_SALBMP_H
 #include <salbmp.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
 #include <com/sun/star/vcl/VCLPath.hxx>
-#endif
 #include <basegfx/vector/b2enums.hxx>
 
 #include "VCLGraphics_cocoa.h"
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 static ::std::list< CGImageRef > aCGImageList;
 static ::std::list< CGPathRef > aCGPathList;
@@ -2031,3 +2015,5 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 		}
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

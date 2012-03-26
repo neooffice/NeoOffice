@@ -200,6 +200,7 @@ LIB1FILES+= \
 .IF "$(GUIBASE)"=="java"
 SHL1STDLIBS+= \
 	$(TKLIB) \
+	-framework AudioToolbox \
 	-framework JavaVM
 .ENDIF
 

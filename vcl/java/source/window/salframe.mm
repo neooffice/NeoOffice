@@ -46,12 +46,19 @@
 #include <vcl/svapp.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
+#ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #include <vcl/dialog.hxx>
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
+#ifdef USE_NATIVE_WINDOW
+#import <AudioToolbox/AudioToolbox.h>
+#endif	// USE_NATIVE_WINDOW
 // Need to include for SetSystemUIMode constants but we don't link to it
 #import <Carbon/Carbon.h>
 #include <postmac.h>
@@ -341,7 +348,7 @@ static NSTimer *pUpdateTimer = nil;
 	return pRet;
 }
 
-- (id)initWithView:(NSView *)pView
+- (id)init
 {
 	[super init];
  
@@ -687,8 +694,10 @@ SalGraphics* JavaSalFrame::GetGraphics()
 		return NULL;
 
 #ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 	mbGraphics = TRUE;
 
@@ -788,17 +797,23 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	mbVisible = bVisible;
 
 #ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Make sure there is a graphics available to avoid crashing when the OOo
 	// code tries to draw while updating the menus
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 
 	mpVCLFrame->setVisible( mbVisible, bNoActivate );
 
+#ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Reset graphics
 	if ( mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics->resetGraphics();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW
 
 	if ( mbVisible )
 	{
@@ -1527,7 +1542,13 @@ const SystemEnvData* JavaSalFrame::GetSystemData() const
 
 void JavaSalFrame::Beep( SoundType eSoundType )
 {
+#ifdef USE_NATIVE_WINDOW
+	AudioServicesPlaySystemSound( kUserPreferredAlert );
+#else	// USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	com_sun_star_vcl_VCLGraphics::beep();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -1573,18 +1594,29 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		// Fix bug 1310 by creating a new native window with the new parent
 		maSysData.pView = NULL;
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
+#ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_WINDOW
 
 		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
 		if ( mpVCLFrame )
 		{
 #ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 			mpVCLFrame->setTitle( maTitle );
 
+#ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 			if ( pOldVCLGraphics )
 				delete pOldVCLGraphics;
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_WINDOW
 
 			if ( pOldVCLFrame )
 			{
@@ -1596,7 +1628,9 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		{
 			mpVCLFrame = pOldVCLFrame;
 #ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 		}
 
@@ -1715,9 +1749,11 @@ void JavaSalFrame::ResetClipRegion()
 #ifdef USE_NATIVE_WINDOW
 	fprintf( stderr, "JavaSalFrame::ResetClipRegion not implemented\n" );
 #else	// USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->resetClipRegion( sal_True );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 }
 
@@ -1728,9 +1764,11 @@ void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 #ifdef USE_NATIVE_WINDOW
 	fprintf( stderr, "JavaSalFrame::BeginSetClipRegion not implemented\n" );
 #else	// USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->beginSetClipRegion( sal_True );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 }
 
@@ -1741,9 +1779,11 @@ void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight 
 #ifdef USE_NATIVE_WINDOW
 	fprintf( stderr, "JavaSalFrame::UnionClipRegion not implemented\n" );
 #else	// USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_True );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 }
 
@@ -1754,9 +1794,11 @@ void JavaSalFrame::EndSetClipRegion()
 #ifdef USE_NATIVE_WINDOW
 	fprintf( stderr, "JavaSalFrame::EndSetClipRegion not implemented\n" );
 #else	// USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 }
 

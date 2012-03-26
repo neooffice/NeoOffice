@@ -37,10 +37,12 @@
 #include <salbmp.h>
 #include <vcl/salwtype.hxx>
 #include <vcl/sysdata.hxx>
-#include <com/sun/star/vcl/VCLBitmap.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+#include <com/sun/star/vcl/VCLBitmap.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <vcl/bmpacc.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 
@@ -126,7 +128,11 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( pJavaSrcGraphics->mpPrinter )
 		return;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpPrinter || useNativeDrawing() != pJavaSrcGraphics->useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	if ( mpPrinter || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	{
 		SalTwoRect aPosAry;
 		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
@@ -140,14 +146,20 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 			delete pBitmap;
 		}
 	}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( useNativeDrawing() )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	else
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	{
 		copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ), true );
 	}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -158,10 +170,14 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 	if ( mpPrinter )
 		return;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ), false );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( mpVCLGraphics )
 		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -236,13 +252,19 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		return;
 
 	// Scale the bitmap if necessary
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpPrinter || ( useNativeDrawing() && pJavaSalBitmap->GetBitCount() != GetBitCount() ) || getBitmapDirectionFormat() != JavaSalBitmap::GetNativeDirectionFormat() || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	if ( mpPrinter || pJavaSalBitmap->GetBitCount() != GetBitCount() || getBitmapDirectionFormat() != JavaSalBitmap::GetNativeDirectionFormat() || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	{
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			if ( mpPrinter || useNativeDrawing() )
 			{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				SalTwoRect aCopyPosAry;
 				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
 				aCopyPosAry.mnDestX = 0;
@@ -252,8 +274,10 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
 				if ( pCopyBuffer )
 				{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 					if ( useNativeDrawing() )
 					{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 						// Assign ownership of bits to a CGDataProvider instance
 						CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
 						if ( aProvider )
@@ -268,6 +292,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						}
 		
 						delete pCopyBuffer;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 					}
 					else if ( mpVCLGraphics )
 					{
@@ -275,7 +300,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						// native method print the bitmap buffer directly
 						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 					}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			}
 			else if ( mpVCLGraphics )
 			{
@@ -314,11 +341,16 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					aVCLBitmap.dispose();
 				}
 			}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 			pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 		}
 	}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( useNativeDrawing() )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	else
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	{
 		// If the bitmap is backed by a layer, draw that
 		JavaSalGraphics *pGraphics = pJavaSalBitmap->GetGraphics();
@@ -365,6 +397,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 			}
 		}
 	}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( mpVCLGraphics )
 	{
 		// If the bitmap is backed by a VCLGraphics instance, draw that
@@ -384,6 +417,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 			}
 		}
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -466,8 +500,10 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
 			if ( pDestBuffer )
 			{
@@ -499,6 +535,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 				delete pDestBuffer;
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -546,6 +583,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				aVCLBitmap.dispose();
 			}
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 	}
@@ -632,8 +670,10 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
 			if ( pDestBuffer )
 			{
@@ -715,6 +755,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 				delete pDestBuffer;
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -814,6 +855,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				aVCLBitmap.dispose();
 			}
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 	}
@@ -899,8 +941,10 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
 			if ( pDestBuffer )
 			{
@@ -934,6 +978,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 
 				delete pDestBuffer;
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -983,6 +1028,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 				aVCLBitmap.dispose();
 			}
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 	}
@@ -1009,10 +1055,12 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 	}
 
 #ifndef USE_NATIVE_WINDOW
+#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Fix bug 3189 and wipe down presentation transition previews without
 	// causing bug 3191 by flushing in certain cases
 	if ( !useNativeDrawing() )
 		com_sun_star_vcl_VCLFrame::flushAllFrames();
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
@@ -1036,8 +1084,10 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 	if ( mpPrinter )
 		return nRet;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( !maPixelContext )
 		{
 			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
@@ -1055,11 +1105,13 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 			copyToContext( NULL, false, false, maPixelContext, CGRectMake( 0, 0, 1, 1 ), CGPointMake( nX, nY ), CGRectMake( 0, 0, 1, 1 ) );
 			nRet = mnPixelContextData & 0x00ffffff;
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		nRet = mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	return nRet;
 }
@@ -1072,8 +1124,10 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 	if ( mpPrinter )
 		return;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
@@ -1115,11 +1169,13 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 
 			CGPathRelease( aPath );
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1130,8 +1186,10 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 	if ( mpPrinter )
 		return;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( nPoints && pPtAry )
 		{
 			::basegfx::B2DPolygon aPoly;
@@ -1182,11 +1240,13 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 				CGPathRelease( aPath );
 			}
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1342,8 +1402,10 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 						if ( useNativeDrawing() )
 						{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 							// Assign ownership of bits to a CGDataProvider
 							// instance
 							CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
@@ -1359,6 +1421,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 		
 							delete pCopyBuffer;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 						}
 						else if ( mpVCLGraphics )
 						{
@@ -1366,6 +1429,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							// native method print the bitmap buffer directly
 							mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 						}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );

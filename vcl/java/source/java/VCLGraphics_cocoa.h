@@ -36,7 +36,12 @@
 #ifndef __VCLGRAPHICS_COCOA_H__
 #define __VCLGRAPHICS_COCOA_H__
 
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <sal/types.h>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 #ifdef __cplusplus
 #include <premac.h>
@@ -62,5 +67,7 @@ SAL_DLLPRIVATE void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float 
 #ifdef __cplusplus
 END_C
 #endif
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #endif

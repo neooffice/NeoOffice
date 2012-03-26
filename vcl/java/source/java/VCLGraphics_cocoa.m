@@ -37,6 +37,8 @@
 
 #include "VCLGraphics_cocoa.h"
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+
 @interface DrawEPSInRect : NSObject
 {
 	void*				mpPtr;
@@ -1208,3 +1210,5 @@ void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, f
 
 	[pPool release];
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

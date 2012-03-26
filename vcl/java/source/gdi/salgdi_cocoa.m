@@ -37,6 +37,8 @@
 
 #include "salgdi_cocoa.h"
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+
 @interface DrawEPSInBitmap : NSObject
 {
 	int					mnDestHeight;
@@ -169,3 +171,5 @@ BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize, int *pDestPtr
 
 	return bRet;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

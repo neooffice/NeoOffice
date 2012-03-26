@@ -476,6 +476,8 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0, sal_Bool 
 	return out;
 }
 
+#ifndef USE_NATIVE_WINDOW
+
 // ----------------------------------------------------------------------------
 
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLFrame::getGraphics()
@@ -500,6 +502,8 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLFrame::getGraphics()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_WINDOW
 
 // ----------------------------------------------------------------------------
 

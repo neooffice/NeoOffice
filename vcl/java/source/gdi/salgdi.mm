@@ -36,8 +36,10 @@
 #include <salgdi.h>
 #include <saldata.hxx>
 #include <salframe.h>
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLBitmap.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLFont.hxx>
 #include <com/sun/star/vcl/VCLPath.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
@@ -496,7 +498,9 @@ JavaSalGraphics::JavaSalGraphics() :
 	mpFrame( NULL ),
 	mpPrinter( NULL ),
 	mpVirDev( NULL ),
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	mpVCLGraphics( NULL ),
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	mpFontData( NULL ),
 	mpVCLFont( NULL ),
 	mnFontFamily( FAMILY_DONTKNOW ),
@@ -537,8 +541,10 @@ JavaSalGraphics::~JavaSalGraphics()
 	if ( maLayer )
 		CGLayerRelease( maLayer );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpVCLGraphics )
 		delete mpVCLGraphics;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	if ( mpFontData )
 		delete mpFontData;
@@ -560,12 +566,14 @@ JavaSalGraphics::~JavaSalGraphics()
 
 void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( ( !mnDPIX || !mnDPIY ) && mpVCLGraphics )
 	{
 		Size aSize( mpVCLGraphics->getResolution() );
 		mnDPIX = aSize.Width();
 		mnDPIY = aSize.Height();
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	rDPIX = mnDPIX;
 	rDPIY = mnDPIY;
@@ -575,38 +583,48 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 USHORT JavaSalGraphics::GetBitCount()
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpVCLGraphics )
 		return mpVCLGraphics->getBitCount();
-	else
-		return 32;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+
+	return 32;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::ResetClipRegion()
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpPrinter || useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( maNativeClipPath )
 		{
 			CFRelease( maNativeClipPath );
 			maNativeClipPath = NULL;
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->resetClipRegion( sal_False );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpPrinter || useNativeDrawing() )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		ResetClipRegion();
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else if ( mpVCLGraphics )
 		mpVCLGraphics->beginSetClipRegion( sal_False );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -615,8 +633,10 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 {
 	BOOL bRet = TRUE;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpPrinter || useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( nWidth > 0 && nHeight > 0 )
 		{
 			if ( !maNativeClipPath )
@@ -625,11 +645,13 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 			if ( maNativeClipPath )
 				CGPathAddRect( maNativeClipPath, NULL, CGRectMake( (float)nX, (float)nY, (float)nWidth, (float)nHeight ) );
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_False );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	return bRet;
 }
@@ -643,8 +665,10 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 	const sal_uInt32 nPoly = rPolyPoly.count();
 	if ( nPoly )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( mpPrinter || useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			if ( !maNativeClipPath )
 				maNativeClipPath = CGPathCreateMutable();
 
@@ -655,13 +679,15 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 				CGPathAddPath( maNativeClipPath, NULL, aCGPath );
 				CFRelease( aCGPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
-		else
+		else if ( mpVCLGraphics )
 		{
 			com_sun_star_vcl_VCLPath aPath;
 			AddPolyPolygonToPaths( &aPath, NULL, rPolyPoly );
 			mpVCLGraphics->unionClipPath( &aPath, sal_False );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 
 	return bRet;
@@ -671,8 +697,10 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 void JavaSalGraphics::EndSetClipRegion()
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpPrinter && !useNativeDrawing() )
 		mpVCLGraphics->endSetClipRegion( sal_False );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -711,8 +739,10 @@ void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 	if ( mpPrinter )
 		bSet = false;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( bSet && bInvertOnly )
 		{
 			mbInvert = true;
@@ -723,6 +753,7 @@ void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 			mbInvert = false;
 			mbXOR = bSet;
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
@@ -730,6 +761,7 @@ void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 		// platforms
 		mpVCLGraphics->setXORMode( bSet );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -758,8 +790,10 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 {
 	if ( mnLineColor )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
@@ -767,9 +801,13 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, mnLineColor, 0x00000000, aPath ) );
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
+		{
 			mpVCLGraphics->setPixel( nX, nY, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -777,8 +815,10 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 
 void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
 	{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
@@ -786,11 +826,13 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, nSalColor | 0xff000000, 0x00000000, aPath ) );
 			CGPathRelease( aPath );
 		}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	}
 	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -799,8 +841,10 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 {
 	if ( mnLineColor )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
@@ -809,11 +853,13 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
 			mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -823,8 +869,10 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 {
 	if ( mnFillColor || mnLineColor )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
@@ -851,6 +899,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -859,6 +908,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			if ( mnLineColor )
 				mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -883,8 +933,10 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( mnLineColor && nPoints && pPtAry )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			::basegfx::B2DPolygon aPoly;
 			for ( ULONG i = 0 ; i < nPoints; i++ )
 				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
@@ -916,11 +968,13 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
 			mpVCLGraphics->drawPolyline( nPoints, pPtAry, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -930,8 +984,10 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( ( mnFillColor || mnLineColor ) && nPoints && pPtAry )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			::basegfx::B2DPolygon aPoly;
 			for ( ULONG i = 0 ; i < nPoints; i++ )
 				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
@@ -964,6 +1020,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -972,6 +1029,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 			if ( mnLineColor )
 				mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -981,8 +1039,10 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 {
 	if ( nPoly && pPoints && pPtAry )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			::basegfx::B2DPolyPolygon aPolyPoly;
 			for ( ULONG i = 0 ; i < nPoly; i++ )
 			{
@@ -1027,6 +1087,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -1035,6 +1096,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 			if ( mnLineColor )
 				mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -1050,8 +1112,10 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 		setFillTransparency( nTransparency );
 		setLineTransparency( nTransparency );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
@@ -1078,6 +1142,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -1092,6 +1157,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			if ( mnLineColor )
 				mpVCLGraphics->drawPath( &aPath, mnFillColor, FALSE, getAntiAliasB2DDraw(), aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 		setFillTransparency( 0 );
 		setLineTransparency( 0 );
@@ -1108,8 +1174,10 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 
 	if ( mnLineColor )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
@@ -1138,6 +1206,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 
 				CGPathRelease( aPath );
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 		else if ( mpPrinter )
 		{
@@ -1153,6 +1222,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 
 			mpVCLGraphics->drawPathline( &aPath, mnLineColor, getAntiAliasB2DDraw(), rLineWidths.getX(), eLineJoin, aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 
 	return bRet;
@@ -1187,15 +1257,19 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 
 	if ( pPtr && nSize )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( mpPrinter || useNativeDrawing() )
 		{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			void *pPtrCopy = rtl_allocateMemory( nSize );
 			if ( pPtrCopy )
 			{
 				memcpy( pPtrCopy, pPtr, nSize );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				if ( useNativeDrawing() )
 				{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 					// Assign ownership of bits to a CFData instance
 					CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, (UInt8 *)pPtrCopy, nSize, NULL );
 					if ( aData )
@@ -1204,6 +1278,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 						CFRelease( aData );
 					}
 					bRet = TRUE;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				}
 				else if ( mpVCLGraphics )
 				{
@@ -1212,7 +1287,9 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 					mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 					bRet = TRUE;
 				}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			}
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
 
 		if ( !bRet && mpVCLGraphics )
@@ -1249,6 +1326,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 				aVCLBitmap.dispose();
 			}
 		}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 
 	return bRet;
@@ -1292,6 +1370,8 @@ void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
 		SetFillColor( mnFillColor & 0x00ffffff );
 }
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+
 // -----------------------------------------------------------------------
 
 bool JavaSalGraphics::useNativeDrawing()
@@ -1308,6 +1388,8 @@ bool JavaSalGraphics::useNativeDrawing()
 
 	return bRet;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // -----------------------------------------------------------------------
 
@@ -1436,10 +1518,14 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 ULONG JavaSalGraphics::getBitmapDirectionFormat()
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( useNativeDrawing() )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		return JavaSalBitmap::GetNativeDirectionFormat();
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	else
 		return BMP_FORMAT_TOP_DOWN;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------

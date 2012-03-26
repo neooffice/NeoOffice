@@ -737,6 +737,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						else
 							nID = SALEVENT_RESIZE;
 
+#ifdef USE_NATIVE_WINDOW
+						if ( bForceResize || bSizeChanged )
+							pFrame->UpdateLayer();
+#else	// USE_NATIVE_WINDOW
 						// Reset graphics
 						com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
 						if ( pVCLGraphics )
@@ -744,10 +748,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 							pVCLGraphics->resetGraphics();
 							delete pVCLGraphics;
 						}
-
-#ifdef USE_NATIVE_WINDOW
-						if ( bForceResize || bSizeChanged )
-							pFrame->UpdateLayer();
 #endif	// USE_NATIVE_WINDOW
 
 						pFrame->CallCallback( nID, NULL );
@@ -773,6 +773,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
 
+#ifndef USE_NATIVE_WINDOW
 				// Reset graphics
 				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
 				if ( pVCLGraphics )
@@ -780,6 +781,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pVCLGraphics->resetGraphics();
 					delete pVCLGraphics;
 				}
+#endif	// !USE_NATIVE_WINDOW
 
 				pFrame->CallCallback( nID, pPaintEvent );
 			}

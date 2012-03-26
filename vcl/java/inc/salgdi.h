@@ -38,8 +38,9 @@
 
 #include <hash_map>
 
-#include <salprn.h>
 #include <salbmp.h>
+#include <salframe.h>
+#include <salprn.h>
 #include <salvd.h>
 #include <vcl/salgdi.hxx>
 #include <vcl/outfont.hxx>
@@ -71,7 +72,9 @@ class SalATSLayout;
 namespace vcl
 {
 class com_sun_star_vcl_VCLFont;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLGraphics;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLPath;
 }
 
@@ -196,7 +199,9 @@ public:
 	JavaSalFrame*			mpFrame;
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	JavaImplFontData*		mpFontData;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	::std::hash_map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
@@ -286,7 +291,9 @@ public:
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	bool					useNativeDrawing();
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );

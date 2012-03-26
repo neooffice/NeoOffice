@@ -36,7 +36,12 @@
 #ifndef __SALGDI_COCOA_H__
 #define __SALGDI_COCOA_H__
 
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <sal/types.h>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 #ifdef __cplusplus
 #include <premac.h>
@@ -53,5 +58,7 @@ SAL_DLLPRIVATE BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize
 #ifdef __cplusplus
 END_C
 #endif
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #endif

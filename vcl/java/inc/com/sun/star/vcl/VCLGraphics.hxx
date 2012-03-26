@@ -36,6 +36,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <basegfx/vector/b2enums.hxx>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
@@ -43,6 +46,8 @@
 #include <vcl/salbtype.hxx>
 #include <vcl/salgtype.hxx>
 #include <vcl/sallayout.hxx>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -107,5 +112,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX

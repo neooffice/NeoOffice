@@ -37,6 +37,8 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/salbtype.hxx>
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+
 using namespace vcl;
 
 // ============================================================================
@@ -125,3 +127,5 @@ java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

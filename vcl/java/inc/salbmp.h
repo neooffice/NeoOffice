@@ -46,10 +46,12 @@
 struct BitmapBuffer;
 class BitmapPalette;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 namespace vcl
 {
 class com_sun_star_vcl_VCLGraphics;
 }
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // -----------------
 // - JavaSalBitmap -
@@ -63,7 +65,9 @@ class JavaSalBitmap : public SalBitmap
 	BYTE*					mpBits;
 	BitmapPalette			maPalette;
 	BitmapBuffer*			mpBuffer;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	JavaSalGraphics*		mpGraphics;
 
 public:
@@ -75,12 +79,18 @@ public:
 
 	bool					Create( BitmapBuffer *pBuffer );
 	bool					Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLBitmap*	CreateVCLBitmap( long nX, long nY, long nWidth, long nHeight );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Point					GetPoint() const { return maPoint; }
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLGraphics*	GetVCLGraphics() { return mpVCLGraphics; }
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	JavaSalGraphics*		GetGraphics() { return mpGraphics; }
 	void					NotifyGraphicsChanged( bool bDisposed );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 	virtual bool			Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal );
 	virtual bool			Create( const SalBitmap& rSalBmp );

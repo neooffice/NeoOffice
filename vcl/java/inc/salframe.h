@@ -40,18 +40,10 @@
 
 #include <list>
 
-#ifndef _SV_SV_H
 #include <vcl/sv.h>
-#endif
-#ifndef _SV_SYSDATA_HXX 
 #include <vcl/sysdata.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
 #include <vcl/salframe.hxx>
-#endif
-#ifndef _SV_SALGEOM_HXX
 #include <vcl/salgeom.hxx>
-#endif
 
 #endif	// __cplusplus
 

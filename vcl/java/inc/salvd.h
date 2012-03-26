@@ -36,6 +36,8 @@
 #ifndef _SV_SALVD_H
 #define _SV_SALVD_H
 
+#ifdef __cplusplus
+
 #include <vcl/salvd.hxx>
 #include <vcl/sv.h>
 
@@ -44,8 +46,12 @@
 #include <postmac.h>
 #undef check
 
+#endif	// __cplusplus
+
 // Uncomment the following line to enable native offscreen drawing APIs
 // #define USE_NATIVE_VIRTUAL_DEVICE
+
+#ifdef __cplusplus
 
 #ifndef USE_NATIVE_VIRTUAL_DEVICE
 namespace vcl
@@ -85,5 +91,7 @@ public:
 	virtual BOOL			SetSize( long nNewDX, long nNewDY );
 	virtual void			GetSize( long& rWidth, long& rHeight );
 };
+
+#endif	// __cplusplus
 
 #endif // _SV_SALVD_H

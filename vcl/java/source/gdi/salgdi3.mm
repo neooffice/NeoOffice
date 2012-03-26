@@ -41,7 +41,9 @@
 #include <vcl/impfont.hxx>
 #include <vcl/outdev.h>
 #include <vcl/unohelp.hxx>
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <rtl/process.h>
 
@@ -987,11 +989,15 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 		SalATSLayout::GetGlyphBounds( nIndex, pVCLFont, rRect );
 #else	// USE_CORETEXT_TEXT_RENDERING
 #ifdef DEBUG
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
 #endif
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( mpVCLGraphics )
 			rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_CORETEXT_TEXT_RENDERING
 		rRect.Justify();
 	}

@@ -52,7 +52,9 @@
 #include <salgdi.h>
 #include <vcl/outfont.hxx>
 #include <vcl/svapp.hxx>
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 #define MAXEXTRACHARS 100
@@ -2606,8 +2608,10 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	bool bUseNativeDrawing = rJavaGraphics.useNativeDrawing();
 	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
@@ -2701,9 +2705,12 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
 			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			if ( bUseNativeDrawing )
 			{
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			}
 			else if ( bPrinter )
 			{
@@ -2738,6 +2745,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
 			}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		}
 	}
 }
