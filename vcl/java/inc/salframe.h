@@ -113,6 +113,10 @@ public:
 	BOOL					mbInWindowDidExitFullScreen;
 	BOOL					mbInWindowWillEnterFullScreen;
 
+#ifdef USE_NATIVE_WINDOW
+	static void				FlushAllFrames();
+#endif	// USE_NATIVE_WINDOW
+
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
 

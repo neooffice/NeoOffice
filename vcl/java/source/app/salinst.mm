@@ -38,87 +38,38 @@
 #include <unistd.h>
 #include <sys/syslimits.h>
 
-#ifndef _SV_SALINST_H
+#include <premac.h>
+#import <Cocoa/Cocoa.h>
+#include <postmac.h>
+#undef check
+
 #include <salinst.h>
-#endif
-#ifndef _SV_SALBMP_H
 #include <salbmp.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALIMESTATUS_HXX
 #include <vcl/salimestatus.hxx>
-#endif
-#ifndef _SALJAVA_H
 #include <saljava.h>
-#endif
-#ifndef _SV_SALMENU_H
 #include <salmenu.h>
-#endif
-#ifndef _SV_SALOBJ_H
 #include <salobj.h>
-#endif
-#ifndef _SV_SALPTYPE_HXX
 #include <vcl/salptype.hxx>
-#endif
-#ifndef _SV_SALSYS_H
 #include <salsys.h>
-#endif
-#ifndef _SV_SALTIMER_H
 #include <saltimer.h>
-#endif
-#ifndef _SV_SALVD_H
 #include <salvd.h>
-#endif
-#ifndef _SV_SALBTYPE_HXX
 #include <vcl/salbtype.hxx>
-#endif
-#ifndef _SV_SALPRN_H
 #include <salprn.h>
-#endif
-#ifndef _SV_SALTIMER_HXX
 #include <vcl/saltimer.hxx>
-#endif
-#ifndef _VCL_APPTYPES_HXX
 #include <vcl/apptypes.hxx>
-#endif
-#ifndef _SV_PRINT_H
 #include <vcl/print.h>
-#endif
-#ifndef _SV_JOBSET_H
 #include <vcl/jobset.h>
-#endif
-#ifndef _SV_FLOATWIN_HXX
 #include <vcl/floatwin.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
-#ifndef _TOOLS_RESMGR_HXX
 #include <tools/resmgr.hxx>
-#endif
-#ifndef _TOOLS_SIMPLERESMGR_HXX_
 #include <tools/simplerm.hxx>
-#endif
 
 #include "salinst.hrc"
 #include "salinst_cocoa.h"
@@ -531,9 +482,12 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
-#ifndef USE_NATIVE_WINDOW
+
+#ifdef USE_NATIVE_WINDOW
+			JavaSalFrame::FlushAllFrames();
+#else	// USE_NATIVE_WINDOW
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
-#endif	// !USE_NATIVE_WINDOW
+#endif	// USE_NATIVE_WINDOW
 
 			// Reduce noticeable pause when opening a new document by delaying
 			// update of submenus until next available timer timeout.
@@ -623,9 +577,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		}
 		delete pEvent;
 
-#ifndef USE_NATIVE_WINDOW
+#ifdef USE_NATIVE_WINDOW
+		JavaSalFrame::FlushAllFrames();
+#else	// USE_NATIVE_WINDOW
 		com_sun_star_vcl_VCLFrame::flushAllFrames();
-#endif	// !USE_NATIVE_WINDOW
+#endif	// USE_NATIVE_WINDOW
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed

@@ -211,7 +211,7 @@ static NSTimer *pUpdateTimer = nil;
 
 #ifdef USE_NATIVE_WINDOW
 
-@interface VCLGetGraphicsLayer : NSObject
+@interface VCLViewGetGraphicsLayer : NSObject
 {
 	JavaSalGraphics*		mpGraphics;
 	CGLayerRef				maLayer;
@@ -225,11 +225,11 @@ static NSTimer *pUpdateTimer = nil;
 - (CGLayerRef)layer;
 @end
 
-@implementation VCLGetGraphicsLayer
+@implementation VCLViewGetGraphicsLayer
 
 + (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize
 {
-	VCLGetGraphicsLayer *pRet = [[VCLGetGraphicsLayer alloc] initGraphicsLayer:pGraphics view:pView size:aSize];
+	VCLViewGetGraphicsLayer *pRet = [[VCLViewGetGraphicsLayer alloc] initGraphicsLayer:pGraphics view:pView size:aSize];
 	[pRet autorelease];
 	return pRet;
 }
@@ -267,8 +267,21 @@ static NSTimer *pUpdateTimer = nil;
 		maLayer = NULL;
 	}
 
-	if ( !mpGraphics )
-		return;
+	// Remove native window's entry
+	NSWindow *pWindow = nil;
+	if ( mpView )
+	{
+		pWindow = [mpView window];
+		if ( pWindow )
+		{
+			::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
+			if ( it != aNativeWindowMap.end() )
+			{
+				[it->first release];
+				aNativeWindowMap.erase( it );
+			}
+		}
+	}
 
 	// Remove all entries for the graphics
 	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.begin();
@@ -276,6 +289,7 @@ static NSTimer *pUpdateTimer = nil;
 	{
 		if ( it->second == mpGraphics )
 		{
+			[it->first release];
 			aNativeWindowMap.erase( it );
 			it = aNativeWindowMap.begin();
 			continue;
@@ -284,20 +298,19 @@ static NSTimer *pUpdateTimer = nil;
 		++it;
 	}
 
-	if ( maSize.width > 0 && maSize.height > 0 && mpView )
+	if ( mpGraphics && maSize.width > 0 && maSize.height > 0 && pWindow && [pWindow isVisible] )
 	{
-		NSWindow *pWindow = [mpView window];
-		if ( pWindow && [pWindow isVisible] )
+		NSGraphicsContext *pContext = [pWindow graphicsContext];
+		if ( pContext )
 		{
-			NSGraphicsContext *pContext = [pWindow graphicsContext];
-			if ( pContext )
+			CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+			if ( aContext )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
+				maLayer = CGLayerCreateWithContext( aContext, maSize, NULL );
+				if ( maLayer )
 				{
-					maLayer = CGLayerCreateWithContext( aContext, maSize, NULL );
-					if ( maLayer )
-						aNativeWindowMap[ pWindow ] = mpGraphics;
+					[pWindow retain];
+					aNativeWindowMap[ pWindow ] = mpGraphics;
 				}
 			}
 		}
@@ -310,6 +323,47 @@ static NSTimer *pUpdateTimer = nil;
 }
 
 @end
+
+@interface VCLSetNeedsDisplayAllViews : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)setNeedsDisplay:(id)pObject;
+@end
+
+@implementation VCLSetNeedsDisplayAllViews
+
++ (id)create
+{
+	VCLSetNeedsDisplayAllViews *pRet = [[VCLSetNeedsDisplayAllViews alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithView:(NSView *)pView
+{
+	[super init];
+ 
+	return self;
+}
+
+- (void)setNeedsDisplay:(id)pObject
+{
+	for ( ::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.begin(); it != aNativeWindowMap.end(); ++it )
+	{
+		if ( [it->first isVisible] )
+		{
+			NSView *pContentView = [it->first contentView];
+			if ( pContentView )
+				[pContentView setNeedsDisplay:YES];
+		}
+	}
+}
+
+@end
+
+// ============================================================================
 
 #endif	// USE_NATIVE_WINDOW
 
@@ -514,6 +568,23 @@ JavaSalFrame::~JavaSalFrame()
 		delete mpGraphics;
 }
 
+#ifdef USE_NATIVE_WINDOW
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::FlushAllFrames()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLSetNeedsDisplayAllViews *pVCLSetNeedsDisplayAllViews = [VCLSetNeedsDisplayAllViews create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLSetNeedsDisplayAllViews performSelectorOnMainThread:@selector(setNeedsDisplay:) withObject:pVCLSetNeedsDisplayAllViews waitUntilDone:NO modes:pModes];
+
+	[pPool release];
+}
+
+#endif	// USE_NATIVE_WINDOW
+
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
@@ -583,10 +654,10 @@ void JavaSalFrame::UpdateLayer()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	VCLGetGraphicsLayer *pVCLGetGraphicsLayer = [VCLGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
+	VCLViewGetGraphicsLayer *pVCLViewGetGraphicsLayer = [VCLViewGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLGetGraphicsLayer waitUntilDone:YES modes:pModes];
-	maFrameLayer = [pVCLGetGraphicsLayer layer];
+	[pVCLViewGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLViewGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	maFrameLayer = [pVCLViewGetGraphicsLayer layer];
 	if ( maFrameLayer )
 		CGLayerRetain( maFrameLayer );
 
