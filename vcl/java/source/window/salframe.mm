@@ -46,11 +46,9 @@
 #include <vcl/svapp.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// !USE_NATIVE_WINDOW
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #include <vcl/dialog.hxx>
 
@@ -694,10 +692,8 @@ SalGraphics* JavaSalFrame::GetGraphics()
 		return NULL;
 
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 	mbGraphics = TRUE;
 
@@ -797,22 +793,18 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	mbVisible = bVisible;
 
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Make sure there is a graphics available to avoid crashing when the OOo
 	// code tries to draw while updating the menus
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 
 	mpVCLFrame->setVisible( mbVisible, bNoActivate );
 
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	// Reset graphics
 	if ( mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics->resetGraphics();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 
 	if ( mbVisible )
@@ -1595,27 +1587,21 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		maSysData.pView = NULL;
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 
 		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
 		if ( mpVCLFrame )
 		{
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 			mpVCLFrame->setTitle( maTitle );
 
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 			if ( pOldVCLGraphics )
 				delete pOldVCLGraphics;
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_NATIVE_WINDOW
 
 			if ( pOldVCLFrame )
@@ -1628,9 +1614,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		{
 			mpVCLFrame = pOldVCLFrame;
 #ifndef USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// !USE_NATIVE_WINDOW
 		}
 
