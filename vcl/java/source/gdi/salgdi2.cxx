@@ -1157,7 +1157,7 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 					// checkerboard pattern
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
 				}
-				else if ( SAL_INVERT_TRACKFRAME )
+				else if ( nFlags & SAL_INVERT_TRACKFRAME )
 				{
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 				}
@@ -1231,7 +1231,7 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 						// checkerboard pattern
 						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
 					}
-					else if ( SAL_INVERT_TRACKFRAME )
+					else if ( nFlags & SAL_INVERT_TRACKFRAME )
 					{
 						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 					}
