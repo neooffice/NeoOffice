@@ -48,8 +48,8 @@
 
 #endif	// __cplusplus
 
-// Uncomment the following line to enable native offscreen drawing APIs
-// #define USE_NATIVE_VIRTUAL_DEVICE
+// Comment out the following line to disable native offscreen drawing APIs
+#define USE_NATIVE_VIRTUAL_DEVICE
 
 #ifdef __cplusplus
 
