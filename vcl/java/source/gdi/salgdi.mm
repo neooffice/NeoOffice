@@ -36,12 +36,12 @@
 #include <salgdi.h>
 #include <saldata.hxx>
 #include <salframe.h>
+#include <com/sun/star/vcl/VCLFont.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLBitmap.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLFont.hxx>
 #include <com/sun/star/vcl/VCLPath.hxx>
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolygon.hxx>
 
 #include "salgdi_cocoa.h"
@@ -81,7 +81,11 @@ using namespace vcl;
 
 // =======================================================================
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 {
 	const sal_uInt32 nCount = rPolygon.count();
 	if ( !nCount )
@@ -107,15 +111,19 @@ void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCG
 
 		if ( !nIndex )
 		{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			if ( pVCLPath )
 				pVCLPath->moveTo( aPoint.getX(), aPoint.getY() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			if ( aCGPath )
 				CGPathMoveToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
 		}
 		else if ( !bPendingCurve )
 		{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			if ( pVCLPath )
 				pVCLPath->lineTo( aPoint.getX(), aPoint.getY() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			if ( aCGPath )
 				CGPathAddLineToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
 		}
@@ -123,8 +131,10 @@ void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCG
 		{
 			::basegfx::B2DPoint aFirstControlPoint = rPolygon.getNextControlPoint( nPreviousIndex );
 			::basegfx::B2DPoint aSecondControlPoint = rPolygon.getPrevControlPoint( nClosedIndex );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			if ( pVCLPath )
 				pVCLPath->curveTo( aFirstControlPoint.getX(), aFirstControlPoint.getY(), aSecondControlPoint.getX(), aSecondControlPoint.getY(), aPoint.getX(), aPoint.getY() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 			if ( aCGPath )
 				CGPathAddCurveToPoint( aCGPath, NULL, aFirstControlPoint.getX(), aFirstControlPoint.getY(), aSecondControlPoint.getX(), aSecondControlPoint.getY(), aPoint.getX(), aPoint.getY() );
 		}
@@ -135,8 +145,10 @@ void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCG
 
 	if ( bClosePath )
 	{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( pVCLPath )
 			pVCLPath->closePath();
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( aCGPath )
 			CGPathCloseSubpath( aCGPath );
 	}
@@ -144,7 +156,11 @@ void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCG
 
 // -----------------------------------------------------------------------
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 void AddPolyPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 {
 	const sal_uInt32 nCount = rPolyPoly.count();
 	if ( !nCount )
@@ -153,7 +169,11 @@ void AddPolyPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef
 	for ( sal_uInt32 i = 0; i < nCount; i++ )
 	{
 		const ::basegfx::B2DPolygon rPolygon = rPolyPoly.getB2DPolygon( i );
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		AddPolygonToPaths( pVCLPath, aCGPath, rPolygon, true );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+		AddPolygonToPaths( aCGPath, rPolygon, true );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	}
 }
 
@@ -675,7 +695,11 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 			if ( maNativeClipPath )
 			{
 				CGMutablePathRef aCGPath = CGPathCreateMutable();
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolyPolygonToPaths( NULL, aCGPath, rPolyPoly );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolyPolygonToPaths( aCGPath, rPolyPoly );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGPathAddPath( maNativeClipPath, NULL, aCGPath );
 				CFRelease( aCGPath );
 			}
@@ -945,7 +969,11 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
 				if ( aRect.size.width < fNativeLineWidth )
@@ -997,7 +1025,11 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
 				if ( aRect.size.width < fNativeLineWidth )
@@ -1061,7 +1093,11 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolyPolygonToPaths( aPath, aPolyPoly );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
 				if ( aRect.size.width < fNativeLineWidth )
@@ -1119,7 +1155,11 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolyPolygonToPaths( aPath, rPolyPoly );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
 				if ( aRect.size.width < fNativeLineWidth )
@@ -1181,7 +1221,11 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolygonToPaths( NULL, aPath, rPoly, rPoly.isClosed() );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolygonToPaths( aPath, rPoly, rPoly.isClosed() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = rLineWidths.getX();
 				if ( fNativeLineWidth <= 0 )

@@ -1201,7 +1201,11 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINT
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
 				if ( aRect.size.width < fNativeLineWidth )

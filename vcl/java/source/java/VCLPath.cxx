@@ -35,9 +35,9 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLPATH_CXX
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
 #include <com/sun/star/vcl/VCLPath.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 using namespace vcl;
 
@@ -173,3 +173,5 @@ void com_sun_star_vcl_VCLPath::moveTo( double _par0, double _par1 )
 		}
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
