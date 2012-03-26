@@ -284,20 +284,34 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		// Copying within the same context to a negative x destination or a
 		// destination that overlaps with the source causes drawing to wrap
 		// around to the right edge of the destination layer so make a temporary
-		// copy of the source
-		CGLayerRef aTmpLayer = CGLayerCreateWithContext( aContext, maRect.size, NULL );
-		if ( aTmpLayer )
+		// copy of the source using a native layer backed by a 1 x 1 pixel
+		// native bitmap
+		sal_uInt32 nTmpBit = 0;
+		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		if ( aColorSpace )
 		{
-			CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
-			if ( aTmpContext )
+			CGContextRef aBitmapContext = CGBitmapContextCreate( &nTmpBit, 1, 1, 8, sizeof( nTmpBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			if ( aBitmapContext )
 			{
-				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( aSrcRect.origin.x * -1, aSrcRect.origin.y * -1 ), maSrcLayer );
+				CGLayerRef aTmpLayer = CGLayerCreateWithContext( aBitmapContext, maRect.size, NULL );
+				if ( aTmpLayer )
+				{
+					CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
+					if ( aTmpContext )
+					{
+						CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( aSrcRect.origin.x * -1, aSrcRect.origin.y * -1 ), maSrcLayer );
 
-				CGContextClipToRect( aContext, maRect );
-				CGContextDrawLayerAtPoint( aContext, maRect.origin, aTmpLayer );
+						CGContextClipToRect( aContext, maRect );
+						CGContextDrawLayerAtPoint( aContext, maRect.origin, aTmpLayer );
+					}
+
+					CGLayerRelease( aTmpLayer );
+				}
+
+				CGContextRelease( aBitmapContext );
 			}
 
-			CGLayerRelease( aTmpLayer );
+			CGColorSpaceRelease( aColorSpace );
 		}
 	}
 	else
