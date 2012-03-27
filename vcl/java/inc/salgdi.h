@@ -189,6 +189,7 @@ private:
 	CGLayerRef				maLayer;
 	sal_uInt32				mnPixelContextData;
 	CGContextRef			maPixelContext;
+	CGRect					maNeedsDisplayRect;
 
 public:
 	SalColor				mnFillColor;
@@ -295,6 +296,7 @@ public:
 	bool					useNativeDrawing();
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
+	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
 	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
@@ -305,6 +307,7 @@ public:
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );
+	void					setNeedsDisplay( NSView *pView );
 };
 
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );

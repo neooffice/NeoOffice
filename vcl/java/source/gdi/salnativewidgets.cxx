@@ -435,20 +435,26 @@ void VCLBitmapBuffer::Destroy()
 
 void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect )
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( pGraphics && mpBits && !mbUseLayer && pGraphics->useNativeDrawing() )
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-	if ( pGraphics && mpBits && !mbUseLayer )
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	if ( pGraphics )
 	{
-		// Assign ownership of bits to a CGDataProvider instance
-		CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
-		if ( aProvider )
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+		if ( mpBits && !mbUseLayer && pGraphics->useNativeDrawing() )
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+		if ( pGraphics && mpBits && !mbUseLayer )
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		{
-			mpBits = NULL;
-			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
-			CGDataProviderRelease( aProvider );
+			// Assign ownership of bits to a CGDataProvider instance
+			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
+			if ( aProvider )
+			{
+				mpBits = NULL;
+				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
+				CGDataProviderRelease( aProvider );
+			}
 		}
+
+		if ( pGraphics->mpFrame )
+			pGraphics->addNeedsDisplayRect( aDestRect, pGraphics->getNativeLineWidth() );
 	}
 
 	Destroy();

@@ -357,12 +357,9 @@ static NSTimer *pUpdateTimer = nil;
 {
 	for ( ::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.begin(); it != aNativeWindowMap.end(); ++it )
 	{
-		if ( [it->first isVisible] )
-		{
-			NSView *pContentView = [it->first contentView];
-			if ( pContentView )
-				[pContentView setNeedsDisplay:YES];
-		}
+		NSView *pContentView = [it->first contentView];
+		if ( pContentView )
+			it->second->setNeedsDisplay( pContentView );
 	}
 }
 
@@ -450,21 +447,24 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 
 	NSWindow *pWindow = [pView window];
 	if ( !pWindow || ![pWindow isVisible] )
+	{
+		[pView setNeedsDisplay:NO];
 		return;
+	}
 
 	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
 	if ( it != aNativeWindowMap.end() && it->second )
 	{
 		CGRect aBounds = CGRectStandardize( NSRectToCGRect( [pView bounds] ) );
-		CGRect aRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
-		if ( CGRectIntersectsRect( aBounds, aRect ) )
+		CGRect aDestRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
+		if ( CGRectIntersectsRect( aBounds, aDestRect ) )
 		{
 			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
-					it->second->copyToContext( NULL, false, false, aContext, aBounds, CGPointMake( 0, 0 ), aRect );
+					it->second->copyToContext( NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
 			}
 		}
 	}

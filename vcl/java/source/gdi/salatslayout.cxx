@@ -1669,7 +1669,10 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 	if ( !aContext || !mpGlyphs || !mpAdvances )
 		return;
 
-	if ( !CGRectIsEmpty( aBounds ) && maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+	CGRect aDrawBounds = aBounds;
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
 		return;
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
@@ -1711,6 +1714,18 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 					CGContextSetFont( aContext, aFont );
 					CGContextSetFontSize( aContext, mfFontSize );
 					CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpAdvances, mnGlyphCount );
+
+					// Calculate rough draw bounds including any transformations
+					if ( pGraphics->mpFrame )
+					{
+						float fWidth = mfFontSize * 2;
+						for ( int i = 0; i < mnGlyphCount; i++ )
+							fWidth += mpAdvances[ i ].width;
+						CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, CGRectMake( mfFontSize * -1, mfFontSize * -2, fWidth, mfFontSize * 4 ) );
+						if ( !CGRectIsEmpty( aTransformedBounds ) )
+							aDrawBounds = CGRectIntersection( aDrawBounds, aTransformedBounds );
+						pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
+					}
 
 					restoreClipXORGState();
 				}

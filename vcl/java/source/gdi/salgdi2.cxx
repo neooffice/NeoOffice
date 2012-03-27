@@ -113,6 +113,9 @@ void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		CGContextDrawImage( aContext, CGRectMake( 0, 0, maRect.size.width, maRect.size.height ), maImage );
 	}
 
+	if ( pGraphics->mpFrame )
+		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
+
 	restoreClipXORGState();
 }
 

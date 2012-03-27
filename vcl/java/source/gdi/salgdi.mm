@@ -320,6 +320,9 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
 	}
 
+	if ( pGraphics->mpFrame )
+		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
+
 	restoreClipXORGState();
 }
 
@@ -377,6 +380,9 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 			[NSGraphicsContext setCurrentContext:pOldContext];
 		}
 	}
+
+	if ( pGraphics->mpFrame )
+		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
 
 	restoreClipXORGState();
 }
@@ -475,6 +481,9 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					CGContextStrokePath( aContext );
 				}
 
+				if ( pGraphics->mpFrame )
+					pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
+
 				restoreClipXORGState();
 			}
 
@@ -524,6 +533,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	maLayer( NULL ),
 	mnPixelContextData( 0 ),
 	maPixelContext( NULL ),
+	maNeedsDisplayRect( CGRectNull ),
 	mnFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000 ),
 	mnLineColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
 	mnTextColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
@@ -1463,6 +1473,21 @@ void JavaSalGraphics::addGraphicsChangeListener( JavaSalBitmap *pBitmap )
 
 // -----------------------------------------------------------------------
 
+void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth )
+{
+	if ( !mpFrame || CGRectIsEmpty( aRect ) )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	if ( fLineWidth <= 0 )
+		fLineWidth = 1.0f;
+
+	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fLineWidth, aRect.origin.y - fLineWidth, aRect.size.width + ( fLineWidth * 2 ), aRect.size.height + ( fLineWidth * 2 ) ) );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 {
 	if ( !pOp )
@@ -1500,9 +1525,19 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 		CGRect aLayerBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
 		drawUndrawnNativeOps( aContext, aLayerBounds );
 
+		CGRect aDrawBounds = aDestRect;
+		if ( !CGRectIsEmpty( aLayerBounds ) )
+			aDrawBounds = CGRectIntersection( aDrawBounds, aLayerBounds );
+		if ( maNativeClipPath )
+			aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+		if ( CGRectIsEmpty( aDrawBounds ) )
+			return;
+
 		CGContextSaveGState( aContext );
 
 		pSrcGraphics->copyToContext( maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcPoint, aDestRect );
+
+		addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
 
 		CGContextRestoreGState( aContext );
 	}
@@ -1622,6 +1657,33 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 		if ( maLayer )
 			CGLayerRetain( maLayer );
 	}
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::setNeedsDisplay( NSView *pView )
+{
+	if ( !pView )
+		return;
+
+	NSWindow *pWindow = [pView window];
+	if ( !pWindow || ![pWindow isVisible] )
+	{
+		[pView setNeedsDisplay:NO];
+		return;
+	}
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	if ( maLayer && !CGRectIsEmpty( maNeedsDisplayRect ) )
+	{
+		CGSize aLayerSize = CGLayerGetSize( maLayer );
+		NSRect aBounds = [pView bounds];
+		NSRect aDirtyRect = NSMakeRect( maNeedsDisplayRect.origin.x + aLayerSize.width - aBounds.size.width, maNeedsDisplayRect.origin.y + aLayerSize.height - aBounds.size.height, maNeedsDisplayRect.size.width, maNeedsDisplayRect.size.height );
+		[pView setNeedsDisplayInRect:aDirtyRect];
+	}
+
+	maNeedsDisplayRect = CGRectNull;
 }
 
 // =======================================================================
