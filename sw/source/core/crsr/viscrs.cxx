@@ -809,7 +809,7 @@ void SwSelPaintRects::Hide()
 				{
 					Rectangle aPaintRect( sit->SVRect() );
 					if ( !aPaintRect.IsEmpty() )
-						pWin->Invalidate( aPaintRect );
+						pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
 				}
 
 				for( USHORT n = 0; n < Count(); ++n )
@@ -817,7 +817,7 @@ void SwSelPaintRects::Hide()
 					const SwRect aNextRect( (*this)[n] );
 					Rectangle aPaintRect( aNextRect.SVRect() );
 					if ( !aPaintRect.IsEmpty() )
-						pWin->Invalidate( aPaintRect );
+						pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
 				}
 			}
 		}
@@ -882,7 +882,7 @@ void SwSelPaintRects::Show()
 					{
 						Rectangle aPaintRect( sit->SVRect() );
 						if ( !aPaintRect.IsEmpty() )
-							pWin->Invalidate( aPaintRect );
+							pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
 					}
 
 					aLastSelectionPixelRects.clear();
@@ -893,7 +893,7 @@ void SwSelPaintRects::Show()
 						Rectangle aPaintRect( aNextRect.SVRect() );
 						if ( !aPaintRect.IsEmpty() )
 						{
-							pWin->Invalidate( aPaintRect );
+							pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
 							aLastSelectionPixelRects.push_back( aNextRect );
 						}
 					}
