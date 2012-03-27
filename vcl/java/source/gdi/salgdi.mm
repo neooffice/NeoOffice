@@ -36,6 +36,7 @@
 #include <salgdi.h>
 #include <saldata.hxx>
 #include <salframe.h>
+#include <vcl/svapp.hxx>
 #include <com/sun/star/vcl/VCLFont.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLBitmap.hxx>
@@ -319,9 +320,6 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		CGContextClipToRect( aContext, maRect );
 		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
 	}
-
-	if ( pGraphics->mpFrame )
-		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
 
 	restoreClipXORGState();
 }
@@ -1480,10 +1478,15 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
-	if ( fLineWidth <= 0 )
-		fLineWidth = 1.0f;
+	float fNativeLineWidth = fLineWidth;
+	if ( fNativeLineWidth <= 0 )
+		fNativeLineWidth = getNativeLineWidth();
 
-	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fLineWidth, aRect.origin.y - fLineWidth, aRect.size.width + ( fLineWidth * 2 ), aRect.size.height + ( fLineWidth * 2 ) ) );
+	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fNativeLineWidth, aRect.origin.y - fNativeLineWidth, aRect.size.width + ( fNativeLineWidth * 2 ), aRect.size.height + ( fNativeLineWidth * 2 ) ) );
+
+	// We need to explicitly flush before the OOo event dispatch loop starts
+	if ( !Application::IsInExecute() && !Application::IsShutDown() )
+		JavaSalFrame::FlushAllFrames();
 }
 
 // -----------------------------------------------------------------------
@@ -1537,7 +1540,8 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 
 		pSrcGraphics->copyToContext( maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcPoint, aDestRect );
 
-		addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
+		if ( mpFrame )
+			addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
 
 		CGContextRestoreGState( aContext );
 	}
