@@ -1718,10 +1718,10 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 					// Calculate rough draw bounds including any transformations
 					if ( pGraphics->mpFrame )
 					{
-						float fWidth = mfFontSize * 2;
+						float fWidth = mfFontSize * 4;
 						for ( int i = 0; i < mnGlyphCount; i++ )
 							fWidth += mpAdvances[ i ].width;
-						CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, CGRectMake( mfFontSize * -1, mfFontSize * -2, fWidth, mfFontSize * 4 ) );
+						CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, CGRectMake( mfFontSize * -2, mfFontSize * -2, fWidth, mfFontSize * 4 ) );
 						if ( !CGRectIsEmpty( aTransformedBounds ) )
 							aDrawBounds = CGRectIntersection( aDrawBounds, aTransformedBounds );
 						pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
