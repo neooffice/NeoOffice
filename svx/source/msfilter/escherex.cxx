@@ -3835,6 +3835,7 @@ sal_uInt32 EscherGraphicProvider::GetBlibID( SvStream& rPicOutStrm, const ByteSt
 									Point aPoint;
 									pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
 									aGraphic = Graphic( pVDev->GetBitmapEx( Point( 0, 0 ), aDstSizePixel ) );
+									eGraphicType = aGraphic.GetType();
 								}
 								delete pVDev;
 							}
