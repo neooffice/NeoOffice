@@ -1473,6 +1473,7 @@ void JavaSalGraphics::addGraphicsChangeListener( JavaSalBitmap *pBitmap )
 
 void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth )
 {
+#ifdef USE_NATIVE_WINDOW
 	if ( !mpFrame || CGRectIsEmpty( aRect ) )
 		return;
 
@@ -1487,6 +1488,7 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 	// We need to explicitly flush before the OOo event dispatch loop starts
 	if ( !Application::IsInExecute() && !Application::IsShutDown() )
 		JavaSalFrame::FlushAllFrames();
+#endif	 // USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
