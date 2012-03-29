@@ -87,11 +87,6 @@ public final class VCLFont {
 	public final static int FAMILY_SYSTEM = 6;
 
 	/**
-	 * Cached buffered image.
-	 */
-	private static BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
-
-	/**
 	 * The antialiased flag.
 	 */
 	private boolean antialiased = false;
