@@ -69,14 +69,14 @@ class JavaSalPrinter;
 class JavaSalVirtualDevice;
 class SalATSLayout;
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 namespace vcl
 {
 class com_sun_star_vcl_VCLFont;
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLGraphics;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLPath;
 }
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // --------------------
 // - JavaImplFontData -
@@ -89,7 +89,7 @@ protected:
 
 public:
 	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadNativeFontIDMap;
-	::rtl::OUString			maVCLFontName;
+	::rtl::OUString			maFontName;
 	mutable sal_IntPtr		mnNativeFontID;
 	::std::list< JavaImplFontData* >	maChildren;
 	::rtl::OUString			maFamilyName;
@@ -98,7 +98,7 @@ public:
 	static void				HandleBadFont( JavaImplFontData *pFontData );
 	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
 
-							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::rtl::OUString& rVCLFontName, sal_IntPtr nNativeFontID, const ::rtl::OUString& rFamilyName );
+							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::rtl::OUString& rFontName, sal_IntPtr nNativeFontID, const ::rtl::OUString& rFamilyName );
 	virtual					~JavaImplFontData();
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
@@ -176,6 +176,46 @@ public:
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
 };
 
+// ----------------
+// - JavaImplFont -
+// ----------------
+
+class SAL_DLLPRIVATE JavaImplFont
+{
+	static ::std::map< JavaImplFont*, JavaImplFont* >	maInstancesMap;
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	::rtl::OUString			maPSName;
+	sal_IntPtr				mnNativeFont;
+	short					mnOrientation;
+	double					mfScaleX;
+	float					mfSize;
+	sal_Bool				mbAntialiased;
+	sal_Bool				mbVertical;
+	sal_Bool				mbNativeFontOwner;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+
+public:
+	static void				clearNativeFonts();
+
+							JavaImplFont( ::rtl::OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+							JavaImplFont( JavaImplFont *pFont );
+	virtual					~JavaImplFont();
+
+	sal_IntPtr				getNativeFont();
+	short					getOrientation();
+	::rtl::OUString			getPSName();
+	double					getScaleX();
+	float					getSize();
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	::vcl::com_sun_star_vcl_VCLFont*	getVCLFont();
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	sal_Bool				isAntialiased();
+	sal_Bool				isVertical();
+};
+
 // -------------------
 // - JavaSalGraphics -
 // -------------------
@@ -204,8 +244,8 @@ public:
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	JavaImplFontData*		mpFontData;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	::std::hash_map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
+	JavaImplFont*			mpFont;
+	::std::hash_map< int, JavaImplFont* >	maFallbackFonts;
 	ImplLayoutRuns			maFallbackRuns;
 	FontFamily				mnFontFamily;
 	FontWeight				mnFontWeight;

@@ -54,6 +54,7 @@ dummy:
 SLOFILES= \
 	$(SLO)$/salatslayout.obj \
 	$(SLO)$/salbmp.obj \
+	$(SLO)$/salfont.obj \
 	$(SLO)$/salgdi.obj \
 	$(SLO)$/salgdi_cocoa.obj \
 	$(SLO)$/salgdi2.obj \

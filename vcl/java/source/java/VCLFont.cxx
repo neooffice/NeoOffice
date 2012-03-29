@@ -33,20 +33,12 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLFONT_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
-#endif
-#ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 using namespace rtl;
 using namespace vcl;
@@ -57,7 +49,7 @@ jclass com_sun_star_vcl_VCLFont::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
-::std::map< com_sun_star_vcl_VCLFont*, com_sun_star_vcl_VCLFont* >com_sun_star_vcl_VCLFont::maInstancesMap;
+::std::map< com_sun_star_vcl_VCLFont*, com_sun_star_vcl_VCLFont* > com_sun_star_vcl_VCLFont::maInstancesMap;
 
 // ----------------------------------------------------------------------------
 
@@ -184,7 +176,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					if ( aFont )
 					{
 						// Fix bug 3653 by never releasing this font as this
-						// is a font loaded by internally by Java and Java will
+						// is a font loaded internally by Java and Java will
 						// release the font out from underneath us
 						mbNativeFontOwner = sal_False;
 						mnNativeFont = (sal_IntPtr)aFont;
@@ -283,3 +275,5 @@ sal_Bool com_sun_star_vcl_VCLFont::isVertical()
 {
 	return mbVertical;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

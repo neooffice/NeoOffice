@@ -37,9 +37,9 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <vcl/svapp.hxx>
-#include <com/sun/star/vcl/VCLFont.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLBitmap.hxx>
+#include <com/sun/star/vcl/VCLFont.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLPath.hxx>
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
@@ -78,7 +78,9 @@ public:
 };
 
 using namespace osl;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 using namespace vcl;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // =======================================================================
 
@@ -544,7 +546,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	mpVCLGraphics( NULL ),
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	mpFontData( NULL ),
-	mpVCLFont( NULL ),
+	mpFont( NULL ),
 	mnFontFamily( FAMILY_DONTKNOW ),
 	mnFontWeight( WEIGHT_DONTKNOW ),
 	mnFontPitch( PITCH_DONTKNOW ),
@@ -591,10 +593,10 @@ JavaSalGraphics::~JavaSalGraphics()
 	if ( mpFontData )
 		delete mpFontData;
 
-	if ( mpVCLFont )
-		delete mpVCLFont;
+	if ( mpFont )
+		delete mpFont;
 
-	for ( ::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
+	for ( ::std::hash_map< int, JavaImplFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
 
 	if ( maNativeClipPath )

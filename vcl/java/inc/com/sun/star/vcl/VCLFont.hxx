@@ -38,9 +38,14 @@
 
 #include <map>
 
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 #include <vcl/vclenum.hxx>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 namespace vcl {
 
@@ -71,7 +76,6 @@ public:
 						com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont );
 	virtual				~com_sun_star_vcl_VCLFont();
 
-	com_sun_star_vcl_VCLFont*	clone();
 	::rtl::OUString		getName();
 	sal_IntPtr			getNativeFont();
 	short				getOrientation();
@@ -83,5 +87,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLFONT_HXX

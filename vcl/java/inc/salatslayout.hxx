@@ -39,12 +39,7 @@
 #include <hash_map>
 #include <vector>
 
-#ifndef _SV_SALLAYOUT_HXX
 #include <vcl/sallayout.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
-#include <com/sun/star/vcl/VCLFont.hxx>
-#endif
 
 // Comment out the following line to use the older ATSUI-based text rendering
 // APIs
@@ -59,6 +54,7 @@
 #define USE_SUBPIXEL_TEXT_RENDERING
 
 struct ImplATSLayoutData;
+class JavaImplFont;
 class JavaSalGraphics;
 
 // ----------------
@@ -69,7 +65,7 @@ class SalATSLayout : public GenericSalLayout
 {
 	JavaSalGraphics*	mpGraphics;
 	int					mnFallbackLevel;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	JavaImplFont*		mpFont;
 	mutable ImplLayoutRuns	maRuns;
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
@@ -80,7 +76,7 @@ class SalATSLayout : public GenericSalLayout
 
 public:
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	static void			GetGlyphBounds( sal_Int32 nGlyph, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, Rectangle &rRect );
+	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectangle &rRect );
 #else	// USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef	GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static sal_IntPtr	GetNativeFontFromATSFontRef( ATSFontRef aFont );

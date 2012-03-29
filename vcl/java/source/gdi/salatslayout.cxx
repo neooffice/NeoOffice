@@ -54,6 +54,8 @@
 #include <vcl/svapp.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#include <java/tools.hxx>
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
@@ -145,7 +147,7 @@ struct SAL_DLLPRIVATE ImplATSLayoutDataHash {
 	sal_Int32			mnStrHash;
 	bool				mbOwnsStr;
 
-						ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+						ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, JavaImplFont *pFont );
 						~ImplATSLayoutDataHash();
 };
 
@@ -172,9 +174,9 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 
 	mutable int			mnRefCount;
 	ImplATSLayoutDataHash*	mpHash;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	JavaImplFont*		mpFont;
 	bool*				mpNeedFallback;
-	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
+	JavaImplFont*		mpFallbackFont;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	CTFontRef			maFont;
 	CTTypesetterRef		maTypesetter;
@@ -208,9 +210,9 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	static void					SetFontFallbacks();
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	static void					ClearLayoutDataCache();
-	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
+	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout );
 
-						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
+						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout );
 						~ImplATSLayoutData();
 
 	void				Destroy();
@@ -242,7 +244,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	float					mfScaleY;
 
 public:
-							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -336,16 +338,16 @@ static bool ATSUIInitialize()
 
 // ============================================================================
 
-ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, com_sun_star_vcl_VCLFont *pVCLFont ) :
+ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, JavaImplFont *pFont ) :
 	mnLen( nEndCharPos - nMinCharPos ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	mnFontID( (CTFontRef)pVCLFont->getNativeFont() ),
+	mnFontID( (CTFontRef)pFont->getNativeFont() ),
 #else	// USE_CORETEXT_TEXT_RENDERING
-	mnFontID( (ATSUFontID)pVCLFont->getNativeFont() ),
+	mnFontID( (ATSUFontID)pFont->getNativeFont() ),
 #endif	// USE_CORETEXT_TEXT_RENDERING
-	mfFontSize( pVCLFont->getSize() ),
-	mfFontScaleX( pVCLFont->getScaleX() ),
-	mbAntialiased( pVCLFont->isAntialiased() ),
+	mfFontSize( pFont->getSize() ),
+	mfFontScaleX( pFont->getScaleX() ),
+	mbAntialiased( pFont->isAntialiased() ),
 	mbRTL( nFlags & SAL_LAYOUT_BIDI_RTL ),
 	mbVertical( nFlags & SAL_LAYOUT_VERTICAL ),
 	mpStr( (sal_Unicode *)( pStr + nMinCharPos ) ),
@@ -517,7 +519,7 @@ void ImplATSLayoutData::SetFontFallbacks()
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout )
+ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
@@ -526,7 +528,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 		return pLayoutData;
 #endif	// !USE_CORETEXT_TEXT_RENDERING
 
-	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pVCLFont );
+	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pFont );
 
 	// Search cache for matching layout
 	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
@@ -542,7 +544,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 		pLayoutHash->mbOwnsStr = true;
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pVCLFont, pCurrentLayout );
+		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pFont, pCurrentLayout );
 
 		if ( !pLayoutData )
 		{
@@ -603,10 +605,10 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout ) :
+ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout ) :
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
-	mpVCLFont( NULL ),
+	mpFont( NULL ),
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -639,8 +641,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont );
-	if ( !mpVCLFont )
+	mpFont = new JavaImplFont( pFont );
+	if ( !mpFont )
 	{
 		Destroy();
 		return;
@@ -1161,7 +1163,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 								::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
 								if ( ffit != pSalData->maJavaFontNameMapping.end() )
-									mpFallbackFont = new com_sun_star_vcl_VCLFont( ffit->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+									mpFallbackFont = new JavaImplFont( ffit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 							}
 
 							if ( !mpFallbackFont )
@@ -1176,7 +1178,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 										CGGlyph nGlyph;
 										if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
 										{
-											mpFallbackFont = new com_sun_star_vcl_VCLFont( nit->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+											mpFallbackFont = new JavaImplFont( nit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 											break;
 										}
 									}
@@ -1251,7 +1253,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				SalData *pSalData = GetSalData();
 				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
-					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+					mpFallbackFont = new JavaImplFont( it->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				else
 					bNeedFontFallbackList = true;
 			}
@@ -1341,10 +1343,10 @@ void ImplATSLayoutData::Destroy()
 		mpHash = NULL;
 	}
 
-	if ( mpVCLFont )
+	if ( mpFont )
 	{
-		delete mpVCLFont;
-		mpVCLFont = NULL;
+		delete mpFont;
+		mpFont = NULL;
 	}
 
 	if ( mpNeedFallback )
@@ -1577,7 +1579,7 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 // ============================================================================
 
-JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
 	JavaSalGraphicsOp( aNativeClipPath ),
 	mfX( fX ),
 	mfY( fY ),
@@ -1585,12 +1587,12 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativ
 	mpGlyphs( NULL ),
 	mpAdvances( NULL ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	mnFontID( (CTFontRef)pVCLFont->getNativeFont() ),
+	mnFontID( (CTFontRef)pFont->getNativeFont() ),
 #else	// USE_CORETEXT_TEXT_RENDERING
-	mnFontID( (ATSUFontID)pVCLFont->getNativeFont() ),
+	mnFontID( (ATSUFontID)pFont->getNativeFont() ),
 #endif	// USE_CORETEXT_TEXT_RENDERING
-	mfFontSize( pVCLFont->getSize() ),
-	mbAntialiased( pVCLFont->isAntialiased() ),
+	mfFontSize( pFont->getSize() ),
+	mbAntialiased( pFont->isAntialiased() ),
 	mnColor( nColor ),
 	mfRotateAngle( 0.0f ),
 	mfTranslateX( fTranslateX ),
@@ -1637,12 +1639,12 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativ
 		else
 			fRotateDegrees = 90.0f;
 		mfRotateAngle += fRotateDegrees * M_PI / 180;
-		mfScaleX *= (float)pVCLFont->getScaleX();
+		mfScaleX *= (float)pFont->getScaleX();
 		mfScaleY *= fGlyphScaleX;
 	}
 	else
 	{
-		mfScaleX *= (float)pVCLFont->getScaleX() * fGlyphScaleX;
+		mfScaleX *= (float)pFont->getScaleX() * fGlyphScaleX;
 	}
 }
 
@@ -1756,20 +1758,20 @@ SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackL
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
 
-void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, com_sun_star_vcl_VCLFont *pVCLFont, Rectangle &rRect )
+void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectangle &rRect )
 {
 	rRect = Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
 
-	if ( pVCLFont )
+	if ( pFont )
 	{
-		CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)pVCLFont->getNativeFont(), pVCLFont->getSize(), NULL, NULL );
+		CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)pFont->getNativeFont(), pFont->getSize(), NULL, NULL );
 		if ( aFont )
 		{
 			CGGlyph nGlyphID = (CGGlyph)( nGlyph & GF_IDXMASK );
 			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
 			if ( !CGRectIsEmpty( aRect ) )
 			{
-				double fFontScaleX = pVCLFont->getScaleX();
+				double fFontScaleX = pFont->getScaleX();
 				if ( nGlyph & GF_ROTMASK )
 					rRect = Rectangle( Point( Float32ToLong( aRect.origin.x ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * fFontScaleX * -1 ) ), Size( Float32ToLong( aRect.size.width ), Float32ToLong( aRect.size.height * fFontScaleX ) ) );
 				else
@@ -1817,7 +1819,7 @@ void SalATSLayout::ClearLayoutDataCache()
 SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
-	mpVCLFont( NULL ),
+	mpFont( NULL ),
 	mpKashidaLayoutData( NULL ),
 	mnOrigWidth( 0 ),
 	mfGlyphScaleX( 1.0 )
@@ -1826,13 +1828,13 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 
 	if ( mnFallbackLevel )
 	{
-		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+		::std::hash_map< int, JavaImplFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
-			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
+			mpFont = new JavaImplFont( it->second );
 	}
 	else
 	{
-		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont );
+		mpFont = new JavaImplFont( mpGraphics->mpFont );
 	}
 }
 
@@ -1842,8 +1844,8 @@ SalATSLayout::~SalATSLayout()
 {
 	Destroy();
 
-	if ( mpVCLFont )
-		delete mpVCLFont;
+	if ( mpFont )
+		delete mpFont;
 }
 
 // ----------------------------------------------------------------------------
@@ -1892,10 +1894,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bRet = false;
 	rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 
-	if ( !mpVCLFont )
+	if ( !mpFont )
 		return bRet;
 
-	com_sun_star_vcl_VCLFont *pSymbolFallbackFont = NULL;
+	JavaImplFont *pSymbolFallbackFont = NULL;
 	bool bUseNativeFallback = false;
 	int nEstimatedGlyphs = 0;
 
@@ -2067,7 +2069,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	SetGlyphCapacity( (int)( nEstimatedGlyphs * 1.1 ) );
 
-	com_sun_star_vcl_VCLFont *pFallbackFont = NULL;
+	JavaImplFont *pFallbackFont = NULL;
 	Point aPos;
 	maRuns.ResetPos();
 	mpGraphics->maFallbackRuns.ResetPos();
@@ -2098,7 +2100,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					aArabicTest[ 0 ] = 0x0634;
 					aArabicTest[ 1 ] = 0x0634;
 					aArabicTest[ 2 ] = 0x0640;
-					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont, this );
+					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpFont, this );
 				}
 
 				if ( mpKashidaLayoutData )
@@ -2172,13 +2174,13 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
 							if ( it != pSalData->maFontNameMapping.end() )
 							{
-								com_sun_star_vcl_VCLFont *pVCLFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-								if ( pVCLFont )
+								JavaImplFont *pFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+								if ( pFont )
 								{
-									if ( pVCLFont->getNativeFont() != mpVCLFont->getNativeFont() )
-										mpKashidaLayoutData->mpFallbackFont = pVCLFont;
+									if ( pFont->getNativeFont() != mpFont->getNativeFont() )
+										mpKashidaLayoutData->mpFallbackFont = pFont;
 									else
-										delete pVCLFont;
+										delete pFont;
 								}
 							}
 
@@ -2213,7 +2215,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 
-		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 		if ( !pLayoutData )
 			continue;
 
@@ -2264,7 +2266,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		if ( bRelayout )
 		{
 			pLayoutData->Release();
-			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
+			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 			if ( !pLayoutData )
 				continue;
 		}
@@ -2308,7 +2310,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							sal_Unicode aMirrored[ 1 ];
 							aMirrored[ 0 ] = nMirroredChar;
-							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont, this );
+							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpFont, this );
 							if ( pCurrentLayoutData )
 							{
 								if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
@@ -2367,8 +2369,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
-									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
 										pSymbolFallbackFont = NULL;
@@ -2390,8 +2392,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aTimesNewRoman );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
-									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
 										pSymbolFallbackFont = NULL;
@@ -2413,8 +2415,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
-									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
 										pSymbolFallbackFont = NULL;
@@ -2437,8 +2439,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aHiraginoMinchoProW3 : aHiraginoKakuGothicProW3 );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
-									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
 										delete pSymbolFallbackFont;
 										pSymbolFallbackFont = NULL;
@@ -2565,7 +2567,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
 				USHORT nHighScore = 0;
-				sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
+				sal_IntPtr nNativeFont = mpFont->getNativeFont();
 				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 				{
 					if ( it->first == nNativeFont )
@@ -2590,7 +2592,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		int nNextLevel = mnFallbackLevel + 1;
-		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
+		::std::hash_map< int, JavaImplFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
 		{
 			delete it->second;
@@ -2600,11 +2602,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// Use the kashida fallback font first so that we are assured of
 		// rendering a kashida if needed
 		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new JavaImplFont( mpKashidaLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new JavaImplFont( pHighScoreFontData->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
 		else if ( pFallbackFont )
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new JavaImplFont( pFallbackFont );
 		else
 			rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 	}
@@ -2724,7 +2726,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			if ( bUseNativeDrawing )
 			{
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			}
 			else if ( bPrinter )
@@ -2750,7 +2752,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 					}
 				}
 
-				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
+				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpFont->getVCLFont(), rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
 			}
 			else
 			{
@@ -2758,7 +2760,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				for ( i = 0; i < nGlyphCount; i++ )
 					aAdvances[ i ] = (float)aDXArray[ i + nStartGlyph ] / UNITS_PER_PIXEL;
 
-				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
+				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpFont->getVCLFont(), rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
 			}
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		}
