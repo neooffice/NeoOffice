@@ -329,6 +329,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
 							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							[pNSFont retain];
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 							nActualCount++;
 						}
 
@@ -435,6 +439,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								[pBoldItalicFont release];
 							}
 						}
+
+						[pFonts release];
 					}
 
 					[pPool release];
