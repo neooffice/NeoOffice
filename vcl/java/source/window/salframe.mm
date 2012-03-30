@@ -699,7 +699,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
-					it->second->copyToContext( NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
+					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
 			}
 		}
 	}
@@ -715,6 +715,7 @@ JavaSalFrame::JavaSalFrame() :
     maHiddenContext( NULL ),
     maHiddenLayer( NULL ),
 	maFrameLayer( NULL ),
+	maFrameClipPath( NULL ),
 #endif  // USE_NATIVE_WINDOW
 	mpVCLFrame( NULL ),
 	mpGraphics( new JavaSalGraphics() ),
@@ -787,6 +788,9 @@ JavaSalFrame::~JavaSalFrame()
 	SetParent( NULL );
 
 #ifdef USE_NATIVE_WINDOW
+	if ( maFrameClipPath )
+		CGPathRelease( maFrameClipPath );
+
 	if ( maFrameLayer )
 		CGLayerRelease( maFrameLayer );
 
@@ -2131,7 +2135,12 @@ void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
 void JavaSalFrame::ResetClipRegion()
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalFrame::ResetClipRegion not implemented\n" );
+	if ( maFrameClipPath )
+	{
+		CGPathRelease( maFrameClipPath );
+		maFrameClipPath = NULL;
+		mpGraphics->setFrameClipPath( maFrameClipPath );
+	}
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
@@ -2146,7 +2155,7 @@ void JavaSalFrame::ResetClipRegion()
 void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalFrame::BeginSetClipRegion not implemented\n" );
+	ResetClipRegion();
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
@@ -2161,7 +2170,15 @@ void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalFrame::UnionClipRegion not implemented\n" );
+	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
+	if ( !CGRectIsEmpty( aRect ) )
+	{
+		if ( !maFrameClipPath )
+			maFrameClipPath = CGPathCreateMutable();
+
+		if ( maFrameClipPath )
+			CGPathAddRect( maFrameClipPath, NULL, aRect );
+	}
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )
@@ -2176,7 +2193,7 @@ void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight 
 void JavaSalFrame::EndSetClipRegion()
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalFrame::EndSetClipRegion not implemented\n" );
+	mpGraphics->setFrameClipPath( maFrameClipPath );
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( !mpGraphics->mpVCLGraphics )

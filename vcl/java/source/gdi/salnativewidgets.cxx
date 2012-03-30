@@ -271,7 +271,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 						{
 							CGContextRetain( maContext );
 							CGContextSaveGState( maContext );
-							JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
+							JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
 							CGContextTranslateCTM( maContext, nX, nY );
 							mnHIThemeOrientationFlags = kHIThemeOrientationNormal;
 							mbUseLayer = true;
@@ -448,7 +448,7 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 			if ( aProvider )
 			{
 				mpBits = NULL;
-				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
+				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
 				CGDataProviderRelease( aProvider );
 			}
 		}

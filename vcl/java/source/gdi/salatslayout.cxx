@@ -244,7 +244,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	float					mfScaleY;
 
 public:
-							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -1579,8 +1579,8 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 // ============================================================================
 
-JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
-	JavaSalGraphicsOp( aNativeClipPath ),
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
+	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath ),
 	mfX( fX ),
 	mfY( fY ),
 	mnGlyphCount( nGlyphCount ),
@@ -1672,6 +1672,8 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 		return;
 
 	CGRect aDrawBounds = aBounds;
+	if ( maFrameClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maFrameClipPath ) );
 	if ( maNativeClipPath )
 		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
 	if ( CGRectIsEmpty( aDrawBounds ) )
@@ -2726,7 +2728,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			if ( bUseNativeDrawing )
 			{
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 			}
 			else if ( bPrinter )

@@ -113,6 +113,7 @@ public:
 class SAL_DLLPRIVATE JavaSalGraphicsOp
 {
 protected:
+	CGPathRef				maFrameClipPath;
 	CGPathRef				maNativeClipPath;
 	bool					mbInvert;
 	bool					mbXOR;
@@ -128,7 +129,7 @@ protected:
 	CGRect					maXORRect;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, bool bXOR = false, float fLineWidth = 0 );
+							JavaSalGraphicsOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert = false, bool bXOR = false, float fLineWidth = 0 );
 	virtual					~JavaSalGraphicsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds ) {}
@@ -149,7 +150,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 	bool					mbFlip;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect, bool bFlip = false );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect, bool bFlip = false );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -170,7 +171,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	bool					mbLineDash;
 
 public:
-							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE, bool bLineDash = false );
+							JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE, bool bLineDash = false );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -253,13 +254,14 @@ public:
 	FontPitch				mnFontPitch;
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
+	CGPathRef				maFrameClipPath;
 	CGMutablePathRef		maNativeClipPath;
 	bool					mbInvert;
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
 
-	static void				setContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth );
+	static void				setContextDefaultSettings( CGContextRef aContext, const CGPathRef aFrameClipPath, const CGPathRef aClipPath, float fLineWidth );
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
@@ -332,6 +334,9 @@ public:
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
+#ifdef USE_NATIVE_WINDOW
+	void					setFrameClipPath( CGPathRef aFrameClipPath );
+#endif	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	bool					useNativeDrawing();
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
@@ -339,7 +344,7 @@ public:
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	ULONG					getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }

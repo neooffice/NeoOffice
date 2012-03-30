@@ -46,6 +46,11 @@
 #include <vcl/salgeom.hxx>
 #include <vcl/salgtype.hxx>
 
+#include <premac.h>
+#include <ApplicationServices/ApplicationServices.h>
+#include <postmac.h>
+#undef check
+
 #endif	// __cplusplus
 
 // Uncomment the following line to enable native window drawing APIs
@@ -78,6 +83,7 @@ private:
 	CGContextRef			maHiddenContext;
 	CGLayerRef				maHiddenLayer;
 	CGLayerRef				maFrameLayer;
+	CGMutablePathRef		maFrameClipPath;
 #endif	// USE_NATIVE_WINDOW
 
 public:
