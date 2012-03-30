@@ -51,6 +51,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+static bool bVCLEventLoopStarted = false;
+
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
@@ -1527,8 +1529,13 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fNativeLineWidth, aRect.origin.y - fNativeLineWidth, aRect.size.width + ( fNativeLineWidth * 2 ), aRect.size.height + ( fNativeLineWidth * 2 ) ) );
 
 	// We need to explicitly flush before the OOo event dispatch loop starts
-	if ( !Application::IsInExecute() && !Application::IsShutDown() )
-		JavaSalFrame::FlushAllFrames();
+	if ( !bVCLEventLoopStarted )
+	{
+		if ( !Application::IsInExecute() && !Application::IsShutDown() )
+			JavaSalFrame::FlushAllFrames();
+		else
+			bVCLEventLoopStarted = true;
+	}
 #endif	 // USE_NATIVE_WINDOW
 }
 
