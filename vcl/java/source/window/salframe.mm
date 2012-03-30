@@ -71,9 +71,82 @@ typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOpti
 #ifdef USE_NATIVE_WINDOW
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 #endif	// USE_NATIVE_WINDOW
+static NSColor *pVCLControlTextColor = nil;
+static NSColor *pVCLTextColor = nil;
+static NSColor *pVCLHighlightColor = nil;
+static NSColor *pVCLHighlightTextColor = nil;
+static NSColor *pVCLDisabledControlTextColor = nil;
+static NSColor *pVCLBackColor = nil;
+static ::osl::Mutex aSystemColorsMutex;
 
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
+
+static void HandleSystemColorsChangedRequest()
+{
+	MutexGuard aGuard( aSystemColorsMutex );
+
+	if ( pVCLControlTextColor )
+		[pVCLControlTextColor release];
+	pVCLControlTextColor = [NSColor controlTextColor];
+	if ( pVCLControlTextColor )
+	{
+		pVCLControlTextColor = [pVCLControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLControlTextColor )
+			[pVCLControlTextColor retain];
+	}
+
+	if ( pVCLTextColor )
+		[pVCLTextColor release];
+	pVCLTextColor = [NSColor textColor];
+	if ( pVCLTextColor )
+	{
+		pVCLTextColor = [pVCLTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLTextColor )
+			[pVCLTextColor retain];
+	}
+
+	if ( pVCLHighlightColor )
+		[pVCLHighlightColor release];
+	pVCLHighlightColor = [NSColor selectedTextBackgroundColor];
+	if ( pVCLHighlightColor )
+	{
+		pVCLHighlightColor = [pVCLHighlightColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLHighlightColor )
+			[pVCLHighlightColor retain];
+	}
+
+	if ( pVCLHighlightTextColor )
+		[pVCLHighlightTextColor release];
+	pVCLHighlightTextColor = [NSColor selectedTextColor];
+	if ( pVCLHighlightTextColor )
+	{
+		pVCLHighlightTextColor = [pVCLHighlightTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLHighlightTextColor )
+			[pVCLHighlightTextColor retain];
+	}
+
+	if ( pVCLDisabledControlTextColor )
+		[pVCLDisabledControlTextColor release];
+	pVCLDisabledControlTextColor = [NSColor disabledControlTextColor];
+	if ( pVCLDisabledControlTextColor )
+	{
+		pVCLDisabledControlTextColor = [pVCLDisabledControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLDisabledControlTextColor )
+			[pVCLDisabledControlTextColor retain];
+	}
+
+	if ( pVCLBackColor )
+		[pVCLBackColor release];
+	pVCLBackColor = [NSColor controlHighlightColor];
+	if ( pVCLBackColor )
+	{
+		pVCLBackColor = [pVCLBackColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pVCLBackColor )
+			[pVCLBackColor retain];
+	}
+}
 
 @interface VCLSetSystemUIMode : NSObject
 {
@@ -361,6 +434,56 @@ static NSTimer *pUpdateTimer = nil;
 		if ( pContentView )
 			it->second->setNeedsDisplay( pContentView );
 	}
+}
+
+@end
+
+@interface VCLUpdateSystemColors : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)systemColorsChanged:(NSNotification *)pNotification;
+- (void)updateSystemColors:(id)pObject;
+@end
+
+static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
+
+@implementation VCLUpdateSystemColors
+
++ (id)create
+{
+	VCLUpdateSystemColors *pRet = [[VCLUpdateSystemColors alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+ 
+	return self;
+}
+
+- (void)systemColorsChanged:(NSNotification *)pNotification
+{
+	HandleSystemColorsChangedRequest();
+}
+
+- (void)updateSystemColors:(id)pObject
+{
+	if ( !pVCLControlTextColor )
+	{
+		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+		if ( pNotificationCenter )
+		{
+			pVCLUpdateSystemColors = self;
+			[pVCLUpdateSystemColors retain];
+			[pNotificationCenter addObserver:pVCLUpdateSystemColors selector:@selector(systemColorsChanged:) name:NSSystemColorsDidChangeNotification object:nil];
+		}
+	}
+
+	HandleSystemColorsChangedRequest();
 }
 
 @end
@@ -1482,17 +1605,23 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	}
 	aStyleSettings.SetCursorBlinkTime( nBlinkRate );
 
+	// Update colors if any system colors have not yet been set
+	ResettableGuard< Mutex > aGuard( aSystemColorsMutex );
+	if ( !pVCLControlTextColor || !pVCLTextColor || !pVCLHighlightColor || !pVCLHighlightTextColor || !pVCLDisabledControlTextColor || !pVCLBackColor )
+	{
+		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+	}
+	
 	BOOL useThemeDialogColor = FALSE;
 	Color themeDialogColor;
-	NSColor *pControlTextColor = [NSColor controlTextColor];
-	if ( pControlTextColor )
+	if ( pVCLControlTextColor )
 	{
-		pControlTextColor = [pControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pControlTextColor )
-		{
-			themeDialogColor = Color( (unsigned char)( [pControlTextColor redComponent] * 0xff ), (unsigned char)( [pControlTextColor greenComponent] * 0xff ), (unsigned char)( [pControlTextColor blueComponent] * 0xff ) );
-			useThemeDialogColor = TRUE;
-		}
+		themeDialogColor = Color( (unsigned char)( [pVCLControlTextColor redComponent] * 0xff ), (unsigned char)( [pVCLControlTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLControlTextColor blueComponent] * 0xff ) );
+		useThemeDialogColor = TRUE;
 	}
 
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
@@ -1500,13 +1629,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
 #else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aTextColor;
-	NSColor *pTextColor = [NSColor textColor];
-	if ( pTextColor )
-	{
-		pTextColor = [pTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pTextColor )
-			aTextColor = Color( (unsigned char)( [pTextColor redComponent] * 0xff ), (unsigned char)( [pTextColor greenComponent] * 0xff ), (unsigned char)( [pTextColor blueComponent] * 0xff ) );
-	}
+	if ( pVCLTextColor )
+		aTextColor = Color( (unsigned char)( [pVCLTextColor redComponent] * 0xff ), (unsigned char)( [pVCLTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLTextColor blueComponent] * 0xff ) );
 #endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
@@ -1523,13 +1647,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aHighlightColor( SALCOLOR_RED( nTextHighlightColor ), SALCOLOR_GREEN( nTextHighlightColor ), SALCOLOR_BLUE( nTextHighlightColor ) );
 #else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightColor;
-	NSColor *pHighlightColor = [NSColor selectedTextBackgroundColor];
-	if ( pHighlightColor )
-	{
-		pHighlightColor = [pHighlightColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pHighlightColor )
-			aHighlightColor = Color( (unsigned char)( [pHighlightColor redComponent] * 0xff ), (unsigned char)( [pHighlightColor greenComponent] * 0xff ), (unsigned char)( [pHighlightColor blueComponent] * 0xff ) );
-	}
+	if ( pVCLHighlightColor )
+		aHighlightColor = Color( (unsigned char)( [pVCLHighlightColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor blueComponent] * 0xff ) );
 #endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetActiveBorderColor( aHighlightColor );
 	aStyleSettings.SetActiveColor( aHighlightColor );
@@ -1542,27 +1661,17 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
 #else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightTextColor;
-	NSColor *pHighlightTextColor = [NSColor selectedTextColor];
-	if ( pHighlightTextColor )
-	{
-		pHighlightTextColor = [pHighlightTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pHighlightTextColor )
-			aHighlightTextColor = Color( (unsigned char)( [pHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pHighlightTextColor blueComponent] * 0xff ) );
-	}
+	if ( pVCLHighlightTextColor )
+		aHighlightTextColor = Color( (unsigned char)( [pVCLHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor blueComponent] * 0xff ) );
 #endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
 
 	useThemeDialogColor = FALSE;
-	NSColor *pDisabledControlTextColor = [NSColor disabledControlTextColor];
-	if ( pDisabledControlTextColor )
+	if ( pVCLDisabledControlTextColor )
 	{
-		pDisabledControlTextColor = [pDisabledControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pDisabledControlTextColor )
-		{
-			themeDialogColor = Color( (unsigned char)( [pDisabledControlTextColor redComponent] * 0xff ), (unsigned char)( [pDisabledControlTextColor greenComponent] * 0xff ), (unsigned char)( [pDisabledControlTextColor blueComponent] * 0xff ) );
-			useThemeDialogColor = TRUE;
-		}
+		themeDialogColor = Color( (unsigned char)( [pVCLDisabledControlTextColor redComponent] * 0xff ), (unsigned char)( [pVCLDisabledControlTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLDisabledControlTextColor blueComponent] * 0xff ) );
+		useThemeDialogColor = TRUE;
 	}
 
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
@@ -1570,13 +1679,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
 #else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aBackColor;
-	NSColor *pBackColor = [NSColor controlHighlightColor];
-	if ( pBackColor )
-	{
-		pBackColor = [pBackColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pBackColor )
-			aBackColor = Color( (unsigned char)( [pBackColor redComponent] * 0xff ), (unsigned char)( [pBackColor greenComponent] * 0xff ), (unsigned char)( [pBackColor blueComponent] * 0xff ) );
-	}
+	if ( pVCLBackColor )
+		aBackColor = Color( (unsigned char)( [pVCLBackColor redComponent] * 0xff ), (unsigned char)( [pVCLBackColor greenComponent] * 0xff ), (unsigned char)( [pVCLBackColor blueComponent] * 0xff ) );
 #endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
