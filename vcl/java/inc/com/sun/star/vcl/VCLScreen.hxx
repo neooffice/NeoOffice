@@ -36,10 +36,15 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 #include <tools/gen.hxx>
 #include <vcl/salgtype.hxx>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 namespace vcl {
 
@@ -64,5 +69,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX

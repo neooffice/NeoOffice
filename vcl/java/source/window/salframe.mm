@@ -41,6 +41,7 @@
 #include <saldata.hxx>
 #include <salmenu.h>
 #include <salsys.h>
+#include <vcl/dialog.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
@@ -48,9 +49,8 @@
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLScreen.hxx>
-#include <vcl/dialog.hxx>
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -365,8 +365,6 @@ static NSTimer *pUpdateTimer = nil;
 
 @end
 
-// ============================================================================
-
 #endif	// USE_NATIVE_WINDOW
 
 // =======================================================================
@@ -589,6 +587,54 @@ void JavaSalFrame::FlushAllFrames()
 }
 
 #endif	// USE_NATIVE_WINDOW
+
+// -----------------------------------------------------------------------
+
+unsigned int JavaSalFrame::GetDefaultScreenNumber()
+{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	return com_sun_star_vcl_VCLScreen::getDefaultScreenNumber();
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalFrame::GetDefaultScreenNumber not implemented\n" );
+	return 0;
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+}
+
+// -----------------------------------------------------------------------
+
+const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode )
+{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	return com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalFrame::GetScreenBounds not implemented\n" );
+	return Rectangle();
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+}
+
+// -----------------------------------------------------------------------
+
+const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode )
+{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, bFullScreenMode );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalFrame::GetScreenBounds2 not implemented\n" );
+	return Rectangle();
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+}
+
+// -----------------------------------------------------------------------
+
+unsigned int JavaSalFrame::GetScreenCount()
+{
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+	return com_sun_star_vcl_VCLScreen::getScreenCount();
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalFrame::GetScreenCount not implemented\n" );
+	return 0;
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+}
 
 // -----------------------------------------------------------------------
 
@@ -1093,7 +1139,7 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 		nHeight -= maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	}
 
-	Rectangle aRect( com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
+	Rectangle aRect( JavaSalFrame::GetScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
 	if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
 		rRect = aRect;
 }
@@ -1449,8 +1495,19 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		}
 	}
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	Color aTextColor;
+	NSColor *pTextColor = [NSColor textColor];
+	if ( pTextColor )
+	{
+		pTextColor = [pTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pTextColor )
+			aTextColor = Color( (unsigned char)( [pTextColor redComponent] * 0xff ), (unsigned char)( [pTextColor greenComponent] * 0xff ), (unsigned char)( [pTextColor blueComponent] * 0xff ) );
+	}
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
 	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
@@ -1461,16 +1518,38 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	aStyleSettings.SetWindowTextColor( aTextColor );
 	aStyleSettings.SetFieldTextColor( aTextColor );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextHighlightColor = com_sun_star_vcl_VCLScreen::getTextHighlightColor();
 	Color aHighlightColor( SALCOLOR_RED( nTextHighlightColor ), SALCOLOR_GREEN( nTextHighlightColor ), SALCOLOR_BLUE( nTextHighlightColor ) );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	Color aHighlightColor;
+	NSColor *pHighlightColor = [NSColor selectedTextBackgroundColor];
+	if ( pHighlightColor )
+	{
+		pHighlightColor = [pHighlightColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pHighlightColor )
+			aHighlightColor = Color( (unsigned char)( [pHighlightColor redComponent] * 0xff ), (unsigned char)( [pHighlightColor greenComponent] * 0xff ), (unsigned char)( [pHighlightColor blueComponent] * 0xff ) );
+	}
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetActiveBorderColor( aHighlightColor );
 	aStyleSettings.SetActiveColor( aHighlightColor );
 	aStyleSettings.SetActiveTextColor( aHighlightColor );
 	aStyleSettings.SetHighlightColor( aHighlightColor );
 	aStyleSettings.SetMenuHighlightColor( aHighlightColor );
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextHighlightTextColor = com_sun_star_vcl_VCLScreen::getTextHighlightTextColor();
 	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	Color aHighlightTextColor;
+	NSColor *pHighlightTextColor = [NSColor selectedTextColor];
+	if ( pHighlightTextColor )
+	{
+		pHighlightTextColor = [pHighlightTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pHighlightTextColor )
+			aHighlightTextColor = Color( (unsigned char)( [pHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pHighlightTextColor blueComponent] * 0xff ) );
+	}
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
 
@@ -1486,8 +1565,19 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		}
 	}
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
 	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
+#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	Color aBackColor;
+	NSColor *pBackColor = [NSColor controlHighlightColor];
+	if ( pBackColor )
+	{
+		pBackColor = [pBackColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pBackColor )
+			aBackColor = Color( (unsigned char)( [pBackColor redComponent] * 0xff ), (unsigned char)( [pBackColor greenComponent] * 0xff ), (unsigned char)( [pBackColor blueComponent] * 0xff ) );
+	}
+#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
 	aStyleSettings.SetDeactiveColor( aBackColor );

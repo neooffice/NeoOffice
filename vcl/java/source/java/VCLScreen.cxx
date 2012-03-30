@@ -33,11 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLSCREEN_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
 using namespace vcl;
 
@@ -378,3 +376,5 @@ SalColor com_sun_star_vcl_VCLScreen::getTextTextColor()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

@@ -44,6 +44,7 @@
 #include <vcl/sysdata.hxx>
 #include <vcl/salframe.hxx>
 #include <vcl/salgeom.hxx>
+#include <vcl/salgtype.hxx>
 
 #endif	// __cplusplus
 
@@ -108,6 +109,10 @@ public:
 #ifdef USE_NATIVE_WINDOW
 	static void				FlushAllFrames();
 #endif	// USE_NATIVE_WINDOW
+	static unsigned int		GetDefaultScreenNumber();
+	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
+	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
+	static unsigned int		GetScreenCount();
 
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
