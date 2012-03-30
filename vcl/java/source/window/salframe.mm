@@ -50,7 +50,7 @@
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLScreen.hxx>
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -71,6 +71,12 @@ typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOpti
 #ifdef USE_NATIVE_WINDOW
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 #endif	// USE_NATIVE_WINDOW
+#if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
+static unsigned int nMainScreen = 0;
+static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
+static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
+static ::osl::Mutex aScreensMutex;
+#endif	// USE_NATIVE_WINDOW && USE_NATIVE_VIRTUAL_DEVICE && USE_NATIVE_PRINTING
 static NSColor *pVCLControlTextColor = nil;
 static NSColor *pVCLTextColor = nil;
 static NSColor *pVCLHighlightColor = nil;
@@ -82,6 +88,60 @@ static ::osl::Mutex aSystemColorsMutex;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+
+#ifdef USE_NATIVE_WINDOW
+
+static void HandleScreensChangedRequest()
+{
+	MutexGuard aGuard( aScreensMutex );
+
+	nMainScreen = 0;
+	aVCLScreensFullBoundsList.clear();
+	aVCLScreensVisibleBoundsList.clear();
+
+	NSArray *pScreens = [NSScreen screens];
+	NSScreen *pMainScreen = [NSScreen mainScreen];
+	if ( pScreens )
+	{
+		// Calculate the total combined scren so that we can flip coordinates
+		NSRect aTotalBounds = NSMakeRect( 0, 0, 0, 0 );
+		unsigned int nCount = [pScreens count];
+		unsigned int i;
+		for ( i = 0 ; i < nCount; i++ )
+		{
+			NSScreen *pScreen = [pScreens objectAtIndex:i];
+			if ( pScreen )
+				aTotalBounds = NSUnionRect( [pScreen frame], aTotalBounds );
+		}
+
+		for ( i = 0 ; i < nCount; i++ )
+		{
+			NSRect aLastFullFrame = NSMakeRect( 0, 0, 0, 0 );
+			NSScreen *pScreen = [pScreens objectAtIndex:i];
+			if ( pScreen )
+			{
+				NSRect aFullFrame = [pScreen frame];
+				NSRect aVisibleFrame = [pScreen visibleFrame];
+
+				// On some machines, there are two monitors for every mirrored
+				// display so eliminate those duplicate monitors
+				if ( i && NSEqualRects( aLastFullFrame, aFullFrame ) )
+					continue;
+				aLastFullFrame = aFullFrame;
+
+				// Flip coordinates and cache bounds
+				aVCLScreensFullBoundsList.push_back( Rectangle( Point( (long)aFullFrame.origin.x, (long)aTotalBounds.size.height - aFullFrame.origin.y - aFullFrame.size.height ), Size( (long)aFullFrame.size.width, (long)aFullFrame.size.height ) ) );
+				aVCLScreensVisibleBoundsList.push_back( Rectangle( Point( (long)aVisibleFrame.origin.x, (long)aTotalBounds.size.height - aVisibleFrame.origin.y- aVisibleFrame.size.height ), Size( (long)aVisibleFrame.size.width, (long)aVisibleFrame.size.height ) ) );
+
+				// Check if this is the main screen
+				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
+					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
+			}
+		}
+	}
+}
+
+#endif	// USE_NATIVE_WINDOW
 
 static void HandleSystemColorsChangedRequest()
 {
@@ -438,6 +498,58 @@ static NSTimer *pUpdateTimer = nil;
 
 @end
 
+@interface VCLUpdateScreens : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)screensChanged:(NSNotification *)pNotification;
+- (void)updateScreens:(id)pObject;
+@end
+
+static VCLUpdateScreens *pVCLUpdateScreens = nil;
+
+@implementation VCLUpdateScreens
+
++ (id)create
+{
+	VCLUpdateScreens *pRet = [[VCLUpdateScreens alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+ 
+	return self;
+}
+
+- (void)screensChanged:(NSNotification *)pNotification
+{
+	HandleScreensChangedRequest();
+}
+
+- (void)updateScreens:(id)pObject
+{
+	if ( !pVCLUpdateScreens )
+	{
+		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+		if ( pNotificationCenter )
+		{
+			pVCLUpdateScreens = self;
+			[pVCLUpdateScreens retain];
+			[pNotificationCenter addObserver:pVCLUpdateScreens selector:@selector(screensChanged:) name:NSApplicationDidChangeScreenParametersNotification object:nil];
+		}
+	}
+
+	HandleScreensChangedRequest();
+}
+
+@end
+
+#endif	// USE_NATIVE_WINDOW
+
 @interface VCLUpdateSystemColors : NSObject
 {
 }
@@ -472,7 +584,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 - (void)updateSystemColors:(id)pObject
 {
-	if ( !pVCLControlTextColor )
+	if ( !pVCLUpdateSystemColors )
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
@@ -487,8 +599,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 }
 
 @end
-
-#endif	// USE_NATIVE_WINDOW
 
 // =======================================================================
 
@@ -717,10 +827,20 @@ unsigned int JavaSalFrame::GetDefaultScreenNumber()
 {
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	return com_sun_star_vcl_VCLScreen::getDefaultScreenNumber();
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalFrame::GetDefaultScreenNumber not implemented\n" );
-	return 0;
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	// Update if screens have not yet been set
+	ResettableGuard< Mutex > aGuard( aScreensMutex );
+	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
+	{
+		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+	}
+
+	return nMainScreen;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -729,10 +849,66 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 {
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	return com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalFrame::GetScreenBounds not implemented\n" );
-	return Rectangle();
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	// Update if screens have not yet been set
+	ResettableGuard< Mutex > aGuard( aScreensMutex );
+	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
+	{
+		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+	}
+
+	// Fix bug 2671 by setting width and height greater than 0
+	if ( nWidth <= 0 )
+		nWidth = 1;
+	if ( nHeight <= 0 )
+		nHeight = 1;
+
+	// Iterate through the screens and find the screen that the
+	// point is inside of
+	Point aPoint( nX, nY );
+	::std::vector< Rectangle >::const_iterator it = aVCLScreensFullBoundsList.begin();
+	unsigned int i;
+	for ( i = 0; i < aVCLScreensFullBoundsList.size() && i < aVCLScreensVisibleBoundsList.size(); i++ )
+	{
+		// Test if the top left point is inside the screen
+		if ( aVCLScreensFullBoundsList[ i ].IsInside( aPoint ) )
+		{
+			if ( bFullScreenMode )
+				return aVCLScreensFullBoundsList[ i ];
+			else
+				return aVCLScreensVisibleBoundsList[ i ];
+		}
+	}
+
+	// Iterate through the screens and find the closest screen
+	unsigned long nClosestArea = ULONG_MAX;
+	Rectangle aClosestBounds;
+	for ( i = 0; i < aVCLScreensFullBoundsList.size() && i < aVCLScreensVisibleBoundsList.size(); i++ )
+	{
+		Rectangle aBounds;
+		if ( bFullScreenMode )
+			aBounds = aVCLScreensFullBoundsList[ i ];
+		else
+			aBounds = aVCLScreensVisibleBoundsList[ i ];
+
+		// Test the closeness of the point to the center of the screen
+		unsigned long nArea = labs( ( aBounds.Left() + ( aBounds.GetWidth() / 2 ) - nX ) * ( aBounds.Top() + ( aBounds.GetHeight() / 2 ) - nY ) );
+		if ( nClosestArea > nArea )
+		{
+			nClosestArea = nArea;
+			aClosestBounds = aBounds;
+		}
+	}
+
+	if ( aClosestBounds.GetWidth() > 0 && aClosestBounds.GetHeight() > 0 )
+		return aClosestBounds;
+	else
+		return Rectangle( Point( 0, 0 ), Size( 800, 600 ) );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -741,10 +917,26 @@ const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bF
 {
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, bFullScreenMode );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalFrame::GetScreenBounds2 not implemented\n" );
-	return Rectangle();
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	// Update if screens have not yet been set
+	ResettableGuard< Mutex > aGuard( aScreensMutex );
+	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
+	{
+		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+	}
+
+	if ( bFullScreenMode && nScreen < aVCLScreensFullBoundsList.size() )
+		return aVCLScreensFullBoundsList[ nScreen ];
+
+	if ( !bFullScreenMode && nScreen < aVCLScreensVisibleBoundsList.size() )
+		return aVCLScreensVisibleBoundsList[ nScreen ];
+		
+	return Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -753,10 +945,20 @@ unsigned int JavaSalFrame::GetScreenCount()
 {
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	return com_sun_star_vcl_VCLScreen::getScreenCount();
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalFrame::GetScreenCount not implemented\n" );
-	return 0;
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	// Update if screens have not yet been set
+	ResettableGuard< Mutex > aGuard( aScreensMutex );
+	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
+	{
+		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+	}
+
+	return ( aVCLScreensFullBoundsList.size() ? aVCLScreensFullBoundsList.size() : 1 );
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1615,7 +1817,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
 		aGuard.reset();
 	}
-	
+
 	BOOL useThemeDialogColor = FALSE;
 	Color themeDialogColor;
 	if ( pVCLControlTextColor )
@@ -1627,11 +1829,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aTextColor;
 	if ( pVCLTextColor )
 		aTextColor = Color( (unsigned char)( [pVCLTextColor redComponent] * 0xff ), (unsigned char)( [pVCLTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLTextColor blueComponent] * 0xff ) );
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
 	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
@@ -1645,11 +1847,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextHighlightColor = com_sun_star_vcl_VCLScreen::getTextHighlightColor();
 	Color aHighlightColor( SALCOLOR_RED( nTextHighlightColor ), SALCOLOR_GREEN( nTextHighlightColor ), SALCOLOR_BLUE( nTextHighlightColor ) );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightColor;
 	if ( pVCLHighlightColor )
 		aHighlightColor = Color( (unsigned char)( [pVCLHighlightColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor blueComponent] * 0xff ) );
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetActiveBorderColor( aHighlightColor );
 	aStyleSettings.SetActiveColor( aHighlightColor );
 	aStyleSettings.SetActiveTextColor( aHighlightColor );
@@ -1659,11 +1861,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nTextHighlightTextColor = com_sun_star_vcl_VCLScreen::getTextHighlightTextColor();
 	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightTextColor;
 	if ( pVCLHighlightTextColor )
 		aHighlightTextColor = Color( (unsigned char)( [pVCLHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor blueComponent] * 0xff ) );
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
 
@@ -1677,11 +1879,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
 	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
-#else	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aBackColor;
 	if ( pVCLBackColor )
 		aBackColor = Color( (unsigned char)( [pVCLBackColor redComponent] * 0xff ), (unsigned char)( [pVCLBackColor greenComponent] * 0xff ), (unsigned char)( [pVCLBackColor blueComponent] * 0xff ) );
-#endif	// !defined USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
 	aStyleSettings.SetDeactiveColor( aBackColor );
