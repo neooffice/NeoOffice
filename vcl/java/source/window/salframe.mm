@@ -130,8 +130,12 @@ static void HandleScreensChangedRequest()
 				aLastFullFrame = aFullFrame;
 
 				// Flip coordinates and cache bounds
-				aVCLScreensFullBoundsList.push_back( Rectangle( Point( (long)aFullFrame.origin.x, (long)aTotalBounds.size.height - aFullFrame.origin.y - aFullFrame.size.height ), Size( (long)aFullFrame.size.width, (long)aFullFrame.size.height ) ) );
-				aVCLScreensVisibleBoundsList.push_back( Rectangle( Point( (long)aVisibleFrame.origin.x, (long)aTotalBounds.size.height - aVisibleFrame.origin.y- aVisibleFrame.size.height ), Size( (long)aVisibleFrame.size.width, (long)aVisibleFrame.size.height ) ) );
+				Rectangle aFullRect( Point( (long)aFullFrame.origin.x, (long)aTotalBounds.size.height - aFullFrame.origin.y - aFullFrame.size.height ), Size( (long)aFullFrame.size.width, (long)aFullFrame.size.height ) );
+				Rectangle aVisibleRect( Point( (long)aVisibleFrame.origin.x, (long)aTotalBounds.size.height - aVisibleFrame.origin.y- aVisibleFrame.size.height ), Size( (long)aVisibleFrame.size.width, (long)aVisibleFrame.size.height ) );
+				aFullRect.Justify();
+				aVisibleRect.Justify();
+				aVCLScreensFullBoundsList.push_back( aFullRect );
+				aVCLScreensVisibleBoundsList.push_back( aVisibleRect );
 
 				// Check if this is the main screen
 				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
