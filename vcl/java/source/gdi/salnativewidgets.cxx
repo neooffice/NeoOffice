@@ -563,22 +563,10 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
 	else
 		pButtonDrawInfo->state = kThemeStateInactive;
 
-	if ( nState & CTRL_STATE_DEFAULT )
-	{
-		// The default adornment hides the pressed state so don't set both
-		if ( pButtonDrawInfo->state != kThemeStatePressed )
-			pButtonDrawInfo->adornment = kThemeAdornmentDefault;
-		else
-			pButtonDrawInfo->adornment = kThemeAdornmentNone;
-	}
-	else if ( nState & CTRL_STATE_FOCUSED )
-	{
+	if ( nState & CTRL_STATE_FOCUSED )
 		pButtonDrawInfo->adornment = kThemeAdornmentFocus;
-	}
 	else
-	{
 		pButtonDrawInfo->adornment = kThemeAdornmentNone;
-	}
 
 	return TRUE;
 }
@@ -2124,9 +2112,25 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 
 			// Detect placard buttons
 			if ( bPlacard )
+			{
 				aButtonDrawInfo.kind = kThemeBevelButton;
+			}
 			else
+			{
 				aButtonDrawInfo.kind = kThemePushButton;
+
+				// The default adornment hides the pressed state so set the
+				// adornment to none if the button is pressed. Also, push
+				// buttons should never have a focus ring so treat them as
+				// default buttons.
+				if ( nState & CTRL_STATE_DEFAULT || aButtonDrawInfo.adornment == kThemeAdornmentFocus )
+				{
+					if ( aButtonDrawInfo.state == kThemeStatePressed )
+						aButtonDrawInfo.adornment = kThemeAdornmentNone;
+					else
+						aButtonDrawInfo.adornment = kThemeAdornmentDefault;
+				}
+			}
 
 			if ( aValue.getTristateVal() == BUTTONVALUE_ON )
 				aButtonDrawInfo.value = kThemeButtonOn;
