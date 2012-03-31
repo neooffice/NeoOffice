@@ -1784,6 +1784,8 @@ XubString JavaSalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 
 void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
 	float fDoubleClickThreshold = 0;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
@@ -1833,15 +1835,11 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	ResettableGuard< Mutex > aGuard( aSystemColorsMutex );
 	if ( !pVCLControlTextColor || !pVCLTextColor || !pVCLHighlightColor || !pVCLHighlightTextColor || !pVCLDisabledControlTextColor || !pVCLBackColor )
 	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
 		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
 		aGuard.reset();
-
-		[pPool release];
 	}
 
 	BOOL useThemeDialogColor = FALSE;
@@ -1931,6 +1929,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	}
 
 	rSettings.SetStyleSettings( aStyleSettings );
+
+	[pPool release];
 }
 
 // -----------------------------------------------------------------------
