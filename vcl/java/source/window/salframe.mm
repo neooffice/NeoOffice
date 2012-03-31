@@ -840,11 +840,15 @@ unsigned int JavaSalFrame::GetDefaultScreenNumber()
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
 		aGuard.reset();
+
+		[pPool release];
 	}
 
 	return nMainScreen;
@@ -862,11 +866,15 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
 		aGuard.reset();
+
+		[pPool release];
 	}
 
 	// Fix bug 2671 by setting width and height greater than 0
@@ -930,11 +938,15 @@ const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bF
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
 		aGuard.reset();
+
+		[pPool release];
 	}
 
 	if ( bFullScreenMode && nScreen < aVCLScreensFullBoundsList.size() )
@@ -958,11 +970,15 @@ unsigned int JavaSalFrame::GetScreenCount()
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
 		aGuard.reset();
+
+		[pPool release];
 	}
 
 	return ( aVCLScreensFullBoundsList.size() ? aVCLScreensFullBoundsList.size() : 1 );
@@ -1768,8 +1784,6 @@ XubString JavaSalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 
 void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 {
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
 	float fDoubleClickThreshold = 0;
 	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
@@ -1819,11 +1833,15 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	ResettableGuard< Mutex > aGuard( aSystemColorsMutex );
 	if ( !pVCLControlTextColor || !pVCLTextColor || !pVCLHighlightColor || !pVCLHighlightTextColor || !pVCLDisabledControlTextColor || !pVCLBackColor )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		aGuard.clear();
 		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
 		aGuard.reset();
+
+		[pPool release];
 	}
 
 	BOOL useThemeDialogColor = FALSE;
@@ -1913,8 +1931,6 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	}
 
 	rSettings.SetStyleSettings( aStyleSettings );
-
-	[pPool release];
 }
 
 // -----------------------------------------------------------------------
