@@ -36,32 +36,19 @@
 #include <stdio.h>
 #include <dlfcn.h>
 
-#ifndef _DTRANS_JAVA_DND_HXX_
 #include "java_dnd.hxx"
-#endif
-#ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
 #include "java_dndcontext.hxx"
-#endif
-#ifndef _DTRANSTRANSFERABLE_HXX
 #include "DTransTransferable.hxx"
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_SYSDATA_HXX
 #include <vcl/sysdata.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
 // Need to include for SetThemeCursor constants but we don't link to it
 #import <Carbon/Carbon.h>
+#import <objc/objc-class.h>
 #include <postmac.h>
 
 typedef OSStatus SetThemeCursor_Type( ThemeCursor nCursor );
@@ -890,7 +877,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 	}
 	else if ( nAction == DNDConstants::ACTION_COPY )
 	{
-		if ( [NSCursor respondsToSelector:@selector(dragCopyCursor)] )
+		if ( class_getClassMethod( [NSCursor class], @selector(dragCopyCursor) ) )
 		{
 			NSCursor *pCursor = [NSCursor dragCopyCursor];
 			if ( pCursor )
@@ -913,7 +900,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 	}
 	else if ( nAction == DNDConstants::ACTION_LINK )
 	{
-		if ( [NSCursor respondsToSelector:@selector(dragLinkCursor)] )
+		if ( class_getClassMethod( [NSCursor class], @selector(dragLinkCursor) ) )
 		{
 			NSCursor *pCursor = [NSCursor dragLinkCursor];
 			if ( pCursor )
