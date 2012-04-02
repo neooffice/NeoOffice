@@ -71,6 +71,7 @@ typedef void* id;
 BEGIN_C
 #endif
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
+SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
 #ifdef __cplusplus
 END_C
 #endif

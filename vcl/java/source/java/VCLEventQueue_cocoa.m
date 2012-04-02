@@ -375,6 +375,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 #ifdef USE_NATIVE_WINDOW
 - (void)drawRect:(NSRect)aDirtyRect;
+- (void)resetCursorRects;
 #endif	// USE_NATIVE_WINDOW
 - (BOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithFrame:(NSRect)aFrame;
@@ -1464,6 +1465,12 @@ static CFDataRef aRTFSelection = nil;
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
 
+		aSelector = @selector(resetCursorRects);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
 #endif	// USE_NATIVE_WINDOW
 	}
 }
@@ -1611,6 +1618,13 @@ static CFDataRef aRTFSelection = nil;
 	[[NSColor redColor] set];
 
 	JavaSalFrame_drawToNSView( self, aDirtyRect );
+}
+
+- (void)resetCursorRects
+{
+	NSCursor *pCursor = JavaSalFrame_getCursor( self );
+	if ( pCursor )
+		[self addCursorRect:[self visibleRect] cursor:pCursor];
 }
 
 #endif	// USE_NATIVE_WINDOW

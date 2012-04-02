@@ -71,6 +71,7 @@ typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOpti
 
 #ifdef USE_NATIVE_WINDOW
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
+static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
 #endif	// USE_NATIVE_WINDOW
 #if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
 static unsigned int nMainScreen = 0;
@@ -479,18 +480,20 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 @interface VCLSetCursor : NSObject
 {
 	PointerStyle			mePointerStyle;
+	NSView*					mpView;
 }
-+ (id)createWithPointerStyle:(PointerStyle)ePointerStyle;
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView;
 + (void)loadCustomCursorWithPointerStyle:(PointerStyle)ePointerStyle hotSpot:(NSPoint)aHotSpot path:(NSString *)pPath;
-- (id)initWithPointerStyle:(PointerStyle)ePointerStyle;
+- (void)dealloc;
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView;
 - (void)setCursor:(id)pObject;
 @end
 
 @implementation VCLSetCursor
 
-+ (id)createWithPointerStyle:(PointerStyle)ePointerStyle
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView
 {
-	VCLSetCursor *pRet = [[VCLSetCursor alloc] initWithPointerStyle:ePointerStyle];
+	VCLSetCursor *pRet = [[VCLSetCursor alloc] initWithPointerStyle:ePointerStyle view:pView];
 	[pRet autorelease];
 	return pRet;
 }
@@ -518,17 +521,51 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	}
 }
 
-- (id)initWithPointerStyle:(PointerStyle)ePointerStyle
+- (void)dealloc
+{
+	if ( mpView )
+		[mpView release];
+
+	[super dealloc];
+}
+
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView
 {
 	[super init];
 
 	mePointerStyle = ePointerStyle;
+	mpView = pView;
+	if ( mpView )
+		[mpView retain];
  
 	return self;
 }
 
 - (void)setCursor:(id)pObject
 {
+	if ( !mpView )
+		return;
+
+	NSWindow *pWindow = [mpView window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
+	// Remove any hidden windows from cursor map
+	::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.begin();
+	while ( cit != aNativeCursorMap.end() )
+	{
+		if ( ![cit->first isVisible] )
+		{
+			[cit->first release];
+			[cit->second release];
+			aNativeCursorMap.erase( cit );
+			cit = aNativeCursorMap.begin();
+			continue;
+		}
+
+		++cit;
+	}
+
 	// Populate cached cursors
 	if ( !aVCLCustomCursors.size() )
 	{
@@ -757,8 +794,12 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	}
 
 	if ( pCursor )
-		[pCursor set];
-
+	{
+		aNativeCursorMap[ pWindow ] = pCursor;
+		[pWindow retain];
+		[pCursor retain];
+		[pWindow invalidateCursorRectsForView:mpView];
+	}
 }
 
 @end
@@ -1000,6 +1041,26 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			}
 		}
 	}
+}
+
+// -----------------------------------------------------------------------
+
+NSCursor *JavaSalFrame_getCursor( NSView *pView )
+{
+	NSCursor *pRet = nil;
+
+	if ( !pView )
+		return pRet;
+
+	NSWindow *pWindow = [pView window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return pRet;
+
+	::std::map< NSWindow*, NSCursor* >::const_iterator cit = aNativeCursorMap.find( pWindow );
+	if ( cit != aNativeCursorMap.end() )
+		pRet = cit->second;
+
+	return pRet;
 }
 
 #endif	// USE_NATIVE_WINDOW
@@ -2005,17 +2066,17 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 
 void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	mpVCLFrame->setPointer( ePointerStyle );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle];
+	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle view:maSysData.pView];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLSetCursor performSelectorOnMainThread:@selector(setCursor:) withObject:pVCLSetCursor waitUntilDone:NO modes:pModes];
 
 	[pPool release];
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+#else	// USE_NATIVE_WINDOW
+	mpVCLFrame->setPointer( ePointerStyle );
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
