@@ -1160,7 +1160,7 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 				{
 					// Fix bug 3443 by filling with gray instead of the
 					// checkerboard pattern
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0xffffffff, 0x00000000, aPath ) );
 				}
 				else if ( nFlags & SAL_INVERT_TRACKFRAME )
 				{
@@ -1234,7 +1234,7 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 					{
 						// Fix bug 3443 by filling with gray instead of the
 						// checkerboard pattern
-						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0xffffffff, 0x00000000, aPath ) );
 					}
 					else if ( nFlags & SAL_INVERT_TRACKFRAME )
 					{
