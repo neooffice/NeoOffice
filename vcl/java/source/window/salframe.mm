@@ -623,7 +623,8 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vshear.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsizebar.gif"]];
 					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsplit.gif"]];
-					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TEXT_VERTICAL hotSpot:NSMakePoint( 15, 15 ) path:[pPath stringByAppendingPathComponent:@"vtext.gif"]];
+					// Note: POINTER_TEXT_VERTICAL vtext.gif icon unused due to
+					// white background in icon
 				}
 			}
 		}
