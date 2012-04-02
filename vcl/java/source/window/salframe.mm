@@ -59,6 +59,7 @@
 #endif	// USE_NATIVE_WINDOW
 // Need to include for SetSystemUIMode constants but we don't link to it
 #import <Carbon/Carbon.h>
+#import <objc/objc-class.h>
 #include <postmac.h>
 
 #ifdef USE_NATIVE_WINDOW
@@ -462,6 +463,301 @@ static NSTimer *pUpdateTimer = nil;
 - (CGLayerRef)layer
 {
 	return maLayer;
+}
+
+@end
+
+@interface NSCursor (VCLSetCursor)
+
++ (NSCursor *)IBeamCursorForVerticalLayout;
++ (NSCursor *)operationNotAllowedCursor;
+
+@end
+
+static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
+
+@interface VCLSetCursor : NSObject
+{
+	PointerStyle			mePointerStyle;
+}
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle;
++ (void)loadCustomCursorWithPointerStyle:(PointerStyle)ePointerStyle hotSpot:(NSPoint)aHotSpot path:(NSString *)pPath;
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle;
+- (void)setCursor:(id)pObject;
+@end
+
+@implementation VCLSetCursor
+
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle
+{
+	VCLSetCursor *pRet = [[VCLSetCursor alloc] initWithPointerStyle:ePointerStyle];
+	[pRet autorelease];
+	return pRet;
+}
+
++ (void)loadCustomCursorWithPointerStyle:(PointerStyle)ePointerStyle hotSpot:(NSPoint)aHotSpot path:(NSString *)pPath
+{
+	if ( !pPath )
+		return;
+
+	::std::map< PointerStyle, NSCursor* >::const_iterator it = aVCLCustomCursors.find( ePointerStyle );
+	if ( it != aVCLCustomCursors.end() )
+		return;
+
+	NSImage *pImage = [[NSImage alloc] initWithContentsOfFile:pPath];
+	if ( pImage )
+	{
+		[pImage autorelease];
+
+		if ( [pImage isValid] )
+		{
+			NSCursor *pCursor = [[NSCursor alloc] initWithImage:pImage hotSpot:aHotSpot];
+			if ( pCursor )
+				aVCLCustomCursors[ ePointerStyle ] = pCursor;
+		}
+	}
+}
+
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle
+{
+	[super init];
+
+	mePointerStyle = ePointerStyle;
+ 
+	return self;
+}
+
+- (void)setCursor:(id)pObject
+{
+	// Populate cached cursors
+	if ( !aVCLCustomCursors.size() )
+	{
+		NSBundle *pBundle = [NSBundle mainBundle];
+		if ( pBundle )
+		{
+			NSString *pPath = [pBundle bundlePath];
+			if ( pPath )
+			{
+				pPath = [[[pPath stringByAppendingPathComponent:@"Contents"] stringByAppendingPathComponent:@"Resources"] stringByAppendingPathComponent:@"cursors"];
+				if ( pPath )
+				{
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AIRBRUSH hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"airbrush.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_E hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ase.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_N hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asn.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asne.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asns.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NSWE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnswe"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_NW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asnw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_S hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"ass.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_SE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asse.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_SW hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"assw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_W hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"asw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_AUTOSCROLL_WE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"aswe.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHAIN hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"chain.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHAIN_NOTALLOWED hotSpot:NSMakePoint( 10, 10 ) path:[pPath stringByAppendingPathComponent:@"chainnot.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CHART hotSpot:NSMakePoint( 11, 11 ) path:[pPath stringByAppendingPathComponent:@"chart.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYDATA hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"copydata.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYDATALINK hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"copydlnk.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILE hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILES hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"copyf2.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_COPYFILELINK hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"copyflnk.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROOK hotSpot:NSMakePoint( 16, 17 ) path:[pPath stringByAppendingPathComponent:@"crook.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROP hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"crop.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_CROSS hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"cross.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ARC hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"darc.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_BEZIER hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dbezier.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CAPTION hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcapt.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CIRCLECUT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dcirccut.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_CONNECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dconnect.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_ELLIPSE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dellipse.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DETECTIVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"detectiv.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_FREEHAND hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dfree.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_LINE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dline.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_PIE hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpie.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_POLYGON hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dpolygon.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_RECT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"drect.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_DRAW_TEXT hotSpot:NSMakePoint( 8, 8 ) path:[pPath stringByAppendingPathComponent:@"dtext.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_FILL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"fill.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HAND hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hand.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HELP hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"help.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hshear.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsizebar.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_HSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"hsplit.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_LINKDATA hotSpot:NSMakePoint( 10, 2 ) path:[pPath stringByAppendingPathComponent:@"linkdata.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_LINKFILE hotSpot:NSMakePoint( 9, 7 ) path:[pPath stringByAppendingPathComponent:@"linkf.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MAGNIFY hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"magnify.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MIRROR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"mirror.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"move.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEBEZIERWEIGHT hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movebw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEDATA hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movedata.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEDATALINK hotSpot:NSMakePoint( 3, 3 ) path:[pPath stringByAppendingPathComponent:@"movedlnk.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILE hotSpot:NSMakePoint( 5, 10 ) path:[pPath stringByAppendingPathComponent:@"movef.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILES hotSpot:NSMakePoint( 9, 10 ) path:[pPath stringByAppendingPathComponent:@"movef2.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEFILELINK hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"moveflnk.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_MOVEPOINT hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"movept.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_SWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_NESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_SWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"neswsize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NOTALLOWED hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"notallow.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NULL hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nullptr.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_NWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_SESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_NWSIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_WINDOW_SESIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"nwsesize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PEN hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"pen.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_COL hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotcol.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_DELETE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"pivotdel.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_FIELD hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotfld.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PIVOT_ROW hotSpot:NSMakePoint( 2, 3 ) path:[pPath stringByAppendingPathComponent:@"pivotrow.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_PAINTBRUSH hotSpot:NSMakePoint( 4, 30 ) path:[pPath stringByAppendingPathComponent:@"pntbrsh.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_REFHAND hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"refhand.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_ROTATE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"rotate.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_E hotSpot:NSMakePoint( 31, 16 ) path:[pPath stringByAppendingPathComponent:@"tblsele.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_S hotSpot:NSMakePoint( 16, 31 ) path:[pPath stringByAppendingPathComponent:@"tblsels.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_SE hotSpot:NSMakePoint( 31, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselse.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_SW hotSpot:NSMakePoint( 2, 31 ) path:[pPath stringByAppendingPathComponent:@"tblselsw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TAB_SELECT_W hotSpot:NSMakePoint( 2, 16 ) path:[pPath stringByAppendingPathComponent:@"tblselw.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TIMEEVENT_MOVE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"timemove.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TIMEEVENT_SIZE hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"timesize.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSHEAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vshear.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSIZEBAR hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsizebar.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_VSPLIT hotSpot:NSMakePoint( 16, 16 ) path:[pPath stringByAppendingPathComponent:@"vsplit.gif"]];
+					[VCLSetCursor loadCustomCursorWithPointerStyle:POINTER_TEXT_VERTICAL hotSpot:NSMakePoint( 15, 15 ) path:[pPath stringByAppendingPathComponent:@"vtext.gif"]];
+				}
+			}
+		}
+	}
+
+	NSCursor *pCursor = nil;
+	::std::map< PointerStyle, NSCursor* >::const_iterator it = aVCLCustomCursors.find( mePointerStyle );
+	if ( it != aVCLCustomCursors.end() )
+		pCursor = it->second;
+
+	if ( !pCursor )
+	{
+		switch ( mePointerStyle )
+		{
+			case POINTER_NULL:
+			case POINTER_TEXT:
+				pCursor = [NSCursor IBeamCursor];
+				break;
+			case POINTER_CROSS:
+			case POINTER_DRAW_LINE:
+			case POINTER_DRAW_RECT:
+			case POINTER_DRAW_POLYGON:
+			case POINTER_DRAW_BEZIER:
+			case POINTER_DRAW_ARC:
+			case POINTER_DRAW_PIE:
+			case POINTER_DRAW_CIRCLECUT:
+			case POINTER_DRAW_ELLIPSE:
+			case POINTER_DRAW_FREEHAND:
+			case POINTER_DRAW_CONNECT:
+			case POINTER_DRAW_TEXT:
+			case POINTER_DRAW_CAPTION:
+				pCursor = [NSCursor crosshairCursor];
+				break;
+			case POINTER_MOVE:
+				pCursor = [NSCursor openHandCursor];
+				break;
+			case POINTER_NOTALLOWED:
+				if ( class_getClassMethod( [NSCursor class], @selector(operationNotAllowedCursor) ) )
+					pCursor = [NSCursor operationNotAllowedCursor];
+				break;
+			case POINTER_NSIZE:
+			case POINTER_WINDOW_NSIZE:
+			case POINTER_SSIZE:
+			case POINTER_WINDOW_SSIZE:
+			case POINTER_VSPLIT:
+			case POINTER_VSIZEBAR:
+				pCursor = [NSCursor resizeUpDownCursor];
+				break;
+			case POINTER_WSIZE:
+			case POINTER_WINDOW_WSIZE:
+			case POINTER_ESIZE:
+			case POINTER_WINDOW_ESIZE:
+			case POINTER_HSPLIT:
+			case POINTER_HSIZEBAR:
+				pCursor = [NSCursor resizeLeftRightCursor];
+				break;
+			case POINTER_HAND:
+			case POINTER_REFHAND:
+				pCursor = [NSCursor pointingHandCursor];
+				break;
+			case POINTER_TEXT_VERTICAL:
+				if ( class_getClassMethod( [NSCursor class], @selector(IBeamCursorForVerticalLayout) ) )
+				pCursor = [NSCursor IBeamCursorForVerticalLayout];
+				break;
+			case POINTER_ARROW:
+			case POINTER_HELP:
+			case POINTER_PEN:
+			case POINTER_MAGNIFY:
+			case POINTER_FILL:
+			case POINTER_ROTATE:
+			case POINTER_HSHEAR:
+			case POINTER_VSHEAR:
+			case POINTER_MIRROR:
+			case POINTER_CROOK:
+			case POINTER_CROP:
+			case POINTER_MOVEPOINT:
+			case POINTER_MOVEBEZIERWEIGHT:
+			case POINTER_MOVEDATA:
+			case POINTER_COPYDATA:
+			case POINTER_LINKDATA:
+			case POINTER_MOVEDATALINK:
+			case POINTER_COPYDATALINK:
+			case POINTER_MOVEFILE:
+			case POINTER_COPYFILE:
+			case POINTER_LINKFILE:
+			case POINTER_MOVEFILELINK:
+			case POINTER_COPYFILELINK:
+			case POINTER_MOVEFILES:
+			case POINTER_COPYFILES:
+			case POINTER_CHART:
+			case POINTER_DETECTIVE:
+			case POINTER_PIVOT_COL:
+			case POINTER_PIVOT_ROW:
+			case POINTER_PIVOT_FIELD:
+			case POINTER_CHAIN:
+			case POINTER_CHAIN_NOTALLOWED:
+			case POINTER_TIMEEVENT_MOVE:
+			case POINTER_TIMEEVENT_SIZE:
+			case POINTER_AUTOSCROLL_N:
+			case POINTER_AUTOSCROLL_S:
+			case POINTER_AUTOSCROLL_W:
+			case POINTER_AUTOSCROLL_E:
+			case POINTER_AUTOSCROLL_NW:
+			case POINTER_AUTOSCROLL_NE:
+			case POINTER_AUTOSCROLL_SW:
+			case POINTER_AUTOSCROLL_SE:
+			case POINTER_AUTOSCROLL_NS:
+			case POINTER_AUTOSCROLL_WE:
+			case POINTER_AUTOSCROLL_NSWE:
+			case POINTER_AIRBRUSH:
+			case POINTER_PIVOT_DELETE:
+			case POINTER_TAB_SELECT_S:
+			case POINTER_TAB_SELECT_E:
+			case POINTER_TAB_SELECT_SE:
+			case POINTER_TAB_SELECT_W:
+			case POINTER_TAB_SELECT_SW:
+			case POINTER_NWSIZE:
+			case POINTER_WINDOW_NWSIZE:
+			case POINTER_NESIZE:
+			case POINTER_WINDOW_NESIZE:
+			case POINTER_SWSIZE:
+			case POINTER_WINDOW_SWSIZE:
+			case POINTER_SESIZE:
+			case POINTER_WINDOW_SESIZE:
+			case POINTER_WAIT:
+			default:
+				pCursor = [NSCursor arrowCursor];
+				break;
+		}
+	}
+
+	if ( pCursor )
+		[pCursor set];
+
 }
 
 @end
@@ -1708,7 +2004,17 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 
 void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 {
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	mpVCLFrame->setPointer( ePointerStyle );
+#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLSetCursor performSelectorOnMainThread:@selector(setCursor:) withObject:pVCLSetCursor waitUntilDone:NO modes:pModes];
+
+	[pPool release];
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------

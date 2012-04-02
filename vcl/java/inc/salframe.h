@@ -54,7 +54,7 @@
 #endif	// __cplusplus
 
 // Uncomment the following line to enable native window drawing APIs
-// #define USE_NATIVE_WINDOW
+#define USE_NATIVE_WINDOW
 
 #ifdef __cplusplus
 
