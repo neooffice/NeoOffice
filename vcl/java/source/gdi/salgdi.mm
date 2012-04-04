@@ -947,19 +947,17 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			{
 				CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 				CGPathAddRect( aPath, NULL, aRect );
-				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
 
@@ -1020,19 +1018,17 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
 
@@ -1076,19 +1072,17 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
 
@@ -1144,19 +1138,17 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 				AddPolyPolygonToPaths( aPath, aPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
 
@@ -1206,21 +1198,20 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 				AddPolyPolygonToPaths( aPath, rPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
+
 
 				if ( aPath )
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
@@ -1275,18 +1266,17 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 				float fNativeLineWidth = rLineWidths.getX();
 				if ( fNativeLineWidth <= 0 )
 					fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < fNativeLineWidth )
-					aRect.size.width = 0;
-				if ( aRect.size.height < fNativeLineWidth )
-					aRect.size.height = 0;
-				if ( CGRectIsEmpty( aRect ) )
+				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
 					if ( aPath )
 					{
-						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
-						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+						if ( aRect.size.width < 1.0f )
+							aRect.size.width = 1.0f;
+						if ( aRect.size.height < 1.0f )
+							aRect.size.height = 1.0f;
+						CGPathAddRect( aPath, NULL, aRect );
 					}
 				}
 
