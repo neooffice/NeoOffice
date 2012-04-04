@@ -542,17 +542,12 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
 				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
 				{
-					// Only clear modal level when window is visible or else
-					// the window will reappear when focus changes to another
-					// application
-					if ( [pWindow isVisible] )
-						[pWindow _clearModalWindowLevel];
-
-					// Make sure that hidden windows are purged from the array
-					// and that the current window is at the back of the array
 					[pNeedRestoreModalWindows removeObject:pWindow];
-					if ( [pWindow isVisible] )
-						[pNeedRestoreModalWindows addObject:pWindow];
+					[pWindow _clearModalWindowLevel];
+
+					// Make sure that that the current window is at the
+					// back of the array
+					[pNeedRestoreModalWindows addObject:pWindow];
 				}
 			}
 		}
@@ -842,6 +837,15 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
+		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
+		{
+			// Clear modal level while window is visible or else the window
+			// will reappear when focus changes to another application on
+			// Mac OS X 10.5
+			[pNeedRestoreModalWindows removeObject:self];
+			[self _clearModalWindowLevel];
+		}
+
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
