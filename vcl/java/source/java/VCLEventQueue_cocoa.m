@@ -542,7 +542,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
 				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
 				{
-					[pWindow _clearModalWindowLevel];
+					// Only clear modal level when window is visible or else
+					// the window will reappear when focus changes to another
+					// application
+					if ( [pWindow isVisible] )
+						[pWindow _clearModalWindowLevel];
 
 					// Make sure that hidden windows are purged from the array
 					// and that the current window is at the back of the array
@@ -1456,7 +1460,6 @@ static CFDataRef aRTFSelection = nil;
 			method_setImplementation( aOldMethod, aNewIMP );
 
 #ifdef USE_NATIVE_WINDOW
-
 		// NSViewAWT selectors
 
 		aSelector = @selector(drawRect:);
@@ -1470,7 +1473,6 @@ static CFDataRef aRTFSelection = nil;
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
-
 #endif	// USE_NATIVE_WINDOW
 	}
 }
@@ -1611,6 +1613,10 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)drawRect:(NSRect)aDirtyRect
 {
+	NSWindow *pWindow = [self window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
 	// For some strange reason, Java will ignore all drawing that we do unless
 	// the color is changed in the current graphics context. Also, the new color
 	// cannot be clear, white, or black since we use those colors as the
@@ -1622,6 +1628,10 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)resetCursorRects
 {
+	NSWindow *pWindow = [self window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
 	NSCursor *pCursor = JavaSalFrame_getCursor( self );
 	if ( pCursor )
 		[self addCursorRect:[self visibleRect] cursor:pCursor];
