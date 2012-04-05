@@ -1618,27 +1618,28 @@ static CFDataRef aRTFSelection = nil;
 - (void)drawRect:(NSRect)aDirtyRect
 {
 	NSWindow *pWindow = [self window];
-	if ( !pWindow || ![pWindow isVisible] )
-		return;
+	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
+	{
+		// For some strange reason, Java will ignore all drawing that we do
+		// unless the color is changed in the current graphics context. Also,
+		// the new color cannot be clear, white, or black since we use those
+		// colors as the window background colors in our Java code so we set
+		// the color to red.
+		[[NSColor redColor] set];
 
-	// For some strange reason, Java will ignore all drawing that we do unless
-	// the color is changed in the current graphics context. Also, the new color
-	// cannot be clear, white, or black since we use those colors as the
-	// window background colors in our Java code so we set the color to red.
-	[[NSColor redColor] set];
-
-	JavaSalFrame_drawToNSView( self, aDirtyRect );
+		JavaSalFrame_drawToNSView( self, aDirtyRect );
+	}
 }
 
 - (void)resetCursorRects
 {
 	NSWindow *pWindow = [self window];
-	if ( !pWindow || ![pWindow isVisible] )
-		return;
-
-	NSCursor *pCursor = JavaSalFrame_getCursor( self );
-	if ( pCursor )
-		[self addCursorRect:[self visibleRect] cursor:pCursor];
+	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
+	{
+		NSCursor *pCursor = JavaSalFrame_getCursor( self );
+		if ( pCursor )
+			[self addCursorRect:[self visibleRect] cursor:pCursor];
+	}
 }
 
 #endif	// USE_NATIVE_WINDOW
