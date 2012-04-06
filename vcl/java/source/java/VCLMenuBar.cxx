@@ -35,21 +35,12 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLMENUBAR_CXX
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 #include <com/sun/star/vcl/VCLMenuBar.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
+
+#ifndef USE_NATIVE_WINDOW
 
 using namespace vcl;
 
@@ -229,3 +220,5 @@ void com_sun_star_vcl_VCLMenuBar::enableMenu( USHORT _par0, bool _par1 )
 		}
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW

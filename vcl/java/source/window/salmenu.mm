@@ -40,13 +40,18 @@
 #include <salframe.h>
 #include <vcl/window.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#ifndef USE_NATIVE_WINDOW
 #include <com/sun/star/vcl/VCLMenuBar.hxx>
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
 #include <com/sun/star/vcl/VCLMenu.hxx>
+#endif	// !USE_NATIVE_WINDOW
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
 #include <premac.h>
 #import <CoreFoundation/CoreFoundation.h>
+#ifdef USE_NATIVE_WINDOW
+#import <Cocoa/Cocoa.h>
+#endif	// USE_NATIVE_WINDOW
 #include <postmac.h>
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
@@ -59,8 +64,13 @@ using namespace vcl;
 
 JavaSalMenu::JavaSalMenu()
 {
+#ifdef USE_NATIVE_WINDOW
+	mpMenuBar = NULL;
+	mpMenu = NULL;
+#else	// USE_NATIVE_WINDOW
 	mpVCLMenuBar = NULL;
 	mpVCLMenu = NULL;
+#endif	// USE_NATIVE_WINDOW
 	mpParentFrame = NULL;
 	mbIsMenuBarMenu = FALSE;
 	mpParentVCLMenu = NULL;
@@ -73,6 +83,9 @@ JavaSalMenu::~JavaSalMenu()
 {
 	aMenuMap.erase( this );
 
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::~JavaSalMenu not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->dispose();
@@ -83,6 +96,7 @@ JavaSalMenu::~JavaSalMenu()
 		mpVCLMenu->dispose();
 		delete mpVCLMenu;
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -96,18 +110,25 @@ BOOL JavaSalMenu::VisibleMenuBar()
 
 void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::SetFrame not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
 		mpVCLMenuBar->setFrame( pJavaFrame->mpVCLFrame );
 		mpParentFrame=pJavaFrame;
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::InsertItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -117,12 +138,16 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 	{
 		mpVCLMenu->insertItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::RemoveItem( unsigned nPos )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::RemoveItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->removeMenu( nPos );
@@ -131,6 +156,7 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 	{
 		mpVCLMenu->removeItem( nPos );
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -145,6 +171,9 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos )
 {
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::SetSubItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	JavaSalMenu* pJavaSubMenu = (JavaSalMenu *)pSubMenu;
 	if( mbIsMenuBarMenu && mpVCLMenuBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenu )
 	{
@@ -154,6 +183,7 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 	{
 		mpVCLMenu->attachSubmenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
+#endif	// USE_NATIVE_WINDOW
 	pJavaSalMenuItem->mpSalSubmenu=(JavaSalMenu *)pSubMenu;
 }
 
@@ -161,6 +191,9 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::CheckItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu )
 	{
 		// doesn't make sense to check top level menus!
@@ -169,12 +202,16 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 	{
 		mpVCLMenu->checkItem(nPos, bCheck);
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::EnableItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->enableMenu( nPos, bEnable );
@@ -183,6 +220,7 @@ void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 	{
 		mpVCLMenu->enableItem( nPos, bEnable );
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -197,6 +235,9 @@ void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const 
 
 void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::SetItemText not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	// assume pSalMenuItem is a pointer to the menu item object already at nPos
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
 	if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData )
@@ -207,12 +248,16 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 		OUString aText( theText );
 		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( aText );
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenu::SetAccelerator not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	// assume pSalMenuItem is a pointer to the item to be associated with the
 	// new shortcut
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
@@ -227,31 +272,43 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
 			pJavaSalMenuItem->mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::GetSystemMenuData( SystemMenuData* pData )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalMenu::GetSystemMenuData not implemented\n" );
+#endif
 }
 
 // =======================================================================
 
-JavaSalMenuItem::JavaSalMenuItem()
+JavaSalMenuItem::JavaSalMenuItem() :
+#ifdef USE_NATIVE_WINDOW
+	mpMenuItem( NULL ),
+#else	// USE_NATIVE_WINDOW
+	mpVCLMenuItemData( NULL ),
+#endif	// USE_NATIVE_WINDOW
+	mpSalSubmenu( NULL )
 {
-	mpVCLMenuItemData = NULL;
-	mpSalSubmenu = NULL;
 }
 
 //-----------------------------------------------------------------------------
 
 JavaSalMenuItem::~JavaSalMenuItem()
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalMenuItem::~JavaSalMenuItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( mpVCLMenuItemData )
 	{
 		mpVCLMenuItemData->dispose();
 		delete mpVCLMenuItemData;
 	}
+#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -261,10 +318,18 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
 	pSalMenu->mbIsMenuBarMenu = bMenuBar;
+#ifdef USE_NATIVE_WINDOW
+	pSalMenu->mpMenuBar=NULL;
+	pSalMenu->mpMenu=NULL;
+#else	// USE_NATIVE_WINDOW
 	pSalMenu->mpVCLMenuBar=NULL;
 	pSalMenu->mpVCLMenu=NULL;
+#endif	// USE_NATIVE_WINDOW
 	pSalMenu->mpParentVCLMenu=pVCLMenu;
 
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalInstance::CreateMenu not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if( bMenuBar )
 	{
 		// create a menubar java object
@@ -275,6 +340,7 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 		// create a regular menu instance
 		pSalMenu->mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
 	}
+#endif	// USE_NATIVE_WINDOW
 
 	return( pSalMenu );
 #else	// !NO_NATIVE_MENUS
@@ -303,7 +369,11 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	XubString title(pItemData->aText);
 	title.EraseAllChars('~');
 	OUString aTitle( title );
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalInstance::CreateMenuItem not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( aTitle, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
+#endif	// USE_NATIVE_WINDOW
 	return( pSalMenuItem );
 #else	// !NO_NATIVE_MENUS
 	return NULL;

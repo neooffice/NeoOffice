@@ -36,25 +36,22 @@
 #ifndef _SV_SALMENU_H
 #define _SV_SALMENU_H
 
-#ifndef _SV_SV_H
+#include <salframe.h>
 #include <vcl/sv.h>
-#endif
-#ifndef _SV_IMAGE_H
 #include <vcl/image.h>
-#endif
-#ifndef _SV_SALMENU_HXX
 #include <vcl/salmenu.hxx>
-#endif
 
 class JavaSalFrame;
 class Menu;
 
+#ifndef USE_NATIVE_WINDOW
 namespace vcl
 {
 class com_sun_star_vcl_VCLMenuBar;
 class com_sun_star_vcl_VCLMenu;
 class com_sun_star_vcl_VCLMenuItemData;
 }
+#endif	// !USE_NATIVE_WINDOW
 
 // =======================================================================
 
@@ -62,10 +59,18 @@ class JavaSalMenu : public SalMenu
 {
 public:
 	// used for menubars only
+#ifdef USE_NATIVE_WINDOW
+	id						mpMenuBar;
+#else	// USE_NATIVE_WINDOW
 	::vcl::com_sun_star_vcl_VCLMenuBar *	mpVCLMenuBar;
+#endif	// USE_NATIVE_WINDOW
 	
 	// used for menus
+#ifdef USE_NATIVE_WINDOW
+	id						mpMenu;
+#else	// USE_NATIVE_WINDOW
 	::vcl::com_sun_star_vcl_VCLMenu *	mpVCLMenu;
+#endif	// USE_NATIVE_WINDOW
 	
 	// Generic data
 	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
@@ -92,7 +97,11 @@ public:
 class JavaSalMenuItem : public SalMenuItem
 {
 public:
+#ifdef USE_NATIVE_WINDOW
+	id						mpMenuItem;
+#else	// USE_NATIVE_WINDOW
 	::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
+#endif	// USE_NATIVE_WINDOW
 	
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
 

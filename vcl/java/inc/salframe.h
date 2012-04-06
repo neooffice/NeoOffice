@@ -63,7 +63,9 @@ namespace vcl
 class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLEventQueue;
 class com_sun_star_vcl_VCLFrame;
+#ifndef USE_NATIVE_WINDOW
 class com_sun_star_vcl_VCLMenuBar;
+#endif	// !USE_NATIVE_WINDOW
 }
 
 class JavaSalGraphics;

@@ -53,7 +53,9 @@ typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pDat
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pAWTFontString = @"AWTFont";
+#ifdef USE_NATIVE_WINDOW
 static NSString *pCMenuBarString = @"CMenuBar";
+#endif	// USE_NATIVE_WINDOW
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSViewAWTString = @"NSViewAWT";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";

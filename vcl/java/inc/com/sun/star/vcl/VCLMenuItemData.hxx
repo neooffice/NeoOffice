@@ -36,9 +36,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 #define _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 
+#include <salframe.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 #include <tools/gen.hxx>
+
+#ifndef USE_NATIVE_WINDOW
 
 class Menu;
 
@@ -65,5 +68,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX

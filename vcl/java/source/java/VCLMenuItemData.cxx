@@ -35,9 +35,9 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_CXX
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
-#endif
+
+#ifndef USE_NATIVE_WINDOW
 
 using namespace vcl;
 
@@ -149,3 +149,5 @@ void com_sun_star_vcl_VCLMenuItemData::dispose( )
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, NULL );
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW
