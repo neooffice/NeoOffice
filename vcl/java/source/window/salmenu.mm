@@ -33,40 +33,20 @@
  *
  ************************************************************************/
 
-#define _SV_SALMENU_CXX
-
 #include <map>
 
-#ifndef _SV_SALINST_H
 #include <salinst.h>
-#endif
-#ifndef _SV_SALMENU_H
 #include <salmenu.h>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_WINDOW_HXX
 #include <vcl/window.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 #include <com/sun/star/vcl/VCLMenuBar.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLMENU_HXX
 #include <com/sun/star/vcl/VCLMenu.hxx>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
 
 #include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
+#import <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
