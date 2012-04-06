@@ -53,6 +53,7 @@ typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pDat
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pAWTFontString = @"AWTFont";
+static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSViewAWTString = @"NSViewAWT";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
@@ -482,6 +483,46 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 @end
 
+#ifdef USE_NATIVE_WINDOW
+
+@interface VCLCMenuBar : NSObject
+{
+}
++ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled;
++ (void)addDefaultHelpMenu;
++ (void)clearMenuBar:(BOOL)bClear;
++ (id)getDefaultMenuBar;
++ (BOOL)isActiveMenuBar:(id)pObject;
+@end
+
+@implementation VCLCMenuBar
+
++ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled
+{
+}
+
++ (void)addDefaultHelpMenu
+{
+}
+
++ (void)clearMenuBar:(BOOL)bClear
+{
+}
+
++ (id)getDefaultMenuBar
+{
+	return nil;
+}
+
++ (BOOL)isActiveMenuBar:(id)pObject
+{
+	return NO;
+}
+
+@end
+
+#endif	 // USE_NATIVE_WINDOW
+
 @interface NSWindow (VCLWindow)
 - (void)_clearModalWindowLevel;
 - (BOOL)_isUtilityWindow;
@@ -587,11 +628,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		bAWTFontInitialized = YES;
 
-		// AWTFont selectors
-
 		NSBundle *pBundle = [NSBundle bundleForClass:[pWindow class]];
 		if ( pBundle )
 		{
+			// AWTFont selectors
+
 			Class aClass = [pBundle classNamed:pAWTFontString];
 			if ( aClass )
 			{
@@ -633,6 +674,64 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				if ( aOldMethod && aNewIMP )
 					method_setImplementation( aOldMethod, aNewIMP );
 			}
+
+#ifdef USE_NATIVE_WINDOW
+			// CMenuBar selectors
+
+			aClass = [pBundle classNamed:pCMenuBarString];
+			if ( aClass )
+			{
+				SEL aSelector = @selector(activate:modallyDisabled:);
+				Method aOldMethod = class_getClassMethod( aClass, aSelector );
+				Method aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(addDefaultHelpMenu);
+				aOldMethod = class_getClassMethod( aClass, aSelector );
+				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(clearMenuBar:);
+				aOldMethod = class_getClassMethod( aClass, aSelector );
+				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(getDefaultMenuBar);
+				aOldMethod = class_getClassMethod( aClass, aSelector );
+				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(isActiveMenuBar:);
+				aOldMethod = class_getClassMethod( aClass, aSelector );
+				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+			}
+#endif	// USE_NATIVE_WINDOW
 		}
 
 		// VCLWindow drag source selectors
@@ -2231,7 +2330,6 @@ static CFDataRef aRTFSelection = nil;
 		}
 	}
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-
 }
 
 @end
