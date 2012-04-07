@@ -641,7 +641,7 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:mpMenu waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:mpMenu waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -667,7 +667,7 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 
 		VCLMenuArgs *pInsertMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSalMenuItem->mpMenuItem, [NSNumber numberWithUnsignedInt:nPos], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(insertMenuItem:) withObject:pInsertMenuItemArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(insertMenuItem:) withObject:pInsertMenuItemArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -694,7 +694,7 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 
 		VCLMenuArgs *pRemoveMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedInt:nPos]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(removeMenuItem:) withObject:pRemoveMenuItemArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(removeMenuItem:) withObject:pRemoveMenuItemArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -730,7 +730,7 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 		VCLMenuArgs *pSetMenuItemSubmenuArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSubMenu->mpMenu, [NSNumber numberWithUnsignedInt:nPos], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuItemSubmenu:) withObject:pSetMenuItemSubmenuArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(setMenuItemSubmenu:) withObject:pSetMenuItemSubmenuArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -758,7 +758,7 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 
 		VCLMenuArgs *pCheckMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bCheck], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(checkMenuItem:) withObject:pCheckMenuItemArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(checkMenuItem:) withObject:pCheckMenuItemArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -785,7 +785,7 @@ void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 
 		VCLMenuArgs *pEnableMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bEnable], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(enableMenuItem:) withObject:pEnableMenuItemArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(enableMenuItem:) withObject:pEnableMenuItemArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
@@ -829,7 +829,7 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 		NSString *pTitle = [NSString stringWithCharacters:aText.getStr() length:aText.getLength()];
 		VCLMenuArgs *pSetMenuItemTitleArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:( pTitle ? pTitle : @"" ), pJavaSalMenuItem->mpMenuItem, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuItemTitle:) withObject:pSetMenuItemTitleArgs waitUntilDone:YES modes:pModes];
+		[mpMenu performSelectorOnMainThread:@selector(setMenuItemTitle:) withObject:pSetMenuItemTitleArgs waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
