@@ -60,12 +60,387 @@ using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
 using namespace vcl;
 
+#ifdef USE_NATIVE_WINDOW
+
+@interface VCLMenuArgs : NSObject
+{
+	NSArray*				mpArgs;
+	NSObject*				mpResult;
+}
++ (id)argsWithArgs:(NSArray *)pArgs;
+- (NSArray *)args;
+- (void)dealloc;
+- (id)initWithArgs:(NSArray *)pArgs;
+- (NSObject *)result;
+- (void)setResult:(NSObject *)pResult;
+@end
+
+@implementation VCLMenuArgs
+
++ (id)argsWithArgs:(NSArray *)pArgs
+{
+	VCLMenuArgs *pRet = [[VCLMenuArgs alloc] initWithArgs:(NSArray *)pArgs];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSArray *)args
+{
+	return mpArgs;
+}
+
+- (void)dealloc
+{
+	if ( mpArgs )
+		[mpArgs release];
+
+	if ( mpResult )
+		[mpResult release];
+
+	[super dealloc];
+}
+
+- (id)initWithArgs:(NSArray *)pArgs
+{
+	[super init];
+
+	mpResult = nil;
+	mpArgs = pArgs;
+	if ( mpArgs )
+		[mpArgs retain];
+
+	return self;
+}
+
+- (NSObject *)result
+{
+	return mpResult;
+}
+
+- (void)setResult:(NSObject *)pResult
+{
+	if ( mpResult )
+		[mpResult release];
+
+	mpResult = pResult;
+
+	if ( mpResult )
+		[mpResult retain];
+}
+
+@end
+
+@interface VCLMenu : NSMenu
+{
+}
+- (id)initWithTitle:(NSString *)pTitle;
+- (void)checkMenuItem:(VCLMenuArgs *)pArgs;
+- (void)enableMenuItem:(VCLMenuArgs *)pArgs;
+- (void)insertMenuItem:(VCLMenuArgs *)pArgs;
+- (void)removeMenuItem:(VCLMenuArgs *)pArgs;
+- (void)setMenuItemSubmenu:(VCLMenuArgs *)pArgs;
+- (void)setMenuItemTitle:(VCLMenuArgs *)pArgs;
+@end
+
+@implementation VCLMenu
+
+- (id)initWithTitle:(NSString *)pTitle
+{
+	return [super initWithTitle:( pTitle ? pTitle : @"" )];
+}
+
+- (void)checkMenuItem:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pPos )
+        return;
+
+    NSNumber *pCheck = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pCheck )
+        return;
+
+    int nPos = [pPos intValue];
+	if ( nPos >= 0 && nPos < [self numberOfItems] )
+	{
+		NSMenuItem *pMenuItem = [self itemAtIndex:nPos];
+		if ( pMenuItem )
+			[pMenuItem setState:[pCheck boolValue]];
+	}
+}
+
+- (void)enableMenuItem:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pPos )
+        return;
+
+    NSNumber *pEnable = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pEnable )
+        return;
+
+    int nPos = [pPos intValue];
+	if ( nPos >= 0 && nPos < [self numberOfItems] )
+	{
+		NSMenuItem *pMenuItem = [self itemAtIndex:nPos];
+		if ( pMenuItem )
+			[pMenuItem setEnabled:[pEnable boolValue]];
+	}
+}
+
+- (void)insertMenuItem:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSMenuItem *pMenuItem = (NSMenuItem *)[pArgArray objectAtIndex:0];
+	if ( !pMenuItem )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pPos )
+        return;
+
+    int nPos = [pPos intValue];
+	if ( nPos >= 0 && nPos < [self numberOfItems] )
+		[self insertItem:pMenuItem atIndex:nPos];
+	else
+		[self addItem:pMenuItem];
+}
+
+- (void)removeMenuItem:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pPos )
+        return;
+
+    int nPos = [pPos intValue];
+	if ( nPos >= 0 && nPos < [self numberOfItems] )
+		[self removeItemAtIndex:nPos];
+}
+
+- (void)setMenuItemSubmenu:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	VCLMenu *pMenu = (VCLMenu *)[pArgArray objectAtIndex:0];
+	if ( !pMenu )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pPos )
+        return;
+
+    int nPos = [pPos intValue];
+	if ( nPos >= 0 && nPos < [self numberOfItems] )
+	{
+		NSMenuItem *pMenuItem = [self itemAtIndex:nPos];
+		if ( pMenuItem )
+			[pMenuItem setSubmenu:pMenu];
+	}
+}
+
+- (void)setMenuItemTitle:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSString *pTitle = (NSString *)[pArgArray objectAtIndex:0];
+	if ( !pTitle )
+		return;
+
+    NSMenuItem *pMenuItem = (NSMenuItem *)[pArgArray objectAtIndex:1];
+    if ( !pMenuItem )
+        return;
+
+	// Set title in menu item and its submenu
+	[pMenuItem setTitle:pTitle];
+	NSMenu *pSubmenu = [pMenuItem submenu];
+	if ( pSubmenu )
+		[pSubmenu setTitle:pTitle];
+}
+
+@end
+
+@interface VCLMenuItem : NSMenuItem
+{
+	USHORT					mnID;
+	Menu*					mpMenu;
+}
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
+- (void)selected;
+@end
+
+@implementation VCLMenuItem
+
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
+{
+	[super initWithTitle:( pTitle ? pTitle : @"" ) action:nil keyEquivalent:@""];
+
+	mnID = nID;
+	mpMenu = pMenu;
+
+	[self setTarget:self];
+	[self setAction:@selector(selected)];
+
+	return self;
+}
+
+- (void)selected
+{
+	fprintf( stderr, "[VCLMenuItem selected] not implemented\n" );
+}
+
+@end
+
+@interface VCLCreateMenu : NSObject
+{
+	VCLMenu*				mpMenu;
+}
++ (id)create;
+- (id)init;
+- (void)dealloc;
+- (void)createMenu:(id)pObject;
+- (VCLMenu *)menu;
+@end
+
+@implementation VCLCreateMenu
+
++ (id)create
+{
+	VCLCreateMenu *pRet = [[VCLCreateMenu alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+
+	mpMenu = nil;
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( mpMenu )
+		[mpMenu release];
+
+	[super dealloc];
+}
+
+- (void)createMenu:(id)pObject
+{
+	if ( mpMenu )
+		return;
+
+	mpMenu = [[VCLMenu alloc] initWithTitle:@""];
+}
+
+- (VCLMenu *)menu
+{
+	return mpMenu;
+}
+
+@end
+
+@interface VCLCreateMenuItem : NSObject
+{
+	USHORT					mnID;
+	Menu*					mpMenu;
+	NSMenuItem*				mpMenuItem;
+	NSString*				mpTitle;
+	MenuItemType			meType;
+}
++ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
+- (void)dealloc;
+- (void)createMenuItem:(id)pObject;
+- (NSMenuItem *)menuItem;
+@end
+
+@implementation VCLCreateMenuItem
+
++ (id)createWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
+{
+	VCLCreateMenuItem *pRet = [[VCLCreateMenuItem alloc] initWithTitle:pTitle type:eType id:nID menu:pMenu];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
+{
+	[super init];
+
+	mnID = nID;
+	mpMenu = pMenu;
+	mpMenuItem = nil;
+	mpTitle = pTitle;
+	if ( mpTitle )
+		[mpTitle retain];
+	meType = eType;
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( mpMenuItem )
+		[mpMenuItem release];
+
+	if ( mpTitle )
+		[mpTitle release];
+
+	[super dealloc];
+}
+
+- (void)createMenuItem:(id)pObject
+{
+	if ( mpMenuItem )
+		return;
+
+	if ( meType == MENUITEM_SEPARATOR )
+	{
+		mpMenuItem = [NSMenuItem separatorItem];
+		if ( mpMenuItem )
+			[mpMenuItem retain];
+	}
+	else
+	{
+		mpMenuItem = [[VCLMenuItem alloc] initWithTitle:mpTitle type:meType id:mnID menu:mpMenu];
+	}
+}
+
+- (NSMenuItem *)menuItem
+{
+	return mpMenuItem;
+}
+
+@end
+
+#endif	// USE_NATIVE_WINDOW
+
 //=============================================================================
 
 JavaSalMenu::JavaSalMenu()
 {
 #ifdef USE_NATIVE_WINDOW
-	mpMenuBar = NULL;
 	mpMenu = NULL;
 #else	// USE_NATIVE_WINDOW
 	mpVCLMenuBar = NULL;
@@ -84,7 +459,8 @@ JavaSalMenu::~JavaSalMenu()
 	aMenuMap.erase( this );
 
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::~JavaSalMenu not implemented\n" );
+	if ( mpMenu )
+		[mpMenu release];
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -111,7 +487,8 @@ BOOL JavaSalMenu::VisibleMenuBar()
 void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::SetFrame not implemented\n" );
+	if ( mbIsMenuBarMenu && mpMenu )
+		mpParentFrame = (JavaSalFrame *)pFrame;
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -126,10 +503,18 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 
 void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 {
-#ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::InsertItem not implemented\n" );
-#else	// USE_NATIVE_WINDOW
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+#ifdef USE_NATIVE_WINDOW
+	if ( mpMenu && pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pInsertMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSalMenuItem->mpMenuItem, [NSNumber numberWithUnsignedInt:nPos], nil]];
+		[mpMenu insertMenuItem:pInsertMenuItemArgs];
+
+		[pPool release];
+	}
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->addMenuItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
@@ -146,7 +531,15 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 void JavaSalMenu::RemoveItem( unsigned nPos )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::RemoveItem not implemented\n" );
+	if ( mpMenu )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pRemoveMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedInt:nPos]]];
+		[mpMenu removeMenuItem:pRemoveMenuItemArgs];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -171,20 +564,28 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos )
 {
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
-#ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::SetSubItem not implemented\n" );
-#else	// USE_NATIVE_WINDOW
 	JavaSalMenu* pJavaSubMenu = (JavaSalMenu *)pSubMenu;
+#ifdef USE_NATIVE_WINDOW
+	if ( mpMenu && pJavaSubMenu && pJavaSubMenu && pJavaSubMenu->mpMenu )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pSetMenuItemSubmenuArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSubMenu->mpMenu, [NSNumber numberWithUnsignedInt:nPos], nil]];
+		[mpMenu setMenuItemSubmenu:pSetMenuItemSubmenuArgs];
+
+		[pPool release];
+	}
+#else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenu )
 	{
 		mpVCLMenuBar->changeMenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
-	else if( mpVCLMenu && pSubMenu )
+	else if( mpVCLMenu && pJavaSubMenu )
 	{
 		mpVCLMenu->attachSubmenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
 #endif	// USE_NATIVE_WINDOW
-	pJavaSalMenuItem->mpSalSubmenu=(JavaSalMenu *)pSubMenu;
+	pJavaSalMenuItem->mpSalSubmenu = pJavaSubMenu;
 }
 
 //-----------------------------------------------------------------------------
@@ -192,7 +593,15 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::CheckItem not implemented\n" );
+	if ( mpMenu )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pCheckMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bCheck], nil]];
+		[mpMenu checkMenuItem:pCheckMenuItemArgs];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu )
 	{
@@ -210,7 +619,15 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::EnableItem not implemented\n" );
+	if ( mpMenu )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pEnableMenuItemArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bEnable], nil]];
+		[mpMenu enableMenuItem:pEnableMenuItemArgs];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -235,17 +652,28 @@ void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const 
 
 void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
 {
-#ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenu::SetItemText not implemented\n" );
-#else	// USE_NATIVE_WINDOW
 	// assume pSalMenuItem is a pointer to the menu item object already at nPos
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+
+	// remove accelerator character
+	XubString theText(rText);
+	theText.EraseAllChars('~');
+	OUString aText( theText );
+
+#ifdef USE_NATIVE_WINDOW
+	if ( mpMenu && pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pTitle = [NSString stringWithCharacters:aText.getStr() length:aText.getLength()];
+		VCLMenuArgs *pSetMenuItemTitleArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:( pTitle ? pTitle : @"" ), pJavaSalMenuItem->mpMenuItem, nil]];
+		[mpMenu setMenuItemTitle:pSetMenuItemTitleArgs];
+
+		[pPool release];
+	}
+#else	// USE_NATIVE_WINDOW
 	if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData )
 	{
-		// remove accelerator character
-		XubString theText(rText);
-		theText.EraseAllChars('~');
-		OUString aText( theText );
 		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( aText );
 	}
 #endif	// USE_NATIVE_WINDOW
@@ -301,7 +729,8 @@ JavaSalMenuItem::JavaSalMenuItem() :
 JavaSalMenuItem::~JavaSalMenuItem()
 {
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalMenuItem::~JavaSalMenuItem not implemented\n" );
+	if ( mpMenuItem )
+		[mpMenuItem release];
 #else	// USE_NATIVE_WINDOW
 	if( mpVCLMenuItemData )
 	{
@@ -319,8 +748,7 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
 	pSalMenu->mbIsMenuBarMenu = bMenuBar;
 #ifdef USE_NATIVE_WINDOW
-	pSalMenu->mpMenuBar=NULL;
-	pSalMenu->mpMenu=NULL;
+	pSalMenu->mpMenu = NULL;
 #else	// USE_NATIVE_WINDOW
 	pSalMenu->mpVCLMenuBar=NULL;
 	pSalMenu->mpVCLMenu=NULL;
@@ -328,7 +756,19 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 	pSalMenu->mpParentVCLMenu=pVCLMenu;
 
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalInstance::CreateMenu not implemented\n" );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLCreateMenu *pVCLCreateMenu = [VCLCreateMenu create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLCreateMenu performSelectorOnMainThread:@selector(createMenu:) withObject:pVCLCreateMenu waitUntilDone:YES modes:pModes];
+	VCLMenu *pMenu = [pVCLCreateMenu menu];
+	if ( pMenu )
+	{
+		[pMenu retain];
+		pSalMenu->mpMenu = pMenu;
+	}
+
+	[pPool release];
 #else	// USE_NATIVE_WINDOW
 	if( bMenuBar )
 	{
@@ -370,7 +810,20 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	title.EraseAllChars('~');
 	OUString aTitle( title );
 #ifdef USE_NATIVE_WINDOW
-	fprintf( stderr, "JavaSalInstance::CreateMenuItem not implemented\n" );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
+	VCLCreateMenuItem *pVCLCreateMenuItem = [VCLCreateMenuItem createWithTitle:pTitle type:pItemData->eType id:pItemData->nId menu:pItemData->pMenu];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLCreateMenuItem performSelectorOnMainThread:@selector(createMenuItem:) withObject:pVCLCreateMenuItem waitUntilDone:YES modes:pModes];
+	NSMenuItem *pMenuItem = [pVCLCreateMenuItem menuItem];
+	if ( pMenuItem )
+	{
+		[pMenuItem retain];
+		pSalMenuItem->mpMenuItem = pMenuItem;
+	}
+
+	[pPool release];
 #else	// USE_NATIVE_WINDOW
 	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( aTitle, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
 #endif	// USE_NATIVE_WINDOW
