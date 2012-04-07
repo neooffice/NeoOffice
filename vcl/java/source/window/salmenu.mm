@@ -255,6 +255,9 @@ static VCLMenu *pMenuBarMenu = nil;
 			else
 				[mpMenu addItem:pMenuItem];
 		}
+
+		if ( self == pMenuBarMenu )
+			[self setMenuAsMainMenu:self];
 	}
 }
 
@@ -323,8 +326,12 @@ static VCLMenu *pMenuBarMenu = nil;
 		if ( pMenuItem )
 		{
 			[mpMenuItems removeObject:pMenuItem];
+
 			if ( mpMenu )
 				[mpMenu removeItem:pMenuItem];
+
+			if ( self == pMenuBarMenu )
+				[self setMenuAsMainMenu:self];
 		}
 	}
 }
