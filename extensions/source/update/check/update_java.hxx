@@ -34,13 +34,8 @@
 #ifndef _UPDATE_JAVA_HXX
 #define _UPDATE_JAVA_HXX
 
-#ifdef __OBJC__
-#import <set>
-#import <rtl/ustring.hxx>
-#else	// __OBJC__
 #include <set>
 #include <rtl/ustring.hxx>
-#endif	// __OBJC__
 
 #ifdef MACOSX
 

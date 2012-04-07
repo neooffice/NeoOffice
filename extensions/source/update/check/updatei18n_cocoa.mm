@@ -31,12 +31,14 @@
  *
  *************************************************************************/
 
-#import "updatei18n_cocoa.hxx"
-#import <map>
-#import <sfx2/app.hxx>
-#import <tools/rcid.h>
-#import <unotools/localedatawrapper.hxx>
-#import <vcl/svapp.hxx>
+#include <map>
+
+#include <sfx2/app.hxx>
+#include <tools/rcid.h>
+#include <unotools/localedatawrapper.hxx>
+#include <vcl/svapp.hxx>
+
+#include "updatei18n_cocoa.hxx"
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
 static NSDictionary *pDefaultLocaleDict = nil;
@@ -55,6 +57,15 @@ using namespace rtl;
  */
 static const sal_Char *pEntries_de[] = {
 	UPDATEBACK, "Zurück",
+	UPDATEDOWNLOADCANCELED, "Herunterladen abgebrochen",
+	UPDATEDOWNLOADFAILED, "Herunterladen fehlgeschlagen",
+	UPDATEDOWNLOADINGFILE, "Datei wird heruntergeladen",
+	UPDATEERROR, "Fehler:",
+	UPDATEINSTALLUPDATES, "Möchten Sie die heruntergeladenen Updates jetzt installieren?",
+	UPDATELOADING, "Laden…",
+	UPDATEOPENFILEFAILED, "%@ kann nicht geöffnet werden",
+	UPDATEOPENINGFILE, "%@ wird geöffnet…",
+	UPDATEREDOWNLOADFILE, "Möchten Sie die Datei erneut herunterladen?",
 	nil, nil
 };
 
@@ -67,7 +78,7 @@ static const sal_Char *pEntries_en_US[] = {
 	UPDATEDOWNLOADFAILED, "Download failed",
 	UPDATEDOWNLOADINGFILE, "Downloading file",
 	UPDATEERROR, "Error:",
-	UPDATEINSTALLUPDATES, "Do you want to install the updates that you downloaded now?",
+	UPDATEINSTALLUPDATES, "Do you want to install the updates that you downloaded?",
 	UPDATELOADING, "Loading…",
 	UPDATEMEGABYTE, "MB",
 	UPDATEOPENFILEFAILED, "Cannot open %@",
@@ -122,7 +133,7 @@ static const sal_Char *pEntries_nl[] = {
 	UPDATEDOWNLOADFAILED, "Ophalen mislukt",
 	UPDATEDOWNLOADINGFILE, "Bestand ophalen",
 	UPDATEERROR, "Fout:",
-	UPDATEINSTALLUPDATES, "Wilt u de updates die u heeft opgehaald nu installeren?",
+	UPDATEINSTALLUPDATES, "Wilt u de updates die u heeft opgehaald installeren?",
 	UPDATELOADING, "Laden…",
 	UPDATEOPENFILEFAILED, "Kan %@ niet openen",
 	UPDATEOPENINGFILE, "%@ openen…",

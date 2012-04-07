@@ -199,7 +199,7 @@ int java_main( int argc, char **argv )
 		if ( i < nLen - 1 )
 			pHomePath = [pHomePath substringToIndex:i + 1];
 		NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomePath];
-		putenv( (char *)[pHomeEnv UTF8String] );
+		putenv( strdup( [pHomeEnv UTF8String] ) );
   	}
 
 	// Make sure TMPDIR exists as a softlink to /private/tmp as it can be
@@ -212,11 +212,11 @@ int java_main( int argc, char **argv )
 	// periodically
 	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TEMP=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 
 	// Unset the CLASSPATH environment variable
 	unsetenv( "CLASSPATH" );
@@ -230,7 +230,7 @@ int java_main( int argc, char **argv )
 		NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
 		if ( pPath )
 			pPathEnv = [pPathEnv stringByAppendingFormat:@":%@", pPath];
-		putenv( (char *)[pPathEnv UTF8String] );
+		putenv( strdup( [pPathEnv UTF8String] ) );
 	}
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
@@ -245,7 +245,7 @@ int java_main( int argc, char **argv )
   		const char *pEnvFallbackFrameworkPath = getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" );
 		if ( pEnvFallbackFrameworkPath )
 			pFrameworkPathEnv = [pFrameworkPathEnv stringByAppendingFormat:@":%@", [NSString stringWithUTF8String:pEnvFallbackFrameworkPath]];
-		putenv( (char *)[pFrameworkPathEnv UTF8String] );
+		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
 		bRestart = true;
 	}
 
@@ -270,7 +270,7 @@ int java_main( int argc, char **argv )
 			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyLibPath];
 		if ( pDyFallbackLibPath )
 			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyFallbackLibPath];
-		putenv( (char *)[pDyFallbackLibPathEnv UTF8String] );
+		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
 		bRestart = true;
 	}
 

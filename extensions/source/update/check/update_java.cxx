@@ -166,7 +166,11 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 		sal_uInt32 nPaths = aPackagePathsRunList.size();
 		if (nPaths)
 		{
+#ifdef MACOSX
 			rtl_uString *pArgs[nPaths];
+#else	// MACOSX
+			rtl_uString **pArgs = (rtl_uString **)rtl_allocateMemory(nPaths * sizeof(rtl_uString*));
+#endif	// MACOSX
 			sal_uInt32 nCurrentItem = 0;
 			for (std::list< OUString >::const_iterator rit = aPackagePathsRunList.begin(); rit != aPackagePathsRunList.end() && nCurrentItem < nPaths; ++rit)
 				pArgs[nCurrentItem++] = (*rit).pData;
@@ -178,6 +182,9 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 			oslFileHandle aStdinHandle;
 			if (osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL) == osl_Process_E_None)
 				bJoin = true;
+#ifndef MACOSX
+			rtl_freeMemory(pArgs);
+#endif	// !MACOSX
 			osl_freeProcessHandle(aProcess);
 		}
 

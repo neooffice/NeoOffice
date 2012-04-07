@@ -1,5 +1,5 @@
 /*************************************************************************
- *
+ *i
  *  $RCSfile$
  *
  *  $Revision$
@@ -35,8 +35,10 @@
 
 #include <errno.h>
 #include <stdio.h>
+#ifdef MACOSX
 #include <unistd.h>
 #include <sys/wait.h>
+#endif	// MACOSX
 
 int main( int argc, char **argv )
 {
