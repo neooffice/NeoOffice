@@ -250,7 +250,6 @@ static NSString *pBlankItem = @" ";
 	int nID = [pID intValue];
 
 	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
-	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
