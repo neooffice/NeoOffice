@@ -432,12 +432,21 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					pSalData->mpFocusFrame = pFrame;
 					pFrame->CallCallback( nID, NULL );
+#ifdef USE_NATIVE_WINDOW
+					JavaSalMenu::SetMenuBarToFocusFrame();
+#endif	// USE_NATIVE_WINDOW
 
 					Window *pWindow = Application::GetFirstTopLevelWindow();
 					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
 						pWindow = Application::GetNextTopLevelWindow( pWindow );
 					InvalidateControls( pWindow );
 				}
+#ifdef USE_NATIVE_WINDOW
+				else
+				{
+					JavaSalMenu::SetMenuBarToFocusFrame();
+				}
+#endif	// USE_NATIVE_WINDOW
 			}
 
 			break;
@@ -450,6 +459,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
+#ifdef USE_NATIVE_WINDOW
+					JavaSalMenu::SetMenuBarToFocusFrame();
+#endif	// USE_NATIVE_WINDOW
 				}
 
 				// Fix bug 3098 by hiding tooltip windows but leaving the

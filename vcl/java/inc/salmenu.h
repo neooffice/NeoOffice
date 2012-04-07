@@ -58,17 +58,15 @@ class com_sun_star_vcl_VCLMenuItemData;
 class JavaSalMenu : public SalMenu
 {
 public:
-	// used for menubars only
-#ifdef USE_NATIVE_WINDOW
-	id						mpMenuBar;
-#else	// USE_NATIVE_WINDOW
-	::vcl::com_sun_star_vcl_VCLMenuBar *	mpVCLMenuBar;
-#endif	// USE_NATIVE_WINDOW
-	
-	// used for menus
 #ifdef USE_NATIVE_WINDOW
 	id						mpMenu;
+
+	static void				SetMenuBarToFocusFrame();
 #else	// USE_NATIVE_WINDOW
+	// used for menubars only
+	::vcl::com_sun_star_vcl_VCLMenuBar *	mpVCLMenuBar;
+	
+	// used for menus
 	::vcl::com_sun_star_vcl_VCLMenu *	mpVCLMenu;
 #endif	// USE_NATIVE_WINDOW
 	

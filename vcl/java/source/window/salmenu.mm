@@ -35,9 +35,10 @@
 
 #include <map>
 
+#include <saldata.hxx>
+#include <salframe.h>
 #include <salinst.h>
 #include <salmenu.h>
-#include <salframe.h>
 #include <vcl/window.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_WINDOW
@@ -257,7 +258,10 @@ static VCLMenu *pMenuBarMenu = nil;
 		}
 
 		if ( self == pMenuBarMenu )
+		{
+			[self removeMenuAsMainMenu:self];
 			[self setMenuAsMainMenu:self];
+		}
 	}
 }
 
@@ -331,14 +335,17 @@ static VCLMenu *pMenuBarMenu = nil;
 				[mpMenu removeItem:pMenuItem];
 
 			if ( self == pMenuBarMenu )
+			{
+				[self removeMenuAsMainMenu:self];
 				[self setMenuAsMainMenu:self];
+			}
 		}
 	}
 }
 
 - (void)setMenuAsMainMenu:(id)pObject
 {
-	if ( !mbMenuBar )
+	if ( !mbMenuBar || self == pMenuBarMenu )
 		return;
 
 	pMenuBarMenu = self;
@@ -629,6 +636,43 @@ JavaSalMenu::~JavaSalMenu()
 #endif	// USE_NATIVE_WINDOW
 }
 
+#ifdef USE_NATIVE_WINDOW
+
+//-----------------------------------------------------------------------------
+
+void JavaSalMenu::SetMenuBarToFocusFrame()
+{
+	JavaSalFrame *pFrame = GetSalData()->mpFocusFrame;
+	while ( pFrame && ( pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) && pFrame->mpParent && pFrame->mpParent->mbVisible )
+		pFrame = pFrame->mpParent;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+
+	if ( pFrame && pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() && pFrame->mbVisible )
+	{
+		[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+	}
+	else
+	{
+		static JavaSalMenu *pEmptyMenuBar = NULL;
+		if ( !pEmptyMenuBar )
+		{
+			JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
+			if ( pInst )
+				pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( TRUE, NULL );
+
+		}
+
+		if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
+			[pEmptyMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pEmptyMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
+}
+
+#endif	// USE_NATIVE_WINDOW
+
 //-----------------------------------------------------------------------------
 
 BOOL JavaSalMenu::VisibleMenuBar()
@@ -644,13 +688,7 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 	if ( mbIsMenuBarMenu && mpMenu )
 	{
 		mpParentFrame = (JavaSalFrame *)pFrame;
-
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:mpMenu waitUntilDone:NO modes:pModes];
-
-		[pPool release];
+		SetMenuBarToFocusFrame();
 	}
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
