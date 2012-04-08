@@ -402,7 +402,7 @@ static VCLMenu *pMenuBarMenu = nil;
 - (void)setMenuItemKeyEquivalent:(VCLMenuArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 2 )
+	if ( !pArgArray || [pArgArray count] < 3 )
 		return;
 
     NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:0];
@@ -413,12 +413,22 @@ static VCLMenu *pMenuBarMenu = nil;
 	if ( !pKeyText || [pKeyText length] != 1 )
 		return;
 
+    NSNumber *pShift = (NSNumber *)[pArgArray objectAtIndex:2];
+    if ( !pShift )
+        return;
+
     unsigned int nPos = [pPos unsignedIntValue];
 	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
+		{
+			NSUInteger nMask = NSCommandKeyMask;
+    		if ( [pShift boolValue] )
+				nMask |= NSShiftKeyMask;
 			[pMenuItem setKeyEquivalent:pKeyText];
+			[pMenuItem setKeyEquivalentModifierMask:nMask];
+		}
 	}
 }
 
@@ -967,7 +977,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
-				VCLMenuArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), nil]];
+				VCLMenuArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithBool:rKeyCode.IsShift()], nil]];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
 
