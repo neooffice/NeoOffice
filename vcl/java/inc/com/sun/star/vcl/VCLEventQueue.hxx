@@ -36,10 +36,10 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 
+#include <salframe.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
-
-class JavaSalFrame;
+#include <vcl/menu.hxx>
 
 namespace vcl {
 
@@ -55,6 +55,9 @@ public:
 	static jclass		getMyClass();
 	static sal_Bool		postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5, jchar _par6, sal_Bool _par7, sal_Bool _par8, sal_Bool _par9, sal_Bool _par10 );
 	static void			postMouseWheelEvent( jobject _par0, long _par1, long _par2, long _par3, long _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
+#ifdef USE_NATIVE_WINDOW
+	static void			postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu );
+#endif	// USE_NATIVE_WINDOW
 	static void			postWindowMoveSessionEvent( jobject _par0, long _par1, long _par2, sal_Bool _par3 );
 
 						com_sun_star_vcl_VCLEventQueue( jobject myObj );

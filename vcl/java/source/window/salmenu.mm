@@ -133,6 +133,7 @@ using namespace vcl;
 
 @interface VCLMenu : NSObject
 {
+	JavaSalFrame*			mpFrame;
 	NSMenu*					mpMenu;
 	MacOSBOOL				mbMenuBar;
 	NSMutableArray*			mpMenuItems;
@@ -145,11 +146,13 @@ using namespace vcl;
 - (NSMenu *)menu;
 - (void)removeMenuAsMainMenu:(id)pObject;
 - (void)removeMenuItem:(VCLMenuArgs *)pArgs;
+- (void)setFrame:(VCLMenuArgs *)pArgs;
 - (void)setMenuAsMainMenu:(id)pObject;
 - (void)setMenuItemSubmenu:(VCLMenuArgs *)pArgs;
 - (void)setMenuItemTitle:(VCLMenuArgs *)pArgs;
 @end
 
+static JavaSalFrame *pMenuBarFrame = NULL;
 static VCLMenu *pMenuBarMenu = nil;
 
 @implementation VCLMenu
@@ -293,6 +296,7 @@ static VCLMenu *pMenuBarMenu = nil;
 	if ( !mbMenuBar || self != pMenuBarMenu )
 		return;
 
+	pMenuBarFrame = NULL;
 	pMenuBarMenu = nil;
 
 	NSApplication *pApp = [NSApplication sharedApplication];
@@ -343,11 +347,25 @@ static VCLMenu *pMenuBarMenu = nil;
 	}
 }
 
+- (void)setFrame:(VCLMenuArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSNumber *pNumber = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pNumber )
+        return;
+
+	mpFrame = (JavaSalFrame *)[pNumber unsignedLongValue];
+}
+
 - (void)setMenuAsMainMenu:(id)pObject
 {
 	if ( !mbMenuBar || self == pMenuBarMenu )
 		return;
 
+	pMenuBarFrame = mpFrame;
 	pMenuBarMenu = self;
 
 	NSApplication *pApp = [NSApplication sharedApplication];
@@ -462,7 +480,7 @@ static VCLMenu *pMenuBarMenu = nil;
 
 - (void)selected
 {
-	fprintf( stderr, "[VCLMenuItem selected] not implemented\n" );
+	com_sun_star_vcl_VCLEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
 }
 
 @end
@@ -688,7 +706,17 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 	if ( mbIsMenuBarMenu && mpMenu )
 	{
 		mpParentFrame = (JavaSalFrame *)pFrame;
-		SetMenuBarToFocusFrame();
+
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLMenuArgs *pSetFrameArgs = [VCLMenuArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)mpParentFrame]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpMenu performSelectorOnMainThread:@selector(setFrame:) withObject:pSetFrameArgs waitUntilDone:NO modes:pModes];
+
+		if ( mpParentFrame && mpParentFrame == GetSalData()->mpFocusFrame )
+			SetMenuBarToFocusFrame();
+
+		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )

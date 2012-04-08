@@ -297,6 +297,20 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Post a custom menu item selected event.
+	 *
+	 * @param f the frame pointer
+	 * @param i the menu ID
+	 * @param m the menu pointer
+	 */
+	public static void postMenuItemSelectedEvent(long f, short i, long m) {
+
+		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+		eventQueue.invokeLater(new PostMenuItemSelectedEvent(f, i, m));
+
+	}
+
+	/**
 	 * Post a custom window move session event.
 	 *
 	 * @param o the <code>Window</code> peer
@@ -917,6 +931,17 @@ public final class VCLEventQueue {
 
 		}
 
+		/**
+		 * Get the event queue
+		 *
+		 * @return the <code>VCLEventQueue</code> instance
+		 */
+		protected VCLEventQueue getEventQueue() {
+
+			return queue;
+
+		}
+
 	}
 
 	/**
@@ -1227,6 +1252,67 @@ public final class VCLEventQueue {
 				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
 				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_PRESSED, when, modifiers, keyCode, originalModifiers, originalKeyChar));
 				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_RELEASED, when, 0, keyCode, 0, (char)0));
+			}
+		}
+	}
+
+	/**
+	 * The <code>PostMenuItemSelectedEvent</code> class is a runnable class
+	 * used for posting <code>Menu</code> event in the Java event dispatch
+	 * thread from the native event dispatch thread without blocking.
+	 */
+	static class PostMenuItemSelectedEvent extends VCLEventQueue.PostEmptyEvent implements Runnable {
+
+		/**
+		 * The start session flag.
+		 */
+		private boolean startSession = false;
+
+		/**
+		 * The frame pointer.
+		 */
+		private long frame = 0;
+
+		/**
+		 * The menu ID.
+		 */
+		private short id = 0;
+
+		/**
+		 * The menu pointer.
+		 */
+		private long menu = 0;
+
+		/**
+		 * Construct a <code>PostMenuItemSelectedEvent</code>.
+		 *
+		 * @param f the frame pointer
+		 * @param i the menu ID
+		 * @param m the menu pointer
+		 */
+		PostMenuItemSelectedEvent(long f, short i, long m) {
+
+			frame = f;
+			id = i;
+			menu = m;
+
+		}
+
+		/**
+		 * Runnable method that performs nothing. This method is used for
+		 * passing this class to the <code>EventQueue.invokeLater()</code>
+		 * method so that we can prevent blocking in Java event dispatch thread.
+		 */
+		public void run() {
+
+			if (EventQueue.isDispatchThread()) {
+				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+				VCLEventQueue q = eventQueue.getEventQueue();
+				if (q != null) {
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, frame, id, menu));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, frame, id, menu));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, frame, id, menu));
+				}
 			}
 		}
 	}

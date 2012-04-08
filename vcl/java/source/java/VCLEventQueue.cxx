@@ -569,6 +569,35 @@ void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _p
 	}
 }
 
+#ifdef USE_NATIVE_WINDOW
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(JSJ)V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postMenuItemSelectedEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[4];
+			args[0].j = jlong( pFrame );
+			args[1].s = jshort( nID );
+			args[2].j = jlong( pMenu );
+			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+		}
+	}
+}
+
+#endif	// USE_NATIVE_WINDOW
+
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLEventQueue::postWindowMoveSessionEvent( jobject _par0, long _par1, long _par2, sal_Bool _par3 )

@@ -1027,6 +1027,7 @@ public final class VCLEvent extends AWTEvent {
 	 * should be used only for injecting SALEVENT_MENU* events into the queue.
 	 *
 	 * @param id the event type
+	 * @param f the frame
 	 * @param mID the menu id
 	 * @param mCookie the menu pointer
 	 */
@@ -1035,6 +1036,24 @@ public final class VCLEvent extends AWTEvent {
 		super(new Object(), id);
 		if (f != null)
 			frame = f.getFrame();
+		menuID = mID;
+		menuCookie = mCookie;
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLEvent</code> instance.  This constructor
+	 * should be used only for injecting SALEVENT_MENU* events into the queue.
+	 *
+	 * @param id the event type
+	 * @param f the frame pointer
+	 * @param mID the menu id
+	 * @param mCookie the menu pointer
+	 */
+	public VCLEvent(int id, long f, short mID, long mCookie) {
+	    
+		super(new Object(), id);
+		frame = f;
 		menuID = mID;
 		menuCookie = mCookie;
 
