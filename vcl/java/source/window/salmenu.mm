@@ -306,13 +306,23 @@ static VCLMenu *pMenuBarMenu = nil;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
-			unsigned int nCount = (unsigned int)[pMainMenu numberOfItems];
+			NSInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
-				// Clear out existing items but keep the application submenu
-				unsigned int i;
-				for ( i = nCount - 1; i > 0; i-- )
-					[pMainMenu removeItemAtIndex:i];
+				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
+				if ( pAppMenuItem )
+				{
+					NSMenu *pNewMainMenu = [[NSMenu alloc] initWithTitle:[pMainMenu title]];
+					if ( pNewMainMenu )
+					{
+						[pAppMenuItem retain];
+						[pMainMenu removeItemAtIndex:0];
+						[pNewMainMenu addItem:pAppMenuItem];
+						[pAppMenuItem release];
+
+						[pApp setMainMenu:pNewMainMenu];
+					}
+				}
 			}
 		}
 	}
@@ -375,23 +385,39 @@ static VCLMenu *pMenuBarMenu = nil;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
-			unsigned int nCount = (unsigned int)[pMainMenu numberOfItems];
+			NSInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
-				// Clear out existing items but keep the application submenu
-				unsigned int i;
-				for ( i = nCount - 1; i > 0; i-- )
-					[pMainMenu removeItemAtIndex:i];
-
-				// Add our menu items to menubar
-				if ( mpMenuItems )
+				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
+				if ( pAppMenuItem )
 				{
-					nCount = [mpMenuItems count];
-					for ( i = 0; i < nCount; i++ )
+					NSMenu *pNewMainMenu = [[NSMenu alloc] initWithTitle:[pMainMenu title]];
+					if ( pNewMainMenu )
 					{
-						NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
-						if ( pMenuItem )
-							[pMainMenu addItem:pMenuItem];
+						[pAppMenuItem retain];
+						[pMainMenu removeItemAtIndex:0];
+						[pNewMainMenu addItem:pAppMenuItem];
+						[pAppMenuItem release];
+
+						// Add our menu items to menubar
+						if ( mpMenuItems )
+						{
+							nCount = (NSInteger)[mpMenuItems count];
+							NSInteger i = 0;
+							for ( ; i < nCount; i++ )
+							{
+								NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
+								if ( pMenuItem )
+								{
+									NSMenu *pMenu = [pMenuItem menu];
+									if ( pMenu )
+										[pMenu removeItem:pMenuItem];
+									[pNewMainMenu addItem:pMenuItem];
+								}
+							}
+						}
+
+						[pApp setMainMenu:pNewMainMenu];
 					}
 				}
 			}
