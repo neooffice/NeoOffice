@@ -508,6 +508,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return self;
 }
 
+- (BOOL)isInTracking
+{
+	return mbInTracking;
+}
+
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
 	if ( pMenu && ( !mbInTracking || mbCancelTracking ) )

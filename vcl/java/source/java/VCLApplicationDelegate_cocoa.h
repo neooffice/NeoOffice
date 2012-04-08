@@ -57,6 +57,7 @@
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
+- (BOOL)isInTracking;
 - (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;
 - (void)showAbout;

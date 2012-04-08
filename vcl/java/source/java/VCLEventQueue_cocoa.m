@@ -35,8 +35,6 @@
 
 #include <dlfcn.h>
 
-// Need to include for SetSystemUIMode constants but we don't link to it
-#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
 #include "VCLApplicationDelegate_cocoa.h"
@@ -48,7 +46,6 @@
 #include "../app/salinst_cocoa.h"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
-typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pData );
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
@@ -888,20 +885,10 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
-		bool bTrackingMenuBar = false;
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			GetMenuTrackingData_Type *pGetMenuTrackingData = (GetMenuTrackingData_Type *)dlsym( pLib, "GetMenuTrackingData" );
-			if ( pGetMenuTrackingData )
-			{
-				MenuTrackingData aTrackingData;
-				if ( pGetMenuTrackingData( nil, &aTrackingData ) == noErr )
-					bTrackingMenuBar = true;
-			}
-
-			dlclose( pLib );
-		}
+		BOOL bTrackingMenuBar = false;
+		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pAppDelegate )
+			bTrackingMenuBar = [pAppDelegate isInTracking];
 
 		// Fix bug 2992 by not allowing the key window to change when we are
 		// tracking the menubar and never allow a borderless window to grab
