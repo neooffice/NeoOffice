@@ -115,6 +115,7 @@ public:
 	BOOL					mbInWindowWillEnterFullScreen;
 
 #ifdef USE_NATIVE_WINDOW
+	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode );
 	static void				FlushAllFrames();
 #endif	// USE_NATIVE_WINDOW
 	static unsigned int		GetDefaultScreenNumber();

@@ -1174,6 +1174,232 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
+::rtl::OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
+{
+	sal_Unicode nChar = 0;
+
+	nKeyCode &= KEY_CODE;
+	switch ( nKeyCode )
+	{
+		case KEY_0:
+		case KEY_1:
+		case KEY_2:
+		case KEY_3:
+		case KEY_4:
+		case KEY_5:
+		case KEY_6:
+		case KEY_7:
+		case KEY_8:
+		case KEY_9:
+			nChar = '0' + nKeyCode - KEY_0;
+			break;
+		case KEY_A:
+		case KEY_B:
+		case KEY_C:
+		case KEY_D:
+		case KEY_E:
+		case KEY_F:
+		case KEY_G:
+		case KEY_H:
+		case KEY_I:
+		case KEY_J:
+		case KEY_K:
+		case KEY_L:
+		case KEY_M:
+		case KEY_N:
+		case KEY_O:
+		case KEY_P:
+		case KEY_Q:
+		case KEY_R:
+		case KEY_S:
+		case KEY_T:
+		case KEY_U:
+		case KEY_V:
+		case KEY_W:
+		case KEY_X:
+		case KEY_Y:
+		case KEY_Z:
+			nChar = 'A' + nKeyCode - KEY_A;
+			break;
+		case KEY_F1:
+			nChar = NSF1FunctionKey;
+			break;
+		case KEY_F2:
+			nChar = NSF2FunctionKey;
+			break;
+		case KEY_F3:
+			nChar = NSF3FunctionKey;
+			break;
+		case KEY_F4:
+			nChar = NSF4FunctionKey;
+			break;
+		case KEY_F5:
+			nChar = NSF5FunctionKey;
+			break;
+		case KEY_F6:
+			nChar = NSF6FunctionKey;
+			break;
+		case KEY_F7:
+			nChar = NSF7FunctionKey;
+			break;
+		case KEY_F8:
+			nChar = NSF8FunctionKey;
+			break;
+		case KEY_F9:
+			nChar = NSF9FunctionKey;
+			break;
+		case KEY_F10:
+			nChar = NSF10FunctionKey;
+			break;
+		case KEY_F11:
+			nChar = NSF11FunctionKey;
+			break;
+		case KEY_F12:
+			nChar = NSF12FunctionKey;
+			break;
+		case KEY_F13:
+			nChar = NSF13FunctionKey;
+			break;
+		case KEY_F14:
+			nChar = NSF14FunctionKey;
+			break;
+		case KEY_F15:
+			nChar = NSF15FunctionKey;
+			break;
+		case KEY_F16:
+			nChar = NSF16FunctionKey;
+			break;
+		case KEY_F17:
+			nChar = NSF17FunctionKey;
+			break;
+		case KEY_F18:
+			nChar = NSF18FunctionKey;
+			break;
+		case KEY_F19:
+			nChar = NSF19FunctionKey;
+			break;
+		case KEY_F20:
+			nChar = NSF20FunctionKey;
+			break;
+		case KEY_F21:
+			nChar = NSF21FunctionKey;
+			break;
+		case KEY_F22:
+			nChar = NSF22FunctionKey;
+			break;
+		case KEY_F23:
+			nChar = NSF23FunctionKey;
+			break;
+		case KEY_F24:
+			nChar = NSF24FunctionKey;
+			break;
+		case KEY_F25:
+			nChar = NSF25FunctionKey;
+			break;
+		case KEY_F26:
+			nChar = NSF26FunctionKey;
+			break;
+		case KEY_DOWN:
+			nChar = NSDownArrowFunctionKey;
+			break;
+		case KEY_UP:
+			nChar = NSUpArrowFunctionKey;
+			break;
+		case KEY_LEFT:
+			nChar = NSLeftArrowFunctionKey;
+			break;
+		case KEY_RIGHT:
+			nChar = NSRightArrowFunctionKey;
+			break;
+		case KEY_HOME:
+			nChar = NSHomeFunctionKey;
+			break;
+		case KEY_END:
+			nChar = NSEndFunctionKey;
+			break;
+		case KEY_PAGEUP:
+			nChar = NSPageUpFunctionKey;
+			break;
+		case KEY_PAGEDOWN:
+			nChar = NSPageDownFunctionKey;
+			break;
+		case KEY_INSERT:
+			nChar = NSInsertFunctionKey;
+			break;
+		case KEY_DELETE:
+			nChar = NSDeleteFunctionKey;
+			break;
+		case KEY_ADD:
+			nChar = '+';
+			break;
+		case KEY_SUBTRACT:
+			nChar = '-';
+			break;
+		case KEY_MULTIPLY:
+			nChar = '*';
+			break;
+		case KEY_DIVIDE:
+			nChar = '/';
+			break;
+		case KEY_DECIMAL:
+		case KEY_POINT:
+			nChar = '.';
+			break;
+		case KEY_COMMA:
+			nChar = ',';
+			break;
+		case KEY_LESS:
+			nChar = '<';
+			break;
+		case KEY_GREATER:
+			nChar = '>';
+			break;
+		case KEY_EQUAL:
+			nChar = '=';
+			break;
+		case KEY_UNDO:
+			nChar = NSUndoFunctionKey;
+			break;
+		case KEY_FIND:
+			nChar = NSFindFunctionKey;
+			break;
+		case KEY_HELP:
+			nChar = NSHelpFunctionKey;
+			break;
+		case KEY_TILDE:
+			nChar = '~';
+			break;
+		case KEY_QUOTELEFT:
+			nChar = '`';
+			break;
+		case KEY_RETURN:
+		case KEY_ESCAPE:
+		case KEY_SPACE:
+		case KEY_TAB:
+		case KEY_BACKSPACE:
+		case KEY_REPEAT:
+		case KEY_CUT:
+		case KEY_COPY:
+		case KEY_PASTE:
+		case KEY_PROPERTIES:
+		case KEY_OPEN:
+		case KEY_FRONT:
+		case KEY_CONTEXTMENU:
+		case KEY_MENU:
+		case KEY_CODE:
+		case KEY_HANGUL_HANJA:
+		default:
+			break;
+	}
+
+	if ( nChar )
+		return OUString( nChar );
+	else
+		return OUString();
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::FlushAllFrames()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
