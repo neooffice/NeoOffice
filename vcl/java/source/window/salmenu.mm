@@ -395,10 +395,6 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 	if ( !mbMenuBar || self == pMenuBarMenu )
 		return;
 
-	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( pAppDelegate && [pAppDelegate isInTracking] )
-		return;
-
 	pMenuBarFrame = mpFrame;
 	pMenuBarMenu = self;
 
@@ -764,8 +760,9 @@ JavaSalMenu::~JavaSalMenu()
 
 void JavaSalMenu::SetMenuBarToFocusFrame()
 {
+	// Find first frame in hierarchy that has a menubar
 	JavaSalFrame *pFrame = GetSalData()->mpFocusFrame;
-	while ( pFrame && ( pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) && pFrame->mpParent && pFrame->mpParent->mbVisible )
+	while ( pFrame && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu || pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) && pFrame->mpParent && pFrame->mpParent->mbVisible )
 		pFrame = pFrame->mpParent;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
