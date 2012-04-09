@@ -440,7 +440,10 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 									NSMenu *pMenu = [pMenuItem menu];
 									if ( pMenu )
 										[pMenu removeItem:pMenuItem];
-									[pNewMainMenu addItem:pMenuItem];
+
+									NSMenu *pSubmenu = [pMenuItem submenu];
+									if ( pSubmenu )
+										[pNewMainMenu addItem:pMenuItem];
 								}
 							}
 						}
