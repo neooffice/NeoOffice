@@ -55,6 +55,8 @@
 #endif	// USE_NATIVE_WINDOW
 #include <postmac.h>
 
+#include "../java/VCLApplicationDelegate_cocoa.h"
+
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
 
 using namespace com::sun::star::datatransfer::clipboard;
@@ -306,7 +308,7 @@ static VCLMenu *pMenuBarMenu = nil;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
-			NSInteger nCount = [pMainMenu numberOfItems];
+			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
 				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
@@ -376,6 +378,10 @@ static VCLMenu *pMenuBarMenu = nil;
 	if ( !mbMenuBar || self == pMenuBarMenu )
 		return;
 
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pAppDelegate && [pAppDelegate isInTracking] )
+		return;
+
 	pMenuBarFrame = mpFrame;
 	pMenuBarMenu = self;
 
@@ -385,7 +391,7 @@ static VCLMenu *pMenuBarMenu = nil;
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu )
 		{
-			NSInteger nCount = [pMainMenu numberOfItems];
+			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
 				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
@@ -399,11 +405,16 @@ static VCLMenu *pMenuBarMenu = nil;
 						[pNewMainMenu addItem:pAppMenuItem];
 						[pAppMenuItem release];
 
-						// Add our menu items to menubar
+						[pApp setMainMenu:pNewMainMenu];
+
+						// Add our menu items to menubar. Note that we must add
+						// the menu items after the menu has been set as the
+						// main menu for [VCLApplicationDelegate addMenuItem:]
+						// to get called.
 						if ( mpMenuItems )
 						{
-							nCount = (NSInteger)[mpMenuItems count];
-							NSInteger i = 0;
+							nCount = [mpMenuItems count];
+							NSUInteger i = 0;
 							for ( ; i < nCount; i++ )
 							{
 								NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
@@ -416,8 +427,6 @@ static VCLMenu *pMenuBarMenu = nil;
 								}
 							}
 						}
-
-						[pApp setMainMenu:pNewMainMenu];
 					}
 				}
 			}
