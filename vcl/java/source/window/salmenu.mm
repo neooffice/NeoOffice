@@ -42,9 +42,9 @@
 #include <vcl/window.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_WINDOW
-#include <com/sun/star/vcl/VCLMenuWrapperBar.hxx>
+#include <com/sun/star/vcl/VCLMenuBar.hxx>
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
-#include <com/sun/star/vcl/VCLMenuWrapper.hxx>
+#include <com/sun/star/vcl/VCLMenu.hxx>
 #endif	// !USE_NATIVE_WINDOW
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
@@ -55,7 +55,9 @@
 #endif	// USE_NATIVE_WINDOW
 #include <postmac.h>
 
+#ifdef USE_NATIVE_WINDOW
 #include "../java/VCLApplicationDelegate_cocoa.h"
+#endif	// USE_NATIVE_WINDOW
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
 
@@ -717,17 +719,17 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 //=============================================================================
 
-JavaSalMenu::JavaSalMenu()
-{
+JavaSalMenu::JavaSalMenu() :
 #ifdef USE_NATIVE_WINDOW
-	mpMenu = NULL;
+	mpMenu( NULL ),
 #else	// USE_NATIVE_WINDOW
-	mpVCLMenuWrapperBar = NULL;
-	mpVCLMenuWrapper = NULL;
+	mpVCLMenuBar( NULL ),
+	mpVCLMenu( NULL ),
 #endif	// USE_NATIVE_WINDOW
-	mpParentFrame = NULL;
-	mbIsMenuBarMenu = FALSE;
-	mpParentVCLMenu = NULL;
+	mpParentFrame( NULL ),
+	mbIsMenuBarMenu( FALSE ),
+	mpParentVCLMenu( NULL )
+{
 	aMenuMap[ this ] = this;
 }
 
@@ -741,15 +743,15 @@ JavaSalMenu::~JavaSalMenu()
 	if ( mpMenu )
 		[mpMenu release];
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		mpVCLMenuWrapperBar->dispose();
-		delete mpVCLMenuWrapperBar;
+		mpVCLMenuBar->dispose();
+		delete mpVCLMenuBar;
 	}
-	else if( mpVCLMenuWrapper )
+	else if( mpVCLMenu )
 	{
-		mpVCLMenuWrapper->dispose();
-		delete mpVCLMenuWrapper;
+		mpVCLMenu->dispose();
+		delete mpVCLMenu;
 	}
 #endif	// USE_NATIVE_WINDOW
 }
@@ -762,13 +764,13 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 {
 	// Find first frame in hierarchy that has a menubar
 	JavaSalFrame *pFrame = GetSalData()->mpFocusFrame;
-	while ( pFrame && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu || pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) && pFrame->mpParent && pFrame->mpParent->mbVisible )
+	while ( pFrame && pFrame->mbVisible && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu || pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) )
 		pFrame = pFrame->mpParent;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
-	if ( pFrame && pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() && pFrame->mbVisible )
+	if ( pFrame && pFrame->mbVisible && pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() )
 	{
 		[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
 	}
@@ -820,10 +822,10 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
-		mpVCLMenuWrapperBar->setFrame( pJavaFrame->mpVCLFrame );
+		mpVCLMenuBar->setFrame( pJavaFrame->mpVCLFrame );
 		mpParentFrame=pJavaFrame;
 	}
 #endif	// USE_NATIVE_WINDOW
@@ -846,13 +848,13 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		mpVCLMenuWrapperBar->addMenuItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
+		mpVCLMenuBar->addMenuItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
 	}
-	else if( mpVCLMenuWrapper )
+	else if( mpVCLMenu )
 	{
-		mpVCLMenuWrapper->insertItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
+		mpVCLMenu->insertItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
 	}
 #endif	// USE_NATIVE_WINDOW
 }
@@ -873,13 +875,13 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		mpVCLMenuWrapperBar->removeMenu( nPos );
+		mpVCLMenuBar->removeMenu( nPos );
 	}
-	else if( mpVCLMenuWrapper )
+	else if( mpVCLMenu )
 	{
-		mpVCLMenuWrapper->removeItem( nPos );
+		mpVCLMenu->removeItem( nPos );
 	}
 #endif	// USE_NATIVE_WINDOW
 }
@@ -909,13 +911,13 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenuWrapper )
+	if( mbIsMenuBarMenu && mpVCLMenuBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenu )
 	{
-		mpVCLMenuWrapperBar->changeMenu( pJavaSubMenu->mpVCLMenuWrapper->getMenuItemDataObject(), nPos );
+		mpVCLMenuBar->changeMenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
-	else if( mpVCLMenuWrapper && pJavaSubMenu )
+	else if( mpVCLMenu && pJavaSubMenu )
 	{
-		mpVCLMenuWrapper->attachSubmenu( pJavaSubMenu->mpVCLMenuWrapper->getMenuItemDataObject(), nPos );
+		mpVCLMenu->attachSubmenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
 #endif	// USE_NATIVE_WINDOW
 	pJavaSalMenuItem->mpSalSubmenu = pJavaSubMenu;
@@ -941,9 +943,9 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 	{
 		// doesn't make sense to check top level menus!
 	}
-	else if( mpVCLMenuWrapper )
+	else if( mpVCLMenu )
 	{
-		mpVCLMenuWrapper->checkItem(nPos, bCheck);
+		mpVCLMenu->checkItem(nPos, bCheck);
 	}
 #endif	// USE_NATIVE_WINDOW
 }
@@ -964,13 +966,13 @@ void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 		[pPool release];
 	}
 #else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuWrapperBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		mpVCLMenuWrapperBar->enableMenu( nPos, bEnable );
+		mpVCLMenuBar->enableMenu( nPos, bEnable );
 	}
-	else if( mpVCLMenuWrapper )
+	else if( mpVCLMenu )
 	{
-		mpVCLMenuWrapper->enableItem( nPos, bEnable );
+		mpVCLMenu->enableItem( nPos, bEnable );
 	}
 #endif	// USE_NATIVE_WINDOW
 }
@@ -1105,8 +1107,8 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
 #ifdef USE_NATIVE_WINDOW
 	pSalMenu->mpMenu = NULL;
 #else	// USE_NATIVE_WINDOW
-	pSalMenu->mpVCLMenuWrapperBar=NULL;
-	pSalMenu->mpVCLMenuWrapper=NULL;
+	pSalMenu->mpVCLMenuBar=NULL;
+	pSalMenu->mpVCLMenu=NULL;
 #endif	// USE_NATIVE_WINDOW
 	pSalMenu->mpParentVCLMenu=pVCLMenuWrapper;
 
@@ -1128,12 +1130,12 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
 	if( bMenuBar )
 	{
 		// create a menubar java object
-		pSalMenu->mpVCLMenuWrapperBar=new ::vcl::com_sun_star_vcl_VCLMenuWrapperBar();
+		pSalMenu->mpVCLMenuBar=new ::vcl::com_sun_star_vcl_VCLMenuBar();
 	}
 	else
 	{
 		// create a regular menu instance
-		pSalMenu->mpVCLMenuWrapper=new ::vcl::com_sun_star_vcl_VCLMenuWrapper();
+		pSalMenu->mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
 	}
 #endif	// USE_NATIVE_WINDOW
 
