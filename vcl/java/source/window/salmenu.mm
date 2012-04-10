@@ -739,9 +739,16 @@ JavaSalMenu::~JavaSalMenu()
 {
 	aMenuMap.erase( this );
 
+	if ( mpParentFrame )
+		mpParentFrame->SetMenu( NULL );
+
 #ifdef USE_NATIVE_WINDOW
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( mpMenu )
 		[mpMenu release];
+
+	[pPool release];
 #else	// USE_NATIVE_WINDOW
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
@@ -1086,8 +1093,12 @@ JavaSalMenuItem::JavaSalMenuItem() :
 JavaSalMenuItem::~JavaSalMenuItem()
 {
 #ifdef USE_NATIVE_WINDOW
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( mpMenuItem )
 		[mpMenuItem release];
+
+	[pPool release];
 #else	// USE_NATIVE_WINDOW
 	if( mpVCLMenuItemData )
 	{

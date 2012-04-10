@@ -1132,6 +1132,9 @@ JavaSalFrame::~JavaSalFrame()
 	StartPresentation( FALSE );
 	CaptureMouse( FALSE );
 
+	if ( mpMenuBar )
+		mpMenuBar->SetFrame( NULL );
+
 	// Detach child objects. Fix bug 3038 unsetting each object's parent.
 	::std::list< JavaSalObject* > aObjects( maObjects );
 	for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
