@@ -36,17 +36,16 @@
 #include <dlfcn.h>
 #include <list>
 
+#include <premac.h>
+#import <objc/objc-runtime.h>
+#include <postmac.h>
+
 #include <saldata.hxx>
 #include <salframe.h>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#import <objc/objc-runtime.h>
-#include <postmac.h>
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "../app/salinst_cocoa.h"
@@ -229,12 +228,12 @@ static void HandleDidChangeScreenParametersRequest()
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
-- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 @end
 
 @interface NSDocumentController (VCLDocumentController)
-- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(BOOL)bShouldTerminate;
+- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(MacOSBOOL)bShouldTerminate;
 @end
 
 @interface VCLDocumentController : NSDocumentController
@@ -244,7 +243,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @implementation VCLDocument
 
-- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+- (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
 	if ( ppError )
 		*ppError = nil;
@@ -279,7 +278,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		NSString *pPath = [pAbsoluteURL path];
 		if ( pApp && pPath )
 		{
-			BOOL bResume = YES;
+			MacOSBOOL bResume = YES;
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
 			if ( aPref )
 			{
@@ -346,7 +345,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	}
 }
 
-- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
+- (MacOSBOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
 	if ( mbInTermination || !pFilename )
 		return NO;
@@ -362,7 +361,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return YES;
 }
 
-- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
+- (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
 {
 	if ( mbInTermination || !pFilename )
 		return NO;
@@ -402,12 +401,12 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	HandleDidChangeScreenParametersRequest();
 }
 
-- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag
+- (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag
 {
 	return NO;
 }
 
-- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
+- (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
 {
 	return NO;
 }
@@ -508,7 +507,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return self;
 }
 
-- (BOOL)isInTracking
+- (MacOSBOOL)isInTracking
 {
 	return mbInTracking;
 }
@@ -622,7 +621,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 }
-- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
+- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
 	return !mbInTermination;
 }

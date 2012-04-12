@@ -39,8 +39,8 @@
 #include <salinst.h>
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents();
-extern "C" SAL_DLLPRIVATE id NSApplication_getModalWindow();
-extern "C" SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
-extern "C" SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
+SAL_DLLPRIVATE id NSApplication_getModalWindow();
+SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
+SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
 
 #endif

@@ -36,34 +36,38 @@
 #ifndef __VCLAPPLICATIONDELEGATE_COCOA_H__
 #define __VCLAPPLICATIONDELEGATE_COCOA_H__
 
+#include <premac.h>
+#import <Cocoa/Cocoa.h>
+#include <postmac.h>
+
 @interface VCLApplicationDelegate : NSObject
 {
-	BOOL				mbAppMenuInitialized;
-	BOOL				mbCancelTracking;
+	MacOSBOOL				mbAppMenuInitialized;
+	MacOSBOOL				mbCancelTracking;
 	id					mpDelegate;
-	BOOL				mbInTermination;
-	BOOL				mbInTracking;
+	MacOSBOOL				mbInTermination;
+	MacOSBOOL				mbInTracking;
 }
 + (VCLApplicationDelegate *)sharedDelegate;
 - (void)addMenuBarItem:(NSNotification *)pNotification;
-- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
-- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (MacOSBOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
+- (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
-- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
-- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
+- (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag;
+- (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
-- (BOOL)isInTracking;
+- (MacOSBOOL)isInTracking;
 - (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;
 - (void)showAbout;
 - (void)showPreferences;
 - (void)trackMenuBar:(NSNotification *)pNotification;
-- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
+- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 
 #endif

@@ -36,13 +36,10 @@
 #ifndef __VCLEVENTQUEUE_COCOA_H__
 #define __VCLEVENTQUEUE_COCOA_H__
 
+#include <com/sun/star/vcl/VCLEventQueue.hxx>
 #include <jni.h>
-#include <salframe.h>
-#include <sal/types.h>
 
-#ifndef __OBJC__
-typedef void* id;
-#else	// __OBJC__
+#ifdef __OBJC__
 
 @interface VCLWindow : NSWindow
 + (void)clearModalWindowLevel;
@@ -51,12 +48,12 @@ typedef void* id;
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
-- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
+- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setContentView:(NSView *)pView;
@@ -67,21 +64,12 @@ typedef void* id;
 @end
 
 #ifdef USE_NATIVE_WINDOW
-#ifdef __cplusplus
-BEGIN_C
-#endif
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
-#ifdef __cplusplus
-END_C
-#endif
 #endif	// USE_NATIVE_WINDOW
 
 #endif	// __OBJC__
 
-#ifdef __cplusplus
-BEGIN_C
-#endif
 SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();
 SAL_DLLPRIVATE void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
 SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
@@ -90,12 +78,9 @@ SAL_DLLPRIVATE BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, s
 SAL_DLLPRIVATE void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
 SAL_DLLPRIVATE void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
-SAL_DLLPRIVATE BOOL NSApplication_isActive();
+SAL_DLLPRIVATE sal_Bool NSApplication_isActive();
 SAL_DLLPRIVATE void NSFontManager_acquire();
 SAL_DLLPRIVATE void NSFontManager_release();
 SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
-#ifdef __cplusplus
-END_C
-#endif
 
 #endif

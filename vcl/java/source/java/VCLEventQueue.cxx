@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <com/sun/star/vcl/VCLEventQueue.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #include <saldata.hxx>

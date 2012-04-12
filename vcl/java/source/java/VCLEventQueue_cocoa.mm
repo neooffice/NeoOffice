@@ -35,8 +35,11 @@
 
 #include <dlfcn.h>
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
+#include <postmac.h>
+
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
 #include "VCLFont_cocoa.h"
@@ -47,7 +50,7 @@
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
-static BOOL bFontManagerLocked = NO;
+static MacOSBOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pAWTFontString = @"AWTFont";
 #ifdef USE_NATIVE_WINDOW
@@ -62,9 +65,9 @@ static NSString *pNSThemeFrameString = @"NSThemeFrame";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
-static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
+static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	if ( !pEvent || [pEvent type] != NSKeyDown )
 		return bRet;
@@ -123,10 +126,10 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 		{
 			if ( CFGetTypeID( pPref ) == CFArrayGetTypeID() )
 			{
-				CFIndex nCount = CFArrayGetCount( pPref );
+				CFIndex nCount = CFArrayGetCount( (CFArrayRef)pPref );
 				CFIndex i = 0;
 				for ( ; i < nCount; i++ ) {
-					NSDictionary *pDict = (NSDictionary *)CFArrayGetValueAtIndex( pPref, i );
+					NSDictionary *pDict = (NSDictionary *)CFArrayGetValueAtIndex( (CFArrayRef)pPref, i );
 					if ( pDict && CFGetTypeID( pDict ) == CFDictionaryGetTypeID() )
 					{
 						// Note that Apple uses an odd spelling for this key
@@ -162,11 +165,11 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 @interface IsApplicationActive : NSObject
 {
-	BOOL					mbActive;
+	MacOSBOOL					mbActive;
 }
 + (id)create;
 - (id)init;
-- (BOOL)isActive;
+- (MacOSBOOL)isActive;
 - (void)isApplicationActive:(id)pObject;
 @end
 
@@ -188,7 +191,7 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	return self;
 }
 
-- (BOOL)isActive
+- (MacOSBOOL)isActive
 {
 	return mbActive;
 }
@@ -234,15 +237,15 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 @end
 
 @interface VCLBundle : NSBundle
-+ (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
-+ (BOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
++ (MacOSBOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
++ (MacOSBOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
 @end
 
 @implementation VCLBundle
 
-+ (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
++ (MacOSBOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
 {
-	BOOL bRet = [VCLBundle poseAsLoadNibFile:pFileName externalNameTable:pContext withZone:pZone];
+	MacOSBOOL bRet = [VCLBundle poseAsLoadNibFile:pFileName externalNameTable:pContext withZone:pZone];
 
 	// Fix bug 3563 by trying to load Java's English nib file if the requested
 	// nib file is nil
@@ -252,7 +255,7 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	return bRet;
 }
 
-+ (BOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
++ (MacOSBOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
 {
 	// This should never be executed and should be swizzled out to superclass
 	return NO;
@@ -346,23 +349,23 @@ static NSString *pCancelInputMethodText = @" ";
 - (void)abandonInput;
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
-- (BOOL)hasMarkedText;
+- (MacOSBOOL)hasMarkedText;
 - (void)paste:(id)pSender;
 @end
 
 @interface NSView (VCLViewPoseAs)
-- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
+- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 - (id)poseAsInitWithFrame:(NSRect)aFrame;
-- (BOOL)poseAsIsOpaque;
+- (MacOSBOOL)poseAsIsOpaque;
 - (NSSize)poseAsBottomCornerSize;
 @end
 
-static BOOL bUseQuickTimeContentViewHack = NO;
+static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
 + (void)swizzleSelectors:(NSView *)pView;
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
@@ -371,27 +374,27 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
 - (void)draggingExited:(id < NSDraggingInfo >)pSender;
 - (id)draggingSourceDelegate;
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 #ifdef USE_NATIVE_WINDOW
 - (void)drawRect:(NSRect)aDirtyRect;
 - (void)resetCursorRects;
 #endif	// USE_NATIVE_WINDOW
-- (BOOL)ignoreModifierKeysWhileDragging;
+- (MacOSBOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithFrame:(NSRect)aFrame;
-- (BOOL)isOpaque;
+- (MacOSBOOL)isOpaque;
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
-- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
-- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
-- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
+- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
+- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 #ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 - (NSSize)_bottomCornerSize;
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
-- (BOOL)wantsPeriodicDraggingUpdates;
-- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
+- (MacOSBOOL)wantsPeriodicDraggingUpdates;
+- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
@@ -438,7 +441,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 - (void)forwardInvocation:(NSInvocation *)pInvocation
 {
-	BOOL bHandled = NO;
+	MacOSBOOL bHandled = NO;
 
 	SEL aSelector = [pInvocation selector];
 
@@ -487,16 +490,16 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 @interface VCLCMenuBar : NSObject
 {
 }
-+ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled;
++ (void)activate:(id)pObject modallyDisabled:(MacOSBOOL)bModallyDisabled;
 + (void)addDefaultHelpMenu;
-+ (void)clearMenuBar:(BOOL)bClear;
++ (void)clearMenuBar:(MacOSBOOL)bClear;
 + (id)getDefaultMenuBar;
-+ (BOOL)isActiveMenuBar:(id)pObject;
++ (MacOSBOOL)isActiveMenuBar:(id)pObject;
 @end
 
 @implementation VCLCMenuBar
 
-+ (void)activate:(id)pObject modallyDisabled:(BOOL)bModallyDisabled
++ (void)activate:(id)pObject modallyDisabled:(MacOSBOOL)bModallyDisabled
 {
 }
 
@@ -504,7 +507,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 {
 }
 
-+ (void)clearMenuBar:(BOOL)bClear
++ (void)clearMenuBar:(MacOSBOOL)bClear
 {
 }
 
@@ -513,7 +516,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 	return nil;
 }
 
-+ (BOOL)isActiveMenuBar:(id)pObject
++ (MacOSBOOL)isActiveMenuBar:(id)pObject
 {
 	return NO;
 }
@@ -524,21 +527,21 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface NSWindow (VCLWindow)
 - (void)_clearModalWindowLevel;
-- (BOOL)_isUtilityWindow;
+- (MacOSBOOL)_isUtilityWindow;
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
-- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
+- (void)_setUtilityWindow:(MacOSBOOL)bUtilityWindow;
 @end
 
 @interface NSWindow (VCLWindowPoseAs)
 - (void)poseAsBecomeKeyWindow;
 - (void)poseAsDisplayIfNeeded;
-- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
-- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (BOOL)poseAsMakeFirstResponder:(NSResponder *)pResponder;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)poseAsMakeFirstResponder:(NSResponder *)pResponder;
 - (void)poseAsMakeKeyWindow;
 - (void)poseAsOrderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
-- (BOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
+- (MacOSBOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
 - (void)poseAsSetContentView:(NSView *)pView;
@@ -551,7 +554,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (void)setStyleMask:(unsigned int)nStyleMask;
 @end
 
-static BOOL bAWTFontInitialized = NO;
+static MacOSBOOL bAWTFontInitialized = NO;
 static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
@@ -832,7 +835,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	return pRet;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
 {
 	[VCLWindow swizzleSelectors:self];
 
@@ -842,7 +845,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		return self;
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
 {
 	[VCLWindow swizzleSelectors:self];
 
@@ -852,11 +855,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		return self;
 }
 
-- (BOOL)makeFirstResponder:(NSResponder *)pResponder
+- (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	NSResponder *pOldResponder = [self firstResponder];
 
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 	if ( [super respondsToSelector:@selector(poseAsMakeFirstResponder:)] )
 		bRet = [super poseAsMakeFirstResponder:pResponder];
 
@@ -885,7 +888,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
-		BOOL bTrackingMenuBar = false;
+		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 		if ( pAppDelegate )
 			bTrackingMenuBar = [pAppDelegate isInTracking];
@@ -1048,9 +1051,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	}
 }
 
-- (BOOL)performKeyEquivalent:(NSEvent *)pEvent
+- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	BOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
+	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
 	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
@@ -1093,13 +1096,13 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		// this window as this window may get released while updating.
 		[self retain];
 		VCLInstance_updateNativeMenus();
-		BOOL bVisible = [self isVisible];
+		MacOSBOOL bVisible = [self isVisible];
 		[self release];
 		if ( !bVisible )
 			return YES;
 	}
 
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 	if ( [super respondsToSelector:@selector(poseAsPerformKeyEquivalent:)] )
 		bRet = [super poseAsPerformKeyEquivalent:pEvent];
 
@@ -1200,7 +1203,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
-		BOOL bHasMarkedText = NO;
+		MacOSBOOL bHasMarkedText = NO;
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
 			bHasMarkedText = [pResponder hasMarkedText];
@@ -1389,7 +1392,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 @end
 
-static BOOL bNSViewAWTInitialized = NO;
+static MacOSBOOL bNSViewAWTInitialized = NO;
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
 
@@ -1578,7 +1581,7 @@ static CFDataRef aRTFSelection = nil;
 		[super concludeDragOperation:pSender];
 }
 
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack
 {
 	// Fix bug 3652 by locking the application mutex and never letting it get
 	// released during a native drag session. This prevents drag events from
@@ -1679,7 +1682,7 @@ static CFDataRef aRTFSelection = nil;
 	return pRet;
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal
 {
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
@@ -1732,7 +1735,7 @@ static CFDataRef aRTFSelection = nil;
 
 #endif	// USE_NATIVE_WINDOW
 
-- (BOOL)ignoreModifierKeysWhileDragging
+- (MacOSBOOL)ignoreModifierKeysWhileDragging
 {
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
@@ -1753,7 +1756,7 @@ static CFDataRef aRTFSelection = nil;
 	return self;
 }
 
-- (BOOL)isOpaque
+- (MacOSBOOL)isOpaque
 {
 	if ( [[self className] isEqualToString:pNSViewAWTString] )
 		return YES;
@@ -1774,7 +1777,7 @@ static CFDataRef aRTFSelection = nil;
 		return nil;
 }
 
-- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender
+- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
@@ -1785,7 +1788,7 @@ static CFDataRef aRTFSelection = nil;
 		return NO;
 }
 
-- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
+- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
@@ -1809,15 +1812,15 @@ static CFDataRef aRTFSelection = nil;
 }
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
-- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
+- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
-			bRet = (BOOL)[super readSelectionFromPasteboard:pPasteboard];
+			bRet = (MacOSBOOL)[super readSelectionFromPasteboard:pPasteboard];
 		return bRet;
 	}
 
@@ -1940,7 +1943,7 @@ static CFDataRef aRTFSelection = nil;
 	return nil;
 }
 
-- (BOOL)wantsPeriodicDraggingUpdates
+- (MacOSBOOL)wantsPeriodicDraggingUpdates
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
@@ -1951,15 +1954,15 @@ static CFDataRef aRTFSelection = nil;
 		return NO;
 }
 
-- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
+- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
-			bRet = (BOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
+			bRet = (MacOSBOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
 		return bRet;
 	}
 
@@ -2003,7 +2006,7 @@ static CFDataRef aRTFSelection = nil;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
-	BOOL					mbUseQuickTimeContentViewHack;
+	MacOSBOOL					mbUseQuickTimeContentViewHack;
 }
 + (id)create;
 - (id)init;
@@ -2323,16 +2326,16 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
-BOOL NSApplication_isActive()
+sal_Bool NSApplication_isActive()
 {
-	BOOL bRet = YES;
+	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	IsApplicationActive *pIsApplicationActive = [IsApplicationActive create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
-	bRet = [pIsApplicationActive isActive];
+	bRet = (sal_Bool)[pIsApplicationActive isActive];
 
 	[pPool release];
 
