@@ -33,17 +33,8 @@
  *
  ************************************************************************/
 
-#define _SV_SALOBJ_CXX
-
-#ifndef _SV_SALOBJ_H
-#include <salobj.h>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
 
 #include "salobj_cocoa.h"
 
@@ -168,7 +159,7 @@ void JavaSalObject::Show( BOOL bVisible )
 		mpParent->RemoveObject( this, false );
 
 	// Don't attach subview unless we are in the Flush() method
-	VCLChildView_show( mpChildView, pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );
+	VCLChildView_show( mpChildView, (id)pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );
 
 	if ( mpParent )
 		mpParent->AddObject( this, mbVisible );
