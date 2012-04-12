@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
 #include <salatslayout.hxx>
 #include <saldata.hxx>
 #include <salinst.h>

@@ -36,11 +36,8 @@
 #ifndef __SALOGL_COCOA_H__
 #define __SALOGL_COCOA_H__
 
-#include <sal/types.h>
+#include <salgdi.h>
 
-#ifdef __cplusplus
-BEGIN_C
-#endif
 #ifndef USE_CORETEXT_TEXT_RENDERING
 SAL_DLLPRIVATE ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont );
 SAL_DLLPRIVATE CFStringRef NSFont_familyName( NSFont *pNSFont );
@@ -51,8 +48,5 @@ SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
 SAL_DLLPRIVATE BOOL NSFontManager_isItalic( NSFont *pNSFont );
 SAL_DLLPRIVATE int NSFontManager_widthOfFont( NSFont *pNSFont );
 SAL_DLLPRIVATE int NSFontManager_weightOfFont( NSFont *pNSFont );
-#ifdef __cplusplus
-END_C
-#endif
 
 #endif

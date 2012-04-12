@@ -33,7 +33,9 @@
  *
  ************************************************************************/
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <postmac.h>
 
 #include "salgdi3_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
