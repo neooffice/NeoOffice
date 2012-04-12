@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <saldata.hxx>

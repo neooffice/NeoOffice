@@ -36,7 +36,7 @@
 #ifndef __VCLFRAME_COCOA_H__
 #define __VCLFRAME_COCOA_H__
 
-#include <sal/types.h>
+#include <com/sun/star/vcl/VCLFrame.hxx>
 
 // Uncomment the following line to enable rounded bottom corners in Java frames
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
@@ -44,20 +44,12 @@
 // Comment out the following line to disable full screen mode
 #define USE_NATIVE_FULL_SCREEN_MODE
 
-#ifdef __cplusplus
-typedef void* id;
-
-BEGIN_C
-#endif
-SAL_DLLPRIVATE id CWindow_getNSWindow( id pCWindow );
-SAL_DLLPRIVATE void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
-SAL_DLLPRIVATE id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
-SAL_DLLPRIVATE int CWindow_makeFloatingWindow( id pCWindow );
-SAL_DLLPRIVATE void CWindow_makeModalWindow( id pCWindow );
-SAL_DLLPRIVATE void CWindow_makeUnshadowedWindow( id pCWindow );
-SAL_DLLPRIVATE void CWindow_updateLocation( id pCWindow );
-#ifdef __cplusplus
-END_C
-#endif
+extern "C" SAL_DLLPRIVATE id CWindow_getNSWindow( id pCWindow );
+extern "C" SAL_DLLPRIVATE void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
+extern "C" SAL_DLLPRIVATE id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
+extern "C" SAL_DLLPRIVATE int CWindow_makeFloatingWindow( id pCWindow );
+extern "C" SAL_DLLPRIVATE void CWindow_makeModalWindow( id pCWindow );
+extern "C" SAL_DLLPRIVATE void CWindow_makeUnshadowedWindow( id pCWindow );
+extern "C" SAL_DLLPRIVATE void CWindow_updateLocation( id pCWindow );
 
 #endif

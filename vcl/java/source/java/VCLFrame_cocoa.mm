@@ -33,7 +33,9 @@
  *
  ************************************************************************/
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
 #include "VCLFrame_cocoa.h"
