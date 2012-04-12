@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <salgdi.h>
 #include <saldata.hxx>
-#include <salframe.h>
 #include <vcl/svapp.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLBitmap.hxx>

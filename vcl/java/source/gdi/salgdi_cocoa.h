@@ -36,10 +36,7 @@
 #ifndef __SALGDI_COCOA_H__
 #define __SALGDI_COCOA_H__
 
-#include <salframe.h>
-#include <salprn.h>
-#include <salvd.h>
-#include <sal/types.h>
+#include <salgdi.h>
 
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
