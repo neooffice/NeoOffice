@@ -33,7 +33,9 @@
  *
  ************************************************************************/
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <postmac.h>
 
 #include "VCLGraphics_cocoa.h"
 

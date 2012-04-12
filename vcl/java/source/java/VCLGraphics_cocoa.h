@@ -36,24 +36,14 @@
 #ifndef __VCLGRAPHICS_COCOA_H__
 #define __VCLGRAPHICS_COCOA_H__
 
-#include <salframe.h>
-#include <salprn.h>
-#include <salvd.h>
-#include <sal/types.h>
+#include <com/sun/star/vcl/VCLGraphics.hxx>
 
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 
-#ifdef __cplusplus
 #include <premac.h>
-#endif
 #include <ApplicationServices/ApplicationServices.h>
-#ifdef __cplusplus
 #include <postmac.h>
-#endif
 
-#ifdef __cplusplus
-BEGIN_C
-#endif
 SAL_DLLPRIVATE void CGContext_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, CGFontRef aFont, float fFontSize, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 SAL_DLLPRIVATE void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 SAL_DLLPRIVATE void CGContext_drawPath( int nColor, BOOL bFill, CGPathRef aPath, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
@@ -64,9 +54,6 @@ SAL_DLLPRIVATE void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float *
 SAL_DLLPRIVATE void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nColor, BOOL bFill, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 SAL_DLLPRIVATE void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 SAL_DLLPRIVATE void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
-#ifdef __cplusplus
-END_C
-#endif
 
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 

@@ -43,7 +43,6 @@
 #include <saldata.hxx>
 #include <java/lang/Class.hxx>
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLFont.hxx>
 #include <com/sun/star/vcl/VCLImage.hxx>
 #include <com/sun/star/vcl/VCLPath.hxx>
