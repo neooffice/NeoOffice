@@ -58,7 +58,7 @@ class SalFrame;
 
 class JavaSalObject : public SalObject
 {
-	void*					mpChildView;
+	id						mpChildView;
 	Rectangle				maClipRect;
 	BOOL					mbInFlush;
 	JavaSalFrame*			mpParent;
