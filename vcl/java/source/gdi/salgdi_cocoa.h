@@ -51,13 +51,7 @@
 #include <postmac.h>
 #endif
 
-#ifdef __cplusplus
-BEGIN_C
-#endif
 SAL_DLLPRIVATE BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize, int *pDestPtr, int nDestWidth, int nDestHeight );
-#ifdef __cplusplus
-END_C
-#endif
 
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
