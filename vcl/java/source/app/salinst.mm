@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#define _SV_SALINST_CXX
-
 #include <unistd.h>
 #include <sys/syslimits.h>
 
@@ -43,7 +41,6 @@
 #include <postmac.h>
 #undef check
 
-#include <salinst.h>
 #include <salbmp.h>
 #include <saldata.hxx>
 #include <salframe.h>

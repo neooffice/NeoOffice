@@ -33,7 +33,10 @@
  *
  ************************************************************************/
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <postmac.h>
+#undef check
 
 #include "salinst_cocoa.h"
 
