@@ -354,7 +354,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].j = jlong( pFrame );
-	if ( pParent )
+	if ( pParent && pParent->mpVCLFrame )
 		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
@@ -387,7 +387,10 @@ void com_sun_star_vcl_VCLFrame::addChild( JavaSalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].l = _par0->mpVCLFrame->getJavaObject();
+			if ( _par0 && _par0->mpVCLFrame )
+				args[0].l = _par0->mpVCLFrame->getJavaObject();
+			else
+				args[0].l = NULL;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -690,7 +693,10 @@ void com_sun_star_vcl_VCLFrame::removeChild( JavaSalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].l = _par0->mpVCLFrame->getJavaObject();
+			if ( _par0 && _par0->mpVCLFrame )
+				args[0].l = _par0->mpVCLFrame->getJavaObject();
+			else
+				args[0].l = NULL;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
