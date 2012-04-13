@@ -341,6 +341,10 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 						[pNewMainMenu addItem:pAppMenuItem];
 						[pAppMenuItem release];
 
+						// Remove remaining menus while still showing
+						while ( [pMainMenu numberOfItems] > 0 )
+							[pMainMenu removeItemAtIndex:0];
+
 						[pApp setMainMenu:pNewMainMenu];
 					}
 				}
@@ -419,6 +423,10 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 						[pMainMenu removeItemAtIndex:0];
 						[pNewMainMenu addItem:pAppMenuItem];
 						[pAppMenuItem release];
+
+						// Remove remaining menus while still showing
+						while ( [pMainMenu numberOfItems] > 0 )
+							[pMainMenu removeItemAtIndex:0];
 
 						[pApp setMainMenu:pNewMainMenu];
 
@@ -789,7 +797,6 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 			JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
 			if ( pInst )
 				pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( TRUE, NULL );
-
 		}
 
 		if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
