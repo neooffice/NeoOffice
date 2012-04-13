@@ -513,7 +513,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( !mbAppMenuInitialized )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
-		NSMenu *pObject = [pNotification object];
 		if ( pApp )
 		{
 			NSMenu *pMainMenu = [pApp mainMenu];
