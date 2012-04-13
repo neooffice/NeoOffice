@@ -958,7 +958,12 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			{
 				if ( [super respondsToSelector:@selector(_isUtilityWindow)] && ![super _isUtilityWindow] && [super respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
+					// Make copy of frame to fix compiler bug that appeared
+					// when this source file was renamed from a *.m file to
+					// a *.mm file
 					NSRect aFrame = [self frame];
+					aFrame = NSMakeRect( aFrame.origin.x, aFrame.origin.y, aFrame.size.width, aFrame.size.height );
+
 					[super _setUtilityWindow:YES];
 
 					// We must set the level again after changing the window to
