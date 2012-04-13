@@ -1633,7 +1633,6 @@ bool JavaSalFrame::IsFloatingFrame()
 bool JavaSalFrame::IsUtilityWindow()
 {
 	return ( mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
-
 }
 
 // -----------------------------------------------------------------------
@@ -1662,7 +1661,7 @@ void JavaSalFrame::FlushAllObjects()
 
 // -----------------------------------------------------------------------
 
-const Rectangle JavaSalFrame::GetBounds( sal_Bool *bInLiveResize, sal_Bool bUseFullScreenOriginalBounds )
+const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseFullScreenOriginalBounds )
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
@@ -1670,7 +1669,7 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *bInLiveResize, sal_Bool bUseF
 	fprintf( stderr, "JavaSalFrame::GetBounds not implemented\n" );
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
-		aRet = mpVCLFrame->getBounds( bInLiveResize, bUseFullScreenOriginalBounds );
+		aRet = mpVCLFrame->getBounds( pInLiveResize, bUseFullScreenOriginalBounds );
 #endif	// USE_NATIVE_EVENTS
 
 	return aRet;
@@ -2820,7 +2819,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	{
 		mpParent->maChildren.remove( this );
 #ifndef USE_NATIVE_EVENTS
-		if ( mpVCLFrame )
+		if ( mpParent->mpVCLFrame )
 			mpParent->mpVCLFrame->removeChild( this );
 #endif	// !USE_NATIVE_EVENTS
 	}
@@ -2887,7 +2886,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	if ( mpParent )
 	{
 #ifndef USE_NATIVE_EVENTS
-		if ( mpVCLFrame )
+		if ( mpParent->mpVCLFrame )
 			mpParent->mpVCLFrame->addChild( this );
 #endif	// !USE_NATIVE_EVENTS
 		mpParent->maChildren.push_back( this );
