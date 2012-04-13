@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #include <salframe.h>
-#include <com/sun/star/vcl/VCLFrame.hxx>
 
 #include "salobj_cocoa.h"
 
@@ -150,8 +149,8 @@ void JavaSalObject::Show( BOOL bVisible )
 	mbVisible = bVisible;
 
 	void *pParentNSWindow;
-	if ( mbVisible && mbInFlush && mpParent && mpParent->mpVCLFrame )
-		pParentNSWindow = mpParent->mpVCLFrame->getNativeWindow();
+	if ( mbVisible && mbInFlush && mpParent )
+		pParentNSWindow = mpParent->GetNativeWindow();
 	else
 		pParentNSWindow = NULL;
 

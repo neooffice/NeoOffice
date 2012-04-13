@@ -36,7 +36,6 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
-#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #include <java/lang/Class.hxx>
@@ -307,7 +306,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		void *pNSPrintInfo = _par0->getNativePrinterJob();
 		ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
 		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, _par1.getStr(), _par1.getLength(), kCFAllocatorNull );
-		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL, aString );
+		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->GetNativeWindow() : NULL, aString );
 		if ( aString )
 			CFRelease( aString );
 		Application::AcquireSolarMutex( nCount );

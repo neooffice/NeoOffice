@@ -33,47 +33,23 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLEVENT_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
+#endif	// !USE_NATIVE_EVENTS
+#ifndef USE_NATIVE_WINDOW
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
+#endif	// !USE_NATIVE_WINDOW
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SALJAVA_H
 #include <saljava.h>
-#endif
-#ifndef _SV_EVENT_HXX
 #include <vcl/event.hxx>
-#endif
-#ifndef _SV_SALMENU_H
 #include <salmenu.h>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_CTRL_HXX
 #include <vcl/ctrl.hxx>
-#endif
-#ifndef _SV_FLOATWIN_HXX
 #include <vcl/floatwin.hxx>
-#endif
-#ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
-#endif
-#ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
-#endif
 
 #include "VCLEventQueue_cocoa.h"
 
@@ -169,7 +145,11 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[3];
 	args[0].i = jint( nID );
+#ifdef USE_NATIVE_EVENTS
+	args[1].l = NULL;
+#else	// USE_NATIVE_EVENTS
 	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
+#endif	// USE_NATIVE_EVENTS
 	args[2].j = jlong( pData );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
@@ -192,7 +172,11 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[4];
 	args[0].i = jint( nID );
+#ifdef USE_NATIVE_EVENTS
+	args[1].l = NULL;
+#else	// USE_NATIVE_EVENTS
 	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
+#endif	// USE_NATIVE_EVENTS
 	args[2].j = jlong( pData );
 	args[3].l = t.pEnv->NewStringUTF( rPath.getStr() );
 
@@ -469,7 +453,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
 				{
 					if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
-						(*cit)->mpVCLFrame->setVisible( sal_False, sal_False );
+						(*cit)->SetVisible( sal_False, sal_False );
 				}
 
 				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -668,7 +652,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Update size
 				sal_Bool bInLiveResize = sal_False;
 				if ( !pPosSize )
-					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds( &bInLiveResize ) );
+					pPosSize = new Rectangle( pFrame->GetBounds( &bInLiveResize ) );
 
 				// If in live resize, ignore event and just repaint
 				bool bSkipEvent = false;

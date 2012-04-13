@@ -41,6 +41,8 @@
 
 #include "VCLFrame_cocoa.h"
 
+#ifndef USE_NATIVE_EVENTS
+
 using namespace vcl;
 using namespace vos;
 
@@ -943,3 +945,5 @@ sal_Bool com_sun_star_vcl_VCLFrame::toFront()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_EVENTS

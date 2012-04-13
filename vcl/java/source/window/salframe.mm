@@ -46,7 +46,9 @@
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLFrame.hxx>
+#endif	// !USE_NATIVE_EVENTS
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLScreen.hxx>
@@ -1067,7 +1069,7 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 
 // =======================================================================
 
-JavaSalFrame::JavaSalFrame() :
+JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 #ifdef USE_NATIVE_WINDOW
 	mnHiddenBit( 0 ),
     maHiddenContext( NULL ),
@@ -1075,9 +1077,13 @@ JavaSalFrame::JavaSalFrame() :
 	maFrameLayer( NULL ),
 	maFrameClipPath( NULL ),
 #endif  // USE_NATIVE_WINDOW
+#ifdef USE_NATIVE_EVENTS
+	mpWindow( NULL ),
+#else	// USE_NATIVE_EVENTS
 	mpVCLFrame( NULL ),
+#endif	// USE_NATIVE_EVENTS
 	mpGraphics( new JavaSalGraphics() ),
-	mnStyle( 0 ),
+	mnStyle( nSalFrameStyle ),
 	mpParent( NULL ),
 	mbGraphics( FALSE ),
 	mbVisible( FALSE ),
@@ -1099,6 +1105,12 @@ JavaSalFrame::JavaSalFrame() :
 	memset( &maGeometry, 0, sizeof( maGeometry ) );
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::JavaSalFrame not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+    mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, pParent, mbInShowOnlyMenus, IsUtilityWindow() );
+#endif	// USE_NATIVE_EVENTS
+
 	mpGraphics->mpFrame = this;
 #ifdef USE_NATIVE_WINDOW
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
@@ -1116,12 +1128,28 @@ JavaSalFrame::JavaSalFrame() :
 
 	mpGraphics->setLayer( maHiddenLayer );
 #endif  // USE_NATIVE_WINDOW
+
+	// Set initial parent
+	SetParent( pParent );
+
+	// Cache the insets
+	Rectangle aRect = GetInsets();
+	maGeometry.nLeftDecoration = aRect.nLeft;
+	maGeometry.nTopDecoration = aRect.nTop;
+	maGeometry.nRightDecoration = aRect.nRight;
+	maGeometry.nBottomDecoration = aRect.nBottom;
+
+	// Insert this window into the window list
+	GetSalData()->maFrameList.push_front( this );
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalFrame::~JavaSalFrame()
 {
+	// Remove this window from the window list
+	GetSalData()->maFrameList.remove( this );
+
 #ifdef USE_NATIVE_WINDOW
 	// Make sure that no native drawing is possible
 	maSysData.pView = NULL;
@@ -1162,11 +1190,20 @@ JavaSalFrame::~JavaSalFrame()
 		CGContextRelease( maHiddenContext );
 #endif  // USE_NATIVE_WINDOW
 
+#ifdef USE_NATIVE_EVENTS
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpWindow )
+		[mpWindow release];
+
+	[pPool release];
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 	{
 		mpVCLFrame->dispose();
 		delete mpVCLFrame;
 	}
+#endif	// USE_NATIVE_EVENTS
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
@@ -1623,6 +1660,159 @@ void JavaSalFrame::FlushAllObjects()
 	}
 }
 
+// -----------------------------------------------------------------------
+
+const Rectangle JavaSalFrame::GetBounds( sal_Bool *bInLiveResize, sal_Bool bUseFullScreenOriginalBounds )
+{
+	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetBounds not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		aRet = mpVCLFrame->getBounds( bInLiveResize, bUseFullScreenOriginalBounds );
+#endif	// USE_NATIVE_EVENTS
+
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
+const Rectangle JavaSalFrame::GetInsets()
+{
+	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetInsets not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		aRet = mpVCLFrame->getInsets();
+#endif	// USE_NATIVE_EVENTS
+
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
+id JavaSalFrame::GetNativeWindow()
+{
+	id pRet = nil;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetNativeWindow not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		pRet = (id)mpVCLFrame->getNativeWindow();
+#endif	// USE_NATIVE_EVENTS
+
+	return pRet;
+}
+
+// -----------------------------------------------------------------------
+
+id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
+{
+	id pRet = nil;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetNativeWindowContentView not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		pRet = (id)mpVCLFrame->getNativeWindowContentView( bTopLevelWindow );
+#endif	// USE_NATIVE_EVENTS
+
+	return pRet;
+}
+
+// -----------------------------------------------------------------------
+
+ULONG JavaSalFrame::GetState()
+{
+	ULONG nRet = SAL_FRAMESTATE_MINIMIZED;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetState not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		nRet = mpVCLFrame->getState();
+#endif	// USE_NATIVE_EVENTS
+
+	return nRet;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::MakeModal()
+{
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::MakeModal not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->makeModal();
+#endif	// USE_NATIVE_EVENTS
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalFrame::RequestFocus()
+{
+	bool bRet = false;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::RequestFocus not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		bRet = mpVCLFrame->requestFocus();
+#endif	// USE_NATIVE_EVENTS
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetState( ULONG nFrameState )
+{
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetState not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+	{
+		if ( nFrameState & SAL_FRAMESTATE_MINIMIZED )
+			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
+		else
+			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
+	}
+#endif	// USE_NATIVE_EVENTS
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
+{
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetVisible not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->setVisible( bVisible, bNoActivate );
+#endif	// USE_NATIVE_EVENTS
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalFrame::ToFront()
+{
+	bool bRet = false;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::ToFront not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		bRet = mpVCLFrame->toFront();
+#endif	// USE_NATIVE_EVENTS
+
+	return bRet;
+}
+
 #ifdef USE_NATIVE_WINDOW
 
 // -----------------------------------------------------------------------
@@ -1674,7 +1864,7 @@ SalGraphics* JavaSalFrame::GetGraphics()
 		return NULL;
 
 #ifndef USE_NATIVE_WINDOW
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 #endif	// !USE_NATIVE_WINDOW
 	mbGraphics = TRUE;
@@ -1706,7 +1896,12 @@ BOOL JavaSalFrame::PostEvent( void *pData )
 void JavaSalFrame::SetTitle( const XubString& rTitle )
 {
 	maTitle = OUString( rTitle );
-	mpVCLFrame->setTitle( maTitle );
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetTitle not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->setTitle( maTitle );
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -1777,11 +1972,11 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 #ifndef USE_NATIVE_WINDOW
 	// Make sure there is a graphics available to avoid crashing when the OOo
 	// code tries to draw while updating the menus
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 #endif	// !USE_NATIVE_WINDOW
 
-	mpVCLFrame->setVisible( mbVisible, bNoActivate );
+	SetVisible( mbVisible, bNoActivate );
 
 #ifndef USE_NATIVE_WINDOW
 	// Reset graphics
@@ -1812,7 +2007,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 						pFrame = pFrame->mpParent;
 
 					if ( pModalFrame == pFrame )
-						mpVCLFrame->makeModal();
+						MakeModal();
 				}
 			}
 		}
@@ -1832,7 +2027,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				bTopLevelWindow = sal_True;
 		}
 
-		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView( bTopLevelWindow );
+		maSysData.pView = (NSView *)GetNativeWindowContentView( bTopLevelWindow );
 		mbCenter = FALSE;
 
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
@@ -1927,7 +2122,12 @@ void JavaSalFrame::Enable( BOOL bEnable )
 
 void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
-	mpVCLFrame->setMinClientSize( nWidth, nHeight );
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetMinClientSize not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->setMinClientSize( nWidth, nHeight );
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -1956,7 +2156,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	long nParentY = 0;
 	if ( mpParent )
 	{
-		Rectangle aParentBounds( mpParent->mpVCLFrame->getBounds() );
+		Rectangle aParentBounds( mpParent->GetBounds() );
 		nParentX = aParentBounds.nLeft + mpParent->maGeometry.nLeftDecoration;
 		nParentY = aParentBounds.nTop + mpParent->maGeometry.nTopDecoration;
 
@@ -2000,7 +2200,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		// so that dialogs don't show on a different monitor than the parent
 		if ( mpParent )
 		{
-			Rectangle aParentBounds( mpParent->mpVCLFrame->getBounds() );
+			Rectangle aParentBounds( mpParent->GetBounds() );
 			if ( aWorkArea.GetIntersection( aParentBounds ).IsEmpty() )
 			{
 				aWorkArea = aParentBounds;
@@ -2038,7 +2238,12 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 	}
 
-	mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetPosSize not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
+#endif	// USE_NATIVE_EVENTS
 
 	// Update the cached position immediately
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
@@ -2111,25 +2316,20 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 	// Fix bug 3078 by setting the state after setting the size
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
-	{
-		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
-			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
-		else
-			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-	}
+		SetState( pState->mnState );
 }
 
 // -----------------------------------------------------------------------
 
 BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
-	Rectangle aBounds( mpVCLFrame->getBounds( NULL, sal_True ) );
+	Rectangle aBounds( GetBounds( NULL, sal_True ) );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
 	pState->mnX = aBounds.Left();
 	pState->mnY = aBounds.Top();
 	pState->mnWidth = aBounds.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration;
 	pState->mnHeight = aBounds.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration;
-	pState->mnState = mpVCLFrame->getState();
+	pState->mnState = GetState();
 
 	// Fix bug 3012 by returning false if the frame size is not larger than
 	// the frame's minimum size
@@ -2151,7 +2351,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSWindow *pNSWindow = (NSWindow *)mpVCLFrame->getNativeWindow();
+		NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
 		if ( pNSWindow )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow];
@@ -2184,7 +2384,12 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
 	}
 
-	mpVCLFrame->setFullScreenMode( bFullScreen );
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::ShowFullScreen not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->setFullScreenMode( bFullScreen );
+#endif	// USE_NATIVE_EVENTS
 	mbFullScreen = bFullScreen;
 	mbInShowFullScreen = FALSE;
 }
@@ -2254,10 +2459,10 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 	if ( !pFrame || pFrame->IsFloatingFrame() || !pFrame->mbVisible )
 		return;
 
-	bool bSuccess;
+	bool bSuccess = false;
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
 	{
-		bSuccess = pFrame->mpVCLFrame->toFront();
+		bSuccess = pFrame->ToFront();
 	}
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
 	{
@@ -2272,9 +2477,9 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 		}
 
 		if ( bModal )
-			bSuccess = pFrame->mpVCLFrame->toFront();
+			bSuccess = pFrame->ToFront();
 		else
-			bSuccess = pFrame->mpVCLFrame->requestFocus();
+			bSuccess = pFrame->RequestFocus();
 	}
 	else
 	{
@@ -2304,7 +2509,8 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 
 	[pPool release];
 #else	// USE_NATIVE_WINDOW
-	mpVCLFrame->setPointer( ePointerStyle );
+	if ( mpVCLFrame )
+		mpVCLFrame->setPointer( ePointerStyle );
 #endif	// USE_NATIVE_WINDOW
 }
 
@@ -2332,14 +2538,24 @@ void JavaSalFrame::SetPointerPos( long nX, long nY )
 
 void JavaSalFrame::Flush()
 {
-	mpVCLFrame->sync();
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::Flush not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->sync();
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::Sync()
 {
-	mpVCLFrame->sync();
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::Sync not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		mpVCLFrame->sync();
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -2347,10 +2563,17 @@ void JavaSalFrame::Sync()
 void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 	// Only allow Mac OS X key bindings when the OOo application code says so
-	if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
-		mpVCLFrame->setAllowKeyBindings( sal_True );
-	else
-		mpVCLFrame->setAllowKeyBindings( sal_False );
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::SetInputContext not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+	{
+		if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
+			mpVCLFrame->setAllowKeyBindings( sal_True );
+		else
+			mpVCLFrame->setAllowKeyBindings( sal_False );
+	}
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -2366,8 +2589,16 @@ void JavaSalFrame::EndExtTextInput( USHORT nFlags )
 
 XubString JavaSalFrame::GetKeyName( USHORT nKeyCode )
 {
-	OUString aKeyName( mpVCLFrame->getKeyName( nKeyCode ) );
-	return XubString( aKeyName );
+	XubString aRet;
+
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalFrame::GetKeyName not implemented\n" );
+#else	// USE_NATIVE_EVENTS
+	if ( mpVCLFrame )
+		aRet = XubString( mpVCLFrame->getKeyName( nKeyCode ) );
+#endif	// USE_NATIVE_EVENTS
+
+	return aRet;
 }
 
 // -----------------------------------------------------------------------
@@ -2588,7 +2819,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	if ( mpParent )
 	{
 		mpParent->maChildren.remove( this );
-		mpParent->mpVCLFrame->removeChild( this );
+#ifndef USE_NATIVE_EVENTS
+		if ( mpVCLFrame )
+			mpParent->mpVCLFrame->removeChild( this );
+#endif	// !USE_NATIVE_EVENTS
 	}
 
 	mpParent = (JavaSalFrame *)pNewParent;
@@ -2600,6 +2834,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		if ( bReshow )
 			Show( FALSE );
 
+#ifndef USE_NATIVE_EVENTS
 		// Fix bug 1310 by creating a new native window with the new parent
 		maSysData.pView = NULL;
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
@@ -2634,6 +2869,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
 #endif	// !USE_NATIVE_WINDOW
 		}
+#endif	// !USE_NATIVE_EVENTS
 
 		if ( mpParent )
 			SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
@@ -2650,7 +2886,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	if ( mpParent )
 	{
-		mpParent->mpVCLFrame->addChild( this );
+#ifndef USE_NATIVE_EVENTS
+		if ( mpVCLFrame )
+			mpParent->mpVCLFrame->addChild( this );
+#endif	// !USE_NATIVE_EVENTS
 		mpParent->maChildren.push_back( this );
 	}
 
@@ -2756,7 +2995,7 @@ void JavaSalFrame::ResetClipRegion()
 	}
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->resetClipRegion( sal_True );
 #endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
@@ -2771,7 +3010,7 @@ void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 	ResetClipRegion();
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->beginSetClipRegion( sal_True );
 #endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
@@ -2794,7 +3033,7 @@ void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight 
 	}
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_True );
 #endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
@@ -2809,7 +3048,7 @@ void JavaSalFrame::EndSetClipRegion()
 	mpGraphics->setFrameClipPath( maFrameClipPath );
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics )
+	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
 #endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING

@@ -40,6 +40,8 @@
 #include "VCLEventQueue_cocoa.h"
 #include "VCLFrame_cocoa.h"
 
+#ifndef USE_NATIVE_EVENTS
+
 #ifndef NSFullScreenWindowMask
 #define NSFullScreenWindowMask ( 1 << 14 )
 #endif
@@ -512,3 +514,5 @@ void CWindow_updateLocation( id pCWindow )
 
 	[pPool release];
 }
+
+#endif	// !USE_NATIVE_EVENTS

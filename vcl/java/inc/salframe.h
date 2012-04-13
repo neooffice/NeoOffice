@@ -56,13 +56,26 @@
 // Comment out the following line to disable native window drawing APIs
 #define USE_NATIVE_WINDOW
 
+#ifdef USE_NATIVE_WINDOW
+
+// Uncomment the following line to enable native event handling APIs
+// #define USE_NATIVE_EVENTS
+
+#endif	// USE_NATIVE_WINDOW
+
 #ifdef __cplusplus
+
+#ifndef __OBJC__
+typedef void* id;
+#endif	// !__OBJC__
 
 namespace vcl
 {
 class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLEventQueue;
+#ifndef USE_NATIVE_EVENTS
 class com_sun_star_vcl_VCLFrame;
+#endif	// !USE_NATIVE_EVENTS
 #ifndef USE_NATIVE_WINDOW
 class com_sun_star_vcl_VCLMenuBar;
 #endif	// !USE_NATIVE_WINDOW
@@ -89,7 +102,11 @@ private:
 #endif	// USE_NATIVE_WINDOW
 
 public:
+#ifdef USE_NATIVE_EVENTS
+	id						mpWindow;
+#else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
+#endif	// USE_NATIVE_EVENTS
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;
 	JavaSalFrame*			mpParent;
@@ -123,7 +140,7 @@ public:
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
 	static unsigned int		GetScreenCount();
 
-							JavaSalFrame();
+							JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();
 
 	void					AddObject( JavaSalObject *pObject, bool bVisible );
@@ -131,6 +148,16 @@ public:
 	bool					IsUtilityWindow();
 	void					RemoveObject( JavaSalObject *pObject, bool bDeleted );
 	void					FlushAllObjects();
+	const Rectangle			GetBounds( sal_Bool *bInLiveResize = NULL, sal_Bool bUseFullScreenOriginalBounds = sal_False );
+	const Rectangle			GetInsets();
+	id						GetNativeWindow();
+	id						GetNativeWindowContentView( sal_Bool bTopLevelWindow );
+	ULONG					GetState();
+	void					MakeModal();
+	bool					RequestFocus();
+	void					SetState( ULONG nFrameState );
+	void					SetVisible( sal_Bool bVisible, sal_Bool bNoActivate );
+	bool					ToFront();
 #ifdef USE_NATIVE_WINDOW
 	void					UpdateLayer();
 #endif	// USE_NATIVE_WINDOW

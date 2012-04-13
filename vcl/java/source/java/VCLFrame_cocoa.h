@@ -38,6 +38,8 @@
 
 #include <com/sun/star/vcl/VCLFrame.hxx>
 
+#ifndef USE_NATIVE_EVENTS
+
 // Uncomment the following line to enable rounded bottom corners in Java frames
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
@@ -51,5 +53,7 @@ extern "C" SAL_DLLPRIVATE int CWindow_makeFloatingWindow( id pCWindow );
 extern "C" SAL_DLLPRIVATE void CWindow_makeModalWindow( id pCWindow );
 extern "C" SAL_DLLPRIVATE void CWindow_makeUnshadowedWindow( id pCWindow );
 extern "C" SAL_DLLPRIVATE void CWindow_updateLocation( id pCWindow );
+
+#endif	// !USE_NATIVE_EVENTS
 
 #endif

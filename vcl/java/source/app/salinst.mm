@@ -62,9 +62,6 @@
 #include <vcl/floatwin.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#include <com/sun/star/vcl/VCLImage.hxx>
-#include <com/sun/star/vcl/VCLPageFormat.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
 
@@ -196,7 +193,7 @@ BOOL VCLInstance_updateNativeMenus()
 			{
 				// Fix bug 3571 by only cancelling when at least one visible
 				// non-backing, non-floating, and non-floating frame
-				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->mpVCLFrame && (*it)->mpVCLFrame->getState() != SAL_FRAMESTATE_MINIMIZED )
+				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->GetState() != SAL_FRAMESTATE_MINIMIZED )
 				{
 					bRet = FALSE;
 					break;
@@ -642,33 +639,16 @@ SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* pSystemParentData
 
 SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
-	JavaSalFrame *pFrame = new JavaSalFrame();
-
-	pFrame->mnStyle = nSalFrameStyle;
-	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->mnStyle, pFrame, (JavaSalFrame *)pParent, sal_False, pFrame->IsUtilityWindow() );
-	if ( !pVCLFrame || !pVCLFrame->getJavaObject() )
+	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, (JavaSalFrame *)pParent );
+#ifdef USE_NATIVE_EVENTS
+	if ( !pFrame->mpWindow )
+#else	// USE_NATIVE_EVENTS
+	if ( !pFrame->mpVCLFrame || !pFrame->mpVCLFrame->getJavaObject() )
+#endif	// USE_NATIVE_EVENTS
 	{
-		if ( pVCLFrame )
-			delete pVCLFrame;
 		delete pFrame;
 		return NULL;
 	}
-	pFrame->mpVCLFrame = pVCLFrame;
-	pFrame->maSysData.pView = NULL;
-
-	// Set initial parent
-	pFrame->SetParent( pParent );
-
-	// Insert this window into the window list
-	SalData *pSalData = GetSalData();
-	pSalData->maFrameList.push_front( pFrame );
-
-	// Cache the insets
-	Rectangle aRect = pFrame->mpVCLFrame->getInsets();
-	pFrame->maGeometry.nLeftDecoration = aRect.nLeft;
-	pFrame->maGeometry.nTopDecoration = aRect.nTop;
-	pFrame->maGeometry.nRightDecoration = aRect.nRight;
-	pFrame->maGeometry.nBottomDecoration = aRect.nBottom;
 
 	// Get work area of the parent window or, if no parent, the main screen
 	Rectangle aWorkArea( Point( 0, 0 ), Size( 0, 0 ) );
@@ -699,6 +679,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 		}
 		if ( !pFrame->mpParent )
 		{
+			SalData *pSalData = GetSalData();
+
 			// Find the next document window if any exist
 			JavaSalFrame* pNextFrame = NULL;
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -740,16 +722,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 
 void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 {
-	// Remove this window from the window list
 	if ( pFrame )
-	{
-		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
-
-		SalData *pSalData = GetSalData();
-		pSalData->maFrameList.remove( pJavaFrame );
-
-		delete pJavaFrame;
-	}
+		delete pFrame;
 }
 
 // -----------------------------------------------------------------------

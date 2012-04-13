@@ -36,7 +36,6 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
-#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <java/lang/Class.hxx>
 #include <vos/module.hxx>
@@ -714,7 +713,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		// emulate a modal dialog
 		sal_Bool bOldLandscape = ( getOrientation() == ORIENTATION_LANDSCAPE ? sal_True : sal_False );
 		void *pNSPrintInfo = getNativePrinterJob();
-		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), bOldLandscape );
+		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->GetNativeWindow(), bOldLandscape );
 
 		pSalData->mpNativeModalSheetFrame = pFocusFrame;
 		pSalData->mbInNativeModalSheet = true;

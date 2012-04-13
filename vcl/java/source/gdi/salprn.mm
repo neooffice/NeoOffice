@@ -48,7 +48,6 @@
 #include <vcl/salptype.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
-#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #ifndef USE_NATIVE_PRINTING
@@ -905,7 +904,7 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 		// Ignore any AWT events while the page layout dialog is showing to
 		// emulate a modal dialog
-		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:(NSWindow *)pFocusFrame->mpVCLFrame->getNativeWindow()];
+		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:(NSWindow *)pFocusFrame->GetNativeWindow()];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 		while ( ![pJavaSalInfoPrinterShowPageLayoutDialog finished] )
@@ -1347,7 +1346,7 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;
 
-			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
+			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
 
 			JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

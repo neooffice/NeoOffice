@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <saldata.hxx>
 #include <salframe.h>
 #include <vcl/svapp.hxx>
@@ -114,7 +113,7 @@ void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen )
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
+				if ( (*it)->mbVisible && (*it)->GetNativeWindow() == pNSWindow )
 				{
 					pFrame = *it;
 					break;
@@ -212,7 +211,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
+				if ( (*it)->mbVisible && (*it)->GetNativeWindow() == pNSWindow )
 				{
 					pFrame = *it;
 					break;
@@ -301,7 +300,7 @@ BOOL VCLEventQueue_paste( void *pNSWindow )
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
+				if ( (*it)->mbVisible && (*it)->GetNativeWindow() == pNSWindow )
 				{
 					pFrame = *it;
 					break;
