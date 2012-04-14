@@ -157,7 +157,7 @@ using namespace vcl;
 @interface VCLMenuWrapper : NSObject
 {
 	JavaSalFrame*			mpFrame;
-	NSMenu*					mpMenu;
+	VCLMenu*				mpMenu;
 	MacOSBOOL				mbMenuBar;
 	NSMutableArray*			mpMenuItems;
 }
@@ -166,7 +166,7 @@ using namespace vcl;
 - (void)dealloc;
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)insertMenuItem:(VCLMenuWrapperArgs *)pArgs;
-- (NSMenu *)menu;
+- (VCLMenu *)menu;
 - (void)removeMenuAsMainMenu:(id)pObject;
 - (void)removeMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)setFrame:(VCLMenuWrapperArgs *)pArgs;
@@ -292,7 +292,7 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 	}
 }
 
-- (NSMenu *)menu
+- (VCLMenu *)menu
 {
 	if ( !mpMenu && !mbMenuBar && mpMenuItems )
 	{
@@ -597,7 +597,7 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 @interface VCLCreateMenu : NSObject
 {
-	VCLMenuWrapper*				mpMenu;
+	VCLMenuWrapper*			mpMenu;
 	MacOSBOOL				mbMenuBar;
 }
 + (id)create:(MacOSBOOL)bMenuBar;
