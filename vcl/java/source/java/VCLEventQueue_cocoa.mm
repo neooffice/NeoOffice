@@ -202,7 +202,7 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
+		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] class] isKindOfClass:[VCLWindow class]] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
 }
 
 @end
@@ -360,7 +360,9 @@ static NSString *pCancelInputMethodText = @" ";
 - (NSSize)poseAsBottomCornerSize;
 @end
 
+#ifndef USE_NATIVE_EVENTS
 static MacOSBOOL bUseQuickTimeContentViewHack = NO;
+#endif	// USE_NATIVE_EVENTS
 
 @interface VCLView : NSView
 + (void)swizzleSelectors:(NSView *)pView;
@@ -396,6 +398,8 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 - (MacOSBOOL)wantsPeriodicDraggingUpdates;
 - (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
+
+#ifndef USE_NATIVE_EVENTS
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
 // break Java's Window.getLocationOnScreen() method so we need to flip the
@@ -484,6 +488,8 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 }
 
 @end
+
+#endif	// !USE_NATIVE_EVENTS
 
 #ifdef USE_NATIVE_WINDOW
 
@@ -583,7 +589,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 				{
 					[pNeedRestoreModalWindows removeObject:pWindow];
 					[pWindow _clearModalWindowLevel];
@@ -626,7 +632,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	// Load Java's AWTFont class and redirect them to VCLFont's matching
 	// selectors
-	if ( pWindow && !bAWTFontInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+	if ( pWindow && !bAWTFontInitialized && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		bAWTFontInitialized = YES;
 
@@ -796,7 +802,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				[pResponder abandonInput];
 			}
 		}
-		else
+		else if ( ![[self class] isKindOfClass:[VCLWindow class]] )
 		{
 			// Fix bug 3327 by removing any cached events when a non-Java
 			// window obtains focus
@@ -813,7 +819,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
-	if ( ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( ![self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ))
 		return;
 
 	if ( [super respondsToSelector:@selector(poseAsDisplayIfNeeded)] )
@@ -886,7 +892,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)makeKeyWindow
 {
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
@@ -917,7 +923,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( nOrderingMode != NSWindowOut && ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
@@ -926,7 +932,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
 		{
@@ -975,6 +981,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 					[self setFrame:aFrame display:NO];
 
+#ifndef USE_NATIVE_EVENTS
 					// Adjust origin of subviews by height change
 					if ( bUseQuickTimeContentViewHack )
 					{
@@ -996,6 +1003,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 						}
 					}
 					else
+#endif	// !USE_NATIVE_EVENTS
 					{
 						NSRect aBounds = [pContentView bounds];
 						aBounds.origin.y += fHeightChange;
@@ -1019,7 +1027,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 					for ( ; i < nCount; i++ )
 					{
 						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 						{
 							[pWindow makeKeyWindow];
 							break;
@@ -1060,7 +1068,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
-	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( bCommandKeyPressed && [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
@@ -1114,7 +1122,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
 	// closable non-Java windows.
-	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self class] isKindOfClass:[VCLWindow class]] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
@@ -1316,6 +1324,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
 		[super poseAsSetContentView:pView];
 
+#ifndef USE_NATIVE_EVENTS
 	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
 	// graphics cards, QTMovieView will misplace the movie if the window's
 	// content view is flipped. Since Java replaces the default content view
@@ -1344,6 +1353,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 		}
 	}
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)setDraggingSourceDelegate:(id)pDelegate
@@ -1370,8 +1380,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)setLevel:(int)nWindowLevel
 {
-	// Don't let Java unset our window level changes unless it is modal window or
-	// the window has been set to the "revert document" window level
+	// Don't let Java unset our window level changes unless it is modal window
+	// or the window has been set to the "revert document" window level
 	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [self level] != 2 && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
@@ -1407,7 +1417,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	// If the NSViewAWT class has its own drag and drop and services selectors,
 	// redirect them to VCLView's matching selectors
-	if ( pView && !bNSViewAWTInitialized && [[pView className] isEqualToString:pNSViewAWTString] )
+	if ( pView && !bNSViewAWTInitialized && ( [[pView class] isKindOfClass:[VCLView class]] || [[pView className] isEqualToString:pNSViewAWTString] ) )
 	{
 		bNSViewAWTInitialized = YES;
 
@@ -1714,7 +1724,7 @@ static CFDataRef aRTFSelection = nil;
 - (void)drawRect:(NSRect)aDirtyRect
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
+	if ( pWindow && [pWindow isVisible] && ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 	{
 		// For some strange reason, Java will ignore all drawing that we do
 		// unless the color is changed in the current graphics context. Also,
@@ -1730,7 +1740,7 @@ static CFDataRef aRTFSelection = nil;
 - (void)resetCursorRects
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
+	if ( pWindow && [pWindow isVisible] && ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 	{
 		NSCursor *pCursor = JavaSalFrame_getCursor( self );
 		if ( pCursor )
@@ -1763,7 +1773,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)isOpaque
 {
-	if ( [[self className] isEqualToString:pNSViewAWTString] )
+	if ( ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 		return YES;
 	else if ( [super respondsToSelector:@selector(poseAsIsOpaque)] )
 		return [super poseAsIsOpaque];
@@ -1822,7 +1832,7 @@ static CFDataRef aRTFSelection = nil;
 	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
 			bRet = (MacOSBOOL)[super readSelectionFromPasteboard:pPasteboard];
@@ -1908,7 +1918,7 @@ static CFDataRef aRTFSelection = nil;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		id pRet = nil;
 		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
@@ -1964,7 +1974,7 @@ static CFDataRef aRTFSelection = nil;
 	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
 			bRet = (MacOSBOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
@@ -2011,7 +2021,9 @@ static CFDataRef aRTFSelection = nil;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
+#ifndef USE_NATIVE_EVENTS
 	MacOSBOOL					mbUseQuickTimeContentViewHack;
+#endif	// !USE_NATIVE_EVENTS
 }
 + (id)create;
 - (id)init;
@@ -2031,6 +2043,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	[super init];
 
+#ifndef USE_NATIVE_EVENTS
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
 	mbUseQuickTimeContentViewHack = NO;
@@ -2047,6 +2060,7 @@ static CFDataRef aRTFSelection = nil;
 
 		dlclose( pLib );
 	}
+#endif	// !USE_NATIVE_EVENTS
 
 	return self;
 }
@@ -2056,8 +2070,10 @@ static CFDataRef aRTFSelection = nil;
 	// Do not retain as invoking alloc disables autorelease
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
+#ifndef USE_NATIVE_EVENTS
 	// Initialize statics
 	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
+#endif	// !USE_NATIVE_EVENTS
 
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
