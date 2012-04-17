@@ -1034,22 +1034,28 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	NSRect					maInsets;
 	VCLWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
-	NSRect					maShowOnlyMenusBounds;
+	NSRect					maShowOnlyMenusFrame;
 	ULONG					mnStyle;
 	MacOSBOOL				mbUndecorated;
 	MacOSBOOL				mbUtility;
 	VCLWindow*				mpWindow;
 }
+- (void)adjustColorLevelAndShadow;
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
 - (void)flush:(id)pObject;
 - (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
+- (void)getFrame:(VCLWindowWrapperArgs *)pArgs;
+- (void)getState:(VCLWindowWrapperArgs *)pArgs;
 - (const NSRect)insets;
 - (MacOSBOOL)isFloatingWindow;
 - (void)makeModal:(id)pObject;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
+- (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
+- (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
 - (void)setParent:(VCLWindowWrapperArgs *)pArgs;
+- (void)setState:(VCLWindowWrapperArgs *)pArgs;
 - (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
 - (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs;
@@ -1057,6 +1063,38 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 @end
 
 @implementation VCLWindowWrapper
+
+- (void)adjustColorLevelAndShadow
+{
+	if ( mpWindow )
+	{
+		if ( mbFullScreen )
+			[mpWindow setBackgroundColor:[NSColor blackColor]];
+		else
+			[mpWindow setBackgroundColor:[NSColor whiteColor]];
+
+		if ( mbUtility )
+		{
+			[mpWindow setHasShadow:YES];
+			[mpWindow setLevel:NSFloatingWindowLevel];
+		}
+		else if ( mbShowOnlyMenus || ( mbUndecorated && mpParent ) )
+		{
+			[mpWindow setHasShadow:YES];
+			[mpWindow setLevel:NSPopUpMenuWindowLevel];
+		}
+		else if ( mbUndecorated && [mpWindow canBecomeKeyOrMainWindow] && !mpParent )
+		{
+			[mpWindow setHasShadow:NO];
+			[mpWindow setLevel:NSNormalWindowLevel];
+		}
+		else
+		{
+			[mpWindow setHasShadow:YES];
+			[mpWindow setLevel:NSNormalWindowLevel];
+		}
+	}
+}
 
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
@@ -1067,7 +1105,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	maInsets = NSMakeRect( 0, 0, 0, 0 );
 	mpParent = nil;
 	mbShowOnlyMenus = bShowOnlyMenus;
-	maShowOnlyMenusBounds = NSMakeRect( 0, 0, 1, 1 );
+	maShowOnlyMenusFrame = NSMakeRect( 0, 0, 1, 1 );
 	mnStyle = nStyle;
 	mbUtility = bUtility;
 	mbUndecorated = NO;
@@ -1080,10 +1118,14 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	if ( !mbUndecorated )
 	{
 		nWindowStyle = NSTitledWindowMask | NSClosableWindowMask;
-		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
-			nWindowStyle |= NSResizableWindowMask | NSMiniaturizableWindowMask;
 		if ( mbUtility )
 			nWindowStyle |= NSUtilityWindowMask;
+		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+		{
+			nWindowStyle |= NSResizableWindowMask;
+			if ( !mbUtility )
+				nWindowStyle |= NSMiniaturizableWindowMask;
+		}
 	}
 
 	VCLView *pContentView = [[VCLView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
@@ -1092,24 +1134,21 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:nWindowStyle backing:NSBackingStoreBuffered defer:YES];
 		if ( mpWindow )
 		{
-			[mpWindow setBackgroundColor:[NSColor whiteColor]];
-
-			if ( mbUndecorated && !mbShowOnlyMenus )
-			{
-				// Disable focus for undecorated windows
-				[mpWindow setCanBecomeKeyOrMainWindow:NO];
-				[mpWindow setLevel:NSPopUpMenuWindowLevel];
-			}
-			else if ( mbUtility )
+			if ( mbUtility )
 			{
 				// Set to utility window type
 				if ( [mpWindow respondsToSelector:@selector(_setUtilityWindow:)] )
 					[mpWindow _setUtilityWindow:YES];
-				[mpWindow setLevel:NSFloatingWindowLevel];
 				[mpWindow setHidesOnDeactivate:YES];
+			}
+			else if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
+			{
+				[mpWindow setCanBecomeKeyOrMainWindow:NO];
 			}
 
 			[mpWindow setContentView:pContentView];
+
+			[self adjustColorLevelAndShadow];
 
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
@@ -1167,6 +1206,78 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		[pArgs setResult:[mpWindow contentView]];
 }
 
+- (void)getFrame:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+    NSValue *pInLiveResize = (NSValue *)[pArgArray objectAtIndex:0];
+    if ( !pInLiveResize )
+        return;
+
+    NSValue *pFullScreen = (NSValue *)[pArgArray objectAtIndex:1];
+    if ( !pFullScreen )
+        return;
+
+	if ( mbShowOnlyMenus )
+	{
+		[pArgs setResult:[NSValue valueWithRect:maShowOnlyMenusFrame]];
+	}
+	else if ( mpWindow )
+	{
+		sal_Bool *pInLiveResizePointer = (sal_Bool *)[pInLiveResize pointerValue];
+		if ( pInLiveResizePointer )
+		{
+			if ( [mpWindow respondsToSelector:@selector(inLiveResize)] && [mpWindow inLiveResize] )
+				*pInLiveResizePointer = YES;
+			else
+				*pInLiveResizePointer = NO;
+		}
+
+		NSRect aFrame = [mpWindow frame];
+
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
+		// Check if we are in full screen mode
+		if ( [mpWindow styleMask] & NSFullScreenWindowMask && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
+		{
+			if ( [pFullScreen boolValue] )
+			{
+				NSRect aNonFullScreenFrame = [mpWindow _frameOnExitFromFullScreen];
+				if ( !NSIsEmptyRect( aNonFullScreenFrame ) )
+					aFrame = aNonFullScreenFrame;
+			}
+			else
+			{
+				aFrame = [NSWindow frameRectForContentRect:maFrame styleMask:[mpWindow styleMask] & ~NSFullScreenWindowMask];
+			}
+		}
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
+
+		// Flip to OOo coordinates
+		NSRect aTotalBounds = GetTotalScreenBounds();
+		aFrame.origin.y = aTotalBounds.size.height - aFrame.origin.y - aFrame.size.height;
+
+		[pArgs setResult:[NSValue valueWithRect:aFrame]];
+	}
+}
+
+- (void)getState:(VCLWindowWrapperArgs *)pArgs
+{
+	if ( mpWindow )
+	{
+		unsigned long nState;
+		if ( [mpWindow styleMask] & NSMiniaturizableWindowMask && [mpWindow isMiniaturized] )
+			nState = SAL_FRAMESTATE_MINIMIZED;
+		else if ( [mpWindow styleMask] & NSResizableWindowMask && [mpWindow isZoomed] )
+			nState = SAL_FRAMESTATE_MAXIMIZED;
+		else
+			nState = SAL_FRAMESTATE_NORMAL;
+
+		[pArgs setResult:[NSNumber numberWithUnsignedLong:nState]];
+	}
+}
+
 - (const NSRect)insets
 {
 	return maInsets;
@@ -1210,9 +1321,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 	if ( mpWindow )
 	{
-		// Calculate the total combined screen so that we can flip coordinates
-		NSRect aTotalBounds = GetTotalScreenBounds();
-
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
 		NSSize aMinSize = [mpWindow minSize];
@@ -1228,14 +1336,67 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		// Always put showOnlyMenus windows under the main menubar
 		if ( mbShowOnlyMenus )
 		{
-			maShowOnlyMenusBounds = aFrame;
+			maShowOnlyMenusFrame = aFrame;
 			aFrame = NSMakeRect( 0, 0, 1, 1);
 		}
 
 		// Flip to native coordinates
+		NSRect aTotalBounds = GetTotalScreenBounds();
 		aFrame.origin.y = aTotalBounds.size.height - aFrame.origin.y - aFrame.size.height;
 
 		[mpWindow setFrame:aFrame display:NO];
+	}
+}
+
+- (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSNumber *pFullScreen = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pFullScreen )
+        return;
+
+	mbFullScreen = [pFullScreen boolValue];
+	[self adjustColorLevelAndShadow];
+
+	if ( mpWindow )
+	{
+		if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
+			[mpWindow setCanBecomeKeyOrMainWindow:NO];
+		else
+			[mpWindow setCanBecomeKeyOrMainWindow:YES];
+	}
+}
+
+- (void)setMinSize:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSValue *pMinSize = (NSValue *)[pArgArray objectAtIndex:0];
+    if ( !pMinSize )
+        return;
+
+	if ( mpWindow )
+	{
+		NSSize aMinSize = [pMinSize sizeValue];
+
+		// Make sure that there is a minimum amount of content area
+		if ( mbUndecorated && aMinSize.width < 1 )
+			aMinSize.width = 1;
+		else if ( !mbUndecorated && aMinSize.width < 200 )
+			aMinSize.width = 200;
+		if ( aMinSize.height < 1 )
+			aMinSize.height = 1;
+
+		const NSRect aInsets = [self insets];
+		aMinSize.width += aInsets.origin.x + aInsets.size.width;
+		aMinSize.height += aInsets.origin.y + aInsets.size.height;
+
+		[mpWindow setMinSize:aMinSize];
 	}
 }
 
@@ -1259,6 +1420,46 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 	if ( mpParent )
 		[mpParent retain];
+
+	[self adjustColorLevelAndShadow];
+}
+
+- (void)setState:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSNumber *pState = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pState )
+        return;
+
+	// Only change the state if the window is a visible window with a frame and
+	// no parent window as this method can cause a deadlock with the native
+	// menu handler on Mac OS X. Also, don't allow utility windows to be
+	// minimized.
+	unsigned long nState = [pState unsignedLongValue];
+	if ( !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
+	{
+		if ( nState == SAL_FRAMESTATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
+		{
+			[mpWindow miniaturize:self];
+		}
+		else if ( nState == SAL_FRAMESTATE_MAXIMIZED && [mpWindow styleMask] & NSResizableWindowMask )
+		{
+			if ( [mpWindow isMiniaturized] )
+				[mpWindow deminiaturize:self];
+			if ( ![mpWindow isZoomed] )
+				[mpWindow zoom:self];
+		}
+		else
+		{
+			if ( [mpWindow isMiniaturized] )
+				[mpWindow deminiaturize:self];
+			if ( [mpWindow isZoomed] )
+				[mpWindow zoom:self];
+		}
+	}
 }
 
 - (void)setTitle:(VCLWindowWrapperArgs *)pArgs
@@ -1294,6 +1495,11 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	{
 		if ( bVisible )
 		{
+			// Fix bug 1012 by deiconifying the parent window. Fix bug 1388 by
+			// skipping this step if the current window is a floating window.
+			if ( ![self isFloatingWindow] && mpParent && [mpParent isMiniaturized] )
+				[mpParent deminiaturize:self];
+
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			if ( [mpWindow canBecomeKeyOrMainWindow] && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
@@ -2117,7 +2323,22 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseF
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::GetBounds not implemented\n" );
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(getFrame:) withObject:pGetFrameArgs waitUntilDone:YES modes:pModes];
+		NSValue *pFrame = (NSValue *)[pGetFrameArgs result];
+		if ( pFrame )
+		{
+			NSRect aFrame = [pFrame rectValue];
+			aRet = Rectangle( Point( (long)aFrame.origin.x, (long)aFrame.origin.y ), Size( (long)aFrame.size.width, (long)aFrame.size.height ) );
+		}
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 		aRet = mpVCLFrame->getBounds( pInLiveResize, bUseFullScreenOriginalBounds );
@@ -2208,7 +2429,19 @@ ULONG JavaSalFrame::GetState()
 	ULONG nRet = SAL_FRAMESTATE_MINIMIZED;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::GetState not implemented\n" );
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pGetStateArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(getContentView:) withObject:pGetStateArgs waitUntilDone:YES modes:pModes];
+		NSNumber *pState = (NSNumber *)[pGetStateArgs result];
+		if ( pState )
+			nRet = [pState unsignedLongValue];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 		nRet = mpVCLFrame->getState();
@@ -2248,7 +2481,7 @@ bool JavaSalFrame::RequestFocus()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray array]];
+		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(requestFocus:) withObject:pRequestFocusArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pResult = (NSNumber *)[pRequestFocusArgs result];
@@ -2270,7 +2503,24 @@ bool JavaSalFrame::RequestFocus()
 void JavaSalFrame::SetState( ULONG nFrameState )
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::SetState not implemented\n" );
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		ULONG nState;
+		if ( nFrameState & SAL_FRAMESTATE_MINIMIZED )
+			nState = SAL_FRAMESTATE_MINIMIZED;
+		else if ( nFrameState & SAL_FRAMESTATE_MAXIMIZED )
+			nState = SAL_FRAMESTATE_MAXIMIZED;
+		else
+			nState = SAL_FRAMESTATE_NORMAL;
+
+		VCLWindowWrapperArgs *pSetStateArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:nState]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(setState:) withObject:pSetStateArgs waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 	{
@@ -2314,7 +2564,7 @@ bool JavaSalFrame::ToFront()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		VCLWindowWrapperArgs *pToFrontArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray array]];
+		VCLWindowWrapperArgs *pToFrontArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(toFront:) withObject:pToFrontArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pResult = (NSNumber *)[pToFrontArgs result];
@@ -2651,7 +2901,17 @@ void JavaSalFrame::Enable( BOOL bEnable )
 void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::SetMinClientSize not implemented\n" );
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSSize aMinSize = NSMakeSize( nWidth, nHeight );
+		VCLWindowWrapperArgs *pSetMinSizeArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithSize:aMinSize]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(setMinSize:) withObject:pSetMinSizeArgs waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 		mpVCLFrame->setMinClientSize( nWidth, nHeight );
@@ -2923,7 +3183,16 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 	}
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::ShowFullScreen not implemented\n" );
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pSetFullScreenModeArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bFullScreen]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(setFullScreenMode:) withObject:pSetFullScreenModeArgs waitUntilDone:YES modes:pModes];
+
+		[pPool release];
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 		mpVCLFrame->setFullScreenMode( bFullScreen );
