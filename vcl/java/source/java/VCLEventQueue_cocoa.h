@@ -41,11 +41,64 @@
 
 #ifdef __OBJC__
 
+@interface VCLView : NSView
++ (void)swizzleSelectors:(NSView *)pView;
+- (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
+- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
+- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
+- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
+- (id)draggingDestinationDelegate;
+- (void)draggingEnded:(id < NSDraggingInfo >)pSender;
+- (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
+- (void)draggingExited:(id < NSDraggingInfo >)pSender;
+- (id)draggingSourceDelegate;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal;
+- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
+#ifdef USE_NATIVE_WINDOW
+- (void)drawRect:(NSRect)aDirtyRect;
+- (void)resetCursorRects;
+#endif	// USE_NATIVE_WINDOW
+- (MacOSBOOL)ignoreModifierKeysWhileDragging;
+- (id)initWithFrame:(NSRect)aFrame;
+- (MacOSBOOL)isOpaque;
+- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
+- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
+- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
+- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+#ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+- (NSSize)_bottomCornerSize;
+#endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+- (void)setDraggingDestinationDelegate:(id)pDelegate;
+- (void)setDraggingSourceDelegate:(id)pDelegate;
+- (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
+- (MacOSBOOL)wantsPeriodicDraggingUpdates;
+- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
+@end
+
+@interface NSWindow (VCLWindow)
+- (void)_clearModalWindowLevel;
+- (NSRect)_frameOnExitFromFullScreen;
+- (MacOSBOOL)_isUtilityWindow;
+- (void)_restoreModalWindowLevel;
+- (void)_setModalWindowLevel;
+- (void)_setUtilityWindow:(MacOSBOOL)bUtilityWindow;
+- (MacOSBOOL)inLiveResize;
+@end
+
 @interface VCLWindow : NSWindow
+{
+#ifdef USE_NATIVE_EVENTS
+	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+#endif	// USE_NATIVE_EVENTS
+}
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)becomeKeyWindow;
+#ifdef USE_NATIVE_EVENTS
+- (MacOSBOOL)canBecomeKeyOrMainWindow;
+#endif	// USE_NATIVE_EVENTS
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
@@ -56,6 +109,9 @@
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
+#ifdef USE_NATIVE_EVENTS
+- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
+#endif	// USE_NATIVE_EVENTS
 - (void)setContentView:(NSView *)pView;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)setLevel:(int)nWindowLevel;

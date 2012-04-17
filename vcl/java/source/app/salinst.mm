@@ -61,7 +61,9 @@
 #include <vcl/jobset.h>
 #include <vcl/floatwin.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLFrame.hxx>
+#endif	// !USE_NATIVE_EVENTS
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
 
@@ -639,6 +641,11 @@ SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* pSystemParentData
 
 SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
+#ifdef USE_NATIVE_EVENTS
+	// TODO: remove Java loading requirement
+	VCLThreadAttach t;
+#endif	// USE_NATIVE_EVENTS
+
 	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, (JavaSalFrame *)pParent );
 #ifdef USE_NATIVE_EVENTS
 	if ( !pFrame->mpWindow )

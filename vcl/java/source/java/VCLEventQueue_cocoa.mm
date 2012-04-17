@@ -58,7 +58,9 @@ static NSString *pCMenuBarString = @"CMenuBar";
 #endif	// USE_NATIVE_WINDOW
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSViewAWTString = @"NSViewAWT";
+#ifndef USE_NATIVE_EVENTS
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
+#endif	// !USE_NATIVE_EVENTS
 #ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 static NSString *pNSThemeFrameString = @"NSThemeFrame";
 #endif	// USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
@@ -364,41 +366,6 @@ static NSString *pCancelInputMethodText = @" ";
 static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 #endif	// USE_NATIVE_EVENTS
 
-@interface VCLView : NSView
-+ (void)swizzleSelectors:(NSView *)pView;
-- (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
-- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
-- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
-- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
-- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
-- (id)draggingDestinationDelegate;
-- (void)draggingEnded:(id < NSDraggingInfo >)pSender;
-- (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
-- (void)draggingExited:(id < NSDraggingInfo >)pSender;
-- (id)draggingSourceDelegate;
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(MacOSBOOL)bLocal;
-- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
-#ifdef USE_NATIVE_WINDOW
-- (void)drawRect:(NSRect)aDirtyRect;
-- (void)resetCursorRects;
-#endif	// USE_NATIVE_WINDOW
-- (MacOSBOOL)ignoreModifierKeysWhileDragging;
-- (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isOpaque;
-- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
-- (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
-- (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
-- (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
-#ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-- (NSSize)_bottomCornerSize;
-#endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-- (void)setDraggingDestinationDelegate:(id)pDelegate;
-- (void)setDraggingSourceDelegate:(id)pDelegate;
-- (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
-- (MacOSBOOL)wantsPeriodicDraggingUpdates;
-- (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
-@end
-
 #ifndef USE_NATIVE_EVENTS
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
@@ -530,14 +497,6 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 @end
 
 #endif	 // USE_NATIVE_WINDOW
-
-@interface NSWindow (VCLWindow)
-- (void)_clearModalWindowLevel;
-- (MacOSBOOL)_isUtilityWindow;
-- (void)_restoreModalWindowLevel;
-- (void)_setModalWindowLevel;
-- (void)_setUtilityWindow:(MacOSBOOL)bUtilityWindow;
-@end
 
 @interface NSWindow (VCLWindowPoseAs)
 - (void)poseAsBecomeKeyWindow;
@@ -816,6 +775,15 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	}
 }
 
+#ifdef USE_NATIVE_EVENTS
+
+- (MacOSBOOL)canBecomeKeyOrMainWindow
+{
+	return mbCanBecomeKeyOrMainWindow;
+}
+
+#endif	// USE_NATIVE_EVENTS
+
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
@@ -846,9 +814,14 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	[VCLWindow swizzleSelectors:self];
 
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:)] )
-		return [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
-	else
-		return self;
+		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+
+#ifdef USE_NATIVE_EVENTS
+	if ( [[self class] isKindOfClass:[VCLWindow class]] )
+		mbCanBecomeKeyOrMainWindow = YES;
+#endif	// USE_NATIVE_EVENTS
+
+	return self;
 }
 
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
@@ -856,9 +829,14 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	[VCLWindow swizzleSelectors:self];
 
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:screen:)] )
-		return [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
-	else
-		return self;
+		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+
+#ifdef USE_NATIVE_EVENTS
+	if ( [[self class] isKindOfClass:[VCLWindow class]] )
+		mbCanBecomeKeyOrMainWindow = YES;
+#endif	// USE_NATIVE_EVENTS
+
+	return self;
 }
 
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
@@ -894,6 +872,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
+#ifdef USE_NATIVE_EVENTS
+		if ( [[self class] isKindOfClass:[VCLWindow class]] && !mbCanBecomeKeyOrMainWindow )
+			return;
+#endif	// USE_NATIVE_EVENTS
+
 		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 		if ( pAppDelegate )
@@ -1318,6 +1301,15 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		}
 	}
 }
+
+#ifdef USE_NATIVE_EVENTS
+
+- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
+{
+	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
+}
+
+#endif	// USE_NATIVE_EVENTS
 
 - (void)setContentView:(NSView *)pView
 {
@@ -2030,6 +2022,8 @@ static CFDataRef aRTFSelection = nil;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
+static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
+
 @implementation InstallVCLEventQueueClasses
 
 + (id)create
@@ -2067,6 +2061,11 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	if ( bVCLEventQueueClassesInitialized )
+		return;
+
+	bVCLEventQueueClassesInitialized = YES;
+
 	// Do not retain as invoking alloc disables autorelease
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 

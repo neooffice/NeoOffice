@@ -49,7 +49,9 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#ifndef USE_NATIVE_EVENTS
 static bool bVCLEventLoopStarted = false;
+#endif	// !USE_NATIVE_EVENTS
 
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
@@ -1516,6 +1518,7 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 
 	maNeedsDisplayRect = CGRectUnion( maNeedsDisplayRect, CGRectMake( aRect.origin.x - fNativeLineWidth, aRect.origin.y - fNativeLineWidth, aRect.size.width + ( fNativeLineWidth * 2 ), aRect.size.height + ( fNativeLineWidth * 2 ) ) );
 
+#ifndef USE_NATIVE_EVENTS
 	// We need to explicitly flush before the OOo event dispatch loop starts
 	if ( !bVCLEventLoopStarted )
 	{
@@ -1524,7 +1527,8 @@ void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth 
 		else
 			bVCLEventLoopStarted = true;
 	}
-#endif	 // USE_NATIVE_WINDOW
+#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------

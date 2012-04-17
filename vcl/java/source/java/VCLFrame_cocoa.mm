@@ -54,12 +54,6 @@
 - (NSWindow *)getNSWindow;
 @end
 
-@interface NSWindow (VCLWindow)
-- (NSRect)_frameOnExitFromFullScreen;
-- (void)_setModalWindowLevel;
-- (BOOL)inLiveResize;
-@end
-
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
