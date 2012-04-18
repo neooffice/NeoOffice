@@ -69,6 +69,7 @@
 
 #include "salinst.hrc"
 #include "salinst_cocoa.h"
+#include "../java/VCLEventQueue_cocoa.h"
 
 class JavaSalI18NImeStatus : public SalI18NImeStatus
 {
@@ -326,6 +327,10 @@ SalInstance* CreateSalInstance()
 	// Set required Mac OS X NWF settings
 	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
 	ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
+
+#ifdef USE_NATIVE_EVENTS
+	VCLEventQueue_installVCLEventQueueClasses();
+#endif	// USE_NATIVE_EVENTS
 
 	return pInst;
 }
@@ -641,11 +646,6 @@ SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* pSystemParentData
 
 SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
-#ifdef USE_NATIVE_EVENTS
-	// TODO: remove Java loading requirement
-	VCLThreadAttach t;
-#endif	// USE_NATIVE_EVENTS
-
 	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, (JavaSalFrame *)pParent );
 #ifdef USE_NATIVE_EVENTS
 	if ( !pFrame->mpWindow )
