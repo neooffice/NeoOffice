@@ -1040,6 +1040,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	MacOSBOOL				mbUtility;
 	VCLWindow*				mpWindow;
 }
++ (void)updateShowOnlyMenusWindows;
 - (void)adjustColorLevelAndShadow;
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
@@ -1062,7 +1063,53 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (VCLWindow *)window;
 @end
 
+static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
+
 @implementation VCLWindowWrapper
+
++ (void)updateShowOnlyMenusWindows
+{
+	// Fix bug 3032 by disabling focus for show only menus windows when
+	// any frames are visible
+	MacOSBOOL bEnableFocus = NO;
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			NSUInteger nCount = [pWindows count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSWindow *pWindow = [pWindows objectAtIndex:i];
+				if ( !pWindow || ![pWindow isVisible] || aShowOnlyMenusWindowMap.find( pWindow ) != aShowOnlyMenusWindowMap.end() )
+					continue;
+
+				if ( [pWindow isKindOfClass:[VCLWindow class]] )
+				{
+					if ( [(VCLWindow *)pWindow canBecomeKeyOrMainWindow] )
+					{
+						bEnableFocus = YES;
+						break;
+					}
+				}
+				else if ( [pWindow canBecomeKeyWindow] )
+				{
+					bEnableFocus = YES;
+					break;
+				}
+			}
+		}
+	}
+
+	for ( ::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.begin(); it != aShowOnlyMenusWindowMap.end(); ++it )
+	{
+		[it->first setCanBecomeKeyOrMainWindow:bEnableFocus];
+		if ( bEnableFocus && [it->first isVisible] )
+			[it->first makeKeyWindow];
+	}
+}
 
 - (void)adjustColorLevelAndShadow
 {
@@ -1154,6 +1201,9 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
 			NSRect aFrameRect = [NSWindow frameRectForContentRect:aContentRect styleMask:nWindowStyle];
 			maInsets = NSMakeRect( aContentRect.origin.x - aFrameRect.origin.x, aContentRect.origin.y - aFrameRect.origin.y, aFrameRect.origin.x + aFrameRect.size.width - aContentRect.origin.x - aContentRect.size.width, aFrameRect.origin.y + aFrameRect.size.height - aContentRect.origin.y - aContentRect.size.height );
+
+			if ( mbShowOnlyMenus )
+				aShowOnlyMenusWindowMap[ mpWindow ] = mpWindow;
 		}
 	}
 
@@ -1166,7 +1216,13 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		[mpParent release];
 
 	if ( mpWindow )
+	{
+		::std::map< VCLWindow*, VCLWindow* >::iterator it = aShowOnlyMenusWindowMap.find ( mpWindow );
+		if ( it != aShowOnlyMenusWindowMap.end() )
+			aShowOnlyMenusWindowMap.erase( it );
+
 		[mpWindow release];
+	}
 
 	[super dealloc];
 }
@@ -1508,6 +1564,8 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		{
 			[mpWindow orderOut:self];
 		}
+
+		[VCLWindowWrapper updateShowOnlyMenusWindows];
 	}
 }
 
