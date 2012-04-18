@@ -1044,6 +1044,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (void)adjustColorLevelAndShadow;
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
+- (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
 - (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
 - (void)getFrame:(VCLWindowWrapperArgs *)pArgs;
@@ -1212,17 +1213,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)dealloc
 {
-	if ( mpParent )
-		[mpParent release];
-
-	if ( mpWindow )
-	{
-		::std::map< VCLWindow*, VCLWindow* >::iterator it = aShowOnlyMenusWindowMap.find ( mpWindow );
-		if ( it != aShowOnlyMenusWindowMap.end() )
-			aShowOnlyMenusWindowMap.erase( it );
-
-		[mpWindow release];
-	}
+	[self destroy:self];
 
 	[super dealloc];
 }
@@ -1238,6 +1229,27 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( pContentView )
 				it->second->setNeedsDisplay( pContentView );
 		}
+	}
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( mpParent )
+	{
+		[mpParent release];
+		mpParent = nil;
+	}
+
+	if ( mpWindow )
+	{
+		[mpWindow orderOut:self];
+
+		::std::map< VCLWindow*, VCLWindow* >::iterator it = aShowOnlyMenusWindowMap.find ( mpWindow );
+		if ( it != aShowOnlyMenusWindowMap.end() )
+			aShowOnlyMenusWindowMap.erase( it );
+
+		[mpWindow release];
+		mpWindow = nil;
 	}
 }
 
@@ -1909,7 +1921,11 @@ JavaSalFrame::~JavaSalFrame()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpWindow )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(destroy:) withObject:mpWindow waitUntilDone:YES modes:pModes];
 		[mpWindow release];
+	}
 
 	[pPool release];
 #else	// USE_NATIVE_EVENTS
