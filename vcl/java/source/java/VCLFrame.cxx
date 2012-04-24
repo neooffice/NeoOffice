@@ -140,7 +140,7 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 					{
 						if ( *it == pFrame )
 						{
-							com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
+							JavaSalEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
 							aEvent.dispatch();
 							break;
 						}

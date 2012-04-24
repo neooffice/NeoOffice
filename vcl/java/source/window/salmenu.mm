@@ -1269,7 +1269,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 
 	// Post the SALEVENT_MENUACTIVATE event
 	SalMenuEvent *pActivateEvent = new SalMenuEvent( 0, pVCLMenuWrapper );
-	com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, pFrame, pActivateEvent );
+	JavaSalEvent aActivateEvent( SALEVENT_MENUACTIVATE, pFrame, pActivateEvent );
 	aActivateEvent.dispatch();
 
 	USHORT nCount = pVCLMenuWrapper->GetItemCount();
@@ -1288,7 +1288,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 
 	// Post the SALEVENT_MENUDEACTIVATE event
 	SalMenuEvent *pDeactivateEvent = new SalMenuEvent( 0, pVCLMenuWrapper );
-	com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
+	JavaSalEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
 	aDeactivateEvent.dispatch();
 #endif	// !NO_NATIVE_MENUS
 }

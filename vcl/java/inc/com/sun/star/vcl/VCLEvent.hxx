@@ -58,7 +58,6 @@ public:
 	virtual				~com_sun_star_vcl_VCLEvent() {};
 
 	void				cancelShutdown();
-	void				dispatch();
 	ULONG				getCommittedCharacterCount();
 	ULONG				getCursorPosition();
 	void*				getData();

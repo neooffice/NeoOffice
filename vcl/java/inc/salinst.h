@@ -129,6 +129,7 @@ class SAL_DLLPRIVATE JavaSalEvent
 public:
 							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData );
 							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath );
+							JavaSalEvent( JavaSalEvent *pEvent );
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
 	virtual					~JavaSalEvent();
 
