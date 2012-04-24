@@ -37,15 +37,15 @@
 
 #include <salframe.h>
 #include <salgdi.h>
-#include <salobj.h>
+#include <salinst.h>
 #include <saldata.hxx>
 #include <salmenu.h>
+#include <salobj.h>
 #include <salsys.h>
 #include <vcl/dialog.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
-#include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif	// !USE_NATIVE_EVENTS
@@ -2687,8 +2687,8 @@ void JavaSalFrame::UpdateLayer()
 		mpGraphics->setLayer( maFrameLayer );
 
 		// Post a paint event
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
-		GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
+		JavaSalEvent aEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		JavaSalEventQueue::postCachedEvent( &aEvent );
 	}
 	else
 	{
@@ -2728,8 +2728,8 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL JavaSalFrame::PostEvent( void *pData )
 {
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, this, pData );
-	GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
+	JavaSalEvent aEvent( SALEVENT_USEREVENT, this, pData );
+	JavaSalEventQueue::postCachedEvent( &aEvent );
 	return TRUE;
 }
 
@@ -2882,7 +2882,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		maSysData.pView = (NSView *)GetNativeWindowContentView( bTopLevelWindow );
 		mbCenter = FALSE;
 
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
+		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 		aEvent.dispatch();
 
 		// Reattach floating children
@@ -2908,7 +2908,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	else
 	{
 		// End composition
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
+		JavaSalEvent aEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
 		aEvent.dispatch();
 
 		// Remove the native window since it is destroyed when hidden
@@ -2919,7 +2919,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// after closing a window whose child window had focus
 		if ( pSalData->mpFocusFrame == this )
 		{
-			com_sun_star_vcl_VCLEvent aFocusEvent( SALEVENT_LOSEFOCUS, this, NULL );
+			JavaSalEvent aFocusEvent( SALEVENT_LOSEFOCUS, this, NULL );
 			aFocusEvent.dispatch();
 		}
 
@@ -3118,7 +3118,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 #endif	// USE_NATIVE_EVENTS
 
 	// Update the cached position immediately
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
+	JavaSalEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
 
 	mbInSetPosSize = FALSE;
@@ -3372,7 +3372,7 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 	// 1203 by not doing this update if we are in the Show() method.
 	if ( bSuccess && !mbInShow )
 	{
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+		JavaSalEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 		aEvent.dispatch();
 	}
 }

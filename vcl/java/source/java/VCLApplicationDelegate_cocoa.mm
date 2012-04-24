@@ -42,7 +42,6 @@
 
 #include <saldata.hxx>
 #include <salframe.h>
-#include <com/sun/star/vcl/VCLEvent.hxx>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
@@ -73,24 +72,12 @@ using namespace vos;
 
 static void HandleAboutRequest()
 {
-	if ( !Application::IsShutDown() )
+	// If no Java event queue exists yet, ignore event as we are likely to
+	// deadlock
+	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		// If no Java event queue exists yet, ignore event as we are likely to
-		// deadlock
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-
-			if ( !Application::IsShutDown() )
-			{
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ABOUT, NULL, NULL);
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-			}
-
-			rSolarMutex.release();
-		}
+		JavaSalEvent aEvent( SALEVENT_ABOUT, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( &aEvent );
 	}
 }
 
@@ -100,48 +87,28 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 	{
 		// If no Java event queue exists yet, queue event as we are likely to
 		// deadlock
-		SalData *pSalData = GetSalData();
-		if ( !pSalData || !pSalData->mpEventQueue )
+		if ( !JavaSalEventQueue::isInitialized() )
 		{
 			ImplPendingOpenPrintFileRequest *pRequest = new ImplPendingOpenPrintFileRequest( rPath, bPrint );
 			if ( pRequest )
 				aPendingOpenPrintFileRequests.push_back( pRequest );
-			return;
 		}
-
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
+		else
 		{
-			com_sun_star_vcl_VCLEvent aEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+			JavaSalEvent aEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
 		}
-
-		rSolarMutex.release();
 	}
 }
 
 static void HandlePreferencesRequest()
 {
-	if ( !Application::IsShutDown() )
+	// If no Java event queue exists yet, ignore event as we are likely to
+	// deadlock
+	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		// If no Java event queue exists yet, ignore event as we are likely to
-		// deadlock
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-
-			if ( !Application::IsShutDown() )
-			{
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PREFS, NULL, NULL);
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-			}
-
-			rSolarMutex.release();
-		}
+		JavaSalEvent aEvent( SALEVENT_PREFS, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( &aEvent );
 	}
 }
 
@@ -149,48 +116,44 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 {
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
-	if ( !Application::IsShutDown() )
+	// If no Java event queue exists yet, ignore event as we are likely to
+	// deadlock
+	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		// If no Java event queue exists yet, ignore event as we are likely to
-		// deadlock
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() && !JavaSalEventQueue::isShutdownDisabled() )
 		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
+			JavaSalEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
+			while ( !Application::IsShutDown() && !aEvent.isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+				Application::Yield();
 
-			if ( !Application::IsShutDown() && !pSalData->mpEventQueue->isShutdownDisabled() )
+			if ( Application::IsShutDown() )
 			{
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-				while ( !Application::IsShutDown() && !aEvent.isShutdownCancelled() && !pSalData->mpEventQueue->isShutdownDisabled() )
-					Application::Yield();
-
-				if ( Application::IsShutDown() )
+				// Close any windows still showing so that all windows
+				// get the appropriate window closing delegate calls
+				NSApplication *pApp = [NSApplication sharedApplication];
+				if ( pApp )
 				{
-					// Close any windows still showing so that all windows
-					// get the appropriate window closing delegate calls
-					NSApplication *pApp = [NSApplication sharedApplication];
-					if ( pApp )
+					NSArray *pWindows = [pApp windows];
+					if ( pWindows )
 					{
-						NSArray *pWindows = [pApp windows];
-						if ( pWindows )
+						unsigned int i = 0;
+						unsigned int nCount = [pWindows count];
+						for ( ; i < nCount ; i++ )
 						{
-							unsigned int i = 0;
-							unsigned int nCount = [pWindows count];
-							for ( ; i < nCount ; i++ )
-							{
-								NSWindow *pWindow = [pWindows objectAtIndex:i];
-								if ( pWindow )
-									[pWindow orderOut:pWindow];
-							}
+							NSWindow *pWindow = [pWindows objectAtIndex:i];
+							if ( pWindow )
+								[pWindow orderOut:pWindow];
 						}
 					}
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 
 	if ( Application::IsShutDown() )
@@ -201,27 +164,24 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 static void HandleDidChangeScreenParametersRequest()
 {
-	if ( !Application::IsShutDown() )
+	// If no Java event queue exists yet, ignore event as we are likely to
+	// deadlock
+	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		// If no Java event queue exists yet, ignore event as we are likely to
-		// deadlock
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
 		{
-			IMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-
-			if ( !Application::IsShutDown() )
+			SalData *pSalData = GetSalData();
+			for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				{
-					if ( (*it)->mbVisible )
-						(*it)->SetPosSize( 0, 0, 0, 0, 0 );
-				}
+				if ( (*it)->mbVisible )
+					(*it)->SetPosSize( 0, 0, 0, 0, 0 );
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 }
 

@@ -36,6 +36,7 @@
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <saldata.hxx>
 #include <salframe.h>
+#include <salinst.h>
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
 #include <vcl/window.hxx>
@@ -411,7 +412,7 @@ void VCLEventQueue_removeCachedEvents()
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				if ( (*it)->mbVisible )
-					pSalData->mpEventQueue->removeCachedEvents( *it );
+					JavaSalEventQueue::removeCachedEvents( *it );
 			}
 		}
 

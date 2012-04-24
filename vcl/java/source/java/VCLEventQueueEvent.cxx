@@ -42,9 +42,10 @@
 #endif	// !USE_NATIVE_WINDOW
 #include <saldata.hxx>
 #include <salframe.h>
+#include <salinst.h>
 #include <saljava.h>
-#include <vcl/event.hxx>
 #include <salmenu.h>
+#include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/floatwin.hxx>
@@ -237,7 +238,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				cancelShutdown();
 
 				// Invoke the native shutdown cancelled handler
-				GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
+				JavaSalEventQueue::setShutdownDisabled( sal_False );
 			}
 
 			return;
@@ -256,7 +257,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			else
 			{
-				com_sun_star_vcl_VCLEvent *pEvent = new com_sun_star_vcl_VCLEvent( getJavaObject() );
+				JavaSalEvent *pEvent = new JavaSalEvent( this );
 				pSalData->maPendingDocumentEventsList.push_back( pEvent );
 			}
 			return;
@@ -668,8 +669,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// event, skip it and repost this event
 				if ( bSkipEvent )
 				{
-					com_sun_star_vcl_VCLEvent aEvent( nID, pFrame, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+					JavaSalEvent aEvent( nID, pFrame, NULL );
+					JavaSalEventQueue::postCachedEvent( &aEvent );
 				}
 				else
 				{

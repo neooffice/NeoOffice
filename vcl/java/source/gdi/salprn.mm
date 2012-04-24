@@ -40,6 +40,7 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salgdi.h>
+#include <salinst.h>
 #include <salvd.h>
 #include <osl/mutex.hxx>
 #include <sfx2/sfx.hrc>
@@ -1450,7 +1451,7 @@ BOOL JavaSalPrinter::EndJob()
 #endif	// USE_NATIVE_PRINTING
 	mbStarted = FALSE;
 
-	GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
+	JavaSalEventQueue::setShutdownDisabled( sal_False );
 	return TRUE;
 }
 
@@ -1542,7 +1543,7 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	// The OOo code does not call Printer::EndJob() if the page range is
 	// results in no pages to print so do not disable shutdown until a page
 	// is successfully started
-	GetSalData()->mpEventQueue->setShutdownDisabled( sal_True );
+	JavaSalEventQueue::setShutdownDisabled( sal_True );
 
 	mpGraphics = new JavaSalGraphics();
 #ifdef USE_NATIVE_PRINTING

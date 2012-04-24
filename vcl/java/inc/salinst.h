@@ -36,24 +36,23 @@
 #ifndef _SV_SALINST_H
 #define _SV_SALINST_H
 
-#ifndef _SV_SALINST_HXX
+#include <jni.h>
+
+#include <salframe.h>
 #include <vcl/salinst.hxx>
-#endif
-#ifndef _SV_SV_H
 #include <vcl/sv.h>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _OSL_CONDITN_HXX
 #include <osl/conditn.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX
 #include <vos/mutex.hxx>
-#endif
-#ifndef _VOS_THREAD_HXX
 #include <vos/thread.hxx>
-#endif
+
+// Custom event types
+#define SALEVENT_OPENDOCUMENT		((USHORT)100)
+#define SALEVENT_PRINTDOCUMENT		((USHORT)101)
+#define SALEVENT_DEMINIMIZED		((USHORT)102)
+#define SALEVENT_MINIMIZED			((USHORT)103)
+#define SALEVENT_ABOUT				((USHORT)130)
+#define SALEVENT_PREFS				((USHORT)140)
 
 // -----------------
 // - SalYieldMutex -
@@ -80,9 +79,9 @@ public:
 
 class JavaSalInstance : public SalInstance
 {
-public:
 	SalYieldMutex*			mpSalYieldMutex;
 
+public:
 							JavaSalInstance();
 	virtual					~JavaSalInstance();
 
@@ -117,6 +116,72 @@ public:
 	virtual void			DestroyMenuItem( SalMenuItem* pItem );
 	virtual SalSession*		CreateSalSession();
 	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes );
+};
+
+// ----------------
+// - JavaSalEvent -
+// ----------------
+
+class SAL_DLLPRIVATE JavaSalEvent
+{
+	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
+
+public:
+							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData );
+							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath );
+							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
+	virtual					~JavaSalEvent();
+
+	void					cancelShutdown();
+	void					dispatch();
+	ULONG					getCommittedCharacterCount();
+	ULONG					getCursorPosition();
+	void*					getData();
+	JavaSalFrame*			getFrame();
+	USHORT					getKeyChar();
+	USHORT					getKeyCode();
+	USHORT					getID();
+	USHORT					getModifiers();
+	JavaSalEvent*			getNextOriginalKeyEvent();
+	::rtl::OUString			getPath();
+	USHORT					getRepeatCount();
+	::rtl::OUString			getText();
+	USHORT*					getTextAttributes();
+	const Rectangle			getUpdateRect();
+	::vcl::com_sun_star_vcl_VCLEvent*	getVCLEvent() const { return mpVCLEvent; }
+	ULONG					getWhen();
+	long					getX();
+	long					getY();
+	short					getMenuID();
+	void*					getMenuCookie();
+	long					getScrollAmount();
+	ULONG					getVisiblePosition();
+	long					getWheelRotation();
+	sal_Bool				isHorizontal();
+	sal_Bool				isShutdownCancelled();
+};
+
+class SAL_DLLPRIVATE JavaSalEventQueue
+{
+	static ::osl::Mutex		maMutex;
+	static ::vcl::com_sun_star_vcl_VCLEventQueue*	mpVCLEventQueue;
+
+public:
+	static ::vcl::com_sun_star_vcl_VCLEventQueue*	getVCLEventQueue();
+	static sal_Bool			postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown );
+	static void				postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown );
+#ifdef USE_NATIVE_WINDOW
+	static void				postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu );
+#endif	// USE_NATIVE_WINDOW
+	static void				postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession );
+	static sal_Bool			anyCachedEvent( USHORT nType );
+	static void				dispatchNextEvent();
+	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
+	static sal_Bool			isInitialized();
+	static sal_Bool			isShutdownDisabled();
+	static void				postCachedEvent( const JavaSalEvent *pEvent );
+	static void				removeCachedEvents( const JavaSalFrame *pFrame );
+	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
 SAL_DLLPRIVATE void InitJavaAWT();

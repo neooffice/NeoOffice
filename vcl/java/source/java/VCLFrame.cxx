@@ -34,8 +34,10 @@
  ************************************************************************/
 
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#include <com/sun/star/vcl/VCLEventQueue.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <saldata.hxx>
+#include <salinst.h>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
 
@@ -352,7 +354,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 
 	jvalue args[7];
 	args[0].j = jlong( nSalFrameStyle );
-	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
+	args[1].l = JavaSalEventQueue::getVCLEventQueue()->getJavaObject();
 	args[2].j = jlong( pFrame );
 	if ( pParent && pParent->mpVCLFrame )
 		args[3].l = pParent->mpVCLFrame->getJavaObject();

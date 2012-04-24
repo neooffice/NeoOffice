@@ -576,7 +576,7 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 - (void)selected
 {
-	com_sun_star_vcl_VCLEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
+	JavaSalEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
 }
 
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem

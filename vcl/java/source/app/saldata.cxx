@@ -33,23 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_SALDATA_CXX
-
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
+#include <salinst.h>
 
 using namespace rtl;
 using namespace vcl;
@@ -63,7 +49,6 @@ SalData::SalData()
 	mnTimerInterval = 0;
 	maTimeout.tv_sec = 0;
 	maTimeout.tv_usec = 0;
-	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
@@ -84,9 +69,6 @@ SalData::SalData()
 
 SalData::~SalData()
 {
-	if ( mpEventQueue )
-		delete mpEventQueue;
-
 	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 		delete it->second;
 

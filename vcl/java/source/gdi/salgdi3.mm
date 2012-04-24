@@ -955,16 +955,16 @@ ULONG JavaSalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs 
 
 void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
-	SalData *pSalData = GetSalData();
-
 	// Only run the timer once since loading fonts is extremely expensive
 	if ( !bNativeFontsLoaded )
 	{
 		// Invoke the native shutdown cancelled handler
-		pSalData->mpEventQueue->setShutdownDisabled( sal_True );
+		JavaSalEventQueue::setShutdownDisabled( sal_True );
 		STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ).Call( NULL );
-		pSalData->mpEventQueue->setShutdownDisabled( sal_False );
+		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
+
+	SalData *pSalData = GetSalData();
 
 	// Iterate through fonts and add each to the font list
 	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.begin(); it != pSalData->maFontNameMapping.end(); ++it )

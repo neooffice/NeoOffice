@@ -45,21 +45,21 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salgdi.h>
-#include <vcl/salimestatus.hxx>
 #include <saljava.h>
 #include <salmenu.h>
 #include <salobj.h>
-#include <vcl/salptype.hxx>
 #include <salsys.h>
 #include <saltimer.h>
 #include <salvd.h>
-#include <vcl/salbtype.hxx>
 #include <salprn.h>
-#include <vcl/saltimer.hxx>
 #include <vcl/apptypes.hxx>
-#include <vcl/print.h>
-#include <vcl/jobset.h>
 #include <vcl/floatwin.hxx>
+#include <vcl/jobset.h>
+#include <vcl/print.h>
+#include <vcl/salbtype.hxx>
+#include <vcl/salimestatus.hxx>
+#include <vcl/salptype.hxx>
+#include <vcl/saltimer.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLFrame.hxx>
@@ -86,6 +86,7 @@ static bool bInNativeDrag = false;
 static SalYieldMutex aEventQueueMutex;
 static ULONG nCurrentTimeout = 0;
 
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -254,15 +255,9 @@ void InitJavaAWT()
 {
 	if ( !Application::IsShutDown() )
 	{
-		SalData *pSalData = GetSalData();
-		if ( !pSalData->mpEventQueue )
-		{
-			pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
-			// Invoke the native shutdown cancelled handler to clear any
-			// pending native open and print events
-			pSalData->mpEventQueue->setShutdownDisabled( sal_False );
-		}
+		// Invoke the native shutdown cancelled handler to initialize the
+		// event queue and clear any pending native open and print events
+		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
 }
 
@@ -439,10 +434,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		AcquireYieldMutex( nCount );
 	}
 
-	com_sun_star_vcl_VCLEvent *pEvent = NULL;
+	JavaSalEvent *pEvent = NULL;
 
 	// Dispatch next pending non-AWT event
-	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
+	if ( !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		pEvent->dispatch();
 		delete pEvent;
@@ -540,7 +535,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
 	bool bContinue = true;
-	while ( bContinue && !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( bContinue && !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
 		nTimeout = 0;
 		nCurrentTimeout = 0;
@@ -627,7 +622,7 @@ bool JavaSalInstance::AnyInput( USHORT nType )
 	}
 
 	if ( !bRet )
-		bRet = (bool)GetSalData()->mpEventQueue->anyCachedEvent( nType );
+		bRet = JavaSalEventQueue::anyCachedEvent( nType );
 
 	return bRet;
 }
@@ -943,7 +938,7 @@ void SalYieldMutex::acquire()
 		{
 			return;
 		}
-		else if ( pSalData->mpEventQueue && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+		else if ( JavaSalEventQueue::isInitialized() && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
@@ -958,8 +953,8 @@ void SalYieldMutex::acquire()
 					aDelay.Seconds = 0;
 					aDelay.Nanosec = 50;
 					maMainThreadCondition.reset();
-					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+					JavaSalEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+					JavaSalEventQueue::postCachedEvent( &aUserEvent );
 					if ( !maMainThreadCondition.check() )
 						maMainThreadCondition.wait( &aDelay );
 					maMainThreadCondition.set();
@@ -978,6 +973,8 @@ void SalYieldMutex::acquire()
 	mnThreadId = OThread::getCurrentIdentifier();
 	mnCount++;
 }
+
+// -------------------------------------------------------------------------
 
 void SalYieldMutex::release()
 {
@@ -1000,6 +997,8 @@ void SalYieldMutex::release()
 	OMutex::release();
 }
 
+// -------------------------------------------------------------------------
+
 sal_Bool SalYieldMutex::tryToAcquire()
 {
 	if ( OMutex::tryToAcquire() )
@@ -1010,4 +1009,520 @@ sal_Bool SalYieldMutex::tryToAcquire()
 	}
 	else
 		return sal_False;
+}
+
+// =========================================================================
+
+JavaSalEvent::JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData ) :
+	mpVCLEvent( NULL )
+{
+	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData );
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEvent::JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath ) :
+	mpVCLEvent( NULL )
+{
+	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData, rPath );
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEvent::JavaSalEvent( com_sun_star_vcl_VCLEvent *pVCLEvent ) :
+	mpVCLEvent( NULL )
+{
+	if ( pVCLEvent && pVCLEvent->getJavaObject() )
+		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEvent::~JavaSalEvent()
+{
+	if ( mpVCLEvent )
+		delete mpVCLEvent;
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::cancelShutdown()
+{
+	if ( mpVCLEvent )
+		mpVCLEvent->cancelShutdown();
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::dispatch()
+{
+	if ( mpVCLEvent )
+		mpVCLEvent->dispatch();
+}
+
+// -------------------------------------------------------------------------
+
+ULONG JavaSalEvent::getCommittedCharacterCount()
+{
+	ULONG nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getCommittedCharacterCount();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+ULONG JavaSalEvent::getCursorPosition()
+{
+	ULONG nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getCursorPosition();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+void *JavaSalEvent::getData()
+{
+	void *pRet = 0;
+
+	if ( mpVCLEvent )
+		pRet = mpVCLEvent->getData();
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalFrame *JavaSalEvent::getFrame()
+{
+	JavaSalFrame *pRet = 0;
+
+	if ( mpVCLEvent )
+		pRet = mpVCLEvent->getFrame();
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT JavaSalEvent::getKeyChar()
+{
+	USHORT nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getKeyChar();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT JavaSalEvent::getKeyCode()
+{
+	USHORT nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getKeyCode();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT JavaSalEvent::getID()
+{
+	USHORT nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getID();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT JavaSalEvent::getModifiers()
+{
+	USHORT nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getModifiers();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
+{
+	JavaSalEvent *pRet = NULL;
+
+	if ( mpVCLEvent )
+	{
+		com_sun_star_vcl_VCLEvent *pVCLEvent = mpVCLEvent->getNextOriginalKeyEvent();
+		if ( pVCLEvent )
+		{
+			if ( pVCLEvent->getJavaObject() )
+				pRet = new JavaSalEvent( pVCLEvent );
+			delete pVCLEvent;
+		}
+	}
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+OUString JavaSalEvent::getPath()
+{
+	OUString aRet;
+
+	if ( mpVCLEvent )
+		aRet = mpVCLEvent->getPath();
+
+	return aRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT JavaSalEvent::getRepeatCount()
+{
+	USHORT nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getRepeatCount();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+OUString JavaSalEvent::getText()
+{
+	OUString aRet;
+
+	if ( mpVCLEvent )
+		aRet = mpVCLEvent->getText();
+
+	return aRet;
+}
+
+// -------------------------------------------------------------------------
+
+USHORT *JavaSalEvent::getTextAttributes()
+{
+	USHORT *pRet = 0;
+
+	if ( mpVCLEvent )
+		pRet = mpVCLEvent->getTextAttributes();
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+const Rectangle JavaSalEvent::getUpdateRect()
+{
+	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
+
+	if ( mpVCLEvent )
+		aRet = mpVCLEvent->getUpdateRect();
+
+	return aRet;
+}
+
+// -------------------------------------------------------------------------
+
+ULONG JavaSalEvent::getWhen()
+{
+	ULONG nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getWhen();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+long JavaSalEvent::getX()
+{
+	long nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getX();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+long JavaSalEvent::getY()
+{
+	long nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getY();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+short JavaSalEvent::getMenuID()
+{
+	short nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getMenuID();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+void *JavaSalEvent::getMenuCookie()
+{
+	void *pRet = NULL;
+
+	if ( mpVCLEvent )
+		pRet = mpVCLEvent->getMenuCookie();
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+long JavaSalEvent::getScrollAmount()
+{
+	long nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getScrollAmount();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+ULONG JavaSalEvent::getVisiblePosition()
+{
+	ULONG nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getVisiblePosition();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+long JavaSalEvent::getWheelRotation()
+{
+	long nRet = 0;
+
+	if ( mpVCLEvent )
+		nRet = mpVCLEvent->getWheelRotation();
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEvent::isHorizontal()
+{
+	sal_Bool bRet = sal_False;
+
+	if ( mpVCLEvent )
+		bRet = mpVCLEvent->isHorizontal();
+
+	return bRet;
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEvent::isShutdownCancelled()
+{
+	sal_Bool bRet = sal_False;
+
+	if ( mpVCLEvent )
+		bRet = mpVCLEvent->isShutdownCancelled();
+
+	return bRet;
+}
+
+// =========================================================================
+
+Mutex JavaSalEventQueue::maMutex;
+
+// -------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLEventQueue *JavaSalEventQueue::mpVCLEventQueue = NULL;
+
+// -------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLEventQueue *JavaSalEventQueue::getVCLEventQueue()
+{
+	if ( !mpVCLEventQueue )
+	{
+		MutexGuard aGuard( maMutex );
+
+		if ( !mpVCLEventQueue )
+			mpVCLEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+	}
+
+	return mpVCLEventQueue;
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEventQueue::postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown )
+{
+	sal_Bool bRet = sal_False;
+
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		bRet = pVCLEventQueue->postCommandEvent( aObj, nKeyCode, bShiftDown, bControlDown, bAltDown, bMetaDown, nOriginalKeyChar, bOriginalShiftDown, bOriginalControlDown, bOriginalAltDown, bOriginalMetaDown );
+
+	return bRet;
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown )
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->postMouseWheelEvent( aObj, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
+}
+
+// -------------------------------------------------------------------------
+
+#ifdef USE_NATIVE_WINDOW
+
+void JavaSalEventQueue::postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu )
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->postMenuItemSelectedEvent( pFrame, nID, pMenu );
+}
+
+// -------------------------------------------------------------------------
+
+#endif	// USE_NATIVE_WINDOW
+
+void JavaSalEventQueue::postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession )
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->postWindowMoveSessionEvent( aObj, nX, nY, bStartSession );
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
+{
+	sal_Bool bRet = sal_False;
+
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		bRet = pVCLEventQueue->anyCachedEvent( nType );
+
+	return bRet;
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::dispatchNextEvent()
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->dispatchNextEvent();
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents )
+{
+	JavaSalEvent *pRet = NULL;
+
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+	{
+		com_sun_star_vcl_VCLEvent *pVCLEvent = pVCLEventQueue->getNextCachedEvent( nTimeout, bNativeEvents );
+		if ( pVCLEvent )
+		{
+			if ( pVCLEvent->getJavaObject() )
+				pRet = new JavaSalEvent( pVCLEvent );
+			delete pVCLEvent;
+		}
+	}
+
+	return pRet;
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEventQueue::isInitialized()
+{
+	sal_Bool bRet = sal_False;
+
+	MutexGuard aGuard( maMutex );
+
+	if ( mpVCLEventQueue )
+		bRet = sal_True;
+
+	return bRet;
+}
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEventQueue::isShutdownDisabled()
+{
+	sal_Bool bRet = sal_False;
+
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		bRet = pVCLEventQueue->isShutdownDisabled();
+
+	return bRet;
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::postCachedEvent( const JavaSalEvent *pEvent )
+{
+	if ( !pEvent )
+		return;
+
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+	{
+		com_sun_star_vcl_VCLEvent *pVCLEvent = pEvent->getVCLEvent();
+		if ( pVCLEvent )
+			pVCLEventQueue->postCachedEvent( pVCLEvent );
+	}
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->removeCachedEvents( pFrame );
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
+{
+	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
+	if ( pVCLEventQueue )
+		pVCLEventQueue->setShutdownDisabled( bShutdownDisabled );
 }

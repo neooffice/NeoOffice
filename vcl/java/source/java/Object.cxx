@@ -33,35 +33,15 @@
  *
  ************************************************************************/
 
-#define _SV_JAVA_LANG_OBJECT_CXX
-
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALINST_H
 #include <salinst.h>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
-#endif
-#ifndef _COM_SUN_STAR_JAVA_XJAVAVM_HPP_
 #include <com/sun/star/java/XJavaVM.hpp>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
-#ifndef _RTL_PROCESS_H_
 #include <rtl/process.h>
-#endif
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -139,7 +119,7 @@ void VCLThreadAttach::AttachThread()
 		// the performSelectorOnMainThread selector by waiting for any
 		// undispatched Java events to get dispatched and then allowing
 		// any pending native timers to run
-		GetSalData()->mpEventQueue->dispatchNextEvent();
+		JavaSalEventQueue::dispatchNextEvent();
 
 		bInAttachThread = false;
 	}

@@ -40,21 +40,13 @@
 #include <hash_map>
 #include <map>
 
-#ifndef _SV_SVDATA_HXX
 #include <vcl/svdata.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
 #include <vcl/salframe.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
-#include <com/sun/star/vcl/VCLEventQueue.hxx>
-#endif
-#ifndef _OSL_CONDITN_HXX_
 #include <osl/conditn.hxx>
-#endif
 
 class JavaImplFontData;
 class JavaSalBitmap;
+class JavaSalEvent;
 class JavaSalFrame;
 class JavaSalGraphics;
 class JavaSalInstance;
@@ -73,7 +65,6 @@ public:
 	timeval					maTimeout;
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
-	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::std::map< String, JavaImplFontData* >	maFontNameMapping;
 	::std::hash_map< ::rtl::OUString, JavaImplFontData*, ::rtl::OUStringHash >	maJavaFontNameMapping;
 	::std::hash_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
@@ -90,7 +81,7 @@ public:
 	SalFrame::SalPointerState	maLastPointerState;
 	JavaSalFrame*			mpLastDragFrame;
 	bool					mbInSignalHandler;
-	::std::list< ::vcl::com_sun_star_vcl_VCLEvent* >	maPendingDocumentEventsList;
+	::std::list< JavaSalEvent* >	maPendingDocumentEventsList;
 	bool					mbDoubleScrollbarArrows;
 	JavaSalFrame*			mpCaptureFrame;
 	JavaSalFrame*			mpLastResizeFrame;
