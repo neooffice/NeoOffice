@@ -2179,8 +2179,6 @@ sal_Bool JavaSalEventQueue::isInitialized()
 {
 	sal_Bool bRet = sal_False;
 
-	MutexGuard aGuard( maMutex );
-
 	if ( mpVCLEventQueue )
 		bRet = sal_True;
 
