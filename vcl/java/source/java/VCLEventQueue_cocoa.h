@@ -130,9 +130,11 @@ SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();
 SAL_DLLPRIVATE void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
 SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
 SAL_DLLPRIVATE BOOL VCLEventQueue_paste( void *pNSWindow );
+#ifndef USE_NATIVE_EVENTS
 SAL_DLLPRIVATE BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers );
 SAL_DLLPRIVATE void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
 SAL_DLLPRIVATE void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
+#endif	// !USE_NATIVE_EVENTS
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE sal_Bool NSApplication_isActive();
 SAL_DLLPRIVATE void NSFontManager_acquire();

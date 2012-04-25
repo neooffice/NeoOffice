@@ -41,6 +41,8 @@
 #include <sal/types.h>
 #include <vcl/menu.hxx>
 
+#ifndef USE_NATIVE_EVENTS
+
 namespace vcl {
 
 class com_sun_star_vcl_VCLEvent;
@@ -73,5 +75,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_EVENTS
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX

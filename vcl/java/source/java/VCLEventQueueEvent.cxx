@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_EVENTS
+#include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif	// !USE_NATIVE_EVENTS
 #ifndef USE_NATIVE_WINDOW
@@ -49,6 +49,8 @@
 #include <vcl/svapp.hxx>
 
 #include "VCLEventQueue_cocoa.h"
+
+#ifndef USE_NATIVE_EVENTS
 
 using namespace rtl;
 using namespace vcl;
@@ -720,3 +722,5 @@ sal_Bool com_sun_star_vcl_VCLEvent::isShutdownCancelled()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_EVENTS

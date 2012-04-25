@@ -1085,8 +1085,12 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		// Fix bug 3496 by having any Cocoa commands take precedence over menu
 		// shortcuts
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
+#ifdef USE_NATIVE_EVENTS
+		fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return YES;
+#endif	// USE_NATIVE_EVENTS
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
@@ -1206,8 +1210,12 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 		// Process any Cocoa commands but ignore when there is marked text
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
+#ifdef USE_NATIVE_EVENTS
+		fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return;
+#endif	// USE_NATIVE_EVENTS
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
@@ -1222,7 +1230,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
 		NSPoint aLocation = [pEvent locationInWindow];
 		if ( NSPointInRect( aLocation, aTitlebarFrame ) )
+#ifdef USE_NATIVE_EVENTS
+			fprintf( stderr, "VCLEventQueue_postWindowMoveSessionEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
+#endif	// USE_NATIVE_EVENTS
 	}
 	// Handle scroll wheel and magnify
 	else if ( ( nType == NSScrollWheel || ( nType == 30 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
@@ -1251,7 +1263,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			fDeltaY = [pEvent deltaY];
 		}
 
+#ifdef USE_NATIVE_EVENTS
+		fprintf( stderr, "VCLEventQueue_postMouseWheelEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+#endif	// USE_NATIVE_EVENTS
 	}
 	// Handle swipe
 	else if ( nType == 31 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )

@@ -33,7 +33,9 @@
  *
  ************************************************************************/
 
+#ifndef USE_NATIVE_EVENTS
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#endif	// !USE_NATIVE_EVENTS
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salinst.h>
@@ -69,6 +71,8 @@ using namespace com::sun::star::uno;
 using namespace vcl;
 using namespace vos;
 
+#ifndef USE_NATIVE_EVENTS
+
 // ============================================================================
 
 JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive( JNIEnv *pEnv, jobject object )
@@ -98,6 +102,8 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 }
+
+#endif	// !USE_NATIVE_EVENTS
 
 // ============================================================================
 
@@ -366,6 +372,8 @@ BOOL VCLEventQueue_paste( void *pNSWindow )
 	return bRet;
 }
 
+#ifndef USE_NATIVE_EVENTS
+
 // ----------------------------------------------------------------------------
 
 BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers )
@@ -373,7 +381,7 @@ BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers
 	BOOL bRet = FALSE;
 
 	if ( aPeer )
-		bRet = com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False, nOriginalKeyChar, nOriginalModifiers & KEY_SHIFT ? sal_True : sal_False, nOriginalModifiers & KEY_MOD1 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD2 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD3 ? sal_True : sal_False );
+		bRet = JavaSalEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False, nOriginalKeyChar, nOriginalModifiers & KEY_SHIFT ? sal_True : sal_False, nOriginalModifiers & KEY_MOD1 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD2 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD3 ? sal_True : sal_False );
 
 	return bRet;
 }
@@ -383,7 +391,7 @@ BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown )
 {
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
+		JavaSalEventQueue::postMouseWheelEvent( aPeer, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
 }
 
 // ----------------------------------------------------------------------------
@@ -391,8 +399,10 @@ void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nR
 void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession )
 {
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postWindowMoveSessionEvent( aPeer, nX, nY, bStartSession );
+		JavaSalEventQueue::postWindowMoveSessionEvent( aPeer, nX, nY, bStartSession );
 }
+
+#endif	// !USE_NATIVE_EVENTS
 
 // ----------------------------------------------------------------------------
 
@@ -419,6 +429,8 @@ void VCLEventQueue_removeCachedEvents()
 		rSolarMutex.release();
 	}
 }
+
+#ifndef USE_NATIVE_EVENTS
 
 // ============================================================================
 
@@ -813,3 +825,5 @@ void com_sun_star_vcl_VCLEventQueue::setShutdownDisabled( sal_Bool _par0 )
 		}
 	}
 }
+
+#endif	// USE_NATIVE_EVENTS

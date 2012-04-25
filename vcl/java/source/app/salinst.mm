@@ -63,8 +63,8 @@
 #include <vcl/saltimer.hxx>
 #include <vcl/unohelp.hxx>
 #include <vos/module.hxx>
-#include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_EVENTS
+#include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif	// !USE_NATIVE_EVENTS
 #include <tools/resmgr.hxx>
@@ -1068,29 +1068,67 @@ sal_Bool SalYieldMutex::tryToAcquire()
 
 // =========================================================================
 
-JavaSalEvent::JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData ) :
+JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData ) :
+#ifdef USE_NATIVE_EVENTS
+	mnID( nID  ),
+	mpFrame( pFrame ),
+	mpData( pData )
+#else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
+#endif	// USE_NATIVE_EVENTS
 {
+#ifndef USE_NATIVE_EVENTS
 	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData );
+#endif	// !USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
-JavaSalEvent::JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath ) :
+JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath ) :
+#ifdef USE_NATIVE_EVENTS
+	mnID( nID  ),
+	mpFrame( pFrame ),
+	mpData( pData )
+#else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
+#endif	// USE_NATIVE_EVENTS
 {
+#ifdef USE_NATIVE_EVENTS
+	maPath = OUString( rPath.getStr(), rPath.getLength(), RTL_TEXTENCODING_UTF8 );
+#else	// USE_NATIVE_EVENTS
 	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData, rPath );
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
+#ifdef USE_NATIVE_EVENTS
+	mnID( 0 ),
+	mpFrame( NULL ),
+	mpData( NULL )
+#else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
+#endif	// USE_NATIVE_EVENTS
 {
+#ifdef USE_NATIVE_EVENTS
+	if ( pEvent )
+	{
+		mnID = pEvent->mnID;
+		mpFrame = pEvent->mpFrame;
+		mpData = pEvent->mpData;
+
+		// Assign ownership of data pointer to this
+		pEvent->mpData = NULL;
+	}
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEvent *pVCLEvent = pEvent->getVCLEvent();
 	if ( pVCLEvent && pVCLEvent->getJavaObject() )
 		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
+#endif	// USE_NATIVE_EVENTS
 }
+
+#ifndef USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -1101,20 +1139,28 @@ JavaSalEvent::JavaSalEvent( com_sun_star_vcl_VCLEvent *pVCLEvent ) :
 		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
 }
 
+#endif	// !USE_NATIVE_EVENTS
+
 // -------------------------------------------------------------------------
 
 JavaSalEvent::~JavaSalEvent()
 {
+#ifndef USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		delete mpVCLEvent;
+#endif	// !USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEvent::cancelShutdown()
 {
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::cancelShutdown not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		mpVCLEvent->cancelShutdown();
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
@@ -1765,6 +1811,10 @@ void JavaSalEvent::dispatch()
 			break;
 		}
 	}
+
+#ifdef USE_NATIVE_EVENTS
+	mpData = NULL;
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
@@ -1773,8 +1823,12 @@ ULONG JavaSalEvent::getCommittedCharacterCount()
 {
 	ULONG nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getCommittedCharacterCount not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getCommittedCharacterCount();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1785,8 +1839,12 @@ ULONG JavaSalEvent::getCursorPosition()
 {
 	ULONG nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getCursorPosition not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getCursorPosition();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1795,10 +1853,14 @@ ULONG JavaSalEvent::getCursorPosition()
 
 void *JavaSalEvent::getData()
 {
-	void *pRet = 0;
+	void *pRet = NULL;
 
+#ifdef USE_NATIVE_EVENTS
+	pRet = mpData;
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getData();
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -1807,10 +1869,14 @@ void *JavaSalEvent::getData()
 
 JavaSalFrame *JavaSalEvent::getFrame()
 {
-	JavaSalFrame *pRet = 0;
+	JavaSalFrame *pRet = NULL;
 
+#ifdef USE_NATIVE_EVENTS
+	pRet = mpFrame;
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getFrame();
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -1821,8 +1887,12 @@ USHORT JavaSalEvent::getKeyChar()
 {
 	USHORT nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getKeyChar not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getKeyChar();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1833,8 +1903,12 @@ USHORT JavaSalEvent::getKeyCode()
 {
 	USHORT nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getKeyCode not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getKeyCode();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1845,8 +1919,12 @@ USHORT JavaSalEvent::getID()
 {
 	USHORT nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	nRet = mnID;
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getID();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1857,8 +1935,12 @@ USHORT JavaSalEvent::getModifiers()
 {
 	USHORT nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getModifiers not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getModifiers();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1869,6 +1951,9 @@ JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 {
 	JavaSalEvent *pRet = NULL;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getNextOriginalKeyEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 	{
 		com_sun_star_vcl_VCLEvent *pVCLEvent = mpVCLEvent->getNextOriginalKeyEvent();
@@ -1879,6 +1964,7 @@ JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 			delete pVCLEvent;
 		}
 	}
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -1889,8 +1975,12 @@ OUString JavaSalEvent::getPath()
 {
 	OUString aRet;
 
+#ifdef USE_NATIVE_EVENTS
+	aRet = maPath;
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		aRet = mpVCLEvent->getPath();
+#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -1901,8 +1991,12 @@ USHORT JavaSalEvent::getRepeatCount()
 {
 	USHORT nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getRepeatCount not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getRepeatCount();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1913,8 +2007,12 @@ OUString JavaSalEvent::getText()
 {
 	OUString aRet;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getText not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		aRet = mpVCLEvent->getText();
+#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -1925,8 +2023,12 @@ USHORT *JavaSalEvent::getTextAttributes()
 {
 	USHORT *pRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getTextAttributes not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getTextAttributes();
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -1937,8 +2039,12 @@ const Rectangle JavaSalEvent::getUpdateRect()
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getUpdateRect not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		aRet = mpVCLEvent->getUpdateRect();
+#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -1949,8 +2055,12 @@ ULONG JavaSalEvent::getWhen()
 {
 	ULONG nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getWhen not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getWhen();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1961,8 +2071,12 @@ long JavaSalEvent::getX()
 {
 	long nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getX not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getX();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1973,8 +2087,12 @@ long JavaSalEvent::getY()
 {
 	long nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getY not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getY();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1985,8 +2103,12 @@ short JavaSalEvent::getMenuID()
 {
 	short nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getMenuID not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getMenuID();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -1997,8 +2119,12 @@ void *JavaSalEvent::getMenuCookie()
 {
 	void *pRet = NULL;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getMenuCookie not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getMenuCookie();
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2009,8 +2135,12 @@ long JavaSalEvent::getScrollAmount()
 {
 	long nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getScrollAmount not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getScrollAmount();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2021,8 +2151,12 @@ ULONG JavaSalEvent::getVisiblePosition()
 {
 	ULONG nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getVisiblePosition not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getVisiblePosition();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2033,8 +2167,12 @@ long JavaSalEvent::getWheelRotation()
 {
 	long nRet = 0;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::getWheelRotation not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getWheelRotation();
+#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2045,8 +2183,12 @@ sal_Bool JavaSalEvent::isHorizontal()
 {
 	sal_Bool bRet = sal_False;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::isHorizontal not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		bRet = mpVCLEvent->isHorizontal();
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2057,8 +2199,12 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 {
 	sal_Bool bRet = sal_False;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEvent::isShutdownCancelled not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		bRet = mpVCLEvent->isShutdownCancelled();
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2066,6 +2212,8 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 // =========================================================================
 
 Mutex JavaSalEventQueue::maMutex;
+
+#ifndef USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -2108,9 +2256,9 @@ void JavaSalEventQueue::postMouseWheelEvent( jobject aObj, long nX, long nY, lon
 		pVCLEventQueue->postMouseWheelEvent( aObj, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
 }
 
-// -------------------------------------------------------------------------
-
 #ifdef USE_NATIVE_WINDOW
+
+// -------------------------------------------------------------------------
 
 void JavaSalEventQueue::postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu )
 {
@@ -2119,9 +2267,9 @@ void JavaSalEventQueue::postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT 
 		pVCLEventQueue->postMenuItemSelectedEvent( pFrame, nID, pMenu );
 }
 
-// -------------------------------------------------------------------------
-
 #endif	// USE_NATIVE_WINDOW
+
+// -------------------------------------------------------------------------
 
 void JavaSalEventQueue::postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession )
 {
@@ -2130,15 +2278,21 @@ void JavaSalEventQueue::postWindowMoveSessionEvent( jobject aObj, long nX, long 
 		pVCLEventQueue->postWindowMoveSessionEvent( aObj, nX, nY, bStartSession );
 }
 
+#endif	 // !USE_NATIVE_EVENTS
+
 // -------------------------------------------------------------------------
 
 sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 {
 	sal_Bool bRet = sal_False;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::anyCachedEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 		bRet = pVCLEventQueue->anyCachedEvent( nType );
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2147,9 +2301,13 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 
 void JavaSalEventQueue::dispatchNextEvent()
 {
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::dispatchNextEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 		pVCLEventQueue->dispatchNextEvent();
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
@@ -2158,6 +2316,9 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 {
 	JavaSalEvent *pRet = NULL;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::getNextCachedEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 	{
@@ -2169,6 +2330,7 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 			delete pVCLEvent;
 		}
 	}
+#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2179,8 +2341,12 @@ sal_Bool JavaSalEventQueue::isInitialized()
 {
 	sal_Bool bRet = sal_False;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::isInitialized not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEventQueue )
 		bRet = sal_True;
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2191,9 +2357,13 @@ sal_Bool JavaSalEventQueue::isShutdownDisabled()
 {
 	sal_Bool bRet = sal_False;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::isShutdownDisabled not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 		bRet = pVCLEventQueue->isShutdownDisabled();
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2205,6 +2375,9 @@ void JavaSalEventQueue::postCachedEvent( const JavaSalEvent *pEvent )
 	if ( !pEvent )
 		return;
 
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::postCachedEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 	{
@@ -2212,22 +2385,31 @@ void JavaSalEventQueue::postCachedEvent( const JavaSalEvent *pEvent )
 		if ( pVCLEvent )
 			pVCLEventQueue->postCachedEvent( pVCLEvent );
 	}
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 {
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::removeCachedEvents not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 		pVCLEventQueue->removeCachedEvents( pFrame );
+#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 {
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::setShutdownDisabled not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
 		pVCLEventQueue->setShutdownDisabled( bShutdownDisabled );
+#endif	// USE_NATIVE_EVENTS
 }

@@ -40,8 +40,8 @@
 #include <salinst.h>
 #include <salmenu.h>
 #include <vcl/window.hxx>
-#include <com/sun/star/vcl/VCLEvent.hxx>
 #ifndef USE_NATIVE_WINDOW
+#include <com/sun/star/vcl/VCLEvent.hxx>
 #include <com/sun/star/vcl/VCLMenuBar.hxx>
 #include <com/sun/star/vcl/VCLMenuItemData.hxx>
 #include <com/sun/star/vcl/VCLMenu.hxx>
@@ -576,7 +576,11 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 - (void)selected
 {
+#ifdef USE_NATIVE_EVENTS
+	fprintf( stderr, "JavaSalEventQueue::postMenuItemSelectedEvent not implemented\n" );
+#else	// USE_NATIVE_EVENTS
 	JavaSalEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
+#endif	// USE_NATIVE_EVENTS
 }
 
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem

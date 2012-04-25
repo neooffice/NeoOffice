@@ -36,9 +36,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 
+#include <salframe.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 #include <tools/gen.hxx>
+
+#ifndef USE_NATIVE_EVENTS
 
 class JavaSalFrame;
 
@@ -85,5 +88,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_EVENTS
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX

@@ -36,8 +36,6 @@
 #ifndef _SV_SALINST_H
 #define _SV_SALINST_H
 
-#include <jni.h>
-
 #include <salframe.h>
 #include <vcl/salinst.hxx>
 #include <vcl/sv.h>
@@ -45,6 +43,10 @@
 #include <osl/conditn.hxx>
 #include <vos/mutex.hxx>
 #include <vos/thread.hxx>
+
+#ifndef USE_NATIVE_EVENTS
+#include <jni.h>
+#endif	// !USE_NATIVE_EVENTS
 
 // Custom event types
 #define SALEVENT_OPENDOCUMENT		((USHORT)100)
@@ -124,11 +126,18 @@ public:
 
 class SAL_DLLPRIVATE JavaSalEvent
 {
+#ifdef USE_NATIVE_EVENTS
+	USHORT					mnID;
+	JavaSalFrame*			mpFrame;
+	void*					mpData;
+	::rtl::OUString			maPath;
+#else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
+#endif	// USE_NATIVE_EVENTS
 
 public:
-							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData );
-							JavaSalEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath );
+							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData );
+							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath );
 							JavaSalEvent( JavaSalEvent *pEvent );
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
 	virtual					~JavaSalEvent();
@@ -149,7 +158,9 @@ public:
 	::rtl::OUString			getText();
 	USHORT*					getTextAttributes();
 	const Rectangle			getUpdateRect();
+#ifndef USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	getVCLEvent() const { return mpVCLEvent; }
+#endif	// !USE_NATIVE_EVENTS
 	ULONG					getWhen();
 	long					getX();
 	long					getY();
@@ -165,9 +176,12 @@ public:
 class SAL_DLLPRIVATE JavaSalEventQueue
 {
 	static ::osl::Mutex		maMutex;
+#ifndef USE_NATIVE_EVENTS
 	static ::vcl::com_sun_star_vcl_VCLEventQueue*	mpVCLEventQueue;
+#endif	// !USE_NATIVE_EVENTS
 
 public:
+#ifndef USE_NATIVE_EVENTS
 	static ::vcl::com_sun_star_vcl_VCLEventQueue*	getVCLEventQueue();
 	static sal_Bool			postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown );
 	static void				postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown );
@@ -175,6 +189,7 @@ public:
 	static void				postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu );
 #endif	// USE_NATIVE_WINDOW
 	static void				postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession );
+#endif	// !USE_NATIVE_EVENTS
 	static sal_Bool			anyCachedEvent( USHORT nType );
 	static void				dispatchNextEvent();
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
