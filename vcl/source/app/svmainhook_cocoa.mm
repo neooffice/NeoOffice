@@ -39,9 +39,12 @@
 #undef check
 
 #include "svmainhook_cocoa.h"
+#include "../../java/source/java/VCLEventQueue_cocoa.h"
 
 void NSApplication_run()
 {
+	VCLEventQueue_installVCLEventQueueClasses();
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSApplication *pApp = [NSApplication sharedApplication];

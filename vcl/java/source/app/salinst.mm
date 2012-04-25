@@ -378,10 +378,6 @@ SalInstance* CreateSalInstance()
 	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
 	ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
 
-#ifdef USE_NATIVE_EVENTS
-	VCLEventQueue_installVCLEventQueueClasses();
-#endif	// USE_NATIVE_EVENTS
-
 	return pInst;
 }
 
