@@ -2358,6 +2358,12 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		}
 	}
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+
+#ifdef USE_NATIVE_EVENTS
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+		[pApp setDelegate:nil];
+#endif	// USE_NATIVE_EVENTS
 }
 
 @end
