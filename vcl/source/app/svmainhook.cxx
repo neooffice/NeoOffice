@@ -56,6 +56,8 @@ BOOL ImplSVMainHook( BOOL * )
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
+#include "svmainhook_cocoa.h"
+
 #define MIN_SVMAIN_STACK_SIZE ( 2 * 1024 * 1024 )
 
 static pthread_attr_t *pSVMainAttr = NULL;
@@ -100,9 +102,13 @@ extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes(
 
 #endif	 // USE_JAVA
 
+#if !defined USE_JAVA || !defined USE_NATIVE_EVENTS
+
 static void SourceContextCallBack( void *pInfo )
 {
 }
+
+#endif	// !USE_JAVA || !USE_NATIVE_EVENTS
 
 struct ThreadContext
 {
@@ -146,6 +152,9 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     bInCreateSVMainThread = false;
 #endif	// USE_JAVA
 
+#if defined USE_JAVA && defined USE_NATIVE_EVENTS
+	NSApplication_run();
+#else	// USE_JAVA && USE_NATIVE_EVENTS
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
     aSourceContext.version = 0;
@@ -161,6 +170,7 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate(NULL, 0, &aSourceContext);
     CFRunLoopAddSource(runLoopRef, aSourceRef, kCFRunLoopCommonModes);
     CFRunLoopRun();
+#endif	// USE_JAVA && USE_NATIVE_EVENTS
 
     osl_joinWithThread( hThreadID );
     osl_destroyThread( hThreadID );
