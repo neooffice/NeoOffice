@@ -33,14 +33,10 @@
  *
  ************************************************************************/
 
-#define _SV_JAVA_LANG_CLASS_CXX
-
-#ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
-#endif
-#ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 using namespace vcl;
 
@@ -179,3 +175,5 @@ jobject java_lang_Class::newInstanceObject()
 	}
 	return aStr;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS

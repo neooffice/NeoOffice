@@ -33,11 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_JAVA_LANG_STRING_CXX
-
-#ifndef _SV_JAVA_LANG_STRING_HXX
 #include <java/lang/String.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 using namespace vcl;
 
@@ -95,3 +93,5 @@ java_lang_String::operator ::rtl::OUString()
 	else
 		return ::rtl::OUString();
 }
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS

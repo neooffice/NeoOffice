@@ -47,6 +47,8 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
+
 using namespace vcl;
 using namespace vos;
 using namespace com::sun::star::java;
@@ -294,3 +296,5 @@ java_lang_Class *java_lang_Object::getClass()
 	}
 	return aStr;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS

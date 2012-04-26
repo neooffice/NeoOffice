@@ -63,7 +63,9 @@ struct ImplPendingOpenPrintFileRequest
 						~ImplPendingOpenPrintFileRequest() {};
 };
 
+#ifndef USE_NATIVE_EVENTS
 static NSString *pApplicationDelegateString = @"ApplicationDelegate";
+#endif	// !USE_NATIVE_EVENTS
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
 
 using namespace rtl;
@@ -497,6 +499,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 							NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
 							if ( pItem )
 							{
+#ifndef USE_NATIVE_EVENTS
 								NSObject *pTarget = [pItem target];
 								if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
 								{
@@ -520,6 +523,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 										}
 									}
 								}
+#endif	// !USE_NATIVE_EVENTS
 							}
 						}
 					}

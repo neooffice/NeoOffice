@@ -33,11 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_JAVA_LANG_THROWABLE_CXX
-
-#ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
-#endif
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 using namespace vcl;
 
@@ -134,3 +132,5 @@ jclass java_lang_Throwable::getMyClass()
 	}
 	return aStr;
 }
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS

@@ -43,14 +43,13 @@
 
 void NSApplication_run()
 {
-	VCLEventQueue_installVCLEventQueueClasses();
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
 		[NSBundle loadNibNamed:@"MainMenu" owner:pApp];
+		VCLEventQueue_installVCLEventQueueClasses();
 		[pApp run];
 	}
 

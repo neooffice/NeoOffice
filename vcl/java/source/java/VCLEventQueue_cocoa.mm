@@ -2362,7 +2362,21 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 #ifdef USE_NATIVE_EVENTS
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
+	{
 		[pApp setDelegate:nil];
+
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
+		{
+			NSMenuItem *pItem = [pMainMenu itemAtIndex:0];
+			if ( pItem )
+			{
+				NSMenu *pSubmenu = [pItem submenu];
+				if ( pSubmenu )
+					[pSubmenu setDelegate:[VCLApplicationDelegate sharedDelegate]];
+			}
+		}
+	}
 #endif	// USE_NATIVE_EVENTS
 }
 

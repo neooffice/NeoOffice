@@ -36,7 +36,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 
-#include <salframe.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 

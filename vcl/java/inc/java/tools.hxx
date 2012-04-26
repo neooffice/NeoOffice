@@ -36,23 +36,20 @@
 #ifndef _SV_JAVA_TOOLS_HXX
 #define _SV_JAVA_TOOLS_HXX
 
-#include <jni.h>
 #include <com/sun/star/uno/Sequence.h>
 #include <com/sun/star/uno/RuntimeException.hpp>
+#include <java/lang/Object.hxx>
 #include <sal/types.h>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 namespace vcl {
 
 	SAL_DLLPRIVATE jstring		StringToJavaString( JNIEnv *pEnv,const ::rtl::OUString& _Temp );
 	SAL_DLLPRIVATE ::rtl::OUString	JavaString2String( JNIEnv *pEnv,jstring _Str );
 
-	SAL_DLLPRIVATE bool			IsRunningLeopard( );
-	SAL_DLLPRIVATE bool			IsRunningSnowLeopard( );
-	SAL_DLLPRIVATE bool			IsRunningLion( );
-	SAL_DLLPRIVATE bool			IsRunningMountainLion( );
-
-	SAL_DLLPRIVATE bool			IsFullKeyboardAccessEnabled( );
-
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 #endif // _SV_JAVA_TOOLS_HXX

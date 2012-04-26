@@ -38,9 +38,6 @@
 
 #include <map>
 
-#include <salframe.h>
-#include <salprn.h>
-#include <salvd.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 #include <vcl/vclenum.hxx>

@@ -36,11 +36,18 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #define	_SV_JAVA_LANG_OBJECT_HXX
 
+#include <jni.h>
+
+#include <salframe.h>
+#include <salprn.h>
+#include <salvd.h>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <java/tools.hxx>
 #include <osl/diagnose.h>
 #include <sal/types.h>
 #include <vcl/sv.h>
+
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 namespace vcl {
 
@@ -88,4 +95,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
+
 #endif //_SV_JAVA_LANG_OBJECT_HXX

@@ -36,9 +36,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 
-#include <salframe.h>
-#include <salprn.h>
-#include <salvd.h>
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 

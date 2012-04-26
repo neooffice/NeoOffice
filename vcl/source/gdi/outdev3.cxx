@@ -81,9 +81,7 @@
 #ifdef USE_JAVA
 
 #ifdef MACOSX
-#ifndef _SV_JAVA_TOOLS_HXX
-#include <java/tools.hxx>
-#endif
+#include <salinst.h>
 #endif	// MACOSX
 
 static const ImplCvtChar* pDefaultSymbolConversion = ImplGetRecodeData( String( RTL_CONSTASCII_USTRINGPARAM( "symbol" ) ), String( RTL_CONSTASCII_USTRINGPARAM( "opensymbol" ) ) );
@@ -4695,7 +4693,7 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout,
 void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
 {
 #if defined USE_JAVA && defined MACOSX
-	if( ! vcl::IsFullKeyboardAccessEnabled() )
+	if( ! IsFullKeyboardAccessEnabled() )
 		return;
 #endif	// USE_JAVA && MACOSX
 

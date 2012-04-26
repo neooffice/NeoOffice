@@ -37,7 +37,6 @@
 #define	_SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 
 #include <java/lang/Object.hxx>
-#include <salprn.h>
 #include <sal/types.h>
 #include <tools/gen.hxx>
 #include <vcl/prntypes.hxx>

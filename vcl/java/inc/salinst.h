@@ -200,6 +200,13 @@ public:
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
+SAL_DLLPRIVATE bool IsRunningLeopard();
+SAL_DLLPRIVATE bool IsRunningSnowLeopard();
+SAL_DLLPRIVATE bool IsRunningLion();
+SAL_DLLPRIVATE bool IsRunningMountainLion();
+SAL_DLLPRIVATE bool IsFullKeyboardAccessEnabled();
+#ifndef USE_NATIVE_EVENTS
 SAL_DLLPRIVATE void InitJavaAWT();
+#endif	// !USE_NATIVE_EVENTS
 
 #endif // _SV_SALINST_H

@@ -39,6 +39,8 @@
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
+
 namespace vcl {
 
 class SAL_DLLPRIVATE java_lang_String : public java_lang_Object
@@ -57,5 +59,8 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
+
 
 #endif // _SV_JAVA_LANG_STRING_HXX

@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
 #include <unistd.h>
 #include <sys/syslimits.h>
 
@@ -70,6 +71,10 @@
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
 
+#include <premac.h>
+#include <CoreServices/CoreServices.h>
+#include <postmac.h>
+
 #include "salinst.hrc"
 #include "salinst_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
@@ -84,9 +89,14 @@ public:
 	virtual void			toggle() {}
 };
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
+static bool isLeopard = false;
+static bool isSnowLeopard = false;
+static bool isLion = false;
+static bool isMountainLion = false;
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
@@ -144,6 +154,85 @@ static void InvalidateControls( Window *pWindow )
 		for ( USHORT i = 0; i < nCount; i++ )
 			InvalidateControls( pWindow->GetChild( i ) );
 	}
+}
+
+// -----------------------------------------------------------------------
+
+static ULONG ReleaseEventQueueMutex()
+{
+	if ( aEventQueueMutex.GetThreadId() == OThread::getCurrentIdentifier() )
+	{
+		ULONG nCount = aEventQueueMutex.GetAcquireCount();
+		ULONG n = nCount;
+		while ( n )
+		{
+			aEventQueueMutex.release();
+			n--;
+		}
+		return nCount;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+// -----------------------------------------------------------------------
+
+static void AcquireEventQueueMutex( ULONG nCount )
+{
+	while ( nCount )
+	{
+		aEventQueueMutex.acquire();
+		nCount--;
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+static void InitializeMacOSXVersion()
+{
+	static bool nInitialized = false;
+
+	if ( nInitialized )
+		return;
+	
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				switch ( res )
+				{
+					case 5:
+						isLeopard = true;
+						break;
+					case 6:
+						isSnowLeopard = true;
+						break;
+					case 7:
+						isLion = true;
+						break;
+					case 8:
+						isMountainLion = true;
+						break;
+					default:
+						break;
+				}
+			}
+		}
+
+		dlclose( pLib );
+	}
+
+	nInitialized = true;
 }
 
 // ============================================================================
@@ -272,37 +361,57 @@ BOOL VCLInstance_updateNativeMenus()
 	return bRet;
 }
 
-// -----------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
-static ULONG ReleaseEventQueueMutex()
+bool IsRunningLeopard( )
 {
-	if ( aEventQueueMutex.GetThreadId() == OThread::getCurrentIdentifier() )
-	{
-		ULONG nCount = aEventQueueMutex.GetAcquireCount();
-		ULONG n = nCount;
-		while ( n )
-		{
-			aEventQueueMutex.release();
-			n--;
-		}
-		return nCount;
-	}
-	else
-	{
-		return 0;
-	}
+	InitializeMacOSXVersion();
+	return isLeopard;
 }
 
-// -----------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
-static void AcquireEventQueueMutex( ULONG nCount )
+bool IsRunningSnowLeopard( )
 {
-	while ( nCount )
-	{
-		aEventQueueMutex.acquire();
-		nCount--;
-	}
+	InitializeMacOSXVersion();
+	return isSnowLeopard;
 }
+
+// ----------------------------------------------------------------------------
+
+bool IsRunningLion( )
+{
+	InitializeMacOSXVersion();
+	return isLion;
+}
+
+// ----------------------------------------------------------------------------
+
+bool IsRunningMountainLion( )
+{
+	InitializeMacOSXVersion();
+	return isMountainLion;
+}
+
+// ----------------------------------------------------------------------------
+
+bool IsFullKeyboardAccessEnabled( )
+{
+	bool isFullAccessEnabled = false;
+
+	CFPropertyListRef keyboardNavigationPref = CFPreferencesCopyAppValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesCurrentApplication );
+	if ( keyboardNavigationPref )
+	{
+		int prefVal;
+		if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
+			isFullAccessEnabled = ( prefVal % 2 ? true : false );
+		CFRelease( keyboardNavigationPref );
+	}
+
+	return isFullAccessEnabled;
+}
+
+#ifndef USE_NATIVE_EVENTS
 
 // ----------------------------------------------------------------------------
 
@@ -315,6 +424,8 @@ void InitJavaAWT()
 		JavaSalEventQueue::setShutdownDisabled( sal_False );
 	}
 }
+
+#endif	// !USE_NATIVE_EVENTS
 
 // =======================================================================
 

@@ -33,73 +33,11 @@
  *
  ************************************************************************/
 
-#define _SV_JAVA_TOOLS_CXX
-
-#include <dlfcn.h>
-
-#ifndef _SV_JAVA_TOOLS_HXX
 #include <java/tools.hxx>
-#endif					
 
-#include <premac.h>
-#include <CoreServices/CoreServices.h>
-#include <postmac.h>
-
-typedef OSErr Gestalt_Type( OSType selector, long *response );
-
-static bool isLeopard = false;
-static bool isSnowLeopard = false;
-static bool isLion = false;
-static bool isMountainLion = false;
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS
 
 using namespace vcl;
-
-// ============================================================================
-
-static void InitializeMacOSXVersion()
-{
-	static bool nInitialized = false;
-
-	if ( nInitialized )
-		return;
-	
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
-			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				switch ( res )
-				{
-					case 5:
-						isLeopard = true;
-						break;
-					case 6:
-						isSnowLeopard = true;
-						break;
-					case 7:
-						isLion = true;
-						break;
-					case 8:
-						isMountainLion = true;
-						break;
-					default:
-						break;
-				}
-			}
-		}
-
-		dlclose( pLib );
-	}
-
-	nInitialized = true;
-}
 
 // ============================================================================
 
@@ -131,52 +69,4 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 	return aStr;
 }
 
-// ----------------------------------------------------------------------------
-
-bool vcl::IsRunningLeopard( )
-{
-	InitializeMacOSXVersion();
-	return isLeopard;
-}
-
-// ----------------------------------------------------------------------------
-
-bool vcl::IsRunningSnowLeopard( )
-{
-	InitializeMacOSXVersion();
-	return isSnowLeopard;
-}
-
-// ----------------------------------------------------------------------------
-
-bool vcl::IsRunningLion( )
-{
-	InitializeMacOSXVersion();
-	return isLion;
-}
-
-// ----------------------------------------------------------------------------
-
-bool vcl::IsRunningMountainLion( )
-{
-	InitializeMacOSXVersion();
-	return isMountainLion;
-}
-
-// ----------------------------------------------------------------------------
-
-bool vcl::IsFullKeyboardAccessEnabled( )
-{
-	bool isFullAccessEnabled = false;
-
-	CFPropertyListRef keyboardNavigationPref = CFPreferencesCopyAppValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesCurrentApplication );
-	if ( keyboardNavigationPref )
-	{
-		int prefVal;
-		if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
-			isFullAccessEnabled = ( prefVal % 2 ? true : false );
-		CFRelease( keyboardNavigationPref );
-	}
-
-	return isFullAccessEnabled;
-}
+#endif	// !USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING || !defined USE_NATIVE_EVENTS

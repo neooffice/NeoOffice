@@ -50,12 +50,11 @@
 #include <salatslayout.hxx>
 #include <saldata.hxx>
 #include <salgdi.h>
+#include <salinst.h>
 #include <vcl/outfont.hxx>
 #include <vcl/svapp.hxx>
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#include <java/tools.hxx>
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 

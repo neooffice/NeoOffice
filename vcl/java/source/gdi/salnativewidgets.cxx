@@ -41,6 +41,7 @@
 #include <saldata.hxx>
 #include <salbmp.h>
 #include <salframe.h>
+#include <salinst.h>
 #include <svsys.h>
 #include <rtl/ustring.h>
 #include <osl/module.h>
@@ -103,8 +104,8 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	java_lang_Object*	 	mpData;
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	CGContextRef			maContext;
 	MutexGuard*				mpGraphicsMutexGuard;
 	HIThemeOrientation		mnHIThemeOrientationFlags;
@@ -186,8 +187,8 @@ VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	mpVCLBitmap( NULL ),
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	mpData( NULL ),
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	maContext( NULL ),
 	mpGraphicsMutexGuard( NULL ),
 	mnHIThemeOrientationFlags( 0 ),
@@ -479,6 +480,7 @@ void VCLBitmapBuffer::ReleaseContext()
 		mpGraphicsMutexGuard = NULL;
 	}
 
+#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	if ( mpData )
 	{
 		if ( mpBits )
@@ -493,6 +495,7 @@ void VCLBitmapBuffer::ReleaseContext()
 		delete mpData;
 		mpData = NULL;
 	}
+#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // =======================================================================
