@@ -131,6 +131,8 @@ class SAL_DLLPRIVATE JavaSalEvent
 	JavaSalFrame*			mpFrame;
 	void*					mpData;
 	::rtl::OUString			maPath;
+	bool					mbDispatchDisabled;
+	bool					mbNative;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
 #endif	// USE_NATIVE_EVENTS
@@ -171,14 +173,24 @@ public:
 	long					getWheelRotation();
 	sal_Bool				isHorizontal();
 	sal_Bool				isShutdownCancelled();
+#ifdef USE_NATIVE_EVENTS
+	bool					isDispatchDisabled() { return mbDispatchDisabled; }
+	bool					isNative() { return mbNative; }
+	void					disableDispatch() { mbDispatchDisabled = true; }
+#endif	// USE_NATIVE_EVENTS
 };
 
 class SAL_DLLPRIVATE JavaSalEventQueue
 {
 	static ::osl::Mutex		maMutex;
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+	static ::osl::Condition	maCondition;
+	static ::std::list< JavaSalEvent* >	maNativeEventQueue;
+	static ::std::list< JavaSalEvent* >	maNonNativeEventQueue;
+	static sal_Bool			mbShutdownDisabled;
+#else	// USE_NATIVE_EVENTS
 	static ::vcl::com_sun_star_vcl_VCLEventQueue*	mpVCLEventQueue;
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 
 public:
 #ifndef USE_NATIVE_EVENTS
@@ -195,7 +207,7 @@ public:
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
 	static sal_Bool			isInitialized();
 	static sal_Bool			isShutdownDisabled();
-	static void				postCachedEvent( const JavaSalEvent *pEvent );
+	static void				postCachedEvent( JavaSalEvent *pEvent );
 	static void				removeCachedEvents( const JavaSalFrame *pFrame );
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };

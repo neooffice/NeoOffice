@@ -1179,7 +1179,9 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData ) :
 #ifdef USE_NATIVE_EVENTS
 	mnID( nID  ),
 	mpFrame( pFrame ),
-	mpData( pData )
+	mpData( pData ),
+	mbDispatchDisabled( false ),
+	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
 #endif	// USE_NATIVE_EVENTS
@@ -1195,7 +1197,9 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 #ifdef USE_NATIVE_EVENTS
 	mnID( nID  ),
 	mpFrame( pFrame ),
-	mpData( pData )
+	mpData( pData ),
+	mbDispatchDisabled( false ),
+	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
 #endif	// USE_NATIVE_EVENTS
@@ -1213,7 +1217,9 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 #ifdef USE_NATIVE_EVENTS
 	mnID( 0 ),
 	mpFrame( NULL ),
-	mpData( NULL )
+	mpData( NULL ),
+	mbDispatchDisabled( false ),
+	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
 #endif	// USE_NATIVE_EVENTS
@@ -1224,6 +1230,9 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 		mnID = pEvent->mnID;
 		mpFrame = pEvent->mpFrame;
 		mpData = pEvent->mpData;
+		maPath = pEvent->maPath;
+		mbDispatchDisabled = pEvent->mbDispatchDisabled;
+		mbNative = pEvent->mbNative;
 
 		// Assign ownership of data pointer to this
 		pEvent->mpData = NULL;
@@ -2320,7 +2329,25 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 
 Mutex JavaSalEventQueue::maMutex;
 
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+
+// -------------------------------------------------------------------------
+
+Condition JavaSalEventQueue::maCondition;
+
+// -------------------------------------------------------------------------
+
+::std::list< JavaSalEvent* > JavaSalEventQueue::maNativeEventQueue;
+
+// -------------------------------------------------------------------------
+
+::std::list< JavaSalEvent* > JavaSalEventQueue::maNonNativeEventQueue;
+
+// -------------------------------------------------------------------------
+
+sal_Bool JavaSalEventQueue::mbShutdownDisabled = sal_False;
+
+#else	// USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -2385,7 +2412,7 @@ void JavaSalEventQueue::postWindowMoveSessionEvent( jobject aObj, long nX, long 
 		pVCLEventQueue->postWindowMoveSessionEvent( aObj, nX, nY, bStartSession );
 }
 
-#endif	 // !USE_NATIVE_EVENTS
+#endif	 // USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -2424,7 +2451,39 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 	JavaSalEvent *pRet = NULL;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::getNextCachedEvent not implemented\n" );
+	ResettableGuard< Mutex > aGuard( maMutex );
+
+	::std::list< JavaSalEvent* > *pEventQueue;
+	if ( bNativeEvents )
+		pEventQueue = &maNativeEventQueue;
+	else
+		pEventQueue = &maNonNativeEventQueue;
+
+	if ( pEventQueue->size() )
+	{
+		pRet = pEventQueue->front();
+		pEventQueue->pop_front();
+	}
+
+	// If no events and a timeout is requested, wait for next event
+	if ( !pRet && nTimeout )
+	{
+		maCondition.reset();
+		aGuard.clear();
+
+		TimeValue aWait;
+		aWait.Seconds = nTimeout / 1000;
+		aWait.Nanosec = ( nTimeout % 1000 ) * 1000000;
+		maCondition.wait( &aWait );
+
+		aGuard.reset();
+
+		if ( pEventQueue->size() )
+		{
+			pRet = pEventQueue->front();
+			pEventQueue->pop_front();
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
@@ -2446,44 +2505,45 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 
 sal_Bool JavaSalEventQueue::isInitialized()
 {
-	sal_Bool bRet = sal_False;
-
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::isInitialized not implemented\n" );
+	return sal_True;
 #else	// USE_NATIVE_EVENTS
-	if ( mpVCLEventQueue )
-		bRet = sal_True;
+	return ( mpVCLEventQueue ? sal_True : sal_False );
 #endif	// USE_NATIVE_EVENTS
-
-	return bRet;
 }
 
 // -------------------------------------------------------------------------
 
 sal_Bool JavaSalEventQueue::isShutdownDisabled()
 {
-	sal_Bool bRet = sal_False;
-
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::isShutdownDisabled not implemented\n" );
+	return mbShutdownDisabled;
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
-		bRet = pVCLEventQueue->isShutdownDisabled();
+		return pVCLEventQueue->isShutdownDisabled();
+	else
+		return sal_False;
 #endif	// USE_NATIVE_EVENTS
-
-	return bRet;
 }
 
 // -------------------------------------------------------------------------
 
-void JavaSalEventQueue::postCachedEvent( const JavaSalEvent *pEvent )
+void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 {
 	if ( !pEvent )
 		return;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::postCachedEvent not implemented\n" );
+	MutexGuard aGuard( maMutex );
+
+	pEvent = new JavaSalEvent( pEvent );
+	if ( pEvent->isNative() )
+		maNativeEventQueue.push_back( pEvent );
+	else
+		maNonNativeEventQueue.push_back( pEvent );
+
+	maCondition.set();
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
@@ -2513,7 +2573,7 @@ void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::setShutdownDisabled not implemented\n" );
+	mbShutdownDisabled = bShutdownDisabled;
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
