@@ -143,6 +143,11 @@ public:
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
 	virtual					~JavaSalEvent();
 
+#ifdef USE_NATIVE_EVENTS
+	void					addRepeatCount( USHORT nCount );
+	void					addUpdateRect( const Rectangle& rRect );
+	void					addWheelRotation( long nRotation );
+#endif	// USE_NATIVE_EVENTS
 	void					cancelShutdown();
 	void					dispatch();
 	ULONG					getCommittedCharacterCount();
@@ -184,14 +189,16 @@ public:
 class SAL_DLLPRIVATE JavaSalEventQueueItem
 {
 	JavaSalEvent*			mpEvent;
+	const ::std::list< JavaSalEventQueueItem* >*	mpEventQueue;
 	bool					mbRemove;
 	USHORT					mnType;
 
 public:
-							JavaSalEventQueueItem( JavaSalEvent *pEvent );
+							JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std::list< JavaSalEventQueueItem* > *pEventQueue );
 	virtual					~JavaSalEventQueueItem();
 
 	JavaSalEvent*			getEvent() { return mpEvent; }
+	const ::std::list< JavaSalEventQueueItem* >*	getEventQueue() { return mpEventQueue; }
 	USHORT					getType() { return mnType; }
 	bool					isRemove() { return mbRemove; }
 	void					remove() { mbRemove = true; }

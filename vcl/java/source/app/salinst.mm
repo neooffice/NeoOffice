@@ -1263,6 +1263,31 @@ JavaSalEvent::~JavaSalEvent()
 #endif	// !USE_NATIVE_EVENTS
 }
 
+#ifdef USE_NATIVE_EVENTS
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::addRepeatCount( USHORT nCount )
+{
+	fprintf( stderr, "JavaSalEvent::addRepeatCount not implemented\n" );
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
+{
+	fprintf( stderr, "JavaSalEvent::addUpdateRect not implemented\n" );
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::addWheelRotation( long nRotation )
+{
+	fprintf( stderr, "JavaSalEvent::addWheelRotation not implemented\n" );
+}
+
+#endif	// USE_NATIVE_EVENTS
+
 // -------------------------------------------------------------------------
 
 void JavaSalEvent::cancelShutdown()
@@ -2323,38 +2348,41 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 
 // =========================================================================
 
-JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent ) :
+JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std::list< JavaSalEventQueueItem* > *pEventQueue ) :
 	mpEvent( NULL ),
+	mpEventQueue( pEventQueue ),
 	mbRemove( false ),
 	mnType( 0 )
 {
 	if ( pEvent )
-	{
 		mpEvent = new JavaSalEvent( pEvent );
 
+	if ( mpEvent )
+	{
 		// Set event type
-		if ( mpEvent )
+		switch ( mpEvent->getID() )
 		{
-			switch ( mpEvent->getID() )
-			{
-				case SALEVENT_EXTTEXTINPUT:
-				case SALEVENT_KEYINPUT:
-					mnType = INPUT_KEYBOARD;
-					break;
-				case SALEVENT_MOUSEMOVE:
-				case SALEVENT_MOUSELEAVE:
-				case SALEVENT_MOUSEBUTTONUP:
-				case SALEVENT_MOUSEBUTTONDOWN:
-					mnType = INPUT_MOUSE;
-					break;
-				case SALEVENT_PAINT:
-					mnType = INPUT_PAINT;
-					break;
-				default:
-					mnType = INPUT_OTHER;
-					break;
-			}
+			case SALEVENT_EXTTEXTINPUT:
+			case SALEVENT_KEYINPUT:
+				mnType = INPUT_KEYBOARD;
+				break;
+			case SALEVENT_MOUSEMOVE:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSEBUTTONDOWN:
+				mnType = INPUT_MOUSE;
+				break;
+			case SALEVENT_PAINT:
+				mnType = INPUT_PAINT;
+				break;
+			default:
+				mnType = INPUT_OTHER;
+				break;
 		}
+	}
+	else
+	{
+		mbRemove = true;
 	}
 }
 
@@ -2631,17 +2659,127 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 #ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
-	JavaSalEventQueueItem *pQueueItem = new JavaSalEventQueueItem( pEvent );
+	::std::list< JavaSalEventQueueItem* > *pEventQueue;
+	if ( pEvent->isNative() )
+		pEventQueue = &maNativeEventQueue;
+	else
+		pEventQueue = &maNonNativeEventQueue;
+
+	JavaSalEventQueueItem *pQueueItem = new JavaSalEventQueueItem( pEvent, pEventQueue );
 	if ( pQueueItem )
 	{
-		::std::list< JavaSalEventQueueItem* > *pEventQueue;
-		if ( pEvent->isNative() )
-			pEventQueue = &maNativeEventQueue;
-		else
-			pEventQueue = &maNonNativeEventQueue;
+		// Coalesce events
+		JavaSalEvent *pNewEvent = pQueueItem->getEvent();
+		if ( pNewEvent )
+		{
+			JavaSalFrame *pFrame = pNewEvent->getFrame();
+			USHORT nID = pNewEvent->getID();
+			switch ( nID )
+			{
+				case SALEVENT_CLOSE:
+				{
+					for ( ::std::list< JavaSalEventQueueItem* >::const_iterator it = pEventQueue->begin(); it != pEventQueue->end(); ++it )
+					{
+						JavaSalEvent *pOldEvent = (*it)->getEvent();
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && (*it)->getEventQueue() == pEventQueue && !(*it)->isRemove() )
+						{
+							pQueueItem->remove();
+							break;
+						}
+					}
+
+					break;
+				}
+				case SALEVENT_EXTTEXTINPUT:
+				{
+					// Reduce flicker when backspacing through uncommitted text
+					if ( pEventQueue->size() )
+					{
+						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && !pOldEvent->getText().getLength() )
+							pEventQueue->back()->remove();
+					}
+
+					break;
+				}
+				case SALEVENT_KEYINPUT:
+				{
+					if ( mpKeyInputItem )
+					{
+						JavaSalEvent *pOldEvent = mpKeyInputItem->getEvent();
+						if ( pOldEvent && pOldEvent->getFrame() == pFrame && mpKeyInputItem->getEventQueue() == pEventQueue && !mpKeyInputItem->isRemove() && pOldEvent->getKeyChar() && pNewEvent->getKeyChar() && pOldEvent->getKeyCode() == pNewEvent->getKeyCode() && pOldEvent->getModifiers() == pNewEvent->getModifiers() )
+						{
+							mpKeyInputItem->remove();
+							pNewEvent->addRepeatCount( 1 );
+						}
+					}
+
+					mpKeyInputItem = pQueueItem;
+					break;
+				}
+				case SALEVENT_KEYUP:
+				{
+					mpKeyInputItem = NULL;
+					break;
+				}
+				case SALEVENT_MOUSEMOVE:
+				{
+					if ( pEventQueue->size() )
+					{
+						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() )
+							pEventQueue->back()->remove();
+					}
+
+					break;
+				}
+				case SALEVENT_WHEELMOUSE:
+				{
+					if ( pEventQueue->size() )
+					{
+						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && pOldEvent->isHorizontal() == pNewEvent->isHorizontal() )
+						{
+							pEventQueue->back()->remove();
+							pNewEvent->addWheelRotation( pOldEvent->getWheelRotation() );
+						}
+					}
+
+					break;
+				}
+				case SALEVENT_MOVERESIZE:
+				{
+					if ( mpMoveResizeItem )
+					{
+						JavaSalEvent *pOldEvent = mpMoveResizeItem->getEvent();
+						if ( pOldEvent && pOldEvent->getFrame() == pFrame && mpMoveResizeItem->getEventQueue() == pEventQueue && !mpMoveResizeItem->isRemove() )
+							mpMoveResizeItem->remove();
+					}
+
+					mpMoveResizeItem = pQueueItem;
+					break;
+				}
+				case SALEVENT_PAINT:
+				{
+					if ( mpPaintItem )
+					{
+						JavaSalEvent *pOldEvent = mpPaintItem->getEvent();
+						if ( pOldEvent && pOldEvent->getFrame() == pFrame && mpMoveResizeItem->getEventQueue() == pEventQueue && !mpPaintItem->isRemove() )
+						{
+							mpPaintItem->remove();
+							pNewEvent->addUpdateRect( pOldEvent->getUpdateRect() );
+						}
+					}
+
+					mpPaintItem = pQueueItem;
+					break;
+				}
+				default:
+					break;
+			}
+		}
 
 		pEventQueue->push_back( pQueueItem );
-
 		purgeRemovedEventsFromFront( pEventQueue );
 	}
 
