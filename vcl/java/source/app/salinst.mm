@@ -1180,7 +1180,6 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData ) :
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mpData( pData ),
-	mbDispatchDisabled( false ),
 	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
@@ -1198,7 +1197,6 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mpData( pData ),
-	mbDispatchDisabled( false ),
 	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
@@ -1218,7 +1216,6 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 	mnID( 0 ),
 	mpFrame( NULL ),
 	mpData( NULL ),
-	mbDispatchDisabled( false ),
 	mbNative( false )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
@@ -1231,7 +1228,6 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 		mpFrame = pEvent->mpFrame;
 		mpData = pEvent->mpData;
 		maPath = pEvent->maPath;
-		mbDispatchDisabled = pEvent->mbDispatchDisabled;
 		mbNative = pEvent->mbNative;
 
 		// Assign ownership of data pointer to this
@@ -2327,6 +2323,51 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 
 // =========================================================================
 
+JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent ) :
+	mpEvent( NULL ),
+	mbRemove( false ),
+	mnType( 0 )
+{
+	if ( pEvent )
+	{
+		mpEvent = new JavaSalEvent( pEvent );
+
+		// Set event type
+		if ( mpEvent )
+		{
+			switch ( mpEvent->getID() )
+			{
+				case SALEVENT_EXTTEXTINPUT:
+				case SALEVENT_KEYINPUT:
+					mnType = INPUT_KEYBOARD;
+					break;
+				case SALEVENT_MOUSEMOVE:
+				case SALEVENT_MOUSELEAVE:
+				case SALEVENT_MOUSEBUTTONUP:
+				case SALEVENT_MOUSEBUTTONDOWN:
+					mnType = INPUT_MOUSE;
+					break;
+				case SALEVENT_PAINT:
+					mnType = INPUT_PAINT;
+					break;
+				default:
+					mnType = INPUT_OTHER;
+					break;
+			}
+		}
+	}
+}
+
+// -------------------------------------------------------------------------
+
+JavaSalEventQueueItem::~JavaSalEventQueueItem()
+{
+	if ( mpEvent )
+		delete mpEvent;
+}
+
+// =========================================================================
+
 Mutex JavaSalEventQueue::maMutex;
 
 #ifdef USE_NATIVE_EVENTS
@@ -2337,15 +2378,50 @@ Condition JavaSalEventQueue::maCondition;
 
 // -------------------------------------------------------------------------
 
-::std::list< JavaSalEvent* > JavaSalEventQueue::maNativeEventQueue;
+::std::list< JavaSalEventQueueItem* > JavaSalEventQueue::maNativeEventQueue;
 
 // -------------------------------------------------------------------------
 
-::std::list< JavaSalEvent* > JavaSalEventQueue::maNonNativeEventQueue;
+::std::list< JavaSalEventQueueItem* > JavaSalEventQueue::maNonNativeEventQueue;
+
+// -------------------------------------------------------------------------
+
+JavaSalEventQueueItem* JavaSalEventQueue::mpKeyInputItem = NULL;
+
+// -------------------------------------------------------------------------
+
+JavaSalEventQueueItem* JavaSalEventQueue::mpMoveResizeItem = NULL;
+
+// -------------------------------------------------------------------------
+
+JavaSalEventQueueItem* JavaSalEventQueue::mpPaintItem = NULL;
 
 // -------------------------------------------------------------------------
 
 sal_Bool JavaSalEventQueue::mbShutdownDisabled = sal_False;
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue )
+{
+	MutexGuard aGuard( maMutex );
+
+	if ( pEventQueue )
+	{
+		while ( pEventQueue->size() && pEventQueue->front()->isRemove() )
+		{
+			JavaSalEventQueueItem *pItem = pEventQueue->front();
+			pEventQueue->pop_front();
+			if ( mpKeyInputItem == pItem )
+				mpKeyInputItem = NULL;
+			if ( mpMoveResizeItem == pItem )
+				mpMoveResizeItem = NULL;
+			if ( mpPaintItem == pItem )
+				mpPaintItem = NULL;
+			delete pItem;
+		}
+	}
+}
 
 #else	// USE_NATIVE_EVENTS
 
@@ -2421,7 +2497,28 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 	sal_Bool bRet = sal_False;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::anyCachedEvent not implemented\n" );
+	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
+	for ( ; it != maNativeEventQueue.end(); ++it )
+	{
+		if ( !(*it)->isRemove() && (*it)->getType() & nType )
+		{
+			bRet = sal_True;
+			break;
+		}
+	}
+
+	if ( !bRet )
+	{
+		it = maNonNativeEventQueue.begin();
+		for ( ; it != maNonNativeEventQueue.end(); ++it )
+		{
+			if ( !(*it)->isRemove() && (*it)->getType() & nType )
+			{
+				bRet = sal_True;
+				break;
+			}
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
@@ -2453,20 +2550,8 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 #ifdef USE_NATIVE_EVENTS
 	ResettableGuard< Mutex > aGuard( maMutex );
 
-	::std::list< JavaSalEvent* > *pEventQueue;
-	if ( bNativeEvents )
-		pEventQueue = &maNativeEventQueue;
-	else
-		pEventQueue = &maNonNativeEventQueue;
-
-	if ( pEventQueue->size() )
-	{
-		pRet = pEventQueue->front();
-		pEventQueue->pop_front();
-	}
-
-	// If no events and a timeout is requested, wait for next event
-	if ( !pRet && nTimeout )
+	// Wait if there are no events in either queue and a timeout is requested
+	if ( nTimeout && !maNativeEventQueue.size() && !maNonNativeEventQueue.size() )
 	{
 		maCondition.reset();
 		aGuard.clear();
@@ -2477,12 +2562,21 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 		maCondition.wait( &aWait );
 
 		aGuard.reset();
+	}
 
-		if ( pEventQueue->size() )
-		{
-			pRet = pEventQueue->front();
-			pEventQueue->pop_front();
-		}
+	::std::list< JavaSalEventQueueItem* > *pEventQueue;
+	if ( bNativeEvents )
+		pEventQueue = &maNativeEventQueue;
+	else
+		pEventQueue = &maNonNativeEventQueue;
+
+	if ( pEventQueue->size() )
+	{
+		JavaSalEventQueueItem *pItem = pEventQueue->front();
+		if ( pItem->getEvent() )
+			pRet = new JavaSalEvent( pItem->getEvent() );
+		pItem->remove();
+		purgeRemovedEventsFromFront( pEventQueue );
 	}
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
@@ -2537,11 +2631,19 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 #ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
-	pEvent = new JavaSalEvent( pEvent );
-	if ( pEvent->isNative() )
-		maNativeEventQueue.push_back( pEvent );
-	else
-		maNonNativeEventQueue.push_back( pEvent );
+	JavaSalEventQueueItem *pQueueItem = new JavaSalEventQueueItem( pEvent );
+	if ( pQueueItem )
+	{
+		::std::list< JavaSalEventQueueItem* > *pEventQueue;
+		if ( pEvent->isNative() )
+			pEventQueue = &maNativeEventQueue;
+		else
+			pEventQueue = &maNonNativeEventQueue;
+
+		pEventQueue->push_back( pQueueItem );
+
+		purgeRemovedEventsFromFront( pEventQueue );
+	}
 
 	maCondition.set();
 #else	// USE_NATIVE_EVENTS
@@ -2560,7 +2662,25 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::removeCachedEvents not implemented\n" );
+	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
+	for ( ; it != maNativeEventQueue.end(); ++it )
+	{
+		JavaSalEvent *pEvent = (*it)->getEvent();
+		if ( pEvent && pEvent->getFrame() == pFrame )
+			(*it)->remove();
+	}
+
+	purgeRemovedEventsFromFront( &maNativeEventQueue );
+
+	it = maNonNativeEventQueue.begin();
+	for ( ; it != maNonNativeEventQueue.end(); ++it )
+	{
+		JavaSalEvent *pEvent = (*it)->getEvent();
+		if ( pEvent && pEvent->getFrame() == pFrame )
+			(*it)->remove();
+	}
+
+	purgeRemovedEventsFromFront( &maNonNativeEventQueue );
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )

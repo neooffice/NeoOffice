@@ -131,7 +131,6 @@ class SAL_DLLPRIVATE JavaSalEvent
 	JavaSalFrame*			mpFrame;
 	void*					mpData;
 	::rtl::OUString			maPath;
-	bool					mbDispatchDisabled;
 	bool					mbNative;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
@@ -172,28 +171,55 @@ public:
 	ULONG					getVisiblePosition();
 	long					getWheelRotation();
 	sal_Bool				isHorizontal();
-	sal_Bool				isShutdownCancelled();
 #ifdef USE_NATIVE_EVENTS
-	bool					isDispatchDisabled() { return mbDispatchDisabled; }
 	bool					isNative() { return mbNative; }
-	void					disableDispatch() { mbDispatchDisabled = true; }
 #endif	// USE_NATIVE_EVENTS
+	sal_Bool				isShutdownCancelled();
 };
+
+// -------------------------
+// - JavaSalEventQueueItem -
+// -------------------------
+
+class SAL_DLLPRIVATE JavaSalEventQueueItem
+{
+	JavaSalEvent*			mpEvent;
+	bool					mbRemove;
+	USHORT					mnType;
+
+public:
+							JavaSalEventQueueItem( JavaSalEvent *pEvent );
+	virtual					~JavaSalEventQueueItem();
+
+	JavaSalEvent*			getEvent() { return mpEvent; }
+	USHORT					getType() { return mnType; }
+	bool					isRemove() { return mbRemove; }
+	void					remove() { mbRemove = true; }
+};
+
+// ---------------------
+// - JavaSalEventQueue -
+// ---------------------
 
 class SAL_DLLPRIVATE JavaSalEventQueue
 {
 	static ::osl::Mutex		maMutex;
 #ifdef USE_NATIVE_EVENTS
 	static ::osl::Condition	maCondition;
-	static ::std::list< JavaSalEvent* >	maNativeEventQueue;
-	static ::std::list< JavaSalEvent* >	maNonNativeEventQueue;
+	static ::std::list< JavaSalEventQueueItem* >	maNativeEventQueue;
+	static ::std::list< JavaSalEventQueueItem* >	maNonNativeEventQueue;
+	static JavaSalEventQueueItem*	mpKeyInputItem;
+	static JavaSalEventQueueItem*	mpMoveResizeItem;
+	static JavaSalEventQueueItem*	mpPaintItem;
 	static sal_Bool			mbShutdownDisabled;
 #else	// USE_NATIVE_EVENTS
 	static ::vcl::com_sun_star_vcl_VCLEventQueue*	mpVCLEventQueue;
 #endif	// USE_NATIVE_EVENTS
 
 public:
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+	static void				purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue );
+#else	// USE_NATIVE_EVENTS
 	static ::vcl::com_sun_star_vcl_VCLEventQueue*	getVCLEventQueue();
 	static sal_Bool			postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown );
 	static void				postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown );
@@ -201,7 +227,7 @@ public:
 	static void				postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu );
 #endif	// USE_NATIVE_WINDOW
 	static void				postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession );
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 	static sal_Bool			anyCachedEvent( USHORT nType );
 	static void				dispatchNextEvent();
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
