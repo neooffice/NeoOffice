@@ -44,6 +44,7 @@
 #include <salframe.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/svids.hrc>
 #include <vos/mutex.hxx>
 
 #include "VCLApplicationDelegate_cocoa.h"
@@ -492,14 +493,110 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					{
 						mbAppMenuInitialized = YES;
 
-						int nItems = [pAppMenu numberOfItems];
-						int i = 0;
+#ifdef USE_NATIVE_EVENTS
+						if ( !Application::IsShutDown() )
+						{
+							IMutex& rSolarMutex = Application::GetSolarMutex();
+							rSolarMutex.acquire();
+							if ( !Application::IsShutDown() )
+							{
+								NSString *pAbout = nil;
+								NSString *pPreferences = nil;
+								NSString *pServices = nil;
+								NSString *pHide = nil;
+								NSString *pHideOthers = nil;
+								NSString *pShowAll = nil;
+								NSString *pQuit = nil;
+
+								ResMgr *pResMgr = ImplGetResMgr();
+								if ( pResMgr )
+								{
+									String aAbout( ResId( SV_STDTEXT_ABOUT, *pResMgr ) );
+									if ( aAbout.Len() )
+										pAbout = [NSString stringWithCharacters:aAbout.GetBuffer() length:aAbout.Len()];
+
+									String aPreferences( ResId( SV_STDTEXT_PREFERENCES, *pResMgr ) );
+									if ( aPreferences.Len() )
+										pPreferences = [NSString stringWithCharacters:aPreferences.GetBuffer() length:aPreferences.Len()];
+
+									String aServices( ResId( SV_MENU_MAC_SERVICES, *pResMgr ) );
+									if ( aServices.Len() )
+										pServices = [NSString stringWithCharacters:aServices.GetBuffer() length:aServices.Len()];
+
+									String aHide( ResId( SV_MENU_MAC_HIDEAPP, *pResMgr ) );
+									if ( aHide.Len() )
+										pHide = [NSString stringWithCharacters:aHide.GetBuffer() length:aHide.Len()];
+
+									String aHideOthers( ResId( SV_MENU_MAC_HIDEALL, *pResMgr ) );
+									if ( aHideOthers.Len() )
+										pHideOthers = [NSString stringWithCharacters:aHideOthers.GetBuffer() length:aHideOthers.Len()];
+
+									String aShowAll( ResId( SV_MENU_MAC_SHOWALL, *pResMgr ) );
+									if ( aShowAll.Len() )
+										pShowAll = [NSString stringWithCharacters:aShowAll.GetBuffer() length:aShowAll.Len()];
+
+									String aQuit( ResId( SV_MENU_MAC_QUITAPP, *pResMgr ) );
+									if ( aQuit.Len() )
+										pQuit = [NSString stringWithCharacters:aQuit.GetBuffer() length:aQuit.Len()];
+								}
+
+								NSUInteger nItems = [pAppMenu numberOfItems];
+								NSUInteger i = 0;
+								for ( ; i < nItems; i++ )
+								{
+									NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
+									if ( pItem )
+									{
+										NSString *pTitle = [pItem title];
+										if ( pTitle )
+										{
+											if ( pAbout && [pTitle isEqualToString:@"About"] )
+											{
+												[pItem setTarget:self];
+												[pItem setAction:@selector(showAbout)];
+												[pItem setTitle:pAbout];
+											}
+											else if ( pPreferences && [pTitle isEqualToString:@"Preferences…"] )
+											{
+												[pItem setTarget:self];
+												[pItem setAction:@selector(showPreferences)];
+												[pItem setTitle:pPreferences];
+											}
+											else if ( pServices && [pTitle isEqualToString:@"Services"] )
+											{
+												[pItem setTitle:pServices];
+											}
+											else if ( pHide && [pTitle isEqualToString:@"Hide"] )
+											{
+												[pItem setTitle:pHide];
+											}
+											else if ( pHideOthers && [pTitle isEqualToString:@"Hide Others"] )
+											{
+												[pItem setTitle:pHideOthers];
+											}
+											else if ( pShowAll && [pTitle isEqualToString:@"Show All"] )
+											{
+												[pItem setTitle:pShowAll];
+											}
+											else if ( pQuit && [pTitle isEqualToString:@"Quit"] )
+											{
+												[pItem setTitle:pQuit];
+											}
+										}
+									}
+								}
+							}
+
+							rSolarMutex.release();
+						}
+#else	// USE_NATIVE_EVENTS
+						NSUInteger nItems = [pAppMenu numberOfItems];
+						NSUInteger i = 0;
 						for ( ; i < nItems; i++ )
 						{
 							NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
 							if ( pItem )
 							{
-#ifndef USE_NATIVE_EVENTS
 								NSObject *pTarget = [pItem target];
 								if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
 								{
@@ -523,9 +620,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 										}
 									}
 								}
-#endif	// !USE_NATIVE_EVENTS
 							}
 						}
+#endif	// USE_NATIVE_EVENTS
 					}
 				}
 			}
