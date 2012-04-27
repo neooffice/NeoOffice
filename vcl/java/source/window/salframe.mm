@@ -2746,7 +2746,7 @@ void JavaSalFrame::SetTitle( const XubString& rTitle )
 		NSString *pTitle = [NSString stringWithCharacters:maTitle.getStr() length:maTitle.getLength()];
 		VCLWindowWrapperArgs *pSetTitleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:pTitle]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(getContentView:) withObject:pSetTitleArgs waitUntilDone:YES modes:pModes];
+		[mpWindow performSelectorOnMainThread:@selector(setTitle:) withObject:pSetTitleArgs waitUntilDone:YES modes:pModes];
 
 		[pPool release];
 	}
