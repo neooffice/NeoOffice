@@ -819,8 +819,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 	pFrame->GetWorkArea( aWorkArea );
 
 	// Set default window size based on style
-	long nX = aWorkArea.nLeft;
-	long nY = aWorkArea.nTop;
+	long nX = aWorkArea.Left();
+	long nY = aWorkArea.Top();
 	long nWidth = aWorkArea.GetWidth();
 	long nHeight = aWorkArea.GetHeight();
 	if ( nSalFrameStyle & SAL_FRAME_STYLE_FLOAT )
@@ -1261,7 +1261,26 @@ void JavaSalEvent::addRepeatCount( USHORT nCount )
 
 void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
 {
-	fprintf( stderr, "JavaSalEvent::addUpdateRect not implemented\n" );
+	if ( mpData && getID() == SALEVENT_PAINT )
+	{
+		Rectangle aUpdateRect( getUpdateRect() );
+		aUpdateRect.Justify();
+		
+		Rectangle aRect( rRect );
+		aRect.Justify();
+
+		if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
+		{
+			if ( aUpdateRect.GetWidth() > 0 && aUpdateRect.GetHeight() > 0 )
+				aRect = aRect.GetUnion( aUpdateRect );
+
+			SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
+			pPaintEvent->mnBoundX = aRect.Left();
+			pPaintEvent->mnBoundY = aRect.Top();
+			pPaintEvent->mnBoundWidth = aRect.GetWidth();
+			pPaintEvent->mnBoundHeight = aRect.GetHeight();
+		}
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -1290,7 +1309,11 @@ void JavaSalEvent::cancelShutdown()
 void JavaSalEvent::dispatch()
 {
 	USHORT nID = getID();
+#ifdef USE_NATIVE_EVENTS
+	void *pData = mpData;
+#else	// USE_NATIVE_EVENTS
 	void *pData = getData();
+#endif	// USE_NATIVE_EVENTS
 	SalData *pSalData = GetSalData();
 
 	// Handle events that do not need a JavaSalFrame pointer
@@ -1774,13 +1797,13 @@ void JavaSalEvent::dispatch()
 					}
 
 					bool bPosChanged = false;
-					int nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
+					int nX = pPosSize->Left() + pFrame->maGeometry.nLeftDecoration;
 					if ( pFrame->maGeometry.nX != nX )
 					{
 						bPosChanged = true;
 						pFrame->maGeometry.nX = nX;
 					}
-					int nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
+					int nY = pPosSize->Top() + pFrame->maGeometry.nTopDecoration;
 					if ( pFrame->maGeometry.nY != nY )
 					{
 						bPosChanged = true;
@@ -1844,7 +1867,7 @@ void JavaSalEvent::dispatch()
 				{
 					// Get paint region
 					const Rectangle &aUpdateRect = getUpdateRect();
-					pPaintEvent = new SalPaintEvent( aUpdateRect.nLeft, aUpdateRect.nTop, aUpdateRect.GetWidth(), aUpdateRect.GetHeight() );
+					pPaintEvent = new SalPaintEvent( aUpdateRect.Left(), aUpdateRect.Top(), aUpdateRect.GetWidth(), aUpdateRect.GetHeight() );
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
@@ -1971,21 +1994,21 @@ ULONG JavaSalEvent::getCursorPosition()
 	return nRet;
 }
 
+#ifndef USE_NATIVE_EVENTS
+
 // -------------------------------------------------------------------------
 
 void *JavaSalEvent::getData()
 {
 	void *pRet = NULL;
 
-#ifdef USE_NATIVE_EVENTS
-	pRet = mpData;
-#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getData();
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
+
+#endif	// !USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -2162,7 +2185,11 @@ const Rectangle JavaSalEvent::getUpdateRect()
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getUpdateRect not implemented\n" );
+	if ( mpData && getID() == SALEVENT_PAINT )
+	{
+		SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
+		aRet = Rectangle( Point( pPaintEvent->mnBoundX, pPaintEvent->mnBoundY ), Size( pPaintEvent->mnBoundWidth, pPaintEvent->mnBoundHeight ) );
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		aRet = mpVCLEvent->getUpdateRect();
@@ -2750,7 +2777,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					if ( mpPaintItem )
 					{
 						JavaSalEvent *pOldEvent = mpPaintItem->getEvent();
-						if ( pOldEvent && pOldEvent->getFrame() == pFrame && mpMoveResizeItem->getEventQueue() == pEventQueue && !mpPaintItem->isRemove() )
+						if ( pOldEvent && pOldEvent->getFrame() == pFrame && mpPaintItem->getEventQueue() == pEventQueue && !mpPaintItem->isRemove() )
 						{
 							mpPaintItem->remove();
 							pNewEvent->addUpdateRect( pOldEvent->getUpdateRect() );

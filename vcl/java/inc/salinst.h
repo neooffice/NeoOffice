@@ -151,7 +151,9 @@ public:
 	void					dispatch();
 	ULONG					getCommittedCharacterCount();
 	ULONG					getCursorPosition();
+#ifndef USE_NATIVE_EVENTS
 	void*					getData();
+#endif	// !USE_NATIVE_EVENTS
 	JavaSalFrame*			getFrame();
 	USHORT					getKeyChar();
 	USHORT					getKeyCode();

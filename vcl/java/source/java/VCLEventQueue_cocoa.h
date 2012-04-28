@@ -90,6 +90,7 @@
 {
 #ifdef USE_NATIVE_EVENTS
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	JavaSalFrame*			mpFrame;
 #endif	// USE_NATIVE_EVENTS
 }
 + (void)clearModalWindowLevel;
@@ -111,12 +112,17 @@
 - (void)sendEvent:(NSEvent *)pEvent;
 #ifdef USE_NATIVE_EVENTS
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
+- (void)setFrame:(JavaSalFrame *)pFrame;
 #endif	// USE_NATIVE_EVENTS
 - (void)setContentView:(NSView *)pView;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)setLevel:(int)nWindowLevel;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
+#ifdef USE_NATIVE_EVENTS
+- (void)windowDidMove:(NSNotification *)pNotification;
+- (void)windowDidResize:(NSNotification *)pNotification;
+#endif	// USE_NATIVE_EVENTS
 @end
 
 #ifdef USE_NATIVE_WINDOW

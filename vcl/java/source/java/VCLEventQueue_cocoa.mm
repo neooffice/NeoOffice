@@ -818,7 +818,13 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLWindow class]] )
+	{
 		mbCanBecomeKeyOrMainWindow = YES;
+		mpFrame = NULL;
+
+		[self setReleasedWhenClosed:NO];
+		[self setDelegate:self];
+	}
 #endif	// USE_NATIVE_EVENTS
 
 	return self;
@@ -833,7 +839,13 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLWindow class]] )
+	{
 		mbCanBecomeKeyOrMainWindow = YES;
+		mpFrame = NULL;
+
+		[self setReleasedWhenClosed:NO];
+		[self setDelegate:self];
+	}
 #endif	// USE_NATIVE_EVENTS
 
 	return self;
@@ -1325,6 +1337,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
 }
 
+- (void)setFrame:(JavaSalFrame *)pFrame
+{
+	mpFrame = pFrame;
+}
+
 #endif	// USE_NATIVE_EVENTS
 
 - (void)setContentView:(NSView *)pView
@@ -1413,6 +1430,27 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 
+#ifdef USE_NATIVE_EVENTS
+
+- (void)windowDidMove:(NSNotification *)pNotification
+{
+	if ( mpFrame && [self isVisible] )
+	{
+		JavaSalEvent aEvent( SALEVENT_MOVE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( &aEvent );
+	}
+}
+
+- (void)windowDidResize:(NSNotification *)pNotification
+{
+	if ( mpFrame && [self isVisible] )
+	{
+		JavaSalEvent aEvent( SALEVENT_RESIZE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( &aEvent );
+	}
+}
+
+#endif	// USE_NATIVE_EVENTS
 @end
 
 static MacOSBOOL bNSViewAWTInitialized = NO;

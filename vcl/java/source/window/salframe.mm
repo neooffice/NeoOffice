@@ -1195,6 +1195,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 
 			[mpWindow setContentView:pContentView];
+			[mpWindow setFrame:mpFrame];
 
 			[self adjustColorLevelAndShadow];
 
@@ -3744,7 +3745,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			// showing and we are in show only menus mode.
 			NSObject *pParent = nil;
 			if ( mpParent && mpParent->mpWindow && !mpParent->mbShowOnlyMenus )
-				pParent = [mpParent->mpWindow window];
+				pParent = [(VCLWindowWrapper *)mpParent->mpWindow window];
 
 			VCLWindowWrapperArgs *pSetParentArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:( pParent ? pParent : [NSNull null] )]];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
