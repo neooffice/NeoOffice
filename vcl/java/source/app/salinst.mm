@@ -1175,24 +1175,9 @@ sal_Bool SalYieldMutex::tryToAcquire()
 
 // =========================================================================
 
-JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData ) :
-#ifdef USE_NATIVE_EVENTS
-	mnID( nID  ),
-	mpFrame( pFrame ),
-	mpData( pData ),
-	mbNative( false )
-#else	// USE_NATIVE_EVENTS
-	mpVCLEvent( NULL )
-#endif	// USE_NATIVE_EVENTS
-{
-#ifndef USE_NATIVE_EVENTS
-	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData );
-#endif	// !USE_NATIVE_EVENTS
-}
-
 // -------------------------------------------------------------------------
 
-JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath ) :
+JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath ) :
 #ifdef USE_NATIVE_EVENTS
 	mnID( nID  ),
 	mpFrame( pFrame ),
@@ -2370,6 +2355,7 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_WHEELMOUSE:
 				mnType = INPUT_MOUSE;
 				break;
 			case SALEVENT_PAINT:

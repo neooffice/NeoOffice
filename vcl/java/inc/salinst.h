@@ -137,8 +137,7 @@ class SAL_DLLPRIVATE JavaSalEvent
 #endif	// USE_NATIVE_EVENTS
 
 public:
-							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData );
-							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString &rPath );
+							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString() );
 							JavaSalEvent( JavaSalEvent *pEvent );
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
 	virtual					~JavaSalEvent();
