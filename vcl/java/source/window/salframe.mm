@@ -1754,7 +1754,18 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
+				{
+					CGContextSaveGState( aContext );
+					if ( ![pView isFlipped] )
+					{
+						CGContextTranslateCTM( aContext, 0, aBounds.origin.y + aBounds.size.height );
+						CGContextScaleCTM( aContext, 1.0, -1.0f );
+					}
+
 					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
+
+					CGContextRestoreGState( aContext );
+				}
 			}
 		}
 	}
@@ -2661,7 +2672,11 @@ bool JavaSalFrame::ToFront()
 
 void JavaSalFrame::UpdateLayer()
 {
+#ifdef USE_NATIVE_EVENTS
+	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth, maGeometry.nHeight );
+#else	// USE_NATIVE_EVENTS
 	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
+#endif	// USE_NATIVE_EVENTS
 	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
 		return;
 

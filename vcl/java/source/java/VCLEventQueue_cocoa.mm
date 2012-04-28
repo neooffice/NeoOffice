@@ -204,7 +204,7 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] class] isKindOfClass:[VCLWindow class]] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
+		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[pApp keyWindow] isKindOfClass:[VCLWindow class]] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
 }
 
 @end
@@ -548,7 +548,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 				{
 					[pNeedRestoreModalWindows removeObject:pWindow];
 					[pWindow _clearModalWindowLevel];
@@ -591,7 +591,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	// Load Java's AWTFont class and redirect them to VCLFont's matching
 	// selectors
-	if ( pWindow && !bAWTFontInitialized && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( pWindow && !bAWTFontInitialized && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		bAWTFontInitialized = YES;
 
@@ -761,7 +761,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				[pResponder abandonInput];
 			}
 		}
-		else if ( ![[self class] isKindOfClass:[VCLWindow class]] )
+		else if ( ![self isKindOfClass:[VCLWindow class]] )
 		{
 			// Fix bug 3327 by removing any cached events when a non-Java
 			// window obtains focus
@@ -787,7 +787,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
-	if ( ![self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ))
+	if ( ![self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ))
 		return;
 
 	if ( [super respondsToSelector:@selector(poseAsDisplayIfNeeded)] )
@@ -817,7 +817,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
 #ifdef USE_NATIVE_EVENTS
-	if ( [[self class] isKindOfClass:[VCLWindow class]] )
+	if ( [self isKindOfClass:[VCLWindow class]] )
 		mbCanBecomeKeyOrMainWindow = YES;
 #endif	// USE_NATIVE_EVENTS
 
@@ -832,7 +832,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 
 #ifdef USE_NATIVE_EVENTS
-	if ( [[self class] isKindOfClass:[VCLWindow class]] )
+	if ( [self isKindOfClass:[VCLWindow class]] )
 		mbCanBecomeKeyOrMainWindow = YES;
 #endif	// USE_NATIVE_EVENTS
 
@@ -870,10 +870,10 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)makeKeyWindow
 {
-	if ( [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 #ifdef USE_NATIVE_EVENTS
-		if ( [[self class] isKindOfClass:[VCLWindow class]] && !mbCanBecomeKeyOrMainWindow )
+		if ( [self isKindOfClass:[VCLWindow class]] && !mbCanBecomeKeyOrMainWindow )
 			return;
 #endif	// USE_NATIVE_EVENTS
 
@@ -906,7 +906,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
@@ -915,7 +915,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
 		{
@@ -1010,7 +1010,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 					for ( ; i < nCount; i++ )
 					{
 						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [[pWindow class] isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 						{
 							[pWindow makeKeyWindow];
 							break;
@@ -1051,7 +1051,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
-	if ( bCommandKeyPressed && [self isVisible] && ( [[self class] isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
@@ -1109,7 +1109,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
 	// closable non-Java windows.
-	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self class] isKindOfClass:[VCLWindow class]] && ![[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLWindow class]] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
@@ -1425,7 +1425,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	// If the NSViewAWT class has its own drag and drop and services selectors,
 	// redirect them to VCLView's matching selectors
-	if ( pView && !bNSViewAWTInitialized && ( [[pView class] isKindOfClass:[VCLView class]] || [[pView className] isEqualToString:pNSViewAWTString] ) )
+	if ( pView && !bNSViewAWTInitialized && ( [pView isKindOfClass:[VCLView class]] || [[pView className] isEqualToString:pNSViewAWTString] ) )
 	{
 		bNSViewAWTInitialized = YES;
 
@@ -1732,7 +1732,7 @@ static CFDataRef aRTFSelection = nil;
 - (void)drawRect:(NSRect)aDirtyRect
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
+	if ( pWindow && [pWindow isVisible] && ( [self isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 	{
 		// For some strange reason, Java will ignore all drawing that we do
 		// unless the color is changed in the current graphics context. Also,
@@ -1748,7 +1748,7 @@ static CFDataRef aRTFSelection = nil;
 - (void)resetCursorRects
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
+	if ( pWindow && [pWindow isVisible] && ( [self isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 	{
 		NSCursor *pCursor = JavaSalFrame_getCursor( self );
 		if ( pCursor )
@@ -1781,7 +1781,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)isOpaque
 {
-	if ( ( [[self class] isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
+	if ( ( [self isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 		return YES;
 	else if ( [super respondsToSelector:@selector(poseAsIsOpaque)] )
 		return [super poseAsIsOpaque];
@@ -1840,7 +1840,7 @@ static CFDataRef aRTFSelection = nil;
 	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![self isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
 			bRet = (MacOSBOOL)[super readSelectionFromPasteboard:pPasteboard];
@@ -1926,7 +1926,7 @@ static CFDataRef aRTFSelection = nil;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![self isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		id pRet = nil;
 		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
@@ -1982,7 +1982,7 @@ static CFDataRef aRTFSelection = nil;
 	MacOSBOOL bRet = NO;
 
 	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self class] isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
+	if ( ![self isKindOfClass:[VCLView class]] && ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
 			bRet = (MacOSBOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
