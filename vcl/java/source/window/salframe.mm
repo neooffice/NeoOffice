@@ -1760,6 +1760,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 					{
 						CGContextTranslateCTM( aContext, 0, aBounds.origin.y + aBounds.size.height );
 						CGContextScaleCTM( aContext, 1.0, -1.0f );
+						aDestRect.origin.y = aBounds.origin.y + aBounds.size.height - aDestRect.origin.y - aDestRect.size.height;
 					}
 
 					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
