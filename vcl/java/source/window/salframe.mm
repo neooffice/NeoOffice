@@ -1039,6 +1039,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	MacOSBOOL				mbUndecorated;
 	MacOSBOOL				mbUtility;
 	VCLWindow*				mpWindow;
+	NSUInteger				mnWindowStyleMask;
 }
 + (void)updateShowOnlyMenusWindows;
 - (void)adjustColorLevelAndShadow;
@@ -1158,28 +1159,28 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mbUtility = bUtility;
 	mbUndecorated = NO;
 	mpWindow = nil;
+	mnWindowStyleMask = NSBorderlessWindowMask;
 
 	if ( !mbUtility && ( mbShowOnlyMenus || ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) ) )
 		mbUndecorated = YES;
 
-	NSUInteger nWindowStyle = NSBorderlessWindowMask;
 	if ( !mbUndecorated )
 	{
-		nWindowStyle = NSTitledWindowMask | NSClosableWindowMask;
+		mnWindowStyleMask = NSTitledWindowMask | NSClosableWindowMask;
 		if ( mbUtility )
-			nWindowStyle |= NSUtilityWindowMask;
+			mnWindowStyleMask |= NSUtilityWindowMask;
 		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 		{
-			nWindowStyle |= NSResizableWindowMask;
+			mnWindowStyleMask |= NSResizableWindowMask;
 			if ( !mbUtility )
-				nWindowStyle |= NSMiniaturizableWindowMask;
+				mnWindowStyleMask |= NSMiniaturizableWindowMask;
 		}
 	}
 
 	VCLView *pContentView = [[VCLView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
 	if ( pContentView )
 	{
-		mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:nWindowStyle backing:NSBackingStoreBuffered defer:YES];
+		mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:( mnWindowStyleMask & ~NSUtilityWindowMask ) backing:NSBackingStoreBuffered defer:YES];
 		if ( mpWindow )
 		{
 			if ( mbUtility )
@@ -1201,7 +1202,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
-			NSRect aFrameRect = [NSWindow frameRectForContentRect:aContentRect styleMask:nWindowStyle];
+			NSRect aFrameRect = [NSWindow frameRectForContentRect:aContentRect styleMask:mnWindowStyleMask];
 			maInsets = NSMakeRect( aContentRect.origin.x - aFrameRect.origin.x, aContentRect.origin.y - aFrameRect.origin.y, aFrameRect.origin.x + aFrameRect.size.width - aContentRect.origin.x - aContentRect.size.width, aFrameRect.origin.y + aFrameRect.size.height - aContentRect.origin.y - aContentRect.size.height );
 
 			if ( mbShowOnlyMenus )
