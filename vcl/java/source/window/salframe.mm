@@ -1043,7 +1043,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 }
 + (void)updateShowOnlyMenusWindows;
 - (void)adjustColorLevelAndShadow;
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
@@ -1057,7 +1057,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
 - (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
-- (void)setParent:(VCLWindowWrapperArgs *)pArgs;
 - (void)setState:(VCLWindowWrapperArgs *)pArgs;
 - (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
 - (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
@@ -1145,14 +1144,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
 	[super init];
 
 	mpFrame = pFrame;
 	mbFullScreen = NO;
 	maInsets = NSMakeRect( 0, 0, 0, 0 );
-	mpParent = nil;
+	mpParent = pParent;
+	if ( mpParent )
+		[mpParent retain];
 	mbShowOnlyMenus = bShowOnlyMenus;
 	maShowOnlyMenusFrame = NSMakeRect( 0, 0, 1, 1 );
 	mnStyle = nStyle;
@@ -1470,30 +1471,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (void)setParent:(VCLWindowWrapperArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-    NSObject *pObject = (NSObject *)[pArgArray objectAtIndex:0];
-    if ( !pObject )
-        return;
-
-	if ( mpParent )
-		[mpParent release];
-
-	if ( [pObject isKindOfClass:[VCLWindow class]] )
-		mpParent = (VCLWindow *)pObject;
-	else
-		mpParent = nil;
-
-	if ( mpParent )
-		[mpParent retain];
-
-	[self adjustColorLevelAndShadow];
-}
-
 - (void)setState:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -1602,13 +1579,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 @interface VCLCreateWindow : NSObject
 {
 	JavaSalFrame*			mpFrame;
+	VCLWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
 	ULONG					mnStyle;
 	MacOSBOOL				mbUtility;
 	VCLWindowWrapper*		mpWindow;
 }
-+ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
++ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
 - (void)createWindow:(id)pObject;
 - (VCLWindowWrapper *)window;
@@ -1616,18 +1594,21 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLCreateWindow
 
-+ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
++ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
-	VCLCreateWindow *pRet = [[VCLCreateWindow alloc] initWithStyle:nStyle frame:pFrame showOnlyMenus:bShowOnlyMenus utility:bUtility];
+	VCLCreateWindow *pRet = [[VCLCreateWindow alloc] initWithStyle:nStyle frame:pFrame parent:pParent showOnlyMenus:bShowOnlyMenus utility:bUtility];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
 	[super init];
 
 	mpFrame = pFrame;
+	mpParent = pParent;
+	if ( mpParent )
+		[mpParent retain];
 	mbShowOnlyMenus = bShowOnlyMenus;
 	mnStyle = nStyle;
 	mbUtility = bUtility;
@@ -1638,6 +1619,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)dealloc
 {
+	if ( mpParent )
+		[mpParent release];
+
 	if ( mpWindow )
 		[mpWindow release];
 
@@ -1649,7 +1633,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	if ( mpWindow )
 		return;
 
-	mpWindow = [[VCLWindowWrapper alloc] initWithStyle:mnStyle frame:mpFrame showOnlyMenus:mbShowOnlyMenus utility:mbUtility];
+	mpWindow = [[VCLWindowWrapper alloc] initWithStyle:mnStyle frame:mpFrame parent:mpParent showOnlyMenus:mbShowOnlyMenus utility:mbUtility];
 }
 
 - (VCLWindowWrapper *)window
@@ -1837,7 +1821,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 #ifdef USE_NATIVE_EVENTS
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
+	VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:nil showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLCreateWindow performSelectorOnMainThread:@selector(createWindow:) withObject:pVCLCreateWindow waitUntilDone:YES modes:pModes];
 	VCLWindowWrapper *pWindow = [pVCLCreateWindow window];
@@ -1849,7 +1833,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 
 	[pPool release];
 #else	// USE_NATIVE_EVENTS
-    mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, pParent, mbShowOnlyMenus, IsUtilityWindow() );
+    mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, NULL, mbShowOnlyMenus, IsUtilityWindow() );
 #endif	// USE_NATIVE_EVENTS
 
 	mpGraphics->mpFrame = this;
@@ -1871,7 +1855,8 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 #endif  // USE_NATIVE_WINDOW
 
 	// Set initial parent
-	SetParent( pParent );
+	if ( pParent )
+		SetParent( pParent );
 
 	// Cache the insets
 	Rectangle aRect = GetInsets();
@@ -3737,26 +3722,33 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		if ( bReshow )
 			Show( FALSE );
 
-#ifdef USE_NATIVE_EVENTS
-		if ( mpWindow )
-		{
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-			// Prevent deadlock when opening a document when toolbars are
-			// showing and we are in show only menus mode.
-			NSObject *pParent = nil;
-			if ( mpParent && mpParent->mpWindow && !mpParent->mbShowOnlyMenus )
-				pParent = [(VCLWindowWrapper *)mpParent->mpWindow window];
-
-			VCLWindowWrapperArgs *pSetParentArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:( pParent ? pParent : [NSNull null] )]];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[mpWindow performSelectorOnMainThread:@selector(setParent:) withObject:pSetParentArgs waitUntilDone:YES modes:pModes];
-
-			[pPool release];
-		}
-#else	// USE_NATIVE_EVENTS
 		// Fix bug 1310 by creating a new native window with the new parent
 		maSysData.pView = NULL;
+#ifdef USE_NATIVE_EVENTS
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		// Prevent deadlock when opening a document when toolbars are
+		// showing and we are in show only menus mode.
+		VCLWindow *pParentWindow = nil;
+		if ( mpParent && mpParent->mpWindow && !mpParent->mbShowOnlyMenus )
+			pParentWindow = [(VCLWindowWrapper *)mpParent->mpWindow window];
+
+		VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:pParentWindow showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLCreateWindow performSelectorOnMainThread:@selector(createWindow:) withObject:pVCLCreateWindow waitUntilDone:YES modes:pModes];
+		VCLWindowWrapper *pWindow = [pVCLCreateWindow window];
+		if ( pWindow )
+		{
+			// Release old window wrapper
+			if ( mpWindow )
+				[mpWindow performSelectorOnMainThread:@selector(destroy:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+
+			[pWindow retain];
+			mpWindow = pWindow;
+		}
+
+		[pPool release];
+#else	// USE_NATIVE_EVENTS
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
 #ifndef USE_NATIVE_WINDOW
 		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
