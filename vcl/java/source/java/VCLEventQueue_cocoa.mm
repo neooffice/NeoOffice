@@ -1436,7 +1436,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( mpFrame && [self isVisible] )
 	{
-		JavaSalEvent aEvent( SALEVENT_MOVE, mpFrame, NULL );
+		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
 		JavaSalEventQueue::postCachedEvent( &aEvent );
 	}
 }
@@ -1445,9 +1445,23 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( mpFrame && [self isVisible] )
 	{
-		JavaSalEvent aEvent( SALEVENT_RESIZE, mpFrame, NULL );
+		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
 		JavaSalEventQueue::postCachedEvent( &aEvent );
 	}
+}
+
+- (MacOSBOOL)windowShouldClose:(id)pObject
+{
+	MacOSBOOL bRet = YES;
+
+	if ( mpFrame && [self isVisible] )
+	{
+		JavaSalEvent aEvent( SALEVENT_CLOSE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( &aEvent );
+		bRet = NO;
+	}
+
+	return bRet;
 }
 
 #endif	// USE_NATIVE_EVENTS

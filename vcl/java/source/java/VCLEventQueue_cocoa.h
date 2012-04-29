@@ -122,6 +122,7 @@
 #ifdef USE_NATIVE_EVENTS
 - (void)windowDidMove:(NSNotification *)pNotification;
 - (void)windowDidResize:(NSNotification *)pNotification;
+- (MacOSBOOL)windowShouldClose:(id)pObject;
 #endif	// USE_NATIVE_EVENTS
 @end
 

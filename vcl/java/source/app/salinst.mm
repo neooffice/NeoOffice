@@ -1188,6 +1188,14 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 #endif	// USE_NATIVE_EVENTS
 {
 #ifdef USE_NATIVE_EVENTS
+	switch ( mnID )
+	{
+		case SALEVENT_CLOSE:
+		case SALEVENT_MOVERESIZE:
+		case SALEVENT_PAINT:
+			mbNative = true;
+	}
+
 	maPath = OUString( rPath.getStr(), rPath.getLength(), RTL_TEXTENCODING_UTF8 );
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData, rPath );
