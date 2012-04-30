@@ -761,7 +761,17 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				[pResponder abandonInput];
 			}
 		}
-		else if ( ![self isKindOfClass:[VCLWindow class]] )
+#ifdef USE_NATIVE_EVENTS
+		else if ( [self isKindOfClass:[VCLWindow class]] )
+		{
+			if ( mpFrame )
+			{
+				JavaSalEvent aEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
+				JavaSalEventQueue::postCachedEvent( &aEvent );
+			}
+		}
+#endif	// USE_NATIVE_EVENTS
+		else
 		{
 			// Fix bug 3327 by removing any cached events when a non-Java
 			// window obtains focus
@@ -882,13 +892,13 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)makeKeyWindow
 {
-	if ( [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
-	{
 #ifdef USE_NATIVE_EVENTS
-		if ( [self isKindOfClass:[VCLWindow class]] && !mbCanBecomeKeyOrMainWindow )
-			return;
+	if ( !mbCanBecomeKeyOrMainWindow )
+		return;
 #endif	// USE_NATIVE_EVENTS
 
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	{
 		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 		if ( pAppDelegate )
@@ -901,6 +911,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		{
 			return;
 		}
+#ifndef USE_NATIVE_EVENTS
 		else if ( [super respondsToSelector:@selector(_isUtilityWindow)] && [super _isUtilityWindow] )
 		{
 			// Do not allow utility windows to grab the focus except when the
@@ -909,6 +920,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
 				return;
 		}
+#endif	// !USE_NATIVE_EVENTS
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsMakeKeyWindow)] )
@@ -1195,6 +1207,16 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 		}
 	}
+#ifdef USE_NATIVE_EVENTS
+	else if ( [self isKindOfClass:[VCLWindow class]] )
+	{
+		if ( mpFrame )
+		{
+			JavaSalEvent aEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
+		}
+	}
+#endif	// USE_NATIVE_EVENTS
 
 	if ( [super respondsToSelector:@selector(poseAsResignKeyWindow)] )
 		[super poseAsResignKeyWindow];
@@ -1786,12 +1808,14 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && ( [self isKindOfClass:[VCLView class]] || [[self className] isEqualToString:pNSViewAWTString] ) )
 	{
+#ifndef USE_NATIVE_EVENTS
 		// For some strange reason, Java will ignore all drawing that we do
 		// unless the color is changed in the current graphics context. Also,
 		// the new color cannot be clear, white, or black since we use those
 		// colors as the window background colors in our Java code so we set
 		// the color to red.
 		[[NSColor redColor] set];
+#endif	// !USE_NATIVE_EVENTS
 
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
 	}

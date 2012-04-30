@@ -1191,6 +1191,8 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	switch ( mnID )
 	{
 		case SALEVENT_CLOSE:
+		case SALEVENT_GETFOCUS:
+		case SALEVENT_LOSEFOCUS:
 		case SALEVENT_MOVERESIZE:
 		case SALEVENT_PAINT:
 			mbNative = true;
@@ -1520,12 +1522,28 @@ void JavaSalEvent::dispatch()
 				if ( pFrame != pSalData->mpFocusFrame )
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+					{
+#ifdef USE_NATIVE_EVENTS
+						if ( pSalData->mpFocusFrame->mbVisible )
+						{
+							JavaSalEvent aEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
+							JavaSalEventQueue::postCachedEvent( &aEvent );
+						}
+#endif	// USE_NATIVE_EVENTS
 						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
+					}
 					pSalData->mpFocusFrame = NULL;
 				}
 
 				if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 				{
+#ifdef USE_NATIVE_EVENTS
+					if ( pFrame->mbVisible )
+					{
+						JavaSalEvent aEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						JavaSalEventQueue::postCachedEvent( &aEvent );
+					}
+#endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame = pFrame;
 					pFrame->CallCallback( nID, NULL );
 #ifdef USE_NATIVE_WINDOW
@@ -1553,6 +1571,13 @@ void JavaSalEvent::dispatch()
 			{
 				if ( pFrame == pSalData->mpFocusFrame )
 				{
+#ifdef USE_NATIVE_EVENTS
+					if ( pFrame->mbVisible )
+					{
+						JavaSalEvent aEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						JavaSalEventQueue::postCachedEvent( &aEvent );
+					}
+#endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
 #ifdef USE_NATIVE_WINDOW
