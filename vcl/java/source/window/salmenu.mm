@@ -577,7 +577,12 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 - (void)selected
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::postMenuItemSelectedEvent not implemented\n" );
+	JavaSalEvent aActivateEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEvent aCommandEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( &aActivateEvent );
+	JavaSalEventQueue::postCachedEvent( &aCommandEvent );
+	JavaSalEventQueue::postCachedEvent( &aDeactivateEvent );
 #else	// USE_NATIVE_EVENTS
 	JavaSalEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
 #endif	// USE_NATIVE_EVENTS

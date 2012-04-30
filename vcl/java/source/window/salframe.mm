@@ -1174,7 +1174,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	VCLView *pContentView = [[VCLView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
 	if ( pContentView )
 	{
-		if ( mbUtility || ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen ) )
+		if ( mbUtility || ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )  || ( !mbUndecorated && mpParent ) )
 			mpWindow = [[VCLPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:mnWindowStyleMask backing:NSBackingStoreBuffered defer:YES];
 		else
 			mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:mnWindowStyleMask backing:NSBackingStoreBuffered defer:YES];
