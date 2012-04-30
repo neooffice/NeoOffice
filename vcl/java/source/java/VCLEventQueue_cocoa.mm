@@ -204,7 +204,7 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[pApp keyWindow] isKindOfClass:[VCLWindow class]] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
+		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[pApp keyWindow] isKindOfClass:[VCLPanel class]] || [[pApp keyWindow] isKindOfClass:[VCLWindow class]] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
 }
 
 @end
@@ -498,6 +498,29 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 #endif	 // USE_NATIVE_WINDOW
 
+#ifdef USE_NATIVE_EVENTS
+
+@implementation VCLPanel
+
+- (MacOSBOOL)canBecomeKeyOrMainWindow
+{
+	return ( mbCanBecomeKeyOrMainWindow && ![self becomesKeyOnlyIfNeeded] );
+}
+
+- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
+{
+	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
+}
+
+- (void)setFrame:(JavaSalFrame *)pFrame
+{
+	mpFrame = pFrame;
+}
+
+@end
+
+#endif	// USE_NATIVE_EVENTS
+
 @interface NSWindow (VCLWindowPoseAs)
 - (void)poseAsBecomeKeyWindow;
 - (void)poseAsDisplayIfNeeded;
@@ -548,7 +571,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 				{
 					[pNeedRestoreModalWindows removeObject:pWindow];
 					[pWindow _clearModalWindowLevel];
@@ -591,7 +614,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	// Load Java's AWTFont class and redirect them to VCLFont's matching
 	// selectors
-	if ( pWindow && !bAWTFontInitialized && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( pWindow && !bAWTFontInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
 	{
 		bAWTFontInitialized = YES;
 
@@ -700,44 +723,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 #endif	// USE_NATIVE_WINDOW
 		}
-
-		// VCLWindow drag source selectors
-
-		SEL aSelector = @selector(draggingSourceDelegate);
-		Method aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		aSelector = @selector(setDraggingSourceDelegate:);
-		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		aSelector = @selector(windowWillEnterFullScreen:);
-		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		aSelector = @selector(windowDidExitFullScreen:);
-		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
 	}
 }
 
@@ -762,7 +747,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 		}
 #ifdef USE_NATIVE_EVENTS
-		else if ( [self isKindOfClass:[VCLWindow class]] )
+		else if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 		{
 			if ( mpFrame )
 			{
@@ -797,7 +782,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
-	if ( ![self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ))
+	if ( ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ))
 		return;
 
 	if ( [super respondsToSelector:@selector(poseAsDisplayIfNeeded)] )
@@ -827,7 +812,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
 #ifdef USE_NATIVE_EVENTS
-	if ( [self isKindOfClass:[VCLWindow class]] )
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		mbCanBecomeKeyOrMainWindow = YES;
 		mpFrame = NULL;
@@ -848,7 +833,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 
 #ifdef USE_NATIVE_EVENTS
-	if ( [self isKindOfClass:[VCLWindow class]] )
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		mbCanBecomeKeyOrMainWindow = YES;
 		mpFrame = NULL;
@@ -897,7 +882,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		return;
 #endif	// USE_NATIVE_EVENTS
 
-	if ( [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
@@ -911,8 +896,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		{
 			return;
 		}
-#ifndef USE_NATIVE_EVENTS
-		else if ( [super respondsToSelector:@selector(_isUtilityWindow)] && [super _isUtilityWindow] )
+		else if ( [self styleMask] & NSUtilityWindowMask )
 		{
 			// Do not allow utility windows to grab the focus except when the
 			// user presses Control-F6
@@ -920,7 +904,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
 				return;
 		}
-#endif	// !USE_NATIVE_EVENTS
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsMakeKeyWindow)] )
@@ -930,7 +913,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
@@ -939,7 +922,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
 		{
@@ -1034,7 +1017,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 					for ( ; i < nCount; i++ )
 					{
 						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
 						{
 							[pWindow makeKeyWindow];
 							break;
@@ -1075,7 +1058,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
-	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
+	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
@@ -1133,7 +1116,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
 	// closable non-Java windows.
-	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLWindow class]] && ![[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLPanel class]] && ![self isKindOfClass:[VCLWindow class]] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
@@ -1173,22 +1156,35 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)resignKeyWindow
 {
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 	{
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		if ( [[self className] isEqualToString:pCocoaAppWindowString] )
 		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
+			NSResponder *pResponder = [self firstResponder];
+			if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+			{
+				if ( [pResponder hasMarkedText] )
+					[pResponder insertText:pCancelInputMethodText];
+				[pResponder abandonInput];
+			}
 		}
+#ifdef USE_NATIVE_EVENTS
+		else if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+		{
+			if ( mpFrame )
+			{
+				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
+				JavaSalEventQueue::postCachedEvent( &aEvent );
+			}
+		}
+#endif	// USE_NATIVE_EVENTS
 
 		// Fix bug 3557 by forcing any non-utility windows to the back when
 		// they lose focus while cycling through windows with the Command-`
 		// shortcut. Fix bug 3557 by including the event's device dependent
 		// modifiers if the Shift key is pressed and excluding the Control key
 		// modifier if the Control key is pressed.
-		if ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] )
+		if ( ! ( [self styleMask] & NSUtilityWindowMask ) )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
@@ -1207,16 +1203,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 		}
 	}
-#ifdef USE_NATIVE_EVENTS
-	else if ( [self isKindOfClass:[VCLWindow class]] )
-	{
-		if ( mpFrame )
-		{
-			JavaSalEvent aEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
-		}
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	if ( [super respondsToSelector:@selector(poseAsResignKeyWindow)] )
 		[super poseAsResignKeyWindow];
@@ -1439,7 +1425,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( [self isVisible] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 		VCLEventQueue_fullScreen( self, NO );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
@@ -1447,7 +1433,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	if ( [self isVisible] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || [[self className] isEqualToString:pCocoaAppWindowString] ) )
 		VCLEventQueue_fullScreen( self, YES );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
@@ -1456,19 +1442,25 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)windowDidMove:(NSNotification *)pNotification
 {
-	if ( mpFrame && [self isVisible] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
-		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( &aEvent );
+		if ( mpFrame )
+		{
+			JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
+		}
 	}
 }
 
 - (void)windowDidResize:(NSNotification *)pNotification
 {
-	if ( mpFrame && [self isVisible] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
-		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( &aEvent );
+		if ( mpFrame )
+		{
+			JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
+		}
 	}
 }
 
@@ -1476,17 +1468,21 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	MacOSBOOL bRet = YES;
 
-	if ( mpFrame && [self isVisible] )
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
-		JavaSalEvent aEvent( SALEVENT_CLOSE, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( &aEvent );
-		bRet = NO;
+		if ( mpFrame )
+		{
+			JavaSalEvent aEvent( SALEVENT_CLOSE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( &aEvent );
+			bRet = NO;
+		}
 	}
 
 	return bRet;
 }
 
 #endif	// USE_NATIVE_EVENTS
+
 @end
 
 static MacOSBOOL bNSViewAWTInitialized = NO;
@@ -1499,7 +1495,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	// If the NSViewAWT class has its own drag and drop and services selectors,
 	// redirect them to VCLView's matching selectors
-	if ( pView && !bNSViewAWTInitialized && ( [pView isKindOfClass:[VCLView class]] || [[pView className] isEqualToString:pNSViewAWTString] ) )
+	if ( pView && !bNSViewAWTInitialized && [[pView className] isEqualToString:pNSViewAWTString] )
 	{
 		bNSViewAWTInitialized = YES;
 
@@ -2411,9 +2407,76 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
-	// NSThemeFrame selectors
+	// VCLWindow selectors
+
+	aSelector = @selector(draggingSourceDelegate);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(setDraggingSourceDelegate:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowWillEnterFullScreen:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowDidExitFullScreen:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+#ifdef USE_NATIVE_EVENTS
+	aSelector = @selector(windowWillMove:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowWillResize:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowShouldClose:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+#endif	// USE_NATIVE_EVENTS
 
 #ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+	// NSThemeFrame selectors
+
 	NSBundle *pBundle = [NSBundle bundleForClass:[NSView class]];
 	if ( pBundle )
 	{

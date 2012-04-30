@@ -1032,18 +1032,18 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 	JavaSalFrame*			mpFrame;
 	MacOSBOOL				mbFullScreen;
 	NSRect					maInsets;
-	VCLWindow*				mpParent;
+	NSWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
 	NSRect					maShowOnlyMenusFrame;
 	ULONG					mnStyle;
 	MacOSBOOL				mbUndecorated;
 	MacOSBOOL				mbUtility;
-	VCLWindow*				mpWindow;
+	NSWindow*				mpWindow;
 	NSUInteger				mnWindowStyleMask;
 }
 + (void)updateShowOnlyMenusWindows;
 - (void)adjustColorLevelAndShadow;
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
@@ -1061,7 +1061,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
 - (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs;
-- (VCLWindow *)window;
+- (NSWindow *)window;
 @end
 
 static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
@@ -1084,18 +1084,11 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( !pWindow || ![pWindow isVisible] || aShowOnlyMenusWindowMap.find( pWindow ) != aShowOnlyMenusWindowMap.end() )
+				if ( !pWindow || ![pWindow isVisible] )
 					continue;
 
-				if ( [pWindow isKindOfClass:[VCLWindow class]] )
-				{
-					if ( [(VCLWindow *)pWindow canBecomeKeyOrMainWindow] )
-					{
-						bEnableFocus = YES;
-						break;
-					}
-				}
-				else if ( [pWindow canBecomeKeyWindow] )
+				::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
+				if ( it != aShowOnlyMenusWindowMap.end() && [it->first canBecomeKeyOrMainWindow] )
 				{
 					bEnableFocus = YES;
 					break;
@@ -1124,17 +1117,17 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		if ( mbUtility )
 		{
 			[mpWindow setHasShadow:YES];
-			[mpWindow setLevel:NSFloatingWindowLevel];
+			[(VCLPanel *)mpWindow setFloatingPanel:YES];
 		}
-		else if ( mbShowOnlyMenus || ( mbUndecorated && mpParent ) )
-		{
-			[mpWindow setHasShadow:YES];
-			[mpWindow setLevel:NSPopUpMenuWindowLevel];
-		}
-		else if ( mbUndecorated && [mpWindow canBecomeKeyOrMainWindow] && !mpParent )
+		else if ( mbFullScreen )
 		{
 			[mpWindow setHasShadow:NO];
 			[mpWindow setLevel:NSNormalWindowLevel];
+		}
+		else if ( mbShowOnlyMenus || mbUndecorated )
+		{
+			[mpWindow setHasShadow:YES];
+			[mpWindow setLevel:NSPopUpMenuWindowLevel];
 		}
 		else
 		{
@@ -1144,7 +1137,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
 	[super init];
 
@@ -1181,23 +1174,26 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	VCLView *pContentView = [[VCLView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
 	if ( pContentView )
 	{
-		mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:( mnWindowStyleMask & ~NSUtilityWindowMask ) backing:NSBackingStoreBuffered defer:YES];
+		if ( mbUtility || ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen ) )
+			mpWindow = [[VCLPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:mnWindowStyleMask backing:NSBackingStoreBuffered defer:YES];
+		else
+			mpWindow = [[VCLWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:mnWindowStyleMask backing:NSBackingStoreBuffered defer:YES];
+
 		if ( mpWindow )
 		{
-			if ( mbUtility )
+			if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
 			{
-				// Set to utility window type
-				if ( [mpWindow respondsToSelector:@selector(_setUtilityWindow:)] )
-					[mpWindow _setUtilityWindow:YES];
-				[mpWindow setHidesOnDeactivate:YES];
-			}
-			else if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
-			{
-				[mpWindow setCanBecomeKeyOrMainWindow:NO];
+				[mpWindow setHidesOnDeactivate:NO];
+				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
+				[(VCLPanel *)mpWindow setCanBecomeKeyOrMainWindow:NO];
 			}
 
 			[mpWindow setContentView:pContentView];
-			[mpWindow setFrame:mpFrame];
+
+			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+				[(VCLPanel *)mpWindow setFrame:mpFrame];
+			else
+				[(VCLWindow *)mpWindow setFrame:mpFrame];
 
 			[self adjustColorLevelAndShadow];
 
@@ -1207,7 +1203,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			maInsets = NSMakeRect( aContentRect.origin.x - aFrameRect.origin.x, aContentRect.origin.y - aFrameRect.origin.y, aFrameRect.origin.x + aFrameRect.size.width - aContentRect.origin.x - aContentRect.size.width, aFrameRect.origin.y + aFrameRect.size.height - aContentRect.origin.y - aContentRect.size.height );
 
 			if ( mbShowOnlyMenus )
-				aShowOnlyMenusWindowMap[ mpWindow ] = mpWindow;
+				aShowOnlyMenusWindowMap[ mpWindow ] = (VCLWindow *)mpWindow;
 		}
 	}
 
@@ -1434,10 +1430,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
-			[mpWindow setCanBecomeKeyOrMainWindow:NO];
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow setCanBecomeKeyOrMainWindow:NO];
 		else
-			[mpWindow setCanBecomeKeyOrMainWindow:YES];
+			[(VCLWindow *)mpWindow setCanBecomeKeyOrMainWindow:YES];
 	}
 }
 
@@ -1548,7 +1544,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[mpParent deminiaturize:self];
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
-			if ( [mpWindow canBecomeKeyOrMainWindow] && ![pNoActivate boolValue] )
+			MacOSBOOL bCanBecomeKeyOrMainWindow;
+			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+				bCanBecomeKeyOrMainWindow = [(VCLPanel *)mpWindow canBecomeKeyOrMainWindow];
+			else
+				bCanBecomeKeyOrMainWindow = [(VCLWindow *)mpWindow canBecomeKeyOrMainWindow];
+			if ( bCanBecomeKeyOrMainWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
 		}
 		else
@@ -1569,7 +1570,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (VCLWindow *)window
+- (NSWindow *)window
 {
 	return mpWindow;
 }
@@ -1579,14 +1580,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 @interface VCLCreateWindow : NSObject
 {
 	JavaSalFrame*			mpFrame;
-	VCLWindow*				mpParent;
+	NSWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
 	ULONG					mnStyle;
 	MacOSBOOL				mbUtility;
 	VCLWindowWrapper*		mpWindow;
 }
-+ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
++ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
 - (void)createWindow:(id)pObject;
 - (VCLWindowWrapper *)window;
@@ -1594,14 +1595,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLCreateWindow
 
-+ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
++ (id)createWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
 	VCLCreateWindow *pRet = [[VCLCreateWindow alloc] initWithStyle:nStyle frame:pFrame parent:pParent showOnlyMenus:bShowOnlyMenus utility:bUtility];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(VCLWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility
 {
 	[super init];
 
@@ -3729,7 +3730,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 		// Prevent deadlock when opening a document when toolbars are
 		// showing and we are in show only menus mode.
-		VCLWindow *pParentWindow = nil;
+		NSWindow *pParentWindow = nil;
 		if ( mpParent && mpParent->mpWindow && !mpParent->mbShowOnlyMenus )
 			pParentWindow = [(VCLWindowWrapper *)mpParent->mpWindow window];
 
@@ -3792,7 +3793,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		{
 			Show( TRUE, FALSE );
 			for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
-					(*it)->Show( TRUE );
+				(*it)->Show( TRUE );
 		}
 	}
 

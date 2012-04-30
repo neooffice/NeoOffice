@@ -86,6 +86,20 @@
 - (MacOSBOOL)inLiveResize;
 @end
 
+@interface VCLPanel : NSPanel
+{
+#ifdef USE_NATIVE_EVENTS
+	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	JavaSalFrame*			mpFrame;
+#endif	// USE_NATIVE_EVENTS
+}
+#ifdef USE_NATIVE_EVENTS
+- (MacOSBOOL)canBecomeKeyOrMainWindow;
+- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
+- (void)setFrame:(JavaSalFrame *)pFrame;
+#endif	// USE_NATIVE_EVENTS
+@end
+
 @interface VCLWindow : NSWindow
 {
 #ifdef USE_NATIVE_EVENTS
