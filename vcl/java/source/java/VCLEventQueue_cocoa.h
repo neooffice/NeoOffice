@@ -79,10 +79,14 @@
 @interface NSWindow (VCLWindow)
 - (void)_clearModalWindowLevel;
 - (NSRect)_frameOnExitFromFullScreen;
+#ifndef USE_NATIVE_EVENTS
 - (MacOSBOOL)_isUtilityWindow;
+#endif	// !USE_NATIVE_EVENTS
 - (void)_restoreModalWindowLevel;
 - (void)_setModalWindowLevel;
+#ifndef USE_NATIVE_EVENTS
 - (void)_setUtilityWindow:(MacOSBOOL)bUtilityWindow;
+#endif	// !USE_NATIVE_EVENTS
 - (MacOSBOOL)inLiveResize;
 @end
 

@@ -498,9 +498,9 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 #endif	 // USE_NATIVE_WINDOW
 
-#ifdef USE_NATIVE_EVENTS
-
 @implementation VCLPanel
+
+#ifdef USE_NATIVE_EVENTS
 
 - (MacOSBOOL)canBecomeKeyOrMainWindow
 {
@@ -517,9 +517,9 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 	mpFrame = pFrame;
 }
 
-@end
-
 #endif	// USE_NATIVE_EVENTS
+
+@end
 
 @interface NSWindow (VCLWindowPoseAs)
 - (void)poseAsBecomeKeyWindow;
@@ -949,6 +949,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		if ( [self isVisible] )
 		{
+#ifndef USE_NATIVE_EVENTS
 			NSView *pContentView = [self contentView];
 			if ( pContentView )
 			{
@@ -971,7 +972,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 					[self setFrame:aFrame display:NO];
 
-#ifndef USE_NATIVE_EVENTS
 					// Adjust origin of subviews by height change
 					if ( bUseQuickTimeContentViewHack )
 					{
@@ -993,7 +993,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 						}
 					}
 					else
-#endif	// !USE_NATIVE_EVENTS
 					{
 						NSRect aBounds = [pContentView bounds];
 						aBounds.origin.y += fHeightChange;
@@ -1001,6 +1000,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 					}
 				}
 			}
+#endif	// !USE_NATIVE_EVENTS
 		}
 		else
 		{
@@ -1082,7 +1082,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			if ( pChars && [pChars isEqualToString:@"m"] )
 			{
 				// Fix bug 3562 by not allowing utility windows to be minimized
-				if ( ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] ) )
+				if ( ! ( [self styleMask] & NSUtilityWindowMask ) )
 					[self miniaturize:self];
 				return YES;
 			}
