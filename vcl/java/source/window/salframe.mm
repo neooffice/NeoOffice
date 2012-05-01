@@ -1946,7 +1946,7 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
-::rtl::OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
+OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
 {
 	sal_Unicode nChar = 0;
 
@@ -3488,7 +3488,16 @@ XubString JavaSalFrame::GetKeyName( USHORT nKeyCode )
 	XubString aRet;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalFrame::GetKeyName not implemented\n" );
+	if ( nKeyCode & KEY_SHIFT )
+		aRet += (sal_Unicode)0x21e7;
+	if ( nKeyCode & KEY_MOD3 )
+		aRet += (sal_Unicode)0x2303;
+	if ( nKeyCode & KEY_MOD1 )
+		aRet += (sal_Unicode)0x2318;
+	if ( nKeyCode & KEY_MOD2 )
+		aRet += (sal_Unicode)0x2325;
+
+	aRet += XubString( ConvertVCLKeyCode( nKeyCode ) );
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 		aRet = XubString( mpVCLFrame->getKeyName( nKeyCode ) );
