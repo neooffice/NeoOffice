@@ -1182,7 +1182,8 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mpData( pData ),
-	mbNative( false )
+	mbNative( false ),
+	mbShutdownCancelled( sal_False )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
 #endif	// USE_NATIVE_EVENTS
@@ -1211,7 +1212,8 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 	mnID( 0 ),
 	mpFrame( NULL ),
 	mpData( NULL ),
-	mbNative( false )
+	mbNative( false ),
+	mbShutdownCancelled( sal_False )
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL )
 #endif	// USE_NATIVE_EVENTS
@@ -1224,6 +1226,7 @@ JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
 		mpData = pEvent->mpData;
 		maPath = pEvent->maPath;
 		mbNative = pEvent->mbNative;
+		mbShutdownCancelled = pEvent->mbShutdownCancelled;
 
 		// Assign ownership of data pointer to this
 		pEvent->mpData = NULL;
@@ -1271,7 +1274,7 @@ void JavaSalEvent::addRepeatCount( USHORT nCount )
 
 void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
 {
-	if ( mpData && getID() == SALEVENT_PAINT )
+	if ( mpData && mnID == SALEVENT_PAINT )
 	{
 		Rectangle aUpdateRect( getUpdateRect() );
 		aUpdateRect.Justify();
@@ -1307,7 +1310,8 @@ void JavaSalEvent::addWheelRotation( long nRotation )
 void JavaSalEvent::cancelShutdown()
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::cancelShutdown not implemented\n" );
+	if ( mnID == SALEVENT_SHUTDOWN )
+		mbShutdownCancelled = sal_True;
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		mpVCLEvent->cancelShutdown();
@@ -2218,7 +2222,7 @@ const Rectangle JavaSalEvent::getUpdateRect()
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
 #ifdef USE_NATIVE_EVENTS
-	if ( mpData && getID() == SALEVENT_PAINT )
+	if ( mpData && mnID == SALEVENT_PAINT )
 	{
 		SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 		aRet = Rectangle( Point( pPaintEvent->mnBoundX, pPaintEvent->mnBoundY ), Size( pPaintEvent->mnBoundWidth, pPaintEvent->mnBoundHeight ) );
@@ -2286,7 +2290,11 @@ short JavaSalEvent::getMenuID()
 	short nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getMenuID not implemented\n" );
+	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
+	{
+		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
+		nRet = pMenuEvent->mnId;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getMenuID();
@@ -2302,7 +2310,11 @@ void *JavaSalEvent::getMenuCookie()
 	void *pRet = NULL;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getMenuCookie not implemented\n" );
+	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
+	{
+		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
+		pRet = pMenuEvent->mpMenu;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getMenuCookie();
@@ -2382,7 +2394,7 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 	sal_Bool bRet = sal_False;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::isShutdownCancelled not implemented\n" );
+	bRet = mbShutdownCancelled;
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		bRet = mpVCLEvent->isShutdownCancelled();
@@ -2571,6 +2583,8 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 	sal_Bool bRet = sal_False;
 
 #ifdef USE_NATIVE_EVENTS
+	MutexGuard aGuard( maMutex );
+
 	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
 	for ( ; it != maNativeEventQueue.end(); ++it )
 	{
@@ -2607,7 +2621,8 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 void JavaSalEventQueue::dispatchNextEvent()
 {
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEventQueue::dispatchNextEvent not implemented\n" );
+	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )
@@ -2685,6 +2700,8 @@ sal_Bool JavaSalEventQueue::isInitialized()
 sal_Bool JavaSalEventQueue::isShutdownDisabled()
 {
 #ifdef USE_NATIVE_EVENTS
+	MutexGuard aGuard( maMutex );
+
 	return mbShutdownDisabled;
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
@@ -2846,6 +2863,8 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 {
 #ifdef USE_NATIVE_EVENTS
+	MutexGuard aGuard( maMutex );
+
 	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
 	for ( ; it != maNativeEventQueue.end(); ++it )
 	{
@@ -2877,7 +2896,31 @@ void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 {
 #ifdef USE_NATIVE_EVENTS
+	MutexGuard aGuard( maMutex );
+
 	mbShutdownDisabled = bShutdownDisabled;
+	if ( mbShutdownDisabled )
+	{
+		::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
+		for ( ; it != maNativeEventQueue.end(); ++it )
+		{
+			JavaSalEvent *pEvent = (*it)->getEvent();
+			if ( pEvent && pEvent->getID() == SALEVENT_SHUTDOWN )
+				pEvent->cancelShutdown();
+		}
+
+		purgeRemovedEventsFromFront( &maNativeEventQueue );
+
+		it = maNonNativeEventQueue.begin();
+		for ( ; it != maNonNativeEventQueue.end(); ++it )
+		{
+			JavaSalEvent *pEvent = (*it)->getEvent();
+			if ( pEvent && pEvent->getID() == SALEVENT_SHUTDOWN )
+				pEvent->cancelShutdown();
+		}
+
+		purgeRemovedEventsFromFront( &maNonNativeEventQueue );
+	}
 #else	// USE_NATIVE_EVENTS
 	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
 	if ( pVCLEventQueue )

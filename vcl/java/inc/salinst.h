@@ -132,6 +132,7 @@ class SAL_DLLPRIVATE JavaSalEvent
 	void*					mpData;
 	::rtl::OUString			maPath;
 	bool					mbNative;
+	sal_Bool				mbShutdownCancelled;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
 #endif	// USE_NATIVE_EVENTS
