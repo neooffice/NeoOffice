@@ -1054,6 +1054,7 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (MacOSBOOL)isFloatingWindow;
 - (void)makeModal:(id)pObject;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
+- (void)setContentMinSize:(NSSize)aContentMinSize;
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
 - (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
@@ -1196,6 +1197,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[(VCLWindow *)mpWindow setFrame:mpFrame];
 
 			[self adjustColorLevelAndShadow];
+			[self setContentMinSize:NSMakeSize( 1, 1 )];
 
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
@@ -1376,6 +1378,22 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
+- (void)setContentMinSize:(NSSize)aContentMinSize
+{
+	if ( mpWindow )
+	{
+		// Make sure that there is a minimum amount of content area
+		if ( mbUndecorated && aContentMinSize.width < 1 )
+			aContentMinSize.width = 1;
+		else if ( !mbUndecorated && aContentMinSize.width < 200 )
+			aContentMinSize.width = 200;
+		if ( aContentMinSize.height < 1 )
+			aContentMinSize.height = 1;
+
+		[mpWindow setContentMinSize:aContentMinSize];
+	}
+}
+
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -1447,24 +1465,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pMinSize )
         return;
 
-	if ( mpWindow )
-	{
-		NSSize aMinSize = [pMinSize sizeValue];
-
-		// Make sure that there is a minimum amount of content area
-		if ( mbUndecorated && aMinSize.width < 1 )
-			aMinSize.width = 1;
-		else if ( !mbUndecorated && aMinSize.width < 200 )
-			aMinSize.width = 200;
-		if ( aMinSize.height < 1 )
-			aMinSize.height = 1;
-
-		const NSRect aInsets = [self insets];
-		aMinSize.width += aInsets.origin.x + aInsets.size.width;
-		aMinSize.height += aInsets.origin.y + aInsets.size.height;
-
-		[mpWindow setMinSize:aMinSize];
-	}
+	[self setContentMinSize:[pMinSize sizeValue]];
 }
 
 - (void)setState:(VCLWindowWrapperArgs *)pArgs
@@ -1482,7 +1483,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// menu handler on Mac OS X. Also, don't allow utility windows to be
 	// minimized.
 	unsigned long nState = [pState unsignedLongValue];
-	if ( !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
+	if ( !mbUtility && !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
 		if ( nState == SAL_FRAMESTATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
 		{
@@ -2500,7 +2501,7 @@ id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
 
 ULONG JavaSalFrame::GetState()
 {
-	ULONG nRet = SAL_FRAMESTATE_MINIMIZED;
+	ULONG nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
@@ -2509,7 +2510,7 @@ ULONG JavaSalFrame::GetState()
 
 		VCLWindowWrapperArgs *pGetStateArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(getContentView:) withObject:pGetStateArgs waitUntilDone:YES modes:pModes];
+		[mpWindow performSelectorOnMainThread:@selector(getState:) withObject:pGetStateArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pState = (NSNumber *)[pGetStateArgs result];
 		if ( pState )
 			nRet = [pState unsignedLongValue];
