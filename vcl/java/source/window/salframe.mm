@@ -2691,8 +2691,9 @@ void JavaSalFrame::UpdateLayer()
 		mpGraphics->setLayer( maFrameLayer );
 
 		// Post a paint event
-		JavaSalEvent aEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
-		JavaSalEventQueue::postCachedEvent( &aEvent );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
 	}
 	else
 	{
@@ -2732,8 +2733,9 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL JavaSalFrame::PostEvent( void *pData )
 {
-	JavaSalEvent aEvent( SALEVENT_USEREVENT, this, pData );
-	JavaSalEventQueue::postCachedEvent( &aEvent );
+	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_USEREVENT, this, pData );
+	JavaSalEventQueue::postCachedEvent( pEvent );
+	pEvent->release();
 	return TRUE;
 }
 
@@ -2886,8 +2888,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		maSysData.pView = (NSView *)GetNativeWindowContentView( bTopLevelWindow );
 		mbCenter = FALSE;
 
-		JavaSalEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
-		aEvent.dispatch();
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+		pEvent->dispatch();
+		pEvent->release();
 
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );
@@ -2912,8 +2915,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	else
 	{
 		// End composition
-		JavaSalEvent aEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
-		aEvent.dispatch();
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
+		pEvent->dispatch();
+		pEvent->release();
 
 		// Remove the native window since it is destroyed when hidden
 		maSysData.pView = NULL;
@@ -2923,8 +2927,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// after closing a window whose child window had focus
 		if ( pSalData->mpFocusFrame == this )
 		{
-			JavaSalEvent aFocusEvent( SALEVENT_LOSEFOCUS, this, NULL );
-			aFocusEvent.dispatch();
+			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, this, NULL );
+			pFocusEvent->dispatch();
+			pFocusEvent->release();
 		}
 
 		if ( pSalData->mpLastDragFrame == this )
@@ -3122,8 +3127,9 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 #endif	// USE_NATIVE_EVENTS
 
 	// Update the cached position immediately
-	JavaSalEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
-	aEvent.dispatch();
+	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+	pEvent->dispatch();
+	pEvent->release();
 
 	mbInSetPosSize = FALSE;
 }
@@ -3376,8 +3382,9 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 	// 1203 by not doing this update if we are in the Show() method.
 	if ( bSuccess && !mbInShow )
 	{
-		JavaSalEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
-		aEvent.dispatch();
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+		pEvent->dispatch();
+		pEvent->release();
 	}
 }
 

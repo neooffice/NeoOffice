@@ -751,8 +751,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		{
 			if ( mpFrame )
 			{
-				JavaSalEvent aEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
-				JavaSalEventQueue::postCachedEvent( &aEvent );
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
 			}
 		}
 #endif	// USE_NATIVE_EVENTS
@@ -1173,8 +1174,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		{
 			if ( mpFrame )
 			{
-				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
-				JavaSalEventQueue::postCachedEvent( &aEvent );
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
 			}
 		}
 #endif	// USE_NATIVE_EVENTS
@@ -1446,8 +1448,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		if ( mpFrame )
 		{
-			JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 		}
 	}
 }
@@ -1458,8 +1461,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		if ( mpFrame )
 		{
-			JavaSalEvent aEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 		}
 	}
 }
@@ -1472,8 +1476,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		if ( mpFrame )
 		{
-			JavaSalEvent aEvent( SALEVENT_CLOSE, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_CLOSE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 			bRet = NO;
 		}
 	}

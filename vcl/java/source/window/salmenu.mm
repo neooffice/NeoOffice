@@ -577,12 +577,17 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 - (void)selected
 {
 #ifdef USE_NATIVE_EVENTS
-	JavaSalEvent aActivateEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEvent aCommandEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( &aActivateEvent );
-	JavaSalEventQueue::postCachedEvent( &aCommandEvent );
-	JavaSalEventQueue::postCachedEvent( &aDeactivateEvent );
+	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pActivateEvent );
+	pActivateEvent->release();
+
+	JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pCommandEvent );
+	pCommandEvent->release();
+
+	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
+	pDeactivateEvent->release();
 #else	// USE_NATIVE_EVENTS
 	JavaSalEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
 #endif	// USE_NATIVE_EVENTS
@@ -1277,9 +1282,9 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	}
 
 	// Post the SALEVENT_MENUACTIVATE event
-	SalMenuEvent *pActivateEvent = new SalMenuEvent( 0, pVCLMenuWrapper );
-	JavaSalEvent aActivateEvent( SALEVENT_MENUACTIVATE, pFrame, pActivateEvent );
-	aActivateEvent.dispatch();
+	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
+	pActivateEvent->dispatch();
+	pActivateEvent->release();
 
 	USHORT nCount = pVCLMenuWrapper->GetItemCount();
 	for( USHORT i = 0; i < nCount; i++ )
@@ -1296,8 +1301,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	}
 
 	// Post the SALEVENT_MENUDEACTIVATE event
-	SalMenuEvent *pDeactivateEvent = new SalMenuEvent( 0, pVCLMenuWrapper );
-	JavaSalEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
-	aDeactivateEvent.dispatch();
+	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pFrame, new SalMenuEvent( 0, pVCLMenuWrapper ) );
+	pDeactivateEvent->dispatch();
+	pDeactivateEvent->release();
 #endif	// !NO_NATIVE_MENUS
 }

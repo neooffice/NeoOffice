@@ -212,8 +212,10 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout );
 
 						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, JavaImplFont *pFont, const SalATSLayout *pCurrentLayout );
-						~ImplATSLayoutData();
+protected:
+	virtual				~ImplATSLayoutData();
 
+public:
 	void				Destroy();
 	const Rectangle&	GetGlyphBounds();
 	bool				IsValid() const { return mbValid; }
@@ -1461,7 +1463,7 @@ void ImplATSLayoutData::Release() const
 		return;
 
 	// const_cast because some compilers violate ANSI C++ spec
-	delete const_cast<ImplATSLayoutData*>( this );
+	delete const_cast< ImplATSLayoutData* >( this );
 }
 
 // ============================================================================

@@ -74,7 +74,7 @@ SalData::~SalData()
 
 	while ( maPendingDocumentEventsList.size() )
 	{
-		delete maPendingDocumentEventsList.front();
+		maPendingDocumentEventsList.front()->release();
 		maPendingDocumentEventsList.pop_front();
 	}
 }

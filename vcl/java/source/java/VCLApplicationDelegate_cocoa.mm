@@ -79,8 +79,9 @@ static void HandleAboutRequest()
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		JavaSalEvent aEvent( SALEVENT_ABOUT, NULL, NULL);
-		JavaSalEventQueue::postCachedEvent( &aEvent );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
 	}
 }
 
@@ -98,8 +99,9 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 		}
 		else
 		{
-			JavaSalEvent aEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
+			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 		}
 	}
 }
@@ -110,8 +112,9 @@ static void HandlePreferencesRequest()
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
-		JavaSalEvent aEvent( SALEVENT_PREFS, NULL, NULL);
-		JavaSalEventQueue::postCachedEvent( &aEvent );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
 	}
 }
 
@@ -128,10 +131,11 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 		if ( !Application::IsShutDown() && !JavaSalEventQueue::isShutdownDisabled() )
 		{
-			JavaSalEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-			JavaSalEventQueue::postCachedEvent( &aEvent );
-			while ( !Application::IsShutDown() && !aEvent.isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			while ( !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
 				Application::Yield();
+			pEvent->release();
 
 			if ( Application::IsShutDown() )
 			{

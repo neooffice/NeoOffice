@@ -602,7 +602,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	if ( !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		pEvent->dispatch();
-		delete pEvent;
+		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
 		return;
@@ -615,7 +615,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		pEvent = pSalData->maPendingDocumentEventsList.front();
 		pSalData->maPendingDocumentEventsList.pop_front();
 		pEvent->dispatch();
-		delete pEvent;
+		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
 		return;
@@ -733,7 +733,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 					bContinue = false;
 				break;
 		}
-		delete pEvent;
+		pEvent->release();
 
 #ifdef USE_NATIVE_WINDOW
 		JavaSalFrame::FlushAllFrames();
@@ -1115,8 +1115,9 @@ void SalYieldMutex::acquire()
 					aDelay.Seconds = 0;
 					aDelay.Nanosec = 50;
 					maMainThreadCondition.reset();
-					JavaSalEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-					JavaSalEventQueue::postCachedEvent( &aUserEvent );
+					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+					JavaSalEventQueue::postCachedEvent( pUserEvent );
+					pUserEvent->release();
 					if ( !maMainThreadCondition.check() )
 						maMainThreadCondition.wait( &aDelay );
 					maMainThreadCondition.set();
@@ -1183,10 +1184,11 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	mpFrame( pFrame ),
 	mpData( pData ),
 	mbNative( false ),
-	mbShutdownCancelled( sal_False )
+	mbShutdownCancelled( sal_False ),
 #else	// USE_NATIVE_EVENTS
-	mpVCLEvent( NULL )
+	mpVCLEvent( NULL ),
 #endif	// USE_NATIVE_EVENTS
+	mnRefCount( 1 )
 {
 #ifdef USE_NATIVE_EVENTS
 	switch ( mnID )
@@ -1205,45 +1207,13 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 #endif	// USE_NATIVE_EVENTS
 }
 
-// -------------------------------------------------------------------------
-
-JavaSalEvent::JavaSalEvent( JavaSalEvent *pEvent ) :
-#ifdef USE_NATIVE_EVENTS
-	mnID( 0 ),
-	mpFrame( NULL ),
-	mpData( NULL ),
-	mbNative( false ),
-	mbShutdownCancelled( sal_False )
-#else	// USE_NATIVE_EVENTS
-	mpVCLEvent( NULL )
-#endif	// USE_NATIVE_EVENTS
-{
-#ifdef USE_NATIVE_EVENTS
-	if ( pEvent )
-	{
-		mnID = pEvent->mnID;
-		mpFrame = pEvent->mpFrame;
-		mpData = pEvent->mpData;
-		maPath = pEvent->maPath;
-		mbNative = pEvent->mbNative;
-		mbShutdownCancelled = pEvent->mbShutdownCancelled;
-
-		// Assign ownership of data pointer to this
-		pEvent->mpData = NULL;
-	}
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEvent *pVCLEvent = pEvent->getVCLEvent();
-	if ( pVCLEvent && pVCLEvent->getJavaObject() )
-		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
-#endif	// USE_NATIVE_EVENTS
-}
-
 #ifndef USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
 JavaSalEvent::JavaSalEvent( com_sun_star_vcl_VCLEvent *pVCLEvent ) :
-	mpVCLEvent( NULL )
+	mpVCLEvent( NULL ),
+	mnRefCount( 1 )
 {
 	if ( pVCLEvent && pVCLEvent->getJavaObject() )
 		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
@@ -1322,10 +1292,11 @@ void JavaSalEvent::cancelShutdown()
 
 void JavaSalEvent::dispatch()
 {
-	USHORT nID = getID();
 #ifdef USE_NATIVE_EVENTS
+	USHORT nID = mnID;
 	void *pData = mpData;
 #else	// USE_NATIVE_EVENTS
+	USHORT nID = getID();
 	void *pData = getData();
 #endif	// USE_NATIVE_EVENTS
 	SalData *pSalData = GetSalData();
@@ -1374,8 +1345,8 @@ void JavaSalEvent::dispatch()
 			}
 			else
 			{
-				JavaSalEvent *pEvent = new JavaSalEvent( this );
-				pSalData->maPendingDocumentEventsList.push_back( pEvent );
+				reference();
+				pSalData->maPendingDocumentEventsList.push_back( this );
 			}
 			return;
 		}
@@ -2403,19 +2374,36 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 	return bRet;
 }
 
+// ----------------------------------------------------------------------------
+
+void JavaSalEvent::reference() const
+{ 
+	++mnRefCount;
+}
+
+// ----------------------------------------------------------------------------
+
+void JavaSalEvent::release() const
+{
+	if ( --mnRefCount > 0 )
+		return;
+
+	// const_cast because some compilers violate ANSI C++ spec
+	delete const_cast< JavaSalEvent* >( this );
+}
+
 // =========================================================================
 
 JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std::list< JavaSalEventQueueItem* > *pEventQueue ) :
-	mpEvent( NULL ),
+	mpEvent( pEvent ),
 	mpEventQueue( pEventQueue ),
 	mbRemove( false ),
 	mnType( 0 )
 {
-	if ( pEvent )
-		mpEvent = new JavaSalEvent( pEvent );
-
 	if ( mpEvent )
 	{
+		mpEvent->reference();
+
 		// Set event type
 		switch ( mpEvent->getID() )
 		{
@@ -2449,7 +2437,7 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 JavaSalEventQueueItem::~JavaSalEventQueueItem()
 {
 	if ( mpEvent )
-		delete mpEvent;
+		mpEvent->release();
 }
 
 // =========================================================================
@@ -2662,8 +2650,9 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 	if ( pEventQueue->size() )
 	{
 		JavaSalEventQueueItem *pItem = pEventQueue->front();
-		if ( pItem->getEvent() )
-			pRet = new JavaSalEvent( pItem->getEvent() );
+		pRet = pItem->getEvent();
+		if ( pRet )
+			pRet->reference();
 		pItem->remove();
 		purgeRemovedEventsFromFront( pEventQueue );
 	}

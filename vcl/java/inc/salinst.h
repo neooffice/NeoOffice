@@ -136,13 +136,17 @@ class SAL_DLLPRIVATE JavaSalEvent
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
 #endif	// USE_NATIVE_EVENTS
+	mutable int				mnRefCount;
 
 public:
 							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString() );
-							JavaSalEvent( JavaSalEvent *pEvent );
+#ifndef USE_NATIVE_EVENTS
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
+#endif	// !USE_NATIVE_EVENTS
+protected:
 	virtual					~JavaSalEvent();
 
+public:
 #ifdef USE_NATIVE_EVENTS
 	void					addRepeatCount( USHORT nCount );
 	void					addUpdateRect( const Rectangle& rRect );
@@ -182,6 +186,8 @@ public:
 	bool					isNative() { return mbNative; }
 #endif	// USE_NATIVE_EVENTS
 	sal_Bool				isShutdownCancelled();
+	void					reference() const;
+	void					release() const;
 };
 
 // -------------------------
