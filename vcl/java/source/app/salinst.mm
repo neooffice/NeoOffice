@@ -2899,6 +2899,8 @@ void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 {
 #ifdef USE_NATIVE_EVENTS
+	VCLEventQueue_cancelTermination();
+
 	MutexGuard aGuard( maMutex );
 
 	mbShutdownDisabled = bShutdownDisabled;
