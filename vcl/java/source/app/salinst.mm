@@ -1779,6 +1779,7 @@ void JavaSalEvent::dispatch()
 
 				// If in live resize, ignore event and just repaint
 				bool bSkipEvent = false;
+#ifndef USE_NATIVE_EVENTS
 				if ( bInLiveResize )
 				{
 					timeval aCurrentTime;
@@ -1786,6 +1787,7 @@ void JavaSalEvent::dispatch()
 					if ( pSalData->mpLastResizeFrame == pFrame && pSalData->maLastResizeTime >= aCurrentTime )
 						bSkipEvent = true;
 				}
+#endif	// !USE_NATIVE_EVENTS
 
 				// If too little time has passed since the last "in live resize"
 				// event, skip it and repost this event

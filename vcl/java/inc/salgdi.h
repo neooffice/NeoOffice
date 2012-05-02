@@ -227,6 +227,7 @@ private:
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
+	SalColor				mnBackgroundColor;
 	CGLayerRef				maLayer;
 	sal_uInt32				mnPixelContextData;
 	CGContextRef			maPixelContext;
@@ -351,6 +352,7 @@ public:
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
+	void					setBackgroundColor( SalColor nBackgroundColor );
 	void					setLayer( CGLayerRef aLayer );
 	void					setNeedsDisplay( NSView *pView );
 };

@@ -1770,6 +1770,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 						CGContextTranslateCTM( aContext, 0, aBounds.origin.y + aBounds.size.height );
 						CGContextScaleCTM( aContext, 1.0, -1.0f );
 						aDestRect.origin.y = aBounds.origin.y + aBounds.size.height - aDestRect.origin.y - aDestRect.size.height;
+						aBounds.origin.y = 0;
 					}
 
 					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
@@ -2711,6 +2712,10 @@ void JavaSalFrame::UpdateLayer()
 	if ( maFrameLayer )
 	{
 		mpGraphics->setLayer( maFrameLayer );
+		if ( mbFullScreen )
+			mpGraphics->setBackgroundColor( 0xff000000 );
+		else
+			mpGraphics->setBackgroundColor( 0xffffffff );
 
 		// Post a paint event
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
@@ -3305,6 +3310,14 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 #endif	// USE_NATIVE_EVENTS
 	mbFullScreen = bFullScreen;
 	mbInShowFullScreen = FALSE;
+
+	if ( maFrameLayer )
+	{
+		if ( mbFullScreen )
+			mpGraphics->setBackgroundColor( 0xff000000 );
+		else
+			mpGraphics->setBackgroundColor( 0xffffffff );
+	}
 }
 
 // -----------------------------------------------------------------------

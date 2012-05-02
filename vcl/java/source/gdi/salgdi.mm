@@ -546,6 +546,7 @@ void JavaSalGraphics::setContextDefaultSettings( CGContextRef aContext, const CG
 // -----------------------------------------------------------------------
 
 JavaSalGraphics::JavaSalGraphics() :
+	mnBackgroundColor( 0x00000000 ),
 	maLayer( NULL ),
 	mnPixelContextData( 0 ),
 	maPixelContext( NULL ),
@@ -1601,8 +1602,46 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 		return;
 
 	// Draw any undrawn operations so that we copy the latest bits
-	CGSize aLayerSize = CGLayerGetSize( maLayer );
-	drawUndrawnNativeOps( aDestContext, CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height ) );
+	drawUndrawnNativeOps( aDestContext, aDestBounds );
+
+	if ( mpFrame && mnBackgroundColor )
+	{
+		// If the layer does not full cover the window, paint the fill color
+		// in the uncovered areas so that no drawing artifacts remain after
+		// resizing a window
+		CGSize aLayerSize = CGLayerGetSize( maLayer );
+		if ( aDestBounds.size.width > aLayerSize.width || aDestBounds.size.height > aLayerSize.height )
+		{
+			CGColorRef aBackgroundColor = CreateCGColorFromSalColor( mnBackgroundColor );
+			if ( aBackgroundColor )
+			{
+				CGMutablePathRef aPath = CGPathCreateMutable();
+				if ( aPath )
+				{
+					CGRect aBottomRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x, aDestBounds.origin.y + aLayerSize.height, aDestBounds.size.width, aDestBounds.size.height - aLayerSize.height ) );
+					if ( !CGRectIsEmpty( aBottomRect ) )
+						CGPathAddRect( aPath, NULL, aBottomRect );
+					CGRect aRightRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x + aLayerSize.width, aDestBounds.origin.y, aDestBounds.size.width - aLayerSize.width, aDestBounds.size.height ) );
+					if ( !CGRectIsEmpty( aRightRect ) )
+						CGPathAddRect( aPath, NULL, aRightRect );
+
+					if ( !CGPathIsEmpty( aPath ) )
+					{
+						CGContextSaveGState( aDestContext );
+						CGContextBeginPath( aDestContext );
+						CGContextAddPath( aDestContext, aPath );
+						CGContextSetFillColorWithColor( aDestContext, aBackgroundColor );
+						CGContextFillPath( aDestContext );
+						CGContextRestoreGState( aDestContext );
+					}
+
+					CGPathRelease( aPath );
+				}
+
+				CGColorRelease( aBackgroundColor );
+			}
+		}
+	}
 
 	// Do not queue this operation since we are copying to another context
 	JavaSalGraphicsCopyLayerOp aOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, maLayer, aSrcPoint, aDestBounds, aDestRect );
@@ -1693,12 +1732,50 @@ void JavaSalGraphics::removeGraphicsChangeListener( JavaSalBitmap *pBitmap )
 
 // -----------------------------------------------------------------------
 
+void JavaSalGraphics::setBackgroundColor( SalColor nBackgroundColor )
+{
+	if ( !mpFrame )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	mnBackgroundColor = nBackgroundColor;
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
 	if ( aLayer != maLayer )
 	{
+		if ( mpFrame && aLayer )
+		{
+			CGSize aLayerSize = CGLayerGetSize( aLayer );
+			CGContextRef aContext = CGLayerGetContext( aLayer );
+			if ( aContext )
+			{
+				// Clear background
+				CGColorRef aBackgroundColor = CreateCGColorFromSalColor( mnBackgroundColor );
+				if ( aBackgroundColor )
+				{
+					CGContextSaveGState( aContext );
+					CGContextBeginPath( aContext );
+					CGContextAddRect( aContext, CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height ) );
+					CGContextSetFillColorWithColor( aContext, aBackgroundColor );
+					CGContextFillPath( aContext );
+					CGContextRestoreGState( aContext );
+
+					CGColorRelease( aBackgroundColor );
+				}
+
+				// Copy old layer to new layer
+				if ( maLayer )
+					CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, 0 ), maLayer );
+			}
+		}
+
 		if ( maLayer )
 			CGLayerRelease( maLayer );
 		maLayer = aLayer;
