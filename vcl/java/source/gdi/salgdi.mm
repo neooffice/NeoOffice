@@ -1728,6 +1728,9 @@ void JavaSalGraphics::setNeedsDisplay( NSView *pView )
 		CGSize aLayerSize = CGLayerGetSize( maLayer );
 		NSRect aBounds = [pView bounds];
 		NSRect aDirtyRect = NSMakeRect( maNeedsDisplayRect.origin.x + aLayerSize.width - aBounds.size.width, maNeedsDisplayRect.origin.y + aLayerSize.height - aBounds.size.height, maNeedsDisplayRect.size.width, maNeedsDisplayRect.size.height );
+		if ( ![pView isFlipped] )
+			aDirtyRect.origin.y = aBounds.origin.y + aBounds.size.height - aDirtyRect.origin.y - aDirtyRect.size.height;
+
 		[pView setNeedsDisplayInRect:aDirtyRect];
 	}
 
