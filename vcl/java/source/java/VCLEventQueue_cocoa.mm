@@ -48,6 +48,14 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
+#ifndef NSEventTypeMagnify
+#define NSEventTypeMagnify 30
+#endif	// !NSEventTypeMagnify
+
+#ifndef NSEventTypeSwipe
+#define NSEventTypeSwipe 31
+#endif	// !NSEventTypeSwipe
+
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 static MacOSBOOL bFontManagerLocked = NO;
@@ -507,6 +515,11 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 	return ( mbCanBecomeKeyOrMainWindow && ![self becomesKeyOnlyIfNeeded] );
 }
 
+- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings
+{
+	mbAllowKeyBindings = bAllowKeyBindings;
+}
+
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
 {
 	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
@@ -815,6 +828,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
+		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mpFrame = NULL;
 
@@ -836,6 +850,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
+		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mpFrame = NULL;
 
@@ -1094,7 +1109,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		// shortcuts
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
 #ifdef USE_NATIVE_EVENTS
-		fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
+		if ( nCommandKey && mbAllowKeyBindings )
+			fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
 #else	// USE_NATIVE_EVENTS
 		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return YES;
@@ -1219,6 +1235,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 	NSEventType nType = [pEvent type];
 
+#ifndef USE_NATIVE_EVENTS
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	if ( nType == NSKeyDown && pSharedResponder && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
@@ -1232,86 +1249,87 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 		// Process any Cocoa commands but ignore when there is marked text
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-#ifdef USE_NATIVE_EVENTS
-		fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
-#else	// USE_NATIVE_EVENTS
 		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return;
-#endif	// USE_NATIVE_EVENTS
 	}
+#endif	// !USE_NATIVE_EVENTS
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 
-	if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] || ( [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] ) )
 	{
-		NSRect aFrame = [self frame];
-		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-		NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
-		NSPoint aLocation = [pEvent locationInWindow];
-		if ( NSPointInRect( aLocation, aTitlebarFrame ) )
+		if ( nType == NSLeftMouseDown || nType == NSLeftMouseUp )
+		{
+			NSRect aFrame = [self frame];
+			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+			NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
+			NSPoint aLocation = [pEvent locationInWindow];
+			if ( NSPointInRect( aLocation, aTitlebarFrame ) )
 #ifdef USE_NATIVE_EVENTS
-			fprintf( stderr, "VCLEventQueue_postWindowMoveSessionEvent not implemented\n" );
+				fprintf( stderr, "VCLEventQueue_postWindowMoveSessionEvent not implemented\n" );
 #else	// USE_NATIVE_EVENTS
-			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
+				VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 #endif	// USE_NATIVE_EVENTS
-	}
-	// Handle scroll wheel and magnify
-	else if ( ( nType == NSScrollWheel || ( nType == 30 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-	{
-		// Post flipped coordinates 
-		NSRect aFrame = [self frame];
-		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-		NSPoint aLocation = [pEvent locationInWindow];
-		int nModifiers = [pEvent modifierFlags];
-		float fDeltaX;
-		float fDeltaY;
-		if ( nType == 30 )
-		{
-			// Magnify events need to be converted to vertical scrolls with
-			// the Command key pressed to force the OOo code to zoom.
-			// Fix bug 3284 by reducing the amount of magnification.
-			nModifiers |= NSCommandKeyMask;
-			fDeltaX = 0;
-			fDeltaY = [pEvent deltaZ] / 8;
 		}
-		else
+		// Handle scroll wheel and magnify
+		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
-			fDeltaX = [pEvent deltaX];
-			fDeltaY = [pEvent deltaY];
-		}
+			// Post flipped coordinates 
+			NSRect aFrame = [self frame];
+			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+			NSPoint aLocation = [pEvent locationInWindow];
+			int nModifiers = [pEvent modifierFlags];
+			float fDeltaX;
+			float fDeltaY;
+			if ( nType == NSEventTypeMagnify )
+			{
+				// Magnify events need to be converted to vertical scrolls with
+				// the Command key pressed to force the OOo code to zoom.
+				// Fix bug 3284 by reducing the amount of magnification.
+				nModifiers |= NSCommandKeyMask;
+				fDeltaX = 0;
+				fDeltaY = [pEvent deltaZ] / 8;
+			}
+			else
+			{
+				fDeltaX = [pEvent deltaX];
+				fDeltaY = [pEvent deltaY];
+			}
 
 #ifdef USE_NATIVE_EVENTS
-		fprintf( stderr, "VCLEventQueue_postMouseWheelEvent not implemented\n" );
+			fprintf( stderr, "VCLEventQueue_postMouseWheelEvent not implemented\n" );
 #else	// USE_NATIVE_EVENTS
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+			VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
 #endif	// USE_NATIVE_EVENTS
-	}
-	// Handle swipe
-	else if ( nType == 31 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		float fDeltaX = [pEvent deltaX] * -1;
-		float fDeltaY = [pEvent deltaY] * -1;
-		if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
+		}
+		// Handle swipe
+		else if ( nType == NSEventTypeSwipe && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] )
 		{
-			unichar pChars[ 1 ];
-			pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
-			unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
-			NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
-			if ( pChar )
+			NSApplication *pApp = [NSApplication sharedApplication];
+			float fDeltaX = [pEvent deltaX] * -1;
+			float fDeltaY = [pEvent deltaY] * -1;
+			if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
 			{
-				NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-				NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-				if ( pKeyDownEvent && pKeyUpEvent )
+				unichar pChars[ 1 ];
+				pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
+				unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
+				NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
+				if ( pChar )
 				{
-					// Post in reverse order since we are posting to the front
-					[pApp postEvent:pKeyUpEvent atStart:YES];
-					[pApp postEvent:pKeyDownEvent atStart:YES];
+					NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					if ( pKeyDownEvent && pKeyUpEvent )
+					{
+						// Post in reverse order since we are posting to the
+						// front
+						[pApp postEvent:pKeyUpEvent atStart:YES];
+						[pApp postEvent:pKeyDownEvent atStart:YES];
+					}
 				}
 			}
 		}
@@ -1341,6 +1359,11 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 }
 
 #ifdef USE_NATIVE_EVENTS
+
+- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings
+{
+	mbAllowKeyBindings = bAllowKeyBindings;
+}
 
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
 {

@@ -1195,9 +1195,17 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	{
 		case SALEVENT_CLOSE:
 		case SALEVENT_GETFOCUS:
+		case SALEVENT_KEYINPUT:
+		case SALEVENT_KEYMODCHANGE:
+		case SALEVENT_KEYUP:
 		case SALEVENT_LOSEFOCUS:
+		case SALEVENT_MOUSEBUTTONDOWN:
+		case SALEVENT_MOUSEBUTTONUP:
+		case SALEVENT_MOUSELEAVE:
+		case SALEVENT_MOUSEMOVE:
 		case SALEVENT_MOVERESIZE:
 		case SALEVENT_PAINT:
+		case SALEVENT_WHEELMOUSE:
 			mbNative = true;
 	}
 
@@ -1501,8 +1509,9 @@ void JavaSalEvent::dispatch()
 #ifdef USE_NATIVE_EVENTS
 						if ( pSalData->mpFocusFrame->mbVisible )
 						{
-							JavaSalEvent aEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
-							JavaSalEventQueue::postCachedEvent( &aEvent );
+							JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
+							JavaSalEventQueue::postCachedEvent( pEvent );
+							pEvent->release();
 						}
 #endif	// USE_NATIVE_EVENTS
 						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
@@ -1515,8 +1524,9 @@ void JavaSalEvent::dispatch()
 #ifdef USE_NATIVE_EVENTS
 					if ( pFrame->mbVisible )
 					{
-						JavaSalEvent aEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
-						JavaSalEventQueue::postCachedEvent( &aEvent );
+						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						JavaSalEventQueue::postCachedEvent( pEvent );
+						pEvent->release();
 					}
 #endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame = pFrame;
@@ -1549,8 +1559,9 @@ void JavaSalEvent::dispatch()
 #ifdef USE_NATIVE_EVENTS
 					if ( pFrame->mbVisible )
 					{
-						JavaSalEvent aEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
-						JavaSalEventQueue::postCachedEvent( &aEvent );
+						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						JavaSalEventQueue::postCachedEvent( pEvent );
+						pEvent->release();
 					}
 #endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame = NULL;
@@ -1780,8 +1791,9 @@ void JavaSalEvent::dispatch()
 				// event, skip it and repost this event
 				if ( bSkipEvent )
 				{
-					JavaSalEvent aEvent( nID, pFrame, NULL );
-					JavaSalEventQueue::postCachedEvent( &aEvent );
+					JavaSalEvent *pEvent = new JavaSalEvent( nID, pFrame, NULL );
+					JavaSalEventQueue::postCachedEvent( pEvent );
+					pEvent->release();
 				}
 				else
 				{
@@ -2409,6 +2421,8 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 		{
 			case SALEVENT_EXTTEXTINPUT:
 			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYMODCHANGE:
+			case SALEVENT_KEYUP:
 				mnType = INPUT_KEYBOARD;
 				break;
 			case SALEVENT_MOUSEMOVE:
