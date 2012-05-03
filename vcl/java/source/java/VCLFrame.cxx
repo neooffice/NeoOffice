@@ -363,6 +363,8 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		args[3].l = NULL;
 	args[4].z = jboolean( bShowOnlyMenus );
 	args[5].z = jboolean( bUtilityWindow );
+#if !defined USE_NATIVE_EVENTS && defined USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+#endif	// !USE_NATIVE_EVENTS && USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 #ifdef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 	args[6].z = jboolean( !IsRunningLeopard() && !IsRunningSnowLeopard() );
 #else	// USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES

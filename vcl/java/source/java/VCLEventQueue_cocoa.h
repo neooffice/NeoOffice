@@ -42,7 +42,9 @@
 #ifdef __OBJC__
 
 @interface VCLView : NSView
+#ifndef USE_NATIVE_EVENTS
 + (void)swizzleSelectors:(NSView *)pView;
+#endif	// !USE_NATIVE_EVENTS
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
@@ -66,9 +68,9 @@
 - (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
-#ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+#if !defined USE_NATIVE_EVENTS && !defined USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 - (NSSize)_bottomCornerSize;
-#endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+#endif	// !USE_NATIVE_EVENTS && !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
