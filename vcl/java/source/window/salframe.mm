@@ -77,6 +77,7 @@ static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
 #endif	// USE_NATIVE_WINDOW
 #if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
 static unsigned int nMainScreen = 0;
+static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
@@ -95,31 +96,12 @@ using namespace vcl;
 
 #ifdef USE_NATIVE_WINDOW
 
-static NSRect GetTotalScreenBounds()
-{
-	NSRect aRet = NSMakeRect( 0, 0, 0, 0 );
-
-	NSArray *pScreens = [NSScreen screens];
-	if ( pScreens )
-	{
-		NSUInteger nCount = [pScreens count];
-		NSUInteger i = 0;
-		for ( ; i < nCount; i++ )
-		{
-			NSScreen *pScreen = [pScreens objectAtIndex:i];
-			if ( pScreen )
-				aRet = NSUnionRect( [pScreen frame], aRet );
-		}
-	}
-
-	return aRet;
-}
-
 static void HandleScreensChangedRequest()
 {
 	MutexGuard aGuard( aScreensMutex );
 
 	nMainScreen = 0;
+	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
 	aVCLScreensVisibleBoundsList.clear();
 
@@ -1800,6 +1782,35 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 		pRet = cit->second;
 
 	return pRet;
+}
+
+// -----------------------------------------------------------------------
+
+NSRect GetTotalScreenBounds()
+{
+	if ( NSIsEmptyRect( aTotalScreenBounds ) )
+	{
+		NSArray *pScreens = [NSScreen screens];
+		if ( pScreens )
+		{
+			NSUInteger nCount = [pScreens count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSScreen *pScreen = [pScreens objectAtIndex:i];
+				if ( pScreen )
+				{
+					NSRect aScreenFrame = [pScreen frame];
+					if ( NSIsEmptyRect( aTotalScreenBounds ) )
+						aTotalScreenBounds = aScreenFrame;
+					else
+						aTotalScreenBounds = NSUnionRect( aScreenFrame, aTotalScreenBounds );
+				}
+			}
+		}
+	}
+
+	return aTotalScreenBounds;
 }
 
 #endif	// USE_NATIVE_WINDOW

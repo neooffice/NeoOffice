@@ -48,6 +48,9 @@
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
+#ifdef __OBJC__
+#include <Foundation/Foundation.h>
+#endif	// __OBJC__
 #include <postmac.h>
 #undef check
 
@@ -209,6 +212,12 @@ public:
 	virtual void			EndSetClipRegion();
 	virtual void			SetScreenNumber( unsigned int nScreen );
 };
+
+#ifdef USE_NATIVE_WINDOW
+#ifdef __OBJC__
+SAL_DLLPRIVATE NSRect GetTotalScreenBounds();
+#endif	// __OBJC__
+#endif	// USE_NATIVE_WINDOW
 
 // Note: this must not be static as the symbol will be loaded by the framework
 // module

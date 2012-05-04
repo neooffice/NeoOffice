@@ -173,6 +173,35 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	return bRet;
 }
 
+#ifdef USE_NATIVE_EVENTS
+
+static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
+{
+	NSPoint aRet = NSZeroPoint;
+
+	if ( pWindow && pEvent )
+	{
+		NSRect aFrame = [pWindow frame];
+		aRet = [pEvent locationInWindow];
+		if ( ![pEvent window] )
+		{
+			aRet.x -= aFrame.origin.x;
+			aRet.y -= aFrame.origin.y;
+		}
+
+		NSRect aContentFrame = [pWindow contentRectForFrameRect:aFrame];
+		aRet.x += aFrame.origin.x - aContentFrame.origin.x;
+		aRet.y += aFrame.origin.y - aContentFrame.origin.y;
+
+		NSRect aTotalScreenBounds = GetTotalScreenBounds();
+		aRet.y = aTotalScreenBounds.origin.y + aTotalScreenBounds.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+	}
+
+	return aRet;
+}
+
+#endif	// USE_NATIVE_EVENTS
+
 @interface IsApplicationActive : NSObject
 {
 	MacOSBOOL					mbActive;
@@ -858,6 +887,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 		[self setReleasedWhenClosed:NO];
 		[self setDelegate:self];
+		[self setAcceptsMouseMovedEvents:YES];
 	}
 #endif	// USE_NATIVE_EVENTS
 
@@ -880,6 +910,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 		[self setReleasedWhenClosed:NO];
 		[self setDelegate:self];
+		[self setAcceptsMouseMovedEvents:YES];
 	}
 #endif	// USE_NATIVE_EVENTS
 
@@ -1313,6 +1344,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		if ( nType == NSLeftMouseDown || nType == NSLeftMouseUp )
 		{
+#ifndef USE_NATIVE_EVENTS
 			NSRect aFrame = [self frame];
 			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
 			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
@@ -1321,32 +1353,13 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			NSPoint aLocation = [pEvent locationInWindow];
 			if ( NSPointInRect( aLocation, aTitlebarFrame ) )
 			{
-#ifdef USE_NATIVE_EVENTS
-				MacOSBOOL bStartSession = ( nType == NSLeftMouseDown ? YES : NO );
-				SalMouseEvent *pMouseEvent = new SalMouseEvent();
-				pMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
-				pMouseEvent->mnX = (long)( aLocation.x - fLeftInset );
-				pMouseEvent->mnY = (long)( aFrame.size.height - aLocation.y - fTopInset );
-				pMouseEvent->mnButton = MOUSE_LEFT;
-				pMouseEvent->mnCode = MOUSE_LEFT;
-
-				JavaSalEvent *pEvent = new JavaSalEvent( bStartSession ? SALEVENT_MOUSEBUTTONDOWN : SALEVENT_MOUSEBUTTONUP, mpFrame, pMouseEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
-#else	// USE_NATIVE_EVENTS
 				VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
-#endif	// USE_NATIVE_EVENTS
 			}
+#endif	// !USE_NATIVE_EVENTS
 		}
 		// Handle scroll wheel and magnify
 		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
-			// Post flipped coordinates 
-			NSRect aFrame = [self frame];
-			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-			NSPoint aLocation = [pEvent locationInWindow];
 			int nModifiers = [pEvent modifierFlags];
 			float fDeltaX;
 			float fDeltaY;
@@ -1366,8 +1379,64 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 
 #ifdef USE_NATIVE_EVENTS
-			fprintf( stderr, "VCLEventQueue_postMouseWheelEvent not implemented\n" );
+			NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
+
+	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
+			// Shift modifier as using it will disable horizontal scrolling.
+			USHORT nCode = 0;
+			if ( nModifiers & NSCommandKeyMask )
+				nCode |= KEY_MOD1;
+			if ( nModifiers & NSAlternateKeyMask )
+				nCode |= KEY_MOD2;
+			if ( nModifiers & NSControlKeyMask )
+				nCode |= KEY_MOD3;
+
+			// Note: no matter what buttons we press, mimic the MouseWheelEvents
+			// in Apple's JVMs always seem to have the following constant
+			// values:
+			//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
+			//   ScrollUnits == 1
+			if ( fDeltaX )
+			{
+				long nScrollAmount = Float32ToLong( fDeltaX );
+				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
+				pWheelMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				pWheelMouseEvent->mnX = (ULONG)aLocation.x;
+				pWheelMouseEvent->mnY = (ULONG)aLocation.y;
+				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
+				pWheelMouseEvent->mnNotchDelta = nScrollAmount;
+				pWheelMouseEvent->mnScrollLines = 1;
+				pWheelMouseEvent->mnCode = nCode;
+				pWheelMouseEvent->mbHorz = TRUE;
+
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
+			}
+			if ( fDeltaY )
+			{
+				long nScrollAmount = Float32ToLong( fDeltaY );
+				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
+				pWheelMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				pWheelMouseEvent->mnX = (ULONG)aLocation.x;
+				pWheelMouseEvent->mnY = (ULONG)aLocation.y;
+				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
+				pWheelMouseEvent->mnNotchDelta = nScrollAmount;
+				pWheelMouseEvent->mnScrollLines = 1;
+				pWheelMouseEvent->mnCode = nCode;
+				pWheelMouseEvent->mbHorz = FALSE;
+
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
+			}
 #else	// USE_NATIVE_EVENTS
+			// Post flipped coordinates 
+			NSRect aFrame = [self frame];
+			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+			NSPoint aLocation = [pEvent locationInWindow];
 			VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
 #endif	// USE_NATIVE_EVENTS
 		}

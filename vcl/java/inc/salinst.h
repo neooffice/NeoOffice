@@ -56,6 +56,8 @@
 #define SALEVENT_ABOUT				((USHORT)130)
 #define SALEVENT_PREFS				((USHORT)140)
 
+#define WHEEL_ROTATION_FACTOR 120
+
 // -----------------
 // - SalYieldMutex -
 // -----------------

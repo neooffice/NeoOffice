@@ -1278,7 +1278,12 @@ void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
 
 void JavaSalEvent::addWheelRotation( long nRotation )
 {
-	fprintf( stderr, "JavaSalEvent::addWheelRotation not implemented\n" );
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
+	{
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+		pWheelMouseEvent->mnNotchDelta += nRotation;
+		pWheelMouseEvent->mnDelta = pWheelMouseEvent->mnNotchDelta * WHEEL_ROTATION_FACTOR;
+	}
 }
 
 #endif	// USE_NATIVE_EVENTS
@@ -1779,7 +1784,6 @@ void JavaSalEvent::dispatch()
 
 				// If in live resize, ignore event and just repaint
 				bool bSkipEvent = false;
-#ifndef USE_NATIVE_EVENTS
 				if ( bInLiveResize )
 				{
 					timeval aCurrentTime;
@@ -1787,7 +1791,6 @@ void JavaSalEvent::dispatch()
 					if ( pSalData->mpLastResizeFrame == pFrame && pSalData->maLastResizeTime >= aCurrentTime )
 						bSkipEvent = true;
 				}
-#endif	// !USE_NATIVE_EVENTS
 
 				// If too little time has passed since the last "in live resize"
 				// event, skip it and repost this event
@@ -1804,7 +1807,11 @@ void JavaSalEvent::dispatch()
 					if ( pSalData->mpLastResizeFrame )
 					{
 						gettimeofday( &pSalData->maLastResizeTime, NULL );
+#ifdef USE_NATIVE_EVENTS
+						pSalData->maLastResizeTime += 100;
+#else	// USE_NATIVE_EVENTS
 						pSalData->maLastResizeTime += 250;
+#endif	// USE_NATIVE_EVENTS
 					}
 
 					// Fix bug 3252 by always comparing the bounds against the
@@ -1924,17 +1931,19 @@ void JavaSalEvent::dispatch()
 			{
 				if ( !pWheelMouseEvent )
 				{
-					// The OOo code expects the opposite in signedness of Java
-					// for vertical scrolling
 					long nWheelRotation = getWheelRotation();
 					BOOL bHorz = isHorizontal();
+#ifndef USE_NATIVE_EVENTS
+					// The OOo code expects the opposite in signedness of Java
+					// for vertical scrolling
 					if ( !bHorz )
 						nWheelRotation *= -1;
+#endif	// !USE_NATIVE_EVENTS
 					pWheelMouseEvent = new SalWheelMouseEvent();
 					pWheelMouseEvent->mnTime = getWhen();
 					pWheelMouseEvent->mnX = getX();
 					pWheelMouseEvent->mnY = getY();
-					pWheelMouseEvent->mnDelta = nWheelRotation * 120;
+					pWheelMouseEvent->mnDelta = nWheelRotation * WHEEL_ROTATION_FACTOR;
 					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
 					pWheelMouseEvent->mnScrollLines = getScrollAmount();
 					pWheelMouseEvent->mnCode = getModifiers();
@@ -2103,7 +2112,18 @@ USHORT JavaSalEvent::getModifiers()
 	USHORT nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getModifiers not implemented\n" );
+	if ( mpData )
+	{
+		if ( mnID == SALEVENT_WHEELMOUSE )
+		{
+			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+			nRet = pWheelMouseEvent->mnCode;
+		}
+		else
+		{
+			fprintf( stderr, "JavaSalEvent::getModifiers not implemented\n" );
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getModifiers();
@@ -2315,7 +2335,11 @@ long JavaSalEvent::getScrollAmount()
 	long nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getScrollAmount not implemented\n" );
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
+	{
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+		nRet = pWheelMouseEvent->mnScrollLines;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getScrollAmount();
@@ -2347,7 +2371,11 @@ long JavaSalEvent::getWheelRotation()
 	long nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getWheelRotation not implemented\n" );
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
+	{
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+		nRet = pWheelMouseEvent->mnNotchDelta;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getWheelRotation();
@@ -2363,7 +2391,11 @@ sal_Bool JavaSalEvent::isHorizontal()
 	sal_Bool bRet = sal_False;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::isHorizontal not implemented\n" );
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
+	{
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+		bRet = (sal_Bool)pWheelMouseEvent->mbHorz;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		bRet = mpVCLEvent->isHorizontal();
