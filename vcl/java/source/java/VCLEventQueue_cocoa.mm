@@ -611,6 +611,9 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
 static NSMutableDictionary *pDraggingSourceDelegates = nil;
+#ifdef USE_NATIVE_EVENTS
+static NSUInteger nMouseMask = 0;
+#endif	// USE_NATIVE_EVENTS
 
 @implementation VCLWindow
 
@@ -1354,34 +1357,51 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{
 			USHORT nID = 0;
-			USHORT nCode = 0;
-			if ( nType == NSMouseMoved || nType == NSMouseEntered )
+			int nModifiers = [pEvent modifierFlags];
+			switch ( nType )
 			{
-				nID = SALEVENT_MOUSEMOVE;
-			}
-			else if ( nType == NSLeftMouseDragged || nType == NSRightMouseDragged || nType == NSOtherMouseDragged )
-			{
-				nID = SALEVENT_MOUSEMOVE;
-				nCode = MOUSE_LEFT;
-			}
-			else if ( nType == NSMouseExited )
-			{
-				nID = SALEVENT_MOUSELEAVE;
-			}
-			else if ( nType == NSLeftMouseDown || nType == NSRightMouseDown || nType == NSOtherMouseDown )
-			{
-				nID = SALEVENT_MOUSEBUTTONDOWN;
-				nCode = MOUSE_LEFT;
-			}
-			else if ( nType == NSLeftMouseUp || nType == NSRightMouseUp || nType == NSOtherMouseUp )
-			{
-				nID = SALEVENT_MOUSEBUTTONUP;
-				nCode = MOUSE_LEFT;
+				case NSMouseMoved:
+					nID = SALEVENT_MOUSEMOVE;
+					nMouseMask = 0;
+					break;
+				case NSMouseEntered:
+				case NSLeftMouseDragged:
+				case NSRightMouseDragged:
+				case NSOtherMouseDragged:
+					nID = SALEVENT_MOUSEMOVE;
+					nModifiers |= nMouseMask;
+					break;
+				case NSMouseExited:
+					nID = SALEVENT_MOUSELEAVE;
+					nModifiers |= nMouseMask;
+					break;
+				case NSLeftMouseDown:
+				case NSRightMouseDown:
+				case NSOtherMouseDown:
+					nID = SALEVENT_MOUSEBUTTONDOWN;
+					nMouseMask |= NSEventMaskFromType( nType );
+					nModifiers |= nMouseMask;
+					break;
+				case NSLeftMouseUp:
+				case NSRightMouseUp:
+				case NSOtherMouseUp:
+					nID = SALEVENT_MOUSEBUTTONUP;
+					nModifiers |= NSEventMaskFromType( nType );
+					nMouseMask &= ~NSEventMaskFromType( nType );
+					break;
+				default:
+					break;
 			}
 
 			if ( nID )
 			{
-				int nModifiers = [pEvent modifierFlags];
+				USHORT nCode = 0;
+				if ( nModifiers & ( NSLeftMouseDownMask | NSLeftMouseUpMask | NSLeftMouseDraggedMask ) )
+					nCode |= MOUSE_LEFT;
+				if ( nModifiers & ( NSRightMouseDownMask | NSRightMouseUpMask | NSRightMouseDraggedMask ) )
+					nCode |= MOUSE_RIGHT;
+				if ( nModifiers & ( NSOtherMouseDownMask | NSOtherMouseUpMask | NSOtherMouseDraggedMask ) )
+					nCode |= MOUSE_MIDDLE;
 				if ( nModifiers & NSCommandKeyMask )
 					nCode |= KEY_MOD1;
 				if ( nModifiers & NSAlternateKeyMask )
