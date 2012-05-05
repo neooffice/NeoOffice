@@ -96,6 +96,33 @@ using namespace vcl;
 
 #ifdef USE_NATIVE_WINDOW
 
+NSRect GetTotalScreenBounds()
+{
+	if ( NSIsEmptyRect( aTotalScreenBounds ) )
+	{
+		NSArray *pScreens = [NSScreen screens];
+		if ( pScreens )
+		{
+			NSUInteger nCount = [pScreens count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSScreen *pScreen = [pScreens objectAtIndex:i];
+				if ( pScreen )
+				{
+					NSRect aScreenFrame = [pScreen frame];
+					if ( NSIsEmptyRect( aTotalScreenBounds ) )
+						aTotalScreenBounds = aScreenFrame;
+					else
+						aTotalScreenBounds = NSUnionRect( aScreenFrame, aTotalScreenBounds );
+				}
+			}
+		}
+	}
+
+	return aTotalScreenBounds;
+}
+
 static void HandleScreensChangedRequest()
 {
 	MutexGuard aGuard( aScreensMutex );
@@ -1782,35 +1809,6 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 		pRet = cit->second;
 
 	return pRet;
-}
-
-// -----------------------------------------------------------------------
-
-NSRect GetTotalScreenBounds()
-{
-	if ( NSIsEmptyRect( aTotalScreenBounds ) )
-	{
-		NSArray *pScreens = [NSScreen screens];
-		if ( pScreens )
-		{
-			NSUInteger nCount = [pScreens count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSScreen *pScreen = [pScreens objectAtIndex:i];
-				if ( pScreen )
-				{
-					NSRect aScreenFrame = [pScreen frame];
-					if ( NSIsEmptyRect( aTotalScreenBounds ) )
-						aTotalScreenBounds = aScreenFrame;
-					else
-						aTotalScreenBounds = NSUnionRect( aScreenFrame, aTotalScreenBounds );
-				}
-			}
-		}
-	}
-
-	return aTotalScreenBounds;
 }
 
 #endif	// USE_NATIVE_WINDOW
