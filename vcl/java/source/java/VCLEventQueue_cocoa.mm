@@ -1385,9 +1385,11 @@ static NSUInteger nMouseMask = 0;
 				case NSLeftMouseUp:
 				case NSRightMouseUp:
 				case NSOtherMouseUp:
+					// Remove matching mouse down mask
 					nID = SALEVENT_MOUSEBUTTONUP;
-					nModifiers |= NSEventMaskFromType( nType );
-					nMouseMask &= ~NSEventMaskFromType( nType );
+					nModifiers |= NSEventMaskFromType( nType - 1 );
+					nMouseMask &= ~NSEventMaskFromType( nType - 1 );
+fprintf( stderr, "Here: %p\n", nMouseMask );
 					break;
 				default:
 					break;
@@ -1396,11 +1398,11 @@ static NSUInteger nMouseMask = 0;
 			if ( nID )
 			{
 				USHORT nCode = 0;
-				if ( nModifiers & ( NSLeftMouseDownMask | NSLeftMouseUpMask | NSLeftMouseDraggedMask ) )
+				if ( nModifiers & NSLeftMouseDownMask )
 					nCode |= MOUSE_LEFT;
-				if ( nModifiers & ( NSRightMouseDownMask | NSRightMouseUpMask | NSRightMouseDraggedMask ) )
+				if ( nModifiers & NSRightMouseDownMask )
 					nCode |= MOUSE_RIGHT;
-				if ( nModifiers & ( NSOtherMouseDownMask | NSOtherMouseUpMask | NSOtherMouseDraggedMask ) )
+				if ( nModifiers & NSOtherMouseDownMask )
 					nCode |= MOUSE_MIDDLE;
 				if ( nModifiers & NSCommandKeyMask )
 					nCode |= KEY_MOD1;
