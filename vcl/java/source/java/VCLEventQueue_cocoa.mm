@@ -207,6 +207,28 @@ static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent
 	return aRet;
 }
 
+static USHORT GetEventCode( NSUInteger nModifiers )
+{
+	USHORT nRet = 0;
+
+	if ( nModifiers & NSLeftMouseDownMask )
+		nRet |= MOUSE_LEFT;
+	if ( nModifiers & NSRightMouseDownMask )
+		nRet |= MOUSE_RIGHT;
+	if ( nModifiers & NSOtherMouseDownMask )
+		nRet |= MOUSE_MIDDLE;
+	if ( nModifiers & NSCommandKeyMask )
+		nRet |= KEY_MOD1;
+	if ( nModifiers & NSAlternateKeyMask )
+		nRet |= KEY_MOD2;
+	if ( nModifiers & NSControlKeyMask )
+		nRet |= KEY_MOD3;
+	if ( nModifiers & NSShiftKeyMask )
+		nRet |= KEY_SHIFT;
+
+	return nRet;
+}
+
 #endif	// USE_NATIVE_EVENTS
 
 @interface IsApplicationActive : NSObject
@@ -1389,7 +1411,6 @@ static NSUInteger nMouseMask = 0;
 					nID = SALEVENT_MOUSEBUTTONUP;
 					nModifiers |= NSEventMaskFromType( nType - 1 );
 					nMouseMask &= ~NSEventMaskFromType( nType - 1 );
-fprintf( stderr, "Here: %p\n", nMouseMask );
 					break;
 				default:
 					break;
@@ -1397,21 +1418,7 @@ fprintf( stderr, "Here: %p\n", nMouseMask );
 
 			if ( nID )
 			{
-				USHORT nCode = 0;
-				if ( nModifiers & NSLeftMouseDownMask )
-					nCode |= MOUSE_LEFT;
-				if ( nModifiers & NSRightMouseDownMask )
-					nCode |= MOUSE_RIGHT;
-				if ( nModifiers & NSOtherMouseDownMask )
-					nCode |= MOUSE_MIDDLE;
-				if ( nModifiers & NSCommandKeyMask )
-					nCode |= KEY_MOD1;
-				if ( nModifiers & NSAlternateKeyMask )
-					nCode |= KEY_MOD2;
-				if ( nModifiers & NSControlKeyMask )
-					nCode |= KEY_MOD3;
-				if ( nModifiers & NSShiftKeyMask )
-					nCode |= KEY_SHIFT;
+				USHORT nCode = GetEventCode( nModifiers );
 
 				NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
 				SalMouseEvent *pMouseEvent = new SalMouseEvent();
@@ -1424,9 +1431,32 @@ fprintf( stderr, "Here: %p\n", nMouseMask );
 					pMouseEvent->mnButton = nCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 				pMouseEvent->mnCode = nCode;
 
+				SalMouseEvent *pExtraMouseEvent = NULL;
+				if ( nID == SALEVENT_MOUSEBUTTONUP )
+				{
+					// Strange but true, fix bug 2157 by posting a synthetic
+					// mouse moved event
+					USHORT nExtraCode = GetEventCode( [pEvent modifierFlags] | nMouseMask );
+					pExtraMouseEvent = new SalMouseEvent();
+					pExtraMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+					pExtraMouseEvent->mnX = (long)aLocation.x;
+					pExtraMouseEvent->mnY = (long)aLocation.y;
+					pExtraMouseEvent->mnButton = 0;
+					pMouseEvent->mnButton = nExtraCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+					pMouseEvent->mnCode = nExtraCode;
+				}
+
 				JavaSalEvent *pEvent = new JavaSalEvent( nID, mpFrame, pMouseEvent );
 				JavaSalEventQueue::postCachedEvent( pEvent );
 				pEvent->release();
+
+				if ( pExtraMouseEvent )
+				{
+					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, mpFrame, pExtraMouseEvent );
+					JavaSalEventQueue::postCachedEvent( pExtraEvent );
+
+					pExtraEvent->release();
+				}
 			}
 		}
 #else	// USE_NATIVE_EVENTS
@@ -1470,13 +1500,7 @@ fprintf( stderr, "Here: %p\n", nMouseMask );
 
 	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
 			// Shift modifier as using it will disable horizontal scrolling.
-			USHORT nCode = 0;
-			if ( nModifiers & NSCommandKeyMask )
-				nCode |= KEY_MOD1;
-			if ( nModifiers & NSAlternateKeyMask )
-				nCode |= KEY_MOD2;
-			if ( nModifiers & NSControlKeyMask )
-				nCode |= KEY_MOD3;
+			USHORT nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
 
 			// Note: no matter what buttons we press, mimic the MouseWheelEvents
 			// in Apple's JVMs always seem to have the following constant
