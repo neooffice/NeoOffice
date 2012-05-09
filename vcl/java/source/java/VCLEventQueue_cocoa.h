@@ -99,6 +99,7 @@
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
+	ULONG					mnLastMetaModifierReleasedTime;
 #endif	// USE_NATIVE_EVENTS
 }
 #ifdef USE_NATIVE_EVENTS
@@ -116,6 +117,7 @@
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
+	ULONG					mnLastMetaModifierReleasedTime;
 #endif	// USE_NATIVE_EVENTS
 }
 + (void)clearModalWindowLevel;

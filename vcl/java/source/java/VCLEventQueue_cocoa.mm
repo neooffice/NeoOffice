@@ -56,6 +56,10 @@
 #define NSEventTypeSwipe 31
 #endif	// !NSEventTypeSwipe
 
+#ifdef USE_NATIVE_EVENTS
+#define MODIFIER_RELEASE_INTERVAL 100
+#endif	// USE_NATIVE_EVENTS
+
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 static MacOSBOOL bFontManagerLocked = NO;
@@ -635,7 +639,6 @@ static VCLResponder *pSharedResponder = nil;
 static NSMutableDictionary *pDraggingSourceDelegates = nil;
 #ifdef USE_NATIVE_EVENTS
 static NSUInteger nMouseMask = 0;
-static NSPoint aLastMouseLocation = NSZeroPoint;
 #endif	// USE_NATIVE_EVENTS
 
 @implementation VCLWindow
@@ -918,6 +921,7 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
+		mnLastMetaModifierReleasedTime = 0;
 
 		[self setReleasedWhenClosed:NO];
 		[self setDelegate:self];
@@ -942,6 +946,7 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
+		mnLastMetaModifierReleasedTime = 0;
 
 		[self setReleasedWhenClosed:NO];
 		[self setDelegate:self];
@@ -1383,6 +1388,7 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 		{
 			USHORT nID = 0;
 			NSUInteger nModifiers = [pEvent modifierFlags];
+
 			switch ( nType )
 			{
 				case NSMouseMoved:
@@ -1421,16 +1427,6 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 
 			if ( nID )
 			{
-				// Cache mouse screen location
-				aLastMouseLocation = [pEvent locationInWindow];
-				NSWindow *pEventWindow = [pEvent window];
-				if ( pEventWindow )
-				{
-					NSRect aEventWindowFrame = [pEventWindow frame];
-					aLastMouseLocation.x += aEventWindowFrame.origin.x;
-					aLastMouseLocation.y += aEventWindowFrame.origin.y;
-				}
-
 				// The OOo code can get confused when we click on a non-focused
 				// window. In these cases, we will receive no mouse move events
 				// so if the OOo code displays a popup menu, the popup menu
@@ -1449,6 +1445,11 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 				}
 				else if ( nID == SALEVENT_MOUSEBUTTONUP )
 				{
+					// Fix bug 3453 by adding back any recently released
+					// modifiers
+					if ( mnLastMetaModifierReleasedTime >= (ULONG)( [pEvent timestamp] * 1000 ) )
+						nModifiers |= NSCommandKeyMask;
+
 					if ( mnIgnoreMouseReleasedModifiers && ( mnIgnoreMouseReleasedModifiers & nModifiers ) == nModifiers )
 					{
 						mnIgnoreMouseReleasedModifiers &= ~nModifiers;
@@ -1508,6 +1509,31 @@ static NSPoint aLastMouseLocation = NSZeroPoint;
 					pExtraEvent->release();
 				}
 			}
+		}
+		// Handle key events
+		else if ( nType == NSKeyDown || nType == NSKeyUp )
+		{
+			fprintf( stderr, "NSKeyDown and NSKeyUp not implemented\n" );
+		}
+		// Handle key modifier change events
+		else if ( nType == NSFlagsChanged )
+		{
+			NSUInteger nModifiers = [pEvent modifierFlags];
+			if ( nModifiers & NSCommandKeyMask )
+				mnLastMetaModifierReleasedTime = 0;
+			else
+				mnLastMetaModifierReleasedTime = (ULONG)( [pEvent timestamp] * 1000 ) + MODIFIER_RELEASE_INTERVAL;
+
+			USHORT nCode = GetEventCode( nModifiers );
+
+			SalKeyModEvent *pKeyModEvent = new SalKeyModEvent();
+			pKeyModEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+			pKeyModEvent->mnCode = nCode;
+			pKeyModEvent->mnModKeyCode = 0;
+
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYMODCHANGE, mpFrame, pKeyModEvent );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 		}
 #else	// USE_NATIVE_EVENTS
 		if ( nType == NSLeftMouseDown || nType == NSLeftMouseUp )
