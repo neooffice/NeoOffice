@@ -197,10 +197,10 @@ static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent
 			aRet.y += aFrame.origin.y - aEventFrame.origin.y;
 		}
 
+		// Translate and flip coordinates within content frame
 		NSRect aContentFrame = [pWindow contentRectForFrameRect:aFrame];
 		aRet.x += aFrame.origin.x - aContentFrame.origin.x;
 		aRet.y += aFrame.origin.y - aContentFrame.origin.y;
-
 		aRet.y = aContentFrame.size.height - aRet.y;
 	}
 
@@ -635,6 +635,7 @@ static VCLResponder *pSharedResponder = nil;
 static NSMutableDictionary *pDraggingSourceDelegates = nil;
 #ifdef USE_NATIVE_EVENTS
 static NSUInteger nMouseMask = 0;
+static NSPoint aLastMouseLocation = NSZeroPoint;
 #endif	// USE_NATIVE_EVENTS
 
 @implementation VCLWindow
@@ -915,6 +916,7 @@ static NSUInteger nMouseMask = 0;
 	{
 		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
+		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
 
 		[self setReleasedWhenClosed:NO];
@@ -938,6 +940,7 @@ static NSUInteger nMouseMask = 0;
 	{
 		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
+		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
 
 		[self setReleasedWhenClosed:NO];
@@ -1379,7 +1382,7 @@ static NSUInteger nMouseMask = 0;
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{
 			USHORT nID = 0;
-			int nModifiers = [pEvent modifierFlags];
+			NSUInteger nModifiers = [pEvent modifierFlags];
 			switch ( nType )
 			{
 				case NSMouseMoved:
@@ -1418,6 +1421,55 @@ static NSUInteger nMouseMask = 0;
 
 			if ( nID )
 			{
+				// Cache mouse screen location
+				aLastMouseLocation = [pEvent locationInWindow];
+				NSWindow *pEventWindow = [pEvent window];
+				if ( pEventWindow )
+				{
+					NSRect aEventWindowFrame = [pEventWindow frame];
+					aLastMouseLocation.x += aEventWindowFrame.origin.x;
+					aLastMouseLocation.y += aEventWindowFrame.origin.y;
+				}
+
+				// The OOo code can get confused when we click on a non-focused
+				// window. In these cases, we will receive no mouse move events
+				// so if the OOo code displays a popup menu, the popup menu
+				// will receive no mouse move events.
+				if ( nID == SALEVENT_MOUSEBUTTONDOWN )
+				{
+					if ( [self canBecomeKeyOrMainWindow] && ![self isKeyWindow] && ! ( nModifiers & NSLeftMouseDownMask ) )
+					{
+						mnIgnoreMouseReleasedModifiers = nModifiers;
+						return;
+					}
+					else
+					{
+						mnIgnoreMouseReleasedModifiers = 0;
+					}
+				}
+				else if ( nID == SALEVENT_MOUSEBUTTONUP )
+				{
+					if ( mnIgnoreMouseReleasedModifiers && ( mnIgnoreMouseReleasedModifiers & nModifiers ) == nModifiers )
+					{
+						mnIgnoreMouseReleasedModifiers &= ~nModifiers;
+						return;
+					}
+				}
+
+				// Fix bug 2769 by creating synthetic window moved events when
+				// dragging a window's title bar
+				if ( nModifiers & NSLeftMouseDownMask && ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
+				{
+					NSRect aFrame = [self frame];
+					NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+					float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+					float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+					NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
+					NSPoint aLocation = [pEvent locationInWindow];
+					if ( NSPointInRect( aLocation, aTitlebarFrame ) )
+						[self windowDidMove:nil];
+				}
+
 				USHORT nCode = GetEventCode( nModifiers );
 
 				NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
@@ -1442,8 +1494,7 @@ static NSUInteger nMouseMask = 0;
 					pExtraMouseEvent->mnX = (long)aLocation.x;
 					pExtraMouseEvent->mnY = (long)aLocation.y;
 					pExtraMouseEvent->mnButton = 0;
-					pMouseEvent->mnButton = nExtraCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-					pMouseEvent->mnCode = nExtraCode;
+					pExtraMouseEvent->mnCode = nExtraCode;
 				}
 
 				JavaSalEvent *pEvent = new JavaSalEvent( nID, mpFrame, pMouseEvent );
@@ -1454,7 +1505,6 @@ static NSUInteger nMouseMask = 0;
 				{
 					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, mpFrame, pExtraMouseEvent );
 					JavaSalEventQueue::postCachedEvent( pExtraEvent );
-
 					pExtraEvent->release();
 				}
 			}

@@ -97,6 +97,7 @@
 #ifdef USE_NATIVE_EVENTS
 	MacOSBOOL				mbAllowKeyBindings;
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 #endif	// USE_NATIVE_EVENTS
 }
@@ -113,6 +114,7 @@
 #ifdef USE_NATIVE_EVENTS
 	MacOSBOOL				mbAllowKeyBindings;
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 #endif	// USE_NATIVE_EVENTS
 }
