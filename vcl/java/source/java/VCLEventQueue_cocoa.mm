@@ -1514,6 +1514,8 @@ static NSUInteger nMouseMask = 0;
 		else if ( nType == NSKeyDown || nType == NSKeyUp )
 		{
 			fprintf( stderr, "NSKeyDown and NSKeyUp not implemented\n" );
+			if ( nType == NSKeyDown )
+				[[self contentView] interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 		}
 		// Handle key modifier change events
 		else if ( nType == NSFlagsChanged )
@@ -1845,7 +1847,77 @@ static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
 
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+
+- (MacOSBOOL)acceptsFirstResponder
+{
+	return YES;
+}
+
+- (MacOSBOOL)hasMarkedText
+{
+	fprintf( stderr, "[VCLView hasMarkedText] not implemented\n" );
+	return NO;
+}
+
+- (NSRange)markedRange
+{
+	fprintf( stderr, "[VCLView markedRange] not implemented\n" );
+	return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSRange)selectedRange
+{
+	fprintf( stderr, "[VCLView selectedRange] not implemented\n" );
+	return NSMakeRange( NSNotFound, 0 );
+}
+
+- (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange
+{
+	fprintf( stderr, "[VCLView setMarkedText:selectedRange:replacementRange:] not implemented\n" );
+}
+
+- (void)unmarkText
+{
+	fprintf( stderr, "[VCLView unmarkedText] not implemented\n" );
+}
+
+- (NSArray *)validAttributesForMarkedText
+{
+	return [NSArray arrayWithObject:NSUnderlineStyleAttributeName];
+}
+
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
+{
+	fprintf( stderr, "[VCLView attributedSubstringForProposedRange:actualRange:] not implemented\n" );
+	return nil;
+}
+
+- (void)insertText:(id)aString replacementRange:(NSRange)aReplacementRange
+{
+	fprintf( stderr, "[VCLView insertText:replacementRange:] not implemented\n" );
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)aPoint
+{
+	fprintf( stderr, "[VCLView characterIndexForPoint:] not implemented\n" );
+	return NSNotFound;
+}
+
+- (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
+{
+	fprintf( stderr, "[VCLView firstRectForCharacterRange:actualRange:] not implemented\n" );
+	if ( pActualRange )
+		pActualRange = NULL;
+	return NSZeroRect;
+}
+
+- (void)doCommandBySelector:(SEL)aSelector
+{
+	fprintf( stderr, "[VCLView doCommandBySelector:] not implemented\n" );
+}
+
+#else	// USE_NATIVE_EVENTS
 
 + (void)swizzleSelectors:(NSView *)pView
 {
@@ -2021,7 +2093,7 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender
 {

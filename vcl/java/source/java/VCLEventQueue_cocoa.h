@@ -41,10 +41,24 @@
 
 #ifdef __OBJC__
 
+#ifdef USE_NATIVE_EVENTS
+@interface VCLView : NSView <NSTextInputClient>
+- (MacOSBOOL)acceptsFirstResponder;
+- (MacOSBOOL)hasMarkedText;
+- (NSRange)markedRange;
+- (NSRange)selectedRange;
+- (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange;
+- (void)unmarkText;
+- (NSArray *)validAttributesForMarkedText;
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange;
+- (void)insertText:(id)aString replacementRange:(NSRange)aReplacementRange;
+- (NSUInteger)characterIndexForPoint:(NSPoint)aPoint;
+- (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange;
+- (void)doCommandBySelector:(SEL)aSelector;
+#else	// USE_NATIVE_EVENTS
 @interface VCLView : NSView
-#ifndef USE_NATIVE_EVENTS
 + (void)swizzleSelectors:(NSView *)pView;
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
