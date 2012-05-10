@@ -55,6 +55,7 @@
 - (NSUInteger)characterIndexForPoint:(NSPoint)aPoint;
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange;
 - (void)doCommandBySelector:(SEL)aSelector;
+- (void)insertText:(id)aString;
 #else	// USE_NATIVE_EVENTS
 @interface VCLView : NSView
 + (void)swizzleSelectors:(NSView *)pView;

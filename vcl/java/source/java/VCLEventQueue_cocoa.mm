@@ -1297,7 +1297,6 @@ static NSUInteger nMouseMask = 0;
 
 - (void)resignKeyWindow
 {
-	// Fix bug 1819 by forcing cancellation of the input method
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
@@ -1307,6 +1306,7 @@ static NSUInteger nMouseMask = 0;
 #else	// USE_NATIVE_EVENTS
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
+		// Fix bug 1819 by forcing cancellation of the input method
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
 		{
@@ -1513,7 +1513,6 @@ static NSUInteger nMouseMask = 0;
 		// Handle key events
 		else if ( nType == NSKeyDown || nType == NSKeyUp )
 		{
-			fprintf( stderr, "NSKeyDown and NSKeyUp not implemented\n" );
 			if ( nType == NSKeyDown )
 				[[self contentView] interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 		}
@@ -1879,7 +1878,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)unmarkText
 {
-	fprintf( stderr, "[VCLView unmarkedText] not implemented\n" );
+	fprintf( stderr, "[VCLView unmarkText] not implemented\n" );
 }
 
 - (NSArray *)validAttributesForMarkedText
@@ -1915,6 +1914,11 @@ static CFDataRef aRTFSelection = nil;
 - (void)doCommandBySelector:(SEL)aSelector
 {
 	fprintf( stderr, "[VCLView doCommandBySelector:] not implemented\n" );
+}
+
+- (void)insertText:(id)aString
+{
+	fprintf( stderr, "[VCLView insertText:] not implemented\n" );
 }
 
 #else	// USE_NATIVE_EVENTS
