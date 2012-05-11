@@ -1656,6 +1656,7 @@ void JavaSalEvent::dispatch()
 					pKeyModEvent = new SalKeyModEvent();
 					pKeyModEvent->mnTime = getWhen();
 					pKeyModEvent->mnCode = getModifiers();
+					pKeyModEvent->mnModKeyCode = 0;
 				}
 				pFrame->CallCallback( nID, pKeyModEvent );
 			}
@@ -2114,14 +2115,30 @@ USHORT JavaSalEvent::getModifiers()
 #ifdef USE_NATIVE_EVENTS
 	if ( mpData )
 	{
-		if ( mnID == SALEVENT_WHEELMOUSE )
+		switch ( mnID )
 		{
-			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
-			nRet = pWheelMouseEvent->mnCode;
-		}
-		else
-		{
-			fprintf( stderr, "JavaSalEvent::getModifiers not implemented\n" );
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYUP:
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+				nRet = pKeyEvent->mnCode;
+				break;
+			case SALEVENT_KEYMODCHANGE:
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
+				nRet = pKeyModEvent->mnCode;
+				break;
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
+				nRet = pMouseEvent->mnCode;
+				break;
+			case SALEVENT_WHEELMOUSE:
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+				nRet = pWheelMouseEvent->mnCode;
+				break;
+			default:
+				break;
 		}
 	}
 #else	// USE_NATIVE_EVENTS
@@ -2247,7 +2264,39 @@ ULONG JavaSalEvent::getWhen()
 	ULONG nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getWhen not implemented\n" );
+	if ( mpData )
+	{
+		switch ( mnID )
+		{
+			case SALEVENT_ENDEXTTEXTINPUT:
+			case SALEVENT_EXTTEXTINPUT:
+				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
+				nRet = pInputEvent->mnTime;
+				break;
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYUP:
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+				nRet = pKeyEvent->mnTime;
+				break;
+			case SALEVENT_KEYMODCHANGE:
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
+				nRet = pKeyModEvent->mnCode;
+				break;
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
+				nRet = pMouseEvent->mnTime;
+				break;
+			case SALEVENT_WHEELMOUSE:
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+				nRet = pWheelMouseEvent->mnTime;
+				break;
+			default:
+				break;
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getWhen();
@@ -2263,7 +2312,25 @@ long JavaSalEvent::getX()
 	long nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getX not implemented\n" );
+	if ( mpData )
+	{
+		switch ( mnID )
+		{
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
+				nRet = pMouseEvent->mnX;
+				break;
+			case SALEVENT_WHEELMOUSE:
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+				nRet = pWheelMouseEvent->mnX;
+				break;
+			default:
+				break;
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getX();
@@ -2279,7 +2346,25 @@ long JavaSalEvent::getY()
 	long nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getY not implemented\n" );
+	if ( mpData )
+	{
+		switch ( mnID )
+		{
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
+				nRet = pMouseEvent->mnY;
+				break;
+			case SALEVENT_WHEELMOUSE:
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+				nRet = pWheelMouseEvent->mnY;
+				break;
+			default:
+				break;
+		}
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getY();
@@ -2343,22 +2428,6 @@ long JavaSalEvent::getScrollAmount()
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getScrollAmount();
-#endif	// USE_NATIVE_EVENTS
-
-	return nRet;
-}
-
-// -------------------------------------------------------------------------
-
-ULONG JavaSalEvent::getVisiblePosition()
-{
-	ULONG nRet = 0;
-
-#ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getVisiblePosition not implemented\n" );
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getVisiblePosition();
 #endif	// USE_NATIVE_EVENTS
 
 	return nRet;

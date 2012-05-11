@@ -181,7 +181,6 @@ public:
 	short					getMenuID();
 	void*					getMenuCookie();
 	long					getScrollAmount();
-	ULONG					getVisiblePosition();
 	long					getWheelRotation();
 	sal_Bool				isHorizontal();
 #ifdef USE_NATIVE_EVENTS

@@ -598,6 +598,10 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 - (void)setFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
+
+	NSView *pContentView = [self contentView];
+	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+		[(VCLView *)pContentView setFrame:pFrame];
 }
 
 #endif	// USE_NATIVE_EVENTS
@@ -1511,10 +1515,11 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 		// Handle key events
-		else if ( nType == NSKeyDown || nType == NSKeyUp )
+		else if ( nType == NSKeyDown )
 		{
-			if ( nType == NSKeyDown )
-				[[self contentView] interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+			NSView *pContentView = [self contentView];
+			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+				[(VCLView *)pContentView interpretKeyEvent:pEvent];
 		}
 		// Handle key modifier change events
 		else if ( nType == NSFlagsChanged )
@@ -1694,6 +1699,10 @@ static NSUInteger nMouseMask = 0;
 - (void)setFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
+
+	NSView *pContentView = [self contentView];
+	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+		[(VCLView *)pContentView setFrame:pFrame];
 }
 
 #endif	// USE_NATIVE_EVENTS
@@ -1853,6 +1862,25 @@ static CFDataRef aRTFSelection = nil;
 	return YES;
 }
 
+- (void)dealloc
+{
+	if ( mpLastKeyDownEvent )
+		[mpLastKeyDownEvent release];
+
+	[super dealloc];
+}
+
+- (void)interpretKeyEvent:(NSEvent *)pEvent
+{
+	if ( mpLastKeyDownEvent )
+		[mpLastKeyDownEvent release];
+	mpLastKeyDownEvent = ( [pEvent type] == NSKeyDown ? pEvent : nil );
+	if ( mpLastKeyDownEvent )
+		[mpLastKeyDownEvent retain];
+
+	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+}
+
 - (MacOSBOOL)hasMarkedText
 {
 	fprintf( stderr, "[VCLView hasMarkedText] not implemented\n" );
@@ -1919,6 +1947,11 @@ static CFDataRef aRTFSelection = nil;
 - (void)insertText:(id)aString
 {
 	fprintf( stderr, "[VCLView insertText:] not implemented\n" );
+}
+
+- (void)setFrame:(JavaSalFrame *)pFrame
+{
+	mpFrame = pFrame;
 }
 
 #else	// USE_NATIVE_EVENTS
@@ -2290,6 +2323,14 @@ static CFDataRef aRTFSelection = nil;
 
 	if ( [super respondsToSelector:@selector(poseAsInitWithFrame:)] )
 		[super poseAsInitWithFrame:aFrame];
+
+#ifdef USE_NATIVE_EVENTS
+	if ( [self isKindOfClass:[VCLView class]] )
+	{
+		mpFrame = NULL;
+		mpLastKeyDownEvent = nil;
+	}
+#endif	// USE_NATIVE_EVENTS
 
 	return self;
 }

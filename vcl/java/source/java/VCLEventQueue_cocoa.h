@@ -43,7 +43,13 @@
 
 #ifdef USE_NATIVE_EVENTS
 @interface VCLView : NSView <NSTextInputClient>
+{
+	JavaSalFrame*			mpFrame;
+	NSEvent*				mpLastKeyDownEvent;
+}
 - (MacOSBOOL)acceptsFirstResponder;
+- (void)dealloc;
+- (void)interpretKeyEvent:(NSEvent *)pEvent;
 - (MacOSBOOL)hasMarkedText;
 - (NSRange)markedRange;
 - (NSRange)selectedRange;
@@ -56,6 +62,7 @@
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange;
 - (void)doCommandBySelector:(SEL)aSelector;
 - (void)insertText:(id)aString;
+- (void)setFrame:(JavaSalFrame *)pFrame;
 #else	// USE_NATIVE_EVENTS
 @interface VCLView : NSView
 + (void)swizzleSelectors:(NSView *)pView;

@@ -641,27 +641,6 @@ long com_sun_star_vcl_VCLEvent::getScrollAmount()
 
 // ----------------------------------------------------------------------------
 
-ULONG com_sun_star_vcl_VCLEvent::getVisiblePosition()
-{
-	static jmethodID mID = NULL;
-	ULONG out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getVisiblePosition", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 long com_sun_star_vcl_VCLEvent::getWheelRotation()
 {
 	static jmethodID mID = NULL;

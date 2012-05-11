@@ -1192,14 +1192,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 		if ( mpWindow )
 		{
+			[mpWindow setContentView:pContentView];
+
 			if ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )
 			{
 				[mpWindow setHidesOnDeactivate:NO];
 				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
 				[(VCLPanel *)mpWindow setCanBecomeKeyOrMainWindow:NO];
 			}
-
-			[mpWindow setContentView:pContentView];
 
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 				[(VCLPanel *)mpWindow setFrame:mpFrame];
