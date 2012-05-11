@@ -1865,6 +1865,18 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
 
+	if ( mpPendingKeyUpEventList )
+	{
+		while ( mpPendingKeyUpEventList->size() )
+		{
+			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
+			mpPendingKeyUpEventList->pop_front();
+			delete pKeyUpEvent;
+		}
+
+		delete mpPendingKeyUpEventList;
+	}
+
 	[super dealloc];
 }
 
@@ -1876,7 +1888,46 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent retain];
 
+	if ( mpPendingKeyUpEventList )
+	{
+		while ( mpPendingKeyUpEventList->size() )
+		{
+			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
+			mpPendingKeyUpEventList->pop_front();
+			delete pKeyUpEvent;
+		}
+	}
+
 	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+}
+
+- (void)keyUp:(NSEvent *)pEvent
+{
+	MacOSBOOL bPostEvents = NO;
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && mpFrame && pEvent )
+		bPostEvents = YES;
+
+	if ( mpPendingKeyUpEventList )
+	{
+		while ( mpPendingKeyUpEventList->size() )
+		{
+			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
+			mpPendingKeyUpEventList->pop_front();
+			if ( bPostEvents )
+			{
+				pKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
+			}
+			else
+			{
+				delete pKeyUpEvent;
+			}
+		}
+	}
+
 }
 
 - (MacOSBOOL)hasMarkedText
@@ -1955,8 +2006,11 @@ static CFDataRef aRTFSelection = nil;
 			pChars = (NSString *)aString;
 		if ( pChars && [pChars length] )
 		{
-			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags];
-			USHORT nCode = GetEventCode( nModifiers );
+			// Fix bug 710 by stripping out the Alt modifier. Note that we do
+			// it here because we need to let the Alt modifier through for
+			// action keys.
+			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
+			USHORT nCode = GetEventCode( nModifiers & ~NSAlternateKeyMask );
 
 			NSUInteger i = 0;
 			NSUInteger nLength = [pChars length];
@@ -1968,20 +2022,16 @@ static CFDataRef aRTFSelection = nil;
 				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 				pKeyDownEvent->mnRepeat = 0;
 
-/*
-				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
-				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
-*/
+				if ( mpPendingKeyUpEventList )
+				{
+					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+					memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+					mpPendingKeyUpEventList->push_back( pKeyUpEvent );
+				}
 
 				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
 				JavaSalEventQueue::postCachedEvent( pEvent );
 				pEvent->release();
-
-/*
-				JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
-				JavaSalEventQueue::postCachedEvent( pExtraEvent );
-				pExtraEvent->release();
-*/
 			}
 		}
 	}
@@ -2367,6 +2417,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		mpFrame = NULL;
 		mpLastKeyDownEvent = nil;
+		mpPendingKeyUpEventList = new ::std::list< SalKeyEvent* >();
 	}
 #endif	// USE_NATIVE_EVENTS
 

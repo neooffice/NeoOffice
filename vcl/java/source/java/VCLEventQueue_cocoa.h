@@ -46,10 +46,12 @@
 {
 	JavaSalFrame*			mpFrame;
 	NSEvent*				mpLastKeyDownEvent;
+	::std::list< SalKeyEvent* >*	mpPendingKeyUpEventList;
 }
 - (MacOSBOOL)acceptsFirstResponder;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
+- (void)keyUp:(NSEvent *)pEvent;
 - (MacOSBOOL)hasMarkedText;
 - (NSRange)markedRange;
 - (NSRange)selectedRange;
