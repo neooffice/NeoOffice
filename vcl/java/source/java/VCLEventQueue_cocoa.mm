@@ -1971,31 +1971,6 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)insertText:(id)aString replacementRange:(NSRange)aReplacementRange
 {
-	fprintf( stderr, "[VCLView insertText:replacementRange:] not implemented\n" );
-}
-
-- (NSUInteger)characterIndexForPoint:(NSPoint)aPoint
-{
-	fprintf( stderr, "[VCLView characterIndexForPoint:] not implemented\n" );
-	return NSNotFound;
-}
-
-- (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
-{
-	fprintf( stderr, "[VCLView firstRectForCharacterRange:actualRange:] not implemented\n" );
-	if ( pActualRange )
-		pActualRange = NULL;
-	return NSZeroRect;
-}
-
-- (void)doCommandBySelector:(SEL)aSelector
-{
-	fprintf( stderr, "[VCLView doCommandBySelector:] not implemented\n" );
-}
-
-- (void)insertText:(id)aString
-{
-	fprintf( stderr, "[VCLView insertText:] not implemented\n" );
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 	{
@@ -2035,6 +2010,30 @@ static CFDataRef aRTFSelection = nil;
 			}
 		}
 	}
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)aPoint
+{
+	fprintf( stderr, "[VCLView characterIndexForPoint:] not implemented\n" );
+	return NSNotFound;
+}
+
+- (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
+{
+	fprintf( stderr, "[VCLView firstRectForCharacterRange:actualRange:] not implemented\n" );
+	if ( pActualRange )
+		pActualRange = NULL;
+	return NSZeroRect;
+}
+
+- (void)doCommandBySelector:(SEL)aSelector
+{
+	fprintf( stderr, "[VCLView doCommandBySelector:] not implemented\n" );
+}
+
+- (void)insertText:(id)aString
+{
+	[self insertText:aString replacementRange:NSMakeRange( NSNotFound, 0 )];
 }
 
 - (void)setFrame:(JavaSalFrame *)pFrame
