@@ -35,6 +35,9 @@
 
 #include <dlfcn.h>
 
+#include <saldata.hxx>
+#include <vos/mutex.hxx>
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 // Need to include for virtual key constants but we don't link to it
@@ -2013,10 +2016,53 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
 {
-	fprintf( stderr, "[VCLView firstRectForCharacterRange:actualRange:] not implemented\n" );
+	NSRect aRet = NSZeroRect;
+
 	if ( pActualRange )
 		pActualRange = NULL;
-	return NSZeroRect;
+
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && mpFrame )
+	{
+		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			SalExtTextInputPosEvent aInputPosEvent;
+			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
+
+			// Fix bug 2426 by checking the frame pointer before any use
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( *it == mpFrame )
+				{
+					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUTPOS, mpFrame, &aInputPosEvent );
+					pEvent->dispatch();
+					pEvent->release();
+
+					if ( aInputPosEvent.mbVertical )
+						aRet = NSMakeRect( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25, aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15, aInputPosEvent.mnWidth, aInputPosEvent.mnHeight );
+					else
+						aRet = NSMakeRect( aInputPosEvent.mnX, aInputPosEvent.mnY + 20, aInputPosEvent.mnWidth, aInputPosEvent.mnHeight );
+
+					// Translate, flip coordinates within content frame, and
+					// adjust to screen coordinates
+					NSRect aFrame = [pWindow frame];
+					NSRect aContentFrame = [pWindow contentRectForFrameRect:aFrame];
+					aRet.origin.y = aContentFrame.size.height - aRet.origin.y;
+					aRet.origin.x += aContentFrame.origin.x;
+					aRet.origin.y += aContentFrame.origin.y;
+
+					break;
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	return aRet;
 }
 
 - (void)doCommandBySelector:(SEL)aSelector
