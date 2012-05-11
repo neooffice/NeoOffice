@@ -1245,7 +1245,11 @@ JavaSalEvent::~JavaSalEvent()
 
 void JavaSalEvent::addRepeatCount( USHORT nCount )
 {
-	fprintf( stderr, "JavaSalEvent::addRepeatCount not implemented\n" );
+	if ( mpData && mnID == SALEVENT_KEYINPUT )
+	{
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+		pKeyEvent->mnRepeat += nCount;
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -2065,7 +2069,11 @@ USHORT JavaSalEvent::getKeyChar()
 	USHORT nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getKeyChar not implemented\n" );
+	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
+	{
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+		nRet = pKeyEvent->mnCharCode;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getKeyChar();
@@ -2081,7 +2089,11 @@ USHORT JavaSalEvent::getKeyCode()
 	USHORT nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getKeyCode not implemented\n" );
+	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
+	{
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+		nRet = pKeyEvent->mnCode & ~( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 | KEY_SHIFT | MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getKeyCode();
@@ -2196,7 +2208,11 @@ USHORT JavaSalEvent::getRepeatCount()
 	USHORT nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getRepeatCount not implemented\n" );
+	if ( mpData && mnID == SALEVENT_KEYINPUT )
+	{
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
+		nRet = pKeyEvent->mnRepeat;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getRepeatCount();

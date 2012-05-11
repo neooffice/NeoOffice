@@ -37,6 +37,8 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+// Need to include for virtual key constants but we don't link to it
+#import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
 
@@ -221,6 +223,9 @@ static USHORT GetEventCode( NSUInteger nModifiers )
 		nRet |= MOUSE_RIGHT;
 	if ( nModifiers & NSOtherMouseDownMask )
 		nRet |= MOUSE_MIDDLE;
+
+	// Treat the Mac OS X command key as a control key and the control key as
+	// the meta key
 	if ( nModifiers & NSCommandKeyMask )
 		nRet |= KEY_MOD1;
 	if ( nModifiers & NSAlternateKeyMask )
@@ -1514,13 +1519,6 @@ static NSUInteger nMouseMask = 0;
 				}
 			}
 		}
-		// Handle key events
-		else if ( nType == NSKeyDown )
-		{
-			NSView *pContentView = [self contentView];
-			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-				[(VCLView *)pContentView interpretKeyEvent:pEvent];
-		}
 		// Handle key modifier change events
 		else if ( nType == NSFlagsChanged )
 		{
@@ -1643,7 +1641,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				unichar pChars[ 1 ];
 				pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
-				unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
+				unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? kVK_PageUp : kVK_PageDown );
 				NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
 				if ( pChar )
 				{
@@ -1870,7 +1868,7 @@ static CFDataRef aRTFSelection = nil;
 	[super dealloc];
 }
 
-- (void)interpretKeyEvent:(NSEvent *)pEvent
+- (void)keyDown:(NSEvent *)pEvent
 {
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
@@ -1947,6 +1945,46 @@ static CFDataRef aRTFSelection = nil;
 - (void)insertText:(id)aString
 {
 	fprintf( stderr, "[VCLView insertText:] not implemented\n" );
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+	{
+		NSString *pChars;
+		if ( [aString isKindOfClass:[NSAttributedString class]] )
+			pChars = [(NSAttributedString *)aString string];
+		else
+			pChars = (NSString *)aString;
+		if ( pChars && [pChars length] )
+		{
+			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags];
+			USHORT nCode = GetEventCode( nModifiers );
+
+			NSUInteger i = 0;
+			NSUInteger nLength = [pChars length];
+			for ( ; i < nLength; i++ )
+			{
+				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+				pKeyDownEvent->mnCode = nCode;
+				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
+				pKeyDownEvent->mnRepeat = 0;
+
+/*
+				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+*/
+
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
+
+/*
+				JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+				JavaSalEventQueue::postCachedEvent( pExtraEvent );
+				pExtraEvent->release();
+*/
+			}
+		}
+	}
 }
 
 - (void)setFrame:(JavaSalFrame *)pFrame

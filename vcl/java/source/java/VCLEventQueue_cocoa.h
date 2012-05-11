@@ -49,7 +49,7 @@
 }
 - (MacOSBOOL)acceptsFirstResponder;
 - (void)dealloc;
-- (void)interpretKeyEvent:(NSEvent *)pEvent;
+- (void)keyDown:(NSEvent *)pEvent;
 - (MacOSBOOL)hasMarkedText;
 - (NSRange)markedRange;
 - (NSRange)selectedRange;
