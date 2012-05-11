@@ -235,6 +235,16 @@ static USHORT GetEventCode( NSUInteger nModifiers )
 	if ( nModifiers & NSShiftKeyMask )
 		nRet |= KEY_SHIFT;
 
+	// If command plus left or middle button is pressed, Cocoa will add the
+	// right button so we need to strip it out
+	if ( nRet & MOUSE_RIGHT && nRet & KEY_MOD1 && nRet & ( MOUSE_LEFT | MOUSE_MIDDLE ) )
+		nRet &= ~MOUSE_RIGHT;
+
+	// Convert control plus left button events to right button events since
+	// one button mice have no right button
+	if ( nRet & MOUSE_LEFT && nRet & KEY_MOD3 )
+		nRet = ( nRet & ~( KEY_MOD3 | MOUSE_LEFT ) ) | MOUSE_RIGHT;
+
 	return nRet;
 }
 
