@@ -56,9 +56,6 @@
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
-#ifdef USE_NATIVE_WINDOW
-#import <AudioToolbox/AudioToolbox.h>
-#endif	// USE_NATIVE_WINDOW
 // Need to include for SetSystemUIMode constants but we don't link to it
 #import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
@@ -3740,7 +3737,7 @@ const SystemEnvData* JavaSalFrame::GetSystemData() const
 void JavaSalFrame::Beep( SoundType eSoundType )
 {
 #ifdef USE_NATIVE_WINDOW
-	AudioServicesPlaySystemSound( kUserPreferredAlert );
+	NSBeep();
 #else	// USE_NATIVE_WINDOW
 #if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 	com_sun_star_vcl_VCLGraphics::beep();
