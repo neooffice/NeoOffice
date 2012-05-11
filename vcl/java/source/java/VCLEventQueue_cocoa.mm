@@ -1875,17 +1875,8 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
 
-	if ( mpPendingKeyUpEventList )
-	{
-		while ( mpPendingKeyUpEventList->size() )
-		{
-			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
-			mpPendingKeyUpEventList->pop_front();
-			delete pKeyUpEvent;
-		}
-
-		delete mpPendingKeyUpEventList;
-	}
+	if ( mpPendingKeyUpEvent )
+		delete mpPendingKeyUpEvent;
 
 	[super dealloc];
 }
@@ -1898,46 +1889,31 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent retain];
 
-	if ( mpPendingKeyUpEventList )
-	{
-		while ( mpPendingKeyUpEventList->size() )
-		{
-			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
-			mpPendingKeyUpEventList->pop_front();
-			delete pKeyUpEvent;
-		}
-	}
+	if ( mpPendingKeyUpEvent )
+		delete mpPendingKeyUpEvent;
 
 	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 }
 
 - (void)keyUp:(NSEvent *)pEvent
 {
-	MacOSBOOL bPostEvents = NO;
-	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && mpFrame && pEvent )
-		bPostEvents = YES;
-
-	if ( mpPendingKeyUpEventList )
+	if ( mpPendingKeyUpEvent )
 	{
-		while ( mpPendingKeyUpEventList->size() )
+		NSWindow *pWindow = [self window];
+		if ( pWindow && [pWindow isVisible] && mpFrame && pEvent )
 		{
-			SalKeyEvent *pKeyUpEvent = mpPendingKeyUpEventList->front();
-			mpPendingKeyUpEventList->pop_front();
-			if ( bPostEvents )
-			{
-				pKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
-				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
-			}
-			else
-			{
-				delete pKeyUpEvent;
-			}
+			mpPendingKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
 		}
-	}
+		else
+		{
+			delete mpPendingKeyUpEvent;
+		}
 
+		mpPendingKeyUpEvent = NULL;
+	}
 }
 
 - (MacOSBOOL)hasMarkedText
@@ -2007,16 +1983,23 @@ static CFDataRef aRTFSelection = nil;
 				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 				pKeyDownEvent->mnRepeat = 0;
 
-				if ( mpPendingKeyUpEventList )
-				{
-					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
-					memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
-					mpPendingKeyUpEventList->push_back( pKeyUpEvent );
-				}
+				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
 
 				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
 				JavaSalEventQueue::postCachedEvent( pEvent );
 				pEvent->release();
+
+				if ( i == nLength - 1 )
+				{
+					mpPendingKeyUpEvent = pKeyUpEvent;
+				}
+				else
+				{
+					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+					JavaSalEventQueue::postCachedEvent( pExtraEvent );
+					pExtraEvent->release();
+				}
 			}
 		}
 	}
@@ -2426,7 +2409,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		mpFrame = NULL;
 		mpLastKeyDownEvent = nil;
-		mpPendingKeyUpEventList = new ::std::list< SalKeyEvent* >();
+		mpPendingKeyUpEvent = NULL;
 	}
 #endif	// USE_NATIVE_EVENTS
 
