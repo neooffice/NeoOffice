@@ -948,7 +948,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			{
 				CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 				CGPathAddRect( aPath, NULL, aRect );
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
+				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
@@ -963,9 +963,10 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 				}
 
 				if ( aPath )
+				{
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
-
-				CGPathRelease( aPath );
+					CGPathRelease( aPath );
+				}
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
@@ -1018,24 +1019,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 #else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
-				{
-					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
-				}
-
-				if ( aPath )
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
-
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
@@ -1073,7 +1057,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
+				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
@@ -1088,9 +1072,10 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 				}
 
 				if ( aPath )
+				{
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
-
-				CGPathRelease( aPath );
+					CGPathRelease( aPath );
+				}
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
@@ -1109,7 +1094,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 
 void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
-	if ( nPoly && pPoints && pPtAry )
+	if ( ( mnFillColor || mnLineColor ) && nPoly && pPoints && pPtAry )
 	{
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( useNativeDrawing() )
@@ -1139,7 +1124,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 				AddPolyPolygonToPaths( aPath, aPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
+				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
@@ -1157,9 +1142,10 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 				// Java code otherwise transparent non-rectangular gradients
 				// will be drawn incorrectly when printed
 				if ( aPath )
+				{
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, false, false, mnFillColor, mnLineColor, aPath ) );
-
-				CGPathRelease( aPath );
+					CGPathRelease( aPath );
+				}
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
@@ -1199,7 +1185,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 				AddPolyPolygonToPaths( aPath, rPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
+				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
@@ -1213,11 +1199,11 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 					}
 				}
 
-
 				if ( aPath )
+				{
 					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
-
-				CGPathRelease( aPath );
+					CGPathRelease( aPath );
+				}
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		}
@@ -1263,27 +1249,10 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 #else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				AddPolygonToPaths( aPath, rPoly, rPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = rLineWidths.getX();
 				if ( fNativeLineWidth <= 0 )
 					fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width < 1.0f || aRect.size.height < 1.0f )
-				{
-					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
-				}
-
-				if ( aPath )
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, fNativeLineWidth, eLineJoin ) );
-
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, fNativeLineWidth, eLineJoin ) );
 				CGPathRelease( aPath );
 			}
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
