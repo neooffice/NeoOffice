@@ -251,6 +251,299 @@ static USHORT GetEventCode( NSUInteger nModifiers )
 	return nRet;
 }
 
+static USHORT GetKeyCode( unsigned short nKey )
+{
+	USHORT nRet = 0;
+
+	switch ( nKey )
+	{
+		case kVK_ANSI_0:
+		case kVK_ANSI_Keypad0:
+			nRet = KEY_0;
+			break;
+		case kVK_ANSI_1:
+		case kVK_ANSI_Keypad1:
+			nRet = KEY_1;
+			break;
+		case kVK_ANSI_2:
+		case kVK_ANSI_Keypad2:
+			nRet = KEY_2;
+			break;
+		case kVK_ANSI_3:
+		case kVK_ANSI_Keypad3:
+			nRet = KEY_3;
+			break;
+		case kVK_ANSI_4:
+		case kVK_ANSI_Keypad4:
+			nRet = KEY_4;
+			break;
+		case kVK_ANSI_5:
+		case kVK_ANSI_Keypad5:
+			nRet = KEY_5;
+			break;
+		case kVK_ANSI_6:
+		case kVK_ANSI_Keypad6:
+			nRet = KEY_6;
+			break;
+		case kVK_ANSI_7:
+		case kVK_ANSI_Keypad7:
+			nRet = KEY_7;
+			break;
+		case kVK_ANSI_8:
+		case kVK_ANSI_Keypad8:
+			nRet = KEY_8;
+			break;
+		case kVK_ANSI_9:
+		case kVK_ANSI_Keypad9:
+			nRet = KEY_9;
+			break;
+		case kVK_ANSI_A:
+			nRet = KEY_A;
+			break;
+		case kVK_ANSI_B:
+			nRet = KEY_B;
+			break;
+		case kVK_ANSI_C:
+			nRet = KEY_C;
+			break;
+		case kVK_ANSI_D:
+			nRet = KEY_D;
+			break;
+		case kVK_ANSI_E:
+			nRet = KEY_E;
+			break;
+		case kVK_ANSI_F:
+			nRet = KEY_F;
+			break;
+		case kVK_ANSI_G:
+			nRet = KEY_G;
+			break;
+		case kVK_ANSI_H:
+			nRet = KEY_H;
+			break;
+		case kVK_ANSI_I:
+			nRet = KEY_I;
+			break;
+		case kVK_ANSI_J:
+			nRet = KEY_J;
+			break;
+		case kVK_ANSI_K:
+			nRet = KEY_K;
+			break;
+		case kVK_ANSI_L:
+			nRet = KEY_L;
+			break;
+		case kVK_ANSI_M:
+			nRet = KEY_M;
+			break;
+		case kVK_ANSI_N:
+			nRet = KEY_N;
+			break;
+		case kVK_ANSI_O:
+			nRet = KEY_O;
+			break;
+		case kVK_ANSI_P:
+			nRet = KEY_P;
+			break;
+		case kVK_ANSI_Q:
+			nRet = KEY_Q;
+			break;
+		case kVK_ANSI_R:
+			nRet = KEY_R;
+			break;
+		case kVK_ANSI_S:
+			nRet = KEY_S;
+			break;
+		case kVK_ANSI_T:
+			nRet = KEY_T;
+			break;
+		case kVK_ANSI_U:
+			nRet = KEY_U;
+			break;
+		case kVK_ANSI_V:
+			nRet = KEY_V;
+			break;
+		case kVK_ANSI_W:
+			nRet = KEY_W;
+			break;
+		case kVK_ANSI_X:
+			nRet = KEY_X;
+			break;
+		case kVK_ANSI_Y:
+			nRet = KEY_Y;
+			break;
+		case kVK_ANSI_Z:
+			nRet = KEY_Z;
+			break;
+		case kVK_ANSI_KeypadDecimal:
+			nRet = KEY_DECIMAL;
+			break;
+		case kVK_ANSI_KeypadDivide:
+			nRet = KEY_DIVIDE;
+			break;
+		case kVK_ANSI_KeypadEnter:
+		case kVK_Return:
+			nRet = KEY_RETURN;
+			break;
+		case kVK_ANSI_KeypadEquals:
+		case kVK_ANSI_Equal:
+			nRet = KEY_EQUAL;
+			break;
+		case kVK_ANSI_KeypadMinus:
+		case kVK_ANSI_Minus:
+			nRet = KEY_SUBTRACT;
+			break;
+		case kVK_ANSI_KeypadMultiply:
+			nRet = KEY_MULTIPLY;
+			break;
+		case kVK_ANSI_KeypadPlus:
+			nRet = KEY_ADD;
+			break;
+		case kVK_ANSI_Comma:
+			nRet = KEY_COMMA;
+			break;
+		case kVK_ANSI_LeftBracket:
+			nRet = KEY_BRACKETLEFT;
+			break;
+		case kVK_ANSI_Period:
+			nRet = KEY_POINT;
+			break;
+		case kVK_ANSI_RightBracket:
+			nRet = KEY_BRACKETRIGHT;
+			break;
+		case kVK_F1:
+			nRet = KEY_F1;
+			break;
+		case kVK_F2:
+			nRet = KEY_F2;
+			break;
+		case kVK_F3:
+			nRet = KEY_F3;
+			break;
+		case kVK_F4:
+			nRet = KEY_F4;
+			break;
+		case kVK_F5:
+			nRet = KEY_F5;
+			break;
+		case kVK_F6:
+			nRet = KEY_F6;
+			break;
+		case kVK_F7:
+			nRet = KEY_F7;
+			break;
+		case kVK_F8:
+			nRet = KEY_F8;
+			break;
+		case kVK_F9:
+			nRet = KEY_F9;
+			break;
+		case kVK_F10:
+			nRet = KEY_F10;
+			break;
+		case kVK_F11:
+			nRet = KEY_F11;
+			break;
+		case kVK_F12:
+			nRet = KEY_F12;
+			break;
+		case kVK_F13:
+			nRet = KEY_F13;
+			break;
+		case kVK_F14:
+			nRet = KEY_F14;
+			break;
+		case kVK_F15:
+			nRet = KEY_F15;
+			break;
+		case kVK_F16:
+			nRet = KEY_F16;
+			break;
+		case kVK_F17:
+			nRet = KEY_F17;
+			break;
+		case kVK_F18:
+			nRet = KEY_F18;
+			break;
+		case kVK_F19:
+			nRet = KEY_F19;
+			break;
+		case kVK_F20:
+			nRet = KEY_F20;
+			break;
+		case kVK_Delete:
+			nRet = KEY_BACKSPACE;
+			break;
+		case kVK_DownArrow:
+			nRet = KEY_DOWN;
+			break;
+		case kVK_End:
+			nRet = KEY_END;
+			break;
+		case kVK_Escape:
+			nRet = KEY_ESCAPE;
+			break;
+		case kVK_ForwardDelete:
+			nRet = KEY_DELETE;
+			break;
+		case kVK_Help:
+			nRet = KEY_HELP;
+			break;
+		case kVK_Home:
+			nRet = KEY_HOME;
+			break;
+		case kVK_LeftArrow:
+			nRet = KEY_LEFT;
+			break;
+		case kVK_PageDown:
+			nRet = KEY_PAGEDOWN;
+			break;
+		case kVK_PageUp:
+			nRet = KEY_PAGEUP;
+			break;
+		case kVK_RightArrow:
+			nRet = KEY_RIGHT;
+			break;
+		case kVK_Space:
+			nRet = KEY_SPACE;
+			break;
+		case kVK_Tab:
+			nRet = KEY_TAB;
+			break;
+		case kVK_UpArrow:
+			nRet = KEY_UP;
+			break;
+		case kVK_ANSI_KeypadClear:
+		case kVK_ANSI_Backslash:
+		case kVK_ANSI_Grave:
+		case kVK_ANSI_Quote:
+		case kVK_ANSI_Semicolon:
+		case kVK_ANSI_Slash:
+		case kVK_CapsLock:
+		case kVK_Command:
+		case kVK_Control:
+		case kVK_Function:
+		case kVK_ISO_Section:
+		case kVK_JIS_Eisu:
+		case kVK_JIS_Kana:
+		case kVK_JIS_KeypadComma:
+		case kVK_JIS_Underscore:
+		case kVK_JIS_Yen:
+		case kVK_Mute:
+		case kVK_Option:
+		case kVK_RightControl:
+		case kVK_RightOption:
+		case kVK_RightShift:
+		case kVK_Shift:
+		case kVK_VolumeDown:
+		case kVK_VolumeUp:
+		default:
+			break;
+	}
+
+	return nRet;
+}
+
 #endif	// USE_NATIVE_EVENTS
 
 @interface IsApplicationActive : NSObject
@@ -1217,9 +1510,9 @@ static NSUInteger nMouseMask = 0;
 	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 #endif	// USE_NATIVE_EVENTS
 	{
+#ifndef USE_NATIVE_EVENTS
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
-#ifndef USE_NATIVE_EVENTS
 		// Fix crashing when using a menu shortcut by forcing cancellation of
 		// the input method
 		NSResponder *pResponder = [self firstResponder];
@@ -1248,16 +1541,12 @@ static NSUInteger nMouseMask = 0;
 		}
 
 
+#ifndef USE_NATIVE_EVENTS
 		// Fix bug 3496 by having any Cocoa commands take precedence over menu
 		// shortcuts
-		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-#ifdef USE_NATIVE_EVENTS
-		if ( nCommandKey && mbAllowKeyBindings )
-			fprintf( stderr, "VCLEventQueue_postCommandEvent not implemented\n" );
-#else	// USE_NATIVE_EVENTS
 		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return YES;
-#endif	// USE_NATIVE_EVENTS
+#endif	// !USE_NATIVE_EVENTS
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
@@ -1286,7 +1575,7 @@ static NSUInteger nMouseMask = 0;
 		NSResponder *pResponder = [self firstResponder];
 		if ( pChars && pResponder )
 		{
-			if ( [pChars isEqualToString:@"a"] && [pResponder respondsToSelector:@selector(copy:)] )
+			if ( [pChars isEqualToString:@"a"] && [pResponder respondsToSelector:@selector(selectAll:)] )
 			{
 				[pResponder selectAll:self];
 				bRet = YES;
@@ -1974,7 +2263,7 @@ static CFDataRef aRTFSelection = nil;
 			// it here because we need to let the Alt modifier through for
 			// action keys.
 			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
-			USHORT nCode = GetEventCode( nModifiers & ~NSAlternateKeyMask );
+			USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
 
 			NSUInteger i = 0;
 			NSUInteger nLength = [pChars length];
@@ -2067,7 +2356,45 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
-	fprintf( stderr, "[VCLView doCommandBySelector:] not implemented\n" );
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+	{
+		NSString *pChars = [mpLastKeyDownEvent charactersIgnoringModifiers];
+		if ( pChars && [pChars length] )
+		{
+			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
+			USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers );
+
+			NSUInteger i = 0;
+			NSUInteger nLength = [pChars length];
+			for ( ; i < nLength; i++ )
+			{
+				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+				pKeyDownEvent->mnCode = nCode;
+				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
+				pKeyDownEvent->mnRepeat = 0;
+
+				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+
+				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+				JavaSalEventQueue::postCachedEvent( pEvent );
+				pEvent->release();
+
+				if ( i == nLength - 1 )
+				{
+					mpPendingKeyUpEvent = pKeyUpEvent;
+				}
+				else
+				{
+					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+					JavaSalEventQueue::postCachedEvent( pExtraEvent );
+					pExtraEvent->release();
+				}
+			}
+		}
+	}
 }
 
 - (void)insertText:(id)aString
