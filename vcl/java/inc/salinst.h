@@ -134,6 +134,7 @@ class SAL_DLLPRIVATE JavaSalEvent
 	::rtl::OUString			maPath;
 	bool					mbNative;
 	sal_Bool				mbShutdownCancelled;
+	::std::list< JavaSalEvent* >	maOriginalKeyEvents;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
 #endif	// USE_NATIVE_EVENTS
@@ -151,6 +152,7 @@ protected:
 public:
 #ifdef USE_NATIVE_EVENTS
 	void					addRepeatCount( USHORT nCount );
+	void					addOriginalKeyEvent( JavaSalEvent *pEvent );
 	void					addUpdateRect( const Rectangle& rRect );
 	void					addWheelRotation( long nRotation );
 #endif	// USE_NATIVE_EVENTS

@@ -1290,10 +1290,17 @@ JavaSalEvent::~JavaSalEvent()
 		}
 	}
 
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+	while ( maOriginalKeyEvents.size() )
+	{
+		JavaSalEvent *pEvent = maOriginalKeyEvents.front();
+		maOriginalKeyEvents.pop_front();
+		pEvent->release();
+	}
+#else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		delete mpVCLEvent;
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 }
 
 #ifdef USE_NATIVE_EVENTS
@@ -1306,6 +1313,17 @@ void JavaSalEvent::addRepeatCount( USHORT nCount )
 	{
 		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		pKeyEvent->mnRepeat += nCount;
+	}
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEvent::addOriginalKeyEvent( JavaSalEvent *pEvent )
+{
+	if ( pEvent && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
+	{
+		pEvent->reference();
+		maOriginalKeyEvents.push_back( pEvent );
 	}
 }
 
@@ -2230,7 +2248,11 @@ JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 	JavaSalEvent *pRet = NULL;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getNextOriginalKeyEvent not implemented\n" );
+	if ( maOriginalKeyEvents.size() )
+	{
+		pRet = maOriginalKeyEvents.front();
+		maOriginalKeyEvents.pop_front();
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 	{
