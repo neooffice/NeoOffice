@@ -104,6 +104,7 @@ private:
 public:
 #ifdef USE_NATIVE_EVENTS
 	id						mpWindow;
+	bool					mbAllowKeyBindings;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 #endif	// USE_NATIVE_EVENTS

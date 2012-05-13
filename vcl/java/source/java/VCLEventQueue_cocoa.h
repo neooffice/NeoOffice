@@ -119,7 +119,6 @@
 @interface VCLPanel : NSPanel
 {
 #ifdef USE_NATIVE_EVENTS
-	MacOSBOOL				mbAllowKeyBindings;
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
@@ -128,7 +127,6 @@
 }
 #ifdef USE_NATIVE_EVENTS
 - (MacOSBOOL)canBecomeKeyOrMainWindow;
-- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings;
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 #endif	// USE_NATIVE_EVENTS
@@ -137,7 +135,6 @@
 @interface VCLWindow : NSWindow
 {
 #ifdef USE_NATIVE_EVENTS
-	MacOSBOOL				mbAllowKeyBindings;
 	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
@@ -162,7 +159,6 @@
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 #ifdef USE_NATIVE_EVENTS
-- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings;
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 #endif	// USE_NATIVE_EVENTS

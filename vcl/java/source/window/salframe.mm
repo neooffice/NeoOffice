@@ -1072,7 +1072,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 - (MacOSBOOL)isFloatingWindow;
 - (void)makeModal:(id)pObject;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
-- (void)setAllowKeyBindings:(VCLWindowWrapperArgs *)pArgs;
 - (void)setContentMinSize:(NSSize)aContentMinSize;
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
@@ -1394,26 +1393,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	{
 		[mpWindow makeKeyWindow];
 		[pArgs setResult:[NSNumber numberWithBool:YES]];
-	}
-}
-
-- (void)setAllowKeyBindings:(VCLWindowWrapperArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-    NSNumber *pAllowKeyBindings = (NSNumber *)[pArgArray objectAtIndex:0];
-    if ( !pAllowKeyBindings )
-        return;
-
-	if ( mpWindow )
-	{
-		MacOSBOOL bAllowKeyBindings = [pAllowKeyBindings boolValue];
-		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setAllowKeyBindings:bAllowKeyBindings];
-		else
-			[(VCLWindow *)mpWindow setAllowKeyBindings:bAllowKeyBindings];
 	}
 }
 
@@ -1834,6 +1813,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 #endif  // USE_NATIVE_WINDOW
 #ifdef USE_NATIVE_EVENTS
 	mpWindow( NULL ),
+	mbAllowKeyBindings( true ),
 #else	// USE_NATIVE_EVENTS
 	mpVCLFrame( NULL ),
 #endif	// USE_NATIVE_EVENTS
@@ -3512,16 +3492,10 @@ void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 	// Only allow Mac OS X key bindings when the OOo application code says so
 #ifdef USE_NATIVE_EVENTS
-	if ( mpWindow )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		VCLWindowWrapperArgs *pSetAllowKeyBindingsArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT ? YES : NO )]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setAllowKeyBindings:) withObject:pSetAllowKeyBindingsArgs waitUntilDone:NO modes:pModes];
-
-		[pPool release];
-	}
+	if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
+		mbAllowKeyBindings = true;
+	else
+		mbAllowKeyBindings = false;
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
 	{

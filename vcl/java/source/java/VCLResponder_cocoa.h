@@ -36,15 +36,21 @@
 #ifndef __VCLRESPONDER_COCOA_H__
 #define __VCLRESPONDER_COCOA_H__
 
+#include <salframe.h>
+
 @interface VCLResponder : NSResponder
 {
 	short					mnLastCommandKey;
 	short					mnLastModifiers;
+#ifndef USE_NATIVE_EVENTS
 	NSString*				mpLastText;
+#endif	// !USE_NATIVE_EVENTS
 	BOOL					mbNoGestures;
 }
-- (void)clearLastText;
+- (void)clear;
+#ifndef USE_NATIVE_EVENTS
 - (void)dealloc;
+#endif	// !USE_NATIVE_EVENTS
 - (void)deleteBackward:(id)pSender;
 - (void)deleteBackwardByDecomposingPreviousCharacter:(id)pSender;
 - (void)deleteForward:(id)pSender;
@@ -63,13 +69,17 @@
 - (void)insertNewline:(id)pSender;
 - (void)insertParagraphSeparator:(id)pSender;
 - (void)insertTab:(id)pSender;
+#ifndef USE_NATIVE_EVENTS
 - (void)insertText:(NSString *)pString;
 - (void)interpretKeyEvents:(NSArray *)pEvents;
+#endif	// !USE_NATIVE_EVENTS
 - (short)lastCommandKey;
 - (short)lastModifiers;
+#ifndef USE_NATIVE_EVENTS
 - (unsigned short)lastOriginalKeyChar;
 - (short)lastOriginalModifiers;
 - (NSString *)lastText;
+#endif	// !USE_NATIVE_EVENTS
 - (void)moveBackwardAndModifySelection:(id)pSender;
 - (void)moveDown:(id)pSender;
 - (void)moveForwardAndModifySelection:(id)pSender;

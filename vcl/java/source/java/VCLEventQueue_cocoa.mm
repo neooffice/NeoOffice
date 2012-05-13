@@ -896,11 +896,6 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 	return ( mbCanBecomeKeyOrMainWindow && ![self becomesKeyOnlyIfNeeded] );
 }
 
-- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings
-{
-	mbAllowKeyBindings = bAllowKeyBindings;
-}
-
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
 {
 	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
@@ -1232,7 +1227,6 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
@@ -1257,7 +1251,6 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		mbAllowKeyBindings = YES;
 		mbCanBecomeKeyOrMainWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
@@ -1540,11 +1533,11 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 
-
 #ifndef USE_NATIVE_EVENTS
 		// Fix bug 3496 by having any Cocoa commands take precedence over menu
 		// shortcuts
-		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
+		short nCommandKey = [pSharedResponder lastCommandKey];
+		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [pSharedResponder lastModifiers], [pSharedResponder lastOriginalKeyChar], [pSharedResponder lastOriginalModifiers] ) )
 			return YES;
 #endif	// !USE_NATIVE_EVENTS
 
@@ -1684,8 +1677,8 @@ static NSUInteger nMouseMask = 0;
 			bHasMarkedText = [pResponder hasMarkedText];
 
 		// Process any Cocoa commands but ignore when there is marked text
-		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
+		short nCommandKey = [pSharedResponder lastCommandKey];
+		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [pSharedResponder lastModifiers], [pSharedResponder lastOriginalKeyChar], [pSharedResponder lastOriginalModifiers] ) )
 			return;
 	}
 #endif	// !USE_NATIVE_EVENTS
@@ -1991,11 +1984,6 @@ static NSUInteger nMouseMask = 0;
 }
 
 #ifdef USE_NATIVE_EVENTS
-
-- (void)setAllowKeyBindings:(MacOSBOOL)bAllowKeyBindings
-{
-	mbAllowKeyBindings = bAllowKeyBindings;
-}
 
 - (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
 {
@@ -2365,6 +2353,33 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 	{
+		// Get key binding if one exists
+		JavaSalEvent *pKeyBindingDownEvent = NULL;
+		JavaSalEvent *pKeyBindingUpEvent = NULL;
+		if ( pSharedResponder )
+		{
+			[pSharedResponder doCommandBySelector:aSelector];
+			short nCommandKey = [pSharedResponder lastCommandKey];
+			if ( nCommandKey )
+			{
+				// Fix bug 3350 by not passing any of the original key modifiers
+				USHORT nCode = nCommandKey | GetEventCode( nMouseMask );
+
+				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+				pKeyDownEvent->mnCode = nCode;
+				pKeyDownEvent->mnCharCode = 0;
+				pKeyDownEvent->mnRepeat = 0;
+
+				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+
+				pKeyBindingDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+				pKeyBindingUpEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+			}
+		}
+
+		// Post original key events
 		NSString *pChars = [mpLastKeyDownEvent charactersIgnoringModifiers];
 		if ( pChars && [pChars length] )
 		{
@@ -2385,20 +2400,30 @@ static CFDataRef aRTFSelection = nil;
 				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
 
 				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
+				if ( pKeyBindingDownEvent )
+					pKeyBindingDownEvent->addOriginalKeyEvent( pEvent );
+				else
+					JavaSalEventQueue::postCachedEvent( pEvent );
 				pEvent->release();
 
-				if ( i == nLength - 1 )
-				{
-					mpPendingKeyUpEvent = pKeyUpEvent;
-				}
+				JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+				if ( pKeyBindingUpEvent )
+					pKeyBindingUpEvent->addOriginalKeyEvent( pExtraEvent );
 				else
-				{
-					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
 					JavaSalEventQueue::postCachedEvent( pExtraEvent );
-					pExtraEvent->release();
-				}
+				pExtraEvent->release();
 			}
+		}
+
+		if ( pKeyBindingDownEvent )
+		{
+			JavaSalEventQueue::postCachedEvent( pKeyBindingDownEvent );
+			pKeyBindingDownEvent->release();
+		}
+		if ( pKeyBindingUpEvent )
+		{
+			JavaSalEventQueue::postCachedEvent( pKeyBindingUpEvent );
+			pKeyBindingUpEvent->release();
 		}
 	}
 }

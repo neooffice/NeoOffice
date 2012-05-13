@@ -1716,7 +1716,11 @@ void JavaSalEvent::dispatch()
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
 				}
+#ifdef USE_NATIVE_EVENTS
+				if ( !pFrame->mbAllowKeyBindings || !pFrame->CallCallback( nID, pKeyEvent ) )
+#else	// USE_NATIVE_EVENTS
 				if ( !pFrame->CallCallback( nID, pKeyEvent ) )
+#endif	// USE_NATIVE_EVENTS
 				{
 					// If the key event fails and this is a command event,
 					// dispatch the original events
