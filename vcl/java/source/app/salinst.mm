@@ -1587,12 +1587,9 @@ void JavaSalEvent::dispatch()
 				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 				{
 #ifdef USE_NATIVE_EVENTS
-					if ( pSalData->mpFocusFrame->mbVisible )
-					{
-						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
-						JavaSalEventQueue::postCachedEvent( pEvent );
-						pEvent->release();
-					}
+					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
+					JavaSalEventQueue::postCachedEvent( pEvent );
+					pEvent->release();
 #endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
 				}

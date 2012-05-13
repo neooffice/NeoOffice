@@ -1611,9 +1611,15 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
+		// Do not post a lost focus event if we are tracking the menubar as
+		// it will cause the menubar to disappear when then help menu is opened
+		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pSharedDelegate && ![pSharedDelegate isInTracking] )
+		{
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
+		}
 #else	// USE_NATIVE_EVENTS
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
