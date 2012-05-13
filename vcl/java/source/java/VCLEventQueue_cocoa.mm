@@ -2362,8 +2362,7 @@ static CFDataRef aRTFSelection = nil;
 			short nCommandKey = [pSharedResponder lastCommandKey];
 			if ( nCommandKey )
 			{
-				// Fix bug 3350 by not passing any of the original key modifiers
-				USHORT nCode = nCommandKey | GetEventCode( nMouseMask );
+				USHORT nCode = nCommandKey | [pSharedResponder lastModifiers];
 
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
 				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );

@@ -65,6 +65,8 @@ static unsigned short GetCurrentKeyChar()
 	return nRet;
 }
 
+#endif	// !USE_NATIVE_EVENTS
+
 static short GetCurrentKeyModifiers()
 {
 	short nRet = 0;
@@ -89,8 +91,6 @@ static short GetCurrentKeyModifiers()
 
 	return nRet;
 }
-
-#endif	// !USE_NATIVE_EVENTS
 
 @implementation VCLResponder
 
@@ -240,10 +240,8 @@ static short GetCurrentKeyModifiers()
 {
 	mnLastCommandKey = KEY_RETURN;
 
-#ifndef USE_NATIVE_EVENTS
 	// Fix bug 3350 by using the current event's key modifiers
 	mnLastModifiers = GetCurrentKeyModifiers();
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)insertParagraphSeparator:(id)pSender
