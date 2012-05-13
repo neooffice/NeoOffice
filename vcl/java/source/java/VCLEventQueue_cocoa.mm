@@ -2311,23 +2311,27 @@ static CFDataRef aRTFSelection = nil;
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			SalExtTextInputPosEvent aInputPosEvent;
-			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
-
 			// Fix bug 2426 by checking the frame pointer before any use
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				if ( *it == mpFrame )
 				{
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUTPOS, mpFrame, &aInputPosEvent );
-					pEvent->dispatch();
-					pEvent->release();
+					SalExtTextInputPosEvent *pInputPosEvent = new SalExtTextInputPosEvent();
+					memset( pInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
 
-					if ( aInputPosEvent.mbVertical )
-						aRet = NSMakeRect( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25, aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15, aInputPosEvent.mnWidth, aInputPosEvent.mnHeight );
-					else
-						aRet = NSMakeRect( aInputPosEvent.mnX, aInputPosEvent.mnY + 20, aInputPosEvent.mnWidth, aInputPosEvent.mnHeight );
+					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUTPOS, mpFrame, pInputPosEvent );
+					pEvent->dispatch();
+
+					if ( pInputPosEvent )
+					{
+						if ( pInputPosEvent->mbVertical )
+							aRet = NSMakeRect( pInputPosEvent->mnX + pInputPosEvent->mnWidth + 25, pInputPosEvent->mnY - pInputPosEvent->mnHeight + 15, pInputPosEvent->mnWidth, pInputPosEvent->mnHeight );
+						else
+							aRet = NSMakeRect( pInputPosEvent->mnX, pInputPosEvent->mnY + 20, pInputPosEvent->mnWidth, pInputPosEvent->mnHeight );
+					}
+
+					pEvent->release();
 
 					// Translate, flip coordinates within content frame, and
 					// adjust to screen coordinates
