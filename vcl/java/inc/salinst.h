@@ -135,6 +135,8 @@ class SAL_DLLPRIVATE JavaSalEvent
 	bool					mbNative;
 	sal_Bool				mbShutdownCancelled;
 	::std::list< JavaSalEvent* >	maOriginalKeyEvents;
+	ULONG					mnCommittedCharacters;
+	ULONG					mnCursorPosition;
 #else	// USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
 #endif	// USE_NATIVE_EVENTS
@@ -142,7 +144,7 @@ class SAL_DLLPRIVATE JavaSalEvent
 	mutable int				mnRefCount;
 
 public:
-							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString() );
+							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString(), ULONG nCommittedCharacters = 0, ULONG nCursorPosition = 0 );
 #ifndef USE_NATIVE_EVENTS
 							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
 #endif	// !USE_NATIVE_EVENTS
@@ -171,8 +173,8 @@ public:
 	JavaSalEvent*			getNextOriginalKeyEvent();
 	::rtl::OUString			getPath();
 	USHORT					getRepeatCount();
-	::rtl::OUString			getText();
-	USHORT*					getTextAttributes();
+	XubString				getText();
+	const USHORT*			getTextAttributes();
 	const Rectangle			getUpdateRect();
 #ifndef USE_NATIVE_EVENTS
 	::vcl::com_sun_star_vcl_VCLEvent*	getVCLEvent() const { return mpVCLEvent; }

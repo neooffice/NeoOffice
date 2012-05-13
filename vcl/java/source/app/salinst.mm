@@ -1176,12 +1176,14 @@ sal_Bool SalYieldMutex::tryToAcquire()
 
 // =========================================================================
 
-JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath ) :
+JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath, ULONG nCommittedCharacters, ULONG nCursorPosition ) :
 #ifdef USE_NATIVE_EVENTS
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mbNative( false ),
 	mbShutdownCancelled( sal_False ),
+	mnCommittedCharacters( nCommittedCharacters ),
+	mnCursorPosition( nCursorPosition ),
 	mpData( pData ),
 #else	// USE_NATIVE_EVENTS
 	mpVCLEvent( NULL ),
@@ -1567,7 +1569,7 @@ void JavaSalEvent::dispatch()
 					ULONG nCursorPos = getCursorPosition();
 					pInputEvent = new SalExtTextInputEvent();
 					pInputEvent->mnTime = getWhen();
-					pInputEvent->maText = XubString( getText() );
+					pInputEvent->maText = getText();
 					pInputEvent->mpTextAttr = getTextAttributes();
 					pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
 					pInputEvent->mnDeltaStart = 0;
@@ -2089,7 +2091,8 @@ ULONG JavaSalEvent::getCommittedCharacterCount()
 	ULONG nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getCommittedCharacterCount not implemented\n" );
+	if ( mnID == SALEVENT_EXTTEXTINPUT )
+		nRet = mnCommittedCharacters;
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getCommittedCharacterCount();
@@ -2105,7 +2108,8 @@ ULONG JavaSalEvent::getCursorPosition()
 	ULONG nRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getCursorPosition not implemented\n" );
+	if ( mnID == SALEVENT_EXTTEXTINPUT )
+		nRet = mnCursorPosition;
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		nRet = mpVCLEvent->getCursorPosition();
@@ -2311,15 +2315,19 @@ USHORT JavaSalEvent::getRepeatCount()
 
 // -------------------------------------------------------------------------
 
-OUString JavaSalEvent::getText()
+XubString JavaSalEvent::getText()
 {
-	OUString aRet;
+	XubString aRet;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getText not implemented\n" );
+	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
+	{
+		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
+		aRet = pInputEvent->maText;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
-		aRet = mpVCLEvent->getText();
+		aRet = XubString( mpVCLEvent->getText() );
 #endif	// USE_NATIVE_EVENTS
 
 	return aRet;
@@ -2327,12 +2335,16 @@ OUString JavaSalEvent::getText()
 
 // -------------------------------------------------------------------------
 
-USHORT *JavaSalEvent::getTextAttributes()
+const USHORT *JavaSalEvent::getTextAttributes()
 {
-	USHORT *pRet = 0;
+	const USHORT *pRet = 0;
 
 #ifdef USE_NATIVE_EVENTS
-	fprintf( stderr, "JavaSalEvent::getTextAttributes not implemented\n" );
+	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
+	{
+		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
+		pRet = pInputEvent->mpTextAttr;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLEvent )
 		pRet = mpVCLEvent->getTextAttributes();
@@ -2969,7 +2981,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					if ( pEventQueue->size() )
 					{
 						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
-						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && !pOldEvent->getText().getLength() )
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && !pOldEvent->getText().Len() )
 							pEventQueue->back()->remove();
 					}
 
