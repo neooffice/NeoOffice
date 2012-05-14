@@ -122,15 +122,15 @@
 @interface VCLPanel : NSPanel
 {
 #ifdef USE_NATIVE_EVENTS
-	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	MacOSBOOL				mbCanBecomeKeyWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 #endif	// USE_NATIVE_EVENTS
 }
 #ifdef USE_NATIVE_EVENTS
-- (MacOSBOOL)canBecomeKeyOrMainWindow;
-- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
+- (MacOSBOOL)canBecomeKeyWindow;
+- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 #endif	// USE_NATIVE_EVENTS
 @end
@@ -138,7 +138,7 @@
 @interface VCLWindow : NSWindow
 {
 #ifdef USE_NATIVE_EVENTS
-	MacOSBOOL				mbCanBecomeKeyOrMainWindow;
+	MacOSBOOL				mbCanBecomeKeyWindow;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
@@ -149,7 +149,7 @@
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)becomeKeyWindow;
 #ifdef USE_NATIVE_EVENTS
-- (MacOSBOOL)canBecomeKeyOrMainWindow;
+- (MacOSBOOL)canBecomeKeyWindow;
 #endif	// USE_NATIVE_EVENTS
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
@@ -162,7 +162,7 @@
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 #ifdef USE_NATIVE_EVENTS
-- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow;
+- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 #endif	// USE_NATIVE_EVENTS
 - (void)setContentView:(NSView *)pView;

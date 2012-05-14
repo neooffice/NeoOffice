@@ -891,14 +891,14 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 #ifdef USE_NATIVE_EVENTS
 
-- (MacOSBOOL)canBecomeKeyOrMainWindow
+- (MacOSBOOL)canBecomeKeyWindow
 {
-	return ( mbCanBecomeKeyOrMainWindow && ![self becomesKeyOnlyIfNeeded] );
+	return ( mbCanBecomeKeyWindow && ![self becomesKeyOnlyIfNeeded] );
 }
 
-- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
+- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
 {
-	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
+	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
 - (void)setFrame:(JavaSalFrame *)pFrame
@@ -1181,9 +1181,9 @@ static NSUInteger nMouseMask = 0;
 
 #ifdef USE_NATIVE_EVENTS
 
-- (MacOSBOOL)canBecomeKeyOrMainWindow
+- (MacOSBOOL)canBecomeKeyWindow
 {
-	return mbCanBecomeKeyOrMainWindow;
+	return mbCanBecomeKeyWindow;
 }
 
 #endif	// USE_NATIVE_EVENTS
@@ -1227,7 +1227,7 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		mbCanBecomeKeyOrMainWindow = YES;
+		mbCanBecomeKeyWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
 		mnLastMetaModifierReleasedTime = 0;
@@ -1251,7 +1251,7 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		mbCanBecomeKeyOrMainWindow = YES;
+		mbCanBecomeKeyWindow = YES;
 		mnIgnoreMouseReleasedModifiers = 0;
 		mpFrame = NULL;
 		mnLastMetaModifierReleasedTime = 0;
@@ -1301,7 +1301,7 @@ static NSUInteger nMouseMask = 0;
 - (void)makeKeyWindow
 {
 #ifdef USE_NATIVE_EVENTS
-	if ( !mbCanBecomeKeyOrMainWindow )
+	if ( ![self canBecomeKeyWindow] )
 		return;
 #endif	// USE_NATIVE_EVENTS
 
@@ -1743,7 +1743,7 @@ static NSUInteger nMouseMask = 0;
 				// will receive no mouse move events.
 				if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
-					if ( [self canBecomeKeyOrMainWindow] && ![self isKeyWindow] && ! ( nModifiers & NSLeftMouseDownMask ) )
+					if ( [self canBecomeKeyWindow] && ![self isKeyWindow] && ! ( nModifiers & NSLeftMouseDownMask ) )
 					{
 						mnIgnoreMouseReleasedModifiers = nModifiers;
 						return;
@@ -1985,9 +1985,9 @@ static NSUInteger nMouseMask = 0;
 
 #ifdef USE_NATIVE_EVENTS
 
-- (void)setCanBecomeKeyOrMainWindow:(MacOSBOOL)bCanBecomeKeyOrMainWindow
+- (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
 {
-	mbCanBecomeKeyOrMainWindow = bCanBecomeKeyOrMainWindow;
+	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
 - (void)setFrame:(JavaSalFrame *)pFrame

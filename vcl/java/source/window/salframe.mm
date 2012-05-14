@@ -1091,7 +1091,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	// Fix bug 3032 by disabling focus for show only menus windows when
 	// any frames are visible
-	MacOSBOOL bEnableFocus = NO;
+	MacOSBOOL bEnableFocus = YES;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -1107,9 +1107,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 					continue;
 
 				::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
-				if ( it != aShowOnlyMenusWindowMap.end() && [it->first canBecomeKeyOrMainWindow] )
+				if ( it == aShowOnlyMenusWindowMap.end() )
 				{
-					bEnableFocus = YES;
+					bEnableFocus = NO;
 					break;
 				}
 			}
@@ -1118,7 +1118,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	for ( ::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.begin(); it != aShowOnlyMenusWindowMap.end(); ++it )
 	{
-		[it->first setCanBecomeKeyOrMainWindow:bEnableFocus];
+		[it->first setCanBecomeKeyWindow:bEnableFocus];
 		if ( bEnableFocus && [it->first isVisible] )
 			[it->first makeKeyWindow];
 	}
@@ -1206,7 +1206,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			{
 				[mpWindow setHidesOnDeactivate:NO];
 				[(VCLPanel *)mpWindow setBecomesKeyOnlyIfNeeded:NO];
-				[(VCLPanel *)mpWindow setCanBecomeKeyOrMainWindow:NO];
+				[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
 			}
 
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
@@ -1467,9 +1467,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	if ( mpWindow )
 	{
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setCanBecomeKeyOrMainWindow:NO];
+			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
 		else
-			[(VCLWindow *)mpWindow setCanBecomeKeyOrMainWindow:YES];
+			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:YES];
 	}
 }
 
@@ -1563,12 +1563,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[mpParent deminiaturize:self];
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
-			MacOSBOOL bCanBecomeKeyOrMainWindow;
+			MacOSBOOL bCanBecomeKeyWindow;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-				bCanBecomeKeyOrMainWindow = [(VCLPanel *)mpWindow canBecomeKeyOrMainWindow];
+				bCanBecomeKeyWindow = [(VCLPanel *)mpWindow canBecomeKeyWindow];
 			else
-				bCanBecomeKeyOrMainWindow = [(VCLWindow *)mpWindow canBecomeKeyOrMainWindow];
-			if ( bCanBecomeKeyOrMainWindow && ![pNoActivate boolValue] )
+				bCanBecomeKeyWindow = [(VCLWindow *)mpWindow canBecomeKeyWindow];
+			if ( bCanBecomeKeyWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
 		}
 		else
@@ -3786,7 +3786,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		if ( mpParent && mpParent->mpWindow && !mpParent->mbShowOnlyMenus )
 			pParentWindow = [(VCLWindowWrapper *)mpParent->mpWindow window];
 
-		VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:pParentWindow showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
+		VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:pParentWindow showOnlyMenus:mbShowOnlyMenus utility:bUtilityWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pVCLCreateWindow performSelectorOnMainThread:@selector(createWindow:) withObject:pVCLCreateWindow waitUntilDone:YES modes:pModes];
 		VCLWindowWrapper *pWindow = [pVCLCreateWindow window];
