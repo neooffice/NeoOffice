@@ -2158,6 +2158,9 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)dealloc
 {
+	if ( mpTextInput )
+		[mpTextInput release];
+
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
 
@@ -2204,30 +2207,140 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)hasMarkedText
 {
-	fprintf( stderr, "[VCLView hasMarkedText] not implemented\n" );
-	return NO;
+	return ( maTextInputRange.length ? YES : NO );
 }
 
 - (NSRange)markedRange
 {
-	fprintf( stderr, "[VCLView markedRange] not implemented\n" );
-	return NSMakeRange( NSNotFound, 0 );
+	return maTextInputRange;
 }
 
 - (NSRange)selectedRange
 {
-	fprintf( stderr, "[VCLView selectedRange] not implemented\n" );
-	return NSMakeRange( NSNotFound, 0 );
+	return maSelectedRange;
 }
 
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange
 {
-	fprintf( stderr, "[VCLView setMarkedText:selectedRange:replacementRange:] not implemented\n" );
+	maSelectedRange = NSMakeRange( NSNotFound, 0 );
+	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpTextInput )
+		[mpTextInput release];
+	mpTextInput = aString;
+	if ( mpTextInput )
+	{
+		[mpTextInput retain];
+
+		NSUInteger nLen = 0;
+		if ( [mpTextInput isKindOfClass:[NSAttributedString class]] )
+			nLen = [(NSAttributedString *)mpTextInput length];
+		else if ( [mpTextInput isKindOfClass:[NSString class]] )
+			nLen = [(NSString *)mpTextInput length];
+		if ( nLen )
+		{
+			maTextInputRange = NSMakeRange( 0, nLen );
+			maSelectedRange = NSIntersectionRange( aSelectedRange, maTextInputRange );
+			if ( !maSelectedRange.length )
+				maSelectedRange.location = NSNotFound;
+		}
+		else
+		{
+			maTextInputRange = NSMakeRange( NSNotFound, 0 );
+		}
+	}
+
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+	{
+		XubString aText;
+		NSString *pChars = nil;
+		if ( mpTextInput )
+		{
+			if ( [mpTextInput isKindOfClass:[NSAttributedString class]] )
+				pChars = [(NSAttributedString *)mpTextInput string];
+			else if ( [mpTextInput isKindOfClass:[NSString class]] )
+				pChars = (NSString *)mpTextInput;
+
+			if ( pChars && [pChars length] )
+			{
+				NSUInteger nLen = [pChars length];
+				sal_Unicode aBuf[ nLen + 1 ];
+				[pChars getCharacters:aBuf];
+				aBuf[ nLen ] = 0;
+				aText = XubString( aBuf );
+			}
+		}
+
+		ULONG nLen = aText.Len();
+		ULONG nCursorPos = ( maSelectedRange.location == NSNotFound || maSelectedRange.location + maSelectedRange.length > nLen ? nLen : maSelectedRange.location );
+		USHORT *pAttr = NULL;
+		if ( nLen )
+		{
+			pAttr = (USHORT *)rtl_allocateMemory( sizeof( USHORT* ) * nLen );
+			if ( pAttr )
+			{
+				// If no characters are selected, highlight all of them
+				ULONG nStartHighlightPos = 0;
+				ULONG nEndHighlightPos = nLen;
+				if ( maSelectedRange.location != NSNotFound && maSelectedRange.location < nLen && maSelectedRange.length )
+				{
+					nStartHighlightPos = maSelectedRange.location;
+					nEndHighlightPos = maSelectedRange.location + maSelectedRange.length;
+				}
+
+				for ( USHORT i = 0; i < nLen; i++ )
+				{
+					if ( i >= nStartHighlightPos && i < nEndHighlightPos )
+						pAttr[ i ] = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
+					else
+						pAttr[ i ] = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+				}
+			}
+		}
+
+		SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
+		pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+		pInputEvent->maText = aText;
+		pInputEvent->mpTextAttr = pAttr;
+		pInputEvent->mnCursorPos = nCursorPos;
+		pInputEvent->mnDeltaStart = 0;
+		pInputEvent->mbOnlyCursor = FALSE;
+		pInputEvent->mnCursorFlags = 0;
+
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, nCursorPos );
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
+	}
 }
 
 - (void)unmarkText
 {
-	fprintf( stderr, "[VCLView unmarkText] not implemented\n" );
+	maSelectedRange = NSMakeRange( NSNotFound, 0 );
+	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpTextInput )
+	{
+		[mpTextInput release];
+		mpTextInput = nil;
+
+		NSWindow *pWindow = [self window];
+		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+		{
+			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
+			pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+			pInputEvent->maText = XubString();
+			pInputEvent->mpTextAttr = NULL;
+			pInputEvent->mnCursorPos = 0;
+			pInputEvent->mnDeltaStart = 0;
+			pInputEvent->mbOnlyCursor = FALSE;
+			pInputEvent->mnCursorFlags = 0;
+
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, 0 );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
+		}
+	}
 }
 
 - (NSArray *)validAttributesForMarkedText
@@ -2237,54 +2350,121 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange
 {
-	fprintf( stderr, "[VCLView attributedSubstringForProposedRange:actualRange:] not implemented\n" );
-	return nil;
+	NSAttributedString *pRet = nil;
+
+	if ( mpTextInput && aRange.location != NSNotFound )
+	{
+		NSUInteger nLen = [mpTextInput length];
+		if ( nLen )
+		{
+			maTextInputRange = NSMakeRange( 0, nLen );
+			NSRange aSubstringRange = NSIntersectionRange( aRange, maTextInputRange );
+			if ( aSubstringRange.location != NSNotFound && aSubstringRange.location < nLen - 1 && aSubstringRange.length )
+			{
+				if ( [mpTextInput isKindOfClass:[NSAttributedString class]] )
+					pRet = [(NSAttributedString *)mpTextInput attributedSubstringFromRange:aSubstringRange];
+				else if ( [mpTextInput isKindOfClass:[NSString class]] )
+				{
+					NSString *pSubstring = [(NSString *)mpTextInput substringWithRange:aSubstringRange];
+					if ( pSubstring )
+						pRet = [[NSAttributedString alloc] initWithString:pSubstring];
+				}
+			}
+		}
+	}
+
+	return pRet;
 }
 
 - (void)insertText:(id)aString replacementRange:(NSRange)aReplacementRange
 {
-	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+	maSelectedRange = NSMakeRange( NSNotFound, 0 );
+	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpTextInput )
 	{
-		NSString *pChars;
-		if ( [aString isKindOfClass:[NSAttributedString class]] )
-			pChars = [(NSAttributedString *)aString string];
-		else
-			pChars = (NSString *)aString;
-		if ( pChars && [pChars length] )
+		[mpTextInput release];
+		mpTextInput = nil;
+
+		NSWindow *pWindow = [self window];
+		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 		{
-			// Fix bug 710 by stripping out the Alt modifier. Note that we do
-			// it here because we need to let the Alt modifier through for
-			// action keys.
-			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
-			USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+			NSString *pChars = nil;
+			if ( [aString isKindOfClass:[NSAttributedString class]] )
+				pChars = [(NSAttributedString *)aString string];
+			else if ( [aString isKindOfClass:[NSString class]] )
+				pChars = (NSString *)aString;
 
-			NSUInteger i = 0;
-			NSUInteger nLength = [pChars length];
-			for ( ; i < nLength; i++ )
+			XubString aText;
+			if ( pChars && [pChars length] )
 			{
-				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
-				pKeyDownEvent->mnCode = nCode;
-				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
-				pKeyDownEvent->mnRepeat = 0;
+				NSUInteger nLen = [pChars length];
+				sal_Unicode aBuf[ nLen + 1 ];
+				[pChars getCharacters:aBuf];
+				aBuf[ nLen ] = 0;
+				aText = XubString( aBuf );
+			}
 
-				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
-				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+			ULONG nLen = aText.Len();
+			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
+			pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+			pInputEvent->maText = aText;
+			pInputEvent->mpTextAttr = NULL;
+			pInputEvent->mnCursorPos = nLen;
+			pInputEvent->mnDeltaStart = 0;
+			pInputEvent->mbOnlyCursor = FALSE;
+			pInputEvent->mnCursorFlags = 0;
 
-				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
-
-				if ( i == nLength - 1 )
+			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), nLen, nLen );
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			pEvent->release();
+		}
+	}
+	else
+	{
+		NSWindow *pWindow = [self window];
+		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+		{
+			NSString *pChars = nil;
+			if ( [aString isKindOfClass:[NSAttributedString class]] )
+				pChars = [(NSAttributedString *)aString string];
+			else if ( [aString isKindOfClass:[NSString class]] )
+				pChars = (NSString *)aString;
+			if ( pChars && [pChars length] )
+			{
+				// Fix bug 710 by stripping out the Alt modifier. Note that we
+				// do it here because we need to let the Alt modifier through
+				// for action keys.
+				NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
+				USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+	
+				NSUInteger i = 0;
+				NSUInteger nLength = [pChars length];
+				for ( ; i < nLength; i++ )
 				{
-					mpPendingKeyUpEvent = pKeyUpEvent;
-				}
-				else
-				{
-					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
-					JavaSalEventQueue::postCachedEvent( pExtraEvent );
-					pExtraEvent->release();
+					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+					pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+					pKeyDownEvent->mnCode = nCode;
+					pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
+					pKeyDownEvent->mnRepeat = 0;
+
+					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+					memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+	
+					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+					JavaSalEventQueue::postCachedEvent( pEvent );
+					pEvent->release();
+
+					if ( i == nLength - 1 )
+					{
+						mpPendingKeyUpEvent = pKeyUpEvent;
+					}
+					else
+					{
+						JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+						JavaSalEventQueue::postCachedEvent( pExtraEvent );
+						pExtraEvent->release();
+					}
 				}
 			}
 		}
@@ -2354,6 +2534,9 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
+	// Cancel any uncommitted input just to be safe
+	[self unmarkText];
+
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 	{
@@ -2817,6 +3000,9 @@ static CFDataRef aRTFSelection = nil;
 		mpFrame = NULL;
 		mpLastKeyDownEvent = nil;
 		mpPendingKeyUpEvent = NULL;
+		maSelectedRange = NSMakeRange( NSNotFound, 0 );
+		mpTextInput = nil;
+		maTextInputRange = NSMakeRange( NSNotFound, 0 );
 	}
 #endif	// USE_NATIVE_EVENTS
 

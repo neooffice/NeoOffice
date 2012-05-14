@@ -47,6 +47,9 @@
 	JavaSalFrame*			mpFrame;
 	NSEvent*				mpLastKeyDownEvent;
 	SalKeyEvent*			mpPendingKeyUpEvent;
+	NSRange					maSelectedRange;
+	id						mpTextInput;
+	NSRange					maTextInputRange;
 }
 - (MacOSBOOL)acceptsFirstResponder;
 - (void)dealloc;
