@@ -2275,9 +2275,7 @@ static CFDataRef aRTFSelection = nil;
 			nLen = [(NSString *)mpTextInput length];
 
 		maTextInputRange = NSMakeRange( 0, nLen );
-		maSelectedRange = NSIntersectionRange( aSelectedRange, maTextInputRange );
-		if ( !maSelectedRange.length )
-			maSelectedRange.location = NSNotFound;
+		maSelectedRange = aSelectedRange;
 	}
 
 	NSWindow *pWindow = [self window];
@@ -2303,7 +2301,10 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		ULONG nLen = aText.Len();
-		ULONG nCursorPos = ( maSelectedRange.location == NSNotFound || maSelectedRange.location + maSelectedRange.length > nLen ? nLen : maSelectedRange.location );
+		ULONG nCursorPos = ( maSelectedRange.location == NSNotFound ? nLen : maSelectedRange.location );
+		if ( nCursorPos > nLen )
+			nCursorPos = nLen;
+
 		USHORT *pAttr = NULL;
 		if ( nLen )
 		{
