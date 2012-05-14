@@ -1148,6 +1148,11 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 		if ( ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 		{
+			// Fix bug 1819 by forcing cancellation of the input method
+			NSResponder *pResponder = [self firstResponder];
+			if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
+				[(VCLView *)pResponder abandonInput];
+
 			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
@@ -1267,15 +1272,23 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
 {
-#ifndef USE_NATIVE_EVENTS
 	NSResponder *pOldResponder = [self firstResponder];
-#endif	// !USE_NATIVE_EVENTS
 
 	MacOSBOOL bRet = NO;
 	if ( [super respondsToSelector:@selector(poseAsMakeFirstResponder:)] )
 		bRet = [super poseAsMakeFirstResponder:pResponder];
 
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+	// Fix bug 1819 by forcing cancellation of the input method
+	if ( bRet && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
+	{
+		if ( pOldResponder && [pOldResponder isKindOfClass:[VCLView class]] )
+			[(VCLView *)pOldResponder abandonInput];
+
+		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
+			[(VCLView *)pResponder abandonInput];
+	}
+#else	// USE_NATIVE_EVENTS
 	// Fix bug 1819 by forcing cancellation of the input method
 	if ( bRet && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
@@ -1293,7 +1306,7 @@ static NSUInteger nMouseMask = 0;
 			[pResponder abandonInput];
 		}
 	}
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -1604,6 +1617,11 @@ static NSUInteger nMouseMask = 0;
 #ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
+		// Fix bug 1819 by forcing cancellation of the input method
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
+			[(VCLView *)pResponder abandonInput];
+
 		// Do not post a lost focus event if we are tracking the menubar as
 		// it will cause the menubar to disappear when then help menu is opened
 		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
@@ -2156,16 +2174,28 @@ static CFDataRef aRTFSelection = nil;
 	return YES;
 }
 
+- (void)abandonInput
+{
+	if ( mpInputManager && [self hasMarkedText] )
+	{
+		[mpInputManager markedTextAbandoned:self];
+		[self unmarkText];
+	}
+}
+
 - (void)dealloc
 {
-	if ( mpTextInput )
-		[mpTextInput release];
+	if ( mpInputManager )
+		[mpInputManager release];
 
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
 
 	if ( mpPendingKeyUpEvent )
 		delete mpPendingKeyUpEvent;
+
+	if ( mpTextInput )
+		[mpTextInput release];
 
 	[super dealloc];
 }
@@ -2207,7 +2237,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)hasMarkedText
 {
-	return ( maTextInputRange.length ? YES : NO );
+	return ( mpTextInput ? YES : NO );
 }
 
 - (NSRange)markedRange
@@ -2225,6 +2255,12 @@ static CFDataRef aRTFSelection = nil;
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
+	if ( mpInputManager )
+		[mpInputManager release];
+	mpInputManager = [NSInputManager currentInputManager];
+	if ( mpInputManager )
+		[mpInputManager retain];
+
 	if ( mpTextInput )
 		[mpTextInput release];
 	mpTextInput = aString;
@@ -2237,17 +2273,11 @@ static CFDataRef aRTFSelection = nil;
 			nLen = [(NSAttributedString *)mpTextInput length];
 		else if ( [mpTextInput isKindOfClass:[NSString class]] )
 			nLen = [(NSString *)mpTextInput length];
-		if ( nLen )
-		{
-			maTextInputRange = NSMakeRange( 0, nLen );
-			maSelectedRange = NSIntersectionRange( aSelectedRange, maTextInputRange );
-			if ( !maSelectedRange.length )
-				maSelectedRange.location = NSNotFound;
-		}
-		else
-		{
-			maTextInputRange = NSMakeRange( NSNotFound, 0 );
-		}
+
+		maTextInputRange = NSMakeRange( 0, nLen );
+		maSelectedRange = NSIntersectionRange( aSelectedRange, maTextInputRange );
+		if ( !maSelectedRange.length )
+			maSelectedRange.location = NSNotFound;
 	}
 
 	NSWindow *pWindow = [self window];
@@ -2319,6 +2349,12 @@ static CFDataRef aRTFSelection = nil;
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
+	if ( mpInputManager )
+	{
+		[mpInputManager release];
+		mpInputManager = nil;
+	}
+
 	if ( mpTextInput )
 	{
 		[mpTextInput release];
@@ -2380,6 +2416,12 @@ static CFDataRef aRTFSelection = nil;
 {
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpInputManager )
+	{
+		[mpInputManager release];
+		mpInputManager = nil;
+	}
 
 	if ( mpTextInput )
 	{
@@ -2998,6 +3040,7 @@ static CFDataRef aRTFSelection = nil;
 	if ( [self isKindOfClass:[VCLView class]] )
 	{
 		mpFrame = NULL;
+		mpInputManager = nil;
 		mpLastKeyDownEvent = nil;
 		mpPendingKeyUpEvent = NULL;
 		maSelectedRange = NSMakeRange( NSNotFound, 0 );

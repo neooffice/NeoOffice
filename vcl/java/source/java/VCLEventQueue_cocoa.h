@@ -45,6 +45,7 @@
 @interface VCLView : NSView <NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;
+	NSInputManager*			mpInputManager;
 	NSEvent*				mpLastKeyDownEvent;
 	SalKeyEvent*			mpPendingKeyUpEvent;
 	NSRange					maSelectedRange;
@@ -52,6 +53,7 @@
 	NSRange					maTextInputRange;
 }
 - (MacOSBOOL)acceptsFirstResponder;
+- (void)abandonInput;
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;
