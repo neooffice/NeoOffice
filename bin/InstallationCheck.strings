@@ -4,6 +4,5 @@
 "19" = "You are using the wrong installer. You have a Mac PowerPC machine and this installer only works on Mac Intel machines. You must download the $(PRODUCT_NAME) installer for Mac PowerPC machine.";
 "20" = "You cannot install $(PRODUCT_NAME) on this machine. You are using Mac OS X in 64 bit mode. You must use Mac OS X in 32 bit mode to install $(PRODUCT_NAME).";
 "21" = "You cannot install $(PRODUCT_NAME) on this machine. You have a unknown type of Mac machine and $(PRODUCT_NAME) only works on Mac Intel machines.";
-"24" = "You cannot install $(PRODUCT_NAME) on this machine. The version of Java is too old. You must install the latest version of Java from Apple. To install the latest Java from Apple, select the Apple :: Software Update... menu and install any Mac OS X updates that are listed.";
 "25" = "You must quit $(PRODUCT_NAME) before you can install $(PRODUCT_NAME). Quit $(PRODUCT_NAME) by Control-clicking on the $(PRODUCT_NAME) icon in the Dock and selecting Quit from the popup menu that appears.";
 

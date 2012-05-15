@@ -70,12 +70,6 @@ if [ "$target_machine" != "$machine" ] ; then
 	esac
 fi
 
-# Check that the user has at least one Java version on their machine
-if [ ! -x "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java" ] ; then
-	# Return 96 + 24 if we didn't find any Java installed
-	exit 120;
-fi
-
 scriptdir=`dirname "$0"`
 if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 
