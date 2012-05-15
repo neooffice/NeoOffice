@@ -91,6 +91,10 @@
 - (void)moveToBeginningOfParagraph:(id)pSender;
 - (void)moveToEndOfLine:(id)pSender;
 - (void)moveToEndOfParagraph:(id)pSender;
+- (void)moveToLeftEndOfLine:(id)pSender;
+- (void)moveToLeftEndOfLineAndModifySelection:(id)pSender;
+- (void)moveToRightEndOfLine:(id)pSender;
+- (void)moveToRightEndOfLineAndModifySelection:(id)pSender;
 - (void)moveUp:(id)pSender;
 - (void)moveWordBackward:(id)pSender;
 - (void)moveWordBackwardAndModifySelection:(id)pSender;
@@ -100,6 +104,8 @@
 - (void)moveWordRight:(id)pSender;
 - (void)pageDown:(id)pSender;
 - (void)pageUp:(id)pSender;
+- (void)scrollToBeginningOfDocument:(id)pSender;
+- (void)scrollToEndOfDocument:(id)pSender;
 - (void)selectAll:(id)pSender;
 - (void)selectLine:(id)pSender;
 - (void)selectParagraph:(id)pSender;

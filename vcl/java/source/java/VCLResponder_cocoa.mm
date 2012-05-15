@@ -420,6 +420,26 @@ static short GetCurrentKeyModifiers()
 	mnLastCommandKey = Key::SELECT_TO_END_OF_PARAGRAPH;
 }
 
+- (void)moveToLeftEndOfLine:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_LINE;
+}
+
+- (void)moveToLeftEndOfLineAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_BEGIN_OF_LINE;
+}
+
+- (void)moveToRightEndOfLine:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_END_OF_LINE;
+}
+
+- (void)moveToRightEndOfLineAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_END_OF_LINE;
+}
+
 - (void)moveUp:(id)pSender
 {
 	mnLastCommandKey = KEY_UP;
@@ -473,6 +493,16 @@ static short GetCurrentKeyModifiers()
 - (void)pageUp:(id)pSender
 {
 	mnLastCommandKey = KEY_PAGEUP;
+}
+
+- (void)scrollToBeginningOfDocument:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_DOCUMENT;
+}
+
+- (void)scrollToEndOfDocument:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_END_OF_DOCUMENT;
 }
 
 - (void)selectAll:(id)pSender
