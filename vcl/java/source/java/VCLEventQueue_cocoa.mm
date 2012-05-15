@@ -1508,6 +1508,11 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
+	// Fix bug 2783 by cancelling menu actions if the input method if the
+	// there is any marked text in the key window.
+    if ( NSApplication_hasMarkedText() )
+		return YES;
+
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
 #ifdef USE_NATIVE_EVENTS
@@ -1517,19 +1522,8 @@ static NSUInteger nMouseMask = 0;
 #endif	// USE_NATIVE_EVENTS
 	{
 #ifndef USE_NATIVE_EVENTS
-		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
-
-		// Fix crashing when using a menu shortcut by forcing cancellation of
-		// the input method
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
-		{
-			// Fix bug 2783 by not cancelling the input method if the command
-			// key is pressed, but instead, returning YES to cancel the menu
-			// matching process
-			if ( [pResponder hasMarkedText] )
-				return YES;
-		}
+		if ( pSharedResponder )
+			[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 #endif	// !USE_NATIVE_EVENTS
 
 		// Implement the standard window minimization behavior with the
@@ -2262,20 +2256,27 @@ static CFDataRef aRTFSelection = nil;
 		[mpInputManager retain];
 
 	if ( mpTextInput )
-		[mpTextInput release];
-	mpTextInput = aString;
-	if ( mpTextInput )
 	{
-		[mpTextInput retain];
+		[mpTextInput release];
+		mpTextInput = nil;
+	}
 
+	if ( aString )
+	{
 		NSUInteger nLen = 0;
-		if ( [mpTextInput isKindOfClass:[NSAttributedString class]] )
-			nLen = [(NSAttributedString *)mpTextInput length];
-		else if ( [mpTextInput isKindOfClass:[NSString class]] )
-			nLen = [(NSString *)mpTextInput length];
+		if ( [aString isKindOfClass:[NSAttributedString class]] )
+			nLen = [(NSAttributedString *)aString length];
+		else if ( [aString isKindOfClass:[NSString class]] )
+			nLen = [(NSString *)aString length];
 
-		maTextInputRange = NSMakeRange( 0, nLen );
-		maSelectedRange = aSelectedRange;
+		if ( nLen )
+		{
+			maTextInputRange = NSMakeRange( 0, nLen );
+			maSelectedRange = aSelectedRange;
+
+			mpTextInput = aString;
+			[mpTextInput retain];
+		}
 	}
 
 	NSWindow *pWindow = [self window];
