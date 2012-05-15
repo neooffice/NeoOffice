@@ -2203,7 +2203,10 @@ static CFDataRef aRTFSelection = nil;
 		[mpLastKeyDownEvent retain];
 
 	if ( mpPendingKeyUpEvent )
+	{
 		delete mpPendingKeyUpEvent;
+		mpPendingKeyUpEvent = NULL;
+	}
 
 	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 }
@@ -2501,6 +2504,12 @@ static CFDataRef aRTFSelection = nil;
 
 					if ( i == nLength - 1 )
 					{
+						if ( mpPendingKeyUpEvent )
+						{
+							delete mpPendingKeyUpEvent;
+							mpPendingKeyUpEvent = NULL;
+						}
+
 						mpPendingKeyUpEvent = pKeyUpEvent;
 					}
 					else
