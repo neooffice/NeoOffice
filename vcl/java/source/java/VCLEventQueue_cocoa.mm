@@ -1508,11 +1508,6 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	// Fix bug 2783 by cancelling menu actions if the input method if the
-	// there is any marked text in the key window.
-    if ( NSApplication_hasMarkedText() )
-		return YES;
-
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
 #ifdef USE_NATIVE_EVENTS
@@ -1521,6 +1516,11 @@ static NSUInteger nMouseMask = 0;
 	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 #endif	// USE_NATIVE_EVENTS
 	{
+		// Fix bug 2783 by cancelling menu actions if the input method if the
+		// there is any marked text in this window
+		if ( NSWindow_hasMarkedText( self ) )
+			return YES;
+
 #ifndef USE_NATIVE_EVENTS
 		if ( pSharedResponder )
 			[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
@@ -3818,6 +3818,35 @@ void NSFontManager_release()
 		[pDelegate cancelTermination];
 }
 @end
+
+MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow )
+{
+	MacOSBOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( !pWindow )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			pWindow = [pApp keyWindow];
+	}
+
+	if ( pWindow )
+	{
+		NSResponder *pResponder = [pWindow firstResponder];
+#ifdef USE_NATIVE_EVENTS
+		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] && [(VCLView *)pResponder hasMarkedText] )
+#else	// USE_NATIVE_EVENTS
+		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder hasMarkedText] )
+#endif	// USE_NATIVE_EVENTS
+			bRet = YES;
+	}
+
+	[pPool release];
+
+	return bRet;
+}
 
 void VCLEventQueue_cancelTermination()
 {

@@ -278,9 +278,12 @@ BOOL VCLInstance_updateNativeMenus()
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
+	if ( Application::IsShutDown() || bInNativeDrag || NSApplication_getModalWindow() )
+		return bRet;
+
 	// Fix bug 2783 by cancelling menu actions if the input method if the
-	// there is any marked text in the key window.
-	if ( Application::IsShutDown() || bInNativeDrag || NSApplication_getModalWindow() || NSApplication_hasMarkedText() )
+	// there is any marked text in the key window
+	if ( NSWindow_hasMarkedText( nil ) )
 		return bRet;
 
 	SalData *pSalData = GetSalData();

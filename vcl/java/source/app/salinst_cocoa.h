@@ -40,7 +40,6 @@
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents();
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
-SAL_DLLPRIVATE BOOL NSApplication_hasMarkedText();
 SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
 SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
 

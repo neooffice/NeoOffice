@@ -184,6 +184,8 @@ SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect 
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
 #endif	// USE_NATIVE_WINDOW
 
+SAL_DLLPRIVATE MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow );
+
 #endif	// __OBJC__
 
 SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();

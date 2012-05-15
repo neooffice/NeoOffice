@@ -39,7 +39,6 @@
 #undef check
 
 #include "salinst_cocoa.h"
-#include "../java/VCLEventQueue_cocoa.h"
 
 @interface GetModalWindow : NSObject
 {
@@ -132,31 +131,4 @@ id NSApplication_getModalWindow()
 	[pPool release];
 
 	return pModalWindow;
-}
-
-BOOL NSApplication_hasMarkedText()
-{
-	BOOL bRet = NO;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSWindow *pWindow = [pApp keyWindow];
-		if ( pWindow )
-		{
-			NSResponder *pResponder = [pWindow firstResponder];
-#ifdef USE_NATIVE_EVENTS
-			if ( pResponder && [pResponder isKindOfClass:[VCLView class]] && [(VCLView *)pResponder hasMarkedText] )
-#else	// USE_NATIVE_EVENTS
-			if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder hasMarkedText] )
-#endif	// USE_NATIVE_EVENTS
-				bRet = YES;
-		}
-	}
-
-	[pPool release];
-
-	return bRet;
 }
