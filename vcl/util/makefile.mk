@@ -199,8 +199,7 @@ LIB1FILES+= \
 
 .IF "$(GUIBASE)"=="java"
 SHL1STDLIBS+= \
-	$(TKLIB) \
-	-framework JavaVM
+	$(TKLIB)
 .ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
