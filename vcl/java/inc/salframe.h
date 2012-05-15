@@ -58,8 +58,8 @@
 
 #ifdef USE_NATIVE_WINDOW
 
-// Uncomment the following line to enable native event handling APIs
-// #define USE_NATIVE_EVENTS
+// Comment out the following line to disable native event handling APIs
+#define USE_NATIVE_EVENTS
 
 #endif	// USE_NATIVE_WINDOW
 
