@@ -906,12 +906,6 @@ javaFrameworkError SAL_CALL jfw_setEnabled(sal_Bool bEnabled)
         if (jfw::getMode() == jfw::JFW_MODE_DIRECT)
             return JFW_E_DIRECT_MODE;
                 
-#ifdef USE_JAVA
-		// Fix bug 595 by making sure Java is never disabled
-		if (!bEnabled)
-			throw jfw::FrameworkException(JFW_E_CONFIGURATION, rtl::OString("[Java framework] The JRE is required to run this application so disabling of the JRE is not allowed."));
-#endif	// USE_JAVA
-
 		if (g_bEnabledSwitchedOn == false && bEnabled == sal_True)
 		{
 			//When the process started then Enabled was false.
@@ -949,14 +943,6 @@ javaFrameworkError SAL_CALL jfw_getEnabled(sal_Bool *pbEnabled)
 			return JFW_E_INVALID_ARG;
 		jfw::MergedSettings settings;
 		*pbEnabled = settings.getEnabled();
-#ifdef USE_JAVA
-		// Fix bug 595 by making sure Java is never disabled
-		if (!*pbEnabled)
-		{
-			jfw_setEnabled(sal_True);
-			*pbEnabled = settings.getEnabled();
-		}
-#endif	// USE_JAVA
     }
     catch (jfw::FrameworkException& e)
     {
