@@ -2252,6 +2252,12 @@ static CFDataRef aRTFSelection = nil;
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
+	if ( mpPendingKeyUpEvent )
+	{
+		delete mpPendingKeyUpEvent;
+		mpPendingKeyUpEvent = NULL;
+	}
+
 	if ( mpInputManager )
 		[mpInputManager release];
 	mpInputManager = [NSInputManager currentInputManager];
@@ -2354,6 +2360,12 @@ static CFDataRef aRTFSelection = nil;
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
+	if ( mpPendingKeyUpEvent )
+	{
+		delete mpPendingKeyUpEvent;
+		mpPendingKeyUpEvent = NULL;
+	}
+
 	if ( mpInputManager )
 	{
 		[mpInputManager release];
@@ -2421,6 +2433,12 @@ static CFDataRef aRTFSelection = nil;
 {
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+
+	if ( mpPendingKeyUpEvent )
+	{
+		delete mpPendingKeyUpEvent;
+		mpPendingKeyUpEvent = NULL;
+	}
 
 	if ( mpInputManager )
 	{
@@ -2504,12 +2522,6 @@ static CFDataRef aRTFSelection = nil;
 
 					if ( i == nLength - 1 )
 					{
-						if ( mpPendingKeyUpEvent )
-						{
-							delete mpPendingKeyUpEvent;
-							mpPendingKeyUpEvent = NULL;
-						}
-
 						mpPendingKeyUpEvent = pKeyUpEvent;
 					}
 					else
