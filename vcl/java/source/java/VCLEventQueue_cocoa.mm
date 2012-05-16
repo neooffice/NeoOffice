@@ -3279,8 +3279,15 @@ static CFDataRef aRTFSelection = nil;
 - (MacOSBOOL)wantsPeriodicDraggingUpdates
 {
 	id pDelegate = [self draggingDestinationDelegate];
+#ifdef USE_NATIVE_EVENTS
+	// Ignore the delegate's selector as always returns NO and we need to return
+	// YES for OOo cursor state to keep in sync with the native pointer position
+	if ( pDelegate && [self isKindOfClass:[VCLView class]] )
+		return YES;
+#else	// USE_NATIVE_EVENTS
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
 		return [pDelegate wantsPeriodicDraggingUpdates];
+#endif	// USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(wantsPeriodicDraggingUpdates)] )
 		return [super wantsPeriodicDraggingUpdates];
 	else
