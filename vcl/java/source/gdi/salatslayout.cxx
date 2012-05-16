@@ -939,11 +939,35 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToChars[ i ] = -1;
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	for ( i = 0; i < mpHash->mnLen; i++ )
+	if ( mpHash->mbRTL )
 	{
-		int nIndex = mpCharsToGlyphs[ i ];
-		if ( nIndex >= 0 )
-			mpCharsToChars[ i ] = mpGlyphsToChars[ nIndex ];
+		i = 0;
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount; j-- )
+		{
+			// Detect characters that have no glyphs
+			if ( mpCharsToGlyphs[ j ] < 0 )
+				continue;
+
+			int nIndex = mpGlyphsToChars[ i ];
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < (int)mnGlyphCount && mpGlyphsToChars[ i ] == nIndex; i++ )
+				;
+		}
+	}
+	else
+	{
+		i = 0;
+		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount; j++ )
+		{
+			// Detect characters that have no glyphs
+			if ( mpCharsToGlyphs[ j ] < 0 )
+				continue;
+
+			int nIndex = mpGlyphsToChars[ i ];
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < (int)mnGlyphCount && mpGlyphsToChars[ i ] == nIndex; i++ )
+				;
+		}
 	}
 #else	// USE_CORETEXT_TEXT_RENDERING
 	if ( mpHash->mbRTL )

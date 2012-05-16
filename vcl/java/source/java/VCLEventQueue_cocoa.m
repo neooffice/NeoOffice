@@ -955,17 +955,10 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
-		// Fix crashing when using a menu shortcut by forcing cancellation of
-		// the input method
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
-		{
-			// Fix bug 2783 by not cancelling the input method if the command
-			// key is pressed, but instead, returning YES to cancel the menu
-			// matching process
-			if ( [pResponder hasMarkedText] )
-				return YES;
-		}
+		// Fix bug 2783 by cancelling menu actions if the input method if the
+		// there is any marked text in this window
+		if ( NSWindow_hasMarkedText( self ) )
+			return YES;
 
 		// Implement the standard window minimization behavior with the
 		// Command-m event
@@ -2231,6 +2224,31 @@ void NSFontManager_release()
 		[pDelegate cancelTermination];
 }
 @end
+
+BOOL NSWindow_hasMarkedText( void *pWindow )
+{
+	BOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( !pWindow )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			pWindow = [pApp keyWindow];
+	}
+
+	if ( pWindow )
+	{
+		NSResponder *pResponder = [(NSWindow *)pWindow firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder hasMarkedText] )
+			bRet = YES;
+	}
+
+	[pPool release];
+
+	return bRet;
+}
 
 void VCLEventQueue_cancelTermination()
 {

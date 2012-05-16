@@ -39,7 +39,9 @@
 #include <jni.h>
 
 #ifdef __cplusplus
+#ifndef __OBJC__
 typedef void* id;
+#endif
 #else
 
 @interface VCLWindow : NSWindow
@@ -68,6 +70,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+BOOL NSWindow_hasMarkedText( void *pWindow );
 void VCLEventQueue_cancelTermination();
 void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
 void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
