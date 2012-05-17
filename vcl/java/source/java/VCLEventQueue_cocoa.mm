@@ -1709,7 +1709,7 @@ static NSUInteger nMouseMask = 0;
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{
 			USHORT nID = 0;
-			NSUInteger nModifiers = [pEvent modifierFlags];
+			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 
 			switch ( nType )
 			{
@@ -1811,7 +1811,7 @@ static NSUInteger nMouseMask = 0;
 				{
 					// Strange but true, fix bug 2157 by posting a synthetic
 					// mouse moved event
-					USHORT nExtraCode = GetEventCode( [pEvent modifierFlags] | nMouseMask );
+					USHORT nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
 					pExtraMouseEvent = new SalMouseEvent();
 					pExtraMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
 					pExtraMouseEvent->mnX = (long)aLocation.x;
@@ -1835,7 +1835,7 @@ static NSUInteger nMouseMask = 0;
 		// Handle key modifier change events
 		else if ( nType == NSFlagsChanged )
 		{
-			NSUInteger nModifiers = [pEvent modifierFlags];
+			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 			if ( nModifiers & NSCommandKeyMask )
 				mnLastMetaModifierReleasedTime = 0;
 			else
@@ -1870,7 +1870,7 @@ static NSUInteger nMouseMask = 0;
 		// Handle scroll wheel and magnify
 		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
-			int nModifiers = [pEvent modifierFlags];
+			int nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 			float fDeltaX;
 			float fDeltaY;
 			if ( nType == NSEventTypeMagnify )
@@ -2500,9 +2500,9 @@ static CFDataRef aRTFSelection = nil;
 				// Fix bug 710 by stripping out the Alt modifier. Note that we
 				// do it here because we need to let the Alt modifier through
 				// for action keys.
-				NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
+				NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
 				USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
-	
+
 				NSUInteger i = 0;
 				NSUInteger nLength = [pChars length];
 				for ( ; i < nLength; i++ )
@@ -2538,7 +2538,9 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSUInteger)characterIndexForPoint:(NSPoint)aPoint
 {
+#ifdef DEBUG
 	fprintf( stderr, "[VCLView characterIndexForPoint:] not implemented\n" );
+#endif
 	return NSNotFound;
 }
 
@@ -2634,7 +2636,7 @@ static CFDataRef aRTFSelection = nil;
 		NSString *pChars = [mpLastKeyDownEvent charactersIgnoringModifiers];
 		if ( pChars && [pChars length] )
 		{
-			NSUInteger nModifiers = [mpLastKeyDownEvent modifierFlags] | nMouseMask;
+			NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
 			USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers );
 
 			NSUInteger i = 0;
