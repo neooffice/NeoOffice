@@ -1966,9 +1966,9 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
-OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
+OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut )
 {
-	sal_Unicode nChar = 0;
+	OUString aRet;
 
 	nKeyCode &= KEY_CODE;
 	switch ( nKeyCode )
@@ -1983,7 +1983,7 @@ OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
 		case KEY_7:
 		case KEY_8:
 		case KEY_9:
-			nChar = '0' + nKeyCode - KEY_0;
+			aRet = OUString( (sal_Unicode)( '0' + nKeyCode - KEY_0 ) );
 			break;
 		case KEY_A:
 		case KEY_B:
@@ -2011,164 +2011,288 @@ OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
 		case KEY_X:
 		case KEY_Y:
 		case KEY_Z:
-			nChar = 'A' + nKeyCode - KEY_A;
+			aRet = OUString( (sal_Unicode)( 'A' + nKeyCode - KEY_A ) );
 			break;
 		case KEY_F1:
-			nChar = NSF1FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF1FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F1" ) );
 			break;
 		case KEY_F2:
-			nChar = NSF2FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF2FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F2" ) );
 			break;
 		case KEY_F3:
-			nChar = NSF3FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF3FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F3" ) );
 			break;
 		case KEY_F4:
-			nChar = NSF4FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF4FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F4" ) );
 			break;
 		case KEY_F5:
-			nChar = NSF5FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF5FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F5" ) );
 			break;
 		case KEY_F6:
-			nChar = NSF6FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF6FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F6" ) );
 			break;
 		case KEY_F7:
-			nChar = NSF7FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF7FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F7" ) );
 			break;
 		case KEY_F8:
-			nChar = NSF8FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF8FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F8" ) );
 			break;
 		case KEY_F9:
-			nChar = NSF9FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF9FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F9" ) );
 			break;
 		case KEY_F10:
-			nChar = NSF10FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF10FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F10" ) );
 			break;
 		case KEY_F11:
-			nChar = NSF11FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF11FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F11" ) );
 			break;
 		case KEY_F12:
-			nChar = NSF12FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF12FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F12" ) );
 			break;
 		case KEY_F13:
-			nChar = NSF13FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF13FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F13" ) );
 			break;
 		case KEY_F14:
-			nChar = NSF14FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF14FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F14" ) );
 			break;
 		case KEY_F15:
-			nChar = NSF15FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF15FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F15" ) );
 			break;
 		case KEY_F16:
-			nChar = NSF16FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF16FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F16" ) );
 			break;
 		case KEY_F17:
-			nChar = NSF17FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF17FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F17" ) );
 			break;
 		case KEY_F18:
-			nChar = NSF18FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF18FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F18" ) );
 			break;
 		case KEY_F19:
-			nChar = NSF19FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF19FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F19" ) );
 			break;
 		case KEY_F20:
-			nChar = NSF20FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF20FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F20" ) );
 			break;
 		case KEY_F21:
-			nChar = NSF21FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF21FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F21" ) );
 			break;
 		case KEY_F22:
-			nChar = NSF22FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF22FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F22" ) );
 			break;
 		case KEY_F23:
-			nChar = NSF23FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF23FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F23" ) );
 			break;
 		case KEY_F24:
-			nChar = NSF24FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF24FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F24" ) );
 			break;
 		case KEY_F25:
-			nChar = NSF25FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF25FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F25" ) );
 			break;
 		case KEY_F26:
-			nChar = NSF26FunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSF26FunctionKey );
+			else
+				aRet = OUString( RTL_CONSTASCII_USTRINGPARAM( "F26" ) );
 			break;
 		case KEY_DOWN:
-			nChar = NSDownArrowFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSDownArrowFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2193 );
 			break;
 		case KEY_UP:
-			nChar = NSUpArrowFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSUpArrowFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2191 );
 			break;
 		case KEY_LEFT:
-			nChar = NSLeftArrowFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSLeftArrowFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2190);
 			break;
 		case KEY_RIGHT:
-			nChar = NSRightArrowFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSRightArrowFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2192 );
 			break;
 		case KEY_HOME:
-			nChar = NSHomeFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSHomeFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2196 );
 			break;
 		case KEY_END:
-			nChar = NSEndFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSEndFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2198 );
 			break;
 		case KEY_PAGEUP:
-			nChar = NSPageUpFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSPageUpFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x21de );
 			break;
 		case KEY_PAGEDOWN:
-			nChar = NSPageDownFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSPageDownFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x21df );
+			break;
+		case KEY_RETURN:
+			if ( !bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)0x23ce );
+			break;
+		case KEY_ESCAPE:
+			if ( !bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)0x238b );
+			break;
+		case KEY_TAB:
+			if ( !bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)0x21e5 );
+			break;
+		case KEY_BACKSPACE:
+			if ( !bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)0x232b );
+			break;
+		case KEY_SPACE:
+			if ( !bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)0x2423 );
 			break;
 		case KEY_INSERT:
-			nChar = NSInsertFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSInsertFunctionKey );
 			break;
 		case KEY_DELETE:
-			nChar = NSDeleteFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSDeleteFunctionKey );
+			else
+				aRet = OUString( (sal_Unicode)0x2326 );
 			break;
 		case KEY_ADD:
-			nChar = '+';
+			aRet = OUString( (sal_Unicode)'+' );
 			break;
 		case KEY_SUBTRACT:
-			nChar = '-';
+			aRet = OUString( (sal_Unicode)'-' );
 			break;
 		case KEY_MULTIPLY:
-			nChar = '*';
+			aRet = OUString( (sal_Unicode)'*' );
 			break;
 		case KEY_DIVIDE:
-			nChar = '/';
+			aRet = OUString( (sal_Unicode)'/' );
 			break;
 		case KEY_DECIMAL:
 		case KEY_POINT:
-			nChar = '.';
+			aRet = OUString( (sal_Unicode)'.' );
 			break;
 		case KEY_COMMA:
-			nChar = ',';
+			aRet = OUString( (sal_Unicode)',' );
 			break;
 		case KEY_LESS:
-			nChar = '<';
+			aRet = OUString( (sal_Unicode)'<' );
 			break;
 		case KEY_GREATER:
-			nChar = '>';
+			aRet = OUString( (sal_Unicode)'>' );
 			break;
 		case KEY_EQUAL:
-			nChar = '=';
+			aRet = OUString( (sal_Unicode)'=' );
 			break;
 		case KEY_UNDO:
-			nChar = NSUndoFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSUndoFunctionKey );
 			break;
 		case KEY_FIND:
-			nChar = NSFindFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSFindFunctionKey );
 			break;
 		case KEY_HELP:
-			nChar = NSHelpFunctionKey;
+			if ( bIsMenuShortcut )
+				aRet = OUString( (sal_Unicode)NSHelpFunctionKey );
 			break;
 		case KEY_TILDE:
-			nChar = '~';
+			aRet = OUString( (sal_Unicode)'~' );
 			break;
 		case KEY_QUOTELEFT:
-			nChar = '`';
+			aRet = OUString( (sal_Unicode)'`' );
 			break;
-		case KEY_RETURN:
-		case KEY_ESCAPE:
-		case KEY_SPACE:
-		case KEY_TAB:
-		case KEY_BACKSPACE:
 		case KEY_REPEAT:
 		case KEY_CUT:
 		case KEY_COPY:
@@ -2184,10 +2308,7 @@ OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode )
 			break;
 	}
 
-	if ( nChar )
-		return OUString( nChar );
-	else
-		return OUString();
+	return aRet;
 }
 
 // -----------------------------------------------------------------------
@@ -3518,24 +3639,28 @@ void JavaSalFrame::EndExtTextInput( USHORT nFlags )
 
 // -----------------------------------------------------------------------
 
-XubString JavaSalFrame::GetKeyName( USHORT nKeyCode )
+String JavaSalFrame::GetKeyName( USHORT nKeyCode )
 {
-	XubString aRet;
+	String aRet;
 
 #ifdef USE_NATIVE_EVENTS
-	if ( nKeyCode & KEY_SHIFT )
-		aRet += (sal_Unicode)0x21e7;
-	if ( nKeyCode & KEY_MOD3 )
-		aRet += (sal_Unicode)0x2303;
-	if ( nKeyCode & KEY_MOD1 )
-		aRet += (sal_Unicode)0x2318;
-	if ( nKeyCode & KEY_MOD2 )
-		aRet += (sal_Unicode)0x2325;
+	String aKeyName( ConvertVCLKeyCode( nKeyCode, false ) );
+	if ( aKeyName.Len() )
+	{
+		if ( nKeyCode & KEY_SHIFT )
+			aRet += (sal_Unicode)0x21e7;
+		if ( nKeyCode & KEY_MOD3 )
+			aRet += (sal_Unicode)0x2303;
+		if ( nKeyCode & KEY_MOD1 )
+			aRet += (sal_Unicode)0x2318;
+		if ( nKeyCode & KEY_MOD2 )
+			aRet += (sal_Unicode)0x2325;
 
-	aRet += XubString( ConvertVCLKeyCode( nKeyCode ) );
+		aRet += aKeyName;
+	}
 #else	// USE_NATIVE_EVENTS
 	if ( mpVCLFrame )
-		aRet = XubString( mpVCLFrame->getKeyName( nKeyCode ) );
+		aRet = String( mpVCLFrame->getKeyName( nKeyCode ) );
 #endif	// USE_NATIVE_EVENTS
 
 	return aRet;

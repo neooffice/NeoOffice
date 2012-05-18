@@ -1065,7 +1065,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 #ifdef USE_NATIVE_WINDOW
 		if ( pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
 		{
-			OUString aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode() );
+			OUString aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
 			if ( !rKeyCode.IsShift() )
 				aKeyEquivalent = aKeyEquivalent.toAsciiLowerCase();
 
