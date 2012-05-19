@@ -472,15 +472,23 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 				}
 
 				CGContextAddPath( aContext, maPath );
+
+				// Fix bug reported in the following NeoOffice forum post by
+				// drawing a path in a single operation when there is a fill
+				// color. Apparently, when the fill and line color are the
+				// same, CGLayers coalesce out the line drawing operation and
+				// so the line bleed at the edges of the path are missing:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62777#62777
 				if ( CGColorGetAlpha( aFillColor ) )
 				{
 					// Smooth out image drawing for bug 2475 image
 					CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
 
 					CGContextSetFillColorWithColor( aContext, aFillColor );
-					CGContextEOFillPath( aContext );
+					CGContextSetStrokeColorWithColor( aContext, aLineColor );
+					CGContextDrawPath( aContext, kCGPathEOFillStroke );
 				}
-				if ( CGColorGetAlpha( aLineColor ) )
+				else if ( CGColorGetAlpha( aLineColor ) )
 				{
 					// Enable or disable antialiasing
 					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
