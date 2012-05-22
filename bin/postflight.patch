@@ -1,4 +1,3 @@
-#!/bin/bash -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -53,55 +52,48 @@ if [ -d "$2" ]; then
 
 fi
 
-scriptdir=`dirname "$0"`
-if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
+if [ "$3" = "/" ] ; then
+	volume=""
+else
+	volume="$3"
+fi
 
-	. "$scriptdir/installutils"
+# Fix bug 1544 by repairing permission in user install directory
+if [ -e "$userinstall" ] ; then
+	chmod -Rf u+rw "$userinstall"
+fi
+
+lastcontentshome=
+lastcontentshomefile="$userinstall/.lastcontentshome"
+if [ -s "$lastcontentshomefile" ] ; then
 
 	if [ "$3" = "/" ] ; then
-		volume=""
+		lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
 	else
-		volume="$3"
+		lastcontentshome=`grep "^$volume/" "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
 	fi
 
-	# Fix bug 1544 by repairing permission in user install directory
-	if [ -e "$userinstall" ] ; then
-		chmod -Rf u+rw "$userinstall"
-	fi
+fi
 
-	lastcontentshome=
-	lastcontentshomefile="$userinstall/.lastcontentshome"
-	if [ -s "$lastcontentshomefile" ] ; then
-
-		if [ "$3" = "/" ] ; then
-			lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
-		else
-			lastcontentshome=`grep "^$volume/" "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
-		fi
-
-	fi
-
-	while read i ; do
-		update_installation "$1" "$i" || exit 1
-	done << !
+while read i ; do
+	update_installation "$1" "$i" || exit 1
+done << !
 `( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
 
-	if check_installation "$lastcontentshome" ; then
-		sudouser=
-		if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
-			sudouser="$USER"
-		fi
+if check_installation "$lastcontentshome" ; then
+	sudouser=
+	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
+		sudouser="$USER"
+	fi
 
-		# Launch installation
-		if [ ! -z "$sudouser" ] ; then
-			launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read 'org.neooffice.$(PRODUCT_DIR_NAME)' updateSuppressLaunchAfterInstallation 2>/dev/null"`
-			if [ -z "$launch" -o "$launch" = "0" ] ; then
-				sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""
-			fi
+	# Launch installation
+	if [ ! -z "$sudouser" ] ; then
+		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read 'org.neooffice.$(PRODUCT_DIR_NAME)' updateSuppressLaunchAfterInstallation 2>/dev/null"`
+		if [ -z "$launch" -o "$launch" = "0" ] ; then
+			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""
 		fi
 	fi
 fi
 
 exit 0
-

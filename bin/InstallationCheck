@@ -1,4 +1,3 @@
-#!/bin/bash -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -70,19 +69,12 @@ if [ "$target_machine" != "$machine" ] ; then
 	esac
 fi
 
-scriptdir=`dirname "$0"`
-if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
-
-	. "$scriptdir/installutils"
-
-	# Check that no instances of the application are running
-	while read i ; do
-		# Return 96 + 25 if any instances are running
-		check_running "$i" && exit 121
-	done << !
+# Check that no instances of the application are running
+while read i ; do
+	# Return 96 + 25 if any instances are running
+	check_running "$i" && exit 121
+done << !
 `ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
 !
-
-fi
 
 exit 0

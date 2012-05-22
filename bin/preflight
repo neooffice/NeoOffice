@@ -1,4 +1,3 @@
-#!/bin/bash -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -61,40 +60,33 @@ if [ -d "$2/Contents" ] ; then
 		mv -f "$2/Contents/basis-link/share/fonts/truetype" "$2" || exit 1
 	fi
 
-	scriptdir=`dirname "$0"`
-	if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
-
-		. "$scriptdir/installutils"
-
-		if check_installation "$2" ; then
-			# Save help files for postflight scripts
-			if [ -d "$2/Contents/basis-link/help" -a ! -e "$2/help" ]; then
-				mv -f "$2/Contents/basis-link/help" "$2" || exit 1
-			fi
-
-			# Save resource files for postflight scripts
-			if [ -d "$2/Contents/basis-link/program/resource" -a ! -e "$2/resource" ]; then
-				mv -f "$2/Contents/basis-link/program/resource" "$2" || exit 1
-			fi
-
-			# Save localization files
-			if [ -d "$2/Contents/basis-link/share" -a ! -e "$2/share" ]; then
-				mv -f "$2/Contents/basis-link/share" "$2" || exit 1
-			fi
-		else
-			if [ -e "$2/help" ]; then
-				rm -Rf "$2/help" || exit 1
-			fi
-
-			if [ -e "$2/resource" ]; then
-				rm -Rf "$2/resource" || exit 1
-			fi
-
-			if [ -e "$2/share" ]; then
-				rm -Rf "$2/share" || exit 1
-			fi
+	if check_installation "$2" ; then
+		# Save help files for postflight scripts
+		if [ -d "$2/Contents/basis-link/help" -a ! -e "$2/help" ]; then
+			mv -f "$2/Contents/basis-link/help" "$2" || exit 1
 		fi
 
+		# Save resource files for postflight scripts
+		if [ -d "$2/Contents/basis-link/program/resource" -a ! -e "$2/resource" ]; then
+			mv -f "$2/Contents/basis-link/program/resource" "$2" || exit 1
+		fi
+
+		# Save localization files
+		if [ -d "$2/Contents/basis-link/share" -a ! -e "$2/share" ]; then
+			mv -f "$2/Contents/basis-link/share" "$2" || exit 1
+		fi
+	else
+		if [ -e "$2/help" ]; then
+			rm -Rf "$2/help" || exit 1
+		fi
+
+		if [ -e "$2/resource" ]; then
+			rm -Rf "$2/resource" || exit 1
+		fi
+
+		if [ -e "$2/share" ]; then
+			rm -Rf "$2/share" || exit 1
+		fi
 	fi
 
 	rm -Rf "$2/Contents" || exit 1
