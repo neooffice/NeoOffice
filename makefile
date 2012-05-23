@@ -650,7 +650,7 @@ endif
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(PATCH_INSTALL_HOME)/emptydir"
 	mkbom "$(PATCH_INSTALL_HOME)/emptydir" "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(PATCH_INSTALL_HOME)/emptydir" ; find . | cpio -o | gzip -c ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Payload"
+	( cd "$(PATCH_INSTALL_HOME)/emptydir" ; find . | cpio -ozH cpio ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Payload"
 	( cd "$(PATCH_INSTALL_HOME)/package" ; pax -w -z -x cpio . ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts/Archive.pax.gz"
 	rm -Rf "$(PATCH_INSTALL_HOME)/emptydir"
 	echo '<payload installKBytes="'`du -sk "$(PATCH_INSTALL_HOME)/package" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/PackageInfo"
