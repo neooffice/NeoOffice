@@ -36,7 +36,7 @@ function runBashScriptAndSetResult(bashScript, volume) {
                 my.result.message = system.localizedStandardString('GENERIC_FAIL_VOLUME');
             }
             else {
-                my.result.message = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME) $(PRODUCT_VERSION)');
+                my.result.message = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERISON)');
             }
             if (my.result.message == null) {
                 my.result.message = '';
