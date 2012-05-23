@@ -75,8 +75,9 @@ if [ -s "$lastcontentshomefile" ] ; then
 
 fi
 
+scriptdir=`dirname "$0"`
 while read i ; do
-	update_installation "$1" "$i" || exit 1
+	update_installation "$scriptdir" "$i" || exit 1
 done << !
 `( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !

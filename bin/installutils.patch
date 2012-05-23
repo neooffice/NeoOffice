@@ -95,14 +95,14 @@ check_installation() {
 
 update_installation() {
 
-	if [ ! -f "$1/Contents/Archive.pax.gz" ] ; then
-		return 0;
+	if [ -z "$1" -o ! -f "$1/Archive.pax.gz" ] ; then
+		return 1;
 	fi
 
 	check_installation "$2" || return 0
 
 	# Unzip new files
-	( cd "$2" || exit 1 ; pax -r -z -f "$1/Contents/Archive.pax.gz" ) || return 1
+	( cd "$2" || exit 1 ; pax -r -z -f "$1/Archive.pax.gz" ) || return 1
 
 	# Fix bug 2711 by updating plugin bundle IDs
 	mdimporter_file="$2/Contents/Library/Spotlight/neolight.mdimporter/Contents/Info.plist"
