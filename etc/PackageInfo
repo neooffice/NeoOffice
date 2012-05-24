@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<pkg-info format-version="2" identifier="org.neooffice.$(PRODUCT_DIR_NAME).pkg" version="$(PRODUCT_VERSION)" install-location="/Applications/$(PRODUCT_DIR_NAME).app" auth="root">
+    <scripts>
+        <preinstall file="./preflight"/>
+        <postinstall file="./postflight"/>
+    </scripts>

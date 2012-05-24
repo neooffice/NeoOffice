@@ -17,11 +17,18 @@ function runBashScriptAndSetResult(bashScript, volume) {
         return true;
     }
     else {
-        my.result.title = '$(PRODUCT_NAME_AND_VERISON)';
         my.result.type = 'Fatal';
+        my.result.title = '';
         my.result.message = '';
 
-		var message = null;
+        if (volume == null) {
+            var title = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERISON)');
+            if (title != null) {
+                my.result.title = title.toString();
+            }
+        }
+
+        var message = null;
         if (!isNaN(procResult)) {
             // Temporary workaround to InstallationCheck exit values
             if (procResult > 96) {
@@ -35,13 +42,8 @@ function runBashScriptAndSetResult(bashScript, volume) {
             }
         }
 
-        if (message == null) {
-            if (volume != null) {
-                message = system.localizedStandardString('GENERIC_FAIL_VOLUME');
-            }
-            else {
-                message = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERISON)');
-            }
+        if (message == null && volume != null) {
+            message = system.localizedStandardString('GENERIC_FAIL_VOLUME');
         }
 
         if (message != null) {
