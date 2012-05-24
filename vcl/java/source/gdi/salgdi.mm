@@ -214,62 +214,32 @@ JavaSalGraphicsCopyLayerOp::~JavaSalGraphicsCopyLayerOp()
 
 void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maSrcLayer )
+	if ( !aContext || !maSrcLayer || CGRectIsEmpty( maRect ) )
 		return;
 
 	// Shrink destination to handle source over or underflow
-	CGSize aLayerSize = CGLayerGetSize( maSrcLayer );
-	CGRect aSrcRect = CGRectMake( maSrcPoint.x, maSrcPoint.y, maRect.size.width, maRect.size.height );
-	if ( aSrcRect.origin.x < 0 )
+	if ( !CGRectIsEmpty( maBounds ) )
 	{
-		maRect.size.width += aSrcRect.origin.x;
-		maRect.origin.x -= aSrcRect.origin.x;
-		aSrcRect.size.width += aSrcRect.origin.x;
-		aSrcRect.origin.x = 0;
+		CGRect aClippedRect = CGRectIntersection( maRect, maBounds );
+		if ( CGRectIsEmpty( aClippedRect ) )
+			return;
+
+		maSrcPoint.x += aClippedRect.origin.x - maRect.origin.x;
+		maSrcPoint.y += aClippedRect.origin.y - maRect.origin.y;
+		maRect = aClippedRect;
 	}
-	if ( aSrcRect.origin.y < 0 )
-	{
-		maRect.size.height += aSrcRect.origin.y;
-		maRect.origin.y -= aSrcRect.origin.y;
-		aSrcRect.size.height += aSrcRect.origin.y;
-		aSrcRect.origin.y = 0;
-	}
-	if ( aSrcRect.size.width > aLayerSize.width - aSrcRect.origin.x )
-	{
-		aSrcRect.size.width = aLayerSize.width - aSrcRect.origin.x;
-		maRect.size.width = aSrcRect.size.width;
-	}
-	if ( aSrcRect.size.height > aLayerSize.height - aSrcRect.origin.y )
-	{
-		aSrcRect.size.height = aLayerSize.height - aSrcRect.origin.y;
-		maRect.size.height = aSrcRect.size.height;
-	}
-	if ( maRect.origin.x < maBounds.origin.x )
-	{
-		aSrcRect.origin.x -= maRect.origin.x - maBounds.origin.x;
-		aSrcRect.size.width += maRect.origin.x - maBounds.origin.x;
-		maRect.size.width += aSrcRect.size.width;
-		maRect.origin.x = maBounds.origin.x;
-	}
-	if ( maRect.origin.y < maBounds.origin.y )
-	{
-		aSrcRect.origin.y -= maRect.origin.y - maBounds.origin.y;
-		aSrcRect.size.height += maRect.origin.y - maBounds.origin.y;
-		maRect.size.height += aSrcRect.size.height;
-		maRect.origin.y = maBounds.origin.y;
-	}
-	if ( maRect.size.width > maBounds.size.width - maRect.origin.x )
-	{
-		maRect.size.width = maBounds.size.width - maRect.origin.x;
-		aSrcRect.size.width = aSrcRect.size.width;
-	}
-	if ( maRect.size.height > maBounds.size.height - maRect.origin.y )
-	{
-		maRect.size.height = maBounds.size.height - maRect.origin.y;
-		aSrcRect.size.height = aSrcRect.size.height;
-	}
-	if ( maRect.size.width <= 0 || maRect.size.height <= 0 )
+
+	CGSize aSrcLayerSize = CGLayerGetSize( maSrcLayer );
+	CGRect aSrcRect = CGRectIntersection( CGRectMake( maSrcPoint.x, maSrcPoint.y, maRect.size.width, maRect.size.height ), CGRectMake( 0, 0, aSrcLayerSize.width, aSrcLayerSize.height ) );
+	if ( CGRectIsEmpty( aSrcRect ) )
 		return;
+
+	maRect.origin.x += aSrcRect.origin.x - maSrcPoint.x;
+	maRect.origin.y += aSrcRect.origin.y - maSrcPoint.y;
+	maRect.size.width = aSrcRect.size.width;
+	maRect.size.height = aSrcRect.size.height;
+	maSrcPoint.x = aSrcRect.origin.x;
+	maSrcPoint.y = aSrcRect.origin.y;
 
 	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
@@ -286,7 +256,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		return;
 
 	CGContextRef aSrcContext = CGLayerGetContext( maSrcLayer );
-	if ( aSrcContext == aContext && ( maRect.origin.x < 0 || CGRectIntersectsRect( maRect, aSrcRect ) ) )
+	if ( aSrcContext == aContext )
 	{
 		// Copying within the same context to a negative x destination or a
 		// destination that overlaps with the source causes drawing to wrap
@@ -324,7 +294,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	else
 	{
 		CGContextClipToRect( aContext, maRect );
-		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
+		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - maSrcPoint.x, maRect.origin.y - maSrcPoint.y ), maSrcLayer );
 	}
 
 	restoreClipXORGState();
