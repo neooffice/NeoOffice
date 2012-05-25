@@ -391,6 +391,10 @@ build.package: build.neo_patches
 	touch "$@"
 
 build.package_shared:
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Check that codesign and productsign executables exist before proceeding
+	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
+endif
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	sh -e -c 'if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ; fi'
 	hdiutil attach "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
@@ -540,6 +544,13 @@ endif
 #	Make QL plugin ID unique for each build
 	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Sign all binaries
+	chmod -Rf u+rw "$(INSTALL_HOME)/package"
+	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+endif
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(INSTALL_HOME)/package"
@@ -574,6 +585,12 @@ ifdef LICENSEANDREADME
 endif
 	echo '</installer-script>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
 	pkgutil --flatten "$(INSTALL_HOME)/package.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg"
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Sign package
+	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg" "$(INSTALL_HOME)/unsigned.pkg"
+	productsign --sign "$(CERTPKGIDENTITY)" "$(INSTALL_HOME)/unsigned.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION).pkg"
+	rm -f "$(INSTALL_HOME)/unsigned.pkg"
+endif
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	rm -Rf "$(INSTALL_HOME)/tmp"
 	mkdir -p "$(INSTALL_HOME)/tmp"
@@ -599,6 +616,10 @@ build.patch_package: build.package
 	touch "$@"
 
 build.patch_package_shared:
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Check that codesign and productsign executables exist before proceeding
+	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
+endif
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS/resource"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources/cursors"
@@ -638,6 +659,13 @@ endif
 #	Make QL plugin ID unique for each build
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Sign all binaries
+	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
+	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
+	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+endif
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
@@ -680,6 +708,12 @@ ifdef LICENSEANDREADME
 endif
 	echo '</installer-script>' >> "$(PATCH_INSTALL_HOME)/package.pkg/Distribution"
 	pkgutil --flatten "$(PATCH_INSTALL_HOME)/package.pkg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg"
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Sign package
+	mv -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg" "$(PATCH_INSTALL_HOME)/unsigned.pkg"
+	productsign --sign "$(CERTPKGIDENTITY)" "$(PATCH_INSTALL_HOME)/unsigned.pkg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION).pkg"
+	rm -f "$(PATCH_INSTALL_HOME)/unsigned.pkg"
+endif
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
@@ -711,43 +745,49 @@ build.package_%: $(INSTALL_HOME)/package_%
 	chmod -Rf a-w,a+r "$<"
 	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
 	sudo chown -Rf root:admin "$<"
-	mkdir -p "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources"
-	mkdir -p "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts"
-	cd "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources" ; sh -e -c 'for i in `cd "/System/Library/PrivateFrameworks/Install.framework/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/PackageInfo.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/PackageInfo"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
+	mkdir -p "$<.pkg/Resources"
+	mkdir -p "$<.pkg/contents.pkg/Scripts"
+	cd "$<.pkg/Resources" ; sh -e -c 'for i in `cd "/System/Library/PrivateFrameworks/Install.framework/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/PackageInfo.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$<.pkg/contents.pkg/PackageInfo"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$<.pkg/Distribution"
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
-	cp "etc/package/ship.tiff" "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources/background.tiff"
-	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
+	cp "etc/package/ship.tiff" "$<.pkg/Resources/background.tiff"
+	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$<.pkg/Distribution"
 endif
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(INSTALL_HOME)/emptydir"
-	mkbom "$(INSTALL_HOME)/emptydir" "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(INSTALL_HOME)/emptydir" ; find . | cpio -ozH cpio ) > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Payload"
-	( cd "$(INSTALL_HOME)/package_$(@:build.package_%=%)" ; pax -w -z -x cpio . ) > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts/Archive.pax.gz"
+	mkbom "$(INSTALL_HOME)/emptydir" "$<.pkg/contents.pkg/Bom" >& /dev/null
+	( cd "$(INSTALL_HOME)/emptydir" ; find . | cpio -ozH cpio ) > "$<.pkg/contents.pkg/Payload"
+	( cd "$<" ; pax -w -z -x cpio . ) > "$<.pkg/contents.pkg/Scripts/Archive.pax.gz"
 	rm -Rf "$(INSTALL_HOME)/emptydir"
-	echo '<payload installKBytes="'`du -sk "$(INSTALL_HOME)/package_$(@:build.package_%=%)" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/PackageInfo"
-	echo '</pkg-info>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/PackageInfo"
+	echo '<payload installKBytes="'`du -sk "$<" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$<.pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$<.pkg/contents.pkg/PackageInfo"
+	echo '</pkg-info>' >> "$<.pkg/contents.pkg/PackageInfo"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(OO_PRODUCT_VERSION_FAMILY)#$(OO_PRODUCT_VERSION_FAMILY)#g' | sed 's#$$(PRODUCT_VERSION_FAMILY)#$(PRODUCT_VERSION_FAMILY)#g' | sed 's#$$(PRODUCT_VERSION_BASE)#$(PRODUCT_VERSION_BASE)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(TARGET_FILE_TYPE)#$(TARGET_FILE_TYPE)#g' > "$(INSTALL_HOME)/installutils.langpack"
 	cat "$(INSTALL_HOME)/installutils.langpack" "bin/InstallationCheck" | sed 's#$$(TARGET_MACHINE)#$(UNAME)#g' | sed 's#$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g' > "$(INSTALL_HOME)/InstallationCheck.langpack" ; chmod a+x "$(INSTALL_HOME)/InstallationCheck.langpack"
 	cat "$(INSTALL_HOME)/installutils.langpack" "bin/VolumeCheck.langpack" > "$(INSTALL_HOME)/VolumeCheck.langpack" ; chmod a+x "$(INSTALL_HOME)/VolumeCheck.langpack"
-	cat "bin/InstallationCheck.strings" "bin/VolumeCheck.strings.langpack" | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g' > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources/Localizable.strings"
-	cd "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../Localizable.strings" "$${i}/Localizable.strings" ; done'
+	cat "bin/InstallationCheck.strings" "bin/VolumeCheck.strings.langpack" | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#$(INSTALLATION_CHECK_REQUIRED_COMMANDS)#g' > "$<.pkg/Resources/Localizable.strings"
+	cd "$<.pkg/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../Localizable.strings" "$${i}/Localizable.strings" ; done'
 	sh -e "etc/convertscripttojsstring.sh" "$(INSTALL_HOME)/InstallationCheck.langpack" > "$(INSTALL_HOME)/InstallationCheck.js.langpack"
 	sh -e "etc/convertscripttojsstring.sh" "$(INSTALL_HOME)/VolumeCheck.langpack" > "$(INSTALL_HOME)/VolumeCheck.js.langpack"
-	sed 's#$$(PRODUCT_NAME_AND_VERSION)#$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)#g' "etc/Distribution.js" | sh -e -c 'sed "s#var.*installationCheckBashScript.*=.*;#var installationCheckBashScript = \""`cat "$(INSTALL_HOME)/InstallationCheck.js.langpack"`"\";#" | sed "s#var.*volumeCheckBashScript.*=.*;#var volumeCheckBashScript = \""`cat "$(INSTALL_HOME)/VolumeCheck.js.langpack"`"\";#"' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/preflight.langpack" > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts/preflight" ; chmod a+x "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts/preflight"
-	cat "$(INSTALL_HOME)/installutils.langpack" "bin/postflight.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' > "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts/postflight" ; chmod a+x "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/contents.pkg/Scripts/postflight"
+	sed 's#$$(PRODUCT_NAME_AND_VERSION)#$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)#g' "etc/Distribution.js" | sh -e -c 'sed "s#var.*installationCheckBashScript.*=.*;#var installationCheckBashScript = \""`cat "$(INSTALL_HOME)/InstallationCheck.js.langpack"`"\";#" | sed "s#var.*volumeCheckBashScript.*=.*;#var volumeCheckBashScript = \""`cat "$(INSTALL_HOME)/VolumeCheck.js.langpack"`"\";#"' >> "$<.pkg/Distribution"
+	cat "$(INSTALL_HOME)/installutils.langpack" "bin/preflight.langpack" > "$<.pkg/contents.pkg/Scripts/preflight" ; chmod a+x "$<.pkg/contents.pkg/Scripts/preflight"
+	cat "$(INSTALL_HOME)/installutils.langpack" "bin/postflight.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' > "$<.pkg/contents.pkg/Scripts/postflight" ; chmod a+x "$<.pkg/contents.pkg/Scripts/postflight"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' | sed 's#$$(PRODUCT_BASE_URL)#'"$(PRODUCT_BASE_URL)"'#g' | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/ReadMe.rtf"
 ifdef LICENSEANDREADME
-	cp "etc/gpl.html" "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources/license.html"
-	echo '<license file="license.html"/>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
-	cp "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/ReadMe.rtf" "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Resources/readme.rtf"
-	echo '<readme file="readme.rtf"/>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
+	cp "etc/gpl.html" "$<.pkg/Resources/license.html"
+	echo '<license file="license.html"/>' >> "$<.pkg/Distribution"
+	cp "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/ReadMe.rtf" "$<.pkg/Resources/readme.rtf"
+	echo '<readme file="readme.rtf"/>' >> "$<.pkg/Distribution"
 endif
-	echo '</installer-script>' >> "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg/Distribution"
-	pkgutil --flatten "$(INSTALL_HOME)/package_$(@:build.package_%=%).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
+	echo '</installer-script>' >> "$<.pkg/Distribution"
+	pkgutil --flatten "$<.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Sign package
+	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg" "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg"
+	productsign --sign "$(CERTPKGIDENTITY)" "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)/Install $(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION).pkg"
+	rm -f "$(INSTALL_HOME)/unsigned_$(@:build.package_%=%).pkg"
+endif
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	rm -Rf "$(INSTALL_HOME)/tmp"
 	mkdir -p "$(INSTALL_HOME)/tmp"
