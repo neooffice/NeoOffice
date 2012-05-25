@@ -1,8 +1,7 @@
-"16" = "One or more BSD commands were not found on this machine. You must install the \"BSD Subsystem\" package that is in the following folder on disk 1 of your Mac OS X installation CD:\n\n\"/Welcome to Mac OS X/Optional Installs\"";
+"16" = "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
 "17" = "You cannot install $(PRODUCT_NAME) on this machine. Your version of Mac OS X is too old. $(PRODUCT_NAME) can only be installed on Mac OS X 10.5 or higher.";
 "18" = "You are using the wrong installer. You have a Mac Intel machine and this installer only works on Mac PowerPC machines. You must download the $(PRODUCT_NAME) installer for Mac Intel machine.";
 "19" = "You are using the wrong installer. You have a Mac PowerPC machine and this installer only works on Mac Intel machines. You must download the $(PRODUCT_NAME) installer for Mac PowerPC machine.";
-"20" = "You cannot install $(PRODUCT_NAME) on this machine. You are using Mac OS X in 64 bit mode. You must use Mac OS X in 32 bit mode to install $(PRODUCT_NAME).";
 "21" = "You cannot install $(PRODUCT_NAME) on this machine. You have a unknown type of Mac machine and $(PRODUCT_NAME) only works on Mac Intel machines.";
 "25" = "You must quit $(PRODUCT_NAME) before you can install $(PRODUCT_NAME). Quit $(PRODUCT_NAME) by Control-clicking on the $(PRODUCT_NAME) icon in the Dock and selecting Quit from the popup menu that appears.";
 

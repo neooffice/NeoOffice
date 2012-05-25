@@ -22,7 +22,7 @@ function runBashScriptAndSetResult(bashScript, volume) {
         my.result.message = '';
 
         if (volume == null) {
-            var title = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERISON)');
+            var title = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERSION)');
             if (title != null) {
                 my.result.title = title.toString();
             }
@@ -30,11 +30,6 @@ function runBashScriptAndSetResult(bashScript, volume) {
 
         var message = null;
         if (!isNaN(procResult)) {
-            // Temporary workaround to InstallationCheck exit values
-            if (procResult > 96) {
-                procResult -= 96;
-            }
-
             var key = procResult.toString();
             message = system.localizedString(key);
             if (message == key) {

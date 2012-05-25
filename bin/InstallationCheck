@@ -36,23 +36,21 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-commands="awk basename chmod chown date defaults dirname echo file find grep id mv open pax ps rm sed sort touch uname unzip"
+commands="$(INSTALLATION_CHECK_REQUIRED_COMMANDS)"
 
 # Check that the required BSD command are installed
 for i in $commands ; do
 	if [ ! -x "/usr/bin/$i" -a ! -x "/bin/$i" -a ! -x "/usr/sbin/$i" -a ! -x "/sbin/$i" ] ; then
-			# Return 96 + 16 if a command is not found
-		exit 112;
+		exit 16;
 	fi
 done
 
 # Check that the user is running Mac OS X 10.5 or higher
 if [ -x "/usr/bin/sw_vers" ] ; then
-	# Return 96 + 17 if it is a bad version
 	version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
 	case "$version" in
-		10.[01234]) exit 113;;
-		10.[01234].*) exit 113;;
+		10.[01234]) exit 17;;
+		10.[01234].*) exit 17;;
 	esac
 fi
 
@@ -60,19 +58,17 @@ fi
 target_machine="$(TARGET_MACHINE)"
 machine=`uname -p`
 if [ "$target_machine" != "$machine" ] ; then
-	# Return 96 + 18, 19, 20, or 21 if we are running the incorrect hardware
 	case "$machine" in
-		i386) exit 114;;
-		powerpc) exit 115;;
-		x86_64) if [ "$target_machine" != "i386" ] ; then exit 114 ; fi;;
-		*) exit 117;;
+		i386) exit 18;;
+		powerpc) exit 19;;
+		x86_64) if [ "$target_machine" != "i386" ] ; then exit 18 ; fi;;
+		*) exit 21;;
 	esac
 fi
 
 # Check that no instances of the application are running
 while read i ; do
-	# Return 96 + 25 if any instances are running
-	check_running "$i" && exit 121
+	check_running "$i" && exit 25
 done << !
 `ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
 !
