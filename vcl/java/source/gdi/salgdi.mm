@@ -57,11 +57,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
 	CGPoint					maSrcPoint;
-	CGRect					maBounds;
 	CGRect					maRect;
 
 public:
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aBounds, const CGRect aRect );
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect );
 	virtual					~JavaSalGraphicsCopyLayerOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -191,11 +190,10 @@ CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 
 // =======================================================================
 
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aBounds, const CGRect aRect ) :
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR ),
 	maSrcLayer( aSrcLayer ),
 	maSrcPoint( aSrcPoint ),
-	maBounds( aBounds ),
 	maRect( aRect )
 {
 	if ( maSrcLayer )
@@ -214,32 +212,8 @@ JavaSalGraphicsCopyLayerOp::~JavaSalGraphicsCopyLayerOp()
 
 void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maSrcLayer || CGRectIsEmpty( maRect ) )
+	if ( !aContext || !maSrcLayer )
 		return;
-
-	// Shrink destination to handle source over or underflow
-	if ( !CGRectIsEmpty( maBounds ) )
-	{
-		CGRect aClippedRect = CGRectIntersection( maRect, maBounds );
-		if ( CGRectIsEmpty( aClippedRect ) )
-			return;
-
-		maSrcPoint.x += aClippedRect.origin.x - maRect.origin.x;
-		maSrcPoint.y += aClippedRect.origin.y - maRect.origin.y;
-		maRect = aClippedRect;
-	}
-
-	CGSize aSrcLayerSize = CGLayerGetSize( maSrcLayer );
-	CGRect aSrcRect = CGRectIntersection( CGRectMake( maSrcPoint.x, maSrcPoint.y, maRect.size.width, maRect.size.height ), CGRectMake( 0, 0, aSrcLayerSize.width, aSrcLayerSize.height ) );
-	if ( CGRectIsEmpty( aSrcRect ) )
-		return;
-
-	maRect.origin.x += aSrcRect.origin.x - maSrcPoint.x;
-	maRect.origin.y += aSrcRect.origin.y - maSrcPoint.y;
-	maRect.size.width = aSrcRect.size.width;
-	maRect.size.height = aSrcRect.size.height;
-	maSrcPoint.x = aSrcRect.origin.x;
-	maSrcPoint.y = aSrcRect.origin.y;
 
 	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
@@ -249,6 +223,12 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	if ( maNativeClipPath )
 		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
 	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
+
+	// Check if the adjusted draw bounds matches any area of the source layer
+	CGSize aSrcLayerSize = CGLayerGetSize( maSrcLayer );
+	CGRect aSrcDrawBounds = CGRectMake( maSrcPoint.x + aDrawBounds.origin.x - maRect.origin.x, maSrcPoint.y + aDrawBounds.origin.y - maRect.origin.y, aDrawBounds.size.width, aDrawBounds.size.height );
+	if ( CGRectIsEmpty( CGRectIntersection( aSrcDrawBounds, CGRectMake( 0, 0, aSrcLayerSize.width, aSrcLayerSize.height ) ) ) )
 		return;
 
 	aContext = saveClipXORGState( pGraphics, aContext, aDrawBounds );
@@ -270,16 +250,26 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 			CGContextRef aBitmapContext = CGBitmapContextCreate( &nTmpBit, 1, 1, 8, sizeof( nTmpBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 			if ( aBitmapContext )
 			{
-				CGLayerRef aTmpLayer = CGLayerCreateWithContext( aBitmapContext, maRect.size, NULL );
+				// Fix the stray drawing artifacts reported in the following
+				// forum post by making the temporary layer large enough to
+				// handle the bleeding for lines drawn in the edge of the
+				// temporary bounds;
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62799#62799
+				sal_uInt32 nBitmapPadding = 0;
+				if ( mfLineWidth > 0 )
+					nBitmapPadding = (sal_uInt32)( mfLineWidth + 0.5 );
+
+				CGLayerRef aTmpLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( maRect.size.width + ( nBitmapPadding * 2 ), maRect.size.height + ( nBitmapPadding * 2 ) ), NULL );
 				if ( aTmpLayer )
 				{
 					CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
 					if ( aTmpContext )
 					{
-						CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( aSrcRect.origin.x * -1, aSrcRect.origin.y * -1 ), maSrcLayer );
+						CGContextTranslateCTM( aTmpContext, nBitmapPadding, nBitmapPadding );
+						CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( maSrcPoint.x * -1, maSrcPoint.y * -1 ), maSrcLayer );
 
 						CGContextClipToRect( aContext, maRect );
-						CGContextDrawLayerAtPoint( aContext, maRect.origin, aTmpLayer );
+						CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - nBitmapPadding, maRect.origin.y - nBitmapPadding ), aTmpLayer );
 					}
 
 					CGLayerRelease( aTmpLayer );
@@ -1591,7 +1581,7 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 	}
 
 	// Do not queue this operation since we are copying to another context
-	JavaSalGraphicsCopyLayerOp aOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, maLayer, aSrcPoint, aDestBounds, aDestRect );
+	JavaSalGraphicsCopyLayerOp aOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, maLayer, aSrcPoint, aDestRect );
 	aOp.drawOp( this, aDestContext, aDestBounds );
 }
 
