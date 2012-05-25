@@ -660,11 +660,20 @@ endif
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
-# Sign all binaries
+# Sign all binaries and use code resources file from main installer so that an
+# updated code resources is created without reshipping all referenced files
 	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
+# Merge codesign plist with main installer's plist. Note that this assumes that
+# the main installer was signed with the same certificate and that the patch
+# has all files that have been modified in the Contents/Resources folder since
+# the main installer was built.
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
+	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
+	cd "$(PATCH_INSTALL_HOME)/tmp" ; $(CC) -o "mergecodesignplistfiles" -framework Foundation "$(PWD)/etc/package/mergecodesignplistfiles.m" ; "./mergecodesignplistfiles" "$(PWD)/$(INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources" "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources" > "out" ; sh -e -c 'if [ -z "out" ] ; then exit 1 ; fi' ; mv "out" "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources"
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 endif
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
