@@ -627,6 +627,12 @@ endif
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 #	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/share/registry/data/org/openoffice/Office"
+ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
+# Copy all resource files in the main installer and overwrite newer resources
+# so that the codesigning will not remove resource files marked as signed in an
+# existing installation
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - ); 
+endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/extensions/$(UOUTPUTDIR)/lib/updchk.uno.dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/unoxml/$(UOUTPUTDIR)/lib/libunordf$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/lib/libjvmfwk.dylib.3" "basis-link/ure-link/lib"
@@ -666,14 +672,6 @@ ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" .
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
-# Merge codesign plist with main installer's plist. Note that this assumes that
-# the main installer was signed with the same certificate and that the patch
-# has all files that have been modified in the Contents/Resources folder since
-# the main installer was built.
-	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
-	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
-	cd "$(PATCH_INSTALL_HOME)/tmp" ; $(CC) -o "mergecodesignplistfiles" -framework Foundation "$(PWD)/etc/package/mergecodesignplistfiles.m" ; "./mergecodesignplistfiles" "$(PWD)/$(INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources" "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources" > "out" ; sh -e -c 'if [ -z "out" ] ; then exit 1 ; fi' ; mv "out" "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/_CodeSignature/CodeResources"
-	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 endif
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
