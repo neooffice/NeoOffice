@@ -7,10 +7,10 @@ function runBashScriptAndSetResult(bashScript, volume) {
 
     var procResult;
     if (volume != null) {
-        procResult = system.run('/bin/bash', '-x', '-c', unescape(bashScript), '/bin/bash', volume);
+        procResult = system.run('/bin/bash', '-x', '-c', bashScript, '/bin/bash', volume);
     }
     else {
-        procResult = system.run('/bin/bash', '-x', '-c', unescape(bashScript), '/bin/bash');
+        procResult = system.run('/bin/bash', '-x', '-c', bashScript, '/bin/bash');
     }
 
     if (procResult === 0) {
@@ -49,15 +49,15 @@ function runBashScriptAndSetResult(bashScript, volume) {
     }
 }
 
+var installationCheckBashScript = null;
+
 function runInstallationCheck() {
-    // Script must an escaped string with no newlines
-    var installationCheckBashScript = null;
     return runBashScriptAndSetResult(installationCheckBashScript, null);
 }
 
+var volumeCheckBashScript = null;
+
 function runVolumeCheck() {
-    // Script must an escaped string with no newlines
-    var volumeCheckBashScript = null;
     return runBashScriptAndSetResult(volumeCheckBashScript, my.target.mountpoint);
 }
 
