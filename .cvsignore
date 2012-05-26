@@ -1,5 +1,6 @@
 build
 build.*
+certs.mk
 custom.mk
 source
 source_X11
