@@ -39,6 +39,17 @@
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #include <jni.h>
 
+// Comment out the following line to disable full screen mode
+#define USE_NATIVE_FULL_SCREEN_MODE
+
+#ifndef NSFullScreenWindowMask
+#define NSFullScreenWindowMask ( 1 << 14 )
+#endif
+
+#ifndef NSWindowCollectionBehaviorFullScreenPrimary
+#define NSWindowCollectionBehaviorFullScreenPrimary ( 1 << 7 )
+#endif
+
 #ifdef __OBJC__
 
 #ifdef USE_NATIVE_EVENTS

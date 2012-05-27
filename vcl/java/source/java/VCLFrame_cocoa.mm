@@ -42,14 +42,6 @@
 
 #ifndef USE_NATIVE_EVENTS
 
-#ifndef NSFullScreenWindowMask
-#define NSFullScreenWindowMask ( 1 << 14 )
-#endif
-
-#ifndef NSWindowCollectionBehaviorFullScreenPrimary
-#define NSWindowCollectionBehaviorFullScreenPrimary ( 1 << 7 )
-#endif
-
 @interface NSObject (CWindow)
 - (NSWindow *)getNSWindow;
 @end

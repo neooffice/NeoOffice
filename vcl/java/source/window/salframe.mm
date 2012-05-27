@@ -1303,7 +1303,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pInLiveResize )
         return;
 
-    NSValue *pFullScreen = (NSValue *)[pArgArray objectAtIndex:1];
+    NSNumber *pFullScreen = (NSNumber *)[pArgArray objectAtIndex:1];
     if ( !pFullScreen )
         return;
 
@@ -1336,7 +1336,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 			else
 			{
-				aFrame = [NSWindow frameRectForContentRect:maFrame styleMask:[mpWindow styleMask] & ~NSFullScreenWindowMask];
+				aFrame = [NSWindow frameRectForContentRect:aFrame styleMask:[mpWindow styleMask] & ~NSFullScreenWindowMask];
 			}
 		}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE

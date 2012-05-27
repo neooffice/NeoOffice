@@ -43,9 +43,6 @@
 // Uncomment the following line to enable rounded bottom corners in Java frames
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
-// Comment out the following line to disable full screen mode
-#define USE_NATIVE_FULL_SCREEN_MODE
-
 extern "C" SAL_DLLPRIVATE id CWindow_getNSWindow( id pCWindow );
 extern "C" SAL_DLLPRIVATE void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
 extern "C" SAL_DLLPRIVATE id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
