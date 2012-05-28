@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" identifier="org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)" install-location="/var/tmp/.$(PRODUCT_DIR_NAME).langpack" auth="root">
+<pkg-info format-version="2" identifier="org.neooffice.flat.$(PRODUCT_DIR_NAME)_langpack.pkg" version="1.0" install-location="/var/tmp/.$(PRODUCT_DIR_NAME).langpack" auth="root">
     <scripts>
         <preinstall file="./preflight"/>
         <postinstall file="./postflight"/>
