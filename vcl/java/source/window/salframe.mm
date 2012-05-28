@@ -1409,6 +1409,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			aContentMinSize.height = 1;
 
 		[mpWindow setContentMinSize:aContentMinSize];
+
+		NSSize aMinSize = NSMakeSize( aContentMinSize.width + maInsets.origin.x + maInsets.size.width, aContentMinSize.height + maInsets.origin.y + maInsets.size.height );
+		[mpWindow setMinSize:aMinSize];
 	}
 }
 
@@ -1426,9 +1429,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
-		NSSize aMinSize = [mpWindow minSize];
-		if ( ![mpWindow isVisible] )
-			aMinSize = NSMakeSize( 0, 0 );
+		NSSize aMinSize = NSMakeSize( 0, 0 );
+		if ( [mpWindow isVisible] )
+ 			aMinSize = [mpWindow minSize];
 
 		NSRect aFrame = [pFrame rectValue];
 		if ( aFrame.size.width < aMinSize.width )
@@ -1447,7 +1450,15 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		NSRect aTotalBounds = GetTotalScreenBounds();
 		aFrame.origin.y = aTotalBounds.size.height - aFrame.origin.y - aFrame.size.height;
 
-		[mpWindow setFrame:aFrame display:NO];
+		MacOSBOOL bDisplay = NO;
+		if ( [mpWindow isVisible] )
+		{
+			NSRect aOldFrame = [mpWindow frame];
+			if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
+				bDisplay = YES;
+		}
+
+		[mpWindow setFrame:aFrame display:bDisplay];
 	}
 }
 
@@ -1561,6 +1572,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// skipping this step if the current window is a floating window.
 			if ( ![self isFloatingWindow] && mpParent && [mpParent isMiniaturized] )
 				[mpParent deminiaturize:self];
+
+ 			NSRect aFrame = [mpWindow frame];
+			NSSize aMinSize = [mpWindow minSize];
+			if ( aFrame.size.width < aMinSize.width )
+				aFrame.size.width = aMinSize.width;
+			if ( aFrame.size.height < aMinSize.height )
+				aFrame.size.height = aMinSize.height;
+			[mpWindow setFrame:aFrame display:NO];
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			MacOSBOOL bCanBecomeKeyWindow;
