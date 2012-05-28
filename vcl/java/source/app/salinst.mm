@@ -1724,7 +1724,11 @@ void JavaSalEvent::dispatch()
 						pFrame = pFrame->mpParent;
 				}
 #ifdef USE_NATIVE_EVENTS
-				if ( !pFrame->mbAllowKeyBindings || !pFrame->CallCallback( nID, pKeyEvent ) )
+				// Fix bug reported in the following NeoOffice forum post that
+				// by only skipping a key binding event when there are original
+				// events attached to the key event event:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62803#62803
+				if ( ( !pFrame->mbAllowKeyBindings && maOriginalKeyEvents.size() ) || !pFrame->CallCallback( nID, pKeyEvent ) )
 #else	// USE_NATIVE_EVENTS
 				if ( !pFrame->CallCallback( nID, pKeyEvent ) )
 #endif	// USE_NATIVE_EVENTS
