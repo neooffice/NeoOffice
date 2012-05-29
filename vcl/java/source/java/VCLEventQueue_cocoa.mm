@@ -1676,7 +1676,9 @@ static NSUInteger nMouseMask = 0;
 
 	NSEventType nType = [pEvent type];
 
-#ifndef USE_NATIVE_EVENTS
+#ifdef USE_NATIVE_EVENTS
+	NSRect aOldFrame = [self frame];
+#else	// USE_NATIVE_EVENTS
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	if ( nType == NSKeyDown && pSharedResponder && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
@@ -1693,7 +1695,7 @@ static NSUInteger nMouseMask = 0;
 		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [pSharedResponder lastModifiers], [pSharedResponder lastOriginalKeyChar], [pSharedResponder lastOriginalModifiers] ) )
 			return;
 	}
-#endif	// !USE_NATIVE_EVENTS
+#endif	// USE_NATIVE_EVENTS
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
@@ -1708,6 +1710,13 @@ static NSUInteger nMouseMask = 0;
 		// Handle all mouse events
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{
+			// If the frame changed after the superclass handled the event,
+			// then we likely clicked on one of the titlebar buttons so
+			// ignore the event to prevent unexpected dragging events
+			NSRect aFrame = [self frame];
+			if ( aFrame.size.width != aOldFrame.size.width || aFrame.size.height != aOldFrame.size.height )
+				return;
+
 			USHORT nID = 0;
 			NSUInteger nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 
@@ -1783,7 +1792,6 @@ static NSUInteger nMouseMask = 0;
 				// dragging a window's title bar
 				if ( nModifiers & NSLeftMouseDownMask && ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
 				{
-					NSRect aFrame = [self frame];
 					NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
 					float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
 					float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
