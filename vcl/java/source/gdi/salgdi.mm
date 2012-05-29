@@ -933,18 +933,10 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			{
 				CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 				CGPathAddRect( aPath, NULL, aRect );
-				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
+				if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
+					aPath = NULL;
 				}
 
 				if ( aPath )
@@ -1042,18 +1034,10 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
+				if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
+					aPath = NULL;
 				}
 
 				if ( aPath )
@@ -1109,18 +1093,10 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 				AddPolyPolygonToPaths( aPath, aPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
+				if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
+					aPath = NULL;
 				}
 
 				// Always disable invert and XOR for polypolygons like in the
@@ -1170,18 +1146,10 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 				AddPolyPolygonToPaths( aPath, rPolyPoly );
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 				CGRect aRect = CGPathGetBoundingBox( aPath );
-				if ( !mnLineColor && ( aRect.size.width < 1.0f || aRect.size.height < 1.0f ) )
+				if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
-					aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						if ( aRect.size.width < 1.0f )
-							aRect.size.width = 1.0f;
-						if ( aRect.size.height < 1.0f )
-							aRect.size.height = 1.0f;
-						CGPathAddRect( aPath, NULL, aRect );
-					}
+					aPath = NULL;
 				}
 
 				if ( aPath )
