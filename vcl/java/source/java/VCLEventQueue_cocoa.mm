@@ -2149,6 +2149,43 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
+- (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame
+{
+	MacOSBOOL bRet = YES;
+
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+	{
+		if ( ![self isVisible] )
+		{
+			bRet = NO;
+		}
+		else
+		{
+			// If the window's frame is roughly the same is the screen's visible
+			// frame and the new frame is equal to the window's minimum size,
+			// disable zooming to prevent the window from being unexpectedly
+			// shrunk to its minimum size
+			NSSize aMinSize = [pWindow minSize];
+			if ( aMinSize.width == aNewFrame.size.width && aMinSize.height == aNewFrame.size.height )
+			{
+				NSScreen *pScreen = [self screen];
+				if ( pScreen )
+				{
+					NSRect aFrame = [pWindow frame];
+					NSRect aVisibleFrame = [pScreen visibleFrame];
+					if ( fabs( aFrame.origin.x - aVisibleFrame.origin.x ) < 25.0f &&
+						fabs( aFrame.origin.y - aVisibleFrame.origin.y ) < 25.0f &&
+						fabs( aFrame.size.width - aVisibleFrame.size.width ) < 50.0f &&
+						fabs( aFrame.size.height - aVisibleFrame.size.height ) < 50.0f )
+							bRet = NO;
+				}
+			}
+		}
+	}
+
+	return bRet;
+}
+
 #endif	// USE_NATIVE_EVENTS
 
 @end
@@ -3716,6 +3753,15 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	aSelector = @selector(windowShouldClose:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowShouldZoom:toFrame:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{

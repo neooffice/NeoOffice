@@ -187,6 +187,7 @@
 - (void)windowDidMove:(NSNotification *)pNotification;
 - (void)windowDidResize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
+- (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
 #endif	// USE_NATIVE_EVENTS
 @end
 

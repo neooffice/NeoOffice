@@ -1214,13 +1214,13 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			else
 				[(VCLWindow *)mpWindow setFrame:mpFrame];
 
-			[self adjustColorLevelAndShadow];
-			[self setContentMinSize:NSMakeSize( 1, 1 )];
-
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
 			NSRect aFrameRect = [NSWindow frameRectForContentRect:aContentRect styleMask:mnWindowStyleMask];
 			maInsets = NSMakeRect( aContentRect.origin.x - aFrameRect.origin.x, aContentRect.origin.y - aFrameRect.origin.y, aFrameRect.origin.x + aFrameRect.size.width - aContentRect.origin.x - aContentRect.size.width, aFrameRect.origin.y + aFrameRect.size.height - aContentRect.origin.y - aContentRect.size.height );
+
+			[self adjustColorLevelAndShadow];
+			[self setContentMinSize:NSMakeSize( 1, 1 )];
 
 			if ( mbShowOnlyMenus )
 				aShowOnlyMenusWindowMap[ mpWindow ] = (VCLWindow *)mpWindow;
@@ -1356,8 +1356,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		unsigned long nState;
 		if ( [mpWindow styleMask] & NSMiniaturizableWindowMask && [mpWindow isMiniaturized] )
 			nState = SAL_FRAMESTATE_MINIMIZED;
-		else if ( [mpWindow styleMask] & NSResizableWindowMask && [mpWindow isZoomed] )
-			nState = SAL_FRAMESTATE_MAXIMIZED;
 		else
 			nState = SAL_FRAMESTATE_NORMAL;
 
@@ -1515,23 +1513,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	if ( !mbUtility && !mbShowOnlyMenus && !mbUndecorated && !mpParent && mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
 		if ( nState == SAL_FRAMESTATE_MINIMIZED && [mpWindow styleMask] & NSMiniaturizableWindowMask )
-		{
 			[mpWindow miniaturize:self];
-		}
-		else if ( nState == SAL_FRAMESTATE_MAXIMIZED && [mpWindow styleMask] & NSResizableWindowMask )
-		{
-			if ( [mpWindow isMiniaturized] )
-				[mpWindow deminiaturize:self];
-			if ( ![mpWindow isZoomed] )
-				[mpWindow zoom:self];
-		}
-		else
-		{
-			if ( [mpWindow isMiniaturized] )
-				[mpWindow deminiaturize:self];
-			if ( [mpWindow isZoomed] )
-				[mpWindow zoom:self];
-		}
+		else if ( [mpWindow isMiniaturized] )
+			[mpWindow deminiaturize:self];
 	}
 }
 
