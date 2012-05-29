@@ -1652,41 +1652,44 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pFrame && pFrame == pSalData->mpFocusFrame )
+			if ( pFrame )
 			{
+				if ( pFrame == pSalData->mpFocusFrame )
+				{
 #ifdef USE_NATIVE_EVENTS
-				if ( pFrame->mbVisible )
-				{
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
-					JavaSalEventQueue::postCachedEvent( pEvent );
-					pEvent->release();
-				}
-#endif	// USE_NATIVE_EVENTS
-				pSalData->mpFocusFrame = NULL;
-				pFrame->CallCallback( nID, NULL );
-#ifdef USE_NATIVE_WINDOW
-				JavaSalMenu::SetMenuBarToFocusFrame();
-#endif	// USE_NATIVE_WINDOW
-			}
-
-			// Fix bug 3098 by hiding tooltip windows but leaving the
-			// visible flag set to true
-			for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
-			{
-				if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
-					(*cit)->SetVisible( sal_False, sal_False );
-			}
-
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( pFrame == *it )
-				{
-					if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
+					if ( pFrame->mbVisible )
 					{
-						Window *pWindow = Application::GetFirstTopLevelWindow();
-						while ( pWindow && pWindow->ImplGetFrame() != pFrame )
-							pWindow = Application::GetNextTopLevelWindow( pWindow );
-						InvalidateControls( pWindow );
+						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						JavaSalEventQueue::postCachedEvent( pEvent );
+						pEvent->release();
+					}
+#endif	// USE_NATIVE_EVENTS
+					pSalData->mpFocusFrame = NULL;
+					pFrame->CallCallback( nID, NULL );
+#ifdef USE_NATIVE_WINDOW
+					JavaSalMenu::SetMenuBarToFocusFrame();
+#endif	// USE_NATIVE_WINDOW
+				}
+
+				// Fix bug 3098 by hiding tooltip windows but leaving the
+				// visible flag set to true
+				for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
+				{
+						if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+					(*cit)->SetVisible( sal_False, sal_False );
+				}
+
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					if ( pFrame == *it )
+					{
+						if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
+						{
+							Window *pWindow = Application::GetFirstTopLevelWindow();
+							while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+								pWindow = Application::GetNextTopLevelWindow( pWindow );
+							InvalidateControls( pWindow );
+						}
 					}
 				}
 			}
