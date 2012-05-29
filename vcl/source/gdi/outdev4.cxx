@@ -54,6 +54,10 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+#include <salvd.h>
+#endif	// USE_JAVA && MACOSX
+
 // -----------
 // - Defines -
 // -----------
@@ -1001,7 +1005,11 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					EnableMapMode( FALSE );
 
 					pVDev->DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
-#if defined USE_JAVA && defined MACOSX
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
+					// Fix black gradient bug reported in the following
+					// NeoOffice forum post by using custom gradient drawing
+					// code only when drawing to Java virtual devices:
+                    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62805#62805
                     const RasterOp eOldROP = GetRasterOp();
 					DrawGradient( aBoundRect, aGradient );
 					pVDev->SetRasterOp( ROP_XOR );
@@ -1016,7 +1024,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					SetRasterOp( ROP_XOR );
 					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
                     SetRasterOp( eOldROP );
-#else	// USE_JAVA && MACOSX
+#else	// !USE_NATIVE_VIRTUAL_DEVICE
 					pVDev->SetRasterOp( ROP_XOR );
 					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
 					pVDev->SetMapMode( aVDevMap );
@@ -1029,7 +1037,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					aVDevMap.SetOrigin( Point() );
 					pVDev->SetMapMode( aVDevMap );
 					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
-#endif	// USE_JAVA && MACOSX
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 					EnableMapMode( bOldMap );
 				}
