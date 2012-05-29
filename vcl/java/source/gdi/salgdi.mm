@@ -434,27 +434,44 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 				CGContextAddPath( aContext, maPath );
 
 				// Fix bug reported in the following NeoOffice forum post by
-				// drawing a path in a single operation when there is a fill
-				// color. Apparently, when the fill and line color are the
-				// same, CGLayers coalesce out the line drawing operation and
-				// so the line bleed at the edges of the path are missing:
+				// drawing a path in a single operation when the fill and line
+				// colors are equal. Apparently, when the fill and line color
+				// are the same, CGLayers coalesce out the line drawing
+				// operation and so the line bleed at the edges of the path are
+				// missing:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62777#62777
-				if ( CGColorGetAlpha( aFillColor ) )
+				// Draw the fill and line separately if the fill and line colors
+				// are different to avoid the drawing artifacts in the Base
+				// buttons found while fixing the bug in the following NeoOffice
+				// forum post:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62805#62805
+				if ( CGColorGetAlpha( aFillColor ) && CGColorEqualToColor( aFillColor, aLineColor ) )
 				{
-					// Smooth out image drawing for bug 2475 image
-					CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
+					// Enable or disable antialiasing
+					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
 					CGContextSetFillColorWithColor( aContext, aFillColor );
 					CGContextSetStrokeColorWithColor( aContext, aLineColor );
 					CGContextDrawPath( aContext, kCGPathEOFillStroke );
 				}
-				else if ( CGColorGetAlpha( aLineColor ) )
+				else
 				{
-					// Enable or disable antialiasing
-					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
+					if ( CGColorGetAlpha( aFillColor ) )
+					{
+						// Smooth out image drawing for bug 2475 image
+						CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
 
-					CGContextSetStrokeColorWithColor( aContext, aLineColor );
-					CGContextStrokePath( aContext );
+						CGContextSetFillColorWithColor( aContext, aFillColor );
+						CGContextEOFillPath( aContext );
+					}
+					if ( CGColorGetAlpha( aLineColor ) )
+					{
+						// Enable or disable antialiasing
+						CGContextSetAllowsAntialiasing( aContext, mbAntialias );
+
+						CGContextSetStrokeColorWithColor( aContext, aLineColor );
+						CGContextStrokePath( aContext );
+					}
 				}
 
 				if ( pGraphics->mpFrame )
