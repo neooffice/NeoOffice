@@ -56,6 +56,7 @@
 #include <postmac.h>
 
 #ifdef USE_NATIVE_WINDOW
+#include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
 #endif	// USE_NATIVE_WINDOW
 
@@ -315,7 +316,12 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 - (void)removeMenuAsMainMenu:(id)pObject
 {
-	if ( !mbMenuBar || self != pMenuBarMenu )
+	// Fix highlighted menu item bug reported in the following forum post by
+	// not changing the main menu when a modal or sheet window is being displayed.
+	// This should be safe since menubar tracking is disabled in the
+	// VCLApplicationDelegate class when this case is true:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
+	if ( !mbMenuBar || self != pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
 	pMenuBarFrame = NULL;
@@ -398,7 +404,12 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 - (void)setMenuAsMainMenu:(id)pObject
 {
-	if ( !mbMenuBar || self == pMenuBarMenu )
+	// Fix highlighted menu item bug reported in the following forum post by
+	// not changing the main menu when a modal or sheet window is being displayed.
+	// This should be safe since menubar tracking is disabled in the
+	// VCLApplicationDelegate class when this case is true:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
+	if ( !mbMenuBar || self == pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
 	pMenuBarFrame = mpFrame;
