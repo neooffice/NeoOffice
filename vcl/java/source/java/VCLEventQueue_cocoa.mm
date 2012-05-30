@@ -2919,8 +2919,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(concludeDragOperation:)])
 		[pDelegate concludeDragOperation:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(concludeDragOperation:)] )
 		[super concludeDragOperation:pSender];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack
@@ -2941,8 +2943,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
 		[pDelegate draggedImage:pImage beganAt:aPoint];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggedImage:beganAt:)] )
 		[super draggedImage:pImage beganAt:aPoint];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
@@ -2950,8 +2954,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:endedAt:operation:)])
 		[pDelegate draggedImage:pImage endedAt:aPoint operation:nOperation];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
 		[super draggedImage:pImage endedAt:aPoint operation:nOperation];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
@@ -2959,8 +2965,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:movedTo:)])
 		[pDelegate draggedImage:pImage movedTo:aPoint];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggedImage:movedTo:)] )
 		[super draggedImage:pImage movedTo:aPoint];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (id)draggingDestinationDelegate
@@ -2985,8 +2993,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEnded:)])
 		[pDelegate draggingEnded:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggingEnded:)] )
 		[super draggingEnded:pSender];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender
@@ -2994,8 +3004,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEntered:)])
 		return [pDelegate draggingEntered:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggingEntered:)] )
 		return [super draggingEntered:pSender];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
@@ -3005,8 +3017,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingExited:)])
 		[pDelegate draggingExited:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggingExited:)] )
 		[super draggingExited:pSender];
+#endif	// !USE_NATIVE_EVENTS
 }
 
 - (id)draggingSourceDelegate
@@ -3029,8 +3043,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
 		return [pDelegate draggingSourceOperationMaskForLocal:bLocal];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
 		return [super draggingSourceOperationMaskForLocal:bLocal];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
@@ -3040,8 +3056,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingUpdated:)])
 		return [pDelegate draggingUpdated:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(draggingUpdated:)] )
 		return [super draggingUpdated:pSender];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
@@ -3091,8 +3109,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
 		return [pDelegate ignoreModifierKeysWhileDragging];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(ignoreModifierKeysWhileDragging)] )
 		return [super ignoreModifierKeysWhileDragging];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3141,8 +3161,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)])
 		return [pDelegate namesOfPromisedFilesDroppedAtDestination:pDropDestination];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
 		return [super namesOfPromisedFilesDroppedAtDestination:pDropDestination];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return nil;
 }
@@ -3152,8 +3174,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
 		return [pDelegate performDragOperation:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(performDragOperation:)] )
 		return [super performDragOperation:pSender];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3163,8 +3187,10 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
 		return [pDelegate prepareForDragOperation:pSender];
+#ifndef USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(prepareForDragOperation:)] )
 		return [super prepareForDragOperation:pSender];
+#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3188,17 +3214,15 @@ static CFDataRef aRTFSelection = nil;
 {
 	MacOSBOOL bRet = NO;
 
+#ifndef USE_NATIVE_EVENTS
 	// Invoke superclass if this is not an NSViewAWT class
-#ifdef USE_NATIVE_EVENTS
-	if ( ![self isKindOfClass:[VCLView class]] )
-#else	// USE_NATIVE_EVENTS
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
 			bRet = (MacOSBOOL)[super readSelectionFromPasteboard:pPasteboard];
 		return bRet;
 	}
+#endif	// !USE_NATIVE_EVENTS
 
 	NSWindow *pWindow = [self window];
 	if ( pPasteboard && pWindow && [pWindow isVisible] )
@@ -3278,18 +3302,16 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
+#ifndef USE_NATIVE_EVENTS
 	// Invoke superclass if this is not an NSViewAWT class
-#ifdef USE_NATIVE_EVENTS
-	if ( ![self isKindOfClass:[VCLView class]] )
-#else	// USE_NATIVE_EVENTS
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		id pRet = nil;
 		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
 			pRet = [super validRequestorForSendType:pSendType returnType:pReturnType];
 		return pRet;
 	}
+#endif	// !USE_NATIVE_EVENTS
 
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
@@ -3334,9 +3356,9 @@ static CFDataRef aRTFSelection = nil;
 #else	// USE_NATIVE_EVENTS
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
 		return [pDelegate wantsPeriodicDraggingUpdates];
-#endif	// USE_NATIVE_EVENTS
 	else if ( [super respondsToSelector:@selector(wantsPeriodicDraggingUpdates)] )
 		return [super wantsPeriodicDraggingUpdates];
+#endif	// USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3345,17 +3367,15 @@ static CFDataRef aRTFSelection = nil;
 {
 	MacOSBOOL bRet = NO;
 
+#ifndef USE_NATIVE_EVENTS
 	// Invoke superclass if this is not an NSViewAWT class
-#ifdef USE_NATIVE_EVENTS
-	if ( ![self isKindOfClass:[VCLView class]] )
-#else	// USE_NATIVE_EVENTS
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
 			bRet = (MacOSBOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
 		return bRet;
 	}
+#endif	// !USE_NATIVE_EVENTS
 
 	if ( pPasteboard && pTypes )
 	{
