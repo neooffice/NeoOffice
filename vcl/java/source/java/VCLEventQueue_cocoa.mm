@@ -893,9 +893,7 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 - (MacOSBOOL)canBecomeKeyWindow
 {
-	// Ignore [NSPanel becomesKeyOnlyIfNeeded] as it causes key events to be
-	// ignored in slideshows
-	return mbCanBecomeKeyWindow;
+	return ( mbCanBecomeKeyWindow && ![self becomesKeyOnlyIfNeeded] );
 }
 
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
