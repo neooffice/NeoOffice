@@ -1473,12 +1473,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mbFullScreen = [pFullScreen boolValue];
 	[self adjustColorLevelAndShadow];
 
-	if ( mpWindow )
+	if ( mbUndecorated && mpWindow )
 	{
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:NO];
+			[(VCLPanel *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 		else
-			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:YES];
+			[(VCLWindow *)mpWindow setCanBecomeKeyWindow:mbFullScreen];
 	}
 }
 
