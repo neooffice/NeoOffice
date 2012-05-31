@@ -1616,6 +1616,11 @@ static NSUInteger nMouseMask = 0;
 		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
 			[(VCLView *)pResponder abandonInput];
 
+		// Have content view post its pending key up event
+		NSView *pContentView = [self contentView];
+		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+			[(VCLView *)pContentView keyUp:nil];
+
 		// Do not post a lost focus event if we are tracking the menubar as
 		// it will cause the menubar to disappear when then help menu is opened
 		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
@@ -2261,9 +2266,12 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpPendingKeyUpEvent )
 	{
 		NSWindow *pWindow = [self window];
-		if ( pWindow && [pWindow isVisible] && mpFrame && pEvent )
+		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
-			mpPendingKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+			if ( pEvent )
+				mpPendingKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+			else if ( mpLastKeyDownEvent )
+				mpPendingKeyUpEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
 			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
