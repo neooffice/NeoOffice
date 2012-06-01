@@ -204,12 +204,18 @@ void SFXDocument_reload( SfxTopViewFrame *pFrame )
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
 	while ( aPendingDuplicateURLsList.size() )
 	{
-		Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
-		aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
-		aSeq[0].Value <<= sal_True;
-		Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-		if ( xLoader.is() )
-			xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+		try
+		{
+			Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
+			aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
+			aSeq[0].Value <<= sal_True;
+			Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			if ( xLoader.is() )
+				xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+		}
+		catch ( ... )
+		{
+		}
 
 		aPendingDuplicateURLsList.pop_front();
 	}
