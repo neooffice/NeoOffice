@@ -56,6 +56,7 @@ SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_saveAVersionLocalizedString( Win
 BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
+void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame );
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );

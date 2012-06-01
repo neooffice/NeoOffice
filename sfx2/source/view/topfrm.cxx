@@ -151,6 +151,16 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 #if defined USE_JAVA && defined MACOSX
 
+void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+			pObjShell->SetModified( sal_True );
+	}
+}
+
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
