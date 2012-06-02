@@ -86,7 +86,7 @@ JavaSalGraphicsDrawImageOp::~JavaSalGraphicsDrawImageOp()
 
 void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maImage )
+	if ( !pGraphics || !aContext || !maImage )
 		return;
 
 	CGRect aDrawBounds = maRect;
@@ -115,10 +115,10 @@ void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		CGContextDrawImage( aContext, CGRectMake( 0, 0, maRect.size.width, maRect.size.height ), maImage );
 	}
 
+	restoreClipXORGState();
+
 	if ( pGraphics->mpFrame )
 		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
-
-	restoreClipXORGState();
 }
 
 // =======================================================================

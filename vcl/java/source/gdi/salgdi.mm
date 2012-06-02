@@ -212,7 +212,7 @@ JavaSalGraphicsCopyLayerOp::~JavaSalGraphicsCopyLayerOp()
 
 void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maSrcLayer )
+	if ( !pGraphics || !aContext || !maSrcLayer )
 		return;
 
 	CGRect aDrawBounds = maRect;
@@ -288,6 +288,9 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	}
 
 	restoreClipXORGState();
+
+	if ( pGraphics->mpFrame )
+		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
 }
 
 // =======================================================================
@@ -313,7 +316,7 @@ JavaSalGraphicsDrawEPSOp::~JavaSalGraphicsDrawEPSOp()
 
 void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maData )
+	if ( !pGraphics || !aContext || !maData )
 		return;
 
 	CGRect aDrawBounds = maRect;
@@ -347,10 +350,10 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		}
 	}
 
+	restoreClipXORGState();
+
 	if ( pGraphics->mpFrame )
 		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
-
-	restoreClipXORGState();
 }
 
 // =======================================================================
@@ -380,7 +383,7 @@ JavaSalGraphicsDrawPathOp::~JavaSalGraphicsDrawPathOp()
 
 void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !aContext || !maPath )
+	if ( !pGraphics || !aContext || !maPath )
 		return;
 
 	// Expand draw bounds by the line width
@@ -474,10 +477,10 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					}
 				}
 
+				restoreClipXORGState();
+
 				if ( pGraphics->mpFrame )
 					pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
-
-				restoreClipXORGState();
 			}
 
 			CGColorRelease( aLineColor );
@@ -1506,9 +1509,6 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 		CGContextSaveGState( aContext );
 
 		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcPoint, aDestRect );
-
-		if ( mpFrame )
-			addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
 
 		CGContextRestoreGState( aContext );
 	}

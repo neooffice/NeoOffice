@@ -441,7 +441,7 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 #if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
 		if ( mpBits && !mbUseLayer && pGraphics->useNativeDrawing() )
 #else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-		if ( pGraphics && mpBits && !mbUseLayer )
+		if ( mpBits && !mbUseLayer )
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		{
 			// Assign ownership of bits to a CGDataProvider instance
@@ -453,9 +453,10 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 				CGDataProviderRelease( aProvider );
 			}
 		}
-
-		if ( pGraphics->mpFrame )
+		else if ( pGraphics->mpFrame )
+		{
 			pGraphics->addNeedsDisplayRect( aDestRect, pGraphics->getNativeLineWidth() );
+		}
 	}
 
 	Destroy();
