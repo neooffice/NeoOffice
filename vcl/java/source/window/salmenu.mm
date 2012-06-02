@@ -140,19 +140,7 @@ using namespace vcl;
 {
 }
 - (id)initWithTitle:(NSString *)pTitle;
-@end
-
-@implementation VCLMenu
-
-- (id)initWithTitle:(NSString *)pTitle
-{
-	[super initWithTitle:pTitle];
-
-	[self setDelegate:[VCLApplicationDelegate sharedDelegate]];
-
-	return self;
-}
-
+- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
 
 @interface VCLMenuWrapper : NSObject
@@ -162,6 +150,7 @@ using namespace vcl;
 	MacOSBOOL				mbMenuBar;
 	NSMutableArray*			mpMenuItems;
 }
++ (void)mainMenuDidEndTracking;
 - (id)init:(MacOSBOOL)bMenuBar;
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)dealloc;
@@ -177,10 +166,46 @@ using namespace vcl;
 - (void)setMenuItemTitle:(VCLMenuWrapperArgs *)pArgs;
 @end
 
+static MacOSBOOL bInPerformKeyEquivalent = NO;
 static JavaSalFrame *pMenuBarFrame = NULL;
 static VCLMenuWrapper *pMenuBarMenu = nil;
+static VCLMenuWrapper *pPendingRemoveMenuAsMainMenu = nil;
+static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
+
+@implementation VCLMenu
+
+- (id)initWithTitle:(NSString *)pTitle
+{
+	[super initWithTitle:pTitle];
+
+	[self setDelegate:[VCLApplicationDelegate sharedDelegate]];
+
+	return self;
+}
+
+- (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
+{
+	MacOSBOOL bRet = NO;
+
+	bInPerformKeyEquivalent = YES;
+	bRet = [super performKeyEquivalent:pEvent];
+	bInPerformKeyEquivalent = NO;
+
+	[VCLMenuWrapper mainMenuDidEndTracking];
+
+	return bRet;
+}
+@end
 
 @implementation VCLMenuWrapper
+
++ (void)mainMenuDidEndTracking
+{
+	if ( pPendingRemoveMenuAsMainMenu )
+		[pPendingRemoveMenuAsMainMenu removeMenuAsMainMenu:nil];
+	if ( pPendingSetMenuAsMainMenu )
+		[pPendingSetMenuAsMainMenu setMenuAsMainMenu:nil];
+}
 
 - (id)init:(MacOSBOOL)bMenuBar
 {
@@ -316,6 +341,13 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 
 - (void)removeMenuAsMainMenu:(id)pObject
 {
+	// Cancel out pending pairs of set and remove operations for the same menu
+	if ( pPendingSetMenuAsMainMenu == self )
+	{
+		[pPendingSetMenuAsMainMenu release];
+		pPendingSetMenuAsMainMenu = nil;
+	}
+
 	// Fix highlighted menu item bug reported in the following forum post by
 	// not changing the main menu when a modal or sheet window is being displayed.
 	// This should be safe since menubar tracking is disabled in the
@@ -323,6 +355,21 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
 	if ( !mbMenuBar || self != pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
+
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( bInPerformKeyEquivalent || !pAppDelegate || [pAppDelegate isInTracking] )
+	{
+		if ( pPendingRemoveMenuAsMainMenu != self )
+		{
+			if ( pPendingRemoveMenuAsMainMenu )
+				[pPendingRemoveMenuAsMainMenu release];
+			pPendingRemoveMenuAsMainMenu = self;
+			if ( pPendingRemoveMenuAsMainMenu )
+				[pPendingRemoveMenuAsMainMenu retain];
+		}
+
+		return;
+	}
 
 	pMenuBarFrame = NULL;
 	pMenuBarMenu = nil;
@@ -356,6 +403,12 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 				}
 			}
 		}
+	}
+
+	if ( pPendingRemoveMenuAsMainMenu == self )
+	{
+		[pPendingRemoveMenuAsMainMenu release];
+		pPendingRemoveMenuAsMainMenu = nil;
 	}
 }
 
@@ -411,6 +464,21 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
 	if ( !mbMenuBar || self == pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
+
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( bInPerformKeyEquivalent || !pAppDelegate || [pAppDelegate isInTracking] )
+	{
+		if ( pPendingSetMenuAsMainMenu != self )
+		{
+			if ( pPendingSetMenuAsMainMenu )
+				[pPendingSetMenuAsMainMenu release];
+			pPendingSetMenuAsMainMenu = self;
+			if ( pPendingSetMenuAsMainMenu )
+				[pPendingSetMenuAsMainMenu retain];
+		}
+
+		return;
+	}
 
 	pMenuBarFrame = mpFrame;
 	pMenuBarMenu = self;
