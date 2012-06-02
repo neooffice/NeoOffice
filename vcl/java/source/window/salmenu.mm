@@ -356,8 +356,7 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	if ( !mbMenuBar || self != pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
-	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( bInPerformKeyEquivalent || !pAppDelegate || [pAppDelegate isInTracking] )
+	if ( bInPerformKeyEquivalent )
 	{
 		if ( pPendingRemoveMenuAsMainMenu != self )
 		{
@@ -465,8 +464,7 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	if ( !mbMenuBar || self == pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
-	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-	if ( bInPerformKeyEquivalent || !pAppDelegate || [pAppDelegate isInTracking] )
+	if ( bInPerformKeyEquivalent )
 	{
 		if ( pPendingSetMenuAsMainMenu != self )
 		{
