@@ -343,7 +343,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 	if ( !maContext && !mbUseLayer )
 	{
-		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 		if ( !aColorSpace )
 		{
 			Destroy();

@@ -425,7 +425,7 @@ CGContextRef ImplATSLayoutData::GetSharedContext()
 {
 	if ( !maSharedContext )
 	{
-		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 		if ( aColorSpace )
 		{
 			maSharedContext = CGBitmapContextCreate( &mnSharedContextData, 1, 1, 8, sizeof( mnSharedContextData ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );

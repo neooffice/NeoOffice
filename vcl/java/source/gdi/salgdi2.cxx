@@ -59,7 +59,8 @@ JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aFrameCl
 {
 	if ( aProvider && nDataScanlineSize && nDataWidth && nDataHeight && !CGRectIsEmpty( aSrcRect ) && CGRectIntersectsRect( aSrcRect, CGRectMake( 0, 0, nDataWidth, nDataHeight ) ) )
 	{
-		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		// Use generic color space since JavaSalBitmap instances use it
+		CGColorSpaceRef aColorSpace = CGColorSpaceCreateWithName( kCGColorSpaceGenericRGB );
 		if ( aColorSpace )
 		{
 			CGImageRef aImage = CGImageCreate( nDataWidth, nDataHeight, 8, nDataBitCount, nDataScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
@@ -1095,7 +1096,7 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		if ( !maPixelContext )
 		{
-			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 			if ( aColorSpace )
 			{
 				maPixelContext = CGBitmapContextCreate( &mnPixelContextData, 1, 1, 8, sizeof( mnPixelContextData ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );

@@ -77,6 +77,7 @@ static unsigned int nMainScreen = 0;
 static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
+static CGColorSpaceRef aDeviceColorSpace = NULL;
 static ::osl::Mutex aScreensMutex;
 #endif	// USE_NATIVE_WINDOW && USE_NATIVE_VIRTUAL_DEVICE && USE_NATIVE_PRINTING
 static NSColor *pVCLControlTextColor = nil;
@@ -128,6 +129,11 @@ static void HandleScreensChangedRequest()
 	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
 	aVCLScreensVisibleBoundsList.clear();
+	if ( aDeviceColorSpace )
+	{
+		CGColorSpaceRelease( aDeviceColorSpace );
+		aDeviceColorSpace = NULL;
+	}
 
 	NSArray *pScreens = [NSScreen screens];
 	NSScreen *pMainScreen = [NSScreen mainScreen];
@@ -163,6 +169,15 @@ static void HandleScreensChangedRequest()
 				// Check if this is the main screen
 				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
 					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
+
+				// Cache device color space
+				NSColorSpace *pColorSpace = [NSColorSpace deviceRGBColorSpace];
+				if ( pColorSpace )
+				{
+					aDeviceColorSpace = [pColorSpace CGColorSpace];
+					if ( aDeviceColorSpace )
+						CGColorSpaceRetain( aDeviceColorSpace );
+				}
 			}
 		}
 	}
@@ -1867,7 +1882,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
 
 	// Make a native layer backed by a 1 x 1 pixel native bitmap
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 	if ( aColorSpace )
 	{
 		maHiddenContext = CGBitmapContextCreate( &mnHiddenBit, 1, 1, 8, sizeof( mnHiddenBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
@@ -1963,6 +1978,39 @@ JavaSalFrame::~JavaSalFrame()
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
 		delete mpGraphics;
+}
+
+// -----------------------------------------------------------------------
+
+CGColorSpaceRef JavaSalFrame::CopyDeviceColorSpace()
+{
+	CGColorSpaceRef aRet = NULL;
+
+#if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
+	// Update if screens have not yet been set
+	ResettableGuard< Mutex > aGuard( aScreensMutex );
+	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		aGuard.clear();
+		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+		aGuard.reset();
+
+		[pPool release];
+	}
+
+	aRet = aDeviceColorSpace;
+	if ( aRet )
+		CGColorSpaceRetain( aRet );
+#endif	// USE_NATIVE_WINDOW && USE_NATIVE_VIRTUAL_DEVICE && USE_NATIVE_PRINTING
+
+	if ( !aRet )
+		aRet = CGColorSpaceCreateDeviceRGB();
+
+	return aRet;
 }
 
 #ifdef USE_NATIVE_WINDOW

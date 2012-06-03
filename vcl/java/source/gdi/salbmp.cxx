@@ -320,7 +320,10 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 		if ( !bDisposed && !mpBits )
 #endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 		{
-			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			// Use generic color space since the OOo code creates bitmaps using
+			// its own implied or explicit color space so we need to be
+			// consistent with that when creating bitmaps from a native graphics
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateWithName( kCGColorSpaceGenericRGB );
 			if ( aColorSpace )
 			{
 				long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );

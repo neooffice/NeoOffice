@@ -238,47 +238,33 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	CGContextRef aSrcContext = CGLayerGetContext( maSrcLayer );
 	if ( aSrcContext == aContext )
 	{
+		// Fix the stray drawing artifacts reported in the following forum post
+		// by making the temporary layer large enough to handle the bleeding
+		// for lines drawn in the edge of the temporary bounds:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62799#62799
+		sal_uInt32 nTmpPadding = 0;
+		if ( mfLineWidth > 0 )
+			nTmpPadding = (sal_uInt32)( mfLineWidth + 0.5 );
+
 		// Copying within the same context to a negative x destination or a
 		// destination that overlaps with the source causes drawing to wrap
 		// around to the right edge of the destination layer so make a temporary
-		// copy of the source using a native layer backed by a 1 x 1 pixel
-		// native bitmap
-		sal_uInt32 nTmpBit = 0;
-		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-		if ( aColorSpace )
+		// copy of the source using a native layer created from the source
+		// layer's context
+		CGLayerRef aTmpLayer = CGLayerCreateWithContext( aSrcContext, CGSizeMake( maRect.size.width + ( nTmpPadding * 2 ), maRect.size.height + ( nTmpPadding * 2 ) ), NULL );
+		if ( aTmpLayer )
 		{
-			CGContextRef aBitmapContext = CGBitmapContextCreate( &nTmpBit, 1, 1, 8, sizeof( nTmpBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-			if ( aBitmapContext )
+			CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
+			if ( aTmpContext )
 			{
-				// Fix the stray drawing artifacts reported in the following
-				// forum post by making the temporary layer large enough to
-				// handle the bleeding for lines drawn in the edge of the
-				// temporary bounds;
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62799#62799
-				sal_uInt32 nBitmapPadding = 0;
-				if ( mfLineWidth > 0 )
-					nBitmapPadding = (sal_uInt32)( mfLineWidth + 0.5 );
+				CGContextTranslateCTM( aTmpContext, nTmpPadding, nTmpPadding );
+				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( maSrcPoint.x * -1, maSrcPoint.y * -1 ), maSrcLayer );
 
-				CGLayerRef aTmpLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( maRect.size.width + ( nBitmapPadding * 2 ), maRect.size.height + ( nBitmapPadding * 2 ) ), NULL );
-				if ( aTmpLayer )
-				{
-					CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
-					if ( aTmpContext )
-					{
-						CGContextTranslateCTM( aTmpContext, nBitmapPadding, nBitmapPadding );
-						CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( maSrcPoint.x * -1, maSrcPoint.y * -1 ), maSrcLayer );
-
-						CGContextClipToRect( aContext, maRect );
-						CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - nBitmapPadding, maRect.origin.y - nBitmapPadding ), aTmpLayer );
-					}
-
-					CGLayerRelease( aTmpLayer );
-				}
-
-				CGContextRelease( aBitmapContext );
+				CGContextClipToRect( aContext, maRect );
+				CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - nTmpPadding, maRect.origin.y - nTmpPadding ), aTmpLayer );
 			}
 
-			CGColorSpaceRelease( aColorSpace );
+			CGLayerRelease( aTmpLayer );
 		}
 	}
 	else
@@ -1795,7 +1781,7 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 			CGContextRelease( maXORBitmapContext );
 			maXORBitmapContext = NULL;
 
-			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 			if ( aColorSpace )
 			{
 				size_t nPixels = mnBitmapCapacity / sizeof( sal_uInt32 );
@@ -1907,7 +1893,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 			maXORRect = CGRectStandardize( aDrawBounds );
 			if ( !CGRectIsEmpty( maXORRect ) )
 			{
-				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+				CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 				if ( aColorSpace )
 				{
 					CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( mnXORBitmapPadding * 2 ), maXORRect.size.height + ( mnXORBitmapPadding * 2 ) );

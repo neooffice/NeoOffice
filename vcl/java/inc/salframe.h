@@ -132,6 +132,7 @@ public:
 	BOOL					mbInWindowDidExitFullScreen;
 	BOOL					mbInWindowWillEnterFullScreen;
 
+	static CGColorSpaceRef	CopyDeviceColorSpace();
 #ifdef USE_NATIVE_WINDOW
 	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut );
 	static void				FlushAllFrames();

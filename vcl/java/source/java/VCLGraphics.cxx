@@ -289,7 +289,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		return;
 	}
 
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 	if ( !aColorSpace )
 	{
 		CGDataProviderRelease( aProvider );
@@ -370,7 +370,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 	CacheBitmapBuffer( pBuffer );
 
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
 	if ( !aColorSpace )
 	{
 		CGDataProviderRelease( aProvider );
