@@ -344,8 +344,8 @@ public:
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
-	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR );
+	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	ULONG					getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }

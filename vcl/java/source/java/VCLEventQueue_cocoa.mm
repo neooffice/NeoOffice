@@ -3423,6 +3423,10 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface NSFileManager (VCLFileManager)
+- (NSURL *)URLForUbiquityContainerIdentifier:(NSString *)pContainerID;
+@end
+
 @interface InstallVCLEventQueueClasses : NSObject
 {
 #ifndef USE_NATIVE_EVENTS
@@ -3850,6 +3854,10 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		}
 	}
 #endif	// USE_NATIVE_EVENTS
+
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	if ( pFileManager && [pFileManager respondsToSelector:@selector(URLForUbiquityContainerIdentifier:)] )
+		CFShow( [pFileManager URLForUbiquityContainerIdentifier:nil] );
 }
 
 @end

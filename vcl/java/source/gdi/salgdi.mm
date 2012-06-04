@@ -56,11 +56,11 @@ static bool bVCLEventLoopStarted = false;
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
-	CGPoint					maSrcPoint;
+	CGRect					maSrcRect;
 	CGRect					maRect;
 
 public:
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect );
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsCopyLayerOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -190,10 +190,10 @@ CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 
 // =======================================================================
 
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect ) :
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGLayerRef aSrcLayer, const CGRect aSrcRect, const CGRect aRect ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR ),
 	maSrcLayer( aSrcLayer ),
-	maSrcPoint( aSrcPoint ),
+	maSrcRect( aSrcRect ),
 	maRect( aRect )
 {
 	if ( maSrcLayer )
@@ -225,9 +225,12 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	if ( CGRectIsEmpty( aDrawBounds ) )
 		return;
 
+	float fScaleX = maRect.size.width / maSrcRect.size.width;
+	float fScaleY = maRect.size.height / maSrcRect.size.height;
+
 	// Check if the adjusted draw bounds matches any area of the source layer
 	CGSize aSrcLayerSize = CGLayerGetSize( maSrcLayer );
-	CGRect aSrcDrawBounds = CGRectMake( maSrcPoint.x + aDrawBounds.origin.x - maRect.origin.x, maSrcPoint.y + aDrawBounds.origin.y - maRect.origin.y, aDrawBounds.size.width, aDrawBounds.size.height );
+	CGRect aSrcDrawBounds = CGRectMake( maSrcRect.origin.x + ( ( aDrawBounds.origin.x - maRect.origin.x ) / fScaleX ), maSrcRect.origin.y + ( ( aDrawBounds.origin.y - maRect.origin.y ) / fScaleY ), aDrawBounds.size.width / fScaleX, aDrawBounds.size.height / fScaleY );
 	if ( CGRectIsEmpty( CGRectIntersection( aSrcDrawBounds, CGRectMake( 0, 0, aSrcLayerSize.width, aSrcLayerSize.height ) ) ) )
 		return;
 
@@ -251,17 +254,19 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		// around to the right edge of the destination layer so make a temporary
 		// copy of the source using a native layer created from the source
 		// layer's context
-		CGLayerRef aTmpLayer = CGLayerCreateWithContext( aSrcContext, CGSizeMake( maRect.size.width + ( nTmpPadding * 2 ), maRect.size.height + ( nTmpPadding * 2 ) ), NULL );
+		CGLayerRef aTmpLayer = CGLayerCreateWithContext( aSrcContext, CGSizeMake( maSrcRect.size.width + ( nTmpPadding * 2 ), maSrcRect.size.height + ( nTmpPadding * 2 ) ), NULL );
 		if ( aTmpLayer )
 		{
 			CGContextRef aTmpContext = CGLayerGetContext( aTmpLayer );
 			if ( aTmpContext )
 			{
 				CGContextTranslateCTM( aTmpContext, nTmpPadding, nTmpPadding );
-				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( maSrcPoint.x * -1, maSrcPoint.y * -1 ), maSrcLayer );
+				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( maSrcRect.origin.x * -1, maSrcRect.origin.y * -1 ), maSrcLayer );
 
 				CGContextClipToRect( aContext, maRect );
-				CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - nTmpPadding, maRect.origin.y - nTmpPadding ), aTmpLayer );
+				CGContextTranslateCTM( aContext, maRect.origin.x - nTmpPadding, maRect.origin.y - nTmpPadding );
+				CGContextScaleCTM( aContext, fScaleX, fScaleY );
+				CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, 0 ), aTmpLayer );
 			}
 
 			CGLayerRelease( aTmpLayer );
@@ -270,7 +275,9 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	else
 	{
 		CGContextClipToRect( aContext, maRect );
-		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - maSrcPoint.x, maRect.origin.y - maSrcPoint.y ), maSrcLayer );
+		CGContextTranslateCTM( aContext, maRect.origin.x - maSrcRect.origin.x, maRect.origin.y - maSrcRect.origin.y );
+		CGContextScaleCTM( aContext, fScaleX, fScaleY );
+		CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, 0 ), maSrcLayer );
 	}
 
 	restoreClipXORGState();
@@ -1467,7 +1474,7 @@ void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR )
+void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
@@ -1494,7 +1501,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 
 		CGContextSaveGState( aContext );
 
-		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcPoint, aDestRect );
+		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcRect, aDestRect );
 
 		CGContextRestoreGState( aContext );
 	}
@@ -1502,7 +1509,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect )
+void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
@@ -1552,7 +1559,7 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 	}
 
 	// Do not queue this operation since we are copying to another context
-	JavaSalGraphicsCopyLayerOp aOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, maLayer, aSrcPoint, aDestRect );
+	JavaSalGraphicsCopyLayerOp aOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, maLayer, aSrcRect, aDestRect );
 	aOp.drawOp( this, aDestContext, aDestBounds );
 }
 

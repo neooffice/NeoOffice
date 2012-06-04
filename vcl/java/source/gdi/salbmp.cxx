@@ -341,7 +341,7 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 					CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 					if ( aContext )
 					{
-						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGPointMake( maPoint.X(), maPoint.Y() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
+						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGRectMake( maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
 
 						CGContextRelease( aContext );
 					}

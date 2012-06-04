@@ -1788,7 +1788,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 						aBounds.origin.y = 0;
 					}
 
-					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect.origin, aDestRect );
+					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect );
 
 					CGContextRestoreGState( aContext );
 				}
