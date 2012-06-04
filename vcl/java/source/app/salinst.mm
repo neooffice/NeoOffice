@@ -64,10 +64,6 @@
 #include <vcl/saltimer.hxx>
 #include <vcl/unohelp.hxx>
 #include <vos/module.hxx>
-#ifndef USE_NATIVE_EVENTS
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#include <com/sun/star/vcl/VCLFrame.hxx>
-#endif	// !USE_NATIVE_EVENTS
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
 
@@ -416,22 +412,6 @@ bool IsFullKeyboardAccessEnabled( )
 	return isFullAccessEnabled;
 }
 
-#ifndef USE_NATIVE_EVENTS
-
-// ----------------------------------------------------------------------------
-
-void InitJavaAWT()
-{
-	if ( !Application::IsShutDown() )
-	{
-		// Invoke the native shutdown cancelled handler to initialize the
-		// event queue and clear any pending native open and print events
-		JavaSalEventQueue::setShutdownDisabled( sal_False );
-	}
-}
-
-#endif	// !USE_NATIVE_EVENTS
-
 // =======================================================================
 
 void SalAbort( const XubString& rErrorText )
@@ -646,11 +626,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 
-#ifdef USE_NATIVE_WINDOW
 			JavaSalFrame::FlushAllFrames();
-#else	// USE_NATIVE_WINDOW
-			com_sun_star_vcl_VCLFrame::flushAllFrames();
-#endif	// USE_NATIVE_WINDOW
 
 			// Reduce noticeable pause when opening a new document by delaying
 			// update of submenus until next available timer timeout.
@@ -740,11 +716,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		}
 		pEvent->release();
 
-#ifdef USE_NATIVE_WINDOW
 		JavaSalFrame::FlushAllFrames();
-#else	// USE_NATIVE_WINDOW
-		com_sun_star_vcl_VCLFrame::flushAllFrames();
-#endif	// USE_NATIVE_WINDOW
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
@@ -809,11 +781,7 @@ SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* pSystemParentData
 SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
 	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, (JavaSalFrame *)pParent );
-#ifdef USE_NATIVE_EVENTS
 	if ( !pFrame->mpWindow )
-#else	// USE_NATIVE_EVENTS
-	if ( !pFrame->mpVCLFrame || !pFrame->mpVCLFrame->getJavaObject() )
-#endif	// USE_NATIVE_EVENTS
 	{
 		delete pFrame;
 		return NULL;
@@ -1182,7 +1150,6 @@ sal_Bool SalYieldMutex::tryToAcquire()
 // =========================================================================
 
 JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath, ULONG nCommittedCharacters, ULONG nCursorPosition ) :
-#ifdef USE_NATIVE_EVENTS
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mbNative( false ),
@@ -1190,13 +1157,8 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	mnCommittedCharacters( nCommittedCharacters ),
 	mnCursorPosition( nCursorPosition ),
 	mpData( pData ),
-#else	// USE_NATIVE_EVENTS
-	mpVCLEvent( NULL ),
-	mpData( NULL ),
-#endif	// USE_NATIVE_EVENTS
 	mnRefCount( 1 )
 {
-#ifdef USE_NATIVE_EVENTS
 	switch ( mnID )
 	{
 		case SALEVENT_CLOSE:
@@ -1219,25 +1181,7 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 	}
 
 	maPath = OUString( rPath.getStr(), rPath.getLength(), RTL_TEXTENCODING_UTF8 );
-#else	// USE_NATIVE_EVENTS
-	mpVCLEvent = new com_sun_star_vcl_VCLEvent( nID, pFrame, pData, rPath );
-#endif	// USE_NATIVE_EVENTS
 }
-
-#ifndef USE_NATIVE_EVENTS
-
-// -------------------------------------------------------------------------
-
-JavaSalEvent::JavaSalEvent( com_sun_star_vcl_VCLEvent *pVCLEvent ) :
-	mpVCLEvent( NULL ),
-	mpData( NULL ),
-	mnRefCount( 1 )
-{
-	if ( pVCLEvent && pVCLEvent->getJavaObject() )
-		mpVCLEvent = new com_sun_star_vcl_VCLEvent( pVCLEvent->getJavaObject() );
-}
-
-#endif	// !USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -1245,11 +1189,7 @@ JavaSalEvent::~JavaSalEvent()
 {
 	if ( mpData )
 	{
-#ifdef USE_NATIVE_EVENTS
 		switch ( mnID )
-#else	// USE_NATIVE_EVENTS
-		switch ( getID() )
-#endif	// USE_NATIVE_EVENTS
 		{
 			case SALEVENT_ENDEXTTEXTINPUT:
 			case SALEVENT_EXTTEXTINPUT:
@@ -1297,20 +1237,13 @@ JavaSalEvent::~JavaSalEvent()
 		}
 	}
 
-#ifdef USE_NATIVE_EVENTS
 	while ( maOriginalKeyEvents.size() )
 	{
 		JavaSalEvent *pEvent = maOriginalKeyEvents.front();
 		maOriginalKeyEvents.pop_front();
 		pEvent->release();
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		delete mpVCLEvent;
-#endif	// USE_NATIVE_EVENTS
 }
-
-#ifdef USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
@@ -1372,32 +1305,19 @@ void JavaSalEvent::addWheelRotation( long nRotation )
 	}
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 // -------------------------------------------------------------------------
 
 void JavaSalEvent::cancelShutdown()
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mnID == SALEVENT_SHUTDOWN )
 		mbShutdownCancelled = sal_True;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		mpVCLEvent->cancelShutdown();
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEvent::dispatch()
 {
-#ifdef USE_NATIVE_EVENTS
 	USHORT nID = mnID;
-#else	// USE_NATIVE_EVENTS
-	USHORT nID = getID();
-	if ( !mpData )
-		mpData = getData();
-#endif	// USE_NATIVE_EVENTS
 	SalData *pSalData = GetSalData();
 
 	// Handle events that do not need a JavaSalFrame pointer
@@ -1611,11 +1531,9 @@ void JavaSalEvent::dispatch()
 			{
 				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 				{
-#ifdef USE_NATIVE_EVENTS
 					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
 					JavaSalEventQueue::postCachedEvent( pEvent );
 					pEvent->release();
-#endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
 				}
 				pSalData->mpFocusFrame = NULL;
@@ -1623,31 +1541,25 @@ void JavaSalEvent::dispatch()
 
 			if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 			{
-#ifdef USE_NATIVE_EVENTS
 				if ( pFrame->mbVisible )
 				{
 					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
 					JavaSalEventQueue::postCachedEvent( pEvent );
 					pEvent->release();
 				}
-#endif	// USE_NATIVE_EVENTS
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->CallCallback( nID, NULL );
-#ifdef USE_NATIVE_WINDOW
 				JavaSalMenu::SetMenuBarToFocusFrame();
-#endif	// USE_NATIVE_WINDOW
 
 				Window *pWindow = Application::GetFirstTopLevelWindow();
 				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
 					pWindow = Application::GetNextTopLevelWindow( pWindow );
 				InvalidateControls( pWindow );
 			}
-#ifdef USE_NATIVE_WINDOW
 			else
 			{
 				JavaSalMenu::SetMenuBarToFocusFrame();
 			}
-#endif	// USE_NATIVE_WINDOW
 			break;
 		}
 		case SALEVENT_LOSEFOCUS:
@@ -1656,19 +1568,15 @@ void JavaSalEvent::dispatch()
 			{
 				if ( pFrame == pSalData->mpFocusFrame )
 				{
-#ifdef USE_NATIVE_EVENTS
 					if ( pFrame->mbVisible )
 					{
 						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
 						JavaSalEventQueue::postCachedEvent( pEvent );
 						pEvent->release();
 					}
-#endif	// USE_NATIVE_EVENTS
 					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
-#ifdef USE_NATIVE_WINDOW
 					JavaSalMenu::SetMenuBarToFocusFrame();
-#endif	// USE_NATIVE_WINDOW
 				}
 
 				// Fix bug 3098 by hiding tooltip windows but leaving the
@@ -1726,15 +1634,11 @@ void JavaSalEvent::dispatch()
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
 				}
-#ifdef USE_NATIVE_EVENTS
 				// Fix bug reported in the following NeoOffice forum post that
 				// by only skipping a key binding event when there are original
 				// events attached to the key event event:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62803#62803
 				if ( ( !pFrame->mbAllowKeyBindings && maOriginalKeyEvents.size() ) || !pFrame->CallCallback( nID, pKeyEvent ) )
-#else	// USE_NATIVE_EVENTS
-				if ( !pFrame->CallCallback( nID, pKeyEvent ) )
-#endif	// USE_NATIVE_EVENTS
 				{
 					// If the key event fails and this is a command event,
 					// dispatch the original events
@@ -1914,11 +1818,7 @@ void JavaSalEvent::dispatch()
 					if ( pSalData->mpLastResizeFrame )
 					{
 						gettimeofday( &pSalData->maLastResizeTime, NULL );
-#ifdef USE_NATIVE_EVENTS
 						pSalData->maLastResizeTime += 100;
-#else	// USE_NATIVE_EVENTS
-						pSalData->maLastResizeTime += 250;
-#endif	// USE_NATIVE_EVENTS
 					}
 
 					// Fix bug 3252 by always comparing the bounds against the
@@ -1973,18 +1873,8 @@ void JavaSalEvent::dispatch()
 						else
 							nID = SALEVENT_RESIZE;
 
-#ifdef USE_NATIVE_WINDOW
 						if ( bForceResize || bSizeChanged )
 							pFrame->UpdateLayer();
-#else	// USE_NATIVE_WINDOW
-						// Reset graphics
-						com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
-						if ( pVCLGraphics )
-						{
-							pVCLGraphics->resetGraphics();
-							delete pVCLGraphics;
-						}
-#endif	// USE_NATIVE_WINDOW
 
 						pFrame->CallCallback( nID, NULL );
 					}
@@ -2009,16 +1899,6 @@ void JavaSalEvent::dispatch()
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
 
-#ifndef USE_NATIVE_WINDOW
-				// Reset graphics
-				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
-				if ( pVCLGraphics )
-				{
-					pVCLGraphics->resetGraphics();
-					delete pVCLGraphics;
-				}
-#endif	// !USE_NATIVE_WINDOW
-
 				pFrame->CallCallback( nID, pPaintEvent );
 			}
 			break;
@@ -2038,12 +1918,6 @@ void JavaSalEvent::dispatch()
 				{
 					long nWheelRotation = getWheelRotation();
 					BOOL bHorz = isHorizontal();
-#ifndef USE_NATIVE_EVENTS
-					// The OOo code expects the opposite in signedness of Java
-					// for vertical scrolling
-					if ( !bHorz )
-						nWheelRotation *= -1;
-#endif	// !USE_NATIVE_EVENTS
 					pWheelMouseEvent = new SalWheelMouseEvent();
 					pWheelMouseEvent->mnTime = getWhen();
 					pWheelMouseEvent->mnX = getX();
@@ -2102,13 +1976,8 @@ ULONG JavaSalEvent::getCommittedCharacterCount()
 {
 	ULONG nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mnID == SALEVENT_EXTTEXTINPUT )
 		nRet = mnCommittedCharacters;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getCommittedCharacterCount();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2119,47 +1988,17 @@ ULONG JavaSalEvent::getCursorPosition()
 {
 	ULONG nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mnID == SALEVENT_EXTTEXTINPUT )
 		nRet = mnCursorPosition;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getCursorPosition();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
-
-#ifndef USE_NATIVE_EVENTS
-
-// -------------------------------------------------------------------------
-
-void *JavaSalEvent::getData()
-{
-	void *pRet = NULL;
-
-	if ( mpVCLEvent )
-		pRet = mpVCLEvent->getData();
-
-	return pRet;
-}
-
-#endif	// !USE_NATIVE_EVENTS
 
 // -------------------------------------------------------------------------
 
 JavaSalFrame *JavaSalEvent::getFrame()
 {
-	JavaSalFrame *pRet = NULL;
-
-#ifdef USE_NATIVE_EVENTS
-	pRet = mpFrame;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		pRet = mpVCLEvent->getFrame();
-#endif	// USE_NATIVE_EVENTS
-
-	return pRet;
+	return mpFrame;
 }
 
 // -------------------------------------------------------------------------
@@ -2168,16 +2007,11 @@ USHORT JavaSalEvent::getKeyChar()
 {
 	USHORT nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
 	{
 		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnCharCode;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getKeyChar();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2188,16 +2022,11 @@ USHORT JavaSalEvent::getKeyCode()
 {
 	USHORT nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
 	{
 		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnCode & ~( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 | KEY_SHIFT | MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getKeyCode();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2206,16 +2035,7 @@ USHORT JavaSalEvent::getKeyCode()
 
 USHORT JavaSalEvent::getID()
 {
-	USHORT nRet = 0;
-
-#ifdef USE_NATIVE_EVENTS
-	nRet = mnID;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getID();
-#endif	// USE_NATIVE_EVENTS
-
-	return nRet;
+	return mnID;
 }
 
 // -------------------------------------------------------------------------
@@ -2224,7 +2044,6 @@ USHORT JavaSalEvent::getModifiers()
 {
 	USHORT nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData )
 	{
 		switch ( mnID )
@@ -2253,10 +2072,6 @@ USHORT JavaSalEvent::getModifiers()
 				break;
 		}
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getModifiers();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2267,24 +2082,11 @@ JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 {
 	JavaSalEvent *pRet = NULL;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( maOriginalKeyEvents.size() )
 	{
 		pRet = maOriginalKeyEvents.front();
 		maOriginalKeyEvents.pop_front();
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-	{
-		com_sun_star_vcl_VCLEvent *pVCLEvent = mpVCLEvent->getNextOriginalKeyEvent();
-		if ( pVCLEvent )
-		{
-			if ( pVCLEvent->getJavaObject() )
-				pRet = new JavaSalEvent( pVCLEvent );
-			delete pVCLEvent;
-		}
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2293,16 +2095,7 @@ JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 
 OUString JavaSalEvent::getPath()
 {
-	OUString aRet;
-
-#ifdef USE_NATIVE_EVENTS
-	aRet = maPath;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		aRet = mpVCLEvent->getPath();
-#endif	// USE_NATIVE_EVENTS
-
-	return aRet;
+	return maPath;
 }
 
 // -------------------------------------------------------------------------
@@ -2311,16 +2104,11 @@ USHORT JavaSalEvent::getRepeatCount()
 {
 	USHORT nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_KEYINPUT )
 	{
 		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnRepeat;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getRepeatCount();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2331,16 +2119,11 @@ XubString JavaSalEvent::getText()
 {
 	XubString aRet;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
 	{
 		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 		aRet = pInputEvent->maText;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		aRet = XubString( mpVCLEvent->getText() );
-#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -2351,16 +2134,11 @@ const USHORT *JavaSalEvent::getTextAttributes()
 {
 	const USHORT *pRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
 	{
 		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 		pRet = pInputEvent->mpTextAttr;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		pRet = mpVCLEvent->getTextAttributes();
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2371,16 +2149,11 @@ const Rectangle JavaSalEvent::getUpdateRect()
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_PAINT )
 	{
 		SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 		aRet = Rectangle( Point( pPaintEvent->mnBoundX, pPaintEvent->mnBoundY ), Size( pPaintEvent->mnBoundWidth, pPaintEvent->mnBoundHeight ) );
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		aRet = mpVCLEvent->getUpdateRect();
-#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -2391,7 +2164,6 @@ ULONG JavaSalEvent::getWhen()
 {
 	ULONG nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData )
 	{
 		switch ( mnID )
@@ -2425,10 +2197,6 @@ ULONG JavaSalEvent::getWhen()
 				break;
 		}
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getWhen();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2439,7 +2207,6 @@ long JavaSalEvent::getX()
 {
 	long nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData )
 	{
 		switch ( mnID )
@@ -2459,10 +2226,6 @@ long JavaSalEvent::getX()
 				break;
 		}
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getX();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2473,7 +2236,6 @@ long JavaSalEvent::getY()
 {
 	long nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData )
 	{
 		switch ( mnID )
@@ -2493,10 +2255,6 @@ long JavaSalEvent::getY()
 				break;
 		}
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getY();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2507,16 +2265,11 @@ short JavaSalEvent::getMenuID()
 {
 	short nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
 	{
 		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 		nRet = pMenuEvent->mnId;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getMenuID();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2527,16 +2280,11 @@ void *JavaSalEvent::getMenuCookie()
 {
 	void *pRet = NULL;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
 	{
 		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 		pRet = pMenuEvent->mpMenu;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		pRet = mpVCLEvent->getMenuCookie();
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2547,16 +2295,11 @@ long JavaSalEvent::getScrollAmount()
 {
 	long nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
 		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		nRet = pWheelMouseEvent->mnScrollLines;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getScrollAmount();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2567,16 +2310,11 @@ long JavaSalEvent::getWheelRotation()
 {
 	long nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
 		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		nRet = pWheelMouseEvent->mnNotchDelta;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		nRet = mpVCLEvent->getWheelRotation();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2587,16 +2325,11 @@ sal_Bool JavaSalEvent::isHorizontal()
 {
 	sal_Bool bRet = sal_False;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
 		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		bRet = (sal_Bool)pWheelMouseEvent->mbHorz;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		bRet = mpVCLEvent->isHorizontal();
-#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2605,16 +2338,7 @@ sal_Bool JavaSalEvent::isHorizontal()
 
 sal_Bool JavaSalEvent::isShutdownCancelled()
 {
-	sal_Bool bRet = sal_False;
-
-#ifdef USE_NATIVE_EVENTS
-	bRet = mbShutdownCancelled;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLEvent )
-		bRet = mpVCLEvent->isShutdownCancelled();
-#endif	// USE_NATIVE_EVENTS
-
-	return bRet;
+	return mbShutdownCancelled;
 }
 
 // ----------------------------------------------------------------------------
@@ -2689,8 +2413,6 @@ JavaSalEventQueueItem::~JavaSalEventQueueItem()
 
 Mutex JavaSalEventQueue::maMutex;
 
-#ifdef USE_NATIVE_EVENTS
-
 // -------------------------------------------------------------------------
 
 Condition JavaSalEventQueue::maCondition;
@@ -2742,80 +2464,12 @@ void JavaSalEventQueue::purgeRemovedEventsFromFront( ::std::list< JavaSalEventQu
 	}
 }
 
-#else	// USE_NATIVE_EVENTS
-
-// -------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLEventQueue *JavaSalEventQueue::mpVCLEventQueue = NULL;
-
-// -------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLEventQueue *JavaSalEventQueue::getVCLEventQueue()
-{
-	if ( !mpVCLEventQueue )
-	{
-		MutexGuard aGuard( maMutex );
-
-		if ( !mpVCLEventQueue )
-			mpVCLEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-	}
-
-	return mpVCLEventQueue;
-}
-
-// -------------------------------------------------------------------------
-
-sal_Bool JavaSalEventQueue::postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown )
-{
-	sal_Bool bRet = sal_False;
-
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		bRet = pVCLEventQueue->postCommandEvent( aObj, nKeyCode, bShiftDown, bControlDown, bAltDown, bMetaDown, nOriginalKeyChar, bOriginalShiftDown, bOriginalControlDown, bOriginalAltDown, bOriginalMetaDown );
-
-	return bRet;
-}
-
-// -------------------------------------------------------------------------
-
-void JavaSalEventQueue::postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown )
-{
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->postMouseWheelEvent( aObj, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
-}
-
-#ifdef USE_NATIVE_WINDOW
-
-// -------------------------------------------------------------------------
-
-void JavaSalEventQueue::postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu )
-{
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->postMenuItemSelectedEvent( pFrame, nID, pMenu );
-}
-
-#endif	// USE_NATIVE_WINDOW
-
-// -------------------------------------------------------------------------
-
-void JavaSalEventQueue::postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession )
-{
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->postWindowMoveSessionEvent( aObj, nX, nY, bStartSession );
-}
-
-#endif	 // USE_NATIVE_EVENTS
-
 // -------------------------------------------------------------------------
 
 sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 {
 	sal_Bool bRet = sal_False;
 
-#ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
 	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
@@ -2840,11 +2494,6 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 			}
 		}
 	}
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		bRet = pVCLEventQueue->anyCachedEvent( nType );
-#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2853,14 +2502,8 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( USHORT nType )
 
 void JavaSalEventQueue::dispatchNextEvent()
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->dispatchNextEvent();
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
@@ -2869,7 +2512,6 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 {
 	JavaSalEvent *pRet = NULL;
 
-#ifdef USE_NATIVE_EVENTS
 	ResettableGuard< Mutex > aGuard( maMutex );
 
 	// Wait if there are no events in either queue and a timeout is requested
@@ -2901,19 +2543,6 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 		pItem->remove();
 		purgeRemovedEventsFromFront( pEventQueue );
 	}
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-	{
-		com_sun_star_vcl_VCLEvent *pVCLEvent = pVCLEventQueue->getNextCachedEvent( nTimeout, bNativeEvents );
-		if ( pVCLEvent )
-		{
-			if ( pVCLEvent->getJavaObject() )
-				pRet = new JavaSalEvent( pVCLEvent );
-			delete pVCLEvent;
-		}
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2922,28 +2551,16 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 
 sal_Bool JavaSalEventQueue::isInitialized()
 {
-#ifdef USE_NATIVE_EVENTS
 	return sal_True;
-#else	// USE_NATIVE_EVENTS
-	return ( mpVCLEventQueue ? sal_True : sal_False );
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 sal_Bool JavaSalEventQueue::isShutdownDisabled()
 {
-#ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
 	return mbShutdownDisabled;
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		return pVCLEventQueue->isShutdownDisabled();
-	else
-		return sal_False;
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
@@ -2953,7 +2570,6 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 	if ( !pEvent )
 		return;
 
-#ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
 	::std::list< JavaSalEventQueueItem* > *pEventQueue;
@@ -3081,22 +2697,12 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 	}
 
 	maCondition.set();
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-	{
-		com_sun_star_vcl_VCLEvent *pVCLEvent = pEvent->getVCLEvent();
-		if ( pVCLEvent )
-			pVCLEventQueue->postCachedEvent( pVCLEvent );
-	}
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 {
-#ifdef USE_NATIVE_EVENTS
 	MutexGuard aGuard( maMutex );
 
 	::std::list< JavaSalEventQueueItem* >::const_iterator it = maNativeEventQueue.begin();
@@ -3118,18 +2724,12 @@ void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 	}
 
 	purgeRemovedEventsFromFront( &maNonNativeEventQueue );
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->removeCachedEvents( pFrame );
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -------------------------------------------------------------------------
 
 void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 {
-#ifdef USE_NATIVE_EVENTS
 	VCLEventQueue_cancelTermination();
 
 	MutexGuard aGuard( maMutex );
@@ -3157,9 +2757,4 @@ void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 
 		purgeRemovedEventsFromFront( &maNonNativeEventQueue );
 	}
-#else	// USE_NATIVE_EVENTS
-	com_sun_star_vcl_VCLEventQueue *pVCLEventQueue = getVCLEventQueue();
-	if ( pVCLEventQueue )
-		pVCLEventQueue->setShutdownDisabled( bShutdownDisabled );
-#endif	// USE_NATIVE_EVENTS
 }

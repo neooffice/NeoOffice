@@ -36,35 +36,16 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
-#ifdef __cplusplus
-
 #include <vcl/prntypes.hxx>
 #include <vcl/salprn.hxx>
 #include <vcl/sv.h>
-
-#endif	// __cplusplus
-
-// Comment out the following line to disable native printing APIs
-#define USE_NATIVE_PRINTING
-
-#ifdef __cplusplus
 
 #ifndef __OBJC__
 typedef void* id;
 #endif	// !__OBJC__
 
-#ifndef USE_NATIVE_PRINTING
-namespace vcl
-{   
-class com_sun_star_vcl_VCLPageFormat;
-class com_sun_star_vcl_VCLPrintJob;
-}
-#endif	// USE_NATIVE_PRINTING
-
 class JavaSalGraphics;
-#ifdef USE_NATIVE_PRINTING
 class JavaSalVirtualDevice;
-#endif	// USE_NATIVE_PRINTING
 
 // ----------------------
 // - JavaSalInfoPrinter -
@@ -72,15 +53,9 @@ class JavaSalVirtualDevice;
 
 class JavaSalInfoPrinter : public SalInfoPrinter
 {
-#ifdef USE_NATIVE_PRINTING
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
 	JavaSalVirtualDevice*	mpVirDev;
-#else	// USE_NATIVE_PRINTING
-	JavaSalGraphics*		mpGraphics;
-	BOOL					mbGraphics;
-	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-#endif	// USE_NATIVE_PRINTING
 
 public:
 							JavaSalInfoPrinter( ImplJobSetup* pSetupData );
@@ -98,12 +73,8 @@ public:
 	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
 	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
 	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
-#ifdef USE_NATIVE_PRINTING
 	virtual const id		GetPrintInfo() { return mpInfo; }
 	virtual sal_Bool		IsPaperRotated() { return mbPaperRotated; }
-#else	// USE_NATIVE_PRINTING
-	virtual const ::vcl::com_sun_star_vcl_VCLPageFormat*	GetVCLPageFormat() { return mpVCLPageFormat; }
-#endif	// USE_NATIVE_PRINTING
 };
 
 // ------------------
@@ -119,16 +90,11 @@ class JavaSalPrinter : public SalPrinter
 	long					mnPaperWidth;
 	long					mnPaperHeight;
 	BOOL					mbStarted;
-#ifdef USE_NATIVE_PRINTING
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
-#else	// USE_NATIVE_PRINTING
-	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
-#endif	// !USE_NATIVE_PRINTING
 
 public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );
@@ -142,11 +108,7 @@ public:
 	virtual ULONG			GetErrorCode();
 	virtual XubString		GetPageRange();
 
-#ifdef USE_NATIVE_PRINTING
 	void					RunPrintOperation();
-#endif	// USE_NATIVE_PRINTING
 };
-
-#endif	// __cplusplus
 
 #endif // _SV_SALPRN_H

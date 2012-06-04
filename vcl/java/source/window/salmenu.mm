@@ -40,33 +40,21 @@
 #include <salinst.h>
 #include <salmenu.h>
 #include <vcl/window.hxx>
-#ifndef USE_NATIVE_WINDOW
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#include <com/sun/star/vcl/VCLMenuBar.hxx>
-#include <com/sun/star/vcl/VCLMenuItemData.hxx>
-#include <com/sun/star/vcl/VCLMenu.hxx>
-#endif	// !USE_NATIVE_WINDOW
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
 #include <premac.h>
 #import <CoreFoundation/CoreFoundation.h>
-#ifdef USE_NATIVE_WINDOW
 #import <Cocoa/Cocoa.h>
-#endif	// USE_NATIVE_WINDOW
 #include <postmac.h>
 
-#ifdef USE_NATIVE_WINDOW
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
-#endif	// USE_NATIVE_WINDOW
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
 
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
 using namespace vcl;
-
-#ifdef USE_NATIVE_WINDOW
 
 @interface VCLMenuWrapperArgs : NSObject
 {
@@ -653,7 +641,6 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 
 - (void)selected
 {
-#ifdef USE_NATIVE_EVENTS
 	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 	JavaSalEventQueue::postCachedEvent( pActivateEvent );
 	pActivateEvent->release();
@@ -665,9 +652,6 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 	JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
 	pDeactivateEvent->release();
-#else	// USE_NATIVE_EVENTS
-	JavaSalEventQueue::postMenuItemSelectedEvent( pMenuBarFrame, mnID, mpMenu );
-#endif	// USE_NATIVE_EVENTS
 }
 
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
@@ -814,17 +798,10 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 
 @end
 
-#endif	// USE_NATIVE_WINDOW
-
 //=============================================================================
 
 JavaSalMenu::JavaSalMenu() :
-#ifdef USE_NATIVE_WINDOW
 	mpMenu( NULL ),
-#else	// USE_NATIVE_WINDOW
-	mpVCLMenuBar( NULL ),
-	mpVCLMenu( NULL ),
-#endif	// USE_NATIVE_WINDOW
 	mpParentFrame( NULL ),
 	mbIsMenuBarMenu( FALSE ),
 	mpParentVCLMenu( NULL )
@@ -841,28 +818,13 @@ JavaSalMenu::~JavaSalMenu()
 	if ( mpParentFrame )
 		mpParentFrame->SetMenu( NULL );
 
-#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMenu )
 		[mpMenu release];
 
 	[pPool release];
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar )
-	{
-		mpVCLMenuBar->dispose();
-		delete mpVCLMenuBar;
-	}
-	else if( mpVCLMenu )
-	{
-		mpVCLMenu->dispose();
-		delete mpVCLMenu;
-	}
-#endif	// USE_NATIVE_WINDOW
 }
-
-#ifdef USE_NATIVE_WINDOW
 
 //-----------------------------------------------------------------------------
 
@@ -897,8 +859,6 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 	[pPool release];
 }
 
-#endif	// USE_NATIVE_WINDOW
-
 //-----------------------------------------------------------------------------
 
 BOOL JavaSalMenu::VisibleMenuBar()
@@ -910,7 +870,6 @@ BOOL JavaSalMenu::VisibleMenuBar()
 
 void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 {
-#ifdef USE_NATIVE_WINDOW
 	if ( mbIsMenuBarMenu && mpMenu )
 	{
 		mpParentFrame = (JavaSalFrame *)pFrame;
@@ -926,14 +885,6 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar )
-	{
-		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
-		mpVCLMenuBar->setFrame( pJavaFrame->mpVCLFrame );
-		mpParentFrame=pJavaFrame;
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -941,7 +892,6 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 {
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu && pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -952,23 +902,12 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar )
-	{
-		mpVCLMenuBar->addMenuItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
-	}
-	else if( mpVCLMenu )
-	{
-		mpVCLMenu->insertItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::RemoveItem( unsigned nPos )
 {
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -979,16 +918,6 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar )
-	{
-		mpVCLMenuBar->removeMenu( nPos );
-	}
-	else if( mpVCLMenu )
-	{
-		mpVCLMenu->removeItem( nPos );
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -1004,7 +933,6 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 {
 	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
 	JavaSalMenu* pJavaSubMenu = (JavaSalMenu *)pSubMenu;
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu && pJavaSubMenu && pJavaSubMenu && pJavaSubMenu->mpMenu )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1015,16 +943,6 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenu )
-	{
-		mpVCLMenuBar->changeMenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
-	}
-	else if( mpVCLMenu && pJavaSubMenu )
-	{
-		mpVCLMenu->attachSubmenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
-	}
-#endif	// USE_NATIVE_WINDOW
 	pJavaSalMenuItem->mpSalSubmenu = pJavaSubMenu;
 }
 
@@ -1032,7 +950,6 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 
 void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1043,23 +960,12 @@ void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu )
-	{
-		// doesn't make sense to check top level menus!
-	}
-	else if( mpVCLMenu )
-	{
-		mpVCLMenu->checkItem(nPos, bCheck);
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
 
 void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1070,16 +976,6 @@ void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( mbIsMenuBarMenu && mpVCLMenuBar )
-	{
-		mpVCLMenuBar->enableMenu( nPos, bEnable );
-	}
-	else if( mpVCLMenu )
-	{
-		mpVCLMenu->enableItem( nPos, bEnable );
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -1102,7 +998,6 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 	theText.EraseAllChars('~');
 	OUString aText( theText );
 
-#ifdef USE_NATIVE_WINDOW
 	if ( mpMenu && pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1114,12 +1009,6 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_WINDOW
-	if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData )
-	{
-		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( aText );
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -1139,7 +1028,6 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 		// assume pSalMenuItem is a pointer to the item to be associated with
 		// the new shortcut
 		JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
-#ifdef USE_NATIVE_WINDOW
 		if ( pJavaSalMenuItem && pJavaSalMenuItem->mpMenuItem )
 		{
 			OUString aKeyEquivalent = JavaSalFrame::ConvertVCLKeyCode( rKeyCode.GetCode(), true );
@@ -1158,10 +1046,6 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 				[pPool release];
 			}
 		}
-#else	// USE_NATIVE_WINDOW
-		if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData )
-			pJavaSalMenuItem->mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
-#endif	// USE_NATIVE_WINDOW
 	}
 }
 
@@ -1177,11 +1061,7 @@ void JavaSalMenu::GetSystemMenuData( SystemMenuData* pData )
 // =======================================================================
 
 JavaSalMenuItem::JavaSalMenuItem() :
-#ifdef USE_NATIVE_WINDOW
 	mpMenuItem( NULL ),
-#else	// USE_NATIVE_WINDOW
-	mpVCLMenuItemData( NULL ),
-#endif	// USE_NATIVE_WINDOW
 	mpSalSubmenu( NULL )
 {
 }
@@ -1190,20 +1070,12 @@ JavaSalMenuItem::JavaSalMenuItem() :
 
 JavaSalMenuItem::~JavaSalMenuItem()
 {
-#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMenuItem )
 		[mpMenuItem release];
 
 	[pPool release];
-#else	// USE_NATIVE_WINDOW
-	if( mpVCLMenuItemData )
-	{
-		mpVCLMenuItemData->dispose();
-		delete mpVCLMenuItemData;
-	}
-#endif	// USE_NATIVE_WINDOW
 }
 
 //-----------------------------------------------------------------------------
@@ -1213,15 +1085,9 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
 	pSalMenu->mbIsMenuBarMenu = bMenuBar;
-#ifdef USE_NATIVE_WINDOW
 	pSalMenu->mpMenu = NULL;
-#else	// USE_NATIVE_WINDOW
-	pSalMenu->mpVCLMenuBar=NULL;
-	pSalMenu->mpVCLMenu=NULL;
-#endif	// USE_NATIVE_WINDOW
 	pSalMenu->mpParentVCLMenu=pVCLMenuWrapper;
 
-#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLCreateMenu *pVCLCreateMenu = [VCLCreateMenu create:bMenuBar];
@@ -1235,18 +1101,6 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_WINDOW
-	if( bMenuBar )
-	{
-		// create a menubar java object
-		pSalMenu->mpVCLMenuBar=new ::vcl::com_sun_star_vcl_VCLMenuBar();
-	}
-	else
-	{
-		// create a regular menu instance
-		pSalMenu->mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
-	}
-#endif	// USE_NATIVE_WINDOW
 
 	return( pSalMenu );
 #else	// !NO_NATIVE_MENUS
@@ -1275,7 +1129,6 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	XubString title(pItemData->aText);
 	title.EraseAllChars('~');
 	OUString aTitle( title );
-#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
@@ -1290,9 +1143,7 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_WINDOW
-	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( aTitle, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
-#endif	// USE_NATIVE_WINDOW
+
 	return( pSalMenuItem );
 #else	// !NO_NATIVE_MENUS
 	return NULL;

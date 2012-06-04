@@ -36,7 +36,6 @@
 #ifndef __SVMAINHOOK_COCOA_H__
 #define __SVMAINHOOK_COCOA_H__
 
-#include <salframe.h>
 #include <sal/types.h>
 
 SAL_DLLPRIVATE void NSApplication_run();

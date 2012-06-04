@@ -49,21 +49,12 @@
 #include <vcl/salptype.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#include <com/sun/star/vcl/VCLPageFormat.hxx>
-#ifndef USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLPrintJob.hxx>
-#endif	// !USE_NATIVE_PRINTING
-
-#ifdef USE_NATIVE_PRINTING
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
-
-#endif	// USE_NATIVE_PRINTING
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 static ResMgr *pSfxResMgr = NULL;
@@ -89,8 +80,6 @@ static XubString GetSfxResString( int nId )
 
 	return XubString( ResId( nId, *pSfxResMgr ) );
 }
-
-#ifdef USE_NATIVE_PRINTING
 
 Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool bPaperRotated )
 {
@@ -757,22 +746,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 @end
 
-#endif	// USE_NATIVE_PRINTING
-
 // =======================================================================
 
 JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
-#ifdef USE_NATIVE_PRINTING
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
 	mpVirDev( new JavaSalVirtualDevice() )
-#else	// USE_NATIVE_PRINTING
-	mpGraphics( new JavaSalGraphics() ),
-	mbGraphics( FALSE ),
-	mpVCLPageFormat( new com_sun_star_vcl_VCLPageFormat() )
-#endif	// USE_NATIVE_PRINTING
 {
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:nil];
@@ -794,7 +774,6 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 		pGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 		ReleaseGraphics( pGraphics );
 	}
-#endif	// USE_NATIVE_PRINTING
 
 	SetData( 0, pSetupData );
 }
@@ -803,7 +782,6 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 
 JavaSalInfoPrinter::~JavaSalInfoPrinter()
 {
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpInfo )
@@ -813,46 +791,20 @@ JavaSalInfoPrinter::~JavaSalInfoPrinter()
 
 	if ( mpVirDev )
 		delete mpVirDev;
-#else	// USE_NATIVE_PRINTING
-	if ( mpGraphics )
-		delete mpGraphics;
-
-	if ( mpVCLPageFormat )
-		delete mpVCLPageFormat;
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 SalGraphics* JavaSalInfoPrinter::GetGraphics()
 {
-#ifdef USE_NATIVE_PRINTING
 	return mpVirDev->GetGraphics();
-#else	// USE_NATIVE_PRINTING
-	if ( mbGraphics )
-		return NULL;
-
-	if ( mpGraphics->mpVCLGraphics )
-		delete mpGraphics->mpVCLGraphics;
-	mpGraphics->mpVCLGraphics = mpVCLPageFormat->getGraphics();
-	mbGraphics = TRUE;
-
-	return mpGraphics;
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 {
-#ifdef USE_NATIVE_PRINTING
 	mpVirDev->ReleaseGraphics( pGraphics );
-#else	// USE_NATIVE_PRINTING
-	if ( pGraphics != mpGraphics )
-		return;
-
-	mbGraphics = FALSE;
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -862,7 +814,6 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	BOOL bRet = FALSE;
 
 	// Display a native page setup dialog
-#ifdef USE_NATIVE_PRINTING
 	if ( !mpInfo )
 		return bRet;
 
@@ -914,33 +865,23 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 		pSalData->mpNativeModalSheetFrame = NULL;
 		bRet = (BOOL)[pJavaSalInfoPrinterShowPageLayoutDialog result];
 	}
-#else	// USE_NATIVE_PRINTING
-	bRet = mpVCLPageFormat->setup();
-#endif	// USE_NATIVE_PRINTING
+
 	if ( bRet )
 	{
-#ifdef USE_NATIVE_PRINTING
 		mbPaperRotated = sal_False;
-#endif	// USE_NATIVE_PRINTING
 
 		// Update values
 		SetData( 0, pSetupData );
 
 		// Fix bug 2777 by caching the scaling factor
-#ifdef USE_NATIVE_PRINTING
 		float fScaleFactor = 1.0f;
 		NSNumber *pValue = [[mpInfo dictionary] objectForKey:NSPrintScalingFactor];
 		if ( pValue )
 			fScaleFactor = [pValue floatValue];
 		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( fScaleFactor );
-#else	// USE_NATIVE_PRINTING
-		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( mpVCLPageFormat->getScaleFactor() );
-#endif	// USE_NATIVE_PRINTING
 	}
 
-#ifdef USE_NATIVE_PRINTING
 	[pPool release];
-#endif	// USE_NATIVE_PRINTING
 
 	return bRet;
 }
@@ -968,7 +909,6 @@ BOOL JavaSalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
 	// Set or update values
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
@@ -986,19 +926,12 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 		else
 			[mpInfo setOrientation:NSPortraitOrientation];
 	}
-#else	// USE_NATIVE_PRINTING
-	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
-		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
-	else
-		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-#endif	// USE_NATIVE_PRINTING
 
 	if ( ! ( nFlags & SAL_JOBSET_PAPERBIN ) )
 		pSetupData->mnPaperBin = 0;
 
 	if ( ! ( nFlags & SAL_JOBSET_PAPERSIZE ) )
 	{
-#ifdef USE_NATIVE_PRINTING
 		pSetupData->mePaperFormat = ImplPrintInfoGetPaperType( mpInfo, mbPaperRotated );
 		if ( pSetupData->mePaperFormat == PAPER_USER && mpInfo )
 		{
@@ -1015,23 +948,12 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 				pSetupData->mnPaperHeight = (long)( aPaperSize.height * 2540 / 72 );
 			}
 		}
-#else	// USE_NATIVE_PRINTING
-		pSetupData->mePaperFormat = mpVCLPageFormat->getPaperType();
-		if ( pSetupData->mePaperFormat == PAPER_USER )
-		{
-			Size aSize( mpVCLPageFormat->getPageSize() );
-			Size aResolution( mpVCLPageFormat->getResolution() );
-			pSetupData->mnPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-			pSetupData->mnPaperHeight = aSize.Height() * 2540 / aResolution.Height();
-		}
-#endif	// USE_NATIVE_PRINTING
 		else
 		{
 			pSetupData->mnPaperWidth = 0;
 			pSetupData->mnPaperHeight = 0;
 		}
 	}
-#ifdef USE_NATIVE_PRINTING
 	else if ( mpInfo )
 	{
 		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
@@ -1040,17 +962,8 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 		else
 			[mpInfo setOrientation:NSPortraitOrientation];
 	}
-#else	// USE_NATIVE_PRINTING
-	else
-	{
-		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-	}
-#endif	// USE_NATIVE_PRINTING
 
-#ifdef USE_NATIVE_PRINTING
 	[pPool release];
-#endif	// USE_NATIVE_PRINTING
 
 	return TRUE;
 }
@@ -1098,7 +1011,6 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 								  long& rPageOffX, long& rPageOffY,
 								  long& rPageWidth, long& rPageHeight )
 {
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	Size aSize;
@@ -1123,10 +1035,6 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.y * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
 		}
 	}
-#else	// USE_NATIVE_PRINTING
-	Size aSize( mpVCLPageFormat->getPageSize() );
-	Rectangle aRect( mpVCLPageFormat->getImageableBounds() );
-#endif	// USE_NATIVE_PRINTING
 
 	// Fix bug 2278 by detecting if the OOo code wants rotated bounds
 	if ( pSetupData->meOrientation != ORIENTATION_PORTRAIT )
@@ -1148,9 +1056,7 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 		rOutHeight = aRect.nBottom - aRect.nTop + 1;
 	}
 
-#ifdef USE_NATIVE_PRINTING
 	[pPool release];
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1191,18 +1097,12 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mnPaperWidth( 0 ),
 	mnPaperHeight( 0 ),
 	mbStarted( FALSE ),
-#ifdef USE_NATIVE_PRINTING
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
 	mpPrintOperation( nil ),
 	maPrintThread( NULL ),
 	mpPrintView( nil )
-#else	// USE_NATIVE_PRINTING
-	mpVCLPageFormat( NULL ),
-	mpVCLPrintJob( new com_sun_star_vcl_VCLPrintJob() )
-#endif	// USE_NATIVE_PRINTING
 {
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	// Create a copy of the info printer's print info to any isolate changes
@@ -1215,13 +1115,6 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 		[mpInfo retain];
 
 	[pPool release];
-#else	// USE_NATIVE_PRINTING
-	const com_sun_star_vcl_VCLPageFormat *pVCLPageFormat = pInfoPrinter->GetVCLPageFormat();
-	if ( pVCLPageFormat )
-		mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pVCLPageFormat->getJavaObject() );
-	else
-		mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1231,7 +1124,6 @@ JavaSalPrinter::~JavaSalPrinter()
 	// Call EndJob() to join and destroy the print thread
 	EndJob();
 
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpInfo )
@@ -1242,15 +1134,6 @@ JavaSalPrinter::~JavaSalPrinter()
 		[mpPrintView release];
 
 	[pPool release];
-#else	// USE_NATIVE_PRINTING
-	if ( mpVCLPageFormat )
-		delete mpVCLPageFormat;
-	if ( mpVCLPrintJob )
-	{
-		mpVCLPrintJob->dispose();
-		delete mpVCLPrintJob;
-	}
-#endif	// USE_NATIVE_PRINTING
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
@@ -1266,21 +1149,10 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 							   ImplJobSetup* pSetupData, BOOL bFirstPass )
 {
 	// Set paper type
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( !mpInfo )
 		return FALSE;
-#else	// USE_NATIVE_PRINTING
-	if ( !bFirstPass )
-	{
-		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-		mePaperFormat = pSetupData->mePaperFormat;
-		mnPaperWidth = pSetupData->mnPaperWidth;
-		mnPaperHeight = pSetupData->mnPaperHeight;
-		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-	}
-#endif	// USE_NATIVE_PRINTING
 
 	float fScaleFactor = 1.0f;
 	::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
@@ -1298,7 +1170,6 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 	else if ( !maJobName.Len() )
 		maJobName = GetSfxResString( STR_NONAME );
 
-#ifdef USE_NATIVE_PRINTING
 	if ( !mpPrintOperation )
 	{
 		mbStarted = FALSE;
@@ -1409,9 +1280,6 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_PRINTING
-	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
-#endif	// USE_NATIVE_PRINTING
 
 	return mbStarted;
 }
@@ -1420,7 +1288,6 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 BOOL JavaSalPrinter::EndJob()
 {
-#ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( maPrintThread )
@@ -1446,9 +1313,6 @@ BOOL JavaSalPrinter::EndJob()
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_PRINTING
-	mpVCLPrintJob->endJob();
-#endif	// USE_NATIVE_PRINTING
 	mbStarted = FALSE;
 
 	JavaSalEventQueue::setShutdownDisabled( sal_False );
@@ -1459,13 +1323,11 @@ BOOL JavaSalPrinter::EndJob()
 
 BOOL JavaSalPrinter::AbortJob()
 {
-#ifdef USE_NATIVE_PRINTING
 	if ( mpPrintView )
 		[mpPrintView abortPrintOperation];
+
 	EndJob();
-#else	// USE_NATIVE_PRINTING
-	mpVCLPrintJob->abortJob();
-#endif	// USE_NATIVE_PRINTING
+
 	return TRUE;
 }
 
@@ -1501,7 +1363,6 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 		{
 			EndJob();
 
-#ifdef USE_NATIVE_PRINTING
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 			if ( mpPrintOperation )
@@ -1517,16 +1378,12 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 			}
 
 			[pPool release];
-#else	// USE_NATIVE_PRINTING
-			delete mpVCLPrintJob;
-			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
-#endif	// USE_NATIVE_PRINTING
+
 			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData, FALSE ) )
 				return NULL;
 		}
 	}
 
-#ifdef USE_NATIVE_PRINTING
 	if ( !maPrintThread )
 	{
 		// Do not retain as invoking alloc disables autorelease
@@ -1534,11 +1391,6 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 		if ( maPrintThread )
 			osl_resumeThread( maPrintThread );
 	}
-#else	// USE_NATIVE_PRINTING
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLPrintJob->startPage( pSetupData->meOrientation );
-	if ( !pVCLGraphics )
-		return NULL;
-#endif	// USE_NATIVE_PRINTING
 
 	// The OOo code does not call Printer::EndJob() if the page range is
 	// results in no pages to print so do not disable shutdown until a page
@@ -1546,14 +1398,10 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	JavaSalEventQueue::setShutdownDisabled( sal_True );
 
 	mpGraphics = new JavaSalGraphics();
-#ifdef USE_NATIVE_PRINTING
 	mpGraphics->meOrientation = pSetupData->meOrientation;
 	mpGraphics->mbPaperRotated = mbPaperRotated;
 	mpGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
-#else	// USE_NATIVE_PRINTING
-	mpGraphics->mpVCLGraphics = pVCLGraphics;
-#endif	// !USE_NATIVE_PRINTING
 	mpGraphics->mpPrinter = this;
 	mbGraphics = TRUE;
 
@@ -1566,7 +1414,6 @@ BOOL JavaSalPrinter::EndPage()
 {
 	if ( mpGraphics )
 	{
-#ifdef USE_NATIVE_PRINTING
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		// Give ownership of graphics to print view
@@ -1574,17 +1421,9 @@ BOOL JavaSalPrinter::EndPage()
 			delete mpGraphics;
 
 		[pPool release];
-#else	// USE_NATIVE_PRINTING
-		if ( mpGraphics->mpVCLGraphics )
-			delete mpGraphics->mpVCLGraphics;
-		delete mpGraphics;
-#endif	// USE_NATIVE_PRINTING
 	}
 	mpGraphics = NULL;
 	mbGraphics = FALSE;
-#ifndef USE_NATIVE_PRINTING
-	mpVCLPrintJob->endPage();
-#endif	// !USE_NATIVE_PRINTING
 	return TRUE;
 }
 
@@ -1592,11 +1431,7 @@ BOOL JavaSalPrinter::EndPage()
 
 ULONG JavaSalPrinter::GetErrorCode()
 {
-#ifdef USE_NATIVE_PRINTING
 	if ( !mbStarted || !mpPrintOperation || !maPrintThread || !osl_isThreadRunning( maPrintThread ) )
-#else	// USE_NATIVE_PRINTING
-	if ( !mbStarted || mpVCLPrintJob->isFinished() )
-#endif	// USE_NATIVE_PRINTING
 		return SAL_PRINTER_ERROR_ABORT;
 	else
 		return 0;
@@ -1606,7 +1441,6 @@ ULONG JavaSalPrinter::GetErrorCode()
 
 XubString JavaSalPrinter::GetPageRange()
 {
-#ifdef USE_NATIVE_PRINTING
 	XubString aRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1642,12 +1476,7 @@ XubString JavaSalPrinter::GetPageRange()
 	[pPool release];
 
 	return aRet;
-#else	// USE_NATIVE_PRINTING
-	return mpVCLPrintJob->getPageRange( mpVCLPageFormat );
-#endif	// USE_NATIVE_PRINTING
 }
-
-#ifdef USE_NATIVE_PRINTING
 
 void JavaSalPrinter::RunPrintOperation()
 {
@@ -1661,5 +1490,3 @@ void JavaSalPrinter::RunPrintOperation()
 
 	[pPool release];
 }
-
-#endif	// USE_NATIVE_PRINTING

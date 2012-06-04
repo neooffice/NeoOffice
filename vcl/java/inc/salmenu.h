@@ -44,32 +44,15 @@
 class JavaSalFrame;
 class Menu;
 
-#ifndef USE_NATIVE_WINDOW
-namespace vcl
-{
-class com_sun_star_vcl_VCLMenuBar;
-class com_sun_star_vcl_VCLMenu;
-class com_sun_star_vcl_VCLMenuItemData;
-}
-#endif	// !USE_NATIVE_WINDOW
-
 // =======================================================================
 
 class JavaSalMenu : public SalMenu
 {
 public:
-#ifdef USE_NATIVE_WINDOW
 	id						mpMenu;
 
 	static void				SetMenuBarToFocusFrame();
-#else	// USE_NATIVE_WINDOW
-	// used for menubars only
-	::vcl::com_sun_star_vcl_VCLMenuBar *	mpVCLMenuBar;
-	
-	// used for menus
-	::vcl::com_sun_star_vcl_VCLMenu *	mpVCLMenu;
-#endif	// USE_NATIVE_WINDOW
-	
+
 	// Generic data
 	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
 	BOOL					mbIsMenuBarMenu;	// true for menu bars
@@ -95,12 +78,7 @@ public:
 class JavaSalMenuItem : public SalMenuItem
 {
 public:
-#ifdef USE_NATIVE_WINDOW
 	id						mpMenuItem;
-#else	// USE_NATIVE_WINDOW
-	::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
-#endif	// USE_NATIVE_WINDOW
-	
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
 
 							JavaSalMenuItem();

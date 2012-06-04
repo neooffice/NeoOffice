@@ -35,23 +35,17 @@
 
 #include <salvd.h>
 #include <salgdi.h>
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#include <com/sun/star/vcl/VCLImage.hxx>
 
 using namespace vcl;
 
 // =======================================================================
 
 JavaSalVirtualDevice::JavaSalVirtualDevice() :
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mnWidth( 0 ),
 	mnHeight( 0 ),
 	mnBit( 0 ),
 	maBitmapContext( NULL ),
 	maBitmapLayer( NULL ),
-#else	// !USE_NATIVE_VIRTUAL_DEVICE
-	mpVCLImage( NULL ),
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	mnBitCount( 32 ),
 	mpGraphics( new JavaSalGraphics() ),
 	mbGraphics( FALSE )
@@ -59,29 +53,19 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	// By default no mirroring for VirtualDevices
 	mpGraphics->SetLayout( 0 );
 	mpGraphics->mpVirDev = this;
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( maBitmapLayer )
 		CGLayerRelease( maBitmapLayer );
 
 	if ( maBitmapContext )
 		CGContextRelease( maBitmapContext );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVCLImage )
-	{
-		mpVCLImage->dispose();
-		delete mpVCLImage;
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
@@ -95,10 +79,6 @@ SalGraphics* JavaSalVirtualDevice::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-	if ( !mpGraphics->mpVCLGraphics )
-		mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	mbGraphics = TRUE;
 
 	return mpGraphics;
@@ -120,7 +100,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 {
 	BOOL bRet = FALSE;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mnWidth = 0;
 	mnHeight = 0;
 
@@ -161,53 +140,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 		mnHeight = nDY;
 		bRet = TRUE;
 	}
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpGraphics->mpVCLGraphics )
-	{
-		delete mpGraphics->mpVCLGraphics;
-		mpGraphics->mpVCLGraphics = NULL;
-	}
-
-	if ( mpVCLImage )
-	{
-		mpVCLImage->dispose();
-		delete mpVCLImage;
-		mpVCLImage = NULL;
-	}
-
-	if ( nDX > 0 && nDY > 0 )
-	{
-		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, mnBitCount );
-		if ( pVCLImage )
-		{
-			if ( pVCLImage->getJavaObject() )
-			{
-				mpVCLImage = pVCLImage;
-				bRet = TRUE;
-			}
-			else
-			{
-				delete pVCLImage;
-			}
-		}
-	}
-
-	if ( !mpVCLImage )
-	{
-		// Try to create something so that we don't crash
-		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( 1, 1, mnBitCount );
-		if ( pVCLImage )
-		{
-			if ( pVCLImage->getJavaObject() )
-				mpVCLImage = pVCLImage;
-			else
-				delete pVCLImage;
-		}
-	}
-
-	if ( mbGraphics && mpVCLImage )
-		mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 	return bRet;
 }
@@ -216,19 +148,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
 {
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	rWidth = mnWidth;
 	rHeight = mnHeight;
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVCLImage )
-	{
-		rWidth = mpVCLImage->getWidth();
-		rHeight = mpVCLImage->getHeight();
-	}
-	else
-	{
-		rWidth = 0;
-		rHeight = 0;
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }

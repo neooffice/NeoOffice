@@ -47,9 +47,6 @@
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
-#include "VCLFont_cocoa.h"
-#include "VCLFrame_cocoa.h"
-#include "VCLGraphics_cocoa.h"
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
@@ -61,26 +58,14 @@
 #define NSEventTypeSwipe 31
 #endif	// !NSEventTypeSwipe
 
-#ifdef USE_NATIVE_EVENTS
 #define MODIFIER_RELEASE_INTERVAL 100
-#endif	// USE_NATIVE_EVENTS
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 static MacOSBOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
-#ifdef USE_NATIVE_WINDOW
 static NSString *pCMenuBarString = @"CMenuBar";
-#endif	// USE_NATIVE_WINDOW
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
-#ifndef USE_NATIVE_EVENTS
-static NSString *pAWTFontString = @"AWTFont";
-static NSString *pNSViewAWTString = @"NSViewAWT";
-static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
-#endif	// !USE_NATIVE_EVENTS
-#if !defined USE_NATIVE_EVENTS && !defined USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-static NSString *pNSThemeFrameString = @"NSThemeFrame";
-#endif	// !USE_NATIVE_EVENTS && !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
@@ -181,8 +166,6 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 	return bRet;
 }
-
-#ifdef USE_NATIVE_EVENTS
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
 {
@@ -544,8 +527,6 @@ static USHORT GetKeyCode( unsigned short nKey )
 	return nRet;
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 @interface IsApplicationActive : NSObject
 {
 	MacOSBOOL					mbActive;
@@ -585,11 +566,7 @@ static USHORT GetKeyCode( unsigned short nKey )
 	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-#ifdef USE_NATIVE_EVENTS
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[pApp keyWindow] isKindOfClass:[VCLPanel class]] || [[pApp keyWindow] isKindOfClass:[VCLWindow class]] ) );
-#else	// USE_NATIVE_EVENTS
-		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
-#endif	// USE_NATIVE_EVENTS
 }
 
 @end
@@ -730,17 +707,10 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 @end
 
-#ifndef USE_NATIVE_EVENTS
-static NSString *pCancelInputMethodText = @" ";
-#endif	// !USE_NATIVE_EVENTS
-
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
-#ifndef USE_NATIVE_EVENTS
-- (MacOSBOOL)hasMarkedText;
-#endif	// !USE_NATIVE_EVENTS
 - (void)paste:(id)pSender;
 @end
 
@@ -750,104 +720,6 @@ static NSString *pCancelInputMethodText = @" ";
 - (MacOSBOOL)poseAsIsOpaque;
 - (NSSize)poseAsBottomCornerSize;
 @end
-
-#ifndef USE_NATIVE_EVENTS
-static MacOSBOOL bUseQuickTimeContentViewHack = NO;
-#endif	// USE_NATIVE_EVENTS
-
-#ifndef USE_NATIVE_EVENTS
-
-// The QuickTime content view hack implemented in [VCLWindow setContentView:]
-// break Java's Window.getLocationOnScreen() method so we need to flip the
-// points returned by NSView's convertPoint selectors
-@interface VCLWindowView : VCLView
-{
-}
-- (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView;
-- (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView;
-- (void)forwardInvocation:(NSInvocation *)pInvocation;
-- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
-@end
-
-@implementation VCLWindowView
-
-- (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView
-{
-	NSPoint aRet = [super convertPoint:aPoint fromView:pView];
-
-	if ( !pView )
-	{
-		NSWindow *pWindow = [self window];
-		if ( pWindow )
-			aRet.y += [pWindow frame].size.height;
-	}
-
-	return aRet;
-}
-
-- (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView
-{
-	NSPoint aRet = [super convertPoint:aPoint toView:pView];
-
-	if ( !pView )
-	{
-		NSWindow *pWindow = [self window];
-		if ( pWindow )
-			aRet.y += [pWindow frame].size.height;
-	}
-
-	return aRet;
-}
-
-- (void)forwardInvocation:(NSInvocation *)pInvocation
-{
-	MacOSBOOL bHandled = NO;
-
-	SEL aSelector = [pInvocation selector];
-
-	NSArray *pSubviews = [self subviews];
-	if ( pSubviews && [pSubviews count] )
-	{
-		// There should only be one subview and it should be an instance
-		// of NSWindowViewAWT
-		NSView *pSubview = [pSubviews objectAtIndex:0];
-		if ( pSubview )
-		{
-			if ( [pSubview respondsToSelector:aSelector] )
-			{
-				[pInvocation invokeWithTarget:pSubview];
-				bHandled = YES;
-			}
-		}
-	}
-
-	if ( !bHandled )
-		[self doesNotRecognizeSelector:aSelector];
-}
-
-- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
-{
-	NSArray *pSubviews = [self subviews];
-	if ( pSubviews && [pSubviews count] )
-	{
-		// There should only be one subview and it should be an instance
-		// of NSWindowViewAWT
-		NSView *pSubview = [pSubviews objectAtIndex:0];
-		if ( pSubview )
-		{
-			if ( [pSubview respondsToSelector:aSelector] )
-				return [pSubview methodSignatureForSelector:aSelector];
-		}
-	}
-
-	return nil;
-}
-
-@end
-
-#endif	// !USE_NATIVE_EVENTS
-
-#ifdef USE_NATIVE_WINDOW
 
 @interface VCLCMenuBar : NSObject
 {
@@ -885,11 +757,7 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 
 @end
 
-#endif	 // USE_NATIVE_WINDOW
-
 @implementation VCLPanel
-
-#ifdef USE_NATIVE_EVENTS
 
 - (MacOSBOOL)canBecomeKeyWindow
 {
@@ -910,8 +778,6 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 		[(VCLView *)pContentView setFrame:pFrame];
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 @end
 
 @interface NSWindow (VCLWindowPoseAs)
@@ -930,14 +796,6 @@ static MacOSBOOL bUseQuickTimeContentViewHack = NO;
 - (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
-#ifndef USE_NATIVE_EVENTS
-
-@interface VCLWindow (CocoaAppWindow)
-- (jobject)peer;
-@end
-
-#endif	// !USE_NATIVE_EVENTS
-
 @interface VCLWindow (ICAImageImport)
 - (void)setStyleMask:(unsigned int)nStyleMask;
 @end
@@ -947,9 +805,7 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
 static NSMutableDictionary *pDraggingSourceDelegates = nil;
-#ifdef USE_NATIVE_EVENTS
 static NSUInteger nMouseMask = 0;
-#endif	// USE_NATIVE_EVENTS
 
 @implementation VCLWindow
 
@@ -974,11 +830,7 @@ static NSUInteger nMouseMask = 0;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-#ifdef USE_NATIVE_EVENTS
 				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 				{
 					[pNeedRestoreModalWindows removeObject:pWindow];
 					[pWindow _clearModalWindowLevel];
@@ -1028,57 +880,9 @@ static NSUInteger nMouseMask = 0;
 		NSBundle *pBundle = [NSBundle bundleForClass:[pWindow class]];
 		if ( pBundle )
 		{
-			Class aClass;
-#ifndef USE_NATIVE_EVENTS
-			// AWTFont selectors
-
-			aClass = [pBundle classNamed:pAWTFontString];
-			if ( aClass )
-			{
-				SEL aSelector = @selector(awtFontForName:style:isFakeItalic:);
-				Method aOldMethod = class_getClassMethod( aClass, aSelector );
-				Method aNewMethod = class_getClassMethod( [VCLFont class], aSelector );
-				if ( aOldMethod && aNewMethod )
-				{
-					IMP aNewIMP = method_getImplementation( aNewMethod );
-					if ( aNewIMP )
-						method_setImplementation( aOldMethod, aNewIMP );
-				}
-
-				aSelector = @selector(nsFontForJavaFont:env:);
-				aOldMethod = class_getClassMethod( aClass, aSelector );
-				aNewMethod = class_getClassMethod( [VCLFont class], aSelector );
-				if ( aOldMethod && aNewMethod )
-				{
-					IMP aNewIMP = method_getImplementation( aNewMethod );
-					if ( aNewIMP )
-						method_setImplementation( aOldMethod, aNewIMP );
-				}
-
-				aSelector = @selector(initWithFont:isFakeItalic:);
-				aOldMethod = class_getInstanceMethod( aClass, aSelector );
-				IMP aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
-				if ( aOldMethod && aNewIMP )
-					method_setImplementation( aOldMethod, aNewIMP );
-
-				aSelector = @selector(dealloc);
-				aOldMethod = class_getInstanceMethod( aClass, aSelector );
-				aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
-				if ( aOldMethod && aNewIMP )
-					method_setImplementation( aOldMethod, aNewIMP );
-
-				aSelector = @selector(finalize);
-				aOldMethod = class_getInstanceMethod( aClass, aSelector );
-				aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
-				if ( aOldMethod && aNewIMP )
-					method_setImplementation( aOldMethod, aNewIMP );
-			}
-
-#endif	// !USE_NATIVE_EVENTS
-#ifdef USE_NATIVE_WINDOW
 			// CMenuBar selectors
 
-			aClass = [pBundle classNamed:pCMenuBarString];
+			Class aClass = [pBundle classNamed:pCMenuBarString];
 			if ( aClass )
 			{
 				SEL aSelector = @selector(activate:modallyDisabled:);
@@ -1131,7 +935,6 @@ static NSUInteger nMouseMask = 0;
 						method_setImplementation( aOldMethod, aNewIMP );
 				}
 			}
-#endif	// USE_NATIVE_WINDOW
 		}
 	}
 }
@@ -1145,7 +948,6 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [self isVisible] )
 	{
-#ifdef USE_NATIVE_EVENTS
 		if ( ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 		{
 			// Fix bug 1819 by forcing cancellation of the input method
@@ -1157,19 +959,6 @@ static NSUInteger nMouseMask = 0;
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
-#else	// USE_NATIVE_EVENTS
-		if ( [[self className] isEqualToString:pCocoaAppWindowString] )
-		{
-			// Fix bug 1819 by forcing cancellation of the input method
-			NSResponder *pResponder = [self firstResponder];
-			if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
-			{
-				if ( [pResponder hasMarkedText] )
-					[pResponder insertText:pCancelInputMethodText];
-				[pResponder abandonInput];
-			}
-		}
-#endif	// USE_NATIVE_EVENTS
 		else
 		{
 			// Fix bug 3327 by removing any cached events when a non-Java
@@ -1184,23 +973,15 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
-#ifdef USE_NATIVE_EVENTS
-
 - (MacOSBOOL)canBecomeKeyWindow
 {
 	return mbCanBecomeKeyWindow;
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
-#ifdef USE_NATIVE_EVENTS
 	if ( ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 		return;
 
 	if ( [super respondsToSelector:@selector(poseAsDisplayIfNeeded)] )
@@ -1229,7 +1010,6 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:)] )
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		mbCanBecomeKeyWindow = YES;
@@ -1241,7 +1021,6 @@ static NSUInteger nMouseMask = 0;
 		[self setDelegate:self];
 		[self setAcceptsMouseMovedEvents:YES];
 	}
-#endif	// USE_NATIVE_EVENTS
 
 	return self;
 }
@@ -1253,7 +1032,6 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:screen:)] )
 		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		mbCanBecomeKeyWindow = YES;
@@ -1265,7 +1043,6 @@ static NSUInteger nMouseMask = 0;
 		[self setDelegate:self];
 		[self setAcceptsMouseMovedEvents:YES];
 	}
-#endif	// USE_NATIVE_EVENTS
 
 	return self;
 }
@@ -1278,7 +1055,6 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsMakeFirstResponder:)] )
 		bRet = [super poseAsMakeFirstResponder:pResponder];
 
-#ifdef USE_NATIVE_EVENTS
 	// Fix bug 1819 by forcing cancellation of the input method
 	if ( bRet && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
@@ -1288,41 +1064,16 @@ static NSUInteger nMouseMask = 0;
 		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
 			[(VCLView *)pResponder abandonInput];
 	}
-#else	// USE_NATIVE_EVENTS
-	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-	{
-		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
-		{
-			if ( [pOldResponder hasMarkedText] )
-				[pOldResponder insertText:pCancelInputMethodText];
-			[pOldResponder abandonInput];
-		}
-
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
-		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
-		}
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
 
 - (void)makeKeyWindow
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( ![self canBecomeKeyWindow] )
 		return;
-#endif	// USE_NATIVE_EVENTS
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		MacOSBOOL bTrackingMenuBar = false;
 		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
@@ -1353,11 +1104,7 @@ static NSUInteger nMouseMask = 0;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_NATIVE_EVENTS
 	if ( nOrderingMode != NSWindowOut && ![self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( nOrderingMode != NSWindowOut && ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
@@ -1366,11 +1113,7 @@ static NSUInteger nMouseMask = 0;
 			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
-#ifdef USE_NATIVE_EVENTS
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
 		{
@@ -1393,11 +1136,7 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self styleMask] & NSUtilityWindowMask && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( [self level] == NSFloatingWindowLevel && [self styleMask] & NSTitledWindowMask && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		if ( ![self isVisible] )
 		{
@@ -1423,61 +1162,6 @@ static NSUInteger nMouseMask = 0;
 				}
 			}
 		}
-#ifndef USE_NATIVE_EVENTS
-		else
-		{
-			NSView *pContentView = [self contentView];
-			if ( pContentView )
-			{
-				if ( [super respondsToSelector:@selector(_isUtilityWindow)] && ![super _isUtilityWindow] && [super respondsToSelector:@selector(_setUtilityWindow:)] )
-				{
-					// Make copy of frame to fix compiler bug that appeared
-					// when this source file was renamed from a *.m file to
-					// a *.mm file
-					NSRect aFrame = [self frame];
-					aFrame = NSMakeRect( aFrame.origin.x, aFrame.origin.y, aFrame.size.width, aFrame.size.height );
-
-					[super _setUtilityWindow:YES];
-
-					// We must set the level again after changing the window to
-					// a utility window otherwise the resize icon does not
-					// display on Mac OS X 10.5.x
-					[self setLevel:NSFloatingWindowLevel];
-
-					float fHeightChange = [self frame].size.height - aFrame.size.height;
-
-					[self setFrame:aFrame display:NO];
-
-					// Adjust origin of subviews by height change
-					if ( bUseQuickTimeContentViewHack )
-					{
-						NSArray *pSubviews = [pContentView subviews];
-						if ( pSubviews )
-						{
-							unsigned int nCount = [pSubviews count];
-							unsigned int i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-								if ( pSubview && [pSubview isFlipped] )
-								{
-									NSRect aBounds = [pSubview bounds];
-									aBounds.origin.y += fHeightChange;
-									[pSubview setBounds:aBounds];
-								}
-							}
-						}
-					}
-					else
-					{
-						NSRect aBounds = [pContentView bounds];
-						aBounds.origin.y += fHeightChange;
-						[pContentView setBounds:aBounds];
-					}
-				}
-			}
-		}
-#endif	// !USE_NATIVE_EVENTS
 	}
 	else if ( nOrderingMode != NSWindowOut && [self isKindOfClass:[NSPanel class]] && [self isFloatingPanel] && [self respondsToSelector:@selector(setStyleMask:)] )
 	{
@@ -1510,21 +1194,12 @@ static NSUInteger nMouseMask = 0;
 {
 	MacOSBOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
-#ifdef USE_NATIVE_EVENTS
 	if ( bCommandKeyPressed && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		// Fix bug 2783 by cancelling menu actions if the input method if the
 		// there is any marked text in this window
 		if ( NSWindow_hasMarkedText( self ) )
 			return YES;
-
-#ifndef USE_NATIVE_EVENTS
-		if ( pSharedResponder )
-			[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
-#endif	// !USE_NATIVE_EVENTS
 
 		// Implement the standard window minimization behavior with the
 		// Command-m event
@@ -1539,14 +1214,6 @@ static NSUInteger nMouseMask = 0;
 				return YES;
 			}
 		}
-
-#ifndef USE_NATIVE_EVENTS
-		// Fix bug 3496 by having any Cocoa commands take precedence over menu
-		// shortcuts
-		short nCommandKey = [pSharedResponder lastCommandKey];
-		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [pSharedResponder lastModifiers], [pSharedResponder lastOriginalKeyChar], [pSharedResponder lastOriginalModifiers] ) )
-			return YES;
-#endif	// !USE_NATIVE_EVENTS
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
@@ -1565,11 +1232,7 @@ static NSUInteger nMouseMask = 0;
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
 	// closable non-Java windows.
-#ifdef USE_NATIVE_EVENTS
 	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLPanel class]] && ![self isKindOfClass:[VCLWindow class]] )
-#else	// USE_NATIVE_EVENTS
-	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
@@ -1608,7 +1271,6 @@ static NSUInteger nMouseMask = 0;
 
 - (void)resignKeyWindow
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
 		// Fix bug 1819 by forcing cancellation of the input method
@@ -1630,18 +1292,6 @@ static NSUInteger nMouseMask = 0;
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
-#else	// USE_NATIVE_EVENTS
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-	{
-		// Fix bug 1819 by forcing cancellation of the input method
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
-		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
-		}
-#endif	// USE_NATIVE_EVENTS
 
 		// Fix bug 3557 by forcing any non-utility windows to the back when
 		// they lose focus while cycling through windows with the Command-`
@@ -1680,38 +1330,13 @@ static NSUInteger nMouseMask = 0;
 		return;
 
 	NSEventType nType = [pEvent type];
-
-#ifdef USE_NATIVE_EVENTS
 	NSRect aOldFrame = [self frame];
-#else	// USE_NATIVE_EVENTS
-	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
-	// character as the JVM only seems to process the first character
-	if ( nType == NSKeyDown && pSharedResponder && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-	{
-		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
-
-		MacOSBOOL bHasMarkedText = NO;
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
-			bHasMarkedText = [pResponder hasMarkedText];
-
-		// Process any Cocoa commands but ignore when there is marked text
-		short nCommandKey = [pSharedResponder lastCommandKey];
-		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [pSharedResponder lastModifiers], [pSharedResponder lastOriginalKeyChar], [pSharedResponder lastOriginalModifiers] ) )
-			return;
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
-#else	// USE_NATIVE_EVENTS
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-#endif	// USE_NATIVE_EVENTS
 	{
-#ifdef USE_NATIVE_EVENTS
 		// Handle all mouse events
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{
@@ -1865,21 +1490,6 @@ static NSUInteger nMouseMask = 0;
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
-#else	// USE_NATIVE_EVENTS
-		if ( nType == NSLeftMouseDown || nType == NSLeftMouseUp )
-		{
-			NSRect aFrame = [self frame];
-			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-			NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
-			NSPoint aLocation = [pEvent locationInWindow];
-			if ( NSPointInRect( aLocation, aTitlebarFrame ) )
-			{
-				VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
-			}
-		}
-#endif	// USE_NATIVE_EVENTS
 		// Handle scroll wheel and magnify
 		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
@@ -1901,7 +1511,6 @@ static NSUInteger nMouseMask = 0;
 				fDeltaY = [pEvent deltaY];
 			}
 
-#ifdef USE_NATIVE_EVENTS
 			NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
 
 	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
@@ -1947,15 +1556,6 @@ static NSUInteger nMouseMask = 0;
 				JavaSalEventQueue::postCachedEvent( pEvent );
 				pEvent->release();
 			}
-#else	// USE_NATIVE_EVENTS
-			// Post flipped coordinates 
-			NSRect aFrame = [self frame];
-			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-			NSPoint aLocation = [pEvent locationInWindow];
-			VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
-#endif	// USE_NATIVE_EVENTS
 		}
 		// Handle swipe
 		else if ( nType == NSEventTypeSwipe && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] )
@@ -2008,8 +1608,6 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
-#ifdef USE_NATIVE_EVENTS
-
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
 {
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
@@ -2024,43 +1622,10 @@ static NSUInteger nMouseMask = 0;
 		[(VCLView *)pContentView setFrame:pFrame];
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 - (void)setContentView:(NSView *)pView
 {
 	if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
 		[super poseAsSetContentView:pView];
-
-#ifndef USE_NATIVE_EVENTS
-	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
-	// graphics cards, QTMovieView will misplace the movie if the window's
-	// content view is flipped. Since Java replaces the default content view
-	// with a flipped view, we need to push their content view down a level
-	// and make the content view unflipped.
-	if ( bUseQuickTimeContentViewHack )
-	{
-		NSView *pContentView = [self contentView];
-		if ( pContentView && [pContentView isFlipped] && [[pContentView className] isEqualToString:pNSWindowViewAWTString] )
-		{
-			NSRect aFrame = [pContentView frame];
-			VCLWindowView *pNewContentView = [[VCLWindowView alloc] initWithFrame:aFrame];
-			if ( pNewContentView )
-			{
-				// Retain current content view just to be safe
-				[pNewContentView retain];
-
-				if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
-					[super poseAsSetContentView:pNewContentView];
-				aFrame.origin.x = 0;
-				aFrame.origin.y = 0;
-				[pContentView setFrame:aFrame];
-				[pNewContentView addSubview:pContentView positioned:NSWindowAbove relativeTo:nil];
-
-				[pNewContentView release];
-			}
-		}
-	}
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)setDraggingSourceDelegate:(id)pDelegate
@@ -2087,13 +1652,6 @@ static NSUInteger nMouseMask = 0;
 
 - (void)setLevel:(int)nWindowLevel
 {
-#ifndef USE_NATIVE_EVENTS
-	// Don't let Java unset our window level changes unless it is modal window
-	// or the window has been set to the "revert document" window level
-	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [self level] != 2 && [[self className] isEqualToString:pCocoaAppWindowString] )
-		return;
-#endif	// !USE_NATIVE_EVENTS
-
 	if ( [super respondsToSelector:@selector(poseAsSetLevel:)] )
 		[super poseAsSetLevel:nWindowLevel];
 }
@@ -2101,11 +1659,7 @@ static NSUInteger nMouseMask = 0;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 		VCLEventQueue_fullScreen( self, NO );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
@@ -2113,16 +1667,10 @@ static NSUInteger nMouseMask = 0;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-#else	// USE_NATIVE_EVENTS
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-#endif	// USE_NATIVE_EVENTS
 		VCLEventQueue_fullScreen( self, YES );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
-
-#ifdef USE_NATIVE_EVENTS
 
 - (void)windowDidMove:(NSNotification *)pNotification
 {
@@ -2199,19 +1747,12 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
-#endif	// USE_NATIVE_EVENTS
-
 @end
 
-#ifndef USE_NATIVE_EVENTS
-static MacOSBOOL bNSViewAWTInitialized = NO;
-#endif	// !USE_NATIVE_EVENTS
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
-
-#ifdef USE_NATIVE_EVENTS
 
 - (MacOSBOOL)acceptsFirstResponder
 {
@@ -2744,193 +2285,11 @@ static CFDataRef aRTFSelection = nil;
 	mpFrame = pFrame;
 }
 
-#else	// USE_NATIVE_EVENTS
-
-+ (void)swizzleSelectors:(NSView *)pView
-{
-	// If the NSViewAWT class has its own drag and drop and services selectors,
-	// redirect them to VCLView's matching selectors
-	if ( pView && !bNSViewAWTInitialized && [[pView className] isEqualToString:pNSViewAWTString] )
-	{
-		bNSViewAWTInitialized = YES;
-
-		// VCLView drag destination selectors
-
-		SEL aSelector = @selector(draggingDestinationDelegate);
-		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		aSelector = @selector(setDraggingDestinationDelegate:);
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		// VCLView drag source selectors
-
-		aSelector = @selector(draggingSourceDelegate);
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		aSelector = @selector(setDraggingSourceDelegate:);
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aNewMethod )
-		{
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aNewIMP )
-				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-		}
-
-		// NSDraggingDestination selectors
-
-		aSelector = @selector(concludeDragOperation:);
-		Method aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggingEnded:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggingEntered:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggingExited:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggingUpdated:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(performDragOperation:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(prepareForDragOperation:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(wantsPeriodicDraggingUpdates);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		// NSDraggingSource selectors
-
-		aSelector = @selector(draggedImage:beganAt:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggedImage:endedAt:operation:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggedImage:movedTo:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(draggingSourceOperationMaskForLocal:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(ignoreModifierKeysWhileDragging);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		// NSResponder selectors
-
-		aSelector = @selector(readSelectionFromPasteboard:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(validRequestorForSendType:returnType:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(writeSelectionToPasteboard:types:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-#ifdef USE_NATIVE_WINDOW
-		// NSViewAWT selectors
-
-		aSelector = @selector(drawRect:);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(resetCursorRects);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-#endif	// USE_NATIVE_WINDOW
-	}
-}
-
-#endif	// USE_NATIVE_EVENTS
-
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender
 {
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(concludeDragOperation:)])
 		[pDelegate concludeDragOperation:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(concludeDragOperation:)] )
-		[super concludeDragOperation:pSender];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack
@@ -2951,10 +2310,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
 		[pDelegate draggedImage:pImage beganAt:aPoint];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggedImage:beganAt:)] )
-		[super draggedImage:pImage beganAt:aPoint];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
@@ -2962,10 +2317,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:endedAt:operation:)])
 		[pDelegate draggedImage:pImage endedAt:aPoint operation:nOperation];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
-		[super draggedImage:pImage endedAt:aPoint operation:nOperation];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
@@ -2973,10 +2324,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:movedTo:)])
 		[pDelegate draggedImage:pImage movedTo:aPoint];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggedImage:movedTo:)] )
-		[super draggedImage:pImage movedTo:aPoint];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (id)draggingDestinationDelegate
@@ -3001,10 +2348,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEnded:)])
 		[pDelegate draggingEnded:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggingEnded:)] )
-		[super draggingEnded:pSender];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender
@@ -3012,10 +2355,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEntered:)])
 		return [pDelegate draggingEntered:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggingEntered:)] )
-		return [super draggingEntered:pSender];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
@@ -3025,10 +2364,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingExited:)])
 		[pDelegate draggingExited:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggingExited:)] )
-		[super draggingExited:pSender];
-#endif	// !USE_NATIVE_EVENTS
 }
 
 - (id)draggingSourceDelegate
@@ -3051,10 +2386,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
 		return [pDelegate draggingSourceOperationMaskForLocal:bLocal];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
-		return [super draggingSourceOperationMaskForLocal:bLocal];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
@@ -3064,45 +2395,21 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingUpdated:)])
 		return [pDelegate draggingUpdated:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(draggingUpdated:)] )
-		return [super draggingUpdated:pSender];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NSDragOperationNone;
 }
 
-#ifdef USE_NATIVE_WINDOW
-
 - (void)drawRect:(NSRect)aDirtyRect
 {
 	NSWindow *pWindow = [self window];
-#ifdef USE_NATIVE_EVENTS
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
-	{
-#else	// USE_NATIVE_EVENTS
-	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
-	{
-		// For some strange reason, Java will ignore all drawing that we do
-		// unless the color is changed in the current graphics context. Also,
-		// the new color cannot be clear, white, or black since we use those
-		// colors as the window background colors in our Java code so we set
-		// the color to red.
-		[[NSColor redColor] set];
-#endif	// USE_NATIVE_EVENTS
-
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
-	}
 }
 
 - (void)resetCursorRects
 {
 	NSWindow *pWindow = [self window];
-#ifdef USE_NATIVE_EVENTS
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
-#else	// USE_NATIVE_EVENTS
-	if ( pWindow && [pWindow isVisible] && [[self className] isEqualToString:pNSViewAWTString] )
-#endif	// USE_NATIVE_EVENTS
 	{
 		NSCursor *pCursor = JavaSalFrame_getCursor( self );
 		if ( pCursor )
@@ -3110,31 +2417,20 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-#endif	// USE_NATIVE_WINDOW
-
 - (MacOSBOOL)ignoreModifierKeysWhileDragging
 {
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
 		return [pDelegate ignoreModifierKeysWhileDragging];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(ignoreModifierKeysWhileDragging)] )
-		return [super ignoreModifierKeysWhileDragging];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
 
 - (id)initWithFrame:(NSRect)aFrame
 {
-#ifndef USE_NATIVE_EVENTS
-	[VCLView swizzleSelectors:self];
-#endif	// !USE_NATIVE_EVENTS
-
 	if ( [super respondsToSelector:@selector(poseAsInitWithFrame:)] )
 		[super poseAsInitWithFrame:aFrame];
 
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLView class]] )
 	{
 		mpFrame = NULL;
@@ -3145,18 +2441,13 @@ static CFDataRef aRTFSelection = nil;
 		mpTextInput = nil;
 		maTextInputRange = NSMakeRange( NSNotFound, 0 );
 	}
-#endif	// USE_NATIVE_EVENTS
 
 	return self;
 }
 
 - (MacOSBOOL)isOpaque
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( [self isKindOfClass:[VCLView class]] )
-#else	// USE_NATIVE_EVENTS
-	if ( [[self className] isEqualToString:pNSViewAWTString] )
-#endif	// USE_NATIVE_EVENTS
 		return YES;
 	else if ( [super respondsToSelector:@selector(poseAsIsOpaque)] )
 		return [super poseAsIsOpaque];
@@ -3169,10 +2460,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)])
 		return [pDelegate namesOfPromisedFilesDroppedAtDestination:pDropDestination];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
-		return [super namesOfPromisedFilesDroppedAtDestination:pDropDestination];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return nil;
 }
@@ -3182,10 +2469,6 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
 		return [pDelegate performDragOperation:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(performDragOperation:)] )
-		return [super performDragOperation:pSender];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3195,42 +2478,13 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
 		return [pDelegate prepareForDragOperation:pSender];
-#ifndef USE_NATIVE_EVENTS
-	else if ( [super respondsToSelector:@selector(prepareForDragOperation:)] )
-		return [super prepareForDragOperation:pSender];
-#endif	// !USE_NATIVE_EVENTS
 	else
 		return NO;
 }
 
-#if !defined USE_NATIVE_EVENTS && !defined USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-
-- (NSSize)_bottomCornerSize
-{
-	NSWindow *pWindow = [self window];
-	if ( pWindow && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
-		return NSMakeSize( 0, 0 );
-	else if ( [self respondsToSelector:@selector(poseAsBottomCornerSize)] )
-		return [self poseAsBottomCornerSize];
-	else
-		return NSMakeSize( 0, 0 );
-}
-
-#endif	// !USE_NATIVE_EVENTS && !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-
 - (MacOSBOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
 {
 	MacOSBOOL bRet = NO;
-
-#ifndef USE_NATIVE_EVENTS
-	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-	{
-		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
-			bRet = (MacOSBOOL)[super readSelectionFromPasteboard:pPasteboard];
-		return bRet;
-	}
-#endif	// !USE_NATIVE_EVENTS
 
 	NSWindow *pWindow = [self window];
 	if ( pPasteboard && pWindow && [pWindow isVisible] )
@@ -3310,17 +2564,6 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-#ifndef USE_NATIVE_EVENTS
-	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-	{
-		id pRet = nil;
-		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
-			pRet = [super validRequestorForSendType:pSendType returnType:pReturnType];
-		return pRet;
-	}
-#endif	// !USE_NATIVE_EVENTS
-
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
 	{
@@ -3356,17 +2599,10 @@ static CFDataRef aRTFSelection = nil;
 - (MacOSBOOL)wantsPeriodicDraggingUpdates
 {
 	id pDelegate = [self draggingDestinationDelegate];
-#ifdef USE_NATIVE_EVENTS
 	// Ignore the delegate's selector as always returns NO and we need to return
 	// YES for OOo cursor state to keep in sync with the native pointer position
 	if ( pDelegate && [self isKindOfClass:[VCLView class]] )
 		return YES;
-#else	// USE_NATIVE_EVENTS
-	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
-		return [pDelegate wantsPeriodicDraggingUpdates];
-	else if ( [super respondsToSelector:@selector(wantsPeriodicDraggingUpdates)] )
-		return [super wantsPeriodicDraggingUpdates];
-#endif	// USE_NATIVE_EVENTS
 	else
 		return NO;
 }
@@ -3374,16 +2610,6 @@ static CFDataRef aRTFSelection = nil;
 - (MacOSBOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
 {
 	MacOSBOOL bRet = NO;
-
-#ifndef USE_NATIVE_EVENTS
-	// Invoke superclass if this is not an NSViewAWT class
-	if ( ![[self className] isEqualToString:pNSViewAWTString] )
-	{
-		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
-			bRet = (MacOSBOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
-		return bRet;
-	}
-#endif	// !USE_NATIVE_EVENTS
 
 	if ( pPasteboard && pTypes )
 	{
@@ -3423,22 +2649,14 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
-@interface NSFileManager (VCLFileManager)
-- (NSURL *)URLForUbiquityContainerIdentifier:(NSString *)pContainerID;
-@end
+static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
-#ifndef USE_NATIVE_EVENTS
-	MacOSBOOL					mbUseQuickTimeContentViewHack;
-#endif	// !USE_NATIVE_EVENTS
 }
 + (id)create;
-- (id)init;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
-
-static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @implementation InstallVCLEventQueueClasses
 
@@ -3447,32 +2665,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] init];
 	[pRet autorelease];
 	return pRet;
-}
-
-- (id)init
-{
-	[super init];
-
-#ifndef USE_NATIVE_EVENTS
-	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
-	// or earlier
-	mbUseQuickTimeContentViewHack = NO;
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			SInt32 res = 0;
-			if ( pGestalt( gestaltQuickTime, &res ) == noErr && res < 0x07500000 )
-				mbUseQuickTimeContentViewHack = YES;
-		}
-
-		dlclose( pLib );
-	}
-#endif	// !USE_NATIVE_EVENTS
-
-	return self;
 }
 
 - (void)installVCLEventQueueClasses:(id)pObject
@@ -3484,11 +2676,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 	// Do not retain as invoking alloc disables autorelease
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
-
-#ifndef USE_NATIVE_EVENTS
-	// Initialize statics
-	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
-#endif	// !USE_NATIVE_EVENTS
 
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
@@ -3773,7 +2960,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-#ifdef USE_NATIVE_EVENTS
 	aSelector = @selector(windowDidMove:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
@@ -3810,32 +2996,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 	}
 
-#endif	// USE_NATIVE_EVENTS
-#if !defined USE_NATIVE_EVENTS && !defined USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-	// NSThemeFrame selectors
-
-	NSBundle *pBundle = [NSBundle bundleForClass:[NSView class]];
-	if ( pBundle )
-	{
-		Class aClass = [pBundle classNamed:pNSThemeFrameString];
-		if ( aClass )
-		{
-			aSelector = @selector(_bottomCornerSize);
-			aPoseAsSelector = @selector(poseAsBottomCornerSize);
-			aOldMethod = class_getInstanceMethod( aClass, aSelector );
-			aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-			if ( aOldMethod && aNewMethod )
-			{
-				IMP aOldIMP = method_getImplementation( aOldMethod );
-				IMP aNewIMP = method_getImplementation( aNewMethod );
-				if ( aOldIMP && aNewIMP && class_addMethod( aClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-					method_setImplementation( aOldMethod, aNewIMP );
-			}
-		}
-	}
-
-#endif	// !USE_NATIVE_EVENTS && !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-#ifdef USE_NATIVE_EVENTS
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -3853,11 +3013,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 			}
 		}
 	}
-#endif	// USE_NATIVE_EVENTS
-
-	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	if ( pFileManager && [pFileManager respondsToSelector:@selector(URLForUbiquityContainerIdentifier:)] )
-		CFShow( [pFileManager URLForUbiquityContainerIdentifier:nil] );
 }
 
 @end
@@ -3934,11 +3089,7 @@ MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow )
 	if ( pWindow )
 	{
 		NSResponder *pResponder = [pWindow firstResponder];
-#ifdef USE_NATIVE_EVENTS
 		if ( pResponder && [pResponder isKindOfClass:[VCLView class]] && [(VCLView *)pResponder hasMarkedText] )
-#else	// USE_NATIVE_EVENTS
-		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder hasMarkedText] )
-#endif	// USE_NATIVE_EVENTS
 			bRet = YES;
 	}
 

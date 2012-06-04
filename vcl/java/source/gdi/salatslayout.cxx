@@ -53,9 +53,6 @@
 #include <salinst.h>
 #include <vcl/outfont.hxx>
 #include <vcl/svapp.hxx>
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 #define MAXEXTRACHARS 100
@@ -2665,10 +2662,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	bool bUseNativeDrawing = rJavaGraphics.useNativeDrawing();
-	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
@@ -2762,47 +2755,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
 			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-			if ( bUseNativeDrawing )
-			{
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-			}
-			else if ( bPrinter )
-			{
-				// Don't delete the CGGlyph buffer and let the Java native
-				// method print the buffer directly
-				CGGlyph *pGlyphs = (CGGlyph *)rtl_allocateMemory( nGlyphCount * sizeof( CGGlyph ) );
-				if ( pGlyphs )
-				{
-					for ( i = 0; i < nGlyphCount; i++ )
-						pGlyphs[ i ] = (CGGlyph)aGlyphArray[ i + nStartGlyph ];
-				}
-
-				// Don't delete the CGSize buffer and let the Java native
-				// method print the buffer directly
-				CGSize *pSizes = (CGSize *)rtl_allocateMemory( nGlyphCount * sizeof( CGSize ) );
-				if ( pSizes )
-				{
-					for ( i = 0; i < nGlyphCount; i++ )
-					{
-						pSizes[ i ].width = (float)aDXArray[ i + nStartGlyph ] / UNITS_PER_PIXEL;
-						pSizes[ i ].height = 0.0f;
-					}
-				}
-
-				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpFont->getVCLFont(), rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
-			}
-			else
-			{
-				float aAdvances[ nGlyphCount ];
-				for ( i = 0; i < nGlyphCount; i++ )
-					aAdvances[ i ] = (float)aDXArray[ i + nStartGlyph ] / UNITS_PER_PIXEL;
-
-				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpFont->getVCLFont(), rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
-			}
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 		}
 	}
 }

@@ -44,7 +44,7 @@
 {
 	MacOSBOOL				mbAppMenuInitialized;
 	MacOSBOOL				mbCancelTracking;
-	id					mpDelegate;
+	id						mpDelegate;
 	MacOSBOOL				mbInTermination;
 	MacOSBOOL				mbInTracking;
 }

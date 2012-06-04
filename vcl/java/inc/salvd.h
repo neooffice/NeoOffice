@@ -36,8 +36,6 @@
 #ifndef _SV_SALVD_H
 #define _SV_SALVD_H
 
-#ifdef __cplusplus
-
 #include <vcl/salvd.hxx>
 #include <vcl/sv.h>
 
@@ -45,20 +43,6 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
 #undef check
-
-#endif	// __cplusplus
-
-// Comment out the following line to disable native offscreen drawing APIs
-#define USE_NATIVE_VIRTUAL_DEVICE
-
-#ifdef __cplusplus
-
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-namespace vcl
-{
-class com_sun_star_vcl_VCLImage;
-}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 class JavaSalGraphics;
 class SalGraphics;
@@ -69,15 +53,11 @@ class SalGraphics;
 
 class JavaSalVirtualDevice : public SalVirtualDevice
 {
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	long					mnWidth;
 	long					mnHeight;
 	sal_uInt32				mnBit;
 	CGContextRef			maBitmapContext;
 	CGLayerRef				maBitmapLayer;
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	USHORT					mnBitCount;
 	JavaSalGraphics*		mpGraphics; 
 	BOOL					mbGraphics;
@@ -91,7 +71,5 @@ public:
 	virtual BOOL			SetSize( long nNewDX, long nNewDY );
 	virtual void			GetSize( long& rWidth, long& rHeight );
 };
-
-#endif	// __cplusplus
 
 #endif // _SV_SALVD_H

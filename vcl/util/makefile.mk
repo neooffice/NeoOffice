@@ -413,14 +413,6 @@ SHL5STDLIBS+= $(XRANDR_LIBS)
 
 .ENDIF		# "$(GUI)" == "UNX" && "$(GUIBASE)" != "aqua" && "$(GUIBASE)"!="java"
 
-.IF "$(GUIBASE)"=="java"
-
-JARCLASSDIRS = com
-JARTARGET = $(TARGET).jar
-JARCOMPRESS = TRUE
-
-.ENDIF # "$(GUIBASE)"=="java"
-
 # --- Allgemein ----------------------------------------------------------
 
 .INCLUDE :  target.mk

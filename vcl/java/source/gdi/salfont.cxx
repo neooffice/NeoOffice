@@ -37,14 +37,7 @@
 #include <salatslayout.hxx>
 #include <saldata.hxx>
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLFont.hxx>
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-
 using namespace rtl;
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-using namespace vcl;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // ============================================================================
 
@@ -54,9 +47,6 @@ using namespace vcl;
 
 void JavaImplFont::clearNativeFonts()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	com_sun_star_vcl_VCLFont::clearNativeFonts();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	for ( ::std::map< JavaImplFont*, JavaImplFont* >::const_iterator vfit = JavaImplFont::maInstancesMap.begin(); vfit != JavaImplFont::maInstancesMap.end(); ++vfit )
 	{
@@ -70,54 +60,33 @@ void JavaImplFont::clearNativeFonts()
 
 	GetSalData()->maJavaNativeFontMapping.clear();
 #endif	// USE_CORETEXT_TEXT_RENDERING
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : mpVCLFont( NULL )
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : maPSName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	mpVCLFont = new com_sun_star_vcl_VCLFont( aName, fSize, nOrientation, bAntialiased, bVertical, fScaleX );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	JavaImplFont::maInstancesMap[ this ] = this;
 #endif	// USE_CORETEXT_TEXT_RENDERING
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : mpVCLFont( NULL )
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : maPSName( pFont->maPSName ), mnNativeFont( pFont->mnNativeFont ), mnOrientation( pFont->mnOrientation ), mfScaleX( pFont->mfScaleX ), mfSize( pFont->mfSize ), mbAntialiased( pFont->mbAntialiased ), mbVertical( pFont->mbVertical ), mbNativeFontOwner( sal_True )
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	mpVCLFont = new com_sun_star_vcl_VCLFont( pFont->getVCLFont() );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFont )
 		CFRetain( (CTFontRef)mnNativeFont );
 
 	JavaImplFont::maInstancesMap[ this ] = this;
 #endif	// USE_CORETEXT_TEXT_RENDERING
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 JavaImplFont::~JavaImplFont()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( mpVCLFont )
-		delete mpVCLFont;
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	::std::map< JavaImplFont*, JavaImplFont* >::iterator it = JavaImplFont::maInstancesMap.find( this );
 	if ( it != JavaImplFont::maInstancesMap.end() )
@@ -126,16 +95,12 @@ JavaImplFont::~JavaImplFont()
 	if ( mnNativeFont && mbNativeFontOwner )
 		CFRelease( (CTFontRef)mnNativeFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 sal_IntPtr JavaImplFont::getNativeFont()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->getNativeFont();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	if ( !mnNativeFont )
 	{
 		SalData *pSalData = GetSalData();
@@ -195,82 +160,46 @@ sal_IntPtr JavaImplFont::getNativeFont()
 	}
 
 	return mnNativeFont;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 short JavaImplFont::getOrientation()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->getOrientation();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return mnOrientation;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 OUString JavaImplFont::getPSName()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->getPSName();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return maPSName;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 double JavaImplFont::getScaleX()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->getScaleX();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return mfScaleX;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 float JavaImplFont::getSize()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->getSize();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return mfSize;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
-
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-
-// ----------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLFont *JavaImplFont::getVCLFont()
-{
-	return mpVCLFont;
-}
-
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // ----------------------------------------------------------------------------
 
 sal_Bool JavaImplFont::isAntialiased()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->isAntialiased();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return mbAntialiased;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool JavaImplFont::isVertical()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return mpVCLFont->isVertical();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	return mbVertical;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }

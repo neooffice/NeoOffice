@@ -44,10 +44,6 @@
 #include <vos/mutex.hxx>
 #include <vos/thread.hxx>
 
-#ifndef USE_NATIVE_EVENTS
-#include <jni.h>
-#endif	// !USE_NATIVE_EVENTS
-
 // Custom event types
 #define SALEVENT_OPENDOCUMENT		((USHORT)100)
 #define SALEVENT_PRINTDOCUMENT		((USHORT)101)
@@ -128,7 +124,6 @@ public:
 
 class SAL_DLLPRIVATE JavaSalEvent
 {
-#ifdef USE_NATIVE_EVENTS
 	USHORT					mnID;
 	JavaSalFrame*			mpFrame;
 	::rtl::OUString			maPath;
@@ -137,34 +132,24 @@ class SAL_DLLPRIVATE JavaSalEvent
 	::std::list< JavaSalEvent* >	maOriginalKeyEvents;
 	ULONG					mnCommittedCharacters;
 	ULONG					mnCursorPosition;
-#else	// USE_NATIVE_EVENTS
-	::vcl::com_sun_star_vcl_VCLEvent*	mpVCLEvent;
-#endif	// USE_NATIVE_EVENTS
 	void*					mpData;
 	mutable int				mnRefCount;
 
 public:
 							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString(), ULONG nCommittedCharacters = 0, ULONG nCursorPosition = 0 );
-#ifndef USE_NATIVE_EVENTS
-							JavaSalEvent( ::vcl::com_sun_star_vcl_VCLEvent *pVCLEvent );
-#endif	// !USE_NATIVE_EVENTS
+
 protected:
 	virtual					~JavaSalEvent();
 
 public:
-#ifdef USE_NATIVE_EVENTS
 	void					addRepeatCount( USHORT nCount );
 	void					addOriginalKeyEvent( JavaSalEvent *pEvent );
 	void					addUpdateRect( const Rectangle& rRect );
 	void					addWheelRotation( long nRotation );
-#endif	// USE_NATIVE_EVENTS
 	void					cancelShutdown();
 	void					dispatch();
 	ULONG					getCommittedCharacterCount();
 	ULONG					getCursorPosition();
-#ifndef USE_NATIVE_EVENTS
-	void*					getData();
-#endif	// !USE_NATIVE_EVENTS
 	JavaSalFrame*			getFrame();
 	USHORT					getKeyChar();
 	USHORT					getKeyCode();
@@ -176,9 +161,6 @@ public:
 	XubString				getText();
 	const USHORT*			getTextAttributes();
 	const Rectangle			getUpdateRect();
-#ifndef USE_NATIVE_EVENTS
-	::vcl::com_sun_star_vcl_VCLEvent*	getVCLEvent() const { return mpVCLEvent; }
-#endif	// !USE_NATIVE_EVENTS
 	ULONG					getWhen();
 	long					getX();
 	long					getY();
@@ -187,9 +169,7 @@ public:
 	long					getScrollAmount();
 	long					getWheelRotation();
 	sal_Bool				isHorizontal();
-#ifdef USE_NATIVE_EVENTS
 	bool					isNative() { return mbNative; }
-#endif	// USE_NATIVE_EVENTS
 	sal_Bool				isShutdownCancelled();
 	void					reference() const;
 	void					release() const;
@@ -224,7 +204,6 @@ public:
 class SAL_DLLPRIVATE JavaSalEventQueue
 {
 	static ::osl::Mutex		maMutex;
-#ifdef USE_NATIVE_EVENTS
 	static ::osl::Condition	maCondition;
 	static ::std::list< JavaSalEventQueueItem* >	maNativeEventQueue;
 	static ::std::list< JavaSalEventQueueItem* >	maNonNativeEventQueue;
@@ -232,22 +211,9 @@ class SAL_DLLPRIVATE JavaSalEventQueue
 	static JavaSalEventQueueItem*	mpMoveResizeItem;
 	static JavaSalEventQueueItem*	mpPaintItem;
 	static sal_Bool			mbShutdownDisabled;
-#else	// USE_NATIVE_EVENTS
-	static ::vcl::com_sun_star_vcl_VCLEventQueue*	mpVCLEventQueue;
-#endif	// USE_NATIVE_EVENTS
 
 public:
-#ifdef USE_NATIVE_EVENTS
 	static void				purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue );
-#else	// USE_NATIVE_EVENTS
-	static ::vcl::com_sun_star_vcl_VCLEventQueue*	getVCLEventQueue();
-	static sal_Bool			postCommandEvent( jobject aObj, short nKeyCode, sal_Bool bShiftDown, sal_Bool bControlDown, sal_Bool bAltDown, sal_Bool bMetaDown, jchar nOriginalKeyChar, sal_Bool bOriginalShiftDown, sal_Bool bOriginalControlDown, sal_Bool bOriginalAltDown, sal_Bool bOriginalMetaDown );
-	static void				postMouseWheelEvent( jobject aObj, long nX, long nY, long nRotationX, long nRotationY, sal_Bool bShiftDown, sal_Bool bMetaDown, sal_Bool bAltDown, sal_Bool bControlDown );
-#ifdef USE_NATIVE_WINDOW
-	static void				postMenuItemSelectedEvent( JavaSalFrame *pFrame, USHORT nID, Menu *pMenu );
-#endif	// USE_NATIVE_WINDOW
-	static void				postWindowMoveSessionEvent( jobject aObj, long nX, long nY, sal_Bool bStartSession );
-#endif	// USE_NATIVE_EVENTS
 	static sal_Bool			anyCachedEvent( USHORT nType );
 	static void				dispatchNextEvent();
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
@@ -263,8 +229,5 @@ SAL_DLLPRIVATE bool IsRunningSnowLeopard();
 SAL_DLLPRIVATE bool IsRunningLion();
 SAL_DLLPRIVATE bool IsRunningMountainLion();
 SAL_DLLPRIVATE bool IsFullKeyboardAccessEnabled();
-#ifndef USE_NATIVE_EVENTS
-SAL_DLLPRIVATE void InitJavaAWT();
-#endif	// !USE_NATIVE_EVENTS
 
 #endif // _SV_SALINST_H

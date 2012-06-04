@@ -102,13 +102,13 @@ extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes(
 
 #endif	 // USE_JAVA
 
-#if !defined USE_JAVA || !defined USE_NATIVE_EVENTS
+#ifndef USE_JAVA
 
 static void SourceContextCallBack( void *pInfo )
 {
 }
 
-#endif	// !USE_JAVA || !USE_NATIVE_EVENTS
+#endif	// !USE_JAVA
 
 struct ThreadContext
 {
@@ -152,9 +152,9 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     bInCreateSVMainThread = false;
 #endif	// USE_JAVA
 
-#if defined USE_JAVA && defined USE_NATIVE_EVENTS
+#ifdef USE_JAVA
 	NSApplication_run();
-#else	// USE_JAVA && USE_NATIVE_EVENTS
+#else	// USE_JAVA
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
     aSourceContext.version = 0;
@@ -170,7 +170,7 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate(NULL, 0, &aSourceContext);
     CFRunLoopAddSource(runLoopRef, aSourceRef, kCFRunLoopCommonModes);
     CFRunLoopRun();
-#endif	// USE_JAVA && USE_NATIVE_EVENTS
+#endif	// USE_JAVA
 
     osl_joinWithThread( hThreadID );
     osl_destroyThread( hThreadID );

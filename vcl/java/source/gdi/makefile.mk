@@ -56,7 +56,6 @@ SLOFILES= \
 	$(SLO)$/salbmp.obj \
 	$(SLO)$/salfont.obj \
 	$(SLO)$/salgdi.obj \
-	$(SLO)$/salgdi_cocoa.obj \
 	$(SLO)$/salgdi2.obj \
 	$(SLO)$/salgdi3.obj \
 	$(SLO)$/salgdi3_cocoa.obj \

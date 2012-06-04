@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include <salgdi.h>
 #include <salatslayout.hxx>
 #include <saldata.hxx>
 #include <salinst.h>
@@ -40,10 +41,6 @@
 #include <vcl/impfont.hxx>
 #include <vcl/outdev.h>
 #include <vcl/unohelp.hxx>
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLFont.hxx>
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <rtl/process.h>
 
@@ -60,9 +57,6 @@ static bool bNativeFontsLoaded = false;
 
 using namespace basegfx;
 using namespace rtl;
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-using namespace vcl;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 using namespace vos;
 
 @interface VCLLoadNativeFonts : NSObject
@@ -121,333 +115,324 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 			if ( !Application::IsShutDown() )
 			{
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-				VCLThreadAttach t;
-				if ( t.pEnv )
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+				// Update cached fonts
+				NSArray *pFonts = NSFontManager_getAllFonts();
+				if ( pFonts )
 				{
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-					NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+					const OUString aCourier( OUString::createFromAscii( "Courier" ) );
+					const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
+					const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
+					const OUString aMincho( OUString::createFromAscii( "Mincho" ) );
+					const OUString aMing( OUString::createFromAscii( "Ming" ) );
+					const OUString aMyungjo( OUString::createFromAscii( "Myungjo" ) );
+					const OUString aRoman( OUString::createFromAscii( "Roman" ) );
+					const OUString aSans( OUString::createFromAscii( "Sans" ) );
+					const OUString aSerif( OUString::createFromAscii( "Serif" ) );
+					const OUString aSong( OUString::createFromAscii( "Song" ) );
+					const OUString aSung( OUString::createFromAscii( "Sung" ) );
+					const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
+					const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
+					const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
+					const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
+					const OUString aRegular( OUString::createFromAscii( " Regular" ) );
+					const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
+					const OUString aTimes( OUString::createFromAscii( "Times" ) );
+					const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 
-					// Update cached fonts
-					NSArray *pFonts = NSFontManager_getAllFonts();
-					if ( pFonts )
+					unsigned int i = 0;
+					unsigned int nCount = [pFonts count];
+
+					sal_uInt32 nActualCount = 0;
+					for ( i = 0; i < nCount; i++ )
 					{
-						const OUString aCourier( OUString::createFromAscii( "Courier" ) );
-						const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
-						const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
-						const OUString aMincho( OUString::createFromAscii( "Mincho" ) );
-						const OUString aMing( OUString::createFromAscii( "Ming" ) );
-						const OUString aMyungjo( OUString::createFromAscii( "Myungjo" ) );
-						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
-						const OUString aSans( OUString::createFromAscii( "Sans" ) );
-						const OUString aSerif( OUString::createFromAscii( "Serif" ) );
-						const OUString aSong( OUString::createFromAscii( "Song" ) );
-						const OUString aSung( OUString::createFromAscii( "Sung" ) );
-						const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
-						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
-						const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
-						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
-						const OUString aRegular( OUString::createFromAscii( " Regular" ) );
-						const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
-						const OUString aTimes( OUString::createFromAscii( "Times" ) );
-						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
+						NSFont *pNSFont = [pFonts objectAtIndex:i];
+						if ( !pNSFont )
+							continue;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						CTFontRef aFont = (CTFontRef)pNSFont;
+#else	// USE_CORETEXT_TEXT_RENDERING
+						ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
+						if ( !aFont )
+							continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
-						unsigned int i = 0;
-						unsigned int nCount = [pFonts count];
+						// Get font attributes
+						FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
+						FontItalic nItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
+						FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
+						FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
 
-						sal_uInt32 nActualCount = 0;
-						for ( i = 0; i < nCount; i++ )
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
+#else	// USE_CORETEXT_TEXT_RENDERING
+						CFStringRef aPSString;
+						if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
+							continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+						OUString aPSName;
+						if ( aPSString )
 						{
-							NSFont *pNSFont = [pFonts objectAtIndex:i];
-							if ( !pNSFont )
-								continue;
-#ifdef USE_CORETEXT_TEXT_RENDERING
-							CTFontRef aFont = (CTFontRef)pNSFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
-							if ( !aFont )
-								continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
-							// Get font attributes
-							FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
-							FontItalic nItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
-							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
-							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
-
-#ifdef USE_CORETEXT_TEXT_RENDERING
-							CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
-#else	// USE_CORETEXT_TEXT_RENDERING
-							CFStringRef aPSString;
-							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
-								continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
-							OUString aPSName;
-							if ( aPSString )
-							{
-								CFIndex nPSLen = CFStringGetLength( aPSString );
-								CFRange aPSRange = CFRangeMake( 0, nPSLen );
-								sal_Unicode pPSBuffer[ nPSLen + 1 ];
-								CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-								pPSBuffer[ nPSLen ] = 0;
-								CFRelease( aPSString );
-								aPSName = OUString( pPSBuffer );
-							}
-
-							if ( !aPSName.getLength() )
-								continue;
-
-							// Get the font family name
-#ifdef USE_CORETEXT_TEXT_RENDERING
-							CFStringRef aFamilyString = CTFontCopyFamilyName( aFont );
-#else	// USE_CORETEXT_TEXT_RENDERING
-							CFStringRef aFamilyString = NSFont_familyName( pNSFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-							if ( !aFamilyString )
-								continue;
-
-							CFIndex nFamilyLen = CFStringGetLength( aFamilyString );
-							CFRange aFamilyRange = CFRangeMake( 0, nFamilyLen );
-							sal_Unicode pFamilyBuffer[ nFamilyLen + 1 ];
-							CFStringGetCharacters( aFamilyString, aFamilyRange, pFamilyBuffer );
-							pFamilyBuffer[ nFamilyLen ] = 0;
-							CFRelease( aFamilyString );
-
-							// Ignore empty family names or family names that
-							// start with a "."
-							OUString aFamilyName( pFamilyBuffer );
-							if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
-								continue;
-
-#ifdef USE_CORETEXT_TEXT_RENDERING
-							sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
-
-							CFStringRef aDisplayString = CTFontCopyFullName( aFont );
-							if ( !aDisplayString )
-								continue;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
-								continue;
-
-							// Get the ATS font name as the Cocoa name on some
-							// Mac OS X versions adds extraneous words
-							CFStringRef aDisplayString;
-							if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
-								continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
-							CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
-							CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
-							sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
-							CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
-							pDisplayBuffer[ nDisplayLen ] = 0;
-							CFRelease( aDisplayString );
-
-							OUString aMapName( aPSName );
-							OUString aDisplayName( pDisplayBuffer );
-							sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
-							if ( nColon >= 0 )
-							{
-								aDisplayName = OUString( aDisplayName.getStr(), nColon );
-								aMapName += aFontSeparator + aDisplayName;
-							}
-
-							// Ignore empty font names or font names that start
-							// with a "."
-							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
-								continue;
-
-							if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol )
-							{
-								// Don't allow Sun's symbol fonts our older
-								// NeoOffice fonts to override our symbol font
-								continue;
-							}
-							else if ( aDisplayName == aNeo3Symbol )
-							{
-								aDisplayName = OUString( aOpenSymbol );
-								aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeo3Symbol;
-							}
-							else if ( aDisplayName == aLastResort )
-							{
-								// Ignore this Java font as it will mess up
-								// our font fallback process
-								continue;
-							}
-							else if ( aDisplayName == aTimesRoman )
-							{
-								aMapName += aFontSeparator + aTimes;
-							}
-							else if ( aDisplayName == aFamilyName + aRegular )
-							{
-								// Fix bug 3668 by adding family name to map
-								// for "regular" fonts
-								aMapName += aFontSeparator + aFamilyName;
-							}
-
-							String aXubMapName( aMapName );
-							String aXubDisplayName( aDisplayName );
-
-							// Skip the font if we already have it
-							::std::map< String, JavaImplFontData* >::iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
-							if ( it != pSalData->maFontNameMapping.end() )
-								continue;
-
-							ImplDevFontAttributes aAttributes;
-
-							// Determine pitch and family type
-							FontFamily nFamily;
-							if ( nPitch == PITCH_FIXED )
-								nFamily = FAMILY_MODERN;
-							else if ( aPSName.indexOf( aSans ) >= 0 )
-								nFamily = FAMILY_SWISS;
-							else if ( aPSName.indexOf( aCourier ) >= 0 || aPSName.indexOf( aMincho ) >= 0 || aPSName.indexOf( aMing ) >= 0 || aPSName.indexOf( aMyungjo ) >= 0 || aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 || aPSName.indexOf( aSong ) >= 0 || aPSName.indexOf( aSung ) >= 0 )
-								nFamily = FAMILY_ROMAN;
-							else
-								nFamily = FAMILY_SWISS;
-
-							aAttributes.maName = aXubDisplayName;
-							aAttributes.meWeight = nWeight;
-							aAttributes.meItalic = nItalic;
-							aAttributes.meFamily = nFamily;
-							aAttributes.mePitch = nPitch;
-							aAttributes.meWidthType = nWidth;
-							aAttributes.mbSymbolFlag = false;
-							aAttributes.maMapNames = aXubMapName;
-							aAttributes.mnQuality = 0;
-							aAttributes.mbOrientation = true;
-							aAttributes.mbDevice = false;
-							aAttributes.mbSubsettable = true;
-							aAttributes.mbEmbeddable = false;
-
-							JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, nNativeFont, aFamilyName );
-							pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
-
-							// Multiple native fonts can map to the same font
-							// due to disabling and reenabling of fonts with
-							// the same name. Also, note that multiple font
-							// names can map to a single native font so do not
-							// rely on the native font to look up the font name.
-							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
-							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
-
-							nActualCount++;
+							CFIndex nPSLen = CFStringGetLength( aPSString );
+							CFRange aPSRange = CFRangeMake( 0, nPSLen );
+							sal_Unicode pPSBuffer[ nPSLen + 1 ];
+							CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
+							pPSBuffer[ nPSLen ] = 0;
+							CFRelease( aPSString );
+							aPSName = OUString( pPSBuffer );
 						}
 
-						// Cache matching bold, italic, and bold italic fonts
-						for ( i = 0; i < nCount; i++ )
+						if ( !aPSName.getLength() )
+							continue;
+
+						// Get the font family name
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						CFStringRef aFamilyString = CTFontCopyFamilyName( aFont );
+#else	// USE_CORETEXT_TEXT_RENDERING
+						CFStringRef aFamilyString = NSFont_familyName( pNSFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+						if ( !aFamilyString )
+							continue;
+
+						CFIndex nFamilyLen = CFStringGetLength( aFamilyString );
+						CFRange aFamilyRange = CFRangeMake( 0, nFamilyLen );
+						sal_Unicode pFamilyBuffer[ nFamilyLen + 1 ];
+						CFStringGetCharacters( aFamilyString, aFamilyRange, pFamilyBuffer );
+						pFamilyBuffer[ nFamilyLen ] = 0;
+						CFRelease( aFamilyString );
+
+						// Ignore empty family names or family names that
+						// start with a "."
+						OUString aFamilyName( pFamilyBuffer );
+						if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
+							continue;
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
+
+						CFStringRef aDisplayString = CTFontCopyFullName( aFont );
+						if ( !aDisplayString )
+							continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
+						sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
+						if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
+							continue;
+
+						// Get the ATS font name as the Cocoa name on some
+						// Mac OS X versions adds extraneous words
+						CFStringRef aDisplayString;
+						if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
+							continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+						CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
+						CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
+						sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
+						CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
+						pDisplayBuffer[ nDisplayLen ] = 0;
+						CFRelease( aDisplayString );
+
+						OUString aMapName( aPSName );
+						OUString aDisplayName( pDisplayBuffer );
+						sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
+						if ( nColon >= 0 )
 						{
-							NSFont *pNSFont = [pFonts objectAtIndex:i];
-							if ( !pNSFont )
-								continue;
-#ifdef USE_CORETEXT_TEXT_RENDERING
-							CTFontRef aFont = (CTFontRef)pNSFont;
-							sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
-							if ( !nNativeFont )
-								continue;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
-							if ( !aFont )
-								continue;
-
-							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
-								continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
-							::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
-							if ( nfit == pSalData->maNativeFontMapping.end() )
-								continue;
-
-							JavaImplFontData *pFontData = nfit->second;
-							bool bIsPlainFont = ( pFontData->meWeight <= WEIGHT_MEDIUM && pFontData->meItalic != ITALIC_OBLIQUE && pFontData->meItalic != ITALIC_NORMAL );
-
-							// Try bold
-							NSFont *pBoldFont = NSFont_findFontWithStyle( pNSFont, TRUE, FALSE );
-							if ( pBoldFont )
-							{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-								CTFontRef aBoldFont = (CTFontRef)pBoldFont;
-								sal_IntPtr nBoldNativeFont = (sal_IntPtr)aBoldFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-								ATSFontRef aBoldFont = NSFont_getATSFontRef( pBoldFont );
-								sal_IntPtr nBoldNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-								if ( nBoldNativeFont && nBoldNativeFont != nNativeFont )
-								{
-									nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
-									if ( nfit != pSalData->maNativeFontMapping.end() )
-									{
-										pSalData->maBoldNativeFontMapping[ nNativeFont ] = nfit->second;
-										if ( bIsPlainFont )
-											pSalData->maPlainNativeFontMapping[ nBoldNativeFont ] = pFontData;
-									}
-								}
-
-								[pBoldFont release];
-							}
-
-							// Try italic
-							NSFont *pItalicFont = NSFont_findFontWithStyle( pNSFont, FALSE, TRUE );
-							if ( pItalicFont )
-							{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-								CTFontRef aItalicFont = (CTFontRef)pItalicFont;
-								sal_IntPtr nItalicNativeFont = (sal_IntPtr)aItalicFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-								ATSFontRef aItalicFont = NSFont_getATSFontRef( pItalicFont );
-								sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-								if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
-								{
-									nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
-									if ( nfit != pSalData->maNativeFontMapping.end() )
-									{
-										pSalData->maItalicNativeFontMapping[ nNativeFont ] = nfit->second;
-										if ( bIsPlainFont )
-											pSalData->maPlainNativeFontMapping[ nItalicNativeFont ] = pFontData;
-									}
-								}
-
-								[pItalicFont release];
-							}
-
-							// Try bold italic
-							NSFont *pBoldItalicFont = NSFont_findFontWithStyle( pNSFont, TRUE, TRUE );
-							if ( pBoldItalicFont )
-							{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-								CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
-								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)aBoldItalicFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-								ATSFontRef aBoldItalicFont = NSFont_getATSFontRef( pBoldItalicFont );
-								sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-								if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
-								{
-									nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
-									if ( nfit != pSalData->maNativeFontMapping.end() )
-									{
-										pSalData->maBoldItalicNativeFontMapping[ nNativeFont ] = nfit->second;
-										if ( bIsPlainFont )
-											pSalData->maPlainNativeFontMapping[ nBoldItalicNativeFont ] = pFontData;
-									}
-								}
-
-								[pBoldItalicFont release];
-							}
+							aDisplayName = OUString( aDisplayName.getStr(), nColon );
+							aMapName += aFontSeparator + aDisplayName;
 						}
 
-						[pFonts release];
+						// Ignore empty font names or font names that start
+						// with a "."
+						if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
+							continue;
+
+						if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol )
+						{
+							// Don't allow Sun's symbol fonts our older
+							// NeoOffice fonts to override our symbol font
+							continue;
+						}
+						else if ( aDisplayName == aNeo3Symbol )
+						{
+							aDisplayName = OUString( aOpenSymbol );
+							aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeo3Symbol;
+						}
+						else if ( aDisplayName == aLastResort )
+						{
+							// Ignore this Java font as it will mess up
+							// our font fallback process
+							continue;
+						}
+						else if ( aDisplayName == aTimesRoman )
+						{
+							aMapName += aFontSeparator + aTimes;
+						}
+						else if ( aDisplayName == aFamilyName + aRegular )
+						{
+							// Fix bug 3668 by adding family name to map
+							// for "regular" fonts
+							aMapName += aFontSeparator + aFamilyName;
+						}
+
+						String aXubMapName( aMapName );
+						String aXubDisplayName( aDisplayName );
+
+						// Skip the font if we already have it
+						::std::map< String, JavaImplFontData* >::iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
+						if ( it != pSalData->maFontNameMapping.end() )
+							continue;
+
+						ImplDevFontAttributes aAttributes;
+
+						// Determine pitch and family type
+						FontFamily nFamily;
+						if ( nPitch == PITCH_FIXED )
+							nFamily = FAMILY_MODERN;
+						else if ( aPSName.indexOf( aSans ) >= 0 )
+							nFamily = FAMILY_SWISS;
+						else if ( aPSName.indexOf( aCourier ) >= 0 || aPSName.indexOf( aMincho ) >= 0 || aPSName.indexOf( aMing ) >= 0 || aPSName.indexOf( aMyungjo ) >= 0 || aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 || aPSName.indexOf( aSong ) >= 0 || aPSName.indexOf( aSung ) >= 0 )
+							nFamily = FAMILY_ROMAN;
+						else
+							nFamily = FAMILY_SWISS;
+
+						aAttributes.maName = aXubDisplayName;
+						aAttributes.meWeight = nWeight;
+						aAttributes.meItalic = nItalic;
+						aAttributes.meFamily = nFamily;
+						aAttributes.mePitch = nPitch;
+						aAttributes.meWidthType = nWidth;
+						aAttributes.mbSymbolFlag = false;
+						aAttributes.maMapNames = aXubMapName;
+						aAttributes.mnQuality = 0;
+						aAttributes.mbOrientation = true;
+						aAttributes.mbDevice = false;
+						aAttributes.mbSubsettable = true;
+						aAttributes.mbEmbeddable = false;
+
+						JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, nNativeFont, aFamilyName );
+						pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
+
+						// Multiple native fonts can map to the same font
+						// due to disabling and reenabling of fonts with
+						// the same name. Also, note that multiple font
+						// names can map to a single native font so do not
+						// rely on the native font to look up the font name.
+						pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
+						pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
+
+						nActualCount++;
 					}
 
-					[pPool release];
+					// Cache matching bold, italic, and bold italic fonts
+					for ( i = 0; i < nCount; i++ )
+					{
+						NSFont *pNSFont = [pFonts objectAtIndex:i];
+						if ( !pNSFont )
+							continue;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						CTFontRef aFont = (CTFontRef)pNSFont;
+						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
+						if ( !nNativeFont )
+							continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
+						ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
+						if ( !aFont )
+							continue;
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
+						sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
+						if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
+							continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+						::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
+						if ( nfit == pSalData->maNativeFontMapping.end() )
+							continue;
+
+						JavaImplFontData *pFontData = nfit->second;
+						bool bIsPlainFont = ( pFontData->meWeight <= WEIGHT_MEDIUM && pFontData->meItalic != ITALIC_OBLIQUE && pFontData->meItalic != ITALIC_NORMAL );
+
+						// Try bold
+						NSFont *pBoldFont = NSFont_findFontWithStyle( pNSFont, TRUE, FALSE );
+						if ( pBoldFont )
+						{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CTFontRef aBoldFont = (CTFontRef)pBoldFont;
+							sal_IntPtr nBoldNativeFont = (sal_IntPtr)aBoldFont;
+#else	// USE_CORETEXT_TEXT_RENDERING
+							ATSFontRef aBoldFont = NSFont_getATSFontRef( pBoldFont );
+							sal_IntPtr nBoldNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+							if ( nBoldNativeFont && nBoldNativeFont != nNativeFont )
+							{
+								nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
+								if ( nfit != pSalData->maNativeFontMapping.end() )
+								{
+									pSalData->maBoldNativeFontMapping[ nNativeFont ] = nfit->second;
+									if ( bIsPlainFont )
+										pSalData->maPlainNativeFontMapping[ nBoldNativeFont ] = pFontData;
+								}
+							}
+
+							[pBoldFont release];
+						}
+
+						// Try italic
+						NSFont *pItalicFont = NSFont_findFontWithStyle( pNSFont, FALSE, TRUE );
+						if ( pItalicFont )
+						{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CTFontRef aItalicFont = (CTFontRef)pItalicFont;
+							sal_IntPtr nItalicNativeFont = (sal_IntPtr)aItalicFont;
+#else	// USE_CORETEXT_TEXT_RENDERING
+							ATSFontRef aItalicFont = NSFont_getATSFontRef( pItalicFont );
+							sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+							if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
+							{
+								nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
+								if ( nfit != pSalData->maNativeFontMapping.end() )
+								{
+									pSalData->maItalicNativeFontMapping[ nNativeFont ] = nfit->second;
+									if ( bIsPlainFont )
+										pSalData->maPlainNativeFontMapping[ nItalicNativeFont ] = pFontData;
+								}
+							}
+
+							[pItalicFont release];
+						}
+
+						// Try bold italic
+						NSFont *pBoldItalicFont = NSFont_findFontWithStyle( pNSFont, TRUE, TRUE );
+						if ( pBoldItalicFont )
+						{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
+							sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)aBoldItalicFont;
+#else	// USE_CORETEXT_TEXT_RENDERING
+							ATSFontRef aBoldItalicFont = NSFont_getATSFontRef( pBoldItalicFont );
+							sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+							if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
+							{
+								nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
+								if ( nfit != pSalData->maNativeFontMapping.end() )
+								{
+									pSalData->maBoldItalicNativeFontMapping[ nNativeFont ] = nfit->second;
+									if ( bIsPlainFont )
+										pSalData->maPlainNativeFontMapping[ nBoldItalicNativeFont ] = pFontData;
+								}
+							}
+
+							[pBoldItalicFont release];
+						}
+					}
+
+					[pFonts release];
 				}
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
+
+				[pPool release];
 			}
 
 			// Fix bug 3095 by handling font change notifications
@@ -998,15 +983,8 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 		SalATSLayout::GetGlyphBounds( nIndex, pFont, rRect );
 #else	// USE_CORETEXT_TEXT_RENDERING
 #ifdef DEBUG
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-		if ( useNativeDrawing() )
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-			fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
+		fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
 #endif
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-		if ( mpVCLGraphics )
-			rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pFont, nIndex & GF_ROTMASK );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 #endif	// USE_CORETEXT_TEXT_RENDERING
 		rRect.Justify();
 	}

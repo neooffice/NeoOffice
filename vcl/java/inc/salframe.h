@@ -36,8 +36,6 @@
 #ifndef _SV_SALFRAME_H
 #define _SV_SALFRAME_H
 
-#ifdef __cplusplus
-
 #include <list>
 
 #include <vcl/sv.h>
@@ -51,35 +49,9 @@
 #include <postmac.h>
 #undef check
 
-#endif	// __cplusplus
-
-// Comment out the following line to disable native window drawing APIs
-#define USE_NATIVE_WINDOW
-
-#ifdef USE_NATIVE_WINDOW
-
-// Comment out the following line to disable native event handling APIs
-#define USE_NATIVE_EVENTS
-
-#endif	// USE_NATIVE_WINDOW
-
-#ifdef __cplusplus
-
 #ifndef __OBJC__
 typedef void* id;
 #endif	// !__OBJC__
-
-namespace vcl
-{
-class com_sun_star_vcl_VCLEvent;
-class com_sun_star_vcl_VCLEventQueue;
-#ifndef USE_NATIVE_EVENTS
-class com_sun_star_vcl_VCLFrame;
-#endif	// !USE_NATIVE_EVENTS
-#ifndef USE_NATIVE_WINDOW
-class com_sun_star_vcl_VCLMenuBar;
-#endif	// !USE_NATIVE_WINDOW
-}
 
 class JavaSalGraphics;
 class JavaSalMenu;
@@ -92,22 +64,16 @@ class SalBitmap;
 
 class JavaSalFrame : public SalFrame
 {
-#ifdef USE_NATIVE_WINDOW
 private:
 	sal_uInt32				mnHiddenBit;
 	CGContextRef			maHiddenContext;
 	CGLayerRef				maHiddenLayer;
 	CGLayerRef				maFrameLayer;
 	CGMutablePathRef		maFrameClipPath;
-#endif	// USE_NATIVE_WINDOW
 
 public:
-#ifdef USE_NATIVE_EVENTS
 	id						mpWindow;
 	bool					mbAllowKeyBindings;
-#else	// USE_NATIVE_EVENTS
-	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
-#endif	// USE_NATIVE_EVENTS
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;
 	JavaSalFrame*			mpParent;
@@ -133,10 +99,8 @@ public:
 	BOOL					mbInWindowWillEnterFullScreen;
 
 	static CGColorSpaceRef	CopyDeviceColorSpace();
-#ifdef USE_NATIVE_WINDOW
 	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut );
 	static void				FlushAllFrames();
-#endif	// USE_NATIVE_WINDOW
 	static unsigned int		GetDefaultScreenNumber();
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
@@ -160,9 +124,7 @@ public:
 	void					SetState( ULONG nFrameState );
 	void					SetVisible( sal_Bool bVisible, sal_Bool bNoActivate );
 	bool					ToFront();
-#ifdef USE_NATIVE_WINDOW
 	void					UpdateLayer();
-#endif	// USE_NATIVE_WINDOW
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
@@ -216,7 +178,5 @@ public:
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool IsShowOnlyMenusWindow( Window *pWindow );
 extern "C" SAL_DLLPUBLIC_EXPORT void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus );
-
-#endif	// __cplusplus
 
 #endif // _SV_SALFRAME_H

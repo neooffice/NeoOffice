@@ -52,31 +52,14 @@
 #include <postmac.h>
 #undef check
 
-#ifdef USE_NATIVE_PRINTING
 // Fix bug 3051 by setting the printer resolution to twips
 #define MIN_PRINTER_RESOLUTION 1440
-#endif	// USE_NATIVE_PRINTING
 
-#if defined USE_NATIVE_WINDOW || defined USE_NATIVE_VIRTUAL_DEVICE
 #define MIN_SCREEN_RESOLUTION 96
-#endif	// USE_NATIVE_WINDOW || USE_NATIVE_VIRTUAL_DEVICE
 
 class ImplDevFontAttributes;
 class ImplFontSelectData;
-class JavaSalBitmap;
-class JavaSalFrame;
-class JavaSalPrinter;
-class JavaSalVirtualDevice;
 class SalATSLayout;
-
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-namespace vcl
-{
-class com_sun_star_vcl_VCLFont;
-class com_sun_star_vcl_VCLGraphics;
-class com_sun_star_vcl_VCLPath;
-}
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 // --------------------
 // - JavaImplFontData -
@@ -185,9 +168,6 @@ class SAL_DLLPRIVATE JavaImplFont
 {
 	static ::std::map< JavaImplFont*, JavaImplFont* >	maInstancesMap;
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	::rtl::OUString			maPSName;
 	sal_IntPtr				mnNativeFont;
 	short					mnOrientation;
@@ -196,7 +176,6 @@ class SAL_DLLPRIVATE JavaImplFont
 	sal_Bool				mbAntialiased;
 	sal_Bool				mbVertical;
 	sal_Bool				mbNativeFontOwner;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 public:
 	static void				clearNativeFonts();
@@ -210,9 +189,6 @@ public:
 	::rtl::OUString			getPSName();
 	double					getScaleX();
 	float					getSize();
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	::vcl::com_sun_star_vcl_VCLFont*	getVCLFont();
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	sal_Bool				isAntialiased();
 	sal_Bool				isVertical();
 };
@@ -242,9 +218,6 @@ public:
 	JavaSalFrame*			mpFrame;
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	JavaImplFontData*		mpFontData;
 	JavaImplFont*			mpFont;
 	::std::hash_map< int, JavaImplFont* >	maFallbackFonts;
@@ -335,12 +308,7 @@ public:
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
-#ifdef USE_NATIVE_WINDOW
 	void					setFrameClipPath( CGPathRef aFrameClipPath );
-#endif	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	bool					useNativeDrawing();
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
@@ -358,12 +326,7 @@ public:
 };
 
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-SAL_DLLPRIVATE void AddPolygonToPaths( ::vcl::com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath );
-SAL_DLLPRIVATE void AddPolyPolygonToPaths( ::vcl::com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 SAL_DLLPRIVATE void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath );
 SAL_DLLPRIVATE void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINT
 
 #endif // _SV_SALGDI_H

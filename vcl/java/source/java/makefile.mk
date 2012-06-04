@@ -52,33 +52,10 @@ dummy:
 .ELSE		# "$(GUIBASE)"!="java"
 
 SLOFILES = \
-	$(SLO)/Class.obj \
-	$(SLO)/Object.obj \
-	$(SLO)/String.obj \
-	$(SLO)/Throwable.obj \
 	$(SLO)/VCLApplicationDelegate_cocoa.obj \
-	$(SLO)/VCLBitmap.obj \
 	$(SLO)/VCLEventQueue.obj \
 	$(SLO)/VCLEventQueue_cocoa.obj \
-	$(SLO)/VCLEventQueueEvent.obj \
-	$(SLO)/VCLFont.obj \
-	$(SLO)/VCLFont_cocoa.obj \
-	$(SLO)/VCLFrame.obj \
-	$(SLO)/VCLFrame_cocoa.obj \
-	$(SLO)/VCLGraphics.obj \
-	$(SLO)/VCLGraphics_cocoa.obj \
-	$(SLO)/VCLImage.obj \
-	$(SLO)/VCLMenu.obj \
-	$(SLO)/VCLMenuBar.obj \
-	$(SLO)/VCLMenuItemData.obj \
-	$(SLO)/VCLPageFormat.obj \
-	$(SLO)/VCLPageFormat_cocoa.obj \
-	$(SLO)/VCLPath.obj \
-	$(SLO)/VCLPrintJob.obj \
-	$(SLO)/VCLPrintJob_cocoa.obj \
-	$(SLO)/VCLResponder_cocoa.obj \
-	$(SLO)/VCLScreen.obj \
-	$(SLO)/tools.obj
+	$(SLO)/VCLResponder_cocoa.obj
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

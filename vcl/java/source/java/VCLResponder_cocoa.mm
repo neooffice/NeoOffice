@@ -44,29 +44,6 @@
 
 using namespace ::com::sun::star::awt;
 
-#ifndef USE_NATIVE_EVENTS
-
-static unsigned short GetCurrentKeyChar()
-{
-	unsigned short nRet = 0;
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSEvent *pEvent = [pApp currentEvent];
-		if ( pEvent && [pEvent type] == NSKeyDown )
-		{
-			NSString *pChars = [pEvent charactersIgnoringModifiers];
-			if ( pChars && [pChars length] )
-				nRet = [pChars characterAtIndex:0];
-		}
-	}
-
-	return nRet;
-}
-
-#endif	// !USE_NATIVE_EVENTS
-
 static short GetCurrentKeyModifiers()
 {
 	short nRet = 0;
@@ -98,26 +75,7 @@ static short GetCurrentKeyModifiers()
 {
 	mnLastCommandKey = 0;
 	mnLastModifiers = 0;
-
-#ifndef USE_NATIVE_EVENTS
-	if ( mpLastText )
-	{
-		[mpLastText release];
-		mpLastText = nil;
-	}
-#endif	// !USE_NATIVE_EVENTS
 }
-
-#ifndef USE_NATIVE_EVENTS
-
-- (void)dealloc
-{
-	[self clear];
-
-	[super dealloc];
-}
-
-#endif	// !USE_NATIVE_EVENTS
 
 - (void)cancelOperation:(id)pSender
 {
@@ -188,10 +146,6 @@ static short GetCurrentKeyModifiers()
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
-#ifdef USE_NATIVE_EVENTS
-	[self clear];
-#endif	// USE_NATIVE_EVENTS
-
 	// Do not invoke the superclass as it can trigger beeping
 	if ( [self respondsToSelector:aSelector] )
 		[self performSelector:aSelector withObject:nil];
@@ -218,9 +172,6 @@ static short GetCurrentKeyModifiers()
 
 	mnLastCommandKey = 0;
 	mnLastModifiers = 0;
-#ifndef USE_NATIVE_EVENTS
-	mpLastText = nil;
-#endif	// !USE_NATIVE_EVENTS
 
 	return self;
 }
@@ -254,26 +205,6 @@ static short GetCurrentKeyModifiers()
 	mnLastCommandKey = KEY_TAB;
 }
 
-#ifndef USE_NATIVE_EVENTS
-
-- (void)insertText:(NSString *)pString
-{
-	[self clear];
-
-	mpLastText = pString;
-	if ( mpLastText )
-		[mpLastText retain];
-}
-
-- (void)interpretKeyEvents:(NSArray *)pEvents
-{
-	[self clear];
-
-	[super interpretKeyEvents:pEvents];
-}
-
-#endif	// !USE_NATIVE_EVENTS
-
 - (short)lastCommandKey
 {
 	return mnLastCommandKey;
@@ -283,25 +214,6 @@ static short GetCurrentKeyModifiers()
 {
 	return mnLastModifiers;
 }
-
-#ifndef USE_NATIVE_EVENTS
-
-- (unsigned short)lastOriginalKeyChar
-{
-	return GetCurrentKeyChar();
-}
-
-- (short)lastOriginalModifiers
-{
-	return GetCurrentKeyModifiers();
-}
-
-- (NSString *)lastText
-{
-	return mpLastText;
-}
-
-#endif	// !USE_NATIVE_EVENTS
 
 - (void)moveBackwardAndModifySelection:(id)pSender
 {

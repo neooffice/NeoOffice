@@ -46,13 +46,6 @@
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
-#ifndef USE_NATIVE_EVENTS
-#include <com/sun/star/vcl/VCLFrame.hxx>
-#endif	// !USE_NATIVE_EVENTS
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#include <com/sun/star/vcl/VCLScreen.hxx>
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -61,25 +54,19 @@
 #import <objc/objc-class.h>
 #include <postmac.h>
 
-#if defined USE_NATIVE_WINDOW || defined USE_NATIVE_EVENTS
 #include "../java/VCLEventQueue_cocoa.h"
-#endif	// USE_NATIVE_WINDOW || USE_NATIVE_EVENTS
 
 typedef UInt32 GetDblTime_Type();
 typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOptions );
 
-#ifdef USE_NATIVE_WINDOW
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
-#endif	// USE_NATIVE_WINDOW
-#if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
 static unsigned int nMainScreen = 0;
 static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static CGColorSpaceRef aDeviceColorSpace = NULL;
 static ::osl::Mutex aScreensMutex;
-#endif	// USE_NATIVE_WINDOW && USE_NATIVE_VIRTUAL_DEVICE && USE_NATIVE_PRINTING
 static NSColor *pVCLControlTextColor = nil;
 static NSColor *pVCLTextColor = nil;
 static NSColor *pVCLHighlightColor = nil;
@@ -91,8 +78,6 @@ static ::osl::Mutex aSystemColorsMutex;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
-
-#ifdef USE_NATIVE_WINDOW
 
 NSRect GetTotalScreenBounds()
 {
@@ -182,8 +167,6 @@ static void HandleScreensChangedRequest()
 		}
 	}
 }
-
-#endif	// USE_NATIVE_WINDOW
 
 static void HandleSystemColorsChangedRequest()
 {
@@ -388,8 +371,6 @@ static NSTimer *pUpdateTimer = nil;
 }
 
 @end
-
-#ifdef USE_NATIVE_WINDOW
 
 @interface VCLViewGetGraphicsLayer : NSObject
 {
@@ -938,8 +919,6 @@ static VCLUpdateScreens *pVCLUpdateScreens = nil;
 
 @end
 
-#endif	// USE_NATIVE_WINDOW
-
 @interface VCLUpdateSystemColors : NSObject
 {
 }
@@ -989,8 +968,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 }
 
 @end
-
-#ifdef USE_NATIVE_EVENTS
 
 @interface VCLWindowWrapperArgs : NSObject
 {
@@ -1681,8 +1658,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @end
 
-#endif	// USE_NATIVE_EVENTS
-
 // =======================================================================
 
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
@@ -1750,8 +1725,6 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 	pFrame->mbInShowOnlyMenus = FALSE;
 }
 
-#ifdef USE_NATIVE_WINDOW
-
 // -----------------------------------------------------------------------
 
 void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
@@ -1817,24 +1790,16 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 	return pRet;
 }
 
-#endif	// USE_NATIVE_WINDOW
-
 // =======================================================================
 
 JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
-#ifdef USE_NATIVE_WINDOW
 	mnHiddenBit( 0 ),
     maHiddenContext( NULL ),
     maHiddenLayer( NULL ),
 	maFrameLayer( NULL ),
 	maFrameClipPath( NULL ),
-#endif  // USE_NATIVE_WINDOW
-#ifdef USE_NATIVE_EVENTS
 	mpWindow( NULL ),
 	mbAllowKeyBindings( true ),
-#else	// USE_NATIVE_EVENTS
-	mpVCLFrame( NULL ),
-#endif	// USE_NATIVE_EVENTS
 	mpGraphics( new JavaSalGraphics() ),
 	mnStyle( nSalFrameStyle ),
 	mpParent( NULL ),
@@ -1858,7 +1823,6 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	memset( &maGeometry, 0, sizeof( maGeometry ) );
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 
-#ifdef USE_NATIVE_EVENTS
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:nil showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
@@ -1872,12 +1836,8 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_EVENTS
-    mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, NULL, mbShowOnlyMenus, IsUtilityWindow() );
-#endif	// USE_NATIVE_EVENTS
 
 	mpGraphics->mpFrame = this;
-#ifdef USE_NATIVE_WINDOW
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
 
@@ -1892,7 +1852,6 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	}
 
 	mpGraphics->setLayer( maHiddenLayer );
-#endif  // USE_NATIVE_WINDOW
 
 	// Set initial parent
 	if ( pParent )
@@ -1916,11 +1875,9 @@ JavaSalFrame::~JavaSalFrame()
 	// Remove this window from the window list
 	GetSalData()->maFrameList.remove( this );
 
-#ifdef USE_NATIVE_WINDOW
 	// Make sure that no native drawing is possible
 	maSysData.pView = NULL;
 	UpdateLayer();
-#endif	// USE_NATIVE_WINDOW
 
 	Show( FALSE );
 	StartPresentation( FALSE );
@@ -1942,7 +1899,6 @@ JavaSalFrame::~JavaSalFrame()
 	// Detach from parent
 	SetParent( NULL );
 
-#ifdef USE_NATIVE_WINDOW
 	if ( maFrameClipPath )
 		CGPathRelease( maFrameClipPath );
 
@@ -1954,9 +1910,7 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( maHiddenContext )
 		CGContextRelease( maHiddenContext );
-#endif  // USE_NATIVE_WINDOW
 
-#ifdef USE_NATIVE_EVENTS
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpWindow )
@@ -1967,13 +1921,6 @@ JavaSalFrame::~JavaSalFrame()
 	}
 
 	[pPool release];
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-	{
-		mpVCLFrame->dispose();
-		delete mpVCLFrame;
-	}
-#endif	// USE_NATIVE_EVENTS
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
 	if ( mpGraphics )
@@ -1986,7 +1933,6 @@ CGColorSpaceRef JavaSalFrame::CopyDeviceColorSpace()
 {
 	CGColorSpaceRef aRet = NULL;
 
-#if defined USE_NATIVE_WINDOW && defined USE_NATIVE_VIRTUAL_DEVICE && defined USE_NATIVE_PRINTING
 	// Update if screens have not yet been set
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
@@ -2005,15 +1951,12 @@ CGColorSpaceRef JavaSalFrame::CopyDeviceColorSpace()
 	aRet = aDeviceColorSpace;
 	if ( aRet )
 		CGColorSpaceRetain( aRet );
-#endif	// USE_NATIVE_WINDOW && USE_NATIVE_VIRTUAL_DEVICE && USE_NATIVE_PRINTING
 
 	if ( !aRet )
 		aRet = CGColorSpaceCreateDeviceRGB();
 
 	return aRet;
 }
-
-#ifdef USE_NATIVE_WINDOW
 
 // -----------------------------------------------------------------------
 
@@ -2375,15 +2318,10 @@ void JavaSalFrame::FlushAllFrames()
 	[pPool release];
 }
 
-#endif	// USE_NATIVE_WINDOW
-
 // -----------------------------------------------------------------------
 
 unsigned int JavaSalFrame::GetDefaultScreenNumber()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return com_sun_star_vcl_VCLScreen::getDefaultScreenNumber();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	// Update if screens have not yet been set
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
@@ -2400,16 +2338,12 @@ unsigned int JavaSalFrame::GetDefaultScreenNumber()
 	}
 
 	return nMainScreen;
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode )
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	// Update if screens have not yet been set
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
@@ -2472,16 +2406,12 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 		return aClosestBounds;
 	else
 		return Rectangle( Point( 0, 0 ), Size( 800, 600 ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode )
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, bFullScreenMode );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	// Update if screens have not yet been set
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
@@ -2504,16 +2434,12 @@ const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bF
 		return aVCLScreensVisibleBoundsList[ nScreen ];
 		
 	return Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 unsigned int JavaSalFrame::GetScreenCount()
 {
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	return com_sun_star_vcl_VCLScreen::getScreenCount();
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	// Update if screens have not yet been set
 	ResettableGuard< Mutex > aGuard( aScreensMutex );
 	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
@@ -2530,7 +2456,6 @@ unsigned int JavaSalFrame::GetScreenCount()
 	}
 
 	return ( aVCLScreensFullBoundsList.size() ? aVCLScreensFullBoundsList.size() : 1 );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -2589,7 +2514,6 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseF
 {
 	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2606,10 +2530,6 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool bUseF
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		aRet = mpVCLFrame->getBounds( pInLiveResize, bUseFullScreenOriginalBounds );
-#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -2621,7 +2541,6 @@ const Rectangle JavaSalFrame::GetInsets()
 	// Insets use the rectangle's data members directly so set members directly
 	Rectangle aRet( 0, 0, 0, 0 );
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2632,10 +2551,6 @@ const Rectangle JavaSalFrame::GetInsets()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		aRet = mpVCLFrame->getInsets();
-#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -2646,7 +2561,6 @@ id JavaSalFrame::GetNativeWindow()
 {
 	id pRet = nil;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2655,10 +2569,6 @@ id JavaSalFrame::GetNativeWindow()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		pRet = (id)mpVCLFrame->getNativeWindow();
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2669,7 +2579,6 @@ id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
 {
 	id pRet = nil;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2681,10 +2590,6 @@ id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		pRet = (id)mpVCLFrame->getNativeWindowContentView( bTopLevelWindow );
-#endif	// USE_NATIVE_EVENTS
 
 	return pRet;
 }
@@ -2695,7 +2600,6 @@ ULONG JavaSalFrame::GetState()
 {
 	ULONG nRet = 0;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2709,10 +2613,6 @@ ULONG JavaSalFrame::GetState()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		nRet = mpVCLFrame->getState();
-#endif	// USE_NATIVE_EVENTS
 
 	return nRet;
 }
@@ -2721,7 +2621,6 @@ ULONG JavaSalFrame::GetState()
 
 void JavaSalFrame::MakeModal()
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2731,10 +2630,6 @@ void JavaSalFrame::MakeModal()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->makeModal();
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -2743,7 +2638,6 @@ bool JavaSalFrame::RequestFocus()
 {
 	bool bRet = false;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2757,10 +2651,6 @@ bool JavaSalFrame::RequestFocus()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		bRet = mpVCLFrame->requestFocus();
-#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
@@ -2769,7 +2659,6 @@ bool JavaSalFrame::RequestFocus()
 
 void JavaSalFrame::SetState( ULONG nFrameState )
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2788,22 +2677,12 @@ void JavaSalFrame::SetState( ULONG nFrameState )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-	{
-		if ( nFrameState & SAL_FRAMESTATE_MINIMIZED )
-			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
-		else
-			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-	}
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2814,10 +2693,6 @@ void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->setVisible( bVisible, bNoActivate );
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -2826,7 +2701,6 @@ bool JavaSalFrame::ToFront()
 {
 	bool bRet = false;
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2840,25 +2714,15 @@ bool JavaSalFrame::ToFront()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		bRet = mpVCLFrame->toFront();
-#endif	// USE_NATIVE_EVENTS
 
 	return bRet;
 }
-
-#ifdef USE_NATIVE_WINDOW
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::UpdateLayer()
 {
-#ifdef USE_NATIVE_EVENTS
 	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth, maGeometry.nHeight );
-#else	// USE_NATIVE_EVENTS
-	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
-#endif	// USE_NATIVE_EVENTS
 	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
 		return;
 
@@ -2898,8 +2762,6 @@ void JavaSalFrame::UpdateLayer()
 	}
 }
 
-#endif	// USE_NATIVE_WINDOW
-
 // -----------------------------------------------------------------------
 
 SalGraphics* JavaSalFrame::GetGraphics()
@@ -2907,10 +2769,6 @@ SalGraphics* JavaSalFrame::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
-#ifndef USE_NATIVE_WINDOW
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_WINDOW
 	mbGraphics = TRUE;
 
 	return mpGraphics;
@@ -2941,7 +2799,6 @@ BOOL JavaSalFrame::PostEvent( void *pData )
 void JavaSalFrame::SetTitle( const XubString& rTitle )
 {
 	maTitle = OUString( rTitle );
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -2953,10 +2810,6 @@ void JavaSalFrame::SetTitle( const XubString& rTitle )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->setTitle( maTitle );
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -3024,20 +2877,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	mbVisible = bVisible;
 
-#ifndef USE_NATIVE_WINDOW
-	// Make sure there is a graphics available to avoid crashing when the OOo
-	// code tries to draw while updating the menus
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_WINDOW
-
 	SetVisible( mbVisible, bNoActivate );
-
-#ifndef USE_NATIVE_WINDOW
-	// Reset graphics
-	if ( mpGraphics->mpVCLGraphics )
-		mpGraphics->mpVCLGraphics->resetGraphics();
-#endif	// !USE_NATIVE_WINDOW
 
 	if ( mbVisible )
 	{
@@ -3132,7 +2972,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSalData->mpLastDragFrame == this )
 			pSalData->mpLastDragFrame = NULL;
 
-#ifdef USE_NATIVE_WINDOW
 		if ( maFrameLayer )
 		{
 			CGLayerRelease( maFrameLayer );
@@ -3140,7 +2979,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		}
 
 		mpGraphics->setLayer( maHiddenLayer );
-#endif	// USE_NATIVE_WINDOW
 
 		// Fix bug 3032 by showing one of the show only frames if no other
 		// non-floating windows are visible
@@ -3162,9 +3000,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			pShowOnlyMenusFrame->Show( TRUE, FALSE );
 	}
 
-#ifdef USE_NATIVE_WINDOW
 	UpdateLayer();
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -3180,7 +3016,6 @@ void JavaSalFrame::Enable( BOOL bEnable )
 
 void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -3192,10 +3027,6 @@ void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->setMinClientSize( nWidth, nHeight );
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -3306,7 +3137,6 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 	}
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -3318,10 +3148,6 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
-#endif	// USE_NATIVE_EVENTS
 
 	// Update the cached position immediately
 	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
@@ -3463,7 +3289,6 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
 	}
 
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -3474,10 +3299,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->setFullScreenMode( bFullScreen );
-#endif	// USE_NATIVE_EVENTS
+
 	mbFullScreen = bFullScreen;
 	mbInShowFullScreen = FALSE;
 
@@ -3597,7 +3419,6 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 
 void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 {
-#ifdef USE_NATIVE_WINDOW
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle view:maSysData.pView];
@@ -3605,10 +3426,6 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 	[pVCLSetCursor performSelectorOnMainThread:@selector(setCursor:) withObject:pVCLSetCursor waitUntilDone:NO modes:pModes];
 
 	[pPool release];
-#else	// USE_NATIVE_WINDOW
-	if ( mpVCLFrame )
-		mpVCLFrame->setPointer( ePointerStyle );
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -3635,7 +3452,6 @@ void JavaSalFrame::SetPointerPos( long nX, long nY )
 
 void JavaSalFrame::Flush()
 {
-#ifdef USE_NATIVE_EVENTS
 	if ( mpWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -3645,10 +3461,6 @@ void JavaSalFrame::Flush()
 
 		[pPool release];
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		mpVCLFrame->sync();
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -3663,20 +3475,10 @@ void JavaSalFrame::Sync()
 void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 	// Only allow Mac OS X key bindings when the OOo application code says so
-#ifdef USE_NATIVE_EVENTS
 	if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
 		mbAllowKeyBindings = true;
 	else
 		mbAllowKeyBindings = false;
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-	{
-		if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
-			mpVCLFrame->setAllowKeyBindings( sal_True );
-		else
-			mpVCLFrame->setAllowKeyBindings( sal_False );
-	}
-#endif	// USE_NATIVE_EVENTS
 }
 
 // -----------------------------------------------------------------------
@@ -3694,7 +3496,6 @@ String JavaSalFrame::GetKeyName( USHORT nKeyCode )
 {
 	String aRet;
 
-#ifdef USE_NATIVE_EVENTS
 	String aKeyName( ConvertVCLKeyCode( nKeyCode, false ) );
 	if ( aKeyName.Len() )
 	{
@@ -3709,10 +3510,6 @@ String JavaSalFrame::GetKeyName( USHORT nKeyCode )
 
 		aRet += aKeyName;
 	}
-#else	// USE_NATIVE_EVENTS
-	if ( mpVCLFrame )
-		aRet = String( mpVCLFrame->getKeyName( nKeyCode ) );
-#endif	// USE_NATIVE_EVENTS
 
 	return aRet;
 }
@@ -3794,14 +3591,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		useThemeDialogColor = TRUE;
 	}
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
-	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aTextColor;
 	if ( pVCLTextColor )
 		aTextColor = Color( (unsigned char)( [pVCLTextColor redComponent] * 0xff ), (unsigned char)( [pVCLTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLTextColor blueComponent] * 0xff ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
 	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
@@ -3812,28 +3604,18 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	aStyleSettings.SetWindowTextColor( aTextColor );
 	aStyleSettings.SetFieldTextColor( aTextColor );
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	SalColor nTextHighlightColor = com_sun_star_vcl_VCLScreen::getTextHighlightColor();
-	Color aHighlightColor( SALCOLOR_RED( nTextHighlightColor ), SALCOLOR_GREEN( nTextHighlightColor ), SALCOLOR_BLUE( nTextHighlightColor ) );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightColor;
 	if ( pVCLHighlightColor )
 		aHighlightColor = Color( (unsigned char)( [pVCLHighlightColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor blueComponent] * 0xff ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetActiveBorderColor( aHighlightColor );
 	aStyleSettings.SetActiveColor( aHighlightColor );
 	aStyleSettings.SetActiveTextColor( aHighlightColor );
 	aStyleSettings.SetHighlightColor( aHighlightColor );
 	aStyleSettings.SetMenuHighlightColor( aHighlightColor );
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	SalColor nTextHighlightTextColor = com_sun_star_vcl_VCLScreen::getTextHighlightTextColor();
-	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aHighlightTextColor;
 	if ( pVCLHighlightTextColor )
 		aHighlightTextColor = Color( (unsigned char)( [pVCLHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor blueComponent] * 0xff ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
 
@@ -3844,14 +3626,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		useThemeDialogColor = TRUE;
 	}
 
-#if !defined USE_NATIVE_WINDOW || !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
-	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
-#else	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	Color aBackColor;
 	if ( pVCLBackColor )
 		aBackColor = Color( (unsigned char)( [pVCLBackColor redComponent] * 0xff ), (unsigned char)( [pVCLBackColor greenComponent] * 0xff ), (unsigned char)( [pVCLBackColor blueComponent] * 0xff ) );
-#endif	// !USE_NATIVE_WINDOW || !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
 	aStyleSettings.SetDeactiveColor( aBackColor );
@@ -3898,13 +3675,7 @@ const SystemEnvData* JavaSalFrame::GetSystemData() const
 
 void JavaSalFrame::Beep( SoundType eSoundType )
 {
-#ifdef USE_NATIVE_WINDOW
 	NSBeep();
-#else	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	com_sun_star_vcl_VCLGraphics::beep();
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -3933,13 +3704,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		return;
 
 	if ( mpParent )
-	{
 		mpParent->maChildren.remove( this );
-#ifndef USE_NATIVE_EVENTS
-		if ( mpParent->mpVCLFrame )
-			mpParent->mpVCLFrame->removeChild( this );
-#endif	// !USE_NATIVE_EVENTS
-	}
 
 	mpParent = (JavaSalFrame *)pNewParent;
 
@@ -3953,7 +3718,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 		// Fix bug 1310 by creating a new native window with the new parent
 		maSysData.pView = NULL;
-#ifdef USE_NATIVE_EVENTS
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		// Prevent deadlock when opening a document when toolbars are
@@ -3977,40 +3741,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		}
 
 		[pPool release];
-#else	// USE_NATIVE_EVENTS
-		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
-#ifndef USE_NATIVE_WINDOW
-		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
-#endif	// !USE_NATIVE_WINDOW
-
-		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
-		if ( mpVCLFrame )
-		{
-#ifndef USE_NATIVE_WINDOW
-			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-#endif	// !USE_NATIVE_WINDOW
-			mpVCLFrame->setTitle( maTitle );
-
-#ifndef USE_NATIVE_WINDOW
-			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-			if ( pOldVCLGraphics )
-				delete pOldVCLGraphics;
-#endif	// !USE_NATIVE_WINDOW
-
-			if ( pOldVCLFrame )
-			{
-				pOldVCLFrame->dispose();
-				delete pOldVCLFrame;
-			}
-		}
-		else
-		{
-			mpVCLFrame = pOldVCLFrame;
-#ifndef USE_NATIVE_WINDOW
-			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
-#endif	// !USE_NATIVE_WINDOW
-		}
-#endif	// USE_NATIVE_EVENTS
 
 		if ( mpParent )
 			SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
@@ -4026,13 +3756,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	}
 
 	if ( mpParent )
-	{
-#ifndef USE_NATIVE_EVENTS
-		if ( mpParent->mpVCLFrame )
-			mpParent->mpVCLFrame->addChild( this );
-#endif	// !USE_NATIVE_EVENTS
 		mpParent->maChildren.push_back( this );
-	}
 
 	if ( !bUtilityWindow )
 	{
@@ -4127,42 +3851,25 @@ void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
 
 void JavaSalFrame::ResetClipRegion()
 {
-#ifdef USE_NATIVE_WINDOW
 	if ( maFrameClipPath )
 	{
 		CGPathRelease( maFrameClipPath );
 		maFrameClipPath = NULL;
 		mpGraphics->setFrameClipPath( maFrameClipPath );
 	}
-#else	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-	mpGraphics->mpVCLGraphics->resetClipRegion( sal_True );
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 {
-#ifdef USE_NATIVE_WINDOW
 	ResetClipRegion();
-#else	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-	mpGraphics->mpVCLGraphics->beginSetClipRegion( sal_True );
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-#ifdef USE_NATIVE_WINDOW
 	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 	if ( !CGRectIsEmpty( aRect ) )
 	{
@@ -4172,28 +3879,13 @@ void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight 
 		if ( maFrameClipPath )
 			CGPathAddRect( maFrameClipPath, NULL, aRect );
 	}
-#else	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-	mpGraphics->mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_True );
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::EndSetClipRegion()
 {
-#ifdef USE_NATIVE_WINDOW
 	mpGraphics->setFrameClipPath( maFrameClipPath );
-#else	// USE_NATIVE_WINDOW
-#if !defined USE_NATIVE_VIRTUAL_DEVICE || !defined USE_NATIVE_PRINTING
-	if ( !mpGraphics->mpVCLGraphics && mpVCLFrame )
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE || !USE_NATIVE_PRINTING
-#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------

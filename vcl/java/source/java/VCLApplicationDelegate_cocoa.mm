@@ -64,9 +64,6 @@ struct ImplPendingOpenPrintFileRequest
 						~ImplPendingOpenPrintFileRequest() {};
 };
 
-#ifndef USE_NATIVE_EVENTS
-static NSString *pApplicationDelegateString = @"ApplicationDelegate";
-#endif	// !USE_NATIVE_EVENTS
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
 
 using namespace rtl;
@@ -75,7 +72,7 @@ using namespace vos;
 
 static void HandleAboutRequest()
 {
-	// If no Java event queue exists yet, ignore event as we are likely to
+	// If no event queue exists yet, ignore event as we are likely to
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
@@ -89,7 +86,7 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
 	if ( rPath.getLength() && !Application::IsShutDown() )
 	{
-		// If no Java event queue exists yet, queue event as we are likely to
+		// If no event queue exists yet, queue event as we are likely to
 		// deadlock
 		if ( !JavaSalEventQueue::isInitialized() )
 		{
@@ -108,7 +105,7 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 
 static void HandlePreferencesRequest()
 {
-	// If no Java event queue exists yet, ignore event as we are likely to
+	// If no event queue exists yet, ignore event as we are likely to
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
@@ -122,7 +119,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 {
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
-	// If no Java event queue exists yet, ignore event as we are likely to
+	// If no event queue exists yet, ignore event as we are likely to
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
@@ -171,7 +168,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 static void HandleDidChangeScreenParametersRequest()
 {
-	// If no Java event queue exists yet, ignore event as we are likely to
+	// If no event queue exists yet, ignore event as we are likely to
 	// deadlock
 	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
 	{
@@ -497,7 +494,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					{
 						mbAppMenuInitialized = YES;
 
-#ifdef USE_NATIVE_EVENTS
 						if ( !Application::IsShutDown() )
 						{
 							IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -593,40 +589,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 							rSolarMutex.release();
 						}
-#else	// USE_NATIVE_EVENTS
-						NSUInteger nItems = [pAppMenu numberOfItems];
-						NSUInteger i = 0;
-						for ( ; i < nItems; i++ )
-						{
-							NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
-							if ( pItem )
-							{
-								NSObject *pTarget = [pItem target];
-								if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
-								{
-									NSString *pAction = NSStringFromSelector( [pItem action] );
-									if ( pAction )
-									{
-										NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
-										if ( aRange.location != NSNotFound && aRange.length > 0 )
-										{
-											[pItem setTarget:self];
-											[pItem setAction:@selector(showAbout)];
-										}
-										else
-										{
-											aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
-											if ( aRange.location != NSNotFound && aRange.length > 0 )
-											{
-												[pItem setTarget:self];
-												[pItem setAction:@selector(showPreferences)];
-											}
-										}
-									}
-								}
-							}
-						}
-#endif	// USE_NATIVE_EVENTS
 					}
 				}
 			}
