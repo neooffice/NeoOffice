@@ -2439,7 +2439,7 @@ JavaSalEventQueueItem* JavaSalEventQueue::mpPaintItem = NULL;
 
 // -------------------------------------------------------------------------
 
-sal_Bool JavaSalEventQueue::mbShutdownDisabled = sal_False;
+sal_Bool JavaSalEventQueue::mbShutdownDisabled = sal_True;
 
 // -------------------------------------------------------------------------
 
