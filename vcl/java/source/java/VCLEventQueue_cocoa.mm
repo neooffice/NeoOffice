@@ -1562,7 +1562,7 @@ static NSUInteger nMouseMask = 0;
 {
 	MacOSBOOL bRet = YES;
 
-	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+	if ( pWindow == self && [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
 		if ( ![self isVisible] )
 		{
@@ -1570,17 +1570,17 @@ static NSUInteger nMouseMask = 0;
 		}
 		else
 		{
-			// If the window's frame is roughly the same is the screen's visible
-			// frame and the new frame is equal to the window's minimum size,
-			// disable zooming to prevent the window from being unexpectedly
-			// shrunk to its minimum size
-			NSSize aMinSize = [pWindow minSize];
-			if ( aMinSize.width == aNewFrame.size.width && aMinSize.height == aNewFrame.size.height )
+			// If the window's frame is roughly the same is the screen's
+			// visible frame and the new frame's height has very little room
+			// for content, disable zooming to prevent the window from being
+			// unexpectedly shrunk to its minimum size
+			NSRect aContentRect = [self contentRectForFrameRect:aNewFrame];
+			if ( aContentRect.size.height < 25.0 )
 			{
 				NSScreen *pScreen = [self screen];
 				if ( pScreen )
 				{
-					NSRect aFrame = [pWindow frame];
+					NSRect aFrame = [self frame];
 					NSRect aVisibleFrame = [pScreen visibleFrame];
 					if ( fabs( aFrame.origin.x - aVisibleFrame.origin.x ) < 25.0f &&
 						fabs( aFrame.origin.y - aVisibleFrame.origin.y ) < 25.0f &&
