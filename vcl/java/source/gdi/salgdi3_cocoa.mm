@@ -38,7 +38,6 @@
 #include <postmac.h>
 
 #include "salgdi3_cocoa.h"
-#include "../java/VCLEventQueue_cocoa.h"
 
 #ifndef USE_CORETEXT_TEXT_RENDERING
 
@@ -117,10 +116,7 @@ NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic )
 				if ( bItalic )
 					nTraits |= NSItalicFontMask;
 
-				NSFontManager_acquire();
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
-				NSFontManager_release();
-
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
 					[pNewNSFont retain];

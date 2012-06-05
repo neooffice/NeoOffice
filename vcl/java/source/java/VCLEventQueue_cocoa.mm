@@ -62,8 +62,6 @@
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
-static MacOSBOOL bFontManagerLocked = NO;
-static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
@@ -600,113 +598,6 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 @end
 
-@interface VCLBundle : NSBundle
-+ (MacOSBOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
-+ (MacOSBOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
-@end
-
-@implementation VCLBundle
-
-+ (MacOSBOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
-{
-	MacOSBOOL bRet = [VCLBundle poseAsLoadNibFile:pFileName externalNameTable:pContext withZone:pZone];
-
-	// Fix bug 3563 by trying to load Java's English nib file if the requested
-	// nib file is nil
-	if ( !bRet && !pFileName )
-		bRet = [VCLBundle poseAsLoadNibFile:@"/System/Library/Frameworks/JavaVM.framework/Versions/Current/Resources/English.lproj/DefaultApp.nib" externalNameTable:pContext withZone:pZone];
-
-	return bRet;
-}
-
-+ (MacOSBOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
-{
-	// This should never be executed and should be swizzled out to superclass
-	return NO;
-}
-
-@end
-
-// Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
-// change the selected font by creating a new font from the font's family
-// name and style. We fix these bugs by prepending the font names to the
-// list of font family names so that Java will think that each font's
-// family name is the same as its font name.
-
-@interface NSFontManager (VCLFontManagerPoseAs)
-- (NSArray *)poseAsAvailableFontFamilies;
-- (NSArray *)poseAsAvailableMembersOfFontFamily:(NSString *)family;
-@end
-
-@interface VCLFontManager : NSFontManager
-- (NSArray *)availableFontFamilies;
-- (NSArray *)availableMembersOfFontFamily:(NSString *)family;
-@end
-
-@implementation VCLFontManager
-
-- (NSArray *)availableFontFamilies
-{
-	NSMutableArray *pRet = nil;
-
-	if ( pFontManagerLock )
-		[pFontManagerLock lock];
-
-	if ( bFontManagerLocked )
-	{
-		if ( [super respondsToSelector:@selector(poseAsAvailableFontFamilies)] )
-			pRet = [NSMutableArray arrayWithArray:[super poseAsAvailableFontFamilies]];
-	}
-	else
-	{
-		pRet = [NSMutableArray arrayWithArray:[super availableFonts]];
-		if ( pRet && [super respondsToSelector:@selector(poseAsAvailableFontFamilies)] )
-			[pRet addObjectsFromArray:[super poseAsAvailableFontFamilies]];
-	}
-
-	if ( pFontManagerLock )
-		[pFontManagerLock unlock];
-
-	return pRet;
-}
-
-- (NSArray *)availableMembersOfFontFamily:(NSString *)family
-{
-	NSArray *pRet = nil;
-
-	if ( pFontManagerLock )
-		[pFontManagerLock lock];
-
-	if ( bFontManagerLocked )
-	{
-		if ( [super respondsToSelector:@selector(poseAsAvailableMembersOfFontFamily:)] )
-			pRet = [super poseAsAvailableMembersOfFontFamily:family];
-	}
-	else
-	{
-		NSFont *pNSFont = [NSFont fontWithName:family size:12];
-		if ( pNSFont )
-		{
-			NSMutableArray *pFontEntries = [NSMutableArray arrayWithCapacity:4];
-			if ( pFontEntries )
-			{
-				[pFontEntries addObject:[pNSFont fontName]];
-				[pFontEntries addObject:@""];
-				[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pNSFont]]];
-				[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pNSFont]]];
-				pRet = [NSArray arrayWithObject:pFontEntries];
-			}
-		}
-	}
-
-	if ( pFontManagerLock )
-		[pFontManagerLock unlock];
-
-	return pRet;
-}
-
-@end
-
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
 - (void)copy:(id)pSender;
@@ -791,8 +682,6 @@ static USHORT GetKeyCode( unsigned short nKey )
 - (MacOSBOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
-- (void)poseAsSetContentView:(NSView *)pView;
-- (void)poseAsSetLevel:(int)nWindowLevel;
 - (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
@@ -1622,12 +1511,6 @@ static NSUInteger nMouseMask = 0;
 		[(VCLView *)pContentView setFrame:pFrame];
 }
 
-- (void)setContentView:(NSView *)pView
-{
-	if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
-		[super poseAsSetContentView:pView];
-}
-
 - (void)setDraggingSourceDelegate:(id)pDelegate
 {
 	if ( !pDraggingSourceDelegates )
@@ -1648,12 +1531,6 @@ static NSUInteger nMouseMask = 0;
 				[pDraggingSourceDelegates removeObjectForKey:pKey];
 		}
 	}
-}
-
-- (void)setLevel:(int)nWindowLevel
-{
-	if ( [super respondsToSelector:@selector(poseAsSetLevel:)] )
-		[super poseAsSetLevel:nWindowLevel];
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification
@@ -2675,9 +2552,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	bVCLEventQueueClassesInitialized = YES;
 
 	// Do not retain as invoking alloc disables autorelease
-	pFontManagerLock = [[NSRecursiveLock alloc] init];
-
-	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
 	// VCLApplication selectors
@@ -2691,50 +2565,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aOldIMP = method_getImplementation( aOldMethod );
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	// VCLBundle selectors
-
-	aSelector = @selector(loadNibFile:externalNameTable:withZone:);
-	aPoseAsSelector = @selector(poseAsLoadNibFile:externalNameTable:withZone:);
-	aOldMethod = class_getClassMethod( [NSBundle class], aSelector );
-	aNewMethod = class_getClassMethod( [VCLBundle class], aSelector );
-	Method aPoseAsMethod = class_getClassMethod( [VCLBundle class], aPoseAsSelector );
-	if ( aOldMethod && aNewMethod && aPoseAsMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP )
-		{
-			method_setImplementation( aPoseAsMethod, aOldIMP );
-			method_setImplementation( aOldMethod, aNewIMP );
-		}
-	}
-
-	// VCLFontManager selectors
-
-	aSelector = @selector(availableFontFamilies);
-	aPoseAsSelector = @selector(poseAsAvailableFontFamilies);
-	aOldMethod = class_getInstanceMethod( [NSFontManager class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLFontManager class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSFontManager class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(availableMembersOfFontFamily:);
-	aPoseAsSelector = @selector(poseAsAvailableMembersOfFontFamily:);
-	aOldMethod = class_getInstanceMethod( [NSFontManager class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLFontManager class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSFontManager class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
@@ -2850,30 +2680,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 	aSelector = @selector(sendEvent:);
 	aPoseAsSelector = @selector(poseAsSendEvent:);
-	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(setContentView:);
-	aPoseAsSelector = @selector(poseAsSetContentView:);
-	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(setLevel:);
-	aPoseAsSelector = @selector(poseAsSetLevel:);
 	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aOldMethod && aNewMethod )
@@ -3031,24 +2837,6 @@ sal_Bool NSApplication_isActive()
 	[pPool release];
 
 	return bRet;
-}
-
-void NSFontManager_acquire()
-{
-	if ( pFontManagerLock )
-	{
-		[pFontManagerLock lock];
-		bFontManagerLocked = YES;
-	}
-}
-
-void NSFontManager_release()
-{
-	if ( pFontManagerLock )
-	{
-		bFontManagerLocked = NO;
-		[pFontManagerLock unlock];
-	}
 }
 
 @interface CancelTermination : NSObject

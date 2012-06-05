@@ -151,9 +151,7 @@
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
-- (void)setContentView:(NSView *)pView;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
-- (void)setLevel:(int)nWindowLevel;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
 - (void)windowDidMove:(NSNotification *)pNotification;
@@ -175,8 +173,6 @@ SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef
 SAL_DLLPRIVATE BOOL VCLEventQueue_paste( void *pNSWindow );
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE sal_Bool NSApplication_isActive();
-SAL_DLLPRIVATE void NSFontManager_acquire();
-SAL_DLLPRIVATE void NSFontManager_release();
 SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
 
 #endif
