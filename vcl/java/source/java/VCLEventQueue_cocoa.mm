@@ -569,35 +569,6 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 @end
 
-@interface NSApplication (VCLApplicationPoseAs)
-- (void)poseAsSetDelegate:(id)pDelegate;
-@end
-
-@interface VCLApplication : NSApplication
-- (void)setDelegate:(id)pDelegate;
-@end
-
-@implementation VCLApplication
-
-- (void)setDelegate:(id)pDelegate
-{
-	if ( ![self delegate] )
-	{
-		VCLApplicationDelegate *pNewDelegate = [VCLApplicationDelegate sharedDelegate];
-		if ( pNewDelegate )
-		{
-			[pNewDelegate setDelegate:pDelegate];
-			// NSApplication does not retain delegates so don't release it
-			pDelegate = pNewDelegate;
-		}
-	}
-
-	if ( [super respondsToSelector:@selector(poseAsSetDelegate:)] )
-		[super poseAsSetDelegate:pDelegate];
-}
-
-@end
-
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
 - (void)copy:(id)pSender;
@@ -689,7 +660,7 @@ static USHORT GetKeyCode( unsigned short nKey )
 - (void)setStyleMask:(unsigned int)nStyleMask;
 @end
 
-static MacOSBOOL bAWTFontInitialized = NO;
+static MacOSBOOL bJavaAWTInitialized = NO;
 static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
@@ -760,11 +731,11 @@ static NSUInteger nMouseMask = 0;
 
 + (void)swizzleSelectors:(NSWindow *)pWindow
 {
-	// Load Java's AWTFont class and redirect them to VCLFont's matching
-	// selectors
-	if ( pWindow && !bAWTFontInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+	// If a Java window is loaded, swizzle Java's menubar management class so
+	// that Java will not be able to change the menubar
+	if ( pWindow && !bJavaAWTInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
 	{
-		bAWTFontInitialized = YES;
+		bJavaAWTInitialized = YES;
 
 		NSBundle *pBundle = [NSBundle bundleForClass:[pWindow class]];
 		if ( pBundle )
@@ -965,9 +936,9 @@ static NSUInteger nMouseMask = 0;
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
 		MacOSBOOL bTrackingMenuBar = false;
-		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-		if ( pAppDelegate )
-			bTrackingMenuBar = [pAppDelegate isInTracking];
+		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pSharedDelegate )
+			bTrackingMenuBar = [pSharedDelegate isInTracking];
 
 		// Fix bug 2992 by not allowing the key window to change when we are
 		// tracking the menubar and never allow a borderless window to grab
@@ -2554,26 +2525,12 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
-	// VCLApplication selectors
-
-	SEL aSelector = @selector(setDelegate:);
-	SEL aPoseAsSelector = @selector(poseAsSetDelegate:);
-	Method aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
-	Method aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
 	// VCLWindow selectors
 
-	aSelector = @selector(becomeKeyWindow);
-	aPoseAsSelector = @selector(poseAsBecomeKeyWindow);
-	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	SEL aSelector = @selector(becomeKeyWindow);
+	SEL aPoseAsSelector = @selector(poseAsBecomeKeyWindow);
+	Method aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	Method aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aOldMethod && aNewMethod )
 	{
 		IMP aOldIMP = method_getImplementation( aOldMethod );
@@ -2803,9 +2760,10 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pApp && pSharedDelegate )
 	{
-		[pApp setDelegate:nil];
+		[pApp setDelegate:pSharedDelegate];
 
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
@@ -2815,7 +2773,7 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 			{
 				NSMenu *pSubmenu = [pItem submenu];
 				if ( pSubmenu )
-					[pSubmenu setDelegate:[VCLApplicationDelegate sharedDelegate]];
+					[pSubmenu setDelegate:pSharedDelegate];
 			}
 		}
 	}
