@@ -1530,23 +1530,12 @@ void JavaSalEvent::dispatch()
 			if ( pFrame != pSalData->mpFocusFrame )
 			{
 				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-				{
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pSalData->mpFocusFrame, new SalPaintEvent( 0, 0, pSalData->mpFocusFrame->maGeometry.nWidth, pSalData->mpFocusFrame->maGeometry.nHeight ) );
-					JavaSalEventQueue::postCachedEvent( pEvent );
-					pEvent->release();
 					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
-				}
 				pSalData->mpFocusFrame = NULL;
 			}
 
 			if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 			{
-				if ( pFrame->mbVisible )
-				{
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
-					JavaSalEventQueue::postCachedEvent( pEvent );
-					pEvent->release();
-				}
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->CallCallback( nID, NULL );
 				JavaSalMenu::SetMenuBarToFocusFrame();
@@ -1568,12 +1557,6 @@ void JavaSalEvent::dispatch()
 			{
 				if ( pFrame == pSalData->mpFocusFrame )
 				{
-					if ( pFrame->mbVisible )
-					{
-						JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, pFrame, new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
-						JavaSalEventQueue::postCachedEvent( pEvent );
-						pEvent->release();
-					}
 					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
 					JavaSalMenu::SetMenuBarToFocusFrame();
