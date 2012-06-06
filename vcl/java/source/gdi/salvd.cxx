@@ -116,29 +116,27 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( nDY < 1 )
 		nDY = 1;
 
-	if ( !maBitmapLayer )
+	// Make a native layer backed by a 1 x 1 pixel native bitmap
+	if ( !maBitmapContext )
 	{
-		// Make a native layer backed by a 1 x 1 pixel native bitmap
-		if ( !maBitmapContext )
+		CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
+		if ( aColorSpace )
 		{
-			CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
-			if ( aColorSpace )
-			{
-				maBitmapContext = CGBitmapContextCreate( &mnBit, 1, 1, 8, sizeof( mnBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-				CGColorSpaceRelease( aColorSpace );
-			}
+			maBitmapContext = CGBitmapContextCreate( &mnBit, 1, 1, 8, sizeof( mnBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			CGColorSpaceRelease( aColorSpace );
 		}
-
-		if ( maBitmapContext )
-			maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
 	}
 
-	if ( maBitmapLayer )
+	if ( maBitmapContext )
 	{
-		mpGraphics->setLayer( maBitmapLayer );
-		mnWidth = nDX;
-		mnHeight = nDY;
-		bRet = TRUE;
+		maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+		if ( maBitmapLayer )
+		{
+			mpGraphics->setLayer( maBitmapLayer );
+			mnWidth = nDX;
+			mnHeight = nDY;
+			bRet = TRUE;
+		}
 	}
 
 	return bRet;
