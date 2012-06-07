@@ -70,8 +70,11 @@ using namespace osl;
 
 // =======================================================================
 
-void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
+void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath, CGRect aUnflippedBounds )
 {
+	if ( !aCGPath )
+		return;
+
 	const sal_uInt32 nCount = rPolygon.count();
 	if ( !nCount )
 		return;
@@ -93,23 +96,23 @@ void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& r
 		}
 
 		::basegfx::B2DPoint aPoint = rPolygon.getB2DPoint( nClosedIndex );
+		CGPoint aUnflippedPoint = UnflipFlippedPoint( CGPointMake( aPoint.getX(), aPoint.getY() ), aUnflippedBounds );
 
 		if ( !nIndex )
 		{
-			if ( aCGPath )
-				CGPathMoveToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
+			CGPathMoveToPoint( aCGPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
 		}
 		else if ( !bPendingCurve )
 		{
-			if ( aCGPath )
-				CGPathAddLineToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
+			CGPathAddLineToPoint( aCGPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
 		}
 		else
 		{
 			::basegfx::B2DPoint aFirstControlPoint = rPolygon.getNextControlPoint( nPreviousIndex );
 			::basegfx::B2DPoint aSecondControlPoint = rPolygon.getPrevControlPoint( nClosedIndex );
-			if ( aCGPath )
-				CGPathAddCurveToPoint( aCGPath, NULL, aFirstControlPoint.getX(), aFirstControlPoint.getY(), aSecondControlPoint.getX(), aSecondControlPoint.getY(), aPoint.getX(), aPoint.getY() );
+			CGPoint aFirstUnflippedControlPoint = UnflipFlippedPoint( CGPointMake( aFirstControlPoint.getX(), aFirstControlPoint.getY() ), aUnflippedBounds );
+			CGPoint aSecondUnflippedControlPoint = UnflipFlippedPoint( CGPointMake( aSecondControlPoint.getX(), aSecondControlPoint.getY() ), aUnflippedBounds );
+			CGPathAddCurveToPoint( aCGPath, NULL, aFirstUnflippedControlPoint.x, aFirstUnflippedControlPoint.y, aSecondUnflippedControlPoint.x, aSecondUnflippedControlPoint.y, aUnflippedPoint.x, aUnflippedPoint.y );
 		}
 
 		if ( bHasCurves )
@@ -117,15 +120,12 @@ void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& r
 	}
 
 	if ( bClosePath )
-	{
-		if ( aCGPath )
-			CGPathCloseSubpath( aCGPath );
-	}
+		CGPathCloseSubpath( aCGPath );
 }
 
 // -----------------------------------------------------------------------
 
-void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly )
+void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly, CGRect aUnflippedBounds )
 {
 	const sal_uInt32 nCount = rPolyPoly.count();
 	if ( !nCount )
@@ -134,15 +134,42 @@ void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPo
 	for ( sal_uInt32 i = 0; i < nCount; i++ )
 	{
 		const ::basegfx::B2DPolygon rPolygon = rPolyPoly.getB2DPolygon( i );
-		AddPolygonToPaths( aCGPath, rPolygon, true );
+		AddPolygonToPaths( aCGPath, rPolygon, true, aUnflippedBounds );
 	}
 }
 
-// =======================================================================
+// -----------------------------------------------------------------------
 
 CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 {
 	return CGColorCreateGenericRGB( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( nColor & 0x000000ff ) / (float)0xff, (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff );
+}
+
+// -----------------------------------------------------------------------
+
+CGPoint UnflipFlippedPoint( CGPoint aFlippedPoint, CGRect aUnflippedBounds )
+{
+	CGPoint aRet = aFlippedPoint;
+
+	if ( !CGRectIsNull( aUnflippedBounds ) )
+		aRet.y = aUnflippedBounds.origin.y + aUnflippedBounds.size.height - aRet.y;
+
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
+CGRect UnflipFlippedRect( CGRect aFlippedRect, CGRect aUnflippedBounds )
+{
+	CGRect aRet = aFlippedRect;
+
+	if ( !CGRectIsNull( aFlippedRect ) && !CGRectIsNull( aUnflippedBounds ) )
+	{
+		aRet = CGRectStandardize( aRet );
+		aRet.origin.y = aUnflippedBounds.origin.y + aUnflippedBounds.size.height - aRet.origin.y - aRet.size.height;
+	}
+
+	return aRet;
 }
 
 // =======================================================================
@@ -283,8 +310,8 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 	if ( !aContext )
 		return;
 
-	// CGImage's assume flipped coordinates when drawing so draw from the
-	// bottom up
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	NSImageRep *pImageRep = [NSEPSImageRep imageRepWithData:(NSData *)maData];
 	if ( !pImageRep )
 		pImageRep = [NSPDFImageRep imageRepWithData:(NSData *)maData];
@@ -295,10 +322,12 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		{
 			NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 			[NSGraphicsContext setCurrentContext:pContext];
-			[pImageRep drawInRect:NSMakeRect( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 )];
+			[pImageRep drawInRect:NSRectFromCGRect( maRect )];
 			[NSGraphicsContext setCurrentContext:pOldContext];
 		}
 	}
+
+	[pPool release];
 
 	restoreClipXORGState();
 
@@ -384,47 +413,38 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					CGContextSetLineDash( aContext, 0, aLengths, 2 );
 				}
 
-				CGContextAddPath( aContext, maPath );
-
-				// Fix bug reported in the following NeoOffice forum post by
-				// drawing a path in a single operation when the fill and line
-				// colors are equal. Apparently, when the fill and line color
-				// are the same, CGLayers coalesce out the line drawing
-				// operation and so the line bleed at the edges of the path are
-				// missing:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62777#62777
-				// Draw the fill and line separately if the fill and line colors
-				// are different to avoid the drawing artifacts in the Base
-				// buttons found while fixing the bug in the following NeoOffice
-				// forum post:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62805#62805
-				if ( CGColorGetAlpha( aFillColor ) && CGColorEqualToColor( aFillColor, aLineColor ) )
+				if ( CGColorGetAlpha( aFillColor ) )
 				{
+					CGContextBeginPath( aContext );
+					CGContextAddPath( aContext, maPath );
+
+					// Smooth out image drawing for bug 2475 image
+					CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
+
+					CGContextSetFillColorWithColor( aContext, aFillColor );
+					CGContextEOFillPath( aContext );
+				}
+				if ( CGColorGetAlpha( aLineColor ) )
+				{
+					// Shift line drawing downward slightly so that line
+					// drawing favors pixels downward and to the right instead
+					// of the CGContext default behavior of upward and to the
+					// right since the OOo code favors the former, noe the
+					// latter behavior.
+					// This download shift also fixes the bugs reported in the
+					// following NeoOffice forum posts:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62777#62777
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62805#62805
+					CGContextTranslateCTM( aContext, 0, -0.01f );
+
+					CGContextBeginPath( aContext );
+					CGContextAddPath( aContext, maPath );
+
 					// Enable or disable antialiasing
 					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
-					CGContextSetFillColorWithColor( aContext, aFillColor );
 					CGContextSetStrokeColorWithColor( aContext, aLineColor );
-					CGContextDrawPath( aContext, kCGPathEOFillStroke );
-				}
-				else
-				{
-					if ( CGColorGetAlpha( aFillColor ) )
-					{
-						// Smooth out image drawing for bug 2475 image
-						CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
-
-						CGContextSetFillColorWithColor( aContext, aFillColor );
-						CGContextEOFillPath( aContext );
-					}
-					if ( CGColorGetAlpha( aLineColor ) )
-					{
-						// Enable or disable antialiasing
-						CGContextSetAllowsAntialiasing( aContext, mbAntialias );
-
-						CGContextSetStrokeColorWithColor( aContext, aLineColor );
-						CGContextStrokePath( aContext );
-					}
+					CGContextStrokePath( aContext );
 				}
 
 				restoreClipXORGState();
@@ -509,7 +529,8 @@ JavaSalGraphics::JavaSalGraphics() :
 	mbInvert( false ),
 	mbXOR( false ),
 	meOrientation( ORIENTATION_PORTRAIT ),
-	mbPaperRotated( sal_False )
+	mbPaperRotated( sal_False ),
+	maNativeBounds( CGRectNull )
 {
 	GetSalData()->maGraphicsList.push_back( this );
 }
@@ -596,7 +617,7 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 {
 	BOOL bRet = TRUE;
 
-	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
+	CGRect aRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), maNativeBounds );
 	if ( !CGRectIsEmpty( aRect ) )
 	{
 		if ( !maNativeClipPath )
@@ -624,7 +645,7 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 		if ( maNativeClipPath )
 		{
 			CGMutablePathRef aCGPath = CGPathCreateMutable();
-			AddPolyPolygonToPaths( aCGPath, rPolyPoly );
+			AddPolyPolygonToPaths( aCGPath, rPolyPoly, maNativeBounds );
 			CGPathAddPath( maNativeClipPath, NULL, aCGPath );
 			CFRelease( aCGPath );
 		}
@@ -716,7 +737,8 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			CGPathAddRect( aPath, NULL, CGRectMake( nX, nY, 1, 1 ) );
+			CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, 1, 1 ), maNativeBounds );
+			CGPathAddRect( aPath, NULL, aUnflippedRect );
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, mnLineColor, 0x00000000, aPath ) );
 			CGPathRelease( aPath );
 		}
@@ -730,7 +752,8 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 	CGMutablePathRef aPath = CGPathCreateMutable();
 	if ( aPath )
 	{
-		CGPathAddRect( aPath, NULL, CGRectMake( nX, nY, 1, 1 ) );
+		CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, 1, 1 ), maNativeBounds );
+		CGPathAddRect( aPath, NULL, aUnflippedRect );
 		addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, nSalColor | 0xff000000, 0x00000000, aPath ) );
 		CGPathRelease( aPath );
 	}
@@ -745,8 +768,10 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			CGPathMoveToPoint( aPath, NULL, nX1, nY1 );
-			CGPathAddLineToPoint( aPath, NULL, nX2, nY2 );
+			CGPoint aUnflippedPoint1 = UnflipFlippedPoint( CGPointMake( nX1, nY1 ), maNativeBounds );
+			CGPoint aUnflippedPoint2 = UnflipFlippedPoint( CGPointMake( nX2, nY2 ), maNativeBounds );
+			CGPathMoveToPoint( aPath, NULL, aUnflippedPoint1.x, aUnflippedPoint1.y );
+			CGPathAddLineToPoint( aPath, NULL, aUnflippedPoint2.x, aUnflippedPoint2.y );
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 			CGPathRelease( aPath );
 		}
@@ -762,9 +787,27 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
-			CGPathAddRect( aPath, NULL, aRect );
-			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
+			CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), maNativeBounds );
+
+			// The OOo code expects any line drawing to be drawn within the
+			// inside edge of the rectangle so shrink the rectange by half the
+			// line width if the line color is set
+			if ( mnLineColor && !CGRectIsEmpty( aUnflippedRect ) )
+			{
+				float fNativeLineWidth = getNativeLineWidth();
+				aUnflippedRect.origin.x += fNativeLineWidth / 2;
+				aUnflippedRect.origin.y += fNativeLineWidth / 2;
+				if ( aUnflippedRect.size.width < fNativeLineWidth )
+					aUnflippedRect.size.width = 0;
+				else
+					aUnflippedRect.size.width -= fNativeLineWidth;
+				if ( aUnflippedRect.size.height < fNativeLineWidth )
+					aUnflippedRect.size.height = 0;
+				else
+					aUnflippedRect.size.height -= fNativeLineWidth;
+			}
+			CGPathAddRect( aPath, NULL, aUnflippedRect );
+			if ( !mnLineColor && CGRectIsEmpty( aUnflippedRect ) )
 			{
 				CGPathRelease( aPath );
 				aPath = NULL;
@@ -808,7 +851,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
+			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed(), maNativeBounds );
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 			CGPathRelease( aPath );
 		}
@@ -830,7 +873,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed() );
+			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed(), maNativeBounds );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 			{
@@ -871,7 +914,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolyPolygonToPaths( aPath, aPolyPoly );
+			AddPolyPolygonToPaths( aPath, aPolyPoly, maNativeBounds );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 			{
@@ -906,7 +949,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolyPolygonToPaths( aPath, rPolyPoly );
+			AddPolyPolygonToPaths( aPath, rPolyPoly, maNativeBounds );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 			{
@@ -939,7 +982,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, rPoly, rPoly.isClosed() );
+			AddPolygonToPaths( aPath, rPoly, rPoly.isClosed(), maNativeBounds );
 			float fNativeLineWidth = rLineWidths.getX();
 			if ( fNativeLineWidth <= 0 )
 				fNativeLineWidth = getNativeLineWidth();
@@ -989,7 +1032,8 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 			CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, (UInt8 *)pPtrCopy, nSize, NULL );
 			if ( aData )
 			{
-				addUndrawnNativeOp( new JavaSalGraphicsDrawEPSOp( maFrameClipPath, maNativeClipPath, aData, CGRectMake( nX, nY, nWidth, nHeight ) ) );
+				CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), maNativeBounds );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawEPSOp( maFrameClipPath, maNativeClipPath, aData, aUnflippedRect ) );
 				CFRelease( aData );
 			}
 
@@ -1095,10 +1139,7 @@ void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 	{
 		CGContextRef aContext = CGLayerGetContext( maLayer );
 		if ( aContext )
-		{
-			CGSize aSize = CGLayerGetSize( maLayer );
-			drawUndrawnNativeOps( aContext, CGRectMake( 0, 0, aSize.width, aSize.height ) );
-		}
+			drawUndrawnNativeOps( aContext, maNativeBounds );
 	}
 }
 
@@ -1115,13 +1156,11 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 	if ( aContext )
 	{
 		// Draw any undrawn operations so that we copy the latest bits
-		CGSize aLayerSize = CGLayerGetSize( maLayer );
-		CGRect aLayerBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
-		drawUndrawnNativeOps( aContext, aLayerBounds );
+		drawUndrawnNativeOps( aContext, maNativeBounds );
 
 		CGRect aDrawBounds = aDestRect;
-		if ( !CGRectIsEmpty( aLayerBounds ) )
-			aDrawBounds = CGRectIntersection( aDrawBounds, aLayerBounds );
+		if ( !CGRectIsEmpty( maNativeBounds ) )
+			aDrawBounds = CGRectIntersection( aDrawBounds, maNativeBounds );
 		if ( maFrameClipPath )
 			aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maFrameClipPath ) );
 		if ( maNativeClipPath )
@@ -1131,7 +1170,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 		CGContextSaveGState( aContext );
 
-		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, aLayerBounds, aSrcRect, aDestRect );
+		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, maNativeBounds, aSrcRect, aDestRect );
 
 		CGContextRestoreGState( aContext );
 	}
@@ -1139,22 +1178,28 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect )
+void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsUnflippedWindow )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
 	if ( !aDestContext || !maLayer )
 		return;
 
+	// If source and destination height do not match, adjust so that they
+	// align coordinates so that the source's top get copies to the
+	// destination's top
+	CGSize aLayerSize = CGLayerGetSize( maLayer );
+	if ( bDestIsUnflippedWindow && !CGRectIsNull( aDestBounds ) )
+		aSrcRect.origin.y += aLayerSize.height - aDestBounds.size.height;
+
 	// Draw any undrawn operations so that we copy the latest bits
-	drawUndrawnNativeOps( aDestContext, aDestBounds );
+	drawUndrawnNativeOps( aDestContext, maNativeBounds );
 
 	if ( mpFrame && mnBackgroundColor )
 	{
-		// If the layer does not full cover the window, paint the fill color
+		// If the layer does not fully cover the window, paint the fill color
 		// in the uncovered areas so that no drawing artifacts remain after
 		// resizing a window
-		CGSize aLayerSize = CGLayerGetSize( maLayer );
 		if ( aDestBounds.size.width > aLayerSize.width || aDestBounds.size.height > aLayerSize.height )
 		{
 			CGColorRef aBackgroundColor = CreateCGColorFromSalColor( mnBackgroundColor );
@@ -1218,13 +1263,12 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 		long nDPIX;
 		long nDPIY;
 		GetResolution( nDPIX, nDPIY );
-		if ( nDPIX && nDPIY )
+		if ( nDPIX && nDPIY && !CGRectIsEmpty( aBounds ) )
 		{
 			float fScaleX = (float)72 / nDPIX;
 			float fScaleY = (float)72 / nDPIY;
 			CGContextScaleCTM( aContext, fScaleX, fScaleY );
-			if ( !CGRectIsEmpty( aBounds ) )
-				aBounds = CGRectMake( aBounds.origin.x / fScaleX, aBounds.origin.y / fScaleY, aBounds.size.width / fScaleX, aBounds.size.height / fScaleY );
+			aBounds = CGRectMake( aBounds.origin.x / fScaleX, aBounds.origin.y / fScaleY, aBounds.size.width / fScaleX, aBounds.size.height / fScaleY );
 		}
 	}
 
@@ -1310,7 +1354,10 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 
 				// Copy old layer to new layer
 				if ( maLayer )
-					CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, 0 ), maLayer );
+				{
+					CGSize aOldLayerSize = CGLayerGetSize( maLayer );
+					CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, aLayerSize.height - aOldLayerSize.height ), maLayer );
+				}
 			}
 		}
 
@@ -1342,9 +1389,16 @@ void JavaSalGraphics::setNeedsDisplay( NSView *pView )
 	{
 		CGSize aLayerSize = CGLayerGetSize( maLayer );
 		NSRect aBounds = [pView bounds];
-		NSRect aDirtyRect = NSMakeRect( maNeedsDisplayRect.origin.x + aLayerSize.width - aBounds.size.width, maNeedsDisplayRect.origin.y + aLayerSize.height - aBounds.size.height, maNeedsDisplayRect.size.width, maNeedsDisplayRect.size.height );
-		if ( ![pView isFlipped] )
+		NSRect aDirtyRect = NSRectFromCGRect( maNeedsDisplayRect );
+
+		// If window is flipped, flip coordiantes. If window is unflipped and
+		// source and destination height do not match, adjust so that they
+		// align coordinates so that the source's top matches the destination's
+		// top
+		if ( [pView isFlipped] )
 			aDirtyRect.origin.y = aBounds.origin.y + aBounds.size.height - aDirtyRect.origin.y - aDirtyRect.size.height;
+		else
+			aDirtyRect.origin.y += aBounds.size.height - aLayerSize.height;
 
 		[pView setNeedsDisplayInRect:aDirtyRect];
 	}

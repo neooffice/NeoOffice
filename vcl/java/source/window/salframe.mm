@@ -1756,15 +1756,20 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 				if ( aContext )
 				{
 					CGContextSaveGState( aContext );
-					if ( ![pView isFlipped] )
+					CGContextTranslateCTM( aContext, aBounds.origin.x, aBounds.origin.y );
+					MacOSBOOL bFlipped = [pView isFlipped];
+					aDestRect.origin.y -= aBounds.origin.y;
+					aDestRect.origin.x -= aBounds.origin.x;
+					aBounds.origin.x = 0;
+					aBounds.origin.y = 0;
+					if ( bFlipped )
 					{
-						CGContextTranslateCTM( aContext, 0, aBounds.origin.y + aBounds.size.height );
+						CGContextTranslateCTM( aContext, 0, aBounds.size.height );
 						CGContextScaleCTM( aContext, 1.0, -1.0f );
-						aDestRect.origin.y = aBounds.origin.y + aBounds.size.height - aDestRect.origin.y - aDestRect.size.height;
-						aBounds.origin.y = 0;
+						aDestRect.origin.y = aBounds.size.height - aDestRect.origin.y - aDestRect.size.height;
 					}
 
-					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect );
+					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect, !bFlipped );
 
 					CGContextRestoreGState( aContext );
 				}
@@ -2748,6 +2753,7 @@ void JavaSalFrame::UpdateLayer()
 
 	if ( maFrameLayer )
 	{
+		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
 		mpGraphics->setLayer( maFrameLayer );
 		if ( mbFullScreen )
 			mpGraphics->setBackgroundColor( 0xff000000 );
@@ -2761,6 +2767,7 @@ void JavaSalFrame::UpdateLayer()
 	}
 	else
 	{
+		mpGraphics->maNativeBounds = CGRectNull;
 		mpGraphics->setLayer( maHiddenLayer );
 	}
 }
@@ -3873,7 +3880,7 @@ void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 
 void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
+	CGRect aRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), mpGraphics->maNativeBounds );
 	if ( !CGRectIsEmpty( aRect ) )
 	{
 		if ( !maFrameClipPath )

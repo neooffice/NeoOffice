@@ -222,8 +222,7 @@ public:
 
 class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 {
-	float					mfX;
-	float					mfY;
+	CGPoint					maStartPoint;
 	int						mnGlyphCount;
 	CGGlyph*				mpGlyphs;
 	CGSize*					mpAdvances;
@@ -242,7 +241,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	float					mfScaleY;
 
 public:
-							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -1601,10 +1600,9 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 // ============================================================================
 
-JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, const CGPoint aStartPoint, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, JavaImplFont *pFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath ),
-	mfX( fX ),
-	mfY( fY ),
+	maStartPoint( aStartPoint ),
 	mnGlyphCount( nGlyphCount ),
 	mpGlyphs( NULL ),
 	mpAdvances( NULL ),
@@ -1649,7 +1647,7 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 
 	// Calculate glyph rotation and scale
 	if ( nOrientation )
-		mfRotateAngle += ( (float)nOrientation / 10 * -1 ) * M_PI / 180;
+		mfRotateAngle += ( (float)nOrientation / 10 ) * M_PI / 180;
 
 	// Fix bug 2673 by applying font scale here instead of in the native method
 	nGlyphOrientation &= GF_ROTMASK;
@@ -1657,9 +1655,9 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	{
 		float fRotateDegrees;
 		if ( nGlyphOrientation == GF_ROTL )
-			fRotateDegrees = -90.0f;
-		else
 			fRotateDegrees = 90.0f;
+		else
+			fRotateDegrees = -90.0f;
 		mfRotateAngle += fRotateDegrees * M_PI / 180;
 		mfScaleX *= (float)pFont->getScaleX();
 		mfScaleY *= fGlyphScaleX;
@@ -1723,10 +1721,9 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 					// Enable or disable font antialiasing
 					CGContextSetAllowsAntialiasing( aContext, mbAntialiased );
 
-					CGContextTranslateCTM( aContext, mfX, mfY );
+					CGContextTranslateCTM( aContext, maStartPoint.x, maStartPoint.y );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextTranslateCTM( aContext, mfTranslateX * mfScaleX, mfTranslateY * mfScaleY );
-					CGContextScaleCTM( aContext, 1.0f, -1.0f );
 
 					// Fix bug 2674 by setting all translation, rotation, and
 					// scaling in the CGContext and not in the text matrix.
@@ -2753,9 +2750,10 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
-			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
+			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL * -1.0f;
 
-			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+			CGPoint aUnflippedStartPoint = UnflipFlippedPoint( CGPointMake( (float)aStartPos.X(), (float)aStartPos.Y() ), rJavaGraphics.maNativeBounds );
+			rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maFrameClipPath, rJavaGraphics.maNativeClipPath, aUnflippedStartPoint, nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 		}
 	}
 }

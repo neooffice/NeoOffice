@@ -61,7 +61,7 @@ ULONG JavaSalBitmap::Get32BitNativeFormat()
 
 ULONG JavaSalBitmap::GetNativeDirectionFormat()
 {
-	return BMP_FORMAT_BOTTOM_UP;
+	return BMP_FORMAT_TOP_DOWN;
 }
 
 // ------------------------------------------------------------------
@@ -116,7 +116,9 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 					CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 					if ( aContext )
 					{
-						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGRectMake( maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
+						CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height() ), mpGraphics->maNativeBounds );
+						CGRect aDestRect = CGRectMake( 0, 0, maSize.Width(), maSize.Height() );
+						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, aDestRect, aUnflippedSrcRect, aDestRect );
 
 						CGContextRelease( aContext );
 					}

@@ -439,6 +439,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				if ( aContext )
 				{
 					float fScaleFactor = 1.0f;
+					MacOSBOOL bFlipped = [self isFlipped];
 					NSRect aBounds = [self bounds];
 					NSRect aPageBounds = NSZeroRect;
 					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
@@ -454,20 +455,25 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 							NSSize aPaperSize = [pInfo paperSize];
 							aPageBounds = [pInfo imageablePageBounds];
 
-							// Flip page bounds to VCL drawing coordinates
-							aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
+							if ( bFlipped )
+								aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
 						}
 					}
 
 					CGContextSaveGState( aContext );
 
-					// Flip coordinates to VCL drawing coordinates
-					CGContextTranslateCTM( aContext, 0, aBounds.size.height );
-					CGContextScaleCTM( aContext, 1.0f, -1.0f );
-
 					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
+					if ( bFlipped )
+					{
+						CGContextTranslateCTM( aContext, 0, aPageBounds.size.height );
+						CGContextScaleCTM( aContext, 1.0, -1.0f );
+						aRect.origin.y = aBounds.origin.y + aBounds.size.height - aRect.origin.y - aRect.size.height;
+					}
+					aRect.origin.x -= aPageBounds.origin.x;
+					aRect.origin.y -= aPageBounds.origin.y;
+
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
-					pGraphics->drawUndrawnNativeOps( aContext, CGRectMake( aRect.origin.x - aPageBounds.origin.x, aRect.origin.y - aPageBounds.origin.y, aRect.size.width, aRect.size.height ) );
+					pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( aRect ) );
 					CGContextRestoreGState( aContext );
 				}
 			}
@@ -1403,6 +1409,17 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	mpGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mpPrinter = this;
+
+	if ( mpInfo )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSRect aPageBounds = [mpInfo imageablePageBounds];
+		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72, aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 );
+
+		[pPool release];
+	}
+
 	mbGraphics = TRUE;
 
 	return mpGraphics;

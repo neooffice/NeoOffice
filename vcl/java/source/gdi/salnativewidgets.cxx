@@ -176,7 +176,7 @@ VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
 	mpGraphicsMutexGuard( NULL ),
-	mnHIThemeOrientationFlags( 0 ),
+	mnHIThemeOrientationFlags( kHIThemeOrientationInverted ),
 	mbLastDrawToPrintGraphics( false ),
 	mbUseLayer( false )
 {
@@ -202,19 +202,17 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	if ( nWidth <= 0 || nHeight <= 0 || !pGraphics )
 		return FALSE;
 
-	bool bDrawToFrameGraphics = ( pGraphics->mpFrame ? true : false );
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
 	mbUseLayer = false;
 
 	// Note that we cannot draw to a frame's layer as it the native window's
 	// flipped graphics context will cause the HITheme images to be flipped
 	// regardless of the HITTheme orientation or context scaling used
-	if ( bUseLayer && ( bDrawToFrameGraphics || bDrawToPrintGraphics ) )
+	if ( bUseLayer && bDrawToPrintGraphics )
 		bUseLayer = false;
 
 	Destroy();
 
-	mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
 	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | pGraphics->getBitmapDirectionFormat();
 	mnWidth = nWidth;
 	mnHeight = nHeight;
@@ -236,8 +234,8 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 					CGContextRetain( maContext );
 					CGContextSaveGState( maContext );
 					JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
-					CGContextTranslateCTM( maContext, nX, nY );
-					mnHIThemeOrientationFlags = kHIThemeOrientationNormal;
+					CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), pGraphics->maNativeBounds );
+					CGContextTranslateCTM( maContext, aUnflippedRect.origin.x, aUnflippedRect.origin.y );
 					mbUseLayer = true;
 				}
 			}
@@ -301,7 +299,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 void VCLBitmapBuffer::Destroy()
 {
-	mnHIThemeOrientationFlags = 0;
+	mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
 	mnFormat = 0;
 	mnWidth = 0;
 	mnHeight = 0;
@@ -342,8 +340,9 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
 			if ( aProvider )
 			{
+				CGRect aUnflippedRect = UnflipFlippedRect( aDestRect, pGraphics->maNativeBounds );
 				mpBits = NULL;
-				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
+				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aUnflippedRect ) );
 				CGDataProviderRelease( aProvider );
 			}
 		}

@@ -133,7 +133,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 	bool					mbFlip;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect, bool bFlip = false );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aFrameClip, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
@@ -234,6 +234,7 @@ public:
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
+	CGRect					maNativeBounds;
 
 	static void				setContextDefaultSettings( CGContextRef aContext, const CGPathRef aFrameClipPath, const CGPathRef aClipPath, float fLineWidth );
 
@@ -313,7 +314,7 @@ public:
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsUnflippedWindow = false );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	ULONG					getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }
@@ -325,8 +326,10 @@ public:
 	void					setNeedsDisplay( NSView *pView );
 };
 
+SAL_DLLPRIVATE void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath, CGRect aUnflippedBounds );
+SAL_DLLPRIVATE void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly, CGRect aUnflippedBounds );
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
-SAL_DLLPRIVATE void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath );
-SAL_DLLPRIVATE void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly );
+SAL_DLLPRIVATE CGPoint UnflipFlippedPoint( CGPoint aFlippedPoint, CGRect aUnflippedBounds );
+SAL_DLLPRIVATE CGRect UnflipFlippedRect( CGRect aFlippedRect, CGRect aUnflippedBounds );
 
 #endif // _SV_SALGDI_H
