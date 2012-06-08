@@ -334,13 +334,13 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 {
 	if ( pGraphics )
 	{
+		CGRect aUnflippedRect = UnflipFlippedRect( aDestRect, pGraphics->maNativeBounds );
 		if ( mpBits && !mbUseLayer )
 		{
 			// Assign ownership of bits to a CGDataProvider instance
 			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
 			if ( aProvider )
 			{
-				CGRect aUnflippedRect = UnflipFlippedRect( aDestRect, pGraphics->maNativeBounds );
 				mpBits = NULL;
 				pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aUnflippedRect ) );
 				CGDataProviderRelease( aProvider );
@@ -348,7 +348,7 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 		}
 		else if ( pGraphics->mpFrame )
 		{
-			pGraphics->addNeedsDisplayRect( aDestRect, pGraphics->getNativeLineWidth() );
+			pGraphics->addNeedsDisplayRect( aUnflippedRect, pGraphics->getNativeLineWidth() );
 		}
 	}
 
