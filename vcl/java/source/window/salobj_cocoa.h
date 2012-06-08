@@ -38,11 +38,15 @@
 
 #include <salobj.h>
 
+#include <premac.h>
+#import <Foundation/Foundation.h>
+#include <postmac.h>
+
 SAL_DLLPRIVATE id VCLChildView_create();
 SAL_DLLPRIVATE void VCLChildView_release( id pVCLChildView );
 SAL_DLLPRIVATE void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor );
-SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
-SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
-SAL_DLLPRIVATE void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
+SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, NSRect aBounds );
+SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, NSRect aClipRect );
+SAL_DLLPRIVATE void VCLChildView_show( id pVCLChildView, id pParentNSWindow, sal_Bool bShow );
 
 #endif

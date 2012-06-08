@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #include <salframe.h>
+#include <salgdi.h>
 
 #include "salobj_cocoa.h"
 
@@ -97,7 +98,7 @@ void JavaSalObject::Flush()
 void JavaSalObject::ResetClipRegion()
 {
 	maClipRect = Rectangle();
-	VCLChildView_setClip( mpChildView, maClipRect.nLeft, maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() );
+	VCLChildView_setClip( mpChildView, NSZeroRect );
 }
 
 // -----------------------------------------------------------------------
@@ -132,14 +133,26 @@ void JavaSalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight
 
 void JavaSalObject::EndSetClipRegion()
 {
-	VCLChildView_setClip( mpChildView, maClipRect.nLeft, maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() );
+	if ( !maClipRect.IsEmpty() )
+	{
+		VCLChildView_setClip( mpChildView, NSMakeRect( maClipRect.nLeft, maSize.Height() - maClipRect.GetHeight() - maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() ) );
+	}
+	else
+	{
+		VCLChildView_setClip( mpChildView, NSZeroRect );
+	}
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 {
-	VCLChildView_setBounds( mpChildView, nX, nY, nWidth, nHeight );
+	if ( mpParent && mpParent->mpGraphics )
+	{
+		CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), mpParent->mpGraphics->maNativeBounds );
+		maSize = Size( aUnflippedRect.size.width, aUnflippedRect.size.height );
+		VCLChildView_setBounds( mpChildView, NSRectFromCGRect( aUnflippedRect ) );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -158,7 +171,7 @@ void JavaSalObject::Show( BOOL bVisible )
 		mpParent->RemoveObject( this, false );
 
 	// Don't attach subview unless we are in the Flush() method
-	VCLChildView_show( mpChildView, (id)pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );
+	VCLChildView_show( mpChildView, (id)pParentNSWindow, mbVisible && pParentNSWindow ? sal_True : sal_False );
 
 	if ( mpParent )
 		mpParent->AddObject( this, mbVisible );

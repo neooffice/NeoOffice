@@ -39,59 +39,11 @@
 
 #include "salobj_cocoa.h"
 
-static NSString *pNSViewAWTClassName = @"NSViewAWT";
-
-static NSView *FindNSViewAWTSubviewForView( NSView *pView )
-{
-	NSView *pRet = nil;
-
-	if ( pView )
-	{
-		if ( [pView isFlipped] && [[pView className] isEqualToString:pNSViewAWTClassName] )
-		{
-			pRet = pView;
-		}
-		else
-		{
-			NSArray *pSubviews = [pView subviews];
-			if ( pSubviews )
-			{
-				unsigned int nCount = [pSubviews count];
-				unsigned int i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSView *pSubview = FindNSViewAWTSubviewForView( (NSView *)[pSubviews objectAtIndex:i] );
-					if ( pSubview )
-					{
-						pRet = pSubview;
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	return pRet;
-}
-
-@interface VCLChildSuperview : NSView
-- (BOOL)isFlipped;
-@end
-
-@implementation VCLChildSuperview
-
-- (BOOL)isFlipped
-{
-	return YES;
-}
-
-@end
-
 @interface NSView (VCLChildView)
 - (void)setFillColor:(NSColor *)pColor;
 @end
 
-@interface VCLChildView : VCLChildSuperview
+@interface VCLChildView : NSView
 {
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
@@ -100,8 +52,10 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 - (void)addSubview:(NSView *)pView;
 - (void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView;
 - (void)dealloc;
+- (void)destroy:(id)pObject;
+- (void)drawRect:(NSRect)aDirtyRect;
 - (id)initWithFrame:(NSRect)aFrame;
-- (void)release:(id)pObject;
+- (MacOSBOOL)isOpaque;
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
 - (void)setClip:(NSValue *)pValue;
@@ -127,6 +81,20 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 - (void)dealloc
 {
+	if ( mpSuperview )
+	{
+		[mpSuperview removeFromSuperview];
+		[mpSuperview release];
+	}
+
+	if ( mpBackgroundColor )
+		[mpBackgroundColor release];
+
+	[super dealloc];
+}
+
+- (void)destroy:(id)pObject
+{
 	// Detach any children
 	NSArray *pSubviews = [self subviews];
 	if ( pSubviews )
@@ -147,17 +115,15 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	}
 
 	[self removeFromSuperview];
+}
 
-	if ( mpSuperview )
-	{
-		[mpSuperview removeFromSuperview];
-		[mpSuperview release];
-	}
-
+- (void)drawRect:(NSRect)aDirtyRect
+{
 	if ( mpBackgroundColor )
-		[mpBackgroundColor release];
-
-	[super dealloc];
+	{
+		[mpBackgroundColor set];
+		[NSBezierPath fillRect:aDirtyRect];
+	}
 }
 
 - (id)initWithFrame:(NSRect)aFrame
@@ -171,16 +137,16 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	maClipRect = NSZeroRect;
 
 	// Create a superview that we use to control clipping
-	mpSuperview = [[VCLChildSuperview alloc] initWithFrame:aFrame];
+	mpSuperview = [[NSView alloc] initWithFrame:aFrame];
 	if ( mpSuperview )
 		[mpSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
 
 	return self;
 }
 
-- (void)release:(id)pObject
+- (MacOSBOOL)isOpaque
 {
-	[self release];
+	return ( mpBackgroundColor && [mpBackgroundColor alphaComponent] == 1.0f );
 }
 
 - (void)setBackgroundColor:(NSColor *)pColor
@@ -208,12 +174,7 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	{
 		NSRect aNewFrame = [pValue rectValue];
 		if ( NSIsEmptyRect( aNewFrame ) )
-		{
-			if ( aNewFrame.size.width < 0 )
-				aNewFrame.size.width = 0;
-			if ( aNewFrame.size.height < 0 )
-				aNewFrame.size.height = 0;
-		}
+			return;
 
 		// Set superview to intersection of new frame and clip
 		NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
@@ -222,12 +183,7 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		aNewParentFrame.origin.x += aNewFrame.origin.x;
 		aNewParentFrame.origin.y += aNewFrame.origin.y;
 		if ( NSIsEmptyRect( aNewParentFrame ) )
-		{
-			if ( aNewParentFrame.size.width < 0 )
-				aNewParentFrame.size.width = 0;
-			if ( aNewParentFrame.size.height < 0 )
-				aNewParentFrame.size.height = 0;
-		}
+			return;
 
 		// Move child view's origin to account for origin of superview
 		if ( !NSIsEmptyRect( maClipRect ) )
@@ -350,24 +306,24 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 @interface ShowVCLChildView : NSObject
 {
 	NSWindow*				mpParentWindow;
-	BOOL					mbShow;
+	MacOSBOOL					mbShow;
 	VCLChildView*			mpView;
 }
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow;
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow;
 - (void)show:(id)pObject;
 @end
 
 @implementation ShowVCLChildView
 
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow
 {
 	ShowVCLChildView *pRet = [[ShowVCLChildView alloc] initWithView:pView parentWindow:pParentWindow show:bShow];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(MacOSBOOL)bShow
 {
 	[super init];
 
@@ -389,8 +345,8 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 			if ( mbShow && mpParentWindow && [mpParentWindow isVisible] )
 			{
-				// Always attach to Java's first NSViewAWT view
-				NSView *pContentView = FindNSViewAWTSubviewForView( [mpParentWindow contentView] );
+				// Always attach to content view
+				NSView *pContentView = [mpParentWindow contentView];
 				if ( pContentView && pContentView != pSuperSuperview )
 				{
 					[pSuperview removeFromSuperview];
@@ -436,7 +392,8 @@ void VCLChildView_release( id pVCLChildView )
 	if ( pVCLChildView )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(release:) withObject:pVCLChildView waitUntilDone:NO modes:pModes];
+		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(destroy:) withObject:pVCLChildView waitUntilDone:NO modes:pModes];
+		[pVCLChildView release];
 	}
 
 	[pPool release];
@@ -457,17 +414,17 @@ void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor )
 	[pPool release];
 }
 
-void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight )
+SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, NSRect aBounds )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pVCLChildView )
 	{
-		if ( nWidth < 1 )
-			nWidth = 1;
-		if ( nHeight < 1 )
-			nHeight = 1;
-		NSValue *pValue = [NSValue valueWithRect:NSMakeRect( nX, nY, nWidth, nHeight )];
+		if ( aBounds.size.width < 0 )
+			aBounds.size.width = 0;
+		if ( aBounds.size.height < 0 )
+			aBounds.size.height = 0;
+		NSValue *pValue = [NSValue valueWithRect:aBounds];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setBounds:) withObject:pValue waitUntilDone:NO modes:pModes];
 	}
@@ -475,17 +432,17 @@ void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, lo
 	[pPool release];
 }
 
-void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight )
+SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, NSRect aClipRect )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pVCLChildView )
 	{
-		if ( nWidth < 0 )
-			nWidth = 0;
-		if ( nHeight < 0 )
-			nHeight = 0;
-		NSValue *pValue = [NSValue valueWithRect:NSMakeRect( nX, nY, nWidth, nHeight )];
+		if ( aClipRect.size.width < 0 )
+			aClipRect.size.width = 0;
+		if ( aClipRect.size.height < 0 )
+			aClipRect.size.height = 0;
+		NSValue *pValue = [NSValue valueWithRect:aClipRect];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setClip:) withObject:pValue waitUntilDone:NO modes:pModes];
 	}
@@ -493,7 +450,7 @@ void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long
 	[pPool release];
 }
 
-void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
+void VCLChildView_show( id pVCLChildView, id pParentNSWindow, sal_Bool bShow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 

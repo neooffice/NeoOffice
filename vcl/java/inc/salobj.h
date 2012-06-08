@@ -58,6 +58,7 @@ class SalFrame;
 
 class JavaSalObject : public SalObject
 {
+	Size					maSize;
 	id						mpChildView;
 	Rectangle				maClipRect;
 	BOOL					mbInFlush;
