@@ -843,15 +843,16 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( mnLineColor && nPoints && pPtAry )
 	{
-		::basegfx::B2DPolygon aPoly;
-		for ( ULONG i = 0 ; i < nPoints; i++ )
-			aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
-		aPoly.removeDoublePoints();
-
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed(), maNativeBounds );
+			CGPoint aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ 0 ].mnX, pPtAry[ 0 ].mnY ), maNativeBounds );
+			CGPathMoveToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
+			for ( ULONG i = 1 ; i < nPoints; i++ )
+			{
+				aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ i ].mnX, pPtAry[ i ].mnY ), maNativeBounds );
+				CGPathAddLineToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
+			}
 			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 			CGPathRelease( aPath );
 		}
@@ -864,16 +865,17 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( ( mnFillColor || mnLineColor ) && nPoints && pPtAry )
 	{
-		::basegfx::B2DPolygon aPoly;
-		for ( ULONG i = 0 ; i < nPoints; i++ )
-			aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
-		aPoly.removeDoublePoints();
-		aPoly.setClosed( true );
-
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, aPoly, aPoly.isClosed(), maNativeBounds );
+			CGPoint aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ 0 ].mnX, pPtAry[ 0 ].mnY ), maNativeBounds );
+			CGPathMoveToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
+			for ( ULONG i = 1 ; i < nPoints; i++ )
+			{
+				aUnflippedPoint = UnflipFlippedPoint( CGPointMake( pPtAry[ i ].mnX, pPtAry[ i ].mnY ), maNativeBounds );
+				CGPathAddLineToPoint( aPath, NULL, aUnflippedPoint.x, aUnflippedPoint.y );
+			}
+			CGPathCloseSubpath( aPath );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 			{
