@@ -1210,11 +1210,11 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 				CGMutablePathRef aPath = CGPathCreateMutable();
 				if ( aPath )
 				{
-					CGRect aBottomRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x, aDestBounds.origin.y + aLayerSize.height, aDestBounds.size.width, aDestBounds.size.height - aLayerSize.height ) );
-					if ( !CGRectIsEmpty( aBottomRect ) )
+					CGRect aBottomRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x, aDestBounds.origin.y, aDestBounds.size.width, aDestBounds.size.height - aLayerSize.height ) );
+					if ( !CGRectIsEmpty( aBottomRect ) && aBottomRect.size.height > 0 )
 						CGPathAddRect( aPath, NULL, aBottomRect );
 					CGRect aRightRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x + aLayerSize.width, aDestBounds.origin.y, aDestBounds.size.width - aLayerSize.width, aDestBounds.size.height ) );
-					if ( !CGRectIsEmpty( aRightRect ) )
+					if ( !CGRectIsEmpty( aRightRect ) && aRightRect.size.width > 0 )
 						CGPathAddRect( aPath, NULL, aRightRect );
 
 					if ( !CGPathIsEmpty( aPath ) )
