@@ -265,9 +265,6 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 	}
 
 	restoreClipXORGState();
-
-	if ( pGraphics->mpFrame )
-		pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
 }
 
 // =======================================================================
@@ -1175,6 +1172,9 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, maNativeBounds, aSrcRect, aDestRect );
 
 		CGContextRestoreGState( aContext );
+
+		if ( mpFrame )
+			addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
 	}
 }
 

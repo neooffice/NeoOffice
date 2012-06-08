@@ -1745,19 +1745,9 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 						for ( int i = 0; i < mnGlyphCount; i++ )
 							fWidth += mpAdvances[ i ].width;
 						CGRect aUntransformedBounds = CGRectMake( mfFontSize * -2, mfFontSize * -2, fWidth, mfFontSize * 4 );
-						if ( !CGRectIsEmpty( aUntransformedBounds ) )
-						{
-							if ( mfRotateAngle )
-							{
-								CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, aUntransformedBounds );
-								if ( !CGRectIsEmpty( aTransformedBounds ) )
-									aDrawBounds = CGRectIntersection( aDrawBounds, aTransformedBounds );
-							}
-							else
-							{
-								aDrawBounds = CGRectIntersection( aDrawBounds, aUntransformedBounds );
-							}
-						}
+						CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, aUntransformedBounds );
+						if ( !CGRectIsEmpty( aTransformedBounds ) )
+							aDrawBounds = CGRectIntersection( aDrawBounds, aTransformedBounds );
 					}
 
 					restoreClipXORGState();
