@@ -1744,10 +1744,26 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 						float fWidth = mfFontSize * 4;
 						for ( int i = 0; i < mnGlyphCount; i++ )
 							fWidth += mpAdvances[ i ].width;
-						CGRect aUntransformedBounds = CGRectMake( mfFontSize * -2, mfFontSize * -2, fWidth, mfFontSize * 4 );
-						CGRect aTransformedBounds = CGContextConvertRectToDeviceSpace( aContext, aUntransformedBounds );
-						if ( !CGRectIsEmpty( aTransformedBounds ) )
-							aDrawBounds = CGRectIntersection( aDrawBounds, aTransformedBounds );
+
+						float fPadding = mfFontSize * 2;
+						CGRect aUntransformedBounds = CGRectMake( maStartPoint.x, maStartPoint.y, fWidth + ( fabs( mfTranslateX ) * mfScaleX ) + fPadding, ( fabs( mfTranslateY ) * mfScaleY ) + ( fPadding * 2 ) );
+
+						// If there is any rotation, expand bounds to cover all
+						// possible rotation positions just to be safe
+						if ( mfRotateAngle != 0 )
+						{
+							float fExtent = ( aUntransformedBounds.size.width > aUntransformedBounds.size.height ? aUntransformedBounds.size.width : aUntransformedBounds.size.height );
+							aUntransformedBounds = CGRectMake( aUntransformedBounds.origin.x - fExtent, aUntransformedBounds.origin.y - fExtent, fExtent * 2, fExtent * 2 );
+						}
+						else
+						{
+							aUntransformedBounds.origin.x -= fPadding;
+							aUntransformedBounds.origin.y -= fPadding;
+							aUntransformedBounds.size.width += fPadding;
+							aUntransformedBounds.size.height += fPadding;
+						}
+
+						aDrawBounds = CGRectIntersection( aDrawBounds, aUntransformedBounds );
 					}
 
 					restoreClipXORGState();
