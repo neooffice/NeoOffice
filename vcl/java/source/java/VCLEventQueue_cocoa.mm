@@ -578,9 +578,6 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 @interface NSView (VCLViewPoseAs)
 - (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
-- (id)poseAsInitWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)poseAsIsOpaque;
-- (NSSize)poseAsBottomCornerSize;
 @end
 
 @interface VCLCMenuBar : NSObject
@@ -2276,31 +2273,22 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)initWithFrame:(NSRect)aFrame
 {
-	if ( [super respondsToSelector:@selector(poseAsInitWithFrame:)] )
-		[super poseAsInitWithFrame:aFrame];
+	[super initWithFrame:aFrame];
 
-	if ( [self isKindOfClass:[VCLView class]] )
-	{
-		mpFrame = NULL;
-		mpInputManager = nil;
-		mpLastKeyDownEvent = nil;
-		mpPendingKeyUpEvent = NULL;
-		maSelectedRange = NSMakeRange( NSNotFound, 0 );
-		mpTextInput = nil;
-		maTextInputRange = NSMakeRange( NSNotFound, 0 );
-	}
+	mpFrame = NULL;
+	mpInputManager = nil;
+	mpLastKeyDownEvent = nil;
+	mpPendingKeyUpEvent = NULL;
+	maSelectedRange = NSMakeRange( NSNotFound, 0 );
+	mpTextInput = nil;
+	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 
 	return self;
 }
 
 - (MacOSBOOL)isOpaque
 {
-	if ( [self isKindOfClass:[VCLView class]] )
-		return YES;
-	else if ( [super respondsToSelector:@selector(poseAsIsOpaque)] )
-		return [super poseAsIsOpaque];
-	else
-		return NO;
+	return YES;
 }
 
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
@@ -2651,30 +2639,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 	aSelector = @selector(dragImage:at:offset:event:pasteboard:source:slideBack:);
 	aPoseAsSelector = @selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:);
-	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(initWithFrame:);
-	aPoseAsSelector = @selector(poseAsInitWithFrame:);
-	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	aSelector = @selector(isOpaque);
-	aPoseAsSelector = @selector(poseAsIsOpaque);
 	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 	if ( aOldMethod && aNewMethod )
