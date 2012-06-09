@@ -361,11 +361,10 @@ static NSTimer *pUpdateTimer = nil;
 {
 	JavaSalGraphics*		mpGraphics;
 	CGLayerRef				maLayer;
-	CGSize					maSize;
 	NSView*					mpView;
 }
-+ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize;
-- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize;
++ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView;
+- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView;
 - (void)dealloc;
 - (void)getGraphicsLayer:(id)pObject;
 - (CGLayerRef)layer;
@@ -373,20 +372,19 @@ static NSTimer *pUpdateTimer = nil;
 
 @implementation VCLViewGetGraphicsLayer
 
-+ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize
++ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView
 {
-	VCLViewGetGraphicsLayer *pRet = [[VCLViewGetGraphicsLayer alloc] initGraphicsLayer:pGraphics view:pView size:aSize];
+	VCLViewGetGraphicsLayer *pRet = [[VCLViewGetGraphicsLayer alloc] initGraphicsLayer:pGraphics view:pView];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize
+- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView
 {
 	[super init];
 
 	mpGraphics = pGraphics;
 	maLayer = NULL;
-	maSize = aSize;
 	mpView = pView;
 	if ( mpView )
 		[mpView retain];
@@ -444,15 +442,21 @@ static NSTimer *pUpdateTimer = nil;
 		++it;
 	}
 
-	if ( mpGraphics && maSize.width > 0 && maSize.height > 0 && pWindow && [pWindow isVisible] )
+	if ( mpGraphics && pWindow && [pWindow isVisible] )
 	{
+		NSRect aContentRect = [pWindow contentRectForFrameRect:[pWindow frame]];
+		if ( aContentRect.size.width <= 1.0f )
+			aContentRect.size.width = 1.0f;
+		if ( aContentRect.size.height <= 1.0f )
+			aContentRect.size.height = 1.0f;
+
 		NSGraphicsContext *pContext = [pWindow graphicsContext];
 		if ( pContext )
 		{
 			CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 			if ( aContext )
 			{
-				maLayer = CGLayerCreateWithContext( aContext, maSize, NULL );
+				maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( aContentRect.size.width, aContentRect.size.height ), NULL );
 				if ( maLayer )
 				{
 					[pWindow retain];
@@ -1758,6 +1762,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 
 					CGContextRestoreGState( aContext );
 				}
+
 			}
 		}
 	}
@@ -2684,8 +2689,8 @@ bool JavaSalFrame::ToFront()
 
 void JavaSalFrame::UpdateLayer()
 {
-	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth, maGeometry.nHeight );
-	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
+	CGSize aExpectedSize = CGSizeMake( maGeometry.nWidth, maGeometry.nHeight );
+	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aExpectedSize ) )
 		return;
 
 	if ( maFrameLayer )
@@ -2696,7 +2701,7 @@ void JavaSalFrame::UpdateLayer()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	VCLViewGetGraphicsLayer *pVCLViewGetGraphicsLayer = [VCLViewGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
+	VCLViewGetGraphicsLayer *pVCLViewGetGraphicsLayer = [VCLViewGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLViewGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLViewGetGraphicsLayer waitUntilDone:YES modes:pModes];
 	maFrameLayer = [pVCLViewGetGraphicsLayer layer];
@@ -2707,6 +2712,7 @@ void JavaSalFrame::UpdateLayer()
 
 	if ( maFrameLayer )
 	{
+		CGSize aLayerSize = CGLayerGetSize( maFrameLayer );
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
 		mpGraphics->setLayer( maFrameLayer );
 		if ( mbFullScreen )
@@ -2714,10 +2720,20 @@ void JavaSalFrame::UpdateLayer()
 		else
 			mpGraphics->setBackgroundColor( 0xffffffff );
 
+		// If the layer size differs from the expected size, the window size is
+		// changing so post a SALEVENT_MOVERESIZE event to notify the OOo code
+		// of the change
+		if ( !CGSizeEqualToSize( aLayerSize, aExpectedSize ) )
+		{
+			JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+			JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+			pMoveResizeEvent->release();
+		}
+
 		// Post a paint event
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
+		JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		JavaSalEventQueue::postCachedEvent( pPaintEvent );
+		pPaintEvent->release();
 	}
 	else
 	{
