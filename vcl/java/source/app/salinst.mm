@@ -1873,7 +1873,7 @@ void JavaSalEvent::dispatch()
 				if ( !pPaintEvent )
 				{
 					// Get paint region
-					const Rectangle &aUpdateRect = getUpdateRect();
+					Rectangle aUpdateRect( getUpdateRect() );
 					pPaintEvent = new SalPaintEvent( aUpdateRect.Left(), aUpdateRect.Top(), aUpdateRect.GetWidth(), aUpdateRect.GetHeight() );
 
 					mpData = pPaintEvent;

@@ -1467,7 +1467,7 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 			CGContextRelease( maXORBitmapContext );
 			maXORBitmapContext = NULL;
 
-			CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 			if ( aColorSpace )
 			{
 				size_t nPixels = mnBitmapCapacity / sizeof( sal_uInt32 );
@@ -1579,7 +1579,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 			maXORRect = CGRectStandardize( aDrawBounds );
 			if ( !CGRectIsEmpty( maXORRect ) )
 			{
-				CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
+				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 				if ( aColorSpace )
 				{
 					CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( mnXORBitmapPadding * 2 ), maXORRect.size.height + ( mnXORBitmapPadding * 2 ) );

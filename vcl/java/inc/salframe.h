@@ -98,7 +98,6 @@ public:
 	BOOL					mbInWindowDidExitFullScreen;
 	BOOL					mbInWindowWillEnterFullScreen;
 
-	static CGColorSpaceRef	CopyDeviceColorSpace();
 	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut );
 	static void				FlushAllFrames();
 	static unsigned int		GetDefaultScreenNumber();

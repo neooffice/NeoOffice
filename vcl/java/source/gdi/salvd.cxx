@@ -120,7 +120,7 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	// Make a native layer backed by a 1 x 1 pixel native bitmap
 	if ( !maBitmapContext )
 	{
-		CGColorSpaceRef aColorSpace = JavaSalFrame::CopyDeviceColorSpace();
+		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 		if ( aColorSpace )
 		{
 			maBitmapContext = CGBitmapContextCreate( &mnBit, 1, 1, 8, sizeof( mnBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
