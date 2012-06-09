@@ -146,6 +146,8 @@ static short GetCurrentKeyModifiers()
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
+	[self clear];
+
 	// Do not invoke the superclass as it can trigger beeping
 	if ( [self respondsToSelector:aSelector] )
 		[self performSelector:aSelector withObject:nil];
