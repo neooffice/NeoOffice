@@ -72,9 +72,9 @@ using namespace vos;
 
 static void HandleAboutRequest()
 {
-	// If no event queue exists yet, ignore event as we are likely to
-	// deadlock
-	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -86,28 +86,28 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
 	if ( rPath.getLength() && !Application::IsShutDown() )
 	{
-		// If no event queue exists yet, queue event as we are likely to
-		// deadlock
-		if ( !JavaSalEventQueue::isInitialized() )
-		{
-			ImplPendingOpenPrintFileRequest *pRequest = new ImplPendingOpenPrintFileRequest( rPath, bPrint );
-			if ( pRequest )
-				aPendingOpenPrintFileRequests.push_back( pRequest );
-		}
-		else
+		// If no application mutex exists yet, queue event as we are likely to
+		// crash
+		if ( ImplGetSVData() && GetSalData() )
 		{
 			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
+		}
+		else
+		{
+			ImplPendingOpenPrintFileRequest *pRequest = new ImplPendingOpenPrintFileRequest( rPath, bPrint );
+			if ( pRequest )
+				aPendingOpenPrintFileRequests.push_back( pRequest );
 		}
 	}
 }
 
 static void HandlePreferencesRequest()
 {
-	// If no event queue exists yet, ignore event as we are likely to
-	// deadlock
-	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -119,9 +119,9 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 {
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
-	// If no event queue exists yet, ignore event as we are likely to
-	// deadlock
-	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
@@ -168,9 +168,9 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 static void HandleDidChangeScreenParametersRequest()
 {
-	// If no event queue exists yet, ignore event as we are likely to
-	// deadlock
-	if ( !Application::IsShutDown() && JavaSalEventQueue::isInitialized() )
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();

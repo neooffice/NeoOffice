@@ -217,7 +217,6 @@ public:
 	static sal_Bool			anyCachedEvent( USHORT nType );
 	static void				dispatchNextEvent();
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
-	static sal_Bool			isInitialized();
 	static sal_Bool			isShutdownDisabled();
 	static void				postCachedEvent( JavaSalEvent *pEvent );
 	static void				removeCachedEvents( const JavaSalFrame *pFrame );

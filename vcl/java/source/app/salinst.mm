@@ -1073,7 +1073,7 @@ void SalYieldMutex::acquire()
 		{
 			return;
 		}
-		else if ( JavaSalEventQueue::isInitialized() && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+		else if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
@@ -2528,13 +2528,6 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 	}
 
 	return pRet;
-}
-
-// -------------------------------------------------------------------------
-
-sal_Bool JavaSalEventQueue::isInitialized()
-{
-	return sal_True;
 }
 
 // -------------------------------------------------------------------------
