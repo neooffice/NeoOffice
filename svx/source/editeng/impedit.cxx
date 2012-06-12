@@ -363,26 +363,21 @@ void ImpEditView::ImplDrawHighlightRect( Window* _pOutWin, const Point& rDocPosT
 		if ( pPolyPoly )
 		{
 			Polygon aTmpPoly( 4 );
-#ifdef USE_JAVA
-			if ( UseNativeHighlightColor() )
-			{
-				Rectangle aTmpRect( Point( aRect.Left() - 5, aRect.Top() - 5 ), Size( aRect.GetWidth() + 10, aRect.GetHeight() + 10 ) );
-				aTmpPoly[0] = aTmpRect.TopLeft();
-				aTmpPoly[1] = aTmpRect.TopRight();
-				aTmpPoly[2] = aTmpRect.BottomRight();
-				aTmpPoly[3] = aTmpRect.BottomLeft();
-			}
-			else
-			{
-#endif	// USE_JAVA
 			aTmpPoly[0] = aRect.TopLeft();
 			aTmpPoly[1] = aRect.TopRight();
 			aTmpPoly[2] = aRect.BottomRight();
 			aTmpPoly[3] = aRect.BottomLeft();
 #ifdef USE_JAVA
-			}
-#endif	// USE_JAVA
+			// Eliminate any overlapping polygons so that no even odd filling
+			// is triggered
+			PolyPolygon aTmpPolyPoly;
+			aTmpPoly.GetDifference( *pPolyPoly, aTmpPolyPoly );
+			USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
+			for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
+				pPolyPoly->Insert( aTmpPolyPoly[ i ] );
+#else	// USE_JAVA
 			pPolyPoly->Insert( aTmpPoly );
+#endif	// USE_JAVA
 		}
 		else
 		{
