@@ -363,10 +363,25 @@ void ImpEditView::ImplDrawHighlightRect( Window* _pOutWin, const Point& rDocPosT
 		if ( pPolyPoly )
 		{
 			Polygon aTmpPoly( 4 );
+#ifdef USE_JAVA
+			if ( UseNativeHighlightColor() )
+			{
+				Rectangle aTmpRect( Point( aRect.Left() - 5, aRect.Top() - 5 ), Size( aRect.GetWidth() + 10, aRect.GetHeight() + 10 ) );
+				aTmpPoly[0] = aTmpRect.TopLeft();
+				aTmpPoly[1] = aTmpRect.TopRight();
+				aTmpPoly[2] = aTmpRect.BottomRight();
+				aTmpPoly[3] = aTmpRect.BottomLeft();
+			}
+			else
+			{
+#endif	// USE_JAVA
 			aTmpPoly[0] = aRect.TopLeft();
 			aTmpPoly[1] = aRect.TopRight();
 			aTmpPoly[2] = aRect.BottomRight();
 			aTmpPoly[3] = aRect.BottomLeft();
+#ifdef USE_JAVA
+			}
+#endif	// USE_JAVA
 			pPolyPoly->Insert( aTmpPoly );
 		}
 		else
@@ -377,7 +392,7 @@ void ImpEditView::ImplDrawHighlightRect( Window* _pOutWin, const Point& rDocPosT
 				// Prevent infinite repainting by ignoring new repaint requests
 				// when this view is already in paint mode
 				if ( !IsInPaint() && !aRect.IsEmpty() )
-					_pOutWin->Invalidate( aRect );
+					_pOutWin->Invalidate( Rectangle( Point( aRect.Left() - 50, aRect.Top() - 50 ), Size( aRect.GetWidth() + 100, aRect.GetHeight() + 100 ) ) );
 			}
 			else
 #endif	// USE_JAVA
@@ -1538,7 +1553,10 @@ void ImpEditView::HideDDCursor()
 #if defined USE_JAVA && defined MACOSX
 		// Clear drag cursor from last ShowDDCursor() call
 		if ( !pDragAndDropInfo->aCurSavedCursor.IsEmpty() )
-			GetWindow()->Invalidate( pDragAndDropInfo->aCurSavedCursor );
+		{
+			Rectangle aRect( pDragAndDropInfo->aCurSavedCursor );
+			GetWindow()->Invalidate( Rectangle( Point( aRect.Left() - 50, aRect.Top() - 50 ), Size( aRect.GetWidth() + 100, aRect.GetHeight() + 100 ) ) );
+		}
 #else	// USE_JAVA && MACOSX
 		GetWindow()->DrawOutDev( pDragAndDropInfo->aCurSavedCursor.TopLeft(), pDragAndDropInfo->aCurSavedCursor.GetSize(),
 							Point(0,0), pDragAndDropInfo->aCurSavedCursor.GetSize(),*pDragAndDropInfo->pBackground );

@@ -2917,7 +2917,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 		pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
 		pOutDev->IntersectClipRegion( aClipRec );
 		pOutDev->SetFillColor( aNativeHighlightColor );
-		pOutDev->SetLineColor( aNativeHighlightColor );
+		pOutDev->SetLineColor();
 		pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
 		pOutDev->Pop();
 	}
