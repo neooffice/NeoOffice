@@ -697,7 +697,7 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
-    PolyPolygon aNativeHighlightPolyPoly;
+    std::vector< Rectangle > aNativeHighlightRects;
     SwRect aRect;
     SwRect aPaintRect;
     CalcRect( rPor, &aRect, &aPaintRect );
@@ -707,15 +707,13 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
     	OutputDevice *pOutDev = pOut;
         aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
 
-        std::vector< Rectangle > aPixelRects;
-
         SwShellTableCrsr *pTblCrsr = (SwShellTableCrsr *)pCrsrSh->GetTableCrsr();
         if ( pTblCrsr )
         {
             std::vector< Rectangle > aTblCrsrPixelRects;
             pTblCrsr->GetNativeHightlightColorRects( aTblCrsrPixelRects );
             for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
-                aPixelRects.push_back( *it );
+                aNativeHighlightRects.push_back( *it );
         }
         else
         {
@@ -726,23 +724,18 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
                 std::vector< Rectangle > aCurCrsrPixelRects;
                 pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
                 for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
-                    aPixelRects.push_back( *it );
+                    aNativeHighlightRects.push_back( *it );
             }
         }
 
-        for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
-        {
-            if ( !it->IsEmpty() )
-                aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
-        }
-
-        if ( aNativeHighlightPolyPoly.Count() )
+        if ( aNativeHighlightRects.size() )
         {
             pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
             pOutDev->IntersectClipRegion( aPaintRect.SVRect() );
             pOutDev->SetFillColor( aNativeHighlightColor );
-            pOutDev->SetLineColor( aNativeHighlightColor );
-            pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+            pOutDev->SetLineColor();
+            for ( std::vector< Rectangle >::const_iterator it = aNativeHighlightRects.begin() ; it != aNativeHighlightRects.end() ; ++it )
+                pOutDev->DrawTransparent( PolyPolygon( Polygon( *it ) ), 25 );
             pOutDev->Pop();
         }
     }

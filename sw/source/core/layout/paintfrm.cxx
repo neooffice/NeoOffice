@@ -1932,13 +1932,11 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
 
 #ifdef USE_JAVA
         Color aNativeHighlightColor( COL_TRANSPARENT );
-        PolyPolygon aNativeHighlightPolyPoly;
+        std::vector< Rectangle > aNativeHighlightRects;
         SwCrsrShell *pCrsrSh = dynamic_cast< SwCrsrShell* >( pSh );
         if ( pCrsrSh )
         {
             aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
-
-            std::vector< Rectangle > aPixelRects;
 
             SwShellTableCrsr *pTblCrsr = pCrsrSh->GetTableCrsr();
             if ( pTblCrsr )
@@ -1946,7 +1944,7 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                 std::vector< Rectangle > aTblCrsrPixelRects;
                 pTblCrsr->GetNativeHightlightColorRects( aTblCrsrPixelRects );
                 for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
-                    aPixelRects.push_back( *it );
+                    aNativeHighlightRects.push_back( *it );
             }
             else
             {
@@ -1957,14 +1955,8 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     std::vector< Rectangle > aCurCrsrPixelRects;
                     pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
                     for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
-                        aPixelRects.push_back( *it );
+                        aNativeHighlightRects.push_back( *it );
                 }
-            }
-
-            for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
-            {
-                if ( !it->IsEmpty() )
-                    aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
             }
         }
 #endif	// USE_JAVA
@@ -2006,7 +1998,7 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
             pOutDev->DrawTransparent( aDrawPoly, nTransparencyPercent );
 
 #ifdef USE_JAVA
-            if ( aNativeHighlightPolyPoly.Count() )
+            if ( aNativeHighlightRects.size() )
             {
                 SwRegionRects aRegion( rOut, 4 );
                 if ( !bGrfIsTransparent )
@@ -2016,8 +2008,9 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
                     pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->SetFillColor( aNativeHighlightColor );
-                    pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->SetLineColor();
+                    for ( std::vector< Rectangle >::const_iterator it = aNativeHighlightRects.begin() ; it != aNativeHighlightRects.end() ; ++it )
+                        pOutDev->DrawRect( *it );
                     pOutDev->Pop();
                 }
             }
@@ -2036,13 +2029,14 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                 pOutDev->DrawRect( aRegion[i].SVRect() );
 
 #ifdef USE_JAVA
-                if ( aNativeHighlightPolyPoly.Count() )
+                if ( aNativeHighlightRects.size() )
                 {
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
                     pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->SetFillColor( aNativeHighlightColor );
-                    pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->SetLineColor();
+                    for ( std::vector< Rectangle >::const_iterator it = aNativeHighlightRects.begin() ; it != aNativeHighlightRects.end() ; ++it )
+                        pOutDev->DrawRect( *it );
                     pOutDev->Pop();
                 }
 #endif  // USE_JAVA
