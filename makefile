@@ -123,14 +123,14 @@ OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION_BASE=3.2
-PRODUCT_VERSION=$(PRODUCT_VERSION_BASE).1
-PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE).1
+PRODUCT_VERSION_BASE=3.3
+PRODUCT_VERSION=$(PRODUCT_VERSION_BASE) Beta
+PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE)_Beta
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 5
-PRODUCT_DIR_PATCH_VERSION=Patch-5
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
@@ -151,7 +151,7 @@ PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it
 ifeq ("$(OS_TYPE)","MacOSX")
 PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
-PRODUCT_COMPONENT_PATCH_MODULES=neomobile
+PRODUCT_COMPONENT_PATCH_MODULES=
 INSTALLATION_CHECK_REQUIRED_COMMANDS=awk basename chmod chown defaults dirname echo file find grep id mv open pax ps rm sed sort touch uname unzip
 else
 PRODUCT_COMPONENT_MODULES=
@@ -169,7 +169,7 @@ YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-3_2_1-5
+NEO_TAG:=NeoOffice-3_3_Beta
 
 all: build.all
 
@@ -632,50 +632,24 @@ ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 endif
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS/resource"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources/cursors"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
-#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/share/registry/data/org/openoffice/Office"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
+#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program"
 ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 # Copy all resource files in the main installer and overwrite newer resources
 # so that the codesigning will not remove resource files marked as signed in an
 # existing installation
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - ); 
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - );
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/extensions/$(UOUTPUTDIR)/lib/updchk.uno.dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/unoxml/$(UOUTPUTDIR)/lib/libunordf$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "basis-link/program"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/jvmfwk/$(UOUTPUTDIR)/lib/libjvmfwk.dylib.3" "basis-link/ure-link/lib"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/extensions/$(UOUTPUTDIR)/bin/updchkruninstallers" "MacOS/updchkruninstallers.bin" ; chmod a+x "MacOS/updchkruninstallers.bin"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjava"*.res "MacOS/resource"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/svx/$(UOUTPUTDIR)/bin/ooo"*.res "MacOS/resource"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/extensions/$(UOUTPUTDIR)/misc/registry/spool/org/openoffice/Office/Jobs/Jobs-onlineupdate.xcu" "basis-link/share/registry/data/org/openoffice/Office/Jobs.xcu"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/java/com/sun/star/vcl/images/"*.gif "Resources/cursors"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/vcl/java/source/res" ; gnutar cvf - --exclude CVS MainMenu.nib ) | gnutar xvf - )
-ifeq ("$(PRODUCT_NAME)","NeoOffice")
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/tmp"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/tmp" ; unzip "$(PWD)/etc/package/NeoOfficeAquaElements.zip" "NeoOffice Aqua Elements 3/Contents/MacOS/*.bmp"
-	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package/Contents/tmp"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/MacOS/"*.bmp "MacOS"
-	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package/Contents/tmp"
-	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/tmp"
-endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' | sed 's#^buildid=.*$$#buildid=$(PRODUCT_PATCH_VERSION)#' > "MacOS/versionrc"
-# Add Mac OS X localized resources
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" ; gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g" > "$${i}" ; done'
 # With gcc 4.x, we must fully strip executables
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do strip "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
-#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook"
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook" ; curl -L "$(NEOPEEK_QLPLUGIN_URL)" | tar zxvf -
-# Make QL plugin ID unique for each build. Fix bug 2711 by updating plugin
-# bundle IDs.
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).'"`date '+%Y%m%d%H%M%S'`"'#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 # Sign all binaries and use code resources file from main installer so that an
