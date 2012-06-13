@@ -831,8 +831,14 @@ void ScOutputData::DrawBackground()
 		{
 			if ( !it->IsEmpty() )
 			{
-				Rectangle aRect( pDev->PixelToLogic( *it ) );
-				aNativeHighlightPolyPoly.Insert( Polygon( aRect ) );
+				// Eliminate any overlapping polygons so that no even odd
+				// filling is triggered
+				Polygon aTmpPoly( pDev->PixelToLogic( *it ) );
+				PolyPolygon aTmpPolyPoly;
+				aTmpPoly.GetDifference( aNativeHighlightPolyPoly, aTmpPolyPoly );
+				USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
+				for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
+					aNativeHighlightPolyPoly.Insert( aTmpPolyPoly[ i ] );
 			}
 		}
 	}
