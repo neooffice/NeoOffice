@@ -697,7 +697,7 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
-    std::vector< Rectangle > aNativeHighlightRects;
+    PolyPolygon aNativeHighlightPolyPoly;
     SwRect aRect;
     SwRect aPaintRect;
     CalcRect( rPor, &aRect, &aPaintRect );
@@ -707,13 +707,18 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
     	OutputDevice *pOutDev = pOut;
         aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
 
+        std::vector< Rectangle > aPixelRects;
+
         SwShellTableCrsr *pTblCrsr = (SwShellTableCrsr *)pCrsrSh->GetTableCrsr();
         if ( pTblCrsr )
         {
             std::vector< Rectangle > aTblCrsrPixelRects;
             pTblCrsr->GetNativeHightlightColorRects( aTblCrsrPixelRects );
             for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
-                aNativeHighlightRects.push_back( *it );
+            {
+                if ( !it->IsEmpty() );
+                    aPixelRects.push_back( *it );
+            }
         }
         else
         {
@@ -724,18 +729,32 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
                 std::vector< Rectangle > aCurCrsrPixelRects;
                 pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
                 for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
-                    aNativeHighlightRects.push_back( *it );
+                {
+                    if ( !it->IsEmpty() );
+                        aPixelRects.push_back( *it );
+                }
             }
         }
 
-        if ( aNativeHighlightRects.size() )
+        for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
+        {
+            // Eliminate any overlapping polygons so that no even odd
+            // filling is triggered
+            Polygon aTmpPoly( *it );
+            PolyPolygon aTmpPolyPoly;
+            aTmpPoly.GetDifference( aNativeHighlightPolyPoly, aTmpPolyPoly );
+            USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
+            for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
+                aNativeHighlightPolyPoly.Insert( aTmpPolyPoly[ i ] );
+        }
+
+        if ( aNativeHighlightPolyPoly.Count() )
         {
             pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
             pOutDev->IntersectClipRegion( aPaintRect.SVRect() );
             pOutDev->SetFillColor( aNativeHighlightColor );
-            pOutDev->SetLineColor();
-            for ( std::vector< Rectangle >::const_iterator it = aNativeHighlightRects.begin() ; it != aNativeHighlightRects.end() ; ++it )
-                pOutDev->DrawTransparent( PolyPolygon( Polygon( *it ) ), 25 );
+            pOutDev->SetLineColor( aNativeHighlightColor );
+            pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
             pOutDev->Pop();
         }
     }
