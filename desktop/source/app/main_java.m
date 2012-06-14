@@ -88,8 +88,8 @@ static NSString *GetNSTemporaryDirectory()
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
 	if ( pFileManager )
 	{
-		// Use NSCachesDirectory to stay within FileVault encryption
-		NSArray *pCachePaths = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, YES );
+		// Use NSApplicationSupportDirectory to stay within FileVault encryption
+		NSArray *pCachePaths = NSSearchPathForDirectoriesInDomains( NSApplicationSupportDirectory, NSUserDomainMask, YES );
 		if ( pCachePaths )
 		{
 			NSNumber *pPerms = [NSNumber numberWithUnsignedLong:( S_IRUSR | S_IWUSR | S_IXUSR )];
@@ -104,16 +104,12 @@ static NSString *GetNSTemporaryDirectory()
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
 				{
 					// Append program name to cache path
-					char **pProgName = _NSGetProgname();
-					if (pProgName && *pProgName)
+					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_DIR_NAME]];
+					bDir = NO;
+					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
 					{
-						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*pProgName]];
-						bDir = NO;
-						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
-						{
-							pTempDir = pCachePath;
-							break;
-						}
+						pTempDir = pCachePath;
+						break;
 					}
 				}
 			}
