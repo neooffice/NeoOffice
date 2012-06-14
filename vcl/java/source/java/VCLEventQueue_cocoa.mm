@@ -1186,13 +1186,19 @@ static NSUInteger nMouseMask = 0;
 	if ( !pEvent )
 		return;
 
+	MacOSBOOL bIsVCLWindow = ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] );
 	NSEventType nType = [pEvent type];
 	NSRect aOldFrame = [self frame];
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 
-	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
+	// Fix bug reported in the following NeoOffice forum post by not checking
+	// if a window is visible until after we are sure that it is one of our
+	// custom windows as some of the native modal panels will dealloc windows
+	// during [NSWindow sendEvent:]:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62851#62851
+	if ( bIsVCLWindow && [self isVisible] && mpFrame )
 	{
 		// Handle all mouse events
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
@@ -1440,26 +1446,26 @@ static NSUInteger nMouseMask = 0;
 				}
 			}
 		}
-	}
 
-	// Cache mouse event in dragging source
-	if ( [self respondsToSelector:@selector(draggingSourceDelegate)] )
-	{
-		id pDelegate = [self draggingSourceDelegate];
-		if ( pDelegate )
+		// Cache mouse event in dragging source
+		if ( [self respondsToSelector:@selector(draggingSourceDelegate)] )
 		{
-			switch ( nType )
+			id pDelegate = [self draggingSourceDelegate];
+			if ( pDelegate )
 			{
-				case NSLeftMouseDown:
-					if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
-						[pDelegate mouseDown:pEvent];
-					break;
-				case NSLeftMouseDragged:
-					if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
-						[pDelegate mouseDragged:pEvent];
-					break;
-				default:
-					break;
+				switch ( nType )
+				{
+					case NSLeftMouseDown:
+						if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
+							[pDelegate mouseDown:pEvent];
+						break;
+					case NSLeftMouseDragged:
+						if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
+							[pDelegate mouseDragged:pEvent];
+						break;
+					default:
+						break;
+				}
 			}
 		}
 	}
