@@ -1557,7 +1557,11 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
             }
 
             // setting properties for all types
+#if SUPD == 310
+            xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_ALTERNATIVE_TEXT ),
+#else	// SUPD == 310
             xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_TITLE ),
+#endif	// SUPD == 310
                 uno::makeAny( m_pImpl->sAlternativeText ));
             if( m_pImpl->bPositionProtected )
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_POSITION_PROTECTED ), 
