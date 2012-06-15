@@ -1084,7 +1084,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	if ( !pEvent )
 		return;
 
-	MacOSBOOL bIsJavaWindow = [[self className] isEqualToString:pCocoaAppWindowString];
+	BOOL bIsJavaWindow = [[self className] isEqualToString:pCocoaAppWindowString];
 	NSEventType nType = [pEvent type];
 
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
