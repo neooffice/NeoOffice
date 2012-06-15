@@ -99,6 +99,8 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#include <list>
+
 #include <comphelper/mediadescriptor.hxx>
 #include <sfx2/app.hxx>
 #include <osl/file.hxx>
@@ -107,6 +109,8 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
+
+static ::std::list< String > aPendingDuplicateURLsList;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -147,6 +151,16 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 #if defined USE_JAVA && defined MACOSX
 
+void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+			pObjShell->SetModified( sal_True );
+	}
+}
+
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
@@ -160,17 +174,9 @@ void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 				SfxMedium *pMedium = new SfxMedium( aTempURL, ( STREAM_STD_WRITE | STREAM_SHARE_DENYALL ) );
 				if ( pMedium )
 				{
-					sal_Bool bSaved = pObjShell->DoSaveAs( *pMedium );
+					if ( pObjShell->DoSaveAs( *pMedium ) )
+						aPendingDuplicateURLsList.push_back( aTempURL );
 					delete pMedium;
-					if ( bSaved )
-					{
-						Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
-						aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
-						aSeq[0].Value <<= sal_True;
-						Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-						if ( xLoader.is() )
-							xLoader->loadComponentFromURL( aTempURL, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
-					}
 				}
 				else
 				{
@@ -190,6 +196,28 @@ void SFXDocument_reload( SfxTopViewFrame *pFrame )
 		SfxRequest aReloadReq( pFrame, SID_RELOAD );
 		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
 		pFrame->ExecReload_Impl( aReloadReq, sal_True );
+	}
+
+	// Fix highlighting bug in duplicated documents reported in the following
+	// NeoOffice forum post by not opening the duplicate documents until after
+	// the original document has finished reloading:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
+	while ( aPendingDuplicateURLsList.size() )
+	{
+		try
+		{
+			Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
+			aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
+			aSeq[0].Value <<= sal_True;
+			Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			if ( xLoader.is() )
+				xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+		}
+		catch ( ... )
+		{
+		}
+
+		aPendingDuplicateURLsList.pop_front();
 	}
 }
 

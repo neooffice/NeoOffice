@@ -1084,11 +1084,12 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	if ( !pEvent )
 		return;
 
+	MacOSBOOL bIsJavaWindow = [[self className] isEqualToString:pCocoaAppWindowString];
 	NSEventType nType = [pEvent type];
 
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
-	if ( nType == NSKeyDown && pSharedResponder && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	if ( bIsJavaWindow && nType == NSKeyDown && pSharedResponder && [self isVisible] && [self respondsToSelector:@selector(peer)] )
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
@@ -1106,90 +1107,98 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 
-	if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	// Fix bug reported in the following NeoOffice forum post by not checking
+	// if a window is visible until after we are sure that it is one of our
+	// custom windows as some of the native modal panels will dealloc windows
+	// during [NSWindow sendEvent:]:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62851#62851
+	if ( bIsJavaWindow && [self isVisible] )
 	{
-		NSRect aFrame = [self frame];
-		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-		NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
-		NSPoint aLocation = [pEvent locationInWindow];
-		if ( NSPointInRect( aLocation, aTitlebarFrame ) )
-			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
-	}
-	// Handle scroll wheel and magnify
-	else if ( ( nType == NSScrollWheel || ( nType == 30 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-	{
-		// Post flipped coordinates 
-		NSRect aFrame = [self frame];
-		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-		NSPoint aLocation = [pEvent locationInWindow];
-		int nModifiers = [pEvent modifierFlags];
-		float fDeltaX;
-		float fDeltaY;
-		if ( nType == 30 )
+		if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [self respondsToSelector:@selector(peer)] )
 		{
-			// Magnify events need to be converted to vertical scrolls with
-			// the Command key pressed to force the OOo code to zoom.
-			// Fix bug 3284 by reducing the amount of magnification.
-			nModifiers |= NSCommandKeyMask;
-			fDeltaX = 0;
-			fDeltaY = [pEvent deltaZ] / 8;
+			NSRect aFrame = [self frame];
+			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+			NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
+			NSPoint aLocation = [pEvent locationInWindow];
+			if ( NSPointInRect( aLocation, aTitlebarFrame ) )
+				VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 		}
-		else
+		// Handle scroll wheel and magnify
+		else if ( ( nType == NSScrollWheel || ( nType == 30 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) ) && [self respondsToSelector:@selector(peer)] )
 		{
-			fDeltaX = [pEvent deltaX];
-			fDeltaY = [pEvent deltaY];
-		}
-
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
-	}
-	// Handle swipe
-	else if ( nType == 31 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
-	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		float fDeltaX = [pEvent deltaX] * -1;
-		float fDeltaY = [pEvent deltaY] * -1;
-		if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
-		{
-			unichar pChars[ 1 ];
-			pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
-			unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
-			NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
-			if ( pChar )
+			// Post flipped coordinates 
+			NSRect aFrame = [self frame];
+			NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+			float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+			float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+			NSPoint aLocation = [pEvent locationInWindow];
+			int nModifiers = [pEvent modifierFlags];
+			float fDeltaX;
+			float fDeltaY;
+			if ( nType == 30 )
 			{
-				NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-				NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-				if ( pKeyDownEvent && pKeyUpEvent )
+				// Magnify events need to be converted to vertical scrolls with
+				// the Command key pressed to force the OOo code to zoom.
+				// Fix bug 3284 by reducing the amount of magnification.
+				nModifiers |= NSCommandKeyMask;
+				fDeltaX = 0;
+				fDeltaY = [pEvent deltaZ] / 8;
+			}
+			else
+			{
+				fDeltaX = [pEvent deltaX];
+				fDeltaY = [pEvent deltaY];
+			}
+
+			VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+		}
+		// Handle swipe
+		else if ( nType == 31 && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] && [self respondsToSelector:@selector(peer)] )
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			float fDeltaX = [pEvent deltaX] * -1;
+			float fDeltaY = [pEvent deltaY] * -1;
+			if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
+			{
+				unichar pChars[ 1 ];
+				pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
+				unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
+				NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
+				if ( pChar )
 				{
-					// Post in reverse order since we are posting to the front
-					[pApp postEvent:pKeyUpEvent atStart:YES];
-					[pApp postEvent:pKeyDownEvent atStart:YES];
+					NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					if ( pKeyDownEvent && pKeyUpEvent )
+					{
+						// Post in reverse order since we are posting to the front
+						[pApp postEvent:pKeyUpEvent atStart:YES];
+						[pApp postEvent:pKeyDownEvent atStart:YES];
+					}
 				}
 			}
 		}
-	}
 
-	// Cache mouse event in dragging source
-	if ( [self respondsToSelector:@selector(draggingSourceDelegate)] )
-	{
-		id pDelegate = [self draggingSourceDelegate];
-		if ( pDelegate )
+		// Cache mouse event in dragging source
+		if ( [self respondsToSelector:@selector(draggingSourceDelegate)] )
 		{
-			switch ( nType )
+			id pDelegate = [self draggingSourceDelegate];
+			if ( pDelegate )
 			{
-				case NSLeftMouseDown:
-					if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
-						[pDelegate mouseDown:pEvent];
-					break;
-				case NSLeftMouseDragged:
-					if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
-						[pDelegate mouseDragged:pEvent];
-					break;
-				default:
-					break;
+				switch ( nType )
+				{
+					case NSLeftMouseDown:
+						if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
+							[pDelegate mouseDown:pEvent];
+						break;
+					case NSLeftMouseDragged:
+						if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
+							[pDelegate mouseDragged:pEvent];
+						break;
+					default:
+						break;
+				}
 			}
 		}
 	}

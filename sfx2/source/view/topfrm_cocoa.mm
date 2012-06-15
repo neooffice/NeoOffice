@@ -121,6 +121,7 @@ static OUString aSaveAVersionLocalizedString;
 {
 	SfxTopViewFrame*		mpFrame;
 	BOOL					mbInRevert;
+	BOOL					mbInSetDocumentModified;
 	NSWindowController*		mpWinController;
 	NSWindow*				mpWindow;
 }
@@ -135,6 +136,8 @@ static OUString aSaveAVersionLocalizedString;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 - (void)revertDocumentToSaved:(id)pObject;
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (void)setDocumentModified:(BOOL)bModified;
+- (void)updateChangeCount:(NSDocumentChangeType)nChangeType;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
 - (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
@@ -286,6 +289,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 	mpFrame = pFrame;
 	mbInRevert = NO;
+	mbInSetDocumentModified = NO;
 	mpWinController = nil;
 	mpWindow = pWindow;
 	if ( mpWindow )
@@ -360,6 +364,48 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[self reloadFrame];
 
 	return YES;
+}
+
+- (void)setDocumentModified:(BOOL)bModified
+{
+	if ( mbInSetDocumentModified )
+		return;
+
+	mbInSetDocumentModified = YES;
+
+	if ( bModified )
+	{
+		if ( [self respondsToSelector:@selector(_checkAutosavingThenUpdateChangeCount:)] )
+			[self _checkAutosavingThenUpdateChangeCount:NSChangeDone];
+		else
+			[self updateChangeCount:NSChangeDone];
+	}
+	else
+	{
+		[self updateChangeCount:NSChangeCleared];
+	}
+
+	mbInSetDocumentModified = NO;
+}
+
+- (void)updateChangeCount:(NSDocumentChangeType)nChangeType
+{
+	BOOL bIsEdited = [self isDocumentEdited];
+
+	[super updateChangeCount:nChangeType];
+
+	if ( !mbInSetDocumentModified && nChangeType == NSChangeDone && !bIsEdited && [self isDocumentEdited] )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+			if ( pDoc == self )
+				SFXDocument_documentHasBeenModified( mpFrame );
+		}
+		rSolarMutex.release();
+	}
 }
 
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation
@@ -680,16 +726,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( pDoc )
 	{
 		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
-		{
-			if ( [pDoc respondsToSelector:@selector(_checkAutosavingThenUpdateChangeCount:)] )
-				[pDoc _checkAutosavingThenUpdateChangeCount:NSChangeDone];
-			else
-				[pDoc updateChangeCount:NSChangeDone];
-		}
+			[pDoc setDocumentModified:YES];
 		else
-		{
-			[pDoc updateChangeCount:NSChangeCleared];
-		}
+			[pDoc setDocumentModified:NO];
 	}
 }
 
