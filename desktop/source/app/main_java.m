@@ -42,7 +42,7 @@
 
 #define MIN_MACOSX_MAJOR_VERSION 5
 #define MAX_MACOSX_MAJOR_VERSION 7
-#define TMPDIR "/tmp"
+#define TMPDIR "/var/tmp"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef int SofficeMain_Type( int argc, char **argv );
@@ -198,14 +198,10 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pHomeEnv UTF8String] ) );
   	}
 
-	// Make sure TMPDIR exists as a softlink to /private/tmp as it can be
-	// easily removed. In most cases, this call should fail, but we do it
-	// just to be sure.
-	symlink( "private/tmp", TMPDIR );
-
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
-	// periodically
+	// periodically. Note that sal/osl/unx/pipe.c will use these environment
+	// variables as well.
 	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
