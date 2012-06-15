@@ -39,6 +39,10 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+.IF "$(PRODUCT_DIR_NAME)" != ""
+CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
+.ENDIF
+
 .IF "$(GUIBASE)"=="aqua"
 CFLAGS+=-x objective-c++
 .ENDIF
