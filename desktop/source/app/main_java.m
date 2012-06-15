@@ -200,7 +200,7 @@ int java_main( int argc, char **argv )
 
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
-	// periodically. Note that sal/osl/unx/pipe.c will use these environment
+	// periodically. Note that sources in sal/osl/unx will use these environment
 	// variables as well.
 	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
