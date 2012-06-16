@@ -121,8 +121,11 @@
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
+	NSEvent*				mpLastWindowDraggedEvent;
 }
+- (void)_init;
 - (MacOSBOOL)canBecomeKeyWindow;
+- (void)dealloc;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 @end
@@ -133,12 +136,15 @@
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
+	NSEvent*				mpLastWindowDraggedEvent;
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
 + (void)swizzleSelectors:(NSWindow *)pWindow;
+- (void)_init;
 - (void)becomeKeyWindow;
 - (MacOSBOOL)canBecomeKeyWindow;
+- (void)dealloc;
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;

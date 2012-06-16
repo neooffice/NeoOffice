@@ -1820,12 +1820,16 @@ void JavaSalEvent::dispatch()
 					if ( pFrame->maGeometry.nX != nX )
 					{
 						bPosChanged = true;
+						if ( pFrame == pSalData->mpLastDragFrame )
+							pSalData->maLastPointerState.maPos.X() += nX - pFrame->maGeometry.nX;
 						pFrame->maGeometry.nX = nX;
 					}
 					int nY = pPosSize->Top() + pFrame->maGeometry.nTopDecoration;
 					if ( pFrame->maGeometry.nY != nY )
 					{
 						bPosChanged = true;
+						if ( pFrame == pSalData->mpLastDragFrame )
+							pSalData->maLastPointerState.maPos.Y() += nY - pFrame->maGeometry.nY;
 						pFrame->maGeometry.nY = nY;
 					}
 
@@ -1858,6 +1862,26 @@ void JavaSalEvent::dispatch()
 
 						if ( bForceResize || bSizeChanged )
 							pFrame->UpdateLayer();
+
+						// Fix bug 2769 by creating synthetic mouse dragged
+						// events when dragging a window's title bar
+						if ( bPosChanged && pFrame == pSalData->mpLastDragFrame )
+						{
+							NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+							SalMouseEvent *pMouseEvent = new SalMouseEvent();
+							pMouseEvent->mnTime = ( [[NSDate date] timeIntervalSince1970] * 1000 );
+							pMouseEvent->mnX = pSalData->maLastPointerState.maPos.X() - pFrame->maGeometry.nX;
+							pMouseEvent->mnY = pSalData->maLastPointerState.maPos.Y() - pFrame->maGeometry.nY;
+							pMouseEvent->mnCode = pSalData->maLastPointerState.mnState;
+							pMouseEvent->mnButton = 0;
+
+							JavaSalEvent *pMouseDraggedEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, pFrame, pMouseEvent );
+							JavaSalEventQueue::postCachedEvent( pMouseDraggedEvent );
+							pMouseDraggedEvent->release();
+
+							[pPool release];
+						}
 
 						pFrame->CallCallback( nID, NULL );
 					}

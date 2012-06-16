@@ -618,9 +618,35 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 @implementation VCLPanel
 
+- (void)_init
+{
+	mbCanBecomeKeyWindow = YES;
+	mnIgnoreMouseReleasedModifiers = 0;
+	mpFrame = NULL;
+	mnLastMetaModifierReleasedTime = 0;
+	mpLastWindowDraggedEvent = nil;
+
+	[self setReleasedWhenClosed:NO];
+	[self setDelegate:self];
+	[self setAcceptsMouseMovedEvents:YES];
+}
+
 - (MacOSBOOL)canBecomeKeyWindow
 {
 	return ( mbCanBecomeKeyWindow && ![self becomesKeyOnlyIfNeeded] );
+}
+
+- (void)dealloc
+{
+	if ( mpLastWindowDraggedEvent )
+		[mpLastWindowDraggedEvent release];
+
+	[super dealloc];
+}
+
+- (id)init
+{
+	return self;
 }
 
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
@@ -640,6 +666,7 @@ static USHORT GetKeyCode( unsigned short nKey )
 @end
 
 @interface NSWindow (VCLWindowPoseAs)
+- (void)_init;
 - (void)poseAsBecomeKeyWindow;
 - (void)poseAsDisplayIfNeeded;
 - (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
@@ -796,6 +823,19 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
+- (void)_init
+{
+	mbCanBecomeKeyWindow = YES;
+	mnIgnoreMouseReleasedModifiers = 0;
+	mpFrame = NULL;
+	mnLastMetaModifierReleasedTime = 0;
+	mpLastWindowDraggedEvent = nil;
+
+	[self setReleasedWhenClosed:NO];
+	[self setDelegate:self];
+	[self setAcceptsMouseMovedEvents:YES];
+}
+
 - (void)becomeKeyWindow
 {
 	[VCLWindow restoreModalWindowLevel];
@@ -835,6 +875,14 @@ static NSUInteger nMouseMask = 0;
 	return mbCanBecomeKeyWindow;
 }
 
+- (void)dealloc
+{
+	if ( mpLastWindowDraggedEvent )
+		[mpLastWindowDraggedEvent release];
+
+	[super dealloc];
+}
+
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
@@ -864,44 +912,30 @@ static NSUInteger nMouseMask = 0;
 {
 	[VCLWindow swizzleSelectors:self];
 
+	id pRet = self;
+
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:)] )
-		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+		pRet = [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
 
-	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
-	{
-		mbCanBecomeKeyWindow = YES;
-		mnIgnoreMouseReleasedModifiers = 0;
-		mpFrame = NULL;
-		mnLastMetaModifierReleasedTime = 0;
+	if ( ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && [self respondsToSelector:@selector(_init)] )
+		[self _init];
 
-		[self setReleasedWhenClosed:NO];
-		[self setDelegate:self];
-		[self setAcceptsMouseMovedEvents:YES];
-	}
-
-	return self;
+	return pRet;
 }
 
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
 {
 	[VCLWindow swizzleSelectors:self];
 
+	id pRet = self;
+
 	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:screen:)] )
-		[super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+		pRet = [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 
-	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
-	{
-		mbCanBecomeKeyWindow = YES;
-		mnIgnoreMouseReleasedModifiers = 0;
-		mpFrame = NULL;
-		mnLastMetaModifierReleasedTime = 0;
+	if ( ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && [self respondsToSelector:@selector(_init)] )
+		[self _init];
 
-		[self setReleasedWhenClosed:NO];
-		[self setDelegate:self];
-		[self setAcceptsMouseMovedEvents:YES];
-	}
-
-	return self;
+	return pRet;
 }
 
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
@@ -972,6 +1006,12 @@ static NSUInteger nMouseMask = 0;
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
+		if ( mpLastWindowDraggedEvent )
+		{
+			[mpLastWindowDraggedEvent release];
+			mpLastWindowDraggedEvent = nil;
+		}
+
 		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
 		{
 			// Clear modal level while window is visible or else the window
@@ -1262,17 +1302,46 @@ static NSUInteger nMouseMask = 0;
 						mnIgnoreMouseReleasedModifiers = nModifiers;
 						return;
 					}
-					else
+
+					// For events where the event is in a window's titlebar,
+					// use the first drag event as the coordinates should not
+					// change but they do sometimes change
+					NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+					float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+					float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+					NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
+					NSPoint aLocation = [pEvent locationInWindow];
+					if ( NSPointInRect( aLocation, aTitlebarFrame ) )
 					{
-						mnIgnoreMouseReleasedModifiers = 0;
+						if ( nModifiers & NSLeftMouseDownMask )
+						{
+							if ( mpLastWindowDraggedEvent )
+								[mpLastWindowDraggedEvent release];
+							mpLastWindowDraggedEvent = pEvent;
+							if ( mpLastWindowDraggedEvent )
+								[mpLastWindowDraggedEvent retain];
+						}
 					}
+					else if ( mpLastWindowDraggedEvent )
+					{
+						[mpLastWindowDraggedEvent release];
+						mpLastWindowDraggedEvent = nil;
+					}
+
+					mnIgnoreMouseReleasedModifiers = 0;
 				}
 				else if ( nID == SALEVENT_MOUSEBUTTONUP )
 				{
 					// Fix bug 3453 by adding back any recently released
 					// modifiers
-					if ( mnLastMetaModifierReleasedTime >= (ULONG)( [pEvent timestamp] * 1000 ) )
+					if ( mnLastMetaModifierReleasedTime >= (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 ) )
 						nModifiers |= NSCommandKeyMask;
+
+					if ( mpLastWindowDraggedEvent && nModifiers & NSLeftMouseDownMask )
+					{
+						[mpLastWindowDraggedEvent release];
+						mpLastWindowDraggedEvent = nil;
+					}
 
 					if ( mnIgnoreMouseReleasedModifiers && ( mnIgnoreMouseReleasedModifiers & nModifiers ) == nModifiers )
 					{
@@ -1281,24 +1350,19 @@ static NSUInteger nMouseMask = 0;
 					}
 				}
 
-				// Fix bug 2769 by creating synthetic window moved events when
-				// dragging a window's title bar
-				if ( nModifiers & NSLeftMouseDownMask && ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
-				{
-					NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
-					float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
-					float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
-					NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
-					NSPoint aLocation = [pEvent locationInWindow];
-					if ( NSPointInRect( aLocation, aTitlebarFrame ) )
-						[self windowDidMove:nil];
-				}
-
 				USHORT nCode = GetEventCode( nModifiers );
 
-				NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
+				// Fix bug 2769 by creating synthetic window moved events
+				// when dragging a window's title bar
+				NSEvent *pPositionEvent = pEvent;
+				if ( mpLastWindowDraggedEvent )
+				{
+					pPositionEvent = mpLastWindowDraggedEvent;
+					[self windowDidMove:nil];
+				}
+				NSPoint aLocation = GetFlippedContentViewLocation( self, pPositionEvent );
 				SalMouseEvent *pMouseEvent = new SalMouseEvent();
-				pMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				pMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 				pMouseEvent->mnX = (long)aLocation.x;
 				pMouseEvent->mnY = (long)aLocation.y;
 				if ( nID == SALEVENT_MOUSEMOVE || nID == SALEVENT_MOUSELEAVE )
@@ -1314,7 +1378,7 @@ static NSUInteger nMouseMask = 0;
 					// mouse moved event
 					USHORT nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
 					pExtraMouseEvent = new SalMouseEvent();
-					pExtraMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+					pExtraMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 					pExtraMouseEvent->mnX = (long)aLocation.x;
 					pExtraMouseEvent->mnY = (long)aLocation.y;
 					pExtraMouseEvent->mnButton = 0;
@@ -1340,12 +1404,12 @@ static NSUInteger nMouseMask = 0;
 			if ( nModifiers & NSCommandKeyMask )
 				mnLastMetaModifierReleasedTime = 0;
 			else
-				mnLastMetaModifierReleasedTime = (ULONG)( [pEvent timestamp] * 1000 ) + MODIFIER_RELEASE_INTERVAL;
+				mnLastMetaModifierReleasedTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 ) + MODIFIER_RELEASE_INTERVAL;
 
 			USHORT nCode = GetEventCode( nModifiers );
 
 			SalKeyModEvent *pKeyModEvent = new SalKeyModEvent();
-			pKeyModEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+			pKeyModEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 			pKeyModEvent->mnCode = nCode;
 			pKeyModEvent->mnModKeyCode = 0;
 
@@ -1389,7 +1453,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				long nScrollAmount = Float32ToLong( fDeltaX );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				pWheelMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
@@ -1406,7 +1470,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				long nScrollAmount = Float32ToLong( fDeltaY );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
+				pWheelMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
@@ -1660,10 +1724,8 @@ static CFDataRef aRTFSelection = nil;
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
-			if ( pEvent )
-				mpPendingKeyUpEvent->mnTime = (ULONG)( [pEvent timestamp] * 1000 );
-			else if ( mpLastKeyDownEvent )
-				mpPendingKeyUpEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+			mpPendingKeyUpEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+
 			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
@@ -1786,7 +1848,7 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-		pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+		pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 		pInputEvent->maText = aText;
 		pInputEvent->mpTextAttr = pAttr;
 		pInputEvent->mnCursorPos = nCursorPos;
@@ -1826,7 +1888,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 		{
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+			pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 			pInputEvent->maText = XubString();
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = 0;
@@ -1917,7 +1979,7 @@ static CFDataRef aRTFSelection = nil;
 
 			ULONG nLen = aText.Len();
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+			pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 			pInputEvent->maText = aText;
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = nLen;
@@ -1953,7 +2015,7 @@ static CFDataRef aRTFSelection = nil;
 				for ( ; i < nLength; i++ )
 				{
 					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-					pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+					pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 					pKeyDownEvent->mnCode = nCode;
 					pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 					pKeyDownEvent->mnRepeat = 0;
@@ -2064,7 +2126,7 @@ static CFDataRef aRTFSelection = nil;
 				USHORT nCode = nCommandKey | [pSharedResponder lastModifiers];
 
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+				pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = 0;
 				pKeyDownEvent->mnRepeat = 0;
@@ -2089,7 +2151,7 @@ static CFDataRef aRTFSelection = nil;
 			for ( ; i < nLength; i++ )
 			{
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( [mpLastKeyDownEvent timestamp] * 1000 );
+				pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 				pKeyDownEvent->mnRepeat = 0;
