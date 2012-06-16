@@ -474,6 +474,59 @@ static NSTimer *pUpdateTimer = nil;
 
 @end
 
+@interface VCLWindowWrapperArgs : NSObject
+{
+	NSArray*				mpArgs;
+	NSObject*				mpResult;
+}
++ (id)argsWithArgs:(NSArray *)pArgs;
+- (NSArray *)args;
+- (void)dealloc;
+- (id)initWithArgs:(NSArray *)pArgs;
+- (NSObject *)result;
+- (void)setResult:(NSObject *)pResult;
+@end
+
+@interface VCLWindowWrapper : NSObject
+{
+	JavaSalFrame*			mpFrame;
+	MacOSBOOL				mbFullScreen;
+	NSRect					maInsets;
+	NSWindow*				mpParent;
+	MacOSBOOL				mbShowOnlyMenus;
+	NSRect					maShowOnlyMenusFrame;
+	ULONG					mnStyle;
+	MacOSBOOL				mbUndecorated;
+	MacOSBOOL				mbUtility;
+	NSProgressIndicator*	mpWaitingView;
+	NSWindow*				mpWindow;
+	NSUInteger				mnWindowStyleMask;
+}
++ (void)updateShowOnlyMenusWindows;
+- (void)adjustColorLevelAndShadow;
+- (void)animateWaitingView:(MacOSBOOL)bAnimate;
+- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
+- (void)dealloc;
+- (void)destroy:(id)pObject;
+- (void)flush:(id)pObject;
+- (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
+- (void)getFrame:(VCLWindowWrapperArgs *)pArgs;
+- (void)getState:(VCLWindowWrapperArgs *)pArgs;
+- (const NSRect)insets;
+- (MacOSBOOL)isFloatingWindow;
+- (void)makeModal:(id)pObject;
+- (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
+- (void)setContentMinSize:(NSSize)aContentMinSize;
+- (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
+- (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
+- (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
+- (void)setState:(VCLWindowWrapperArgs *)pArgs;
+- (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
+- (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
+- (void)toFront:(VCLWindowWrapperArgs *)pArgs;
+- (NSWindow *)window;
+@end
+
 @interface NSCursor (VCLSetCursor)
 
 + (NSCursor *)IBeamCursorForVerticalLayout;
@@ -486,20 +539,20 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 @interface VCLSetCursor : NSObject
 {
 	PointerStyle			mePointerStyle;
-	NSView*					mpView;
+	VCLWindowWrapper*		mpWindowWrapper;
 }
-+ (id)createWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView;
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle windowWrapper:(VCLWindowWrapper *)pWindowWrapper;
 + (void)loadCustomCursorWithPointerStyle:(PointerStyle)ePointerStyle hotSpot:(NSPoint)aHotSpot path:(NSString *)pPath;
 - (void)dealloc;
-- (id)initWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView;
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle windowWrapper:(VCLWindowWrapper *)pWindowWrapper;
 - (void)setCursor:(id)pObject;
 @end
 
 @implementation VCLSetCursor
 
-+ (id)createWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView
++ (id)createWithPointerStyle:(PointerStyle)ePointerStyle windowWrapper:(VCLWindowWrapper *)pWindowWrapper
 {
-	VCLSetCursor *pRet = [[VCLSetCursor alloc] initWithPointerStyle:ePointerStyle view:pView];
+	VCLSetCursor *pRet = [[VCLSetCursor alloc] initWithPointerStyle:ePointerStyle windowWrapper:pWindowWrapper];
 	[pRet autorelease];
 	return pRet;
 }
@@ -529,31 +582,35 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 
 - (void)dealloc
 {
-	if ( mpView )
-		[mpView release];
+	if ( mpWindowWrapper )
+		[mpWindowWrapper release];
 
 	[super dealloc];
 }
 
-- (id)initWithPointerStyle:(PointerStyle)ePointerStyle view:(NSView *)pView
+- (id)initWithPointerStyle:(PointerStyle)ePointerStyle windowWrapper:(VCLWindowWrapper *)pWindowWrapper
 {
 	[super init];
 
 	mePointerStyle = ePointerStyle;
-	mpView = pView;
-	if ( mpView )
-		[mpView retain];
+	mpWindowWrapper = pWindowWrapper;
+	if ( mpWindowWrapper )
+		[mpWindowWrapper retain];
  
 	return self;
 }
 
 - (void)setCursor:(id)pObject
 {
-	if ( !mpView )
+	if ( !mpWindowWrapper )
 		return;
 
-	NSWindow *pWindow = [mpView window];
+	NSWindow *pWindow = [mpWindowWrapper window];
 	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
+	NSView *pContentView = [pWindow contentView];
+	if ( !pContentView )
 		return;
 
 	// Remove any hidden windows from cursor map
@@ -685,6 +742,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 		}
 	}
 
+	MacOSBOOL bAnimateWaitingView = NO;
 	NSCursor *pCursor = nil;
 	::std::map< PointerStyle, NSCursor* >::const_iterator it = aVCLCustomCursors.find( mePointerStyle );
 	if ( it != aVCLCustomCursors.end() )
@@ -743,6 +801,11 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 			case POINTER_TEXT_VERTICAL:
 				if ( class_getClassMethod( [NSCursor class], @selector(IBeamCursorForVerticalLayout) ) )
 				pCursor = [NSCursor IBeamCursorForVerticalLayout];
+				break;
+			case POINTER_WAIT:
+				// Animate waiting view if available
+				bAnimateWaitingView = YES;
+				pCursor = [NSCursor arrowCursor];
 				break;
 			case POINTER_ARROW:
 			case POINTER_HELP:
@@ -804,19 +867,20 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 			case POINTER_WINDOW_SWSIZE:
 			case POINTER_SESIZE:
 			case POINTER_WINDOW_SESIZE:
-			case POINTER_WAIT:
 			default:
 				pCursor = [NSCursor arrowCursor];
 				break;
 		}
 	}
 
+	[mpWindowWrapper animateWaitingView:bAnimateWaitingView];
+
 	if ( pCursor )
 	{
 		aNativeCursorMap[ pWindow ] = pCursor;
 		[pWindow retain];
 		[pCursor retain];
-		[pWindow invalidateCursorRectsForView:mpView];
+		[pWindow invalidateCursorRectsForView:pContentView];
 	}
 }
 
@@ -958,19 +1022,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 @end
 
-@interface VCLWindowWrapperArgs : NSObject
-{
-	NSArray*				mpArgs;
-	NSObject*				mpResult;
-}
-+ (id)argsWithArgs:(NSArray *)pArgs;
-- (NSArray *)args;
-- (void)dealloc;
-- (id)initWithArgs:(NSArray *)pArgs;
-- (NSObject *)result;
-- (void)setResult:(NSObject *)pResult;
-@end
-
 @implementation VCLWindowWrapperArgs
 
 + (id)argsWithArgs:(NSArray *)pArgs
@@ -1026,44 +1077,6 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 @end
 
-@interface VCLWindowWrapper : NSObject
-{
-	JavaSalFrame*			mpFrame;
-	MacOSBOOL				mbFullScreen;
-	NSRect					maInsets;
-	NSWindow*				mpParent;
-	MacOSBOOL				mbShowOnlyMenus;
-	NSRect					maShowOnlyMenusFrame;
-	ULONG					mnStyle;
-	MacOSBOOL				mbUndecorated;
-	MacOSBOOL				mbUtility;
-	NSWindow*				mpWindow;
-	NSUInteger				mnWindowStyleMask;
-}
-+ (void)updateShowOnlyMenusWindows;
-- (void)adjustColorLevelAndShadow;
-- (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
-- (void)dealloc;
-- (void)destroy:(id)pObject;
-- (void)flush:(id)pObject;
-- (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
-- (void)getFrame:(VCLWindowWrapperArgs *)pArgs;
-- (void)getState:(VCLWindowWrapperArgs *)pArgs;
-- (const NSRect)insets;
-- (MacOSBOOL)isFloatingWindow;
-- (void)makeModal:(id)pObject;
-- (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
-- (void)setContentMinSize:(NSSize)aContentMinSize;
-- (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
-- (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
-- (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
-- (void)setState:(VCLWindowWrapperArgs *)pArgs;
-- (void)setTitle:(VCLWindowWrapperArgs *)pArgs;
-- (void)setVisible:(VCLWindowWrapperArgs *)pArgs;
-- (void)toFront:(VCLWindowWrapperArgs *)pArgs;
-- (NSWindow *)window;
-@end
-
 static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLWindowWrapper
@@ -1102,6 +1115,17 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		[it->first setCanBecomeKeyWindow:bEnableFocus];
 		if ( bEnableFocus && [it->first isVisible] )
 			[it->first makeKeyWindow];
+	}
+}
+
+- (void)animateWaitingView:(MacOSBOOL)bAnimate
+{
+	if ( mpWaitingView )
+	{
+		if ( bAnimate && mpWindow && [mpWindow isVisible] )
+			[mpWaitingView startAnimation:self];
+		else
+			[mpWaitingView stopAnimation:self];
 	}
 }
 
@@ -1152,6 +1176,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mnStyle = nStyle;
 	mbUtility = bUtility;
 	mbUndecorated = NO;
+	mpWaitingView = nil;
 	mpWindow = nil;
 	mnWindowStyleMask = NSBorderlessWindowMask;
 
@@ -1174,6 +1199,8 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	VCLView *pContentView = [[VCLView alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
 	if ( pContentView )
 	{
+		[pContentView autorelease];
+
 		if ( mbUtility || ( mbUndecorated && !mbShowOnlyMenus && !mbFullScreen )  || ( !mbUndecorated && mpParent ) )
 			mpWindow = [[VCLPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:mnWindowStyleMask backing:NSBackingStoreBuffered defer:YES];
 		else
@@ -1250,6 +1277,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 		[mpWindow release];
 		mpWindow = nil;
+	}
+
+	if ( mpWaitingView )
+	{
+		[mpWaitingView release];
+		mpWaitingView = nil;
 	}
 }
 
@@ -1555,11 +1588,35 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				bCanBecomeKeyWindow = [(VCLPanel *)mpWindow canBecomeKeyWindow];
 			else
 				bCanBecomeKeyWindow = [(VCLWindow *)mpWindow canBecomeKeyWindow];
+			if ( !mpWaitingView && ( !mbUndecorated || mbFullScreen ) )
+			{
+				NSView *pContentView = [mpWindow contentView];
+				if ( pContentView )
+				{
+					mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+					if ( mpWaitingView )
+					{
+						[mpWaitingView setIndeterminate:YES];
+						[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+						[mpWaitingView setDisplayedWhenStopped:NO];
+						[mpWaitingView sizeToFit];
+						[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
+						[pContentView addSubview:mpWaitingView];
+
+						// Center in content view
+						NSRect aContentBounds = [pContentView bounds];
+						NSRect aWaitingFrame = [mpWaitingView frame];
+						[mpWaitingView setFrameOrigin:NSMakePoint( ( aContentBounds.size.width - aWaitingFrame.size.width ) / 2, ( aContentBounds.size.height - aWaitingFrame.size.height ) / 2 )];
+					}
+				}
+			}
+
 			if ( bCanBecomeKeyWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
 		}
 		else
 		{
+			[self animateWaitingView:NO];
 			[mpWindow orderOut:self];
 		}
 
@@ -3401,7 +3458,7 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle view:maSysData.pView];
+	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle windowWrapper:mpWindow];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLSetCursor performSelectorOnMainThread:@selector(setCursor:) withObject:pVCLSetCursor waitUntilDone:NO modes:pModes];
 
