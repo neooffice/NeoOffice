@@ -56,6 +56,8 @@
 
 #include "../java/VCLEventQueue_cocoa.h"
 
+#define MIN_CONTENT_WIDTH 130
+
 typedef UInt32 GetDblTime_Type();
 typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOptions );
 
@@ -1418,8 +1420,8 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// Make sure that there is a minimum amount of content area
 		if ( mbUndecorated && aContentMinSize.width < 1 )
 			aContentMinSize.width = 1;
-		else if ( !mbUndecorated && aContentMinSize.width < 200 )
-			aContentMinSize.width = 200;
+		else if ( !mbUndecorated && aContentMinSize.width < MIN_CONTENT_WIDTH )
+			aContentMinSize.width = MIN_CONTENT_WIDTH;
 		if ( aContentMinSize.height < 1 )
 			aContentMinSize.height = 1;
 
