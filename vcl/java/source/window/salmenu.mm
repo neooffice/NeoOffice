@@ -131,6 +131,11 @@ using namespace vcl;
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
 
+@interface VCLMainMenuDidEndTracking : NSObject
++ (void)mainMenuDidEndTracking;
+- (void)handlePendingMainMenuChanges;
+@end
+
 @interface VCLMenuWrapper : NSObject
 {
 	JavaSalFrame*			mpFrame;
@@ -138,7 +143,6 @@ using namespace vcl;
 	MacOSBOOL				mbMenuBar;
 	NSMutableArray*			mpMenuItems;
 }
-+ (void)mainMenuDidEndTracking;
 - (id)init:(MacOSBOOL)bMenuBar;
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)dealloc;
@@ -179,21 +183,49 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	bRet = [super performKeyEquivalent:pEvent];
 	bInPerformKeyEquivalent = NO;
 
-	[VCLMenuWrapper mainMenuDidEndTracking];
-
 	return bRet;
 }
 @end
 
-@implementation VCLMenuWrapper
+@implementation VCLMainMenuDidEndTracking
 
 + (void)mainMenuDidEndTracking
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu )
+			[pMainMenu cancelTracking];
+	}
+
+	VCLMainMenuDidEndTracking *pVCLMainMenuDidEndTracking = [[VCLMainMenuDidEndTracking alloc] init];
+	[pVCLMainMenuDidEndTracking autorelease];
+
+	// Queue processing to occur after a very slight delay
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges) withObject:nil afterDelay:0.1f inModes:pModes];
+}
+
+- (void)handlePendingMainMenuChanges
+{
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
+	{
+		// Requeue this operation to occur later
+		[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
+		return;
+	}
+
 	if ( pPendingRemoveMenuAsMainMenu )
 		[pPendingRemoveMenuAsMainMenu removeMenuAsMainMenu:nil];
 	if ( pPendingSetMenuAsMainMenu )
 		[pPendingSetMenuAsMainMenu setMenuAsMainMenu:nil];
 }
+
+@end
+
+@implementation VCLMenuWrapper
 
 - (id)init:(MacOSBOOL)bMenuBar
 {
@@ -344,7 +376,8 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	if ( !mbMenuBar || self != pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
-	if ( bInPerformKeyEquivalent )
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
 	{
 		if ( pPendingRemoveMenuAsMainMenu != self )
 		{
@@ -353,6 +386,8 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 			pPendingRemoveMenuAsMainMenu = self;
 			if ( pPendingRemoveMenuAsMainMenu )
 				[pPendingRemoveMenuAsMainMenu retain];
+
+			[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
 		}
 
 		return;
@@ -452,7 +487,8 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 	if ( !mbMenuBar || self == pMenuBarMenu || NSApplication_getModalWindow() )
 		return;
 
-	if ( bInPerformKeyEquivalent )
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) )
 	{
 		if ( pPendingSetMenuAsMainMenu != self )
 		{
@@ -461,6 +497,8 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 			pPendingSetMenuAsMainMenu = self;
 			if ( pPendingSetMenuAsMainMenu )
 				[pPendingSetMenuAsMainMenu retain];
+
+			[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
 		}
 
 		return;
