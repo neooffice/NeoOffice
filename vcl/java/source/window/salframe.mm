@@ -1150,7 +1150,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[mpWindow setHasShadow:NO];
 			[mpWindow setLevel:NSNormalWindowLevel];
 		}
-		else if ( mbShowOnlyMenus || ( mbUndecorated && mpParent ) )
+		else if ( mbShowOnlyMenus )
+		{
+			[mpWindow setHasShadow:NO];
+			[mpWindow setLevel:NSPopUpMenuWindowLevel];
+		}
+		else if ( mbUndecorated && mpParent )
 		{
 			[mpWindow setHasShadow:YES];
 			[mpWindow setLevel:NSPopUpMenuWindowLevel];
