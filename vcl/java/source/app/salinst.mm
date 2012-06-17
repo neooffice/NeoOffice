@@ -1961,10 +1961,23 @@ void JavaSalEvent::dispatch()
 				// its parent window
 				if ( nID == SALEVENT_MENUCOMMAND )
 				{
+					bool bIsInFocusFrameHierarchy = ( pFrame == pSalData->mpFocusFrame );
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+					{
 						pFrame = pFrame->mpParent;
+						if ( !bIsInFocusFrameHierarchy )
+							bIsInFocusFrameHierarchy = ( pFrame == pSalData->mpFocusFrame );
+					}
+
+					// Ignore menu command events that are not for the focus
+					// frame as it indicates that the menu updating has fallen
+					// out of sync with our focus tracking
+					if ( !bIsInFocusFrameHierarchy )
+						pFrame = NULL;
 				}
-				pFrame->CallCallback( nID, pMenuEvent );
+
+				if ( pFrame )
+					pFrame->CallCallback( nID, pMenuEvent );
 			}
 			break;
 		}
