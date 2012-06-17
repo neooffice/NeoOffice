@@ -830,9 +830,12 @@ JavaSalMenu::~JavaSalMenu()
 
 void JavaSalMenu::SetMenuBarToFocusFrame()
 {
-	// Find first frame in hierarchy that has a menubar
+	// Find first frame in hierarchy that has a menubar. Fix bug reported in
+	// the following NeoOffice forum post by only doing this if the frame is a
+	// floating or utility window:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62883#62883
 	JavaSalFrame *pFrame = GetSalData()->mpFocusFrame;
-	while ( pFrame && pFrame->mbVisible && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu || pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) )
+	while ( pFrame && pFrame->mbVisible && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu ) && ( pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) )
 		pFrame = pFrame->mpParent;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
