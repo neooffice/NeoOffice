@@ -161,7 +161,7 @@ void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 	}
 }
 
-void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall )
 {
 	if ( pFrame )
 	{
@@ -177,6 +177,9 @@ void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 					if ( pObjShell->DoSaveAs( *pMedium ) )
 						aPendingDuplicateURLsList.push_back( aTempURL );
 					delete pMedium;
+
+					if ( !bWaitForRevertCall )
+						SFXDocument_openPendingDuplicateURLs();
 				}
 				else
 				{
@@ -189,15 +192,8 @@ void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 	}
 }
 
-void SFXDocument_reload( SfxTopViewFrame *pFrame )
+void SFXDocument_openPendingDuplicateURLs()
 {
-	if ( pFrame )
-	{
-		SfxRequest aReloadReq( pFrame, SID_RELOAD );
-		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
-		pFrame->ExecReload_Impl( aReloadReq, sal_True );
-	}
-
 	// Fix highlighting bug in duplicated documents reported in the following
 	// NeoOffice forum post by not opening the duplicate documents until after
 	// the original document has finished reloading:
@@ -219,6 +215,18 @@ void SFXDocument_reload( SfxTopViewFrame *pFrame )
 
 		aPendingDuplicateURLsList.pop_front();
 	}
+}
+
+void SFXDocument_reload( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxRequest aReloadReq( pFrame, SID_RELOAD );
+		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
+		pFrame->ExecReload_Impl( aReloadReq, sal_True );
+	}
+
+	SFXDocument_openPendingDuplicateURLs();
 }
 
 #endif	// USE_JAVA && MACOSX
