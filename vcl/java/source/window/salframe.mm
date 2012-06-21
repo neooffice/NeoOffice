@@ -1280,7 +1280,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		[mpWindow orderOut:self];
+		// Close, not order out the window because when the window is in full
+		// screen mode, order out will leave the application in an empty full
+		// mode state
+		[mpWindow close];
 
 		::std::map< VCLWindow*, VCLWindow* >::iterator it = aShowOnlyMenusWindowMap.find ( mpWindow );
 		if ( it != aShowOnlyMenusWindowMap.end() )
@@ -1628,7 +1631,11 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		else
 		{
 			[self animateWaitingView:NO];
-			[mpWindow orderOut:self];
+
+			// Close, not order out the window because when the window is in full
+			// screen mode, order out will leave the application in an empty full
+			// mode state
+			[mpWindow close];
 		}
 
 		[VCLWindowWrapper updateShowOnlyMenusWindows];
@@ -3782,7 +3789,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		{
 			// Release old window wrapper
 			if ( mpWindow )
+			{
 				[mpWindow performSelectorOnMainThread:@selector(destroy:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+				[mpWindow release];
+			}
 
 			[pWindow retain];
 			mpWindow = pWindow;
