@@ -411,14 +411,17 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 					NSMenu *pNewMainMenu = [[VCLMenu alloc] initWithTitle:[pMainMenu title]];
 					if ( pNewMainMenu )
 					{
+						[pNewMainMenu autorelease];
+
+						// Remove remaining menus while still showing
+						NSUInteger i = nCount - 1;
+						for ( ; i > 0; i-- )
+							[pMainMenu removeItemAtIndex:i];
+
 						[pAppMenuItem retain];
 						[pMainMenu removeItemAtIndex:0];
 						[pNewMainMenu addItem:pAppMenuItem];
 						[pAppMenuItem release];
-
-						// Remove remaining menus while still showing
-						while ( [pMainMenu numberOfItems] > 0 )
-							[pMainMenu removeItemAtIndex:0];
 
 						[pApp setMainMenu:pNewMainMenu];
 					}
@@ -522,14 +525,17 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 					NSMenu *pNewMainMenu = [[VCLMenu alloc] initWithTitle:[pMainMenu title]];
 					if ( pNewMainMenu )
 					{
+						[pNewMainMenu autorelease];
+
+						// Remove remaining menus while still showing
+						NSUInteger i = nCount - 1;
+						for ( ; i > 0; i-- )
+							[pMainMenu removeItemAtIndex:i];
+
 						[pAppMenuItem retain];
 						[pMainMenu removeItemAtIndex:0];
 						[pNewMainMenu addItem:pAppMenuItem];
 						[pAppMenuItem release];
-
-						// Remove remaining menus while still showing
-						while ( [pMainMenu numberOfItems] > 0 )
-							[pMainMenu removeItemAtIndex:0];
 
 						[pApp setMainMenu:pNewMainMenu];
 
@@ -540,7 +546,7 @@ static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 						if ( mpMenuItems )
 						{
 							nCount = [mpMenuItems count];
-							NSUInteger i = 0;
+							i = 0;
 							for ( ; i < nCount; i++ )
 							{
 								NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
