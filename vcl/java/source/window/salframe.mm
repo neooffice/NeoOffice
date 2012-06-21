@@ -1826,7 +1826,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 						aDestRect.origin.y = aBounds.size.height - aDestRect.origin.y - aDestRect.size.height;
 					}
 
-					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect, !bFlipped );
+					it->second->copyToContext( NULL, NULL, false, false, aContext, aBounds, aDestRect, aDestRect, true, !bFlipped );
 
 					CGContextRestoreGState( aContext );
 				}

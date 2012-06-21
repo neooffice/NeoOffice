@@ -1180,7 +1180,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsUnflippedWindow )
+void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow, bool bDestIsUnflipped )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
@@ -1191,47 +1191,33 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 	// align coordinates so that the source's top get copies to the
 	// destination's top
 	CGSize aLayerSize = CGLayerGetSize( maLayer );
-	if ( bDestIsUnflippedWindow && !CGRectIsNull( aDestBounds ) )
+	if ( bDestIsUnflipped && !CGRectIsNull( aDestBounds ) )
 		aSrcRect.origin.y += aLayerSize.height - aDestBounds.size.height;
 
 	// Draw any undrawn operations so that we copy the latest bits
-	drawUndrawnNativeOps( aDestContext, maNativeBounds );
+	CGContextRef aContext = CGLayerGetContext( maLayer );
+	if ( aContext )
+		drawUndrawnNativeOps( aContext, maNativeBounds );
 
-	if ( mpFrame && mnBackgroundColor )
+	if ( bDestIsWindow && mpFrame && mnBackgroundColor&& !CGRectIsEmpty( aDestRect ) )
 	{
 		// If the layer does not fully cover the window, paint the fill color
 		// in the uncovered areas so that no drawing artifacts remain after
-		// resizing a window
-		if ( aDestBounds.size.width > aLayerSize.width || aDestBounds.size.height > aLayerSize.height )
+		// resizing a window. Fix doubling of transparent and antialias pixels
+		// reported in the following NeoOffice forum post by drawing the
+		// background color in covered areas as well:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62905#62905
+		CGColorRef aBackgroundColor = CreateCGColorFromSalColor( mnBackgroundColor );
+		if ( aBackgroundColor )
 		{
-			CGColorRef aBackgroundColor = CreateCGColorFromSalColor( mnBackgroundColor );
-			if ( aBackgroundColor )
-			{
-				CGMutablePathRef aPath = CGPathCreateMutable();
-				if ( aPath )
-				{
-					CGRect aBottomRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x, aDestBounds.origin.y, aDestBounds.size.width, aDestBounds.size.height - aLayerSize.height ) );
-					if ( !CGRectIsEmpty( aBottomRect ) && aBottomRect.size.height > 0 )
-						CGPathAddRect( aPath, NULL, aBottomRect );
-					CGRect aRightRect = CGRectIntersection( aDestRect, CGRectMake( aDestBounds.origin.x + aLayerSize.width, aDestBounds.origin.y, aDestBounds.size.width - aLayerSize.width, aDestBounds.size.height ) );
-					if ( !CGRectIsEmpty( aRightRect ) && aRightRect.size.width > 0 )
-						CGPathAddRect( aPath, NULL, aRightRect );
+			CGContextSaveGState( aDestContext );
+			CGContextBeginPath( aDestContext );
+			CGContextAddRect( aDestContext, aDestRect );
+			CGContextSetFillColorWithColor( aDestContext, aBackgroundColor );
+			CGContextFillPath( aDestContext );
+			CGContextRestoreGState( aDestContext );
 
-					if ( !CGPathIsEmpty( aPath ) )
-					{
-						CGContextSaveGState( aDestContext );
-						CGContextBeginPath( aDestContext );
-						CGContextAddPath( aDestContext, aPath );
-						CGContextSetFillColorWithColor( aDestContext, aBackgroundColor );
-						CGContextFillPath( aDestContext );
-						CGContextRestoreGState( aDestContext );
-					}
-
-					CGPathRelease( aPath );
-				}
-
-				CGColorRelease( aBackgroundColor );
-			}
+			CGColorRelease( aBackgroundColor );
 		}
 	}
 
