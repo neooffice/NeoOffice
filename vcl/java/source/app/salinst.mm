@@ -137,19 +137,11 @@ static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rSc
 
 static void InvalidateControls( Window *pWindow )
 {
+	// Fix bug reported in the following NeoOffice forum support by
+	// invalidating the entire window:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62916#62916
 	if ( pWindow && pWindow->IsReallyVisible() )
-	{
-		Control *pCtrl = dynamic_cast< Control * >( pWindow );
-		if ( pCtrl )
-		{
-			pCtrl->Invalidate();
-			return;
-		}
-
-		USHORT nCount = pWindow->GetChildCount();
-		for ( USHORT i = 0; i < nCount; i++ )
-			InvalidateControls( pWindow->GetChild( i ) );
-	}
+		pWindow->Invalidate();
 }
 
 // -----------------------------------------------------------------------
