@@ -1310,7 +1310,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	// Enable full screen feature for normal windows. Only enable this feature
 	// if the window is not a panel and has a titlebar.
-	if ( !mbUndecorated && mpWindow && [mpWindow isKindOfClass:[VCLWindow class]] )
+	if ( [pTopLevelWindow boolValue] && !mbUndecorated && mpWindow && [mpWindow isKindOfClass:[VCLWindow class]] )
 		[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
 	else
 		[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] & ~NSWindowCollectionBehaviorFullScreenPrimary];
