@@ -545,14 +545,6 @@ JavaSalGraphics::~JavaSalGraphics()
 		delete pOp;
 	}
 
-	// Notify graphics change listeners
-	while ( maGraphicsChangeListenerList.size() )
-	{
-		JavaSalBitmap *pBitmap = maGraphicsChangeListenerList.front();
-		maGraphicsChangeListenerList.pop_front();
-		pBitmap->NotifyGraphicsChanged( true );
-	}
-
 	if ( maLayer )
 		CGLayerRelease( maLayer );
 
@@ -1097,18 +1089,6 @@ void JavaSalGraphics::setFrameClipPath( CGPathRef aFrameClipPath )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::addGraphicsChangeListener( JavaSalBitmap *pBitmap )
-{
-	if ( !pBitmap )
-		return;
-
-	MutexGuard aGuard( maUndrawnNativeOpsMutex );
-
-	maGraphicsChangeListenerList.push_back( pBitmap );
-}
-
-// -----------------------------------------------------------------------
-
 void JavaSalGraphics::addNeedsDisplayRect( const CGRect aRect, float fLineWidth )
 {
 	if ( !mpFrame || CGRectIsEmpty( aRect ) )
@@ -1235,14 +1215,6 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
-	// Notify graphics change listeners
-	while ( maGraphicsChangeListenerList.size() )
-	{
-		JavaSalBitmap *pBitmap = maGraphicsChangeListenerList.front();
-		maGraphicsChangeListenerList.pop_front();
-		pBitmap->NotifyGraphicsChanged( false );
-	}
-
 	CGContextSaveGState( aContext );
 
 	// Scale printer context to match OOo resolution
@@ -1286,18 +1258,6 @@ float JavaSalGraphics::getNativeLineWidth()
 		return (float)MIN_PRINTER_RESOLUTION / 72;
 	else
 		return 1.0f;
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalGraphics::removeGraphicsChangeListener( JavaSalBitmap *pBitmap )
-{
-	if ( !pBitmap )
-		return;
-
-	MutexGuard aGuard( maUndrawnNativeOpsMutex );
-
-	maGraphicsChangeListenerList.remove( pBitmap );
 }
 
 // -----------------------------------------------------------------------

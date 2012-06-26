@@ -202,7 +202,6 @@ class JavaSalGraphics : public SalGraphics
 private:
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
-	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
 	SalColor				mnBackgroundColor;
 	CGLayerRef				maLayer;
 	sal_uInt32				mnPixelContextData;
@@ -310,7 +309,6 @@ public:
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
 	void					setFrameClipPath( CGPathRef aFrameClipPath );
-	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR );
@@ -320,7 +318,6 @@ public:
 	CGLayerRef				getLayer() { return maLayer; }
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
-	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setBackgroundColor( SalColor nBackgroundColor );
 	void					setLayer( CGLayerRef aLayer );
 	void					setNeedsDisplay( NSView *pView );

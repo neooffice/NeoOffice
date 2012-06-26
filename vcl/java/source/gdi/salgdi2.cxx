@@ -224,7 +224,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		return;
 
 	// Scale the bitmap if necessary
-	if ( mpPrinter || pJavaSalBitmap->GetBitCount() != GetBitCount() || getBitmapDirectionFormat() != JavaSalBitmap::GetNativeDirectionFormat() || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
+	if ( mpPrinter || pJavaSalBitmap->GetBitCount() != GetBitCount() || getBitmapDirectionFormat() != JavaSalBitmap::GetNativeDirectionFormat() )
 	{
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )

@@ -44,6 +44,7 @@
 struct BitmapBuffer;
 class BitmapPalette;
 class JavaSalGraphics;
+class JavaSalVirtualDevice;
 
 // -----------------
 // - JavaSalBitmap -
@@ -58,6 +59,7 @@ class JavaSalBitmap : public SalBitmap
 	BitmapPalette			maPalette;
 	BitmapBuffer*			mpBuffer;
 	JavaSalGraphics*		mpGraphics;
+	JavaSalVirtualDevice*	mpVirDev;
 
 public:
 	static ULONG			Get32BitNativeFormat();
@@ -67,10 +69,9 @@ public:
 	virtual					~JavaSalBitmap();
 
 	bool					Create( BitmapBuffer *pBuffer );
-	bool					Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal );
+	bool					Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pSrcGraphics, const BitmapPalette& rPal );
 	Point					GetPoint() const { return maPoint; }
 	JavaSalGraphics*		GetGraphics() { return mpGraphics; }
-	void					NotifyGraphicsChanged( bool bDisposed );
 
 	virtual bool			Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal );
 	virtual bool			Create( const SalBitmap& rSalBmp );

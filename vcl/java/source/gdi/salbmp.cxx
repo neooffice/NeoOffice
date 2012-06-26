@@ -36,6 +36,7 @@
 #include <salbmp.h>
 #include <saldata.hxx>
 #include <salgdi.h>
+#include <salinst.h>
 #include <vcl/bmpacc.hxx>
 
 using namespace vcl;
@@ -67,11 +68,13 @@ ULONG JavaSalBitmap::GetNativeDirectionFormat()
 // ------------------------------------------------------------------
 
 JavaSalBitmap::JavaSalBitmap() :
+	maPoint( 0, 0 ),
 	maSize( 0, 0 ),
 	mnBitCount( 0 ),
 	mpBits( NULL ),
 	mpBuffer( NULL ),
-	mpGraphics( NULL )
+	mpGraphics( NULL ),
+	mpVirDev( NULL )
 {
 	GetSalData()->maBitmapList.push_back( this );
 }
@@ -82,52 +85,6 @@ JavaSalBitmap::~JavaSalBitmap()
 {
 	GetSalData()->maBitmapList.remove( this );
 	Destroy();
-}
-
-// ------------------------------------------------------------------
-
-void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
-{
-	// Force copying of the buffer if it has not already been done
-	if ( mpGraphics )
-	{
-		mpGraphics->removeGraphicsChangeListener( this );
-
-		if ( !bDisposed && !mpBits )
-		{
-			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-			if ( aColorSpace )
-			{
-				long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
-				long nCapacity = nScanlineSize * maSize.Height();
-				// Force copying of the buffer
-				try
-				{
-					mpBits = new BYTE[ nCapacity ];
-				}
-				catch( const std::bad_alloc& ) {}
-				if ( mpBits )
-				{
-					memset( mpBits, 0, nCapacity );
-
-					CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-					if ( aContext )
-					{
-						CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height() ), mpGraphics->maNativeBounds );
-						CGRect aDestRect = CGRectMake( 0, 0, maSize.Width(), maSize.Height() );
-						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, aDestRect, aUnflippedSrcRect, aDestRect );
-
-						CGContextRelease( aContext );
-					}
-				}
-
-				CGColorSpaceRelease( aColorSpace );
-			}
-		}
-	}
-
-	mpGraphics = NULL;
-	maPoint = Point( 0, 0 );
 }
 
 // ------------------------------------------------------------------
@@ -158,26 +115,19 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal )
+bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pSrcGraphics, const BitmapPalette& rPal )
 {
 	Destroy();
 
-	if ( !pGraphics )
+	if ( !pSrcGraphics )
 		return false;
 
-	long nX = rPoint.X();
-	long nY = rPoint.Y();
-	long nWidth = rSize.Width();
-	long nHeight = rSize.Height();
-
-	maPoint = Point( nX, nY );
-	maSize = Size( nWidth, nHeight );
+	maSize = Size( rSize.Width(), rSize.Height() );
 
 	if ( maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
-	mpGraphics = pGraphics;
-	mnBitCount = mpGraphics->GetBitCount();
+	mnBitCount = pSrcGraphics->GetBitCount();
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -187,7 +137,27 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 		maPalette.SetEntryCount( nColors );
 	}
 
-	NotifyGraphicsChanged( false );
+	float fLineWidth = pSrcGraphics->getNativeLineWidth();
+	if ( fLineWidth > 0 )
+	{
+		long nPadding = (long)( fLineWidth + 0.5 );
+		maPoint = Point( nPadding, nPadding );
+	}
+
+	JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
+	if ( pInst )
+	{
+		mpVirDev = (JavaSalVirtualDevice *)pInst->CreateVirtualDevice( pSrcGraphics, maSize.Width() + ( maPoint.X() * 2 ), maSize.Height() + ( maPoint.Y() * 2 ), mnBitCount, NULL );
+		if ( mpVirDev )
+		{
+			mpGraphics = (JavaSalGraphics *)mpVirDev->GetGraphics();
+			if ( mpGraphics )
+			{
+				CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( rPoint.X(), rPoint.Y(), maSize.Width(), maSize.Height() ), pSrcGraphics->maNativeBounds );
+				mpGraphics->copyFromGraphics( pSrcGraphics, aUnflippedSrcRect, CGRectMake( maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height() ), false );
+			}
+		}
+	}
 
 	return true;
 }
@@ -301,11 +271,18 @@ void JavaSalBitmap::Destroy()
 
 	maPalette.SetEntryCount( 0 );
 
-	if ( mpGraphics )
+	if ( mpVirDev )
 	{
-		mpGraphics->removeGraphicsChangeListener( this );
-		mpGraphics = NULL;
+		if ( mpGraphics )
+			mpVirDev->ReleaseGraphics( mpGraphics );
+
+		JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
+		if ( pInst )
+			pInst->DestroyVirtualDevice( mpVirDev );
 	}
+
+	mpGraphics = NULL;
+	mpVirDev = NULL;
 }
 
 // ------------------------------------------------------------------
@@ -354,8 +331,6 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	pBuffer->maPalette = maPalette;
 
-	NotifyGraphicsChanged( false );
-
 	if ( !mpBits )
 	{
 		try
@@ -366,12 +341,49 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 		if ( mpBits )
 		{
 			memset( mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+
+			if ( mpGraphics )
+			{
+				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+				if ( aColorSpace )
+				{
+					CGContextRef aContext = CGBitmapContextCreate( mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+					if ( aContext )
+					{
+						CGRect aSrcRect = CGRectMake( maPoint.X(), maPoint.Y(), pBuffer->mnWidth, pBuffer->mnHeight );
+						CGRect aDestRect = CGRectMake( 0, 0, pBuffer->mnWidth, pBuffer->mnHeight );
+						mpGraphics->copyToContext( NULL, NULL, false, false, aContext, aDestRect, aSrcRect, aDestRect );
+
+						CGContextRelease( aContext );
+					}
+
+					CGColorSpaceRelease( aColorSpace );
+				}
+			}
 		}
 		else
 		{
 			delete pBuffer;
 			return NULL;
 		}
+	}
+
+	if ( !bReadOnly )
+	{
+		// Release the virtual device if the bits will change
+		if ( mpVirDev )
+		{
+			if ( mpGraphics )
+				mpVirDev->ReleaseGraphics( mpGraphics );
+
+			JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
+			if ( pInst )
+				pInst->DestroyVirtualDevice( mpVirDev );
+		}
+
+		maPoint = Point( 0, 0 );
+		mpGraphics = NULL;
+		mpVirDev = NULL;
 	}
 
 	pBuffer->mpBits = mpBits;
@@ -395,6 +407,7 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 				maPalette.SetEntryCount( nColors );
 			}
 		}
+
 		delete pBuffer;
 	}
 }
