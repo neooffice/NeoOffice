@@ -223,89 +223,50 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
 		return;
 
-	// Scale the bitmap if necessary
-	if ( mpPrinter || pJavaSalBitmap->GetBitCount() != GetBitCount() || getBitmapDirectionFormat() != JavaSalBitmap::GetNativeDirectionFormat() )
+	// If the bitmap is backed by a layer, draw that
+	JavaSalGraphics *pGraphics = pJavaSalBitmap->GetGraphics();
+	if ( pGraphics && !mpPrinter )
+	{
+		Point aPoint( pJavaSalBitmap->GetPoint() );
+		CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight ), pGraphics->maNativeBounds );
+		CGRect aUnflippedDestRect = UnflipFlippedRect( CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), maNativeBounds );
+		copyFromGraphics( pGraphics, aUnflippedSrcRect, aUnflippedDestRect, true );
+	}
+	else
 	{
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
-			SalTwoRect aCopyPosAry;
-			memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
-			aCopyPosAry.mnDestX = 0;
-			aCopyPosAry.mnDestY = 0;
-			aCopyPosAry.mnDestWidth = aCopyPosAry.mnSrcWidth;
-			aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
-			BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
-			if ( pCopyBuffer )
+			if ( pSrcBuffer->mpBits )
 			{
-				// Assign ownership of bits to a CGDataProvider instance
-				CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
-				if ( aProvider )
+				SalTwoRect aCopyPosAry;
+				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
+				aCopyPosAry.mnDestX = 0;
+				aCopyPosAry.mnDestY = 0;
+				aCopyPosAry.mnDestWidth = aCopyPosAry.mnSrcWidth;
+				aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
+				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
+				if ( pCopyBuffer )
 				{
-					CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), maNativeBounds );
-					pCopyBuffer->mpBits = NULL;
-					addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), aUnflippedRect ) );
-					CGDataProviderRelease( aProvider );
-				}
-				else
-				{
-					delete[] pCopyBuffer->mpBits;
-				}
+					// Assign ownership of bits to a CGDataProvider instance
+					CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+					if ( aProvider )
+					{
+						CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), maNativeBounds );
+						pCopyBuffer->mpBits = NULL;
+						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), aUnflippedRect ) );
+						CGDataProviderRelease( aProvider );
+					}
+					else
+					{
+						delete[] pCopyBuffer->mpBits;
+					}
 
-				delete pCopyBuffer;
+					delete pCopyBuffer;
+				}
 			}
 
 			pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
-		}
-	}
-	else
-	{
-		// If the bitmap is backed by a layer, draw that
-		JavaSalGraphics *pGraphics = pJavaSalBitmap->GetGraphics();
-		if ( pGraphics )
-		{
-			Point aPoint( pJavaSalBitmap->GetPoint() );
-			CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight ), pGraphics->maNativeBounds );
-			CGRect aUnflippedDestRect = UnflipFlippedRect( CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), maNativeBounds );
-			copyFromGraphics( pGraphics, aUnflippedSrcRect, aUnflippedDestRect, true );
-		}
-		else
-		{
-			BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
-			if ( pSrcBuffer )
-			{
-				if ( pSrcBuffer->mpBits )
-				{
-					SalTwoRect aCopyPosAry;
-					memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
-					aCopyPosAry.mnDestX = 0;
-					aCopyPosAry.mnDestY = 0;
-					aCopyPosAry.mnDestWidth = aCopyPosAry.mnSrcWidth;
-					aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
-					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | getBitmapDirectionFormat() );
-					if ( pCopyBuffer )
-					{
-						// Assign ownership of bits to a CGDataProvider
-						// instance
-						CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
-						if ( aProvider )
-						{
-							CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), maNativeBounds );
-							pCopyBuffer->mpBits = NULL;
-							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), aUnflippedRect ) );
-							CGDataProviderRelease( aProvider );
-						}
-						else
-						{
-							delete[] pCopyBuffer->mpBits;
-						}
-	
-						delete pCopyBuffer;
-					}
-				}
-
-				pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
-			}
 		}
 	}
 }
