@@ -42,27 +42,28 @@ using namespace vcl;
 
 // ========================================================================
 
-SalData::SalData()
+SalData::SalData() :
+	mpFirstInstance( NULL ),
+	mpFocusFrame( NULL ),
+	mnTimerInterval( 0 ),
+	mpPresentationFrame( NULL ),
+	mbInNativeModalSheet( false ),
+	mpNativeModalSheetFrame( NULL ),
+	mpLastDragFrame( NULL ),
+	mbInSignalHandler( false ),
+	mbDoubleScrollbarArrows( false ),
+	mpCaptureFrame( NULL ),
+	mpLastResizeFrame( NULL )
 {
-	mpFirstInstance	= NULL;
-	mpFocusFrame = NULL;
-	mnTimerInterval = 0;
 	maTimeout.tv_sec = 0;
 	maTimeout.tv_usec = 0;
-	mpPresentationFrame = NULL;
-	mbInNativeModalSheet = false;
-	mpNativeModalSheetFrame = NULL;
-	mpLastDragFrame = NULL;
-	mbInSignalHandler = false;
-	mbDoubleScrollbarArrows = false;
-	mpCaptureFrame = NULL;
-	mpLastResizeFrame = NULL;
 	maLastResizeTime.tv_sec = 0;
 	maLastResizeTime.tv_usec = 0;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();
 	maLastPointerState.mnState = 0;
+	maLastPointerState.maPos = Point( 0, 0 );
 }
 
 // ------------------------------------------------------------------------
