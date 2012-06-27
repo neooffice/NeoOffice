@@ -1684,8 +1684,13 @@ void JavaSalEvent::dispatch()
 				}
 
 				USHORT nButtons = pMouseEvent->mnCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-				if ( nButtons && nID == SALEVENT_MOUSEMOVE && !pSalData->mpLastDragFrame )
-					pSalData->mpLastDragFrame = pFrame;
+				if ( nID == SALEVENT_MOUSEMOVE )
+				{
+					if ( nButtons && !pSalData->mpLastDragFrame )
+						pSalData->mpLastDragFrame = pFrame;
+					if ( !nButtons && !pSalData->mpLastMouseMoveFrame )
+						pSalData->mpLastMouseMoveFrame = pFrame;
+				}
 
 				// Find the real mouse frame
 				JavaSalFrame *pOriginalFrame = pFrame;
@@ -1731,6 +1736,30 @@ void JavaSalEvent::dispatch()
 						pSalData->mpLastDragFrame = pFrame;
 					else
 						pSalData->mpLastDragFrame = NULL;
+				}
+
+				// Create a synthetic mouse leave event when a mouse move event
+				// resolves to a different window than the last mouse move event
+				if ( pSalData->mpLastMouseMoveFrame && nID == SALEVENT_MOUSEMOVE && !nButtons )
+				{
+					if ( pSalData->mpLastMouseMoveFrame != pFrame )
+					{
+						nID = SALEVENT_MOUSELEAVE;
+						pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpLastMouseMoveFrame->maGeometry.nX;
+						pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpLastMouseMoveFrame->maGeometry.nY;
+
+						JavaSalFrame *pLastMouseMoveFrame = pSalData->mpLastMouseMoveFrame;
+						pSalData->mpLastMouseMoveFrame = pFrame;
+						pFrame = pLastMouseMoveFrame;
+					}
+					else
+					{
+						pSalData->mpLastMouseMoveFrame = pFrame;
+					}
+				}
+				else
+				{
+					pSalData->mpLastMouseMoveFrame = NULL;
 				}
 
 				// Check if we are not clicking on a floating window

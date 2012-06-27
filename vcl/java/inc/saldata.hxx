@@ -86,6 +86,7 @@ public:
 	JavaSalFrame*			mpCaptureFrame;
 	JavaSalFrame*			mpLastResizeFrame;
 	timeval					maLastResizeTime;
+	JavaSalFrame*			mpLastMouseMoveFrame;
 
 							SalData();
 							~SalData();

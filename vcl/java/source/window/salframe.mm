@@ -3027,6 +3027,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSalData->mpLastDragFrame == this )
 			pSalData->mpLastDragFrame = NULL;
 
+		if ( pSalData->mpLastMouseMoveFrame == this )
+			pSalData->mpLastMouseMoveFrame = NULL;
+
 		if ( maFrameLayer )
 		{
 			CGLayerRelease( maFrameLayer );
