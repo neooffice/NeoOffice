@@ -404,6 +404,20 @@ bool IsFullKeyboardAccessEnabled( )
 	return isFullAccessEnabled;
 }
 
+// -----------------------------------------------------------------------
+
+// Note: this must not be static as the symbol will be loaded by the vos
+// module
+extern "C" SAL_DLLPUBLIC_EXPORT IMutex *Application_GetSolarMutex()
+{
+	IMutex *pRet = NULL;
+
+	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+		pRet = &Application::GetSolarMutex();
+
+	return pRet;
+}
+
 // =======================================================================
 
 void SalAbort( const XubString& rErrorText )
