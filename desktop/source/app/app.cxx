@@ -515,15 +515,6 @@ void Desktop::DeInit()
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::DeInit" );
 
 	try {
-#ifdef USE_JAVA
-        // Attempt to fix bug 3675 by flushing the configuration so that the
-        // configuration manager's vos::OTimer subclass does not need to
-        // invoke its deadlocking code
-        Reference < XFlushable > xCFGFlush( ::utl::ConfigManager::GetConfigManager()->GetConfigurationProvider(), UNO_QUERY );
-        if (xCFGFlush.is())
-            xCFGFlush->flush();
-#endif	 // USE_JAVA
-
         // instead of removing of the configManager just let it commit all the changes
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "<- store config items" );
         utl::ConfigManager::GetConfigManager()->StoreConfigItems();
