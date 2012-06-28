@@ -301,8 +301,16 @@ BOOL VCLInstance_updateNativeMenus()
 	while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 		pSalData->mpFirstInstance->Yield( false, true );
 
-	// Fix bug 3451 by not updating menus when there is a modal dialog
+	// Close all popups
 	ImplSVData *pSVData = ImplGetSVData();
+	if ( pSVData && pSVData->maWinData.mpFirstFloat )
+	{
+		static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+		if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+			pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
+	}
+
+	// Fix bug 3451 by not updating menus when there is a modal dialog
 	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSVData->maWinData.mpLastExecuteDlg );
 	if ( bRet )
 	{
@@ -1782,7 +1790,7 @@ void JavaSalEvent::dispatch()
 				{
 					ImplSVData* pSVData = ImplGetSVData();
 					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
-						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
 				}
 			}
 			break;
@@ -2000,20 +2008,7 @@ void JavaSalEvent::dispatch()
 					// frame as it indicates that the menu updating has fallen
 					// out of sync with our focus tracking
 					if ( !bIsInFocusFrameHierarchy )
-					{
 						pFrame = NULL;
-					}
-					else
-					{
-						// Close all popups
-						ImplSVData *pSVData = ImplGetSVData();
-						if ( pSVData && pSVData->maWinData.mpFirstFloat )
-						{
-							static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-							if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-								pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
-						}
-					}
 				}
 
 				if ( pFrame )
