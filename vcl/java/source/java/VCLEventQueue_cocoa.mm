@@ -852,9 +852,9 @@ static NSUInteger nMouseMask = 0;
 			if ( pResponder && [pResponder isKindOfClass:[VCLView class]] )
 				[(VCLView *)pResponder abandonInput];
 
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pFocusEvent );
+			pFocusEvent->release();
 		}
 		else
 		{
@@ -1185,9 +1185,9 @@ static NSUInteger nMouseMask = 0;
 		VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
 		if ( pSharedDelegate && ![pSharedDelegate isInTracking] )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pFocusEvent );
+			pFocusEvent->release();
 		}
 
 		// Fix bug 3557 by forcing any non-utility windows to the back when
@@ -1225,6 +1225,9 @@ static NSUInteger nMouseMask = 0;
 {
 	if ( !pEvent )
 		return;
+
+	// Cache the event time
+	JavaSalEventQueue::setLastNativeEventTime( [pEvent timestamp] );
 
 	MacOSBOOL bIsVCLWindow = ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] );
 	NSEventType nType = [pEvent type];
@@ -1334,7 +1337,7 @@ static NSUInteger nMouseMask = 0;
 				{
 					// Fix bug 3453 by adding back any recently released
 					// modifiers
-					if ( mnLastMetaModifierReleasedTime >= (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 ) )
+					if ( mnLastMetaModifierReleasedTime >= (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) )
 						nModifiers |= NSCommandKeyMask;
 
 					if ( mpLastWindowDraggedEvent && nModifiers & NSLeftMouseDownMask )
@@ -1362,7 +1365,7 @@ static NSUInteger nMouseMask = 0;
 				}
 				NSPoint aLocation = GetFlippedContentViewLocation( self, pPositionEvent );
 				SalMouseEvent *pMouseEvent = new SalMouseEvent();
-				pMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+				pMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pMouseEvent->mnX = (long)aLocation.x;
 				pMouseEvent->mnY = (long)aLocation.y;
 				if ( nID == SALEVENT_MOUSEMOVE || nID == SALEVENT_MOUSELEAVE )
@@ -1378,22 +1381,22 @@ static NSUInteger nMouseMask = 0;
 					// mouse moved event
 					USHORT nExtraCode = GetEventCode( ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask );
 					pExtraMouseEvent = new SalMouseEvent();
-					pExtraMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+					pExtraMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pExtraMouseEvent->mnX = (long)aLocation.x;
 					pExtraMouseEvent->mnY = (long)aLocation.y;
 					pExtraMouseEvent->mnButton = 0;
 					pExtraMouseEvent->mnCode = nExtraCode;
 				}
 
-				JavaSalEvent *pEvent = new JavaSalEvent( nID, mpFrame, pMouseEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
+				JavaSalEvent *pSalMouseEvent = new JavaSalEvent( nID, mpFrame, pMouseEvent );
+				JavaSalEventQueue::postCachedEvent( pSalMouseEvent );
+				pSalMouseEvent->release();
 
 				if ( pExtraMouseEvent )
 				{
-					JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, mpFrame, pExtraMouseEvent );
-					JavaSalEventQueue::postCachedEvent( pExtraEvent );
-					pExtraEvent->release();
+					JavaSalEvent *pSalExtraMouseEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, mpFrame, pExtraMouseEvent );
+					JavaSalEventQueue::postCachedEvent( pSalExtraMouseEvent );
+					pSalExtraMouseEvent->release();
 				}
 			}
 		}
@@ -1404,18 +1407,18 @@ static NSUInteger nMouseMask = 0;
 			if ( nModifiers & NSCommandKeyMask )
 				mnLastMetaModifierReleasedTime = 0;
 			else
-				mnLastMetaModifierReleasedTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 ) + MODIFIER_RELEASE_INTERVAL;
+				mnLastMetaModifierReleasedTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 ) + MODIFIER_RELEASE_INTERVAL;
 
 			USHORT nCode = GetEventCode( nModifiers );
 
 			SalKeyModEvent *pKeyModEvent = new SalKeyModEvent();
-			pKeyModEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+			pKeyModEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pKeyModEvent->mnCode = nCode;
 			pKeyModEvent->mnModKeyCode = 0;
 
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYMODCHANGE, mpFrame, pKeyModEvent );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pSalKeyModEvent = new JavaSalEvent( SALEVENT_KEYMODCHANGE, mpFrame, pKeyModEvent );
+			JavaSalEventQueue::postCachedEvent( pSalKeyModEvent );
+			pSalKeyModEvent->release();
 		}
 		// Handle scroll wheel and magnify
 		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
@@ -1453,7 +1456,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				long nScrollAmount = Float32ToLong( fDeltaX );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
@@ -1462,15 +1465,15 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = TRUE;
 
-				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
+				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
+				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
+				pSalWheelMouseEvent->release();
 			}
 			if ( fDeltaY )
 			{
 				long nScrollAmount = Float32ToLong( fDeltaY );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
@@ -1479,9 +1482,9 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = FALSE;
 
-				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
-				JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
+				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
+				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
+				pSalWheelMouseEvent->release();
 			}
 		}
 		// Handle swipe
@@ -1498,8 +1501,8 @@ static NSUInteger nMouseMask = 0;
 				NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
 				if ( pChar )
 				{
-					NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-					NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+					NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
 					if ( pKeyDownEvent && pKeyUpEvent )
 					{
 						// Post in reverse order since we are posting to the
@@ -1591,9 +1594,9 @@ static NSUInteger nMouseMask = 0;
 {
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
+		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+		pMoveResizeEvent->release();
 	}
 }
 
@@ -1601,9 +1604,9 @@ static NSUInteger nMouseMask = 0;
 {
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
+		JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
+		pMoveResizeEvent->release();
 	}
 }
 
@@ -1615,9 +1618,9 @@ static NSUInteger nMouseMask = 0;
 	{
 		if ( mpFrame )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_CLOSE, mpFrame, NULL );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pCloseEvent = new JavaSalEvent( SALEVENT_CLOSE, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pCloseEvent );
+			pCloseEvent->release();
 			bRet = NO;
 		}
 	}
@@ -1724,11 +1727,11 @@ static CFDataRef aRTFSelection = nil;
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
-			mpPendingKeyUpEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+			mpPendingKeyUpEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pKeyEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, mpPendingKeyUpEvent );
+			JavaSalEventQueue::postCachedEvent( pKeyEvent );
+			pKeyEvent->release();
 		}
 		else
 		{
@@ -1848,7 +1851,7 @@ static CFDataRef aRTFSelection = nil;
 		}
 
 		SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-		pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+		pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 		pInputEvent->maText = aText;
 		pInputEvent->mpTextAttr = pAttr;
 		pInputEvent->mnCursorPos = nCursorPos;
@@ -1856,9 +1859,9 @@ static CFDataRef aRTFSelection = nil;
 		pInputEvent->mbOnlyCursor = FALSE;
 		pInputEvent->mnCursorFlags = 0;
 
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, nCursorPos );
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
+		JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, nCursorPos );
+		JavaSalEventQueue::postCachedEvent( pSalInputEvent );
+		pSalInputEvent->release();
 	}
 }
 
@@ -1888,7 +1891,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
 		{
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+			pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pInputEvent->maText = XubString();
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = 0;
@@ -1896,9 +1899,9 @@ static CFDataRef aRTFSelection = nil;
 			pInputEvent->mbOnlyCursor = FALSE;
 			pInputEvent->mnCursorFlags = 0;
 
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, 0 );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), 0, 0 );
+			JavaSalEventQueue::postCachedEvent( pSalInputEvent );
+			pSalInputEvent->release();
 		}
 	}
 }
@@ -1979,7 +1982,7 @@ static CFDataRef aRTFSelection = nil;
 
 			ULONG nLen = aText.Len();
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
-			pInputEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+			pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 			pInputEvent->maText = aText;
 			pInputEvent->mpTextAttr = NULL;
 			pInputEvent->mnCursorPos = nLen;
@@ -1987,9 +1990,9 @@ static CFDataRef aRTFSelection = nil;
 			pInputEvent->mbOnlyCursor = FALSE;
 			pInputEvent->mnCursorFlags = 0;
 
-			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), nLen, nLen );
-			JavaSalEventQueue::postCachedEvent( pEvent );
-			pEvent->release();
+			JavaSalEvent *pSalInputEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUT, mpFrame, (void *)pInputEvent, OString(), nLen, nLen );
+			JavaSalEventQueue::postCachedEvent( pSalInputEvent );
+			pSalInputEvent->release();
 		}
 	}
 	else
@@ -2015,7 +2018,7 @@ static CFDataRef aRTFSelection = nil;
 				for ( ; i < nLength; i++ )
 				{
 					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-					pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+					pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pKeyDownEvent->mnCode = nCode;
 					pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 					pKeyDownEvent->mnRepeat = 0;
@@ -2023,9 +2026,9 @@ static CFDataRef aRTFSelection = nil;
 					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
 					memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
 	
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
-					JavaSalEventQueue::postCachedEvent( pEvent );
-					pEvent->release();
+					JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+					JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
+					pSalKeyUpEvent->release();
 
 					if ( i == nLength - 1 )
 					{
@@ -2033,9 +2036,9 @@ static CFDataRef aRTFSelection = nil;
 					}
 					else
 					{
-						JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
-						JavaSalEventQueue::postCachedEvent( pExtraEvent );
-						pExtraEvent->release();
+						JavaSalEvent *pSalExtraKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+						JavaSalEventQueue::postCachedEvent( pSalExtraKeyUpEvent );
+						pSalExtraKeyUpEvent->release();
 					}
 				}
 			}
@@ -2074,8 +2077,8 @@ static CFDataRef aRTFSelection = nil;
 					SalExtTextInputPosEvent *pInputPosEvent = new SalExtTextInputPosEvent();
 					memset( pInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
 
-					JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUTPOS, mpFrame, pInputPosEvent );
-					pEvent->dispatch();
+					JavaSalEvent *pSalInputPosEvent = new JavaSalEvent( SALEVENT_EXTTEXTINPUTPOS, mpFrame, pInputPosEvent );
+					pSalInputPosEvent->dispatch();
 
 					if ( pInputPosEvent )
 					{
@@ -2085,7 +2088,7 @@ static CFDataRef aRTFSelection = nil;
 							aRet = NSMakeRect( pInputPosEvent->mnX, pInputPosEvent->mnY + 20, pInputPosEvent->mnWidth, pInputPosEvent->mnHeight );
 					}
 
-					pEvent->release();
+					pSalInputPosEvent->release();
 
 					// Translate, flip coordinates within content frame, and
 					// adjust to screen coordinates
@@ -2126,7 +2129,7 @@ static CFDataRef aRTFSelection = nil;
 				USHORT nCode = nCommandKey | [pSharedResponder lastModifiers];
 
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+				pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = 0;
 				pKeyDownEvent->mnRepeat = 0;
@@ -2151,7 +2154,7 @@ static CFDataRef aRTFSelection = nil;
 			for ( ; i < nLength; i++ )
 			{
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-				pKeyDownEvent->mnTime = (ULONG)( [[NSDate date] timeIntervalSince1970] * 1000 );
+				pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pKeyDownEvent->mnCode = nCode;
 				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
 				pKeyDownEvent->mnRepeat = 0;
@@ -2159,19 +2162,19 @@ static CFDataRef aRTFSelection = nil;
 				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
 				memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
 
-				JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+				JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
 				if ( pKeyBindingDownEvent )
-					pKeyBindingDownEvent->addOriginalKeyEvent( pEvent );
+					pKeyBindingDownEvent->addOriginalKeyEvent( pSalKeyUpEvent );
 				else
-					JavaSalEventQueue::postCachedEvent( pEvent );
-				pEvent->release();
+					JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
+				pSalKeyUpEvent->release();
 
-				JavaSalEvent *pExtraEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+				JavaSalEvent *pSalExtraKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
 				if ( pKeyBindingUpEvent )
-					pKeyBindingUpEvent->addOriginalKeyEvent( pExtraEvent );
+					pKeyBindingUpEvent->addOriginalKeyEvent( pSalExtraKeyUpEvent );
 				else
-					JavaSalEventQueue::postCachedEvent( pExtraEvent );
-				pExtraEvent->release();
+					JavaSalEventQueue::postCachedEvent( pSalExtraKeyUpEvent );
+				pSalExtraKeyUpEvent->release();
 			}
 		}
 

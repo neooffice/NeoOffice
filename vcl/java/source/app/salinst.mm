@@ -1905,7 +1905,7 @@ void JavaSalEvent::dispatch()
 							NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 							SalMouseEvent *pMouseEvent = new SalMouseEvent();
-							pMouseEvent->mnTime = ( [[NSDate date] timeIntervalSince1970] * 1000 );
+							pMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 							pMouseEvent->mnX = pSalData->maLastPointerState.maPos.X() - pFrame->maGeometry.nX;
 							pMouseEvent->mnY = pSalData->maLastPointerState.maPos.Y() - pFrame->maGeometry.nY;
 							pMouseEvent->mnCode = pSalData->maLastPointerState.mnState;
@@ -2482,6 +2482,10 @@ Condition JavaSalEventQueue::maCondition;
 
 // -------------------------------------------------------------------------
 
+double JavaSalEventQueue::mfLastNativeEventTime = 0;
+
+// -------------------------------------------------------------------------
+
 JavaSalEventQueueItem* JavaSalEventQueue::mpKeyInputItem = NULL;
 
 // -------------------------------------------------------------------------
@@ -2559,6 +2563,13 @@ void JavaSalEventQueue::dispatchNextEvent()
 {
 	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+}
+
+// -------------------------------------------------------------------------
+
+double JavaSalEventQueue::getLastNativeEventTime()
+{
+	return mfLastNativeEventTime;
 }
 
 // -------------------------------------------------------------------------
@@ -2772,6 +2783,13 @@ void JavaSalEventQueue::removeCachedEvents( const JavaSalFrame *pFrame )
 	}
 
 	purgeRemovedEventsFromFront( &maNonNativeEventQueue );
+}
+
+// -------------------------------------------------------------------------
+
+void JavaSalEventQueue::setLastNativeEventTime( double nEventTime )
+{
+	mfLastNativeEventTime = nEventTime;
 }
 
 // -------------------------------------------------------------------------

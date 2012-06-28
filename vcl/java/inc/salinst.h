@@ -208,6 +208,7 @@ class SAL_DLLPRIVATE JavaSalEventQueue
 	static ::std::list< JavaSalEventQueueItem* >	maNativeEventQueue;
 	static ::std::list< JavaSalEventQueueItem* >	maNonNativeEventQueue;
 	static JavaSalEventQueueItem*	mpKeyInputItem;
+	static double			mfLastNativeEventTime;
 	static JavaSalEventQueueItem*	mpMoveResizeItem;
 	static JavaSalEventQueueItem*	mpPaintItem;
 	static sal_Bool			mbShutdownDisabled;
@@ -216,10 +217,12 @@ public:
 	static void				purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue );
 	static sal_Bool			anyCachedEvent( USHORT nType );
 	static void				dispatchNextEvent();
+	static double			getLastNativeEventTime();
 	static JavaSalEvent*	getNextCachedEvent( ULONG nTimeout, sal_Bool bNativeEvents );
 	static sal_Bool			isShutdownDisabled();
 	static void				postCachedEvent( JavaSalEvent *pEvent );
 	static void				removeCachedEvents( const JavaSalFrame *pFrame );
+	static void				setLastNativeEventTime( double nEventTime );
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
