@@ -307,7 +307,7 @@ BOOL VCLInstance_updateNativeMenus()
 	{
 		static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 		if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-			pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
+			pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
 	}
 
 	// Fix bug 3451 by not updating menus when there is a modal dialog
@@ -1790,7 +1790,7 @@ void JavaSalEvent::dispatch()
 				{
 					ImplSVData* pSVData = ImplGetSVData();
 					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
-						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
+						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
 				}
 			}
 			break;
