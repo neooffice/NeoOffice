@@ -297,20 +297,12 @@ BOOL VCLInstance_updateNativeMenus()
 
 	pSalData->maNativeEventCondition.reset();
 
-	// Close all popups
-	ImplSVData *pSVData = ImplGetSVData();
-	if ( pSVData && pSVData->maWinData.mpFirstFloat )
-	{
-		static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-		if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-			pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
-	}
-
 	// Dispatch pending VCL events until the queue is clear
 	while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 		pSalData->mpFirstInstance->Yield( false, true );
 
 	// Fix bug 3451 by not updating menus when there is a modal dialog
+	ImplSVData *pSVData = ImplGetSVData();
 	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSVData->maWinData.mpLastExecuteDlg );
 	if ( bRet )
 	{
