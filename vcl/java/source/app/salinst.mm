@@ -2000,7 +2000,20 @@ void JavaSalEvent::dispatch()
 					// frame as it indicates that the menu updating has fallen
 					// out of sync with our focus tracking
 					if ( !bIsInFocusFrameHierarchy )
+					{
 						pFrame = NULL;
+					}
+					else
+					{
+						// Close all popups
+						ImplSVData *pSVData = ImplGetSVData();
+						if ( pSVData && pSVData->maWinData.mpFirstFloat )
+						{
+							static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+							if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+								pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+						}
+					}
 				}
 
 				if ( pFrame )
