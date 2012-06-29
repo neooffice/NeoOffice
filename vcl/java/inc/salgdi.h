@@ -204,6 +204,7 @@ private:
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	SalColor				mnBackgroundColor;
 	CGLayerRef				maLayer;
+	float					mfLayerScaleFactor;
 	sal_uInt32				mnPixelContextData;
 	CGContextRef			maPixelContext;
 	CGRect					maNeedsDisplayRect;
@@ -312,14 +313,14 @@ public:
 	void					addNeedsDisplayRect( const CGRect aRect, float fLineWidth );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aSrcRect, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow = false, bool bDestIsUnflipped = false );
+	void					copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow = false, bool bDestIsUnflipped = false, float fDestBackingScaleFactor = 1.0f );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	ULONG					getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					setBackgroundColor( SalColor nBackgroundColor );
-	void					setLayer( CGLayerRef aLayer );
+	void					setLayer( CGLayerRef aLayer, float fLayerScaleFactor );
 	void					setNeedsDisplay( NSView *pView );
 };
 

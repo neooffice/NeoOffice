@@ -104,7 +104,7 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	mnHeight = 0;
 
 	mpGraphics->maNativeBounds = CGRectNull;
-	mpGraphics->setLayer( NULL );
+	mpGraphics->setLayer( NULL, 1.0f );
 
 	if ( maBitmapLayer )
 	{
@@ -130,11 +130,14 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 	if ( maBitmapContext )
 	{
-		maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+		float fBackingScaleFactor = JavaSalFrame::GetBackingScaleFactor();
+		float fDX = (float)nDX * fBackingScaleFactor;
+		float fDY = (float)nDY * fBackingScaleFactor;
+		maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( fDX, fDY ), NULL );
 		if ( maBitmapLayer )
 		{
-			mpGraphics->maNativeBounds = CGRectMake( 0, 0, nDX, nDY );
-			mpGraphics->setLayer( maBitmapLayer );
+			mpGraphics->maNativeBounds = CGRectMake( 0, 0, fDX, fDY );
+			mpGraphics->setLayer( maBitmapLayer, fBackingScaleFactor );
 			mnWidth = nDX;
 			mnHeight = nDY;
 			bRet = TRUE;
