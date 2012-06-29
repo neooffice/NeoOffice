@@ -274,8 +274,6 @@ BOOL VCLInstance_updateNativeMenus()
 	if ( NSWindow_hasMarkedText( nil ) )
 		return bRet;
 
-	SalData *pSalData = GetSalData();
-
 	// Make sure that any events fetched from the queue while the application
 	// mutex was unlocked are already dispatched before we try to lock the
 	// mutex. Fix bug 3467 by speeding up acquiring of the event queue mutex
@@ -288,7 +286,10 @@ BOOL VCLInstance_updateNativeMenus()
 
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
-	if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
+
+	ImplSVData *pSVData = ImplGetSVData();
+	SalData *pSalData = GetSalData();
+	if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet || !pSVData || !pSalData )
 	{
 		rSolarMutex.release();
 		aEventQueueMutex.release();
@@ -302,8 +303,7 @@ BOOL VCLInstance_updateNativeMenus()
 		pSalData->mpFirstInstance->Yield( false, true );
 
 	// Close all popups
-	ImplSVData *pSVData = ImplGetSVData();
-	if ( pSVData && pSVData->maWinData.mpFirstFloat )
+	if ( pSVData->maWinData.mpFirstFloat )
 	{
 		static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 		if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
@@ -635,7 +635,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 
 	// Check timer
-	if ( pSVData->mpSalTimer && pSalData->mnTimerInterval )
+	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 	{
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, NULL );
@@ -770,7 +770,7 @@ bool JavaSalInstance::AnyInput( USHORT nType )
 		// Check timer
 		SalData *pSalData = GetSalData();
 		ImplSVData* pSVData = ImplGetSVData();
-		if ( pSVData->mpSalTimer && pSalData->mnTimerInterval )
+		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 		{
 			timeval aCurrentTime;
 			gettimeofday( &aCurrentTime, NULL );
@@ -1351,7 +1351,7 @@ void JavaSalEvent::dispatch()
 			if ( !isShutdownCancelled() )
 			{
 				ImplSVData *pSVData = ImplGetSVData();
-				if ( !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+				if ( pSVData && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 				{
 					JavaSalFrame *pFrame = pSalData->maFrameList.front();
 					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
