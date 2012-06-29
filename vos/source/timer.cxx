@@ -38,9 +38,9 @@
 #ifdef USE_JAVA
 
 #include <dlfcn.h>
-#include <vos/mutex.hxx>
 
-typedef ::vos::IMutex *Application_GetSolarMutexFunc();
+typedef sal_Bool Application_acquireSolarMutexFunc();
+typedef void Application_releaseSolarMutexFunc();
 
 #endif	// USE_JAVA
 
@@ -436,7 +436,8 @@ void OTimerManager::checkForTimeout()
 	// locking the application mutex before executing the timer:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8428
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8456
-	Application_GetSolarMutexFunc *pFunc = (Application_GetSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_GetSolarMutex" );
+	Application_acquireSolarMutexFunc *pAcquireFunc = (Application_acquireSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" );
+	Application_releaseSolarMutexFunc *pReleaseFunc = (Application_releaseSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" );
 #endif	// USE_JAVA
 
 	if (pTimer->isExpired())
@@ -449,21 +450,14 @@ void OTimerManager::checkForTimeout()
 		m_Lock.release();
 		
 #ifdef USE_JAVA
-		if ( pFunc )
-		{
-			IMutex *pSolarMutex = pFunc();
-			if ( pSolarMutex )
-				pSolarMutex->acquire();
-		}
+		sal_Bool bSolarMutexAcquired = sal_False;
+		if ( pAcquireFunc && pReleaseFunc )
+			bSolarMutexAcquired = pAcquireFunc();
 #endif	// USE_JAVA
 		pTimer->onShot();
 #ifdef USE_JAVA
-		if ( pFunc )
-		{
-			IMutex *pSolarMutex = pFunc();
-			if ( pSolarMutex )
-				pSolarMutex->release();
-		}
+		if ( bSolarMutexAcquired && pAcquireFunc && pReleaseFunc )
+			pReleaseFunc();
 #endif	// USE_JAVA
 
 		// restart timer if specified
