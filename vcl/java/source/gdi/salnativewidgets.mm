@@ -52,6 +52,7 @@
 #include <ApplicationServices/ApplicationServices.h>
 // Need to include for HITheme constants but we don't link to it
 #include <Carbon/Carbon.h>
+#include <Cocoa/Cocoa.h>
 #include <postmac.h>
 
 // Comment out the following line to disable native controls
@@ -229,7 +230,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 				{
 					CGContextRetain( maContext );
 					CGContextSaveGState( maContext );
-					JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
+					JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maFrameClipPath, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth(), pGraphics->getLayerScaleFactor() );
 					CGRect aUnflippedRect = UnflipFlippedRect( CGRectMake( nX, nY, nWidth, nHeight ), pGraphics->maNativeBounds );
 					CGContextTranslateCTM( maContext, aUnflippedRect.origin.x, aUnflippedRect.origin.y );
 					mbUseLayer = true;
@@ -2149,6 +2150,8 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 	if ( !HIThemeInitialize() )
 		return bOK;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
 	switch( nType )
@@ -2358,6 +2361,8 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			}
 			break;
 	}
+
+	[pPool release];
 
 	return bOK;
 }
