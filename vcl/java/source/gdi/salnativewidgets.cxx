@@ -48,15 +48,11 @@
 #include <vcl/svapp.hxx>
 #include <vcl/decoview.hxx>
 
-#ifdef __cplusplus
 #include <premac.h>
-#endif
 #include <ApplicationServices/ApplicationServices.h>
 // Need to include for HITheme constants but we don't link to it
 #include <Carbon/Carbon.h>
-#ifdef __cplusplus
 #include <postmac.h>
-#endif
 
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
