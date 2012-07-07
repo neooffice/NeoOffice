@@ -375,12 +375,14 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
 	{
-		if ( pPendingSetMenuAsMainMenu != self )
+		if ( !pPendingSetMenuAsMainMenu )
 		{
-			if ( pPendingSetMenuAsMainMenu )
-				[pPendingSetMenuAsMainMenu release];
 			pPendingSetMenuAsMainMenu = self;
 			[pPendingSetMenuAsMainMenu retain];
+			bRemovePendingSetMenuAsMainMenu = YES;
+		}
+		else if ( !bRemovePendingSetMenuAsMainMenu && pPendingSetMenuAsMainMenu == self )
+		{
 			bRemovePendingSetMenuAsMainMenu = YES;
 		}
 
@@ -430,6 +432,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
+		bRemovePendingSetMenuAsMainMenu = NO;
 	}
 }
 
@@ -489,8 +492,9 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 				[pPendingSetMenuAsMainMenu release];
 			pPendingSetMenuAsMainMenu = self;
 			[pPendingSetMenuAsMainMenu retain];
-			bRemovePendingSetMenuAsMainMenu = NO;
 		}
+
+		bRemovePendingSetMenuAsMainMenu = NO;
 
 		[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
 
@@ -562,6 +566,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
+		bRemovePendingSetMenuAsMainMenu = NO;
 	}
 }
 
