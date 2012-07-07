@@ -128,11 +128,10 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 		if ( !Application::IsShutDown() && !JavaSalEventQueue::isShutdownDisabled() )
 		{
-			// Fix crashing bug reported in the following forum post by not
-			// queuing the shutdown and, instead, dispatch the shutdown event
-			// immediately
 			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-			pEvent->dispatch();
+			JavaSalEventQueue::postCachedEvent( pEvent );
+			while ( !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+				Application::Yield();
 			pEvent->release();
 
 			if ( Application::IsShutDown() )
