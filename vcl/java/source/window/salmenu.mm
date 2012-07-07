@@ -274,10 +274,16 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	[self removeMenuAsMainMenu:self];
 
 	if ( mpMenu )
+	{
 		[mpMenu release];
+		mpMenu = nil;
+	}
 
 	if ( mpMenuItems )
+	{
 		[mpMenuItems release];
+		mpMenuItems = nil;
+	}
 }
 
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs
