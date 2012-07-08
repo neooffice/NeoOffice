@@ -117,7 +117,7 @@ static void HandleScreensChangedRequest()
 	MutexGuard aGuard( aScreensMutex );
 
 	nMainScreen = 0;
-	fHighestBackingScaleFactor = 2.0f;
+	fHighestBackingScaleFactor = 1.0f;
 	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
 	aVCLScreensVisibleBoundsList.clear();
@@ -157,12 +157,14 @@ static void HandleScreensChangedRequest()
 				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
 					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
 
+#ifdef USE_RETINA_DISPLAY
 				if ( [pScreen respondsToSelector:@selector(backingScaleFactor)] )
 				{
 					float fBackingScaleFactor = [pScreen backingScaleFactor];
 					if ( fHighestBackingScaleFactor < fBackingScaleFactor )
 						fHighestBackingScaleFactor = fBackingScaleFactor;
 				}
+#endif	// USE_RETINA_DISPLAY
 			}
 		}
 	}
