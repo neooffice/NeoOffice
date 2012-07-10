@@ -1722,6 +1722,12 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)keyUp:(NSEvent *)pEvent
 {
+	if ( mpLastKeyDownEvent )
+	{
+		[mpLastKeyDownEvent release];
+		mpLastKeyDownEvent = nil;
+	}
+
 	if ( mpPendingKeyUpEvent )
 	{
 		NSWindow *pWindow = [self window];
@@ -1799,7 +1805,7 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
 		XubString aText;
 		NSString *pChars = nil;
@@ -1888,7 +1894,7 @@ static CFDataRef aRTFSelection = nil;
 		mpTextInput = nil;
 
 		NSWindow *pWindow = [self window];
-		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
 			SalExtTextInputEvent *pInputEvent = new SalExtTextInputEvent();
 			pInputEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
@@ -1962,7 +1968,7 @@ static CFDataRef aRTFSelection = nil;
 		mpTextInput = nil;
 
 		NSWindow *pWindow = [self window];
-		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
 			NSString *pChars = nil;
 			if ( [aString isKindOfClass:[NSAttributedString class]] )
@@ -1998,7 +2004,7 @@ static CFDataRef aRTFSelection = nil;
 	else
 	{
 		NSWindow *pWindow = [self window];
-		if ( pWindow && [pWindow isVisible] && mpFrame && mpLastKeyDownEvent )
+		if ( pWindow && [pWindow isVisible] && mpFrame )
 		{
 			NSString *pChars = nil;
 			if ( [aString isKindOfClass:[NSAttributedString class]] )
@@ -2010,8 +2016,8 @@ static CFDataRef aRTFSelection = nil;
 				// Fix bug 710 by stripping out the Alt modifier. Note that we
 				// do it here because we need to let the Alt modifier through
 				// for action keys.
-				NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
-				USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+				NSUInteger nModifiers = ( ( mpLastKeyDownEvent ? [mpLastKeyDownEvent modifierFlags] : 0 ) & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
+				USHORT nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : 0 ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
 
 				NSUInteger i = 0;
 				NSUInteger nLength = [pChars length];
@@ -2026,9 +2032,9 @@ static CFDataRef aRTFSelection = nil;
 					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
 					memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
 	
-					JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
-					JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
-					pSalKeyUpEvent->release();
+					JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+					JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
+					pSalKeyDownEvent->release();
 
 					if ( i == nLength - 1 )
 					{
@@ -2036,9 +2042,9 @@ static CFDataRef aRTFSelection = nil;
 					}
 					else
 					{
-						JavaSalEvent *pSalExtraKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
-						JavaSalEventQueue::postCachedEvent( pSalExtraKeyUpEvent );
-						pSalExtraKeyUpEvent->release();
+						JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, mpFrame, pKeyUpEvent );
+						JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
+						pSalKeyUpEvent->release();
 					}
 				}
 			}
