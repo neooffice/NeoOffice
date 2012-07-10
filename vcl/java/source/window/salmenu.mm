@@ -885,33 +885,40 @@ JavaSalMenu::~JavaSalMenu()
 
 void JavaSalMenu::SetMenuBarToFocusFrame()
 {
-	// Find first frame in hierarchy that has a menubar. Fix bug reported in
-	// the following NeoOffice forum post by only doing this if the frame is a
-	// floating or utility window:
+	// Find first non-floating, non-utility window in hierarchy. Fix bug
+	// reported in the following NeoOffice forum post by only doing this if the
+	// frame is a floating or utility window:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62883#62883
 	JavaSalFrame *pFrame = GetSalData()->mpFocusFrame;
-	while ( pFrame && pFrame->mbVisible && ( !pFrame->mpMenuBar || !pFrame->mpMenuBar->mbIsMenuBarMenu || !pFrame->mpMenuBar->mpMenu ) && ( pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) )
+	while ( pFrame && ( pFrame->IsFloatingFrame() || pFrame->IsUtilityWindow() ) )
 		pFrame = pFrame->mpParent;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
-	if ( pFrame && pFrame->mbVisible && pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() )
+	// Fix bug reported in the following NeoOffice forum post that causes the
+	// empty menu to be set when editing an embedded OLE object by only setting
+	// the empty menu if the frame has no menu and has a visible parent:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63032#63032
+	if ( pFrame && pFrame->mbVisible )
 	{
-		[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
-	}
-	else
-	{
-		static JavaSalMenu *pEmptyMenuBar = NULL;
-		if ( !pEmptyMenuBar )
+		if ( pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu )
 		{
-			JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
-			if ( pInst )
-				pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( TRUE, NULL );
+			[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
 		}
+		else if ( pFrame->mpParent && pFrame->mpParent->mbVisible )
+		{
+			static JavaSalMenu *pEmptyMenuBar = NULL;
+			if ( !pEmptyMenuBar )
+			{
+				JavaSalInstance *pInst = GetSalData()->mpFirstInstance;
+				if ( pInst )
+					pEmptyMenuBar = (JavaSalMenu *)pInst->CreateMenu( TRUE, NULL );
+			}
 
-		if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
-			[pEmptyMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pEmptyMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+			if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
+				[pEmptyMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pEmptyMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+		}
 	}
 
 	[pPool release];
