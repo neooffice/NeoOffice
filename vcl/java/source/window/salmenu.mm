@@ -866,7 +866,11 @@ JavaSalMenu::~JavaSalMenu()
 {
 	aMenuMap.erase( this );
 
-	if ( mpParentFrame )
+	// Fix disabled menu bug when editing embedded OLE object reported in the
+	// following forum topic by only setting the frame's menubar to NULL if
+	// this menu is the menubar:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8462
+	if ( mpParentFrame && mpParentFrame->mpMenuBar == this )
 		mpParentFrame->SetMenu( NULL );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
