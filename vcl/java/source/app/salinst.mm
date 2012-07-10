@@ -595,7 +595,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	JavaSalEvent *pEvent = NULL;
 
 	// Dispatch next pending non-AWT event
-	if ( !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, FALSE ) ) != NULL )
+	if ( !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
 	{
 		pEvent->dispatch();
 		pEvent->release();

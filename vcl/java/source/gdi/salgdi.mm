@@ -1180,7 +1180,7 @@ void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPat
 	if ( aContext )
 		drawUndrawnNativeOps( aContext, maNativeBounds );
 
-	if ( bDestIsWindow && mpFrame && mnBackgroundColor&& !CGRectIsEmpty( aDestRect ) )
+	if ( bDestIsWindow && mpFrame && mnBackgroundColor && !CGRectIsEmpty( aDestRect ) )
 	{
 		// If the layer does not fully cover the window, paint the fill color
 		// in the uncovered areas so that no drawing artifacts remain after
