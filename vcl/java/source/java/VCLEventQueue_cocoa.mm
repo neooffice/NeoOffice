@@ -1718,6 +1718,12 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+
+	// Fix broken repeat key events on Mac OS X 10.8 by explicitly posting
+	// the key down event if the interpretKeyEvents: selector does not post
+	// anything
+	if ( mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
+		[self insertText:[mpLastKeyDownEvent characters] replacementRange:NSMakeRange( NSNotFound, 0 )];
 }
 
 - (void)keyUp:(NSEvent *)pEvent
@@ -2049,6 +2055,13 @@ static CFDataRef aRTFSelection = nil;
 				}
 			}
 		}
+	}
+
+	// Clear cached last key down event
+	if ( mpLastKeyDownEvent )
+	{
+		[mpLastKeyDownEvent release];
+		mpLastKeyDownEvent = nil;
 	}
 }
 
