@@ -261,7 +261,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
-	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
@@ -301,7 +301,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
-	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
@@ -326,7 +326,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
     unsigned int nPos = [pPos unsignedIntValue];
 	if ( mpMenuItems )
 	{
-		if ( nPos >= 0 && nPos < [mpMenuItems count] )
+		if ( nPos < [mpMenuItems count] )
 			[mpMenuItems insertObject:pMenuItem atIndex:nPos];
 		else
 			[mpMenuItems addObject:pMenuItem];
@@ -447,7 +447,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
-	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
@@ -589,7 +589,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
-	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
@@ -618,7 +618,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
-	if ( mpMenuItems && nPos >= 0 && nPos < [mpMenuItems count] )
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
