@@ -1622,6 +1622,14 @@ void JavaSalEvent::dispatch()
 
 					mpData = pKeyEvent;
 				}
+
+				// Fix bug reported in the following NeoOffice forum post by
+				// ignoring character codes that are in the Unicode private use
+				// use area and there is a non-alphanumeric key code:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63098#63098
+				if ( pKeyEvent->mnCharCode >= 0xe000 && pKeyEvent->mnCharCode < 0xf900 && ( getKeyCode() & ~( KEYGROUP_NUM | KEYGROUP_ALPHA ) ) )
+					pKeyEvent->mnCharCode = 0;
+
 				// Fix bug 1158 by resetting the focus to whichever window is
 				// receiving key events
 				if ( pFrame != pSalData->mpFocusFrame )
