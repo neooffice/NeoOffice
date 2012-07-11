@@ -492,12 +492,12 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					NSMenu *pAppMenu = [pItem submenu];
 					if ( pAppMenu )
 					{
-						mbAppMenuInitialized = YES;
-
-						if ( !Application::IsShutDown() )
+						if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
 						{
 							IMutex& rSolarMutex = Application::GetSolarMutex();
 							rSolarMutex.acquire();
+							mbAppMenuInitialized = YES;
+
 							if ( !Application::IsShutDown() )
 							{
 								NSString *pAbout = nil;
