@@ -426,13 +426,16 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					// Shift line drawing downward slightly so that line
 					// drawing favors pixels downward and to the right instead
 					// of the CGContext default behavior of upward and to the
-					// right since the OOo code favors the former, noe the
+					// right since the OOo code favors the former, not the
 					// latter behavior.
 					// This download shift also fixes the bugs reported in the
 					// following NeoOffice forum posts:
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62777#62777
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62805#62805
-					CGContextTranslateCTM( aContext, 0, -0.01f );
+					// Shift half the line width to fix the bug reported in the
+					// following NeoOffice forum post:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8467
+					CGContextTranslateCTM( aContext, mbAntialias ? mfLineWidth / 2 : 0, mfLineWidth / -2 );
 
 					CGContextBeginPath( aContext );
 					CGContextAddPath( aContext, maPath );
