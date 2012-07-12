@@ -129,6 +129,7 @@ static OUString aSaveAVersionLocalizedString;
 - (void)dealloc;
 - (NSDocument *)duplicateAndReturnError:(NSError **)ppError;
 - (void)duplicateDocument:(id)pObject;
+- (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -256,12 +257,22 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( ppError )
 		*ppError = nil;
 
-	[self duplicateDocument:self];
+	// This selector gets invoked by the duplicate button in the "this document
+	// is locked" alert that appears when you change content in a locked
+	// document so wait for a revert call
+	[self duplicateDocumentAndWaitForRevertCall:YES];
 
 	return self;
 }
 
 - (void)duplicateDocument:(id)pObject
+{
+	// This selector gets invoked by the duplicate menu item in the titlebar's
+	// menu so don't wait for a revert call and execute immediately
+	[self duplicateDocumentAndWaitForRevertCall:NO];
+}
+
+- (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait
 {
 	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
@@ -271,7 +282,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		{
 			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 			if ( pDoc == self )
-				SFXDocument_duplicate( mpFrame );
+				SFXDocument_duplicate( mpFrame, bWait );
 		}
 		rSolarMutex.release();
 	}
