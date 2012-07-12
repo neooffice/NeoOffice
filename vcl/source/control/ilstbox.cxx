@@ -2833,7 +2833,8 @@ void ImplWin::ImplDraw( bool bLayout )
                 if ( pImplBtn && pImplBtn->IsPressed() )
                     nState |= CTRL_STATE_PRESSED;
             }
-#else	// USE_JAVA
+#endif	// USE_JAVA
+
             // if parent has no border, then nobody has drawn the background
             // since no border window exists. so draw it here.
             WinBits nParentStyle = pWin->GetStyle();
@@ -2841,11 +2842,17 @@ void ImplWin::ImplDraw( bool bLayout )
             {
                 Rectangle aParentRect( Point( 0, 0 ), pWin->GetSizePixel() );
                 Region aParentReg( aParentRect );
+#ifdef USE_JAVA
+	            bNativeOK = pWin->DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aParentReg,
+#else	// USE_JAVA
                 pWin->DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aParentReg,
+#endif	// USE_JAVA
                                          nState, aControlValue, rtl::OUString() );
             }
-#endif	// USE_JAVA
             
+#ifdef USE_JAVA
+	        if ( !bNativeOK )
+#endif	// USE_JAVA
 	        bNativeOK = DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
 		        aControlValue, rtl::OUString() );
 	    }
