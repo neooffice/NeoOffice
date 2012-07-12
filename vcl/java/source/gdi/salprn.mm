@@ -1300,7 +1300,7 @@ BOOL JavaSalPrinter::EndJob()
 	{
 		TimeValue aDelay;
 		aDelay.Seconds = 0;
-		aDelay.Nanosec = 50;
+		aDelay.Nanosec = 10000;
 		MacOSBOOL bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
 		while ( osl_isThreadRunning( maPrintThread ) )
 		{

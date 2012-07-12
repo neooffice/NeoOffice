@@ -1097,7 +1097,7 @@ void SalYieldMutex::acquire()
 				{
 					TimeValue aDelay;
 					aDelay.Seconds = 0;
-					aDelay.Nanosec = 50;
+					aDelay.Nanosec = 10000;
 					maMainThreadCondition.reset();
 					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
 					JavaSalEventQueue::postCachedEvent( pUserEvent );
