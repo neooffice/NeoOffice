@@ -1553,9 +1553,12 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	// Fix bug 3647 by allowing the VCL event dispatch thread to run
 	Application::Reschedule();
 
-	// One of the listeners may have rejected the drop so use the rejected
-	// flag instead the context's getDropComplete() method
-	bRet = !mbRejected;
+	// Fix bug reported in the following NeoOffice forum topic by only
+	// returning true if none of the listeners have rejected the drop and
+	// one of the listeners set the drop as successfully completed:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8457
+	mbRejected = pContext->isRejected();
+	bRet = ( !mbRejected && pContext->getDropComplete() );
 
 	return bRet;
 }
