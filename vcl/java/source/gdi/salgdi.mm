@@ -1153,7 +1153,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 		CGContextSaveGState( aContext );
 
-		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, maNativeBounds, aSrcRect, aDestRect, false, false, mfLayerScaleFactor );
+		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, maNativeBounds, aSrcRect, aDestRect, false, false );
 
 		CGContextRestoreGState( aContext );
 
@@ -1164,7 +1164,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow, bool bDestIsUnflipped, float fDestBackingScaleFactor )
+void JavaSalGraphics::copyToContext( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGRect aSrcRect, CGRect aDestRect, bool bDestIsWindow, bool bDestIsUnflipped )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
@@ -1305,7 +1305,7 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer, float fLayerScaleFactor )
 				}
 
 				// Copy old layer to new layer
-				if ( maLayer && mfLayerScaleFactor == fLayerScaleFactor )
+				if ( maLayer && fLayerScaleFactor == mfLayerScaleFactor )
 				{
 					CGSize aOldLayerSize = CGLayerGetSize( maLayer );
 					CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, aLayerSize.height - aOldLayerSize.height ), maLayer );

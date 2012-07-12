@@ -157,14 +157,12 @@ static void HandleScreensChangedRequest()
 				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
 					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
 
-#ifdef USE_RETINA_DISPLAY
 				if ( [pScreen respondsToSelector:@selector(backingScaleFactor)] )
 				{
 					float fBackingScaleFactor = [pScreen backingScaleFactor];
 					if ( fHighestBackingScaleFactor < fBackingScaleFactor )
 						fHighestBackingScaleFactor = fBackingScaleFactor;
 				}
-#endif	// USE_RETINA_DISPLAY
 			}
 		}
 	}
@@ -2801,8 +2799,7 @@ bool JavaSalFrame::ToFront()
 
 void JavaSalFrame::UpdateLayer()
 {
-	float fBackingScaleFactor = JavaSalFrame::GetBackingScaleFactor();
-	CGSize aExpectedSize = CGSizeMake( (float)maGeometry.nWidth * fBackingScaleFactor, (float)maGeometry.nHeight * fBackingScaleFactor );
+	CGSize aExpectedSize = CGSizeMake( maGeometry.nWidth, maGeometry.nHeight );
 	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aExpectedSize ) )
 		return;
 
@@ -2827,7 +2824,7 @@ void JavaSalFrame::UpdateLayer()
 	{
 		CGSize aLayerSize = CGLayerGetSize( maFrameLayer );
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
-		mpGraphics->setLayer( maFrameLayer, fBackingScaleFactor );
+		mpGraphics->setLayer( maFrameLayer, JavaSalFrame::GetBackingScaleFactor() );
 		if ( mbFullScreen )
 			mpGraphics->setBackgroundColor( 0xff000000 );
 		else
