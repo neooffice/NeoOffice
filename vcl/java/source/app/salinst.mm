@@ -430,7 +430,7 @@ void SalAbort( const XubString& rErrorText )
 	if ( !rErrorText.Len() )
 		fprintf( stderr, "Application Error" );
 	else
-		fprintf( stderr, ByteString( rErrorText, gsl_getSystemTextEncoding() ).GetBuffer() );
+		fprintf( stderr, "%s", ByteString( rErrorText, gsl_getSystemTextEncoding() ).GetBuffer() );
 	fprintf( stderr, "\n" );
 	abort();
 }
