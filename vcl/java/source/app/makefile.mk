@@ -51,12 +51,8 @@ dummy:
 
 .ELSE		# "$(GUIBASE)"!="java"
 
-OBJFILES=\
-	$(OBJ)$/salmain.obj
-
 SLOFILES= \
 	$(SLO)$/saldata.obj \
-	$(SLO)$/salmain.obj \
 	$(SLO)$/saltimer.obj \
 	$(SLO)$/salinfo.obj \
 	$(SLO)$/salinst.obj \

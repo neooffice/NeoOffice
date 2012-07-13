@@ -15,6 +15,18 @@
  .ENDIF
  
  # Name of library where static data members are initialized
+@@ -116,7 +116,11 @@
+ CFLAGS_NO_EXCEPTIONS=-fno-exceptions
+ 
+ # Normal C++ compilation flags
++.IF "$(BUILD_OS_MAJOR)"=="10" && "$(BUILD_OS_MINOR)"=="5"
+ CFLAGSCXX=-pipe -malign-natural -fsigned-char -Wno-long-double $(ARCH_FLAGS)
++.ELSE		# "$(BUILD_OS_MAJOR)"=="10" && "$(BUILD_OS_MINOR)"=="5"
++CFLAGSCXX=-pipe -malign-natural -fsigned-char $(ARCH_FLAGS)
++.ENDIF		# "$(BUILD_OS_MAJOR)"=="10" && "$(BUILD_OS_MINOR)"=="5"
+ CFLAGSCXX+= -Wno-ctor-dtor-privacy
+ 
+ PICSWITCH:=-fPIC
 @@ -259,11 +262,11 @@
  STDOBJCUI=
  STDSLOCUI=

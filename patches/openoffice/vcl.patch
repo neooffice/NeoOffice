@@ -238,7 +238,7 @@ diff -u -r1.5 salnativewidgets-none.cxx
  WaitObject::~WaitObject()
  {
      if ( mpWindow )
---- util/makefile.mk.bak	2009-01-05 06:44:12.000000000 -0800
+--- util/makefile.mk	2009-01-05 06:44:12.000000000 -0800
 +++ util/makefile.mk	2011-02-02 07:43:41.000000000 -0800
 @@ -190,6 +190,7 @@
  	-lAppleRemote$(DLLPOSTFIX)
@@ -248,3 +248,23 @@ diff -u -r1.5 salnativewidgets-none.cxx
               -framework QTKit
  LIB1FILES+= \
              $(SLB)$/sala11y.lib
+--- aqua/source/a11y/aqua11yfocuslistener.hxx	2008-04-15 06:10:39.000000000 -0700
++++ aqua/source/a11y/aqua11yfocuslistener.hxx	2012-07-12 21:53:03.000000000 -0700
+@@ -47,8 +47,8 @@
+     
+     static rtl::Reference< AquaA11yFocusListener > theListener;
+ 
+-    AquaA11yFocusListener::AquaA11yFocusListener();
+-    virtual AquaA11yFocusListener::~AquaA11yFocusListener() {};
++    AquaA11yFocusListener();
++    virtual ~AquaA11yFocusListener() {};
+ public:
+ 
+     static rtl::Reference< AquaA11yFocusListener > get();
+@@ -63,4 +63,4 @@
+     virtual oslInterlockedCount SAL_CALL release() SAL_THROW(());	
+ };
+ 
+-#endif // _AQUA11YFOCUSLISTENER_HXX_
+\ No newline at end of file
++#endif // _AQUA11YFOCUSLISTENER_HXX_

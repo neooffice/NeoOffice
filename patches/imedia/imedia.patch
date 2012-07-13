@@ -435,6 +435,57 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
+@@ -1865,8 +1865,6 @@
+ 			buildSettings = {
+ 				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+ 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
+-				MACOSX_DEPLOYMENT_TARGET = 10.4;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 			};
+ 			name = Debug;
+ 		};
+@@ -1879,8 +1877,6 @@
+ 				);
+ 				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+ 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
+-				MACOSX_DEPLOYMENT_TARGET = 10.4;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 			};
+ 			name = Release;
+ 		};
+@@ -1945,8 +1941,6 @@
+ 			buildSettings = {
+ 				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+ 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
+-				MACOSX_DEPLOYMENT_TARGET = 10.4;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 			};
+ 			name = Plugin;
+ 		};
+@@ -1979,7 +1973,6 @@
+ 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/sqlite\"";
+ 				PREBINDING = NO;
+ 				PRODUCT_NAME = iMediaTesterSingle;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 				WRAPPER_EXTENSION = app;
+ 				ZERO_LINK = NO;
+ 			};
+@@ -2014,7 +2007,6 @@
+ 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
+ 				PREBINDING = NO;
+ 				PRODUCT_NAME = iMediaTesterSingle;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 				WRAPPER_EXTENSION = app;
+ 				ZERO_LINK = NO;
+ 			};
+@@ -2049,7 +2041,6 @@
+ 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
+ 				PREBINDING = NO;
+ 				PRODUCT_NAME = iMediaTesterSingle;
+-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+ 				WRAPPER_EXTENSION = app;
+ 				ZERO_LINK = NO;
+ 			};
 @@ -2034,7 +2069,7 @@
  				);
  				PREBINDING = NO;

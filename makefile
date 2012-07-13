@@ -84,7 +84,6 @@ OS_TYPE=Win32
 UOUTPUTDIR=wntmsci12.pro
 DLLSUFFIX=mxp
 endif
-COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
 # Build location macros
@@ -111,6 +110,7 @@ else
 OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/winenv.set
 OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
+COMPILERDIR=$(OOO-BUILD_BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
@@ -191,7 +191,7 @@ build.ooo-build_configure: build.ooo-build_checkout build.sun-template_checkout
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
 ifeq ("$(OS_TYPE)","MacOSX")
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.5 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
@@ -216,23 +216,31 @@ build.oo_patches: \
 	build.oo_cppu_patch \
 	build.oo_cppuhelper_patch \
 	build.oo_cpputools_patch \
+	build.oo_dtrans_patch \
 	build.oo_filter_patch \
+	build.oo_fpicker_patch \
 	build.oo_framework_patch \
 	build.oo_i18npool_patch \
+	build.oo_idlc_patch \
 	build.oo_jfreereport_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
+	build.oo_lpsolve_patch \
 	build.oo_moz_patch \
 	build.oo_postprocess_patch \
 	build.oo_qadevOOo_patch \
 	build.oo_reportbuilder_patch \
 	build.oo_scp2_patch \
 	build.oo_solenv_patch \
+	build.oo_soltools_patch \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch \
 	build.oo_wizards_patch
+# Copy modified compiler scripts to force 32 bit compilation of all binaries
+	mkdir -p "$(COMPILERDIR)"
+	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches

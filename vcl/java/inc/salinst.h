@@ -122,7 +122,7 @@ public:
 // - JavaSalEvent -
 // ----------------
 
-class SAL_DLLPRIVATE JavaSalEvent
+class JavaSalEvent
 {
 	USHORT					mnID;
 	JavaSalFrame*			mpFrame;

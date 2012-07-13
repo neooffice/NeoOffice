@@ -93,7 +93,7 @@ public:
 // - JavaSalGraphicsOp -
 // ----------------------
 
-class SAL_DLLPRIVATE JavaSalGraphicsOp
+class JavaSalGraphicsOp
 {
 protected:
 	CGPathRef				maFrameClipPath;
@@ -164,7 +164,7 @@ public:
 // - JavaImplFont -
 // ----------------
 
-class SAL_DLLPRIVATE JavaImplFont
+class JavaImplFont
 {
 	static ::std::map< JavaImplFont*, JavaImplFont* >	maInstancesMap;
 

@@ -260,6 +260,7 @@ void ProcessShutdownIconCommand( int nCommand )
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
+- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;

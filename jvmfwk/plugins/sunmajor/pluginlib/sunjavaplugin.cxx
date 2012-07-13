@@ -505,13 +505,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     typedef jint JNICALL JNI_InitArgs_Type(void *);
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
     rtl::OUString sSymbolCreateJava(
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
             // Fix bug 1257 by explicitly loading the JVM instead of loading the
             // shared JavaVM library
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl"));
-#else	// USE_JAVA && MACOSX
+#else	// MACOSX
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
         
     JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getFunctionSymbol(
         moduleRt, sSymbolCreateJava.pData);
