@@ -1258,10 +1258,10 @@ ULONG JavaSalGraphics::getBitmapDirectionFormat()
 
 float JavaSalGraphics::getNativeLineWidth()
 {
-	if ( mpPrinter )
-		return (float)MIN_PRINTER_RESOLUTION / 72;
-	else
-		return 1.0f;
+	// Fix printing bug reported in the following forum post by not using
+	// thicker line widths for printers:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63125#63125
+	return 1.0f;
 }
 
 // -----------------------------------------------------------------------
