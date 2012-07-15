@@ -65,9 +65,6 @@ class SalBitmap;
 class JavaSalFrame : public SalFrame
 {
 private:
-	sal_uInt32				mnHiddenBit;
-	CGContextRef			maHiddenContext;
-	CGLayerRef				maHiddenLayer;
 	CGLayerRef				maFrameLayer;
 	CGMutablePathRef		maFrameClipPath;
 

@@ -1870,9 +1870,6 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 // =======================================================================
 
 JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
-	mnHiddenBit( 0 ),
-    maHiddenContext( NULL ),
-    maHiddenLayer( NULL ),
 	maFrameLayer( NULL ),
 	maFrameClipPath( NULL ),
 	mpWindow( NULL ),
@@ -1917,18 +1914,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	mpGraphics->mpFrame = this;
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
-
-	// Make a native layer backed by a 1 x 1 pixel native bitmap
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( aColorSpace )
-	{
-		maHiddenContext = CGBitmapContextCreate( &mnHiddenBit, 1, 1, 8, sizeof( mnHiddenBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-		if ( maHiddenContext )
-			maHiddenLayer = CGLayerCreateWithContext( maHiddenContext, CGSizeMake( 1, 1 ), NULL );
-		CGColorSpaceRelease( aColorSpace );
-	}
-
-	mpGraphics->setLayer( maHiddenLayer );
+	mpGraphics->setLayer( NULL );
 
 	// Set initial parent
 	if ( pParent )
@@ -1981,12 +1967,6 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( maFrameLayer )
 		CGLayerRelease( maFrameLayer );
-
-	if ( maHiddenLayer )
-		CGLayerRelease( maHiddenLayer );
-
-	if ( maHiddenContext )
-		CGContextRelease( maHiddenContext );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2817,7 +2797,7 @@ void JavaSalFrame::UpdateLayer()
 	else
 	{
 		mpGraphics->maNativeBounds = CGRectNull;
-		mpGraphics->setLayer( maHiddenLayer );
+		mpGraphics->setLayer( NULL );
 	}
 }
 
@@ -3040,7 +3020,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			maFrameLayer = NULL;
 		}
 
-		mpGraphics->setLayer( maHiddenLayer );
+		mpGraphics->setLayer( NULL );
 
 		// Fix bug 3032 by showing one of the show only frames if no other
 		// non-floating windows are visible
