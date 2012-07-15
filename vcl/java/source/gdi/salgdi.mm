@@ -435,7 +435,8 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					// Shift half the line width to fix the bug reported in the
 					// following NeoOffice forum post:
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8467
-					CGContextTranslateCTM( aContext, mbAntialias ? mfLineWidth / 2 : 0, mfLineWidth / -2 );
+					if ( !pGraphics->mpPrinter )
+						CGContextTranslateCTM( aContext, mbAntialias ? mfLineWidth / 2 : 0, mfLineWidth / -2 );
 
 					CGContextBeginPath( aContext );
 					CGContextAddPath( aContext, maPath );
