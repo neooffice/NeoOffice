@@ -100,7 +100,6 @@ public:
 
 	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut );
 	static void				FlushAllFrames();
-	static float			GetBackingScaleFactor();
 	static unsigned int		GetDefaultScreenNumber();
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );

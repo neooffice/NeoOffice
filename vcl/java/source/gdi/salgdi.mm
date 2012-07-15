@@ -507,7 +507,6 @@ void JavaSalGraphics::setContextDefaultSettings( CGContextRef aContext, const CG
 JavaSalGraphics::JavaSalGraphics() :
 	mnBackgroundColor( 0x00000000 ),
 	maLayer( NULL ),
-	mfLayerScaleFactor( 1.0f ),
 	mnPixelContextData( 0 ),
 	maPixelContext( NULL ),
 	maNeedsDisplayRect( CGRectNull ),
@@ -1279,7 +1278,7 @@ void JavaSalGraphics::setBackgroundColor( SalColor nBackgroundColor )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::setLayer( CGLayerRef aLayer, float fLayerScaleFactor )
+void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 {
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
@@ -1306,7 +1305,7 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer, float fLayerScaleFactor )
 				}
 
 				// Copy old layer to new layer
-				if ( maLayer && fLayerScaleFactor == mfLayerScaleFactor )
+				if ( maLayer )
 				{
 					CGSize aOldLayerSize = CGLayerGetSize( maLayer );
 					CGContextDrawLayerAtPoint( aContext, CGPointMake( 0, aLayerSize.height - aOldLayerSize.height ), maLayer );
@@ -1319,10 +1318,6 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer, float fLayerScaleFactor )
 		maLayer = aLayer;
 		if ( maLayer )
 			CGLayerRetain( maLayer );
-
-		mfLayerScaleFactor = fLayerScaleFactor;
-		if ( mfLayerScaleFactor < 1.0f )
-			mfLayerScaleFactor = 1.0f;
 	}
 }
 
