@@ -42,6 +42,10 @@
 
 using namespace vcl;
 
+@interface NSWindow (VCLVirtualDeviceGetGraphicsLayer)
+- (CGFloat)backingScaleFactor;
+@end
+
 @interface VCLVirtualDeviceGetGraphicsLayer : NSObject
 {
 	CGLayerRef				maLayer;
@@ -101,6 +105,8 @@ using namespace vcl;
 		NSArray *pWindows = [pApp windows];
 		if ( pWindows )
 		{
+			float fLastBackingScaleFactor = 1.0f;
+			CGContextRef aLastContext = NULL;
 			NSUInteger nCount = [pWindows count];
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
@@ -114,13 +120,28 @@ using namespace vcl;
 						CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 						if ( aContext )
 						{
-							maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( mnDX, mnDY ), NULL );
-							if ( maLayer )
+							if ( [pWindow respondsToSelector:@selector(backingScaleFactor)] )
+							{
+								float fBackingScaleFactor = [pWindow backingScaleFactor];
+								if ( fLastBackingScaleFactor < fBackingScaleFactor )
+								{
+									fLastBackingScaleFactor = fBackingScaleFactor;
+									aLastContext = aContext;
+									break;
+								}
+							}
+							else
+							{
+								aLastContext = aContext;
 								break;
+							}
 						}
 					}
 				}
 			}
+
+			if ( aLastContext )
+				maLayer = CGLayerCreateWithContext( aLastContext, CGSizeMake( mnDX, mnDY ), NULL );
 		}
 	}
 }
