@@ -44,9 +44,8 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
+#include <salprn.h>
 
 #endif	// USE_JAVA && MACOSX
 
@@ -88,6 +87,13 @@ ImplQPrinter::ImplQPrinter( Printer* pParent ) :
 	SetPageQueueSize( 0 );
 	mnCopyCount 	= pParent->mnCopyCount;
 	mbCollateCopy	= pParent->mbCollateCopy;
+
+#if defined USE_JAVA && defined MACOSX
+	// Fix bug reported in the following NeoOffice forum topic by copying the
+	// parent printer's native print info settings:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+	((JavaSalInfoPrinter *)mpInfoPrinter)->SetImplQPrinterInfoPrinter( (JavaSalInfoPrinter *)pParent->mpInfoPrinter );
+#endif	# USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -103,6 +109,13 @@ ImplQPrinter::~ImplQPrinter()
 
 void ImplQPrinter::Destroy()
 {
+#if defined USE_JAVA && defined MACOSX
+	// Fix bug reported in the following NeoOffice forum topic by copying the
+	// parent printer's native print info settings:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+	((JavaSalInfoPrinter *)mpInfoPrinter)->SetImplQPrinterInfoPrinter( NULL );
+#endif	# USE_JAVA && MACOSX
+
 	if( mbDestroyAllowed )
 		delete this;
 	else

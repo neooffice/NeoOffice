@@ -1,0 +1,286 @@
+/*************************************************************************
+ *
+ *  $RCSfile$
+ *
+ *  $Revision$
+ *
+ *  last change: $Author$ $Date$
+ *
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
+ *
+ *         - GNU General Public License Version 2.1
+ *
+ *  Patrick Luby, June 2003
+ *
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2003 Planamesa Inc.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
+ *
+ ************************************************************************/
+
+#include <salvd.h>
+#include <salgdi.h>
+
+#include <premac.h>
+#import <AppKit/AppKit.h>
+#include <postmac.h>
+
+using namespace vcl;
+
+@interface NSWindow (VCLVirtualDeviceGetGraphicsLayer)
+- (CGFloat)backingScaleFactor;
+@end
+
+@interface VCLVirtualDeviceGetGraphicsLayer : NSObject
+{
+	CGLayerRef				maLayer;
+	long					mnDX;
+	long					mnDY;
+}
++ (id)createWithWidth:(long)nDX height:(long)nDY;
+- (id)initWithWidth:(long)nDX height:(long)nDY;
+- (void)dealloc;
+- (void)getGraphicsLayer:(id)pObject;
+- (CGLayerRef)layer;
+@end
+
+@implementation VCLVirtualDeviceGetGraphicsLayer
+
++ (id)createWithWidth:(long)nDX height:(long)nDY
+{
+	VCLVirtualDeviceGetGraphicsLayer *pRet = [[VCLVirtualDeviceGetGraphicsLayer alloc] initWithWidth:nDX height:nDY];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithWidth:(long)nDX height:(long)nDY
+{
+	[super init];
+
+	maLayer = NULL;
+	mnDX = nDX;
+	if ( mnDX < 1 )
+		mnDX = 1;
+	mnDY = nDY;
+	if ( mnDY < 1 )
+		mnDY = 1;
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( maLayer )
+		CGLayerRelease( maLayer );
+
+	[super dealloc];
+}
+
+- (void)getGraphicsLayer:(id)pObject
+{
+	if ( maLayer )
+	{
+		CGLayerRelease( maLayer );
+		maLayer = NULL;
+	}
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			float fLastBackingScaleFactor = 1.0f;
+			CGContextRef aLastContext = NULL;
+			NSUInteger nCount = [pWindows count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				{
+					NSGraphicsContext *pContext = [pWindow graphicsContext];
+					if ( pContext )
+					{
+						CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+						if ( aContext )
+						{
+							if ( [pWindow respondsToSelector:@selector(backingScaleFactor)] )
+							{
+								float fBackingScaleFactor = [pWindow backingScaleFactor];
+								if ( fLastBackingScaleFactor < fBackingScaleFactor )
+								{
+									fLastBackingScaleFactor = fBackingScaleFactor;
+									aLastContext = aContext;
+									break;
+								}
+							}
+							else
+							{
+								aLastContext = aContext;
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			if ( aLastContext )
+				maLayer = CGLayerCreateWithContext( aLastContext, CGSizeMake( mnDX, mnDY ), NULL );
+		}
+	}
+}
+
+- (CGLayerRef)layer
+{
+	return maLayer;
+}
+
+@end
+
+// =======================================================================
+
+JavaSalVirtualDevice::JavaSalVirtualDevice() :
+	mnWidth( 0 ),
+	mnHeight( 0 ),
+	mbBitmapLayer( false ),
+	maVirDevLayer( NULL ),
+	mnBitCount( 32 ),
+	mpGraphics( new JavaSalGraphics() ),
+	mbGraphics( FALSE )
+{
+	// By default no mirroring for VirtualDevices
+	mpGraphics->SetLayout( 0 );
+	mpGraphics->mpVirDev = this;
+	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
+	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
+}
+
+// -----------------------------------------------------------------------
+
+JavaSalVirtualDevice::~JavaSalVirtualDevice()
+{
+	if ( maVirDevLayer )
+		CGLayerRelease( maVirDevLayer );
+
+	// Delete graphics last as it may be needed by a JavaSalBitmap
+	if ( mpGraphics )
+		delete mpGraphics;
+}
+
+// -----------------------------------------------------------------------
+
+SalGraphics* JavaSalVirtualDevice::GetGraphics()
+{
+	if ( mbGraphics )
+		return NULL;
+
+	mbGraphics = TRUE;
+
+	return mpGraphics;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
+{
+	if ( pGraphics != mpGraphics )
+		return;
+
+	mbGraphics = FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
+{
+	if ( nDX < 1 )
+		nDX = 1;
+	if ( nDY < 1 )
+		nDY = 1;
+
+	if ( maVirDevLayer && !mbBitmapLayer && nDX == mnWidth && nDY == mnHeight )
+		return TRUE;
+
+	BOOL bRet = FALSE;
+
+	mnWidth = 0;
+	mnHeight = 0;
+	mbBitmapLayer = false;
+
+	if ( maVirDevLayer )
+	{
+		CGLayerRelease( maVirDevLayer );
+		maVirDevLayer = NULL;
+	}
+
+	mpGraphics->maNativeBounds = CGRectNull;
+	mpGraphics->setLayer( NULL );
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLVirtualDeviceGetGraphicsLayer *pVCLVirtualDeviceGetGraphicsLayer = [VCLVirtualDeviceGetGraphicsLayer createWithWidth:nDX height:nDY];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLVirtualDeviceGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLVirtualDeviceGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	maVirDevLayer = [pVCLVirtualDeviceGetGraphicsLayer layer];
+	if ( maVirDevLayer )
+	{
+		mbBitmapLayer = true;
+	}
+	else
+	{
+		// Make a native layer backed by a 1 x 1 pixel native bitmap
+		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		if ( aColorSpace )
+		{
+			sal_uInt32 nBit = 0;
+			CGContextRef aBitmapContext = CGBitmapContextCreate( &nBit, 1, 1, 8, sizeof( nBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			if ( aBitmapContext )
+			{
+				maVirDevLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+				CGContextRelease( aBitmapContext );
+			}
+
+			CGColorSpaceRelease( aColorSpace );
+		}
+	}
+
+	if ( maVirDevLayer )
+	{
+		CGLayerRetain( maVirDevLayer );
+
+		CGSize aLayerSize = CGLayerGetSize( maVirDevLayer );
+		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
+		mpGraphics->setLayer( maVirDevLayer );
+		mnWidth = nDX;
+		mnHeight = nDY;
+		bRet = TRUE;
+	}
+
+	[pPool release];
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
+{
+	rWidth = mnWidth;
+	rHeight = mnHeight;
+}

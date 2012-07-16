@@ -757,6 +757,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
+	mpImplQPrinterInfoPrinter( NULL ),
 	mpVirDev( new JavaSalVirtualDevice() )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -1094,10 +1095,36 @@ DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 	return DUPLEX_UNKNOWN;
 }
 
+// -----------------------------------------------------------------------
+
+void JavaSalInfoPrinter::SetPrintInfo( id pInfo )
+{
+	if ( mpImplQPrinterInfoPrinter )
+		mpImplQPrinterInfoPrinter->SetPrintInfo( pInfo );
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpInfo )
+	{
+		[mpInfo release];
+		mpInfo = nil;
+	}
+
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:pInfo];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
+	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
+	if ( mpInfo )
+		[mpInfo retain];
+
+	[pPool release];
+}
+
 // =======================================================================
 
 JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mpGraphics( NULL ),
+	mpInfoPrinter( pInfoPrinter ),
 	mbGraphics( FALSE ),
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
@@ -1113,7 +1140,7 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 
 	// Create a copy of the info printer's print info to any isolate changes
 	// made by the print job
-	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:pInfoPrinter->GetPrintInfo()];
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( mpInfoPrinter ? mpInfoPrinter->GetPrintInfo() : nil )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
@@ -1244,6 +1271,12 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 					mpInfo = pInfo;
 					[mpInfo retain];
 				}
+
+				// Fix bug reported in the following NeoOffice forum topic by
+				// copying the parent printer's native print info settings:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+				if ( mpInfoPrinter )
+					mpInfoPrinter->SetPrintInfo( mpInfo );
 
 				mbStarted = TRUE;
 			}

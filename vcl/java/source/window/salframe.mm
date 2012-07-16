@@ -64,7 +64,6 @@ typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOpti
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
 static unsigned int nMainScreen = 0;
-static float fHighestBackingScaleFactor = 1.0f;
 static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
@@ -80,10 +79,6 @@ static ::osl::Mutex aSystemColorsMutex;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
-
-@interface NSScreen (VCLUpdateScreens)
-- (CGFloat)backingScaleFactor;
-@end
 
 NSRect GetTotalScreenBounds()
 {
@@ -117,7 +112,6 @@ static void HandleScreensChangedRequest()
 	MutexGuard aGuard( aScreensMutex );
 
 	nMainScreen = 0;
-	fHighestBackingScaleFactor = 1.0f;
 	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
 	aVCLScreensVisibleBoundsList.clear();
@@ -156,13 +150,6 @@ static void HandleScreensChangedRequest()
 				// Check if this is the main screen
 				if ( pMainScreen && aVCLScreensFullBoundsList.size() && NSEqualRects( [pMainScreen frame], aFullFrame ) )
 					nMainScreen = aVCLScreensFullBoundsList.size() - 1;
-
-				if ( [pScreen respondsToSelector:@selector(backingScaleFactor)] )
-				{
-					float fBackingScaleFactor = [pScreen backingScaleFactor];
-					if ( fHighestBackingScaleFactor < fBackingScaleFactor )
-						fHighestBackingScaleFactor = fBackingScaleFactor;
-				}
 			}
 		}
 	}
@@ -1879,9 +1866,6 @@ NSCursor *JavaSalFrame_getCursor( NSView *pView )
 // =======================================================================
 
 JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
-	mnHiddenBit( 0 ),
-    maHiddenContext( NULL ),
-    maHiddenLayer( NULL ),
 	maFrameLayer( NULL ),
 	maFrameClipPath( NULL ),
 	mpWindow( NULL ),
@@ -1926,18 +1910,7 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	mpGraphics->mpFrame = this;
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
-
-	// Make a native layer backed by a 1 x 1 pixel native bitmap
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( aColorSpace )
-	{
-		maHiddenContext = CGBitmapContextCreate( &mnHiddenBit, 1, 1, 8, sizeof( mnHiddenBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-		if ( maHiddenContext )
-			maHiddenLayer = CGLayerCreateWithContext( maHiddenContext, CGSizeMake( 1, 1 ), NULL );
-		CGColorSpaceRelease( aColorSpace );
-	}
-
-	mpGraphics->setLayer( maHiddenLayer, 1.0f );
+	mpGraphics->setLayer( NULL );
 
 	// Set initial parent
 	if ( pParent )
@@ -1990,12 +1963,6 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( maFrameLayer )
 		CGLayerRelease( maFrameLayer );
-
-	if ( maHiddenLayer )
-		CGLayerRelease( maHiddenLayer );
-
-	if ( maHiddenContext )
-		CGContextRelease( maHiddenContext );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -2371,28 +2338,6 @@ void JavaSalFrame::FlushAllFrames()
 	[pVCLSetNeedsDisplayAllViews performSelectorOnMainThread:@selector(setNeedsDisplay:) withObject:pVCLSetNeedsDisplayAllViews waitUntilDone:NO modes:pModes];
 
 	[pPool release];
-}
-
-// -----------------------------------------------------------------------
-
-float JavaSalFrame::GetBackingScaleFactor()
-{
-	// Update if screens have not yet been set
-	ResettableGuard< Mutex > aGuard( aScreensMutex );
-	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-
-		[pPool release];
-	}
-
-	return fHighestBackingScaleFactor;
 }
 
 // -----------------------------------------------------------------------
@@ -2824,7 +2769,7 @@ void JavaSalFrame::UpdateLayer()
 	{
 		CGSize aLayerSize = CGLayerGetSize( maFrameLayer );
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
-		mpGraphics->setLayer( maFrameLayer, JavaSalFrame::GetBackingScaleFactor() );
+		mpGraphics->setLayer( maFrameLayer );
 		if ( mbFullScreen )
 			mpGraphics->setBackgroundColor( 0xff000000 );
 		else
@@ -2848,7 +2793,7 @@ void JavaSalFrame::UpdateLayer()
 	else
 	{
 		mpGraphics->maNativeBounds = CGRectNull;
-		mpGraphics->setLayer( maHiddenLayer, 1.0f );
+		mpGraphics->setLayer( NULL );
 	}
 }
 
@@ -3071,7 +3016,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			maFrameLayer = NULL;
 		}
 
-		mpGraphics->setLayer( maHiddenLayer, 1.0f );
+		mpGraphics->setLayer( NULL );
 
 		// Fix bug 3032 by showing one of the show only frames if no other
 		// non-floating windows are visible

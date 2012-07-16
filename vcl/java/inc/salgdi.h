@@ -204,7 +204,6 @@ private:
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	SalColor				mnBackgroundColor;
 	CGLayerRef				maLayer;
-	float					mfLayerScaleFactor;
 	sal_uInt32				mnPixelContextData;
 	CGContextRef			maPixelContext;
 	CGRect					maNeedsDisplayRect;
@@ -320,7 +319,7 @@ public:
 	float					getNativeLineWidth();
 	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					setBackgroundColor( SalColor nBackgroundColor );
-	void					setLayer( CGLayerRef aLayer, float fLayerScaleFactor );
+	void					setLayer( CGLayerRef aLayer );
 	void					setNeedsDisplay( NSView *pView );
 };
 

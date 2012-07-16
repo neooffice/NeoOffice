@@ -55,6 +55,7 @@ class JavaSalInfoPrinter : public SalInfoPrinter
 {
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
+	JavaSalInfoPrinter*		mpImplQPrinterInfoPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
 
 public:
@@ -75,6 +76,8 @@ public:
 	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
 	virtual const id		GetPrintInfo() { return mpInfo; }
 	virtual sal_Bool		IsPaperRotated() { return mbPaperRotated; }
+	virtual void			SetImplQPrinterInfoPrinter( JavaSalInfoPrinter *pImplQPrinterInfoPrinter ) { mpImplQPrinterInfoPrinter = pImplQPrinterInfoPrinter; }
+	virtual void			SetPrintInfo( id pInfo );
 };
 
 // ------------------
@@ -84,6 +87,7 @@ public:
 class JavaSalPrinter : public SalPrinter
 {
 	JavaSalGraphics*		mpGraphics;
+	JavaSalInfoPrinter*		mpInfoPrinter;
 	BOOL					mbGraphics;
 	XubString				maJobName;
 	Paper					mePaperFormat;
