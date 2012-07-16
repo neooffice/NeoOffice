@@ -80,10 +80,6 @@ using namespace osl;
 using namespace rtl;
 using namespace vcl;
 
-@interface NSScreen (VCLUpdateScreens)
-- (CGFloat)backingScaleFactor;
-@end
-
 NSRect GetTotalScreenBounds()
 {
 	if ( NSIsEmptyRect( aTotalScreenBounds ) )
