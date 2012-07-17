@@ -688,6 +688,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
+	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
 	while ( bContinue && !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
@@ -698,7 +699,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		nCount = 0;
 
 		USHORT nID = pEvent->getID();
-		size_t nFrames = pSalData->maFrameList.size();
 		pEvent->dispatch();
 		switch ( nID )
 		{
