@@ -44,7 +44,6 @@
 #if defined USE_JAVA && defined MACOSX
 
 #include <salgdi.h>
-#include <salprn.h>
 
 #endif	// USE_JAVA && MACOSX
 
