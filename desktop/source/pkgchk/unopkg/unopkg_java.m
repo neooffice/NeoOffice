@@ -39,7 +39,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define TMPDIR "/tmp"
+#define TMPDIR "/var/tmp"
 
 typedef int UnopkgMain_Type( int argc, char **argv );
 
@@ -63,14 +63,14 @@ static NSString *GetNSTemporaryDirectory( const char *pProgName )
 			{
 				BOOL bDir = NO;
 				NSString *pCachePath = (NSString *)[pCachePaths objectAtIndex:i];
-				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
+				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
 					if ( pProgName )
 					{
 						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:pProgName]];
 						bDir = NO;
-						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
+						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 						{
 							pTempDir = pCachePath;
 							break;
@@ -154,11 +154,6 @@ int java_main( int argc, char **argv )
 		NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomePath];
 		putenv( (char *)[pHomeEnv UTF8String] );
   	}
-
-	// Make sure TMPDIR exists as a softlink to /private/tmp as it can be
-	// easily removed. In most cases, this call should fail, but we do it
-	// just to be sure.
-	symlink( "private/tmp", TMPDIR );
 
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
