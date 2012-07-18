@@ -101,12 +101,12 @@ static NSString *GetNSTemporaryDirectory()
 			{
 				BOOL bDir = NO;
 				NSString *pCachePath = (NSString *)[pCachePaths objectAtIndex:i];
-				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
+				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:YES attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
 					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_DIR_NAME]];
 					bDir = NO;
-					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
+					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:YES attributes:pDict error:nil] )
 					{
 						pTempDir = pCachePath;
 						break;
