@@ -441,7 +441,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					float fScaleFactor = 1.0f;
 					MacOSBOOL bFlipped = [self isFlipped];
 					NSRect aBounds = [self bounds];
-					NSRect aPageBounds = NSZeroRect;
 					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
 					if ( pPrintOperation )
 					{
@@ -451,26 +450,25 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 							NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
 							if ( pValue )
 								fScaleFactor = [pValue floatValue];
-
-							NSSize aPaperSize = [pInfo paperSize];
-							aPageBounds = [pInfo imageablePageBounds];
-
-							if ( bFlipped )
-								aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
 						}
 					}
 
 					CGContextSaveGState( aContext );
 
-					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
 					if ( bFlipped )
 					{
-						CGContextTranslateCTM( aContext, 0, aPageBounds.size.height );
+						CGContextTranslateCTM( aContext, 0, aBounds.size.height );
 						CGContextScaleCTM( aContext, 1.0, -1.0f );
 						aRect.origin.y = aBounds.origin.y + aBounds.size.height - aRect.origin.y - aRect.size.height;
 					}
-					aRect.origin.x -= aPageBounds.origin.x;
-					aRect.origin.y -= aPageBounds.origin.y;
+
+					// Fix bug reported in the following NeoOffice forum topic
+					// by translating using the margins that were set before
+					// the native print dialog was displayed:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+					aRect.origin.x -= pGraphics->mfPageTranslateX;
+					aRect.origin.y += pGraphics->mfPageTranslateY;
+					CGContextTranslateCTM( aContext, pGraphics->mfPageTranslateX, pGraphics->mfPageTranslateY * -1 );
 
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
 					pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( aRect ) );
@@ -1033,12 +1031,12 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 		if ( ( mbPaperRotated && nOrientation == NSPortraitOrientation ) || ( !mbPaperRotated && nOrientation == NSLandscapeOrientation ) )
 		{
 			aSize = Size( (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( aPageBounds.origin.y * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
+			aRect = Rectangle( Point( (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
 		}
 		else
 		{
 			aSize = Size( (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ) );
-			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.y * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
+			aRect = Rectangle( Point( (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ), (long)( ( aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height ) * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ) ) );
 		}
 	}
 
@@ -1098,6 +1096,7 @@ DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 
 JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mpGraphics( NULL ),
+	mpInfoPrinter( pInfoPrinter ),
 	mbGraphics( FALSE ),
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
@@ -1113,7 +1112,7 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 
 	// Create a copy of the info printer's print info to any isolate changes
 	// made by the print job
-	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( pInfoPrinter ? pInfoPrinter->GetPrintInfo() : nil )];
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( mpInfoPrinter ? mpInfoPrinter->GetPrintInfo() : nil )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
@@ -1410,14 +1409,19 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mpPrinter = this;
 
-	if ( mpInfo )
+	if ( mpInfoPrinter )
 	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+		long nOutWidth = 0;
+		long nOutHeight = 0;
+		long nPageOffX = 0;
+		long nPageOffY = 0;
+		long nPageWidth = 0;
+		long nPageHeight = 0;
+		mpInfoPrinter->GetPageInfo( pSetupData, nOutWidth, nOutHeight, nPageOffX, nPageOffY, nPageWidth, nPageHeight );
 
-		NSRect aPageBounds = [mpInfo imageablePageBounds];
-		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72, aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 );
-
-		[pPool release];
+		mpGraphics->mfPageTranslateX = (float)nPageOffX * 72 / MIN_PRINTER_RESOLUTION;
+		mpGraphics->mfPageTranslateY = (float)nPageOffY * 72 / MIN_PRINTER_RESOLUTION;
+		mpGraphics->maNativeBounds = CGRectMake( 0, 0, nPageWidth, nPageHeight );
 	}
 
 	mbGraphics = TRUE;

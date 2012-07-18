@@ -688,6 +688,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
+	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
 	while ( bContinue && !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
@@ -698,7 +699,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		nCount = 0;
 
 		USHORT nID = pEvent->getID();
-		size_t nFrames = pSalData->maFrameList.size();
 		pEvent->dispatch();
 		switch ( nID )
 		{
@@ -1204,45 +1204,61 @@ JavaSalEvent::~JavaSalEvent()
 		{
 			case SALEVENT_ENDEXTTEXTINPUT:
 			case SALEVENT_EXTTEXTINPUT:
+			{
 				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 				if ( pInputEvent->mpTextAttr )
 					rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
 				delete pInputEvent;
 				break;
+			}
 			case SALEVENT_EXTTEXTINPUTPOS:
+			{
 				SalExtTextInputPosEvent *pInputPosEvent = (SalExtTextInputPosEvent *)mpData;
 				delete pInputPosEvent;
 				break;
+			}
 			case SALEVENT_KEYINPUT:
 			case SALEVENT_KEYUP:
+			{
 				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				delete pKeyEvent;
 				break;
+			}
 			case SALEVENT_KEYMODCHANGE:
+			{
 				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				delete pKeyModEvent;
 				break;
+			}
 			case SALEVENT_MOUSEBUTTONDOWN:
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEMOVE:
+			{
 				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				delete pMouseEvent;
 				break;
+			}
 			case SALEVENT_MOVE:
 			case SALEVENT_MOVERESIZE:
 			case SALEVENT_RESIZE:
+			{
 				Rectangle *pPosSize = (Rectangle *)mpData;
 				delete pPosSize;
 				break;
+			}
 			case SALEVENT_PAINT:
+			{
 				SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 				delete pPaintEvent;
 				break;
+			}
 			case SALEVENT_WHEELMOUSE:
+			{
 				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				delete pWheelMouseEvent;
 				break;
+			}
 			default:
 				break;
 		}
@@ -1448,28 +1464,7 @@ void JavaSalEvent::dispatch()
 		if ( NSApplication_isActive() )
 			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
-		switch ( nID )
-		{
-			case SALEVENT_CLOSE:
-			case SALEVENT_ENDEXTTEXTINPUT:
-			case SALEVENT_EXTTEXTINPUT:
-			case SALEVENT_GETFOCUS:
-			case SALEVENT_LOSEFOCUS:
-			case SALEVENT_KEYINPUT:
-			case SALEVENT_KEYMODCHANGE:
-			case SALEVENT_KEYUP:
-			case SALEVENT_MOUSEBUTTONDOWN:
-			case SALEVENT_MOUSEBUTTONUP:
-			case SALEVENT_MOUSELEAVE:
-			case SALEVENT_MOUSEMOVE:
-			case SALEVENT_WHEELMOUSE:
-			case SALEVENT_MENUACTIVATE:
-			case SALEVENT_MENUCOMMAND:
-			case SALEVENT_MENUDEACTIVATE:
-				return;
-			default:
-				break;
-		}
+		return;
 	}
 
 	switch ( nID )
@@ -2125,24 +2120,32 @@ USHORT JavaSalEvent::getModifiers()
 		{
 			case SALEVENT_KEYINPUT:
 			case SALEVENT_KEYUP:
+			{
 				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				nRet = pKeyEvent->mnCode;
 				break;
+			}
 			case SALEVENT_KEYMODCHANGE:
+			{
 				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				nRet = pKeyModEvent->mnCode;
 				break;
+			}
 			case SALEVENT_MOUSEBUTTONDOWN:
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEMOVE:
+			{
 				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnCode;
 				break;
+			}
 			case SALEVENT_WHEELMOUSE:
+			{
 				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnCode;
 				break;
+			}
 			default:
 				break;
 		}
@@ -2245,29 +2248,39 @@ ULONG JavaSalEvent::getWhen()
 		{
 			case SALEVENT_ENDEXTTEXTINPUT:
 			case SALEVENT_EXTTEXTINPUT:
+			{
 				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 				nRet = pInputEvent->mnTime;
 				break;
+			}
 			case SALEVENT_KEYINPUT:
 			case SALEVENT_KEYUP:
+			{
 				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				nRet = pKeyEvent->mnTime;
 				break;
+			}
 			case SALEVENT_KEYMODCHANGE:
+			{
 				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				nRet = pKeyModEvent->mnCode;
 				break;
+			}
 			case SALEVENT_MOUSEBUTTONDOWN:
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEMOVE:
+			{
 				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnTime;
 				break;
+			}
 			case SALEVENT_WHEELMOUSE:
+			{
 				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnTime;
 				break;
+			}
 			default:
 				break;
 		}
@@ -2290,13 +2303,17 @@ long JavaSalEvent::getX()
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEMOVE:
+			{
 				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnX;
 				break;
+			}
 			case SALEVENT_WHEELMOUSE:
+			{
 				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnX;
 				break;
+			}
 			default:
 				break;
 		}
@@ -2319,13 +2336,17 @@ long JavaSalEvent::getY()
 			case SALEVENT_MOUSEBUTTONUP:
 			case SALEVENT_MOUSELEAVE:
 			case SALEVENT_MOUSEMOVE:
+			{
 				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnY;
 				break;
+			}
 			case SALEVENT_WHEELMOUSE:
+			{
 				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnY;
 				break;
+			}
 			default:
 				break;
 		}
