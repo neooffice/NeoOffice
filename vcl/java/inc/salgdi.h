@@ -233,6 +233,8 @@ public:
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
+	float					mfPageTranslateX;
+	float					mfPageTranslateY;
 	CGRect					maNativeBounds;
 
 	static void				setContextDefaultSettings( CGContextRef aContext, const CGPathRef aFrameClipPath, const CGPathRef aClipPath, float fLineWidth );

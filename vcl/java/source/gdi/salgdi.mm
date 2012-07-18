@@ -531,6 +531,8 @@ JavaSalGraphics::JavaSalGraphics() :
 	mbXOR( false ),
 	meOrientation( ORIENTATION_PORTRAIT ),
 	mbPaperRotated( sal_False ),
+	mfPageTranslateX( 0 ),
+	mfPageTranslateY( 0 ),
 	maNativeBounds( CGRectNull )
 {
 	GetSalData()->maGraphicsList.push_back( this );

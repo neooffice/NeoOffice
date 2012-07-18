@@ -84,6 +84,7 @@ public:
 class JavaSalPrinter : public SalPrinter
 {
 	JavaSalGraphics*		mpGraphics;
+	JavaSalInfoPrinter*		mpInfoPrinter;
 	BOOL					mbGraphics;
 	XubString				maJobName;
 	Paper					mePaperFormat;
@@ -95,6 +96,8 @@ class JavaSalPrinter : public SalPrinter
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
+	float					mfTranslateX;
+	float					mfTranslateY;
 
 public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );

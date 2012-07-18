@@ -438,39 +438,43 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
 				{
+					float fTranslateX = 0;
+					float fTranslateY = 0;
 					float fScaleFactor = 1.0f;
 					MacOSBOOL bFlipped = [self isFlipped];
 					NSRect aBounds = [self bounds];
-					NSRect aPageBounds = NSZeroRect;
 					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
 					if ( pPrintOperation )
 					{
 						NSPrintInfo *pInfo = [pPrintOperation printInfo];
 						if ( pInfo )
 						{
+							NSRect aPageBounds = [pInfo imageablePageBounds];
+							fTranslateX = pGraphics->mfPageTranslateX;
+							fTranslateY = aBounds.size.height - pGraphics->mfPageTranslateY - aPageBounds.size.height;
+
 							NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
 							if ( pValue )
 								fScaleFactor = [pValue floatValue];
-
-							NSSize aPaperSize = [pInfo paperSize];
-							aPageBounds = [pInfo imageablePageBounds];
-
-							if ( bFlipped )
-								aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
 						}
 					}
 
 					CGContextSaveGState( aContext );
 
-					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
 					if ( bFlipped )
 					{
-						CGContextTranslateCTM( aContext, 0, aPageBounds.size.height );
+						CGContextTranslateCTM( aContext, 0, aBounds.size.height );
 						CGContextScaleCTM( aContext, 1.0, -1.0f );
 						aRect.origin.y = aBounds.origin.y + aBounds.size.height - aRect.origin.y - aRect.size.height;
 					}
-					aRect.origin.x -= aPageBounds.origin.x;
-					aRect.origin.y -= aPageBounds.origin.y;
+
+					// Fix bug reported in the following NeoOffice forum topic
+					// by translating using the margins that were set before
+					// the native print dialog was displayed:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8468
+					aRect.origin.x -= fTranslateX;
+					aRect.origin.y -= fTranslateY;
+					CGContextTranslateCTM( aContext, fTranslateX, fTranslateY );
 
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
 					pGraphics->drawUndrawnNativeOps( aContext, NSRectToCGRect( aRect ) );
@@ -1098,6 +1102,7 @@ DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 
 JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mpGraphics( NULL ),
+	mpInfoPrinter( pInfoPrinter ),
 	mbGraphics( FALSE ),
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
@@ -1107,13 +1112,15 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mbPaperRotated( sal_False ),
 	mpPrintOperation( nil ),
 	maPrintThread( NULL ),
-	mpPrintView( nil )
+	mpPrintView( nil ),
+	mfTranslateX( 0 ),
+	mfTranslateY( 0 )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	// Create a copy of the info printer's print info to any isolate changes
 	// made by the print job
-	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( pInfoPrinter ? pInfoPrinter->GetPrintInfo() : nil )];
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( mpInfoPrinter ? mpInfoPrinter->GetPrintInfo() : nil )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
@@ -1184,6 +1191,21 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		{
 			[mpPrintView release];
 			mpPrintView = nil;
+		}
+
+		// Reset translation
+		mfTranslateX = 0;
+		mfTranslateY = 0;
+		if ( mpInfoPrinter )
+		{
+			NSPrintInfo *pParentInfo = mpInfoPrinter->GetPrintInfo();
+			if ( pParentInfo )
+			{
+				NSSize aParentPaperSize = [pParentInfo paperSize];
+				NSRect aParentPageBounds = [pParentInfo imageablePageBounds];
+				mfTranslateX = aParentPageBounds.origin.x;
+				mfTranslateY = aParentPaperSize.height - aParentPageBounds.origin.y - aParentPageBounds.size.height;
+			}
 		}
 
 		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
@@ -1406,6 +1428,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	mpGraphics = new JavaSalGraphics();
 	mpGraphics->meOrientation = pSetupData->meOrientation;
 	mpGraphics->mbPaperRotated = mbPaperRotated;
+	mpGraphics->mfPageTranslateX = mfTranslateX;
+	mpGraphics->mfPageTranslateY = mfTranslateY;
 	mpGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 	mpGraphics->mpPrinter = this;
