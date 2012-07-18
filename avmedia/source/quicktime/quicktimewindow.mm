@@ -507,7 +507,7 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 
 	if ( pMoviePlayer && rArguments.getLength() > 1 )
 	{
-		sal_Int32 nPtr;
+		sal_Int32 nPtr = 0;
 		rArguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
 		{
