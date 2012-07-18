@@ -1464,28 +1464,7 @@ void JavaSalEvent::dispatch()
 		if ( NSApplication_isActive() )
 			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
-		switch ( nID )
-		{
-			case SALEVENT_CLOSE:
-			case SALEVENT_ENDEXTTEXTINPUT:
-			case SALEVENT_EXTTEXTINPUT:
-			case SALEVENT_GETFOCUS:
-			case SALEVENT_LOSEFOCUS:
-			case SALEVENT_KEYINPUT:
-			case SALEVENT_KEYMODCHANGE:
-			case SALEVENT_KEYUP:
-			case SALEVENT_MOUSEBUTTONDOWN:
-			case SALEVENT_MOUSEBUTTONUP:
-			case SALEVENT_MOUSELEAVE:
-			case SALEVENT_MOUSEMOVE:
-			case SALEVENT_WHEELMOUSE:
-			case SALEVENT_MENUACTIVATE:
-			case SALEVENT_MENUCOMMAND:
-			case SALEVENT_MENUDEACTIVATE:
-				return;
-			default:
-				break;
-		}
+		return;
 	}
 
 	switch ( nID )
