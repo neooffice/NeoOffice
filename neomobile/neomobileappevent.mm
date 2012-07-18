@@ -105,7 +105,7 @@ using namespace ::rtl;
 			{
 				MacOSBOOL isDir = NO;
 				NSString *cachePath = (NSString *)[cachePaths objectAtIndex:i];
-				if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
+				if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath withIntermediateDirectories:NO attributes:dict error:nil])
 				{
 					// Append program name to cache path
 					char **progName = _NSGetProgname();
@@ -113,7 +113,7 @@ using namespace ::rtl;
 					{
 						cachePath = [cachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*progName]];
 						isDir = NO;
-						if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
+						if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath withIntermediateDirectories:NO attributes:dict error:nil])
 						{
 							basePath = cachePath;
 							break;
@@ -150,12 +150,12 @@ using namespace ::rtl;
 {
 	NSNumber *perms = [NSNumber numberWithUnsignedLong:(S_IRUSR | S_IWUSR | S_IXUSR)];
 	NSDictionary *dict = (perms ? [NSDictionary dictionaryWithObject:perms forKey:NSFilePosixPermissions] : nil);
-	[[NSFileManager defaultManager] createDirectoryAtPath:path attributes:dict];
+	[[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:NO attributes:dict error:nil];
 }
 
 - (void)removeItem:(NSString *)path
 {
-	[[NSFileManager defaultManager] removeFileAtPath:path handler:nil];
+	[[NSFileManager defaultManager] removeItemAtPath:path error:nil];
 }
 
 @end
