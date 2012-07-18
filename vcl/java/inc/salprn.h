@@ -96,8 +96,6 @@ class JavaSalPrinter : public SalPrinter
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
-	float					mfTranslateX;
-	float					mfTranslateY;
 
 public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );
