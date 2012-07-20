@@ -79,6 +79,10 @@
 #include <com/sun/star/script/ModuleInfo.hpp>
 #endif
 
+#ifdef USE_JAVA
+#include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
+#endif	// USE_JAVA
+
 namespace basic
 {
 
@@ -3292,6 +3296,16 @@ Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextUserScript
 			m_eState = END_REACHED;
 			return xScriptPackage;
 		}
+#ifdef USE_JAVA
+		// Fix crashing when launching NeoOffice by dragging a file from the
+		// Finder onto the application icon while a different version of
+		// NeoOffice is already running
+		catch( com::sun::star::lang::WrappedTargetRuntimeException& )
+		{
+			m_eState = END_REACHED;
+			return xScriptPackage;
+		}
+#endif	// USE_JAVA
 
 		m_bUserPackagesLoaded = true;
 	}
