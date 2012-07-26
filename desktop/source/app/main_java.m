@@ -163,6 +163,20 @@ int java_main( int argc, char **argv )
 		_exit( 1 );
 	}
 
+	// Check if application's directory softlinks have been converted to
+	// regular directories. If they have, the application has been moved or
+	// copied to a file system that does not support softlinks.
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	NSString *pProgramPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pProgramPath )
+		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
+	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
+	{
+		fprintf( stderr, "%s: application's main bundle path missing program softlink\n", argv[ 0 ] );
+		[pPool release];
+		_exit( 1 );
+	}
+
 	NSString *pCmdPath = nil;
 	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
 	if ( aCmdURL )
