@@ -1274,6 +1274,8 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpParent )
 	{
+		if ( mpWindow && [mpParent parentWindow] )
+			[mpParent removeChildWindow:mpWindow];
 		[mpParent release];
 		mpParent = nil;
 	}
@@ -1627,10 +1629,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( bCanBecomeKeyWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
+
+			if ( mpParent && ![mpWindow parentWindow] )
+				[mpParent addChildWindow:mpWindow ordered:NSWindowAbove];
 		}
 		else
 		{
 			[self animateWaitingView:NO];
+
+			if ( mpParent && [mpWindow parentWindow] )
+				[mpParent removeChildWindow:mpWindow];
 
 			// Close, not order out the window because when the window is in full
 			// screen mode, order out will leave the application in an empty full
