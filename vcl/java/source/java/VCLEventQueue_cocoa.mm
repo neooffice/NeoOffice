@@ -525,6 +525,21 @@ static USHORT GetKeyCode( unsigned short nKey )
 	return nRet;
 }
 
+static void OrderChildWindowsInFrontOfParent( NSWindow *pWindow, NSArray *pChildren )
+{
+	if ( pWindow && pChildren && [pWindow isVisible] )
+	{
+		NSUInteger nCount = [pChildren count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSWindow *pChild = [pChildren objectAtIndex:i];
+			if ( pChild && [pChild isVisible] )
+				[pChild orderWindow:NSWindowAbove relativeTo:[pWindow windowNumber]];
+		}
+	}
+}
+
 @interface IsApplicationActive : NSObject
 {
 	MacOSBOOL					mbActive;
@@ -621,6 +636,9 @@ static USHORT GetKeyCode( unsigned short nKey )
 - (void)_init
 {
 	mbCanBecomeKeyWindow = YES;
+	mpChildren = [NSMutableArray arrayWithCapacity:10];
+	if ( mpChildren )
+		[mpChildren retain];
 	mnIgnoreMouseReleasedModifiers = 0;
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
@@ -631,6 +649,12 @@ static USHORT GetKeyCode( unsigned short nKey )
 	[self setAcceptsMouseMovedEvents:YES];
 }
 
+- (void)addChild:(NSWindow *)pChild
+{
+	if ( pChild && mpChildren && ![mpChildren containsObject:pChild] )
+		[mpChildren addObject:pChild];
+}
+
 - (MacOSBOOL)canBecomeKeyWindow
 {
 	return ( mbCanBecomeKeyWindow && ![self becomesKeyOnlyIfNeeded] );
@@ -638,6 +662,9 @@ static USHORT GetKeyCode( unsigned short nKey )
 
 - (void)dealloc
 {
+	if ( mpChildren )
+		[mpChildren release];
+
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -647,6 +674,12 @@ static USHORT GetKeyCode( unsigned short nKey )
 - (id)init
 {
 	return self;
+}
+
+- (void)removeChild:(NSWindow *)pChild
+{
+	if ( pChild && mpChildren )
+		[mpChildren removeObject:pChild];
 }
 
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
@@ -826,6 +859,9 @@ static NSUInteger nMouseMask = 0;
 - (void)_init
 {
 	mbCanBecomeKeyWindow = YES;
+	mpChildren = [NSMutableArray arrayWithCapacity:10];
+	if ( mpChildren )
+		[mpChildren retain];
 	mnIgnoreMouseReleasedModifiers = 0;
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
@@ -834,6 +870,12 @@ static NSUInteger nMouseMask = 0;
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
 	[self setAcceptsMouseMovedEvents:YES];
+}
+
+- (void)addChild:(NSWindow *)pChild
+{
+	if ( pChild && mpChildren && ![mpChildren containsObject:pChild] )
+		[mpChildren addObject:pChild];
 }
 
 - (void)becomeKeyWindow
@@ -877,6 +919,9 @@ static NSUInteger nMouseMask = 0;
 
 - (void)dealloc
 {
+	if ( mpChildren )
+		[mpChildren release];
+
 	if ( mpLastWindowDraggedEvent )
 		[mpLastWindowDraggedEvent release];
 
@@ -1060,6 +1105,13 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 	}
+	else if ( nOrderingMode != NSWindowOut && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
+	{
+		// Fix bug reported in the following NeoOffice forum topic by
+		// ordering all children in front of this window:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8475
+		OrderChildWindowsInFrontOfParent( self, mpChildren );
+	}
 	else if ( nOrderingMode != NSWindowOut && [self isKindOfClass:[NSPanel class]] && [self isFloatingPanel] && [self respondsToSelector:@selector(setStyleMask:)] )
 	{
 		// Fix bug in ICAImageImport()'s window by removing its close button.
@@ -1166,6 +1218,12 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
+- (void)removeChild:(NSWindow *)pChild
+{
+	if ( pChild && mpChildren )
+		[mpChildren removeObject:pChild];
+}
+
 - (void)resignKeyWindow
 {
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
@@ -1243,6 +1301,12 @@ static NSUInteger nMouseMask = 0;
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62851#62851
 	if ( bIsVCLWindow && [self isVisible] && mpFrame )
 	{
+		// Fix bug reported in the following NeoOffice forum topic by
+		// ordering all children in front of this window:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8475
+		if ( mpChildren && [self isKeyWindow] )
+			OrderChildWindowsInFrontOfParent( self, mpChildren );
+
 		// Handle all mouse events
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
 		{

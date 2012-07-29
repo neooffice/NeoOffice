@@ -1233,6 +1233,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			else
 				[(VCLWindow *)mpWindow setFrame:mpFrame];
 
+			if ( mpParent )
+			{
+				if ( [mpParent isKindOfClass:[VCLPanel class]] )
+					[(VCLPanel *)mpParent addChild:mpWindow];
+				else
+					[(VCLWindow *)mpParent addChild:mpWindow];
+			}
+
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
 			NSRect aFrameRect = [NSWindow frameRectForContentRect:aContentRect styleMask:mnWindowStyleMask];
@@ -1274,8 +1282,11 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpParent )
 	{
-		if ( mpWindow && [mpParent parentWindow] )
-			[mpParent removeChildWindow:mpWindow];
+		if ( [mpParent isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpParent removeChild:mpWindow];
+		else
+			[(VCLWindow *)mpParent removeChild:mpWindow];
+
 		[mpParent release];
 		mpParent = nil;
 	}
@@ -1629,16 +1640,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( bCanBecomeKeyWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
-
-			if ( mpParent && ![mpWindow parentWindow] )
-				[mpParent addChildWindow:mpWindow ordered:NSWindowAbove];
 		}
 		else
 		{
 			[self animateWaitingView:NO];
-
-			if ( mpParent && [mpWindow parentWindow] )
-				[mpParent removeChildWindow:mpWindow];
 
 			// Close, not order out the window because when the window is in full
 			// screen mode, order out will leave the application in an empty full
