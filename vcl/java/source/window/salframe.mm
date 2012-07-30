@@ -1650,9 +1650,13 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// mode state
 			[mpWindow close];
 		}
-
-		[VCLWindowWrapper updateShowOnlyMenusWindows];
 	}
+
+	// Fix bug reported in the following NeoOffice forum topic by always
+	// updating the show only menus even if there is no change in visibility
+	// for the current window:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63224#63224
+	[VCLWindowWrapper updateShowOnlyMenusWindows];
 }
 
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs
