@@ -761,7 +761,7 @@ bool JavaSalInstance::AnyInput( USHORT nType )
 	{
 		// Check timer
 		SalData *pSalData = GetSalData();
-		ImplSVData* pSVData = ImplGetSVData();
+		ImplSVData *pSVData = ImplGetSVData();
 		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 		{
 			timeval aCurrentTime;
@@ -1783,7 +1783,7 @@ void JavaSalEvent::dispatch()
 				FloatingWindow *pPopupWindow = NULL;
     			if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
-					ImplSVData* pSVData = ImplGetSVData();
+					ImplSVData *pSVData = ImplGetSVData();
 					if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
 					{
 						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
@@ -1805,7 +1805,7 @@ void JavaSalEvent::dispatch()
 
     			if ( pPopupWindow )
 				{
-					ImplSVData* pSVData = ImplGetSVData();
+					ImplSVData *pSVData = ImplGetSVData();
 					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
 						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
 				}
@@ -2012,34 +2012,22 @@ void JavaSalEvent::dispatch()
 
 				// Pass all menu selections received by a utility window to
 				// its parent window
-				FloatingWindow *pPopupWindow = NULL;
 				if ( nID == SALEVENT_MENUCOMMAND )
 				{
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
 
-					ImplSVData* pSVData = ImplGetSVData();
-					if ( pFrame && !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
+					// Close all popups
+					ImplSVData *pSVData = ImplGetSVData();
+					if ( pSVData && pSVData->maWinData.mpFirstFloat )
 					{
 						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-							pPopupWindow = pSVData->maWinData.mpFirstFloat;
+							pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
 					}
 				}
 
-				if ( pFrame )
-					pFrame->CallCallback( nID, pMenuEvent );
-
-				// Fix bug reported in the following NeoOffice forum topic by
-				// dismissing popup windows after the menu event has been
-				// dispatched:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8476
-    			if ( pPopupWindow )
-				{
-					ImplSVData* pSVData = ImplGetSVData();
-					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
-						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
-				}
+				pFrame->CallCallback( nID, pMenuEvent );
 			}
 			break;
 		}
