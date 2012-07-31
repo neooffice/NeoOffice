@@ -1656,10 +1656,19 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs
 {
-	if ( mpWindow && [mpWindow isVisible] && ![self isFloatingWindow] )
+	if ( mpWindow && ![self isFloatingWindow] )
 	{
-		[mpWindow makeKeyAndOrderFront:self];
-		[pArgs setResult:[NSNumber numberWithBool:YES]];
+		// Fix bug reported in the following NeoOffice forum post by
+		// unminiaturizing the window before making it the key window:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63241#63241
+		if ( [mpWindow isMiniaturized] )
+			[mpWindow deminiaturize:self];
+
+		if ( [mpWindow isVisible] )
+		{
+			[mpWindow makeKeyAndOrderFront:self];
+			[pArgs setResult:[NSNumber numberWithBool:YES]];
+		}
 	}
 }
 
