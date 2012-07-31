@@ -118,17 +118,14 @@
 @interface VCLPanel : NSPanel
 {
 	MacOSBOOL				mbCanBecomeKeyWindow;
-	NSMutableArray*			mpChildren;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
 }
 - (void)_init;
-- (void)addChild:(NSWindow *)pChild;
 - (MacOSBOOL)canBecomeKeyWindow;
 - (void)dealloc;
-- (void)removeChild:(NSWindow *)pChild;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 @end
@@ -136,7 +133,6 @@
 @interface VCLWindow : NSWindow
 {
 	MacOSBOOL				mbCanBecomeKeyWindow;
-	NSMutableArray*			mpChildren;
 	NSUInteger				mnIgnoreMouseReleasedModifiers;
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
@@ -146,7 +142,6 @@
 + (void)restoreModalWindowLevel;
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)_init;
-- (void)addChild:(NSWindow *)pChild;
 - (void)becomeKeyWindow;
 - (MacOSBOOL)canBecomeKeyWindow;
 - (void)dealloc;
@@ -158,7 +153,6 @@
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
-- (void)removeChild:(NSWindow *)pChild;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
