@@ -1198,7 +1198,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		if ( mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 		{
 			mnWindowStyleMask |= NSResizableWindowMask;
-			if ( !mbUtility )
+			if ( !mbUtility && !mpParent )
 				mnWindowStyleMask |= NSMiniaturizableWindowMask;
 		}
 	}
