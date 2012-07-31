@@ -353,42 +353,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 		dlclose( pLib );
 	}
-
-	// Fix bug reported in the following NeoOffice forum topic by
-	// deminiaturizing the first miniaturized window if no windows are no
-	// unminiaturized windows so that we following the behavior of most
-	// Apple applications:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8478
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSArray *pWindows = [pApp orderedWindows];
-		if ( pWindows )
-		{
-			NSWindow *pWindowToDeminiaturize = nil;
-			NSUInteger nCount = [pWindows count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow )
-				{
-					if ( [pWindow isVisible] )
-					{
-						pWindowToDeminiaturize = nil;
-						break;
-					}
-					else if ( [pWindow isMiniaturized] )
-					{
-						pWindowToDeminiaturize = pWindow;
-					}
-				}
-			}
-
-			if ( pWindowToDeminiaturize )
-				[pWindowToDeminiaturize deminiaturize:pApp];
-		}
-	}
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification
@@ -403,7 +367,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag
 {
-	return NO;
+	// Fix bug reported in the following NeoOffice forum topic by
+	// returning true if there is visible windows:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8478
+	return bFlag;
 }
 
 - (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
