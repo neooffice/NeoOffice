@@ -296,6 +296,8 @@ BOOL VCLInstance_updateNativeMenus()
 		return bRet;
 	}
 
+	size_t nFrames = pSalData->maFrameList.size();
+
 	pSalData->maNativeEventCondition.reset();
 
 	// Dispatch pending VCL events until the queue is clear
@@ -333,6 +335,24 @@ BOOL VCLInstance_updateNativeMenus()
 				}
 			}
 		}
+
+		if ( bRet && pSVData && pSVData->maWinData.mpFirstFloat )
+		{
+			// Close all popups but return false to cancel menu tracking
+			// since any shutdown event dispatched after this will cause a
+			// crash when a second level popup menu is open
+			static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+			if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+			{
+				pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
+				bRet = FALSE;
+			}
+		}
+
+		// Probably overkill, but if the number of frames changes, cancel menu
+		// tracking
+		if ( bRet && pSalData->maFrameList.size() != nFrames )
+			bRet = FALSE;
 
 		// We need to let any timers run that were added by any menu
 		// changes. Otherwise, some menus will be drawn in the state
@@ -1358,6 +1378,9 @@ void JavaSalEvent::dispatch()
 			// method or when in presentation mode
 			if ( !isShutdownCancelled() )
 			{
+				// Do not shutdown if any popups are visible since any shutdown
+				// event dispatched will cause a crash when a second level
+				// popup menu is open
 				ImplSVData *pSVData = ImplGetSVData();
 				if ( pSVData && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 				{
@@ -1365,15 +1388,6 @@ void JavaSalEvent::dispatch()
 					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
 						bCancelShutdown = false;
 				}
-				else if ( pSVData && pSVData->maWinData.mpFirstFloat )
-				{
-					// Close all popups but do not shutdown since that will
-					// cause a crash when a second level popup menu is open
-					static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-					if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-						pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
-				}
-
 			}
 
 			if ( bCancelShutdown )
@@ -2016,15 +2030,6 @@ void JavaSalEvent::dispatch()
 				{
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
-
-					// Close all popups
-					ImplSVData *pSVData = ImplGetSVData();
-					if ( pSVData && pSVData->maWinData.mpFirstFloat )
-					{
-						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-							pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
-					}
 				}
 
 				pFrame->CallCallback( nID, pMenuEvent );

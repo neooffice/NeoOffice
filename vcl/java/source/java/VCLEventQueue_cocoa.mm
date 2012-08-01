@@ -1115,8 +1115,7 @@ static NSUInteger nMouseMask = 0;
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
 		[self retain];
-		VCLInstance_updateNativeMenus();
-		MacOSBOOL bVisible = [self isVisible];
+		MacOSBOOL bVisible = ( VCLInstance_updateNativeMenus() && [self isVisible] );
 		[self release];
 		if ( !bVisible )
 			return YES;
