@@ -2030,6 +2030,12 @@ void JavaSalEvent::dispatch()
 				{
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
+
+					// Fix bug reported in the following NeoOffice forum post
+					// where selecting the focussed document window in the
+					// Window menu fails to unminimize the document window:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63242#63242
+					pFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 				}
 
 				pFrame->CallCallback( nID, pMenuEvent );
