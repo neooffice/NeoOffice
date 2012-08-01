@@ -1115,8 +1115,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	for ( ::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.begin(); it != aShowOnlyMenusWindowMap.end(); ++it )
 	{
 		[it->first setCanBecomeKeyWindow:bEnableFocus];
-		if ( bEnableFocus && [it->first isVisible] )
-			[it->first makeKeyWindow];
+
+		// Fix bug reported in the following NeoOffice forum topic when
+		// clicking on the application's Dock icon when all document windows
+		// are minimized by hiding all show only menus windows when focus is
+		// disabled:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63252#63252
+		if ( bEnableFocus )
+			[it->first makeKeyAndOrderFront:it->first];
+		else
+			[it->first orderOut:it->first];
 	}
 }
 
