@@ -319,7 +319,7 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
 {
-    return mpDockMenu;
+	return mpDockMenu;
 } 
 
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification
@@ -450,16 +450,13 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (void)setDelegate:(id)pDelegate
 {
-	if ( mpDelegate )
+	if ( pDelegate != mpDelegate )
 	{
-    	[mpDelegate release];
-    	mpDelegate = nil;
-	}
-
-	if ( pDelegate )
-	{
-    	mpDelegate = pDelegate;
-    	[mpDelegate retain];
+		if ( mpDelegate )
+			[mpDelegate release];
+		mpDelegate = pDelegate;
+		if ( mpDelegate )
+			[mpDelegate retain];
 	}
 }
 
@@ -573,6 +570,20 @@ void ProcessShutdownIconCommand( int nCommand )
 		NSMenu *pAppMenu = nil;
 		NSMenu *pDockMenu = nil;
 
+		// Fix bug reported in the following NeoOffice forum post by ensuring
+		// that the application has a windows menu:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63252#63252
+		NSMenu *pWindowsMenu = [pApp windowsMenu];
+		if ( !pWindowsMenu )
+		{
+			pWindowsMenu = [[NSMenu alloc] initWithTitle:@""];
+			if ( pWindowsMenu )
+			{
+				[pWindowsMenu autorelease];
+				[pApp setWindowsMenu:pWindowsMenu];
+			}
+		}
+
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
 		{
@@ -596,7 +607,6 @@ void ProcessShutdownIconCommand( int nCommand )
 			pDelegate = pNewDelegate;
 			pDockMenu = [pNewDelegate applicationDockMenu:pApp];
 		}
-
 
 		if ( pAppMenu && pDockMenu )
 		{
@@ -668,7 +678,7 @@ extern "C" void java_init_systray()
 		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC, @selector(handleImpressCommand:), CFSTR( "-impress" ), FALSE },
 		{ SvtModuleOptions::E_SDRAW, DRAW_URL, DRAW_FALLBACK_DESC, @selector(handleDrawCommand:), CFSTR( "-draw" ), FALSE },
 		{ SvtModuleOptions::E_SDATABASE, BASE_URL, BASE_FALLBACK_DESC, @selector(handleBaseCommand:), CFSTR( "-base" ), FALSE },
-		{ SvtModuleOptions::E_SMATH, MATH_URL, MATH_FALLBACK_DESC, @selector(handleMathCommand:), CFSTR( "-math" ), FALSE  }
+		{ SvtModuleOptions::E_SMATH, MATH_URL, MATH_FALLBACK_DESC, @selector(handleMathCommand:), CFSTR( "-math" ), FALSE }
 	};
 
 	// Disable shutdown
