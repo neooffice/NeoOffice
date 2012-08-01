@@ -1099,14 +1099,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( !pWindow || ![pWindow isVisible] )
-					continue;
-
-				::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
-				if ( it == aShowOnlyMenusWindowMap.end() )
+				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
-					bEnableFocus = NO;
-					break;
+					::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
+					if ( it == aShowOnlyMenusWindowMap.end() )
+					{
+						bEnableFocus = NO;
+						break;
+					}
 				}
 			}
 		}
