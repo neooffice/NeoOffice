@@ -570,20 +570,6 @@ void ProcessShutdownIconCommand( int nCommand )
 		NSMenu *pAppMenu = nil;
 		NSMenu *pDockMenu = nil;
 
-		// Fix bug reported in the following NeoOffice forum post by ensuring
-		// that the application has a windows menu:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63252#63252
-		NSMenu *pWindowsMenu = [pApp windowsMenu];
-		if ( !pWindowsMenu )
-		{
-			pWindowsMenu = [[NSMenu alloc] initWithTitle:@""];
-			if ( pWindowsMenu )
-			{
-				[pWindowsMenu autorelease];
-				[pApp setWindowsMenu:pWindowsMenu];
-			}
-		}
-
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
 		{
