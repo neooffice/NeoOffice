@@ -45,6 +45,7 @@
 	MacOSBOOL				mbAppMenuInitialized;
 	MacOSBOOL				mbCancelTracking;
 	id						mpDelegate;
+	NSMenu*					mpDockMenu;
 	MacOSBOOL				mbInTermination;
 	MacOSBOOL				mbInTracking;
 }
@@ -54,6 +55,7 @@
 - (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
+- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag;
 - (MacOSBOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;

@@ -365,6 +365,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	HandleDidChangeScreenParametersRequest();
 }
 
+- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
+{
+	return mpDockMenu;
+}
+
 - (MacOSBOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(MacOSBOOL)bFlag
 {
 	// Fix bug reported in the following NeoOffice forum topic by
@@ -429,6 +434,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( mpDelegate )
 		[mpDelegate release];
 
+	if ( mpDockMenu )
+		[mpDockMenu release];
+
 	[super dealloc];
 }
 
@@ -439,6 +447,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mbAppMenuInitialized = NO;
 	mbCancelTracking = NO;
 	mpDelegate = nil;
+	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
 	mbInTermination = NO;
 	mbInTracking = NO;
 
@@ -471,6 +480,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
+	// Set the application delegate as the delegate for the dock menu
+	if ( mpDockMenu )
+		[mpDockMenu setDelegate:self];
+	
 	return self;
 }
 
@@ -668,7 +681,46 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( !mbInTermination )
 	{
 		if ( !mbInTracking && pMenuItem && ![pMenuItem submenu] )
-			VCLInstance_updateNativeMenus();
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			NSMenu *pMenu = [pMenuItem menu];
+			if ( pApp && pMenu )
+			{
+				NSMenu *pMainMenu = [pApp mainMenu];
+				if ( pMainMenu )
+				{
+					// Skip updating if menu item is an item in the main menu
+					if ( pMenu != pMainMenu )
+					{
+						NSMenu *pAppMenu = nil;
+						if ( [pMainMenu numberOfItems] > 0 )
+						{
+							NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
+							if ( pAppMenuItem )
+								pAppMenu = [pAppMenuItem submenu];
+						}
+
+						// Skip updating if an item is in the main menu's
+						// application menu item hierarchy or is in the dock
+						// menu's hierarchy
+						MacOSBOOL bUpdate = YES;
+						while ( pMenu )
+						{
+							if ( pMenu == pAppMenu || pMenu == mpDockMenu )
+							{
+								bUpdate = NO;
+								break;
+							}
+
+							pMenu = [pMenu supermenu];
+						}
+
+						if ( bUpdate )
+							VCLInstance_updateNativeMenus();
+					}
+				}
+			}
+		}
 
 		bRet = YES;
 	}

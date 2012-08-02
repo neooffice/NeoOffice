@@ -274,7 +274,6 @@ void ProcessShutdownIconCommand( int nCommand )
 @interface ShutdownIconDelegate : NSObject
 {
 	id					mpDelegate;
-	NSMenu*				mpDockMenu;
 }
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
@@ -319,7 +318,10 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
 {
-	return mpDockMenu;
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationDockMenu:)] )
+		return [mpDelegate applicationDockMenu:pApplication];
+	else
+		return nil;
 } 
 
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification
@@ -361,9 +363,6 @@ void ProcessShutdownIconCommand( int nCommand )
 	if ( mpDelegate )
 		[mpDelegate release];
 
-	if ( mpDockMenu )
-		[mpDockMenu release];
-
 	[super dealloc];
 }
 
@@ -372,7 +371,6 @@ void ProcessShutdownIconCommand( int nCommand )
 	[super init];
 
 	mpDelegate = nil;
-	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
 
 	return self;
 }
@@ -579,10 +577,7 @@ void ProcessShutdownIconCommand( int nCommand )
 		}
 
 		NSObject *pDelegate = [pApp delegate];
-		if ( pDelegate && [pDelegate respondsToSelector:@selector(applicationDockMenu:)] )
-			pDockMenu = [pDelegate applicationDockMenu:pApp];
-
-		if ( !pDockMenu )
+		if ( !pDelegate || ![pDelegate isKindOfClass:[ShutdownIconDelegate class]] )
 		{
 			// Do not retain as invoking alloc disables autorelease
 			ShutdownIconDelegate *pNewDelegate = [[ShutdownIconDelegate alloc] init];
@@ -591,8 +586,10 @@ void ProcessShutdownIconCommand( int nCommand )
 			// NSApplication does not retain delegates so don't release it
 			[pApp setDelegate:pNewDelegate];
 			pDelegate = pNewDelegate;
-			pDockMenu = [pNewDelegate applicationDockMenu:pApp];
 		}
+
+		if ( pDelegate && [pDelegate isKindOfClass:[ShutdownIconDelegate class]] )
+			pDockMenu = [(ShutdownIconDelegate *)pDelegate applicationDockMenu:pApp];
 
 		if ( pAppMenu && pDockMenu )
 		{
