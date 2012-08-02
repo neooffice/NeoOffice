@@ -162,6 +162,8 @@
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
 - (void)windowDidMove:(NSNotification *)pNotification;
 - (void)windowDidResize:(NSNotification *)pNotification;
+- (void)windowDidDeminiaturize:(NSNotification *)pNotification;
+- (void)windowWillMiniaturize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
 - (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
 @end

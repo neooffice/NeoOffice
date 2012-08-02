@@ -1601,6 +1601,26 @@ static NSUInteger nMouseMask = 0;
 	}
 }
 
+- (void)windowDidDeminiaturize:(NSNotification *)pNotification
+{
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
+	{
+		JavaSalEvent *pDeminimizedEvent = new JavaSalEvent( SALEVENT_DEMINIMIZED, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pDeminimizedEvent );
+		pDeminimizedEvent->release();
+	}
+}
+
+- (void)windowWillMiniaturize:(NSNotification *)pNotification
+{
+	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) && mpFrame )
+	{
+		JavaSalEvent *pMinimizedEvent = new JavaSalEvent( SALEVENT_MINIMIZED, mpFrame, NULL );
+		JavaSalEventQueue::postCachedEvent( pMinimizedEvent );
+		pMinimizedEvent->release();
+	}
+}
+
 - (MacOSBOOL)windowShouldClose:(id)pObject
 {
 	MacOSBOOL bRet = YES;
@@ -2782,6 +2802,24 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	aSelector = @selector(windowDidResize:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowDidDeminiaturize:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowDidMiniaturize:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{

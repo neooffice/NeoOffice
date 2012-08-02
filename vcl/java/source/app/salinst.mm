@@ -1490,9 +1490,23 @@ void JavaSalEvent::dispatch()
 			break;
 		}
 		case SALEVENT_DEMINIMIZED:
-		case SALEVENT_MINIMIZED:
 		{
 			// Fix bug 3649 by not hiding any windows when minimizing
+			break;
+		}
+		case SALEVENT_MINIMIZED:
+		{
+			// Fix bug 3649 by not hiding any windows when minimizing. Fix bug
+			// reported in the following NeoOffice forum post where selecting
+			// the focussed document window in the Window menu fails to
+			// unminimize the document window by dispatching a lose focus event
+			// when the window is minimized:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63242#63242
+			if ( pFrame && pFrame == pSalData->mpFocusFrame )
+			{
+				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, pFrame, NULL );
+				aEvent.dispatch();
+			}
 			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
@@ -2030,12 +2044,6 @@ void JavaSalEvent::dispatch()
 				{
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
-
-					// Fix bug reported in the following NeoOffice forum post
-					// where selecting the focussed document window in the
-					// Window menu fails to unminimize the document window:
-					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63242#63242
-					pFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 				}
 
 				pFrame->CallCallback( nID, pMenuEvent );
