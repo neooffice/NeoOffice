@@ -659,9 +659,21 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 }
+
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
-	return !mbInTermination;
+	MacOSBOOL bRet = NO;
+
+	// Fix bug 3357 by updating we are not in a menu tracking session
+	if ( !mbInTermination )
+	{
+		if ( !mbInTracking && pMenuItem && ![pMenuItem submenu] )
+			VCLInstance_updateNativeMenus();
+
+		bRet = YES;
+	}
+
+	return bRet;
 }
 
 @end

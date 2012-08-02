@@ -1111,14 +1111,6 @@ static NSUInteger nMouseMask = 0;
 				return YES;
 			}
 		}
-
-		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
-		// this window as this window may get released while updating.
-		[self retain];
-		MacOSBOOL bVisible = ( VCLInstance_updateNativeMenus() && [self isVisible] );
-		[self release];
-		if ( !bVisible )
-			return YES;
 	}
 
 	MacOSBOOL bRet = NO;
