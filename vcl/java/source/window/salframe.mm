@@ -1124,6 +1124,58 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		else
 			[it->first orderOut:it->first];
 	}
+
+	// Fix bug reported in the following NeoOffice forum post by ensuring that
+	// if no window has focus (usually when all document windows are
+	// minimized and a visible window has just closed), we force one of the
+	// visible windows to have focus or, if there are only minimized windows,
+	// dispatch a get focus event to fill the menubar for one of the minimized
+	// windows:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63282#63282
+	if ( !bShow && pApp && ![pApp keyWindow] )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			NSWindow *pVisibleWindow = nil;
+			JavaSalFrame *pMinitiarizedFrame = NULL;
+			NSUInteger nCount = [pWindows count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSWindow *pWindow = [pWindows objectAtIndex:i];
+				if ( pWindow && ![pWindow parentWindow] && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				{
+					::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
+					if ( it == aShowOnlyMenusWindowMap.end() )
+					{
+						if ( [pWindow isVisible] )
+						{
+							pVisibleWindow = pWindow;
+							break;
+						}
+						else if ( !pMinitiarizedFrame && [pWindow isMiniaturized] )
+						{
+							::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( pWindow );
+							if ( nwit != aNativeWindowMap.end() )
+								pMinitiarizedFrame = nwit->second->mpFrame;
+						}
+					}
+				}
+			}
+
+			if ( pVisibleWindow )
+			{
+				[pVisibleWindow makeKeyAndOrderFront:pVisibleWindow];
+			}
+			else if ( pMinitiarizedFrame )
+			{
+				JavaSalEvent *pGetFocusEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pMinitiarizedFrame, NULL );
+				JavaSalEventQueue::postCachedEvent( pGetFocusEvent );
+				pGetFocusEvent->release();
+			}
+		}
+	}
 }
 
 - (void)animateWaitingView:(MacOSBOOL)bAnimate
