@@ -403,27 +403,10 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
-				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
-				if ( pAppMenuItem )
-				{
-					NSMenu *pNewMainMenu = [[VCLMenu alloc] initWithTitle:[pMainMenu title]];
-					if ( pNewMainMenu )
-					{
-						[pNewMainMenu autorelease];
-
-						// Remove remaining menus while still showing
-						NSUInteger i = nCount - 1;
-						for ( ; i > 0; i-- )
-							[pMainMenu removeItemAtIndex:i];
-
-						[pAppMenuItem retain];
-						[pMainMenu removeItemAtIndex:0];
-						[pNewMainMenu addItem:pAppMenuItem];
-						[pAppMenuItem release];
-
-						[pApp setMainMenu:pNewMainMenu];
-					}
-				}
+				// Remove remaining menus while still showing
+				NSUInteger i = nCount - 1;
+				for ( ; i > 0; i-- )
+					[pMainMenu removeItemAtIndex:i];
 			}
 		}
 	}
@@ -513,48 +496,31 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 			NSUInteger nCount = [pMainMenu numberOfItems];
 			if ( nCount > 0 )
 			{
-				NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
-				if ( pAppMenuItem )
+				// Remove remaining menus while still showing
+				NSUInteger i = nCount - 1;
+				for ( ; i > 0; i-- )
+					[pMainMenu removeItemAtIndex:i];
+
+				// Add our menu items to menubar. Note that we must add
+				// the menu items after the menu has been set as the
+				// main menu for [VCLApplicationDelegate addMenuItem:]
+				// to get called.
+				if ( mpMenuItems )
 				{
-					NSMenu *pNewMainMenu = [[VCLMenu alloc] initWithTitle:[pMainMenu title]];
-					if ( pNewMainMenu )
+					nCount = [mpMenuItems count];
+					i = 0;
+					for ( ; i < nCount; i++ )
 					{
-						[pNewMainMenu autorelease];
-
-						// Remove remaining menus while still showing
-						NSUInteger i = nCount - 1;
-						for ( ; i > 0; i-- )
-							[pMainMenu removeItemAtIndex:i];
-
-						[pAppMenuItem retain];
-						[pMainMenu removeItemAtIndex:0];
-						[pNewMainMenu addItem:pAppMenuItem];
-						[pAppMenuItem release];
-
-						[pApp setMainMenu:pNewMainMenu];
-
-						// Add our menu items to menubar. Note that we must add
-						// the menu items after the menu has been set as the
-						// main menu for [VCLApplicationDelegate addMenuItem:]
-						// to get called.
-						if ( mpMenuItems )
+						NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
+						if ( pMenuItem )
 						{
-							nCount = [mpMenuItems count];
-							i = 0;
-							for ( ; i < nCount; i++ )
-							{
-								NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:i];
-								if ( pMenuItem )
-								{
-									NSMenu *pMenu = [pMenuItem menu];
-									if ( pMenu )
-										[pMenu removeItem:pMenuItem];
+							NSMenu *pMenu = [pMenuItem menu];
+							if ( pMenu )
+								[pMenu removeItem:pMenuItem];
 
-									NSMenu *pSubmenu = [pMenuItem submenu];
-									if ( pSubmenu )
-										[pNewMainMenu addItem:pMenuItem];
-								}
-							}
+							NSMenu *pSubmenu = [pMenuItem submenu];
+							if ( pSubmenu )
+								[pMainMenu addItem:pMenuItem];
 						}
 					}
 				}
