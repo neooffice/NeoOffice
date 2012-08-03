@@ -686,8 +686,14 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			NSMenu *pMenu = [pMenuItem menu];
 			if ( pApp && pMenu )
 			{
+				// Attempt to fix crashing when menu items are queried by
+				// assistive devices reported in the following NeoOffice forum
+				// post by only updating the menus when the current event is
+				// an NSFlagsChanged event:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63302#63302
 				NSMenu *pMainMenu = [pApp mainMenu];
-				if ( pMainMenu )
+				NSEvent *pEvent = [pApp currentEvent];
+				if ( pMainMenu && pEvent && [pEvent type] == NSFlagsChanged )
 				{
 					// Skip updating if menu item is an item in the main menu
 					if ( pMenu != pMainMenu )
