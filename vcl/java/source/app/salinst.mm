@@ -1504,6 +1504,10 @@ void JavaSalEvent::dispatch()
 			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63242#63242
 			if ( pFrame && pFrame == pSalData->mpFocusFrame )
 			{
+				// Update menus before giving up focus otherwise the window
+				// list in the windows menu will not include other minimized
+				// windows
+				UpdateMenusForFrame( pFrame, NULL, true );
 				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, pFrame, NULL );
 				aEvent.dispatch();
 			}
