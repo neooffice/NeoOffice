@@ -264,6 +264,11 @@ BOOL VCLInstance_updateNativeMenus()
 {
 	BOOL bRet = FALSE;
 
+	// If no application mutex exists yet, queue event as we are likely to
+	// crash
+	if ( !ImplGetSVData() || !GetSalData() )
+		return bRet;
+
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
 	if ( Application::IsShutDown() || bInNativeDrag || NSApplication_getModalWindow() )
