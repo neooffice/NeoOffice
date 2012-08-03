@@ -1654,11 +1654,17 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pNoActivate )
         return;
 
+	// Fix bug reported in the following NeoOffice forum post by treating
+	// minimized windows the same as visible windows:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63308#63308
 	MacOSBOOL bVisible = [pVisible boolValue];
-	if ( mpWindow && bVisible != [mpWindow isVisible] )
+	if ( mpWindow && bVisible != ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
 		if ( bVisible )
 		{
+			if ( [mpWindow isMiniaturized] )
+				[mpWindow deminiaturize:self];
+
 			// Fix bug 1012 by deiconifying the parent window. Fix bug 1388 by
 			// skipping this step if the current window is a floating window.
 			if ( ![self isFloatingWindow] && mpParent && [mpParent isMiniaturized] )
