@@ -1087,7 +1087,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	// Fix bug 3032 by disabling focus for show only menus windows when
 	// any frames are visible
-	MacOSBOOL bEnableFocus = YES;
+	MacOSBOOL bShow = YES;
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -1104,7 +1104,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 					::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
 					if ( it == aShowOnlyMenusWindowMap.end() )
 					{
-						bEnableFocus = NO;
+						bShow = NO;
 						break;
 					}
 				}
@@ -1114,14 +1114,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	for ( ::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.begin(); it != aShowOnlyMenusWindowMap.end(); ++it )
 	{
-		[it->first setCanBecomeKeyWindow:bEnableFocus];
-
 		// Fix bug reported in the following NeoOffice forum topic when
 		// clicking on the application's Dock icon when all document windows
 		// are minimized by hiding all show only menus windows when focus is
 		// disabled:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63252#63252
-		if ( bEnableFocus )
+		if ( bShow )
 			[it->first makeKeyAndOrderFront:it->first];
 		else
 			[it->first orderOut:it->first];
