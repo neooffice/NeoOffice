@@ -678,7 +678,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	MacOSBOOL bRet = NO;
 
 	// Fix bug 3357 by updating we are not in a menu tracking session
-	if ( !mbInTermination )
+	if ( !mbInTermination && pMenuItem )
 	{
 		if ( !mbInTracking && pMenuItem && ![pMenuItem submenu] )
 		{
