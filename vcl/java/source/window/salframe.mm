@@ -1180,12 +1180,28 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)animateWaitingView:(MacOSBOOL)bAnimate
 {
-	if ( mpWaitingView )
+	if ( mpWaitingView && mpWindow )
 	{
-		if ( bAnimate && mpWindow && [mpWindow isVisible] )
+		if ( bAnimate && [mpWindow isVisible] )
+		{
+			NSView *pContentView = [mpWindow contentView];
+			if ( pContentView )
+			{
+				[pContentView addSubview:mpWaitingView];
+
+				// Center in content view
+				NSRect aContentBounds = [pContentView bounds];
+				NSRect aWaitingFrame = [mpWaitingView frame];
+				[mpWaitingView setFrameOrigin:NSMakePoint( ( aContentBounds.size.width - aWaitingFrame.size.width ) / 2, ( aContentBounds.size.height - aWaitingFrame.size.height ) / 2 )];
+			}
+
 			[mpWaitingView startAnimation:self];
+		}
 		else
+		{
 			[mpWaitingView stopAnimation:self];
+			[mpWaitingView removeFromSuperview];
+		}
 	}
 }
 
@@ -1664,24 +1680,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				bCanBecomeKeyWindow = [(VCLWindow *)mpWindow canBecomeKeyWindow];
 			if ( !mpWaitingView && ( !mbUndecorated || mbFullScreen ) )
 			{
-				NSView *pContentView = [mpWindow contentView];
-				if ( pContentView )
+				mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+				if ( mpWaitingView )
 				{
-					mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-					if ( mpWaitingView )
-					{
-						[mpWaitingView setIndeterminate:YES];
-						[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
-						[mpWaitingView setDisplayedWhenStopped:NO];
-						[mpWaitingView sizeToFit];
-						[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
-						[pContentView addSubview:mpWaitingView];
-
-						// Center in content view
-						NSRect aContentBounds = [pContentView bounds];
-						NSRect aWaitingFrame = [mpWaitingView frame];
-						[mpWaitingView setFrameOrigin:NSMakePoint( ( aContentBounds.size.width - aWaitingFrame.size.width ) / 2, ( aContentBounds.size.height - aWaitingFrame.size.height ) / 2 )];
-					}
+					[mpWaitingView setIndeterminate:YES];
+					[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+					[mpWaitingView setDisplayedWhenStopped:NO];
+					[mpWaitingView sizeToFit];
+					[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
 				}
 			}
 
