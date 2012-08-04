@@ -106,6 +106,7 @@ public:
 	virtual					~JavaSalFrame();
 
 	void					AddObject( JavaSalObject *pObject, bool bVisible );
+	bool					Deminimize();
 	bool					IsFloatingFrame();
 	bool					IsUtilityWindow();
 	void					RemoveObject( JavaSalObject *pObject, bool bDeleted );

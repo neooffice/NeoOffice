@@ -509,6 +509,7 @@ static NSTimer *pUpdateTimer = nil;
 - (void)animateWaitingView:(MacOSBOOL)bAnimate;
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
 - (void)dealloc;
+- (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
 - (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
@@ -1323,6 +1324,16 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	return self;
 }
 
+- (void)deminimize:(VCLWindowWrapperArgs *)pArgs
+{
+	if ( mpWindow && [mpWindow isMiniaturized] && ![self isFloatingWindow] )
+	{
+		[mpWindow deminiaturize:self];
+		if ( [mpWindow isVisible] )
+			[pArgs setResult:[NSNumber numberWithBool:YES]];
+	}
+}
+
 - (void)dealloc
 {
 	[self destroy:self];
@@ -1726,7 +1737,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs
 {
-	if ( mpWindow && ![self isFloatingWindow] )
+	if ( mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) && ![self isFloatingWindow] )
 	{
 		// Fix bug reported in the following NeoOffice forum post by
 		// unminiaturizing the window before making it the key window:
@@ -2581,6 +2592,29 @@ void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 		if ( bVisible )
 			maVisibleObjects.push_back( pObject );
 	}
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalFrame::Deminimize()
+{
+	bool bRet = false;
+
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(deminimize:) withObject:pRequestFocusArgs waitUntilDone:YES modes:pModes];
+		NSNumber *pResult = (NSNumber *)[pRequestFocusArgs result];
+		if ( pResult && [pResult boolValue] )
+			bRet = true;
+
+		[pPool release];
+	}
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -3523,10 +3557,14 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 				bModal = true;
 		}
 
-		if ( bModal )
+		if ( bModal || nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN )
 			bSuccess = pFrame->ToFront();
 		else
 			bSuccess = pFrame->RequestFocus();
+	}
+	else if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN )
+	{
+		bSuccess = pFrame->Deminimize();
 	}
 	else
 	{

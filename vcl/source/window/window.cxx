@@ -3584,7 +3584,16 @@ void Window::ImplToTop( USHORT nFlags )
         // Wenn in das externe Fenster geklickt wird, ist dieses
         // dafuer zustaendig dafuer zu sorgen, das unser Frame
         // nach vorne kommt
+#ifdef USE_JAVA
+        // Fix failure of clicking on the selected documented menu item in the
+        // Windows menu when that document is minimized reported in the
+        // following NeoOffice forum post by deminimizing the frame even if it
+        // is the focus frame:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63311#63311
+        if ( ( !mpWindowImpl->mpFrameData->mbHasFocus || nFlags == TOTOP_RESTOREWHENMIN ) &&
+#else	// USE_JAVA
         if ( !mpWindowImpl->mpFrameData->mbHasFocus &&
+#endif	// USE_JAVA
              !mpWindowImpl->mpFrameData->mbSysObjFocus &&
              !mpWindowImpl->mpFrameData->mbInSysObjFocusHdl &&
              !mpWindowImpl->mpFrameData->mbInSysObjToTopHdl )
