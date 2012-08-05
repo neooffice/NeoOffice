@@ -1224,9 +1224,18 @@ static NSUInteger nMouseMask = 0;
 	NSEventType nType = [pEvent type];
 	NSRect aOldFrame = [self frame];
 
-	// Fix bug 3357 by updating when we are not in a menu tracking session
+	// Fix bug 3357 by updating when we are not in a menu tracking session.
+	// Fix bug 3379 by retaining this window as this window may get released
+	// while updating.
 	if ( bIsVCLWindow && [self isVisible] && nType == NSFlagsChanged && [pEvent modifierFlags] & NSCommandKeyMask )
+	{
+		[self retain];
 		VCLInstance_updateNativeMenus();
+		MacOSBOOL bVisible = [self isVisible];
+		[self release];
+		if ( !bVisible )
+			return;
+	}
 
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
