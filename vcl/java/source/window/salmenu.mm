@@ -550,8 +550,8 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	if ( !pKeyText || [pKeyText length] != 1 )
 		return;
 
-    NSNumber *pShift = (NSNumber *)[pArgArray objectAtIndex:2];
-    if ( !pShift )
+    NSNumber *pTag = (NSNumber *)[pArgArray objectAtIndex:2];
+    if ( !pTag )
         return;
 
     unsigned int nPos = [pPos unsignedIntValue];
@@ -560,11 +560,19 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
 		{
-			NSUInteger nMask = NSCommandKeyMask;
-    		if ( [pShift boolValue] )
-				nMask |= NSShiftKeyMask;
-			[pMenuItem setKeyEquivalent:pKeyText];
-			[pMenuItem setKeyEquivalentModifierMask:nMask];
+			// This selector should not have been called if there is no key
+			// code or command key modifier. Also, the only modifiers allowed
+			// are command and shift keys.
+			NSInteger nTag = [pTag unsignedShortValue] & ( KEY_CODE | KEY_MOD1 | KEY_SHIFT );
+			if ( nTag & KEY_CODE && nTag & KEY_MOD1 )
+			{
+				NSUInteger nMask = NSCommandKeyMask;
+    			if ( nTag & KEY_SHIFT )
+					nMask |= NSShiftKeyMask;
+				[pMenuItem setKeyEquivalent:pKeyText];
+				[pMenuItem setKeyEquivalentModifierMask:nMask];
+				[pMenuItem setTag:nTag];
+			}
 		}
 	}
 }
@@ -655,17 +663,43 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	MacOSBOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
 	bInPerformKeyEquivalent = YES;
 
-	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pActivateEvent );
-	pActivateEvent->release();
+	// Fix OpenOffice.org bug reported in the following forum topic by
+	// posting key events when the menu item has a key shortcut assigned to it:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8476
+	USHORT nTag = (USHORT)[self tag] & ( KEY_CODE | KEY_MODTYPE );
+	if ( nTag & KEY_CODE && nTag & KEY_MODTYPE )
+	{
+		SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+		pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+		pKeyDownEvent->mnCode = nTag;
+		pKeyDownEvent->mnCharCode = 0;
+		pKeyDownEvent->mnRepeat = 0;
 
-	JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pCommandEvent );
-	pCommandEvent->release();
+		SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
+		memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
+	
+		JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, pMenuBarFrame, pKeyDownEvent );
+		JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
+		pSalKeyDownEvent->release();
 
-	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-	JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
-	pDeactivateEvent->release();
+		JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, pMenuBarFrame, pKeyUpEvent );
+		JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
+		pSalKeyUpEvent->release();
+	}
+	else
+	{
+		JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+		JavaSalEventQueue::postCachedEvent( pActivateEvent );
+		pActivateEvent->release();
+
+		JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+		JavaSalEventQueue::postCachedEvent( pCommandEvent );
+		pCommandEvent->release();
+
+		JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+		JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
+		pDeactivateEvent->release();
+	}
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
@@ -1074,7 +1108,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
-				VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithBool:rKeyCode.IsShift()], nil]];
+				VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithUnsignedShort:rKeyCode.GetFullCode()], nil]];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
 
