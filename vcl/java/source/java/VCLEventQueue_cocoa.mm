@@ -1224,6 +1224,10 @@ static NSUInteger nMouseMask = 0;
 	NSEventType nType = [pEvent type];
 	NSRect aOldFrame = [self frame];
 
+	// Fix bug 3357 by updating when we are not in a menu tracking session
+	if ( bIsVCLWindow && [self isVisible] && nType == NSFlagsChanged && [pEvent modifierFlags] & NSCommandKeyMask )
+		VCLInstance_updateNativeMenus();
+
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 

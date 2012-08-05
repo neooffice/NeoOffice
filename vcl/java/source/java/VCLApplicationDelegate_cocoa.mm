@@ -675,63 +675,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
-	MacOSBOOL bRet = NO;
-
-	// Fix bug 3357 by updating we are not in a menu tracking session
-	if ( !mbInTermination && pMenuItem )
-	{
-		if ( !mbInTracking && pMenuItem && ![pMenuItem submenu] )
-		{
-			NSApplication *pApp = [NSApplication sharedApplication];
-			NSMenu *pMenu = [pMenuItem menu];
-			if ( pApp && pMenu )
-			{
-				// Attempt to fix crashing when menu items are queried by
-				// assistive devices reported in the following NeoOffice forum
-				// post by only updating the menus when the current event is
-				// an NSFlagsChanged event:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63302#63302
-				NSMenu *pMainMenu = [pApp mainMenu];
-				NSEvent *pEvent = [pApp currentEvent];
-				if ( pMainMenu && pEvent && [pEvent type] == NSFlagsChanged )
-				{
-					// Skip updating if menu item is an item in the main menu
-					if ( pMenu != pMainMenu )
-					{
-						NSMenu *pAppMenu = nil;
-						if ( [pMainMenu numberOfItems] > 0 )
-						{
-							NSMenuItem *pAppMenuItem = [pMainMenu itemAtIndex:0];
-							if ( pAppMenuItem )
-								pAppMenu = [pAppMenuItem submenu];
-						}
-
-						// Skip updating if an item is in the main menu's
-						// application menu item hierarchy or is in the dock
-						// menu's hierarchy
-						MacOSBOOL bUpdate = YES;
-						while ( pMenu )
-						{
-							if ( pMenu == pAppMenu || pMenu == mpDockMenu )
-							{
-								bUpdate = NO;
-								break;
-							}
-
-							pMenu = [pMenu supermenu];
-						}
-
-						if ( bUpdate )
-							VCLInstance_updateNativeMenus();
-					}
-				}
-			}
-		}
-
-		bRet = YES;
-	}
-
-	return bRet;
+	return ( !mbInTermination && pMenuItem );
 }
 
 @end
