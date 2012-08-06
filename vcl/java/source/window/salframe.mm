@@ -1099,8 +1099,12 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
+				// Fix bug reported in the following NeoOffice forum post by
+				// only letting the subset of windows that are VCLWindows stop
+				// the show only menus windows from showing:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63338#63338
 				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				if ( pWindow && [pWindow isKindOfClass:[VCLWindow class]] && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
 					::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
 					if ( it == aShowOnlyMenusWindowMap.end() )
