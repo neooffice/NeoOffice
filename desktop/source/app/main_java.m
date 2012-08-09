@@ -330,6 +330,7 @@ int java_main( int argc, char **argv )
 		}
 	}
 
+#ifndef USE_MAC_SANDBOX
 	// Restart if necessary since most library path changes don't have any
 	// effect after the application has already started on most platforms
 	if ( bRestart )
@@ -382,6 +383,7 @@ int java_main( int argc, char **argv )
 		[pPool release];
 		_exit( 1 );
 	}
+#endif	// !USE_MAC_SANDBOX
 
 	// If this Mac OS X version is not supported, try to open the bundled
 	// "unsupported_macosx_version.html" file in the default web browser

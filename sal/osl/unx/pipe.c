@@ -262,6 +262,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 			unlink(name);
 		}
 
+#ifndef USE_MAC_SANDBOX
 		/* ok, fs clean */
 		if ( bind(pPipe->m_Socket, (struct sockaddr *)&addr, len) < 0 )
 		{
@@ -270,6 +271,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 			__osl_destroyPipeImpl(pPipe);
 			return NULL;
 		}
+#endif	// !USE_MAC_SANDBOX
 
 		/*	Only give access to all if no security handle was specified, otherwise security
 			depends on umask */
@@ -280,6 +282,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 
 		strncpy(pPipe->m_Name, name, sizeof(pPipe->m_Name));
 
+#ifndef USE_MAC_SANDBOX
 		if ( listen(pPipe->m_Socket, 5) < 0 )
 		{
 			OSL_TRACE("osl_createPipe failed to listen. Errno: %d; %s\n",errno,strerror(errno));
@@ -288,6 +291,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 			__osl_destroyPipeImpl(pPipe);
 			return NULL;
 		}
+#endif	// !USE_MAC_SANDBOX
 
 		return (pPipe);
 	}
