@@ -300,7 +300,6 @@ int java_main( int argc, char **argv )
 
 				pNewArgv[ argc ] = NULL;
 				argv = pNewArgv;
-				bRestart = true;
 			}
 			else if ( CFGetTypeID( aPref ) == CFArrayGetTypeID() )
 			{
@@ -325,7 +324,6 @@ int java_main( int argc, char **argv )
 
 				pNewArgv[ argc ] = NULL;
 				argv = pNewArgv;
-				bRestart = true;
 			}
 
 			CFRelease( aPref );
