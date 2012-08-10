@@ -2991,6 +2991,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				switch( nPart )
 				{
+					case PART_ENTIRE_CONTROL:
+						{
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)( spinnerThemeHeight * 2 ) );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+
 					case PART_BUTTON_UP:
 						{
 							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );

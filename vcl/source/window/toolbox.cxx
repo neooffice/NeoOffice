@@ -3299,6 +3299,19 @@ void ToolBox::ImplDrawSpin( BOOL bUpperIn, BOOL bLowerIn )
         bTmpLower = FALSE;
     }
 
+#ifdef USE_JAVA
+    // Fix bug reported in the following NeoOffice forum topic by drawing the
+    // background before drawing the spin buttons:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63386#63386
+    Rectangle aNativeBounds( maUpperRect );
+    aNativeBounds.Union( maLowerRect );
+    ImplControlValue aControlValue;
+    Region aBoundRgn, aContentRgn;
+    Region aNativeRgn( aNativeBounds );
+    if ( IsNativeControlSupported( CTRL_SPINBUTTONS, PART_ENTIRE_CONTROL ) && GetNativeControlRegion( CTRL_SPINBUTTONS, PART_ENTIRE_CONTROL, aNativeRgn, 0, aControlValue, rtl::OUString(), aBoundRgn, aContentRgn ) )
+        ImplDrawBackground( this, aBoundRgn.GetBoundRect() );
+#endif	// USE_JAVA
+
     ImplDrawSpinButton( this, maUpperRect, maLowerRect,
                         bUpperIn, bLowerIn, bTmpUpper, bTmpLower, !mbHorz );
 }
