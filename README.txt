@@ -11,7 +11,7 @@ At this time, the NeoOffice build only supports building on Mac OS X 10.6 Snow L
 
    sudo systemsetup -setkernelbootarchitecture i386
 
-2. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
+2. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website. Note: NeoOffice will not build if Xcode 4.x is installed:
 
    Xcode Tools v3.2.6
 
