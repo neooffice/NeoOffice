@@ -266,12 +266,12 @@ BOOL VCLInstance_updateNativeMenus()
 
 	// If no application mutex exists yet, queue event as we are likely to
 	// crash
-	if ( !ImplGetSVData() || !GetSalData() )
+	if ( Application::IsShutDown() || !ImplGetSVData() || !ImplGetSVData()->mpDefInst )
 		return bRet;
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
-	if ( Application::IsShutDown() || bInNativeDrag || NSApplication_getModalWindow() )
+	if ( bInNativeDrag || NSApplication_getModalWindow() )
 		return bRet;
 
 	// Fix bug 2783 by cancelling menu actions if the input method if the
@@ -429,7 +429,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
 	sal_Bool bRet = sal_False;
 
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		Application::GetSolarMutex().acquire();
 		bRet = sal_True;
@@ -444,7 +444,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 		Application::GetSolarMutex().release();
 }
 

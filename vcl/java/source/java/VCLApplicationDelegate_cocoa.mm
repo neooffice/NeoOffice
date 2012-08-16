@@ -74,7 +74,7 @@ static void HandleAboutRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -88,7 +88,7 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 	{
 		// If no application mutex exists yet, queue event as we are likely to
 		// crash
-		if ( ImplGetSVData() && GetSalData() )
+		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst )
 		{
 			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
@@ -107,7 +107,7 @@ static void HandlePreferencesRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -121,7 +121,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
@@ -170,7 +170,7 @@ static void HandleDidChangeScreenParametersRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
@@ -508,7 +508,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					NSMenu *pAppMenu = [pItem submenu];
 					if ( pAppMenu )
 					{
-						if ( !Application::IsShutDown() && ImplGetSVData() && GetSalData() )
+						if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 						{
 							IMutex& rSolarMutex = Application::GetSolarMutex();
 							rSolarMutex.acquire();
