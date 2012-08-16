@@ -1437,7 +1437,7 @@ static NSUInteger nMouseMask = 0;
 				// Fix bug 3284 by reducing the amount of magnification.
 				nModifiers |= NSCommandKeyMask;
 				fDeltaX = 0;
-				fDeltaY = [pEvent deltaZ] / 8;
+				fDeltaY = [pEvent magnification];
 			}
 			else
 			{
@@ -1480,7 +1480,7 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
-				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
+				pWheelMouseEvent->mnDelta = nScrollAmount * ( nType == NSEventTypeMagnify ? 1.0f : WHEEL_ROTATION_FACTOR );
 				pWheelMouseEvent->mnNotchDelta = nScrollAmount;
 				pWheelMouseEvent->mnScrollLines = 1;
 				pWheelMouseEvent->mnCode = nCode;
