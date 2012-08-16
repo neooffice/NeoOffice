@@ -237,6 +237,7 @@ public:
 	float					mfPageTranslateY;
 	CGRect					maNativeBounds;
 
+	static float			getContextBackingFactor( CGContextRef aContext );
 	static void				setContextDefaultSettings( CGContextRef aContext, const CGPathRef aFrameClipPath, const CGPathRef aClipPath, float fLineWidth );
 
 							JavaSalGraphics();

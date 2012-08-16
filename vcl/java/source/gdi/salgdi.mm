@@ -463,6 +463,28 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 
 // =======================================================================
 
+float JavaSalGraphics::getContextBackingFactor( CGContextRef aContext )
+{
+	float fRet = 1.0f;
+
+	if ( aContext )
+	{
+		CGRect aDeviceRect = CGContextConvertRectToDeviceSpace( aContext, CGRectMake( 0, 0, 1, 1 ) );
+		if ( !CGRectIsEmpty( aDeviceRect ) )
+		{
+			// Use the higher of the two backing factors if they are different
+			if ( fRet < aDeviceRect.size.width )
+				fRet = aDeviceRect.size.width;
+			if ( fRet < aDeviceRect.size.height )
+				fRet = aDeviceRect.size.height;
+		}
+	}
+
+	return fRet;
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::setContextDefaultSettings( CGContextRef aContext, const CGPathRef aFrameClipPath, const CGPathRef aClipPath, float fLineWidth )
 {
 	if ( !aContext )
@@ -1443,7 +1465,15 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 					CGImageRef aImage = CGImageCreate( nBitmapWidth, nBitmapHeight, 8, 32, AlignedWidth4Bytes( 32 * nBitmapWidth ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
 					if ( aImage )
 					{
-						CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - mnXORBitmapPadding, maXORRect.origin.y - mnXORBitmapPadding, nBitmapWidth, nBitmapHeight ), aImage );
+						// Fix Retina display bug reported in the following
+						// NeoOffice forum topic by making the temporary bitmaps
+						// have the same bytes per pixel that the layer has:
+						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8493
+						float fBackingFactor = JavaSalGraphics::getContextBackingFactor( maSavedContext );
+						if ( fBackingFactor < 1.0f )
+							fBackingFactor = 1.0f;
+
+						CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - mnXORBitmapPadding, maXORRect.origin.y - mnXORBitmapPadding, (float)nBitmapWidth / fBackingFactor, (float)nBitmapHeight / fBackingFactor ), aImage );
 						CGImageRelease( aImage );
 					}
 
@@ -1534,7 +1564,17 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 				if ( aColorSpace )
 				{
+					// Fix Retina display bug reported in the following
+					// NeoOffice forum topic by making the temporary bitmaps
+					// have the same bytes per pixel that the layer has:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8493
+					float fBackingFactor = JavaSalGraphics::getContextBackingFactor( aContext );
+					if ( fBackingFactor < 1.0f )
+						fBackingFactor = 1.0f;
+
 					CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( mnXORBitmapPadding * 2 ), maXORRect.size.height + ( mnXORBitmapPadding * 2 ) );
+					aBitmapSize.width *= fBackingFactor;
+					aBitmapSize.height *= fBackingFactor;
 					long nScanlineSize = AlignedWidth4Bytes( 32 * aBitmapSize.width );
 					mnBitmapCapacity = nScanlineSize * aBitmapSize.height;
 					try
@@ -1553,12 +1593,15 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 						if ( maDrawBitmapContext && maXORBitmapContext )
 						{
 							// Translate the drawing context
-							CGContextTranslateCTM( maDrawBitmapContext, mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y );
+							CGContextTranslateCTM( maDrawBitmapContext, ( mnXORBitmapPadding - maXORRect.origin.x ) * fBackingFactor, ( mnXORBitmapPadding - maXORRect.origin.y ) * fBackingFactor );
+							CGContextScaleCTM( maDrawBitmapContext, fBackingFactor, fBackingFactor );
 
 							JavaSalGraphics::setContextDefaultSettings( maDrawBitmapContext, maFrameClipPath, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 							// Copy layer to XOR context
-							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y ), maXORLayer );
+							CGContextTranslateCTM( maXORBitmapContext, ( mnXORBitmapPadding - maXORRect.origin.x ) * fBackingFactor, ( mnXORBitmapPadding - maXORRect.origin.y ) * fBackingFactor );
+							CGContextScaleCTM( maXORBitmapContext, fBackingFactor, fBackingFactor );
+							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( 0, 0 ), maXORLayer );
 
 							bXORDrawable = true;
 						}
