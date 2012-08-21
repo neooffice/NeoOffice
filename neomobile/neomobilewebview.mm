@@ -1246,7 +1246,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				@try
 				{
-					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+					NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+					NSArray *pURLs = [NSArray arrayWithObject:[NSURL fileURLWithPath:path]];
+					NSString *pBundleID = [[NSBundle mainBundle] bundleIdentifier];
+					if (pWorkspace && pURLs && pBundleID)
+						[pWorkspace openURLs:pURLs withAppBundleIdentifier:pBundleID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 				}
 				@catch (NSException *pExc)
 				{
@@ -1260,7 +1264,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				@try
 				{
-					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+					NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+					NSURL *pURL = [NSURL fileURLWithPath:path];
+					if (pWorkspace && pURL)
+						[pWorkspace openURL:pURL];
 				}
 				@catch (NSException *pExc)
 				{
