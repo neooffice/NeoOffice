@@ -85,7 +85,11 @@ APP1OBJS=$(OBJ)$/copyright_ascii_sun.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
 APP1OBJS+=\
 	$(OBJ)$/main_java.obj
+.IF "$(USE_MAC_SANDBOX)" != ""
 APP1STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+.ELSE		# "$(USE_MAC_SANDBOX)" != ""
+APP1STDLIBS =
+.ENDIF		# "$(USE_MAC_SANDBOX)" != ""
 .ELSE		# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
@@ -120,7 +124,11 @@ APP5OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
 APP5OBJS+=\
 	$(OBJ)$/main_java.obj
+.IF "$(USE_MAC_SANDBOX)" != ""
 APP5STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+.ELSE		# "$(USE_MAC_SANDBOX)" != ""
+APP5STDLIBS =
+.ENDIF		# "$(USE_MAC_SANDBOX)" != ""
 .ELSE		# "$(GUIBASE)" == "java"
 APP5STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"

@@ -36,6 +36,9 @@
 #include <crt_externs.h>
 #include <dlfcn.h>
 #include <stdio.h>
+#ifndef USE_MAC_SANDBOX
+#include <unistd.h>
+#endif	// !USE_MAC_SANDBOX
 
 #import <Cocoa/Cocoa.h>
 
@@ -240,7 +243,9 @@ int java_main( int argc, char **argv )
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
+#ifndef USE_MAC_SANDBOX
 	bool bRestart = false;
+#endif	// !USE_MAC_SANDBOX
   	const char *pEnvFrameworkPath = getenv( "DYLD_FRAMEWORK_PATH" );
 	// Always unset DYLD_FRAMEWORK_PATH
 	unsetenv( "DYLD_FRAMEWORK_PATH" );
@@ -251,10 +256,16 @@ int java_main( int argc, char **argv )
 		if ( pEnvFallbackFrameworkPath )
 			pFrameworkPathEnv = [pFrameworkPathEnv stringByAppendingFormat:@":%@", [NSString stringWithUTF8String:pEnvFallbackFrameworkPath]];
 		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
+#ifndef USE_MAC_SANDBOX
 		bRestart = true;
+#endif	// !USE_MAC_SANDBOX
 	}
 
 	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/basis-link/program:%@/Contents/basis-link/ure-link/lib:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath, pBundlePath];
+#ifndef USE_MAC_SANDBOX
+  	if ( pEnvHome )
+		pStandardLibPath = [pStandardLibPath stringByAppendingFormat:@"%@/lib:", [NSString stringWithUTF8String:pEnvHome]];
+#endif	// !USE_MAC_SANDBOX
 	const char *pEnvLibPath = getenv( "LD_LIBRARY_PATH" );
 	NSString *pLibPath = ( pEnvLibPath ? [NSString stringWithUTF8String:pEnvLibPath] : nil );
 	const char *pEnvDyLibPath = getenv( "DYLD_LIBRARY_PATH" );
@@ -274,7 +285,9 @@ int java_main( int argc, char **argv )
 		if ( pDyFallbackLibPath )
 			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyFallbackLibPath];
 		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
+#ifndef USE_MAC_SANDBOX
 		bRestart = true;
+#endif	// !USE_MAC_SANDBOX
 	}
 
 	// Use default launch options if there are no application arguments
@@ -327,47 +340,62 @@ int java_main( int argc, char **argv )
 		}
 	}
 
-	NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/pagein", pBundlePath];
-	if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
+#ifndef USE_MAC_SANDBOX
+	// Restart if necessary since most library path changes don't have any
+	// effect after the application has already started on most platforms
+	if ( bRestart )
 	{
-		int nCurrentArg = 0;
-		char *pPageinArgs[ argc + 3 ];
-		pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
-		NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/basis-link/program", pBundlePath];
-		pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
-		int i = 1;
-		for ( ; i < argc; i++ )
+#endif	// !USE_MAC_SANDBOX
+		NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/pagein", pBundlePath];
+		if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
 		{
-			if ( !strcmp( "-calc", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
-			else if ( !strcmp( "-draw", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
-			else if ( !strcmp( "-impress", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
-			else if ( !strcmp( "-writer", argv[ i ] ) )
+			int nCurrentArg = 0;
+			char *pPageinArgs[ argc + 3 ];
+			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
+			NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/basis-link/program", pBundlePath];
+			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
+			int i = 1;
+			for ( ; i < argc; i++ )
+			{
+				if ( !strcmp( "-calc", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
+				else if ( !strcmp( "-draw", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
+				else if ( !strcmp( "-impress", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
+				else if ( !strcmp( "-writer", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			}
+			if ( nCurrentArg == 1 )
 				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
-		}
-		if ( nCurrentArg == 1 )
-			pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
-		pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
-		pPageinArgs[ nCurrentArg++ ] = NULL;
+			pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
+			pPageinArgs[ nCurrentArg++ ] = NULL;
 
-		// Execute the pagein command in child process
-		pid_t pid = fork();
-		if ( !pid )
-		{
-			close( 0 );
-			execvp( [pPageinPath UTF8String], pPageinArgs );
-			_exit( 1 );
+			// Execute the pagein command in child process
+			pid_t pid = fork();
+			if ( !pid )
+			{
+				close( 0 );
+				execvp( [pPageinPath UTF8String], pPageinArgs );
+				_exit( 1 );
+			}
+			else if ( pid > 0 )
+			{
+				// Invoke waitpid to prevent zombie processes
+				int status;
+				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+					usleep( 10 );
+			}
 		}
-		else if ( pid > 0 )
-		{
-			// Invoke waitpid to prevent zombie processes
-			int status;
-			while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-				usleep( 10 );
-		}
+
+#ifndef USE_MAC_SANDBOX
+		// Reexecute the parent process
+		execv( [pCmdPath UTF8String], argv );
+		fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
+		[pPool release];
+		_exit( 1 );
 	}
+#endif	// !USE_MAC_SANDBOX
 
 	// If this Mac OS X version is not supported, try to open the bundled
 	// "unsupported_macosx_version.html" file in the default web browser
