@@ -1189,10 +1189,27 @@ static NSString *pBlankItem = @" ";
 - (int)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
 	int nRet = NSCancelButton;
+    static bool recursing=false;
 
-	if ( [mpFilePanel isVisible] )
-		return nRet;
-
+    // When sandboxed the NSSavePanel does not derive direclty from a widget
+    // but is routed through powerbox objects.  It may notrespond to is visible
+    if ( [mpFilePanel respondsToSelector:@selector(isVisible)] )
+    {
+        if ( [mpFilePanel isVisible] )
+            return nRet;
+    }
+    else
+    {
+        // if we get into here twice that means there's some weird recursion going on.
+        // at some point +++FIXME+++ this should be a proper recursion guard
+        if(recursing)
+        {
+            return NSCancelButton;
+        }
+    }
+    
+    recursing = true;
+    
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
 	if ( pAccessoryView )
@@ -1331,6 +1348,8 @@ static NSString *pBlankItem = @" ";
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
+    recursing = false;
+    
 	return nRet;
 }
 
