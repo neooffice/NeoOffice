@@ -849,6 +849,42 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @end
 
+@interface VCLDestroyMenuItem : NSObject
+{
+	NSMenuItem*				mpMenuItem;
+}
++ (id)createWithMenuItem:(NSMenuItem *)pMenuItem;
+- (id)initWithMenuItem:(NSMenuItem *)pMenuItem;
+- (void)destroy:(id)pObject;
+@end
+
+@implementation VCLDestroyMenuItem
+
++ (id)createWithMenuItem:(NSMenuItem *)pMenuItem
+{
+	VCLDestroyMenuItem *pRet = [[VCLDestroyMenuItem alloc] initWithMenuItem:pMenuItem];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithMenuItem:(NSMenuItem *)pMenuItem
+{
+	[super init];
+
+	// Do not retain as it will block deallocation on the main thread
+	mpMenuItem = pMenuItem;
+
+	return self;
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( mpMenuItem )
+		[mpMenuItem release];
+}
+
+@end
+
 //=============================================================================
 
 JavaSalMenu::JavaSalMenu() :
@@ -1142,7 +1178,11 @@ JavaSalMenuItem::~JavaSalMenuItem()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMenuItem )
-		[mpMenuItem release];
+	{
+		VCLDestroyMenuItem *pVCLDestroyMenuItem = [VCLDestroyMenuItem createWithMenuItem:mpMenuItem];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLDestroyMenuItem performSelectorOnMainThread:@selector(destroy:) withObject:pVCLDestroyMenuItem waitUntilDone:YES modes:pModes];
+	}
 
 	[pPool release];
 }
