@@ -35,56 +35,15 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
-#import <objc/objc-class.h>
 #include <postmac.h>
 #undef check
 
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
-@interface NSApplication (VCLApplicationPoseAs)
-- (NSEvent *)poseAsNextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag;
-@end
-
-@interface VCLApplication : NSApplication
-- (NSEvent *)nextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag;
-@end
-
-@implementation VCLApplication
-
-- (NSEvent *)nextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag
-{
-	NSEvent *pRet = nil;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( [super respondsToSelector:@selector(poseAsNextEventMatchingMask:untilDate:inMode:dequeue:)] )
-		pRet = [super poseAsNextEventMatchingMask:nMask untilDate:pExpiration inMode:pMode dequeue:nFlag];
-
-	[pPool release];
-
-	return pRet;
-}
-
-@end
-
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	// VCLApplication selectors
-
-	SEL aSelector = @selector(nextEventMatchingMask:untilDate:inMode:dequeue:);
-	SEL aPoseAsSelector = @selector(poseAsNextEventMatchingMask:untilDate:inMode:dequeue:);
-	Method aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
-	Method aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
