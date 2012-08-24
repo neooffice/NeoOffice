@@ -158,7 +158,6 @@ using namespace vcl;
 JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mnWidth( 0 ),
 	mnHeight( 0 ),
-	mbBitmapLayer( false ),
 	maVirDevLayer( NULL ),
 	mnBitCount( 32 ),
 	mpGraphics( new JavaSalGraphics() ),
@@ -214,14 +213,10 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( nDY < 1 )
 		nDY = 1;
 
-	if ( maVirDevLayer && !mbBitmapLayer && nDX == mnWidth && nDY == mnHeight )
-		return TRUE;
-
 	BOOL bRet = FALSE;
 
 	mnWidth = 0;
 	mnHeight = 0;
-	mbBitmapLayer = false;
 
 	if ( maVirDevLayer )
 	{
@@ -238,11 +233,7 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLVirtualDeviceGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLVirtualDeviceGetGraphicsLayer waitUntilDone:YES modes:pModes];
 	maVirDevLayer = [pVCLVirtualDeviceGetGraphicsLayer layer];
-	if ( maVirDevLayer )
-	{
-		mbBitmapLayer = true;
-	}
-	else
+	if ( !maVirDevLayer )
 	{
 		// Make a native layer backed by a 1 x 1 pixel native bitmap
 		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();

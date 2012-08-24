@@ -55,7 +55,6 @@ class JavaSalVirtualDevice : public SalVirtualDevice
 {
 	long					mnWidth;
 	long					mnHeight;
-	bool					mbBitmapLayer;
 	CGLayerRef				maVirDevLayer;
 	USHORT					mnBitCount;
 	JavaSalGraphics*		mpGraphics; 
