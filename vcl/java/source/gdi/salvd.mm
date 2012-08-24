@@ -120,6 +120,9 @@ using namespace vcl;
 						CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 						if ( aContext )
 						{
+							if ( !aLastContext )
+								aLastContext = aContext;
+
 							if ( [pWindow respondsToSelector:@selector(backingScaleFactor)] )
 							{
 								float fBackingScaleFactor = [pWindow backingScaleFactor];
@@ -233,7 +236,11 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLVirtualDeviceGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLVirtualDeviceGetGraphicsLayer waitUntilDone:YES modes:pModes];
 	maVirDevLayer = [pVCLVirtualDeviceGetGraphicsLayer layer];
-	if ( !maVirDevLayer )
+	if ( maVirDevLayer )
+	{
+		CGLayerRetain( maVirDevLayer );
+	}
+	else
 	{
 		// Make a native layer backed by a 1 x 1 pixel native bitmap
 		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
@@ -253,8 +260,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 	if ( maVirDevLayer )
 	{
-		CGLayerRetain( maVirDevLayer );
-
 		CGSize aLayerSize = CGLayerGetSize( maVirDevLayer );
 		mpGraphics->maNativeBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
 		mpGraphics->setLayer( maVirDevLayer );
