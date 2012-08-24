@@ -35,15 +35,52 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+#import <objc/objc-class.h>
 #include <postmac.h>
 #undef check
 
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
+@interface NSApplication (VCLApplicationPoseAs)
+- (void)poseAsSendEvent:(NSEvent *)pEvent;
+@end
+
+@interface VCLApplication : NSApplication
+- (void)sendEvent:(NSEvent *)pEvent;
+@end
+
+@implementation VCLApplication
+
+- (void)sendEvent:(NSEvent *)pEvent
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
+		[super poseAsSendEvent:pEvent];
+
+	[pPool release];
+}
+
+@end
+
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	// VCLApplication selectors
+
+	SEL aSelector = @selector(sendEvent:);
+	SEL aPoseAsSelector = @selector(poseAsSendEvent:);
+	Method aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
+	Method aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
