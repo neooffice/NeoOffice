@@ -264,10 +264,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @end
 
-@interface NSApplication (VCLApplicationDelegate)
-- (void)setHelpMenu:(NSMenu *)pHelpMenu;
-@end
-
 @implementation VCLApplicationDelegate
 
 + (VCLApplicationDelegate *)sharedDelegate
