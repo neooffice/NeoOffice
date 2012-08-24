@@ -43,23 +43,27 @@
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
 @interface NSApplication (VCLApplicationPoseAs)
-- (void)poseAsSendEvent:(NSEvent *)pEvent;
+- (NSEvent *)poseAsNextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag;
 @end
 
 @interface VCLApplication : NSApplication
-- (void)sendEvent:(NSEvent *)pEvent;
+- (NSEvent *)nextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag;
 @end
 
 @implementation VCLApplication
 
-- (void)sendEvent:(NSEvent *)pEvent
+- (NSEvent *)nextEventMatchingMask:(NSUInteger)nMask untilDate:(NSDate *)pExpiration inMode:(NSString *)pMode dequeue:(MacOSBOOL)nFlag
 {
+	NSEvent *pRet = nil;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
-		[super poseAsSendEvent:pEvent];
+	if ( [super respondsToSelector:@selector(poseAsNextEventMatchingMask:untilDate:inMode:dequeue:)] )
+		pRet = [super poseAsNextEventMatchingMask:nMask untilDate:pExpiration inMode:pMode dequeue:nFlag];
 
 	[pPool release];
+
+	return pRet;
 }
 
 @end
@@ -70,8 +74,8 @@ void NSApplication_run()
 
 	// VCLApplication selectors
 
-	SEL aSelector = @selector(sendEvent:);
-	SEL aPoseAsSelector = @selector(poseAsSendEvent:);
+	SEL aSelector = @selector(nextEventMatchingMask:untilDate:inMode:dequeue:);
+	SEL aPoseAsSelector = @selector(poseAsNextEventMatchingMask:untilDate:inMode:dequeue:);
 	Method aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
 	Method aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
 	if ( aOldMethod && aNewMethod )
