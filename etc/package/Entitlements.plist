@@ -34,13 +34,6 @@
 	<true/>
 	<key>com.apple.security.print</key>
 	<true/>
-	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
-	<array>
-		<!-- Enable services in Services menu -->
-		<string>com.apple.appkit.xpc.sandboxedServiceRunner</string>
-		<!-- Enable QuickLook plugins when displaying versions -->
-		<string>com.apple.coresymbolicationd</string>
-	</array>
 	<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
 	<array>
 		<string>/</string>
