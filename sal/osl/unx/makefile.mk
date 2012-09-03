@@ -52,10 +52,6 @@ ENVCDEFS += -DPRODUCT_FILETYPE=\'$(PRODUCT_FILETYPE)\'
 
 .INCLUDE :  settings.mk
 
-.IF "$(USE_MAC_SANDBOX)" != ""
-CDEFS += -DUSE_MAC_SANDBOX='"$(USE_MAC_SANDBOX)"'
-.ENDIF
-
 CFLAGS+= $(LFS_CFLAGS)
 CXXFLAGS+= $(LFS_CFLAGS)
 
@@ -126,6 +122,11 @@ SLOFILES += $(SLO)$/osxlocale.obj
 SLOFILES += $(SLO)$/backtrace.obj
 OBJFILES += $(OBJ)$/backtrace.obj
 .ENDIF
+
+.IF "$(GUIBASE)"=="java"
+SLOFILES += $(SLO)$/system_cocoa.obj
+OBJFILES += $(OBJ)$/system_cocoa.obj
+.ENDIF		# "$(GUIBASE)"=="java"
 
 # --- Targets ------------------------------------------------------
 
