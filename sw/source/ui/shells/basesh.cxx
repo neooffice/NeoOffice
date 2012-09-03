@@ -149,6 +149,10 @@
 #include <comcore.hrc>
 #endif
 
+#ifdef USE_JAVA
+#include <wview.hxx>
+#endif	// USE_JAVA
+
 #include <unomid.h>
 
 FlyMode SwBaseShell::eFrameMode = FLY_DRAG_END;
@@ -2437,6 +2441,14 @@ void SwBaseShell::ExecDlg(SfxRequest &rReq)
 		break;
 		case FN_FORMAT_BORDER_DLG:
 		{
+#ifdef USE_JAVA
+			// Fix bug reported in the following NeoOffice forum topic when
+			// the border dialog is opened before the Format :: Paragraph menu
+			// or Format :: Page menu is selected:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8504
+			FieldUnit eMetric = ::GetDfltMetric(0 != PTR_CAST(SwWebView, &rSh.GetView()));
+			SW_MOD()->PutItem(SfxUInt16Item(SID_ATTR_METRIC, static_cast< UINT16 >(eMetric)));
+#endif	// USE_JAVA
 			SfxItemSet	 aSet( rSh.GetAttrPool(),
 							   RES_BOX	  			, RES_SHADOW,
 							   SID_ATTR_BORDER_INNER, SID_ATTR_BORDER_INNER,
