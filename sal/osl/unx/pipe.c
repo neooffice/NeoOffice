@@ -239,11 +239,16 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 	 */
 	if (strlen(realname))
 	{
-		symlink(realname, name);
-
 		struct stat status;
+
+		symlink(realname, name);
 		if (lstat(name, &status) != 0 || !S_ISLNK(status.st_mode))
-			return NULL;
+		{
+			unlink(name);
+			symlink(realname, name);
+			if (lstat(name, &status) != 0 || !S_ISLNK(status.st_mode))
+				return NULL;
+		}
 	}
 #endif	/* USE_JAVA */
 
