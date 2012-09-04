@@ -36,6 +36,11 @@
 	<true/>
 	<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
 	<array>
+		<!--
+			Allow creation of Unix domain sockets that are in folders with
+			paths that are guaranteed to fit within the 104 character path
+			limit for Unix domain sockets
+		-->
 		<string>/</string>
 	</array>
 </dict>
