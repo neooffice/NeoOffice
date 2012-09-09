@@ -93,6 +93,7 @@ String STR_DISABLEVERSIONSSUPPORT
 {
 	Text [ de ] = "Deaktiviere Mac OS X Versionen";
 	Text [ en-US ] = "Disable Mac OS X Versions";
+	Text [ es ] = "Deshabilitar Versiones de Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Versions uit";
 };
 
@@ -100,6 +101,7 @@ String STR_DISABLERESUMESUPPORT
 {
 	Text [ de ] = "Deaktiviere Mac OS X Resume";
 	Text [ en-US ] = "Disable Mac OS X Resume";
+	Text [ es ] = "Deshabilitar Resume de Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Resume uit";
 };
 
