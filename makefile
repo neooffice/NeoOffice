@@ -664,7 +664,7 @@ ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjavaes.res" "MacOS/resource"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fpicker.uno.dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
 ifneq (,$(CERTSANDBOXTEAMIDENTIFIER))
