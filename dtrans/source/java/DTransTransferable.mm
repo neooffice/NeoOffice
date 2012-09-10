@@ -162,6 +162,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 }
 + (id)createWithPasteboardName:(NSString *)pPasteboardName;
 - (int)changeCount;
+- (void)clearContentsWithChangeCount:(NSNumber *)pChangeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
 - (void)destroyData;
@@ -208,6 +209,16 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (int)changeCount
 {
 	return mnChangeCount;
+}
+
+- (void)clearContentsWithChangeCount:(NSNumber *)pChangeCount
+{
+	if ( !pChangeCount )
+		return;
+
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard && [pChangeCount intValue] == [pPasteboard changeCount] )
+		[pPasteboard clearContents];
 }
 
 - (NSData *)dataForType
@@ -1036,6 +1047,21 @@ DTransTransferable::DTransTransferable( NSString *pPasteboardName ) :
 DTransTransferable::~DTransTransferable()
 {
 	aTransferableList.remove( this );
+
+	// If this object is the pasteboard owner, clear the pasteboard's contents
+	if ( mnChangeCount >= 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(clearContentsWithChangeCount:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
+		}
+
+		[pPool release];
+	}
 
 	if ( mpPasteboardName )
 		[mpPasteboardName release];
