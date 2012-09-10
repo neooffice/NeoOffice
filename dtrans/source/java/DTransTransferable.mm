@@ -910,12 +910,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 		bool bRequestedTypeIsText = false;
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
-		// Avoid deadlock reported in the following NeoOffice forum topic
-		// by releasing the application mutex while querying the pasteboard as
-		// that may call back into the OOo code:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
-		ULONG nCount = Application::ReleaseSolarMutex();
-
 		// Run a loop so that if data type fails, we can try another
 		for ( USHORT i = 0; !bDataRetrieved && i < nSupportedTypes; i++ )
 		{
@@ -1011,8 +1005,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				}
 			}
 		}
-
-		Application::AcquireSolarMutex( nCount );
 	}
 
 	[pPool release];
@@ -1049,6 +1041,10 @@ DTransTransferable::~DTransTransferable()
 	aTransferableList.remove( this );
 
 	// If this object is the pasteboard owner, clear the pasteboard's contents
+	// Avoid deadlock reported in the following NeoOffice forum topic
+	// by clearing the pasteboard's contents is this object is the pasteboard
+	// owner:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
 	if ( mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
