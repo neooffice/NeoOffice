@@ -864,14 +864,8 @@ void DTransTransferable::flush()
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			// Avoid deadlock reported in the following NeoOffice forum topic
-			// by releasing the application mutex while flushing since flushing
-			// will call back into the OOo code:
-			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
-			ULONG nCount = Application::ReleaseSolarMutex();
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pHelper performSelectorOnMainThread:@selector(flush:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];
@@ -905,6 +899,12 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 		bool bRequestedTypeIsText = false;
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
+		// Avoid deadlock reported in the following NeoOffice forum topic
+		// by releasing the application mutex while querying the pasteboard as
+		// that may call back into the OOo code:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
+		ULONG nCount = Application::ReleaseSolarMutex();
+
 		// Run a loop so that if data type fails, we can try another
 		for ( USHORT i = 0; !bDataRetrieved && i < nSupportedTypes; i++ )
 		{
@@ -929,7 +929,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					if ( pUTF8String )
 					{
 						OUString aString( pUTF8String, strlen( pUTF8String ), RTL_TEXTENCODING_UTF8 );
-
 						// Replace carriage returns with line feeds
 						aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
 
@@ -1001,7 +1000,11 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				}
 			}
 		}
+
+		Application::AcquireSolarMutex( nCount );
 	}
+
+	[pPool release];
 
 	if ( !bDataRetrieved )
 	{
@@ -1010,8 +1013,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 		else
 			throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 	}
-
-	[pPool release];
 
 	return out;
 }
