@@ -864,8 +864,14 @@ void DTransTransferable::flush()
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
+			// Avoid deadlock reported in the following NeoOffice forum topic
+			// by releasing the application mutex while flushing since flushing
+			// will call back into the OOo code:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
+			ULONG nCount = Application::ReleaseSolarMutex();
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pHelper performSelectorOnMainThread:@selector(flush:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
+			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];
