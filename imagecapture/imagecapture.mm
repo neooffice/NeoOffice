@@ -49,58 +49,37 @@
  *************************************************************************
  *************************************************************************/
 
-#include <stdio.h>
-#include <dlfcn.h>
-
-#ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX
-#include <vos/mutex.hxx>
-#endif
-#ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
-#endif
  
-#ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
-#endif
-#ifndef _CPPUHELPER_FACTORY_HXX_
 #include <cppuhelper/factory.hxx> // helper for component factory
-#endif
-#ifndef _CPPUHELPER_IMPLEMENATIONENTRY_HXX_
 #include <cppuhelper/implementationentry.hxx>
-#endif
 
 // generated c++ interfaces
 
-#ifndef _COM_SUN_STAR_LANG_XSINGLESERVICEFACTORY_HPP_
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef _COM_SUN_STAR_REGISTRY_XREGISTRYKEY_HPP_
 #include <com/sun/star/registry/XRegistryKey.hpp>
-#endif
-#ifndef _ORG_NEOOFFICE_XIMAGECAPTURE_HPP_
 #include <org/neooffice/XImageCapture.hpp>
-#endif
-#ifndef _CPPUHELPER_IMPLBASE_HXX_
 #include <cppuhelper/implbase2.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
-// Need to include for ICAImportImagePB struct but we don't link to it
-#import <Carbon/Carbon.h>
+#undef MAC_OS_X_VERSION_MIN_REQUIRED
+#define MAC_OS_X_VERSION_MIN_REQUIRED MAC_OS_X_VERSION_10_6
+#import <Quartz/Quartz.h>
 #include "postmac.h"
+
+// Redefine Cocoa YES and NO defines types for convenience
+#ifdef YES
+#undef YES
+#define YES (MacOSBOOL)1
+#endif
+#ifdef NO
+#undef NO
+#define NO (MacOSBOOL)0
+#endif
 
 #define SERVICENAME "org.neooffice.ImageCapture"
 #define IMPLNAME	"org.neooffice.XImageCapture"
@@ -112,7 +91,6 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
  
-typedef ICAError ICAImportImage_Type( ICAImportImagePB *pPB, ICACompletion nCompletion );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -125,6 +103,9 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 - (id)init;
 - (void)doImageCapture: (id)pObj;
 - (bool)capturedImage;
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError;
+- (void)windowWillClose:(NSNotification *)pNotification;
 @end
 
 using namespace ::rtl;
@@ -237,7 +218,6 @@ Reference< XInterface > SAL_CALL MacOSXImageCaptureImpl_create(
 			static Sequence < OUString > *pNames = 0;
 			if( ! pNames )
 			{
-		//		MutexGuard guard( Mutex::getGlobalMutex() );
 				if( !pNames )
 				{
 					static Sequence< OUString > seqNames(1);
@@ -253,7 +233,6 @@ Reference< XInterface > SAL_CALL MacOSXImageCaptureImpl_create(
 			static OUString *pImplName = 0;
 			if( ! pImplName )
 			{
-		//		MutexGuard guard( Mutex::getGlobalMutex() );
 				if( ! pImplName )
 				{
 					static OUString implName( RTL_CONSTASCII_USTRINGPARAM(IMPLNAME) );
@@ -336,9 +315,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone: 1 modes: pModes];
-	Application::AcquireSolarMutex( nCount );
+	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
 	
 	bool toReturn=[imp capturedImage];
 	
@@ -362,59 +339,31 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)doImageCapture: (id)pObj
 {
-	CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", @"pdf", @"bmp", NULL];
-	NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
-	if (theTypes && thePasteboard)
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
 	{
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
+		NSPanel *pPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 700, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( pPanel )
 		{
-			ICAImportImage_Type *pICAImportImage = (ICAImportImage_Type *)dlsym( pLib, "ICAImportImage" );
-			if ( pICAImportImage )
+			[pPanel autorelease];
+
+			NSView *pContentView = [pPanel contentView];
+			if ( pContentView )
 			{
-				ICAImportImagePB thePB;
-				memset(&thePB, '\0', sizeof(thePB));
-
-				// Fix bug 3641 by passing a pointer to NULL
-				CFArrayRef importedImages = NULL;
-				thePB.importedImages = &importedImages;
-				thePB.supportedFileTypes = theTypes;
-				ICAError error = pICAImportImage(&thePB, NULL);
-				if(thePB.importedImages && *thePB.importedImages)
+				IKScannerDeviceView *pScannerView = [[IKScannerDeviceView alloc] initWithFrame:[pContentView frame]];
+				if ( pScannerView )
 				{
-					if((error==noErr) && CFArrayGetCount(*thePB.importedImages))
-					{
-						CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
-						if(theImage)
-						{
-							// convert image into TIFF so we can put it on the
-							// pasteboard
-							NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-							if(theNSImage)
-							{
-								NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-								if(theNSTIFFData)
-								{
-									// no need to acquire global mutex now that
-									// libdtransjava does all pasteboard actions
-									// on the main thread
-									[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
-									[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
-									// mark that we've successfully imported the
-									// image and placed it onto the clipboard
-									gotImage=true;
-								}
+					[pScannerView autorelease];
 
-								[theNSImage release];
-							}
-						}
-					}
+					pScannerView.delegate = self;
+					[pScannerView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+					[pContentView addSubview:pScannerView];
 
-					CFRelease(*thePB.importedImages);
+					[pPanel setDelegate:self];
+					[pApp runModalForWindow:pPanel];
+					[pPanel setDelegate:nil];
 				}
 			}
-
-			dlclose( pLib );
 		}
 	}
 }
@@ -422,6 +371,71 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (bool)capturedImage
 {
 	return(gotImage);
+}
+
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
+{
+	NSPasteboard *pPasteboard = [NSPasteboard generalPasteboard];
+	if ( pPasteboard )
+	{
+		// Convert image into TIFF so we can put it on the pasteboard
+		NSData *pTIFFData = nil;
+
+		// Try file data first
+		if ( pFileData )
+		{
+			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			if ( pImage )
+			{
+				[pImage autorelease];
+				pTIFFData = [pImage TIFFRepresentation];
+			}
+		}
+
+		// Try URL second
+		if ( !pTIFFData && pURL )
+		{
+			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			if ( pImage )
+			{
+				[pImage autorelease];
+				pTIFFData = [pImage TIFFRepresentation];
+			}
+		}
+
+		if ( pTIFFData )
+		{
+			[pPasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:nil];
+			[pPasteboard setData:pTIFFData forType:NSTIFFPboardType];
+			gotImage = true;
+		}
+	}
+
+	// Close modal panel
+	if ( pScannerDeviceView )
+	{
+		NSWindow *pWindow = [pScannerDeviceView window];
+		if ( pWindow )
+			[pWindow close];
+	}
+}
+
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
+{
+	// Show an alert
+	if ( pError )
+	{
+		NSAlert *pAlert = [NSAlert alertWithError:pError];
+		if ( pAlert )
+			[pAlert runModal];
+	}
+}
+
+- (void)windowWillClose:(NSNotification *)pNotification
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+		[pApp stopModal];
 }
 
 @end
