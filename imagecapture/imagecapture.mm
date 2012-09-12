@@ -50,6 +50,7 @@
  *************************************************************************/
 
 #include <rtl/ustring.hxx>
+#include <vcl/svapp.hxx>
 #include <vos/module.hxx>
  
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -315,7 +316,9 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
 	
 	bool toReturn=[imp capturedImage];
 	
