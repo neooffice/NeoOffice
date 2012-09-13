@@ -378,12 +378,16 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
 		if ( mpPanel )
 		{
+			[mpPanel autorelease];
+			[mpPanel setReleasedWhenClosed:NO];
+
 			NSView *pContentView = [mpPanel contentView];
 			if ( pContentView )
 			{
 				mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
 				if ( mpSplitView )
 				{
+					[mpSplitView autorelease];
 					[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 					[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
 					[mpSplitView setVertical:YES];
@@ -393,16 +397,18 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
 					if ( mpDeviceBrowserView )
 					{
-						mpDeviceBrowserView.delegate = self;
+						[mpDeviceBrowserView autorelease];
 						[mpSplitView addSubview:mpDeviceBrowserView];
 
 						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
 						if ( mpEmptyView )
 						{
+							[mpEmptyView autorelease];
 							[mpSplitView addSubview:mpEmptyView];
 							[mpSplitView setPosition:aSplitViewBounds.size.width / 3 ofDividerAtIndex:0];
 
 							[mpPanel setDelegate:self];
+							mpDeviceBrowserView.delegate = self;
 							[pApp runModalForWindow:mpPanel];
 						}
 					}
@@ -411,31 +417,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		}
 	}
 
-	// Remove views from superview to prevent crashing after pressing the red
-	// window close button
-	if ( mpEmptyView )
-	{
-		[mpEmptyView removeFromSuperview];
-		[mpEmptyView release];
-		mpEmptyView = nil;
-	}
-	if ( mpDeviceBrowserView )
-	{
-		[mpDeviceBrowserView removeFromSuperview];
-		[mpDeviceBrowserView release];
-		mpDeviceBrowserView = nil;
-	}
-	if ( mpSplitView )
-	{
-		[mpSplitView removeFromSuperview];
-		[mpSplitView release];
-		mpSplitView = nil;
-	}
-	if ( mpPanel )
-	{
-		[mpPanel release];
-		mpPanel = nil;
-	}
+	mpPanel = nil;
+	mpSplitView = nil;
+	mpDeviceBrowserView = nil;
+	mpEmptyView = nil;
 }
 
 - (bool)capturedImage
@@ -618,6 +603,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)windowWillClose:(NSNotification *)pNotification
 {
+	// Set delegate to nil otherwise crashing will occur when pressing
+	// the red window close button
+	mpDeviceBrowserView.delegate = nil;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		[pApp stopModal];
