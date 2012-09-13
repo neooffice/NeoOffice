@@ -104,6 +104,8 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 	NSSplitView *mpSplitView;
 	IKDeviceBrowserView *mpDeviceBrowserView;
 	NSView *mpEmptyView;
+	IKCameraDeviceView *mpCameraDeviceView;
+	IKScannerDeviceView *mpScannerDeviceView;
 }
 - (id)init;
 - (void)doImageCapture: (id)pObj;
@@ -134,6 +136,19 @@ static void ShowAlertWithError( NSError *pError )
 		NSAlert *pAlert = [NSAlert alertWithError:pError];
 		if ( pAlert )
 			[pAlert runModal];
+	}
+}
+
+static void ResetDeviceViewProperties( NSView *pView )
+{
+	if ( pView )
+	{
+		if ( [pView isKindOfClass:[IKDeviceBrowserView class]] )
+			((IKDeviceBrowserView *)pView).delegate = nil;
+		else if ( [pView isKindOfClass:[IKCameraDeviceView class]] )
+			((IKCameraDeviceView *)pView).delegate = nil;
+		else if ( [pView isKindOfClass:[IKScannerDeviceView class]] )
+			((IKScannerDeviceView *)pView).delegate = nil;
 	}
 }
 
@@ -362,6 +377,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	mpSplitView=nil;
 	mpDeviceBrowserView=nil;
 	mpEmptyView=nil;
+	mpCameraDeviceView=nil;
+	mpScannerDeviceView=nil;
 
 	return(self);
 }
@@ -369,7 +386,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)doImageCapture: (id)pObj
 {
 	// Do nothing if we are recursing
-	if ( gotImage || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView )
+	if ( gotImage || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
 		return;
 
 	NSApplication *pApp = [NSApplication sharedApplication];
@@ -405,11 +422,25 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 						{
 							[mpEmptyView autorelease];
 							[mpSplitView addSubview:mpEmptyView];
-							[mpSplitView setPosition:aSplitViewBounds.size.width / 3 ofDividerAtIndex:0];
+							[mpSplitView setPosition:aSplitViewBounds.size.width / 4 ofDividerAtIndex:0];
 
-							[mpPanel setDelegate:self];
-							mpDeviceBrowserView.delegate = self;
-							[pApp runModalForWindow:mpPanel];
+							mpCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+							if ( mpCameraDeviceView )
+							{
+								[mpCameraDeviceView autorelease];
+								[mpCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+
+								mpScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+								if ( mpScannerDeviceView )
+								{
+									[mpScannerDeviceView autorelease];
+									[mpScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+
+									[mpPanel setDelegate:self];
+									mpDeviceBrowserView.delegate = self;
+									[pApp runModalForWindow:mpPanel];
+								}
+							}
 						}
 					}
 				}
@@ -421,6 +452,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	mpSplitView = nil;
 	mpDeviceBrowserView = nil;
 	mpEmptyView = nil;
+	mpCameraDeviceView = nil;
+	mpScannerDeviceView = nil;
 }
 
 - (bool)capturedImage
@@ -495,54 +528,39 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
 {
 	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || gotImage || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView )
+	if ( !pDeviceBrowserView || gotImage || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView || !mpCameraDeviceView || !mpScannerDeviceView )
 		return;
 
 	NSWindow *pWindow = [pDeviceBrowserView window];
 	if ( !pWindow || pWindow != mpPanel )
 		return;
 
-	// Determine which subview to add
-	NSView *pNewSubview = mpEmptyView;
+	// Remove all device subviews from the empty view
+	if ( [mpCameraDeviceView superview] )
+	{
+		ResetDeviceViewProperties( mpCameraDeviceView );
+		[mpCameraDeviceView removeFromSuperview];
+	}
+	if ( [mpScannerDeviceView superview] )
+	{
+		ResetDeviceViewProperties( mpScannerDeviceView );
+		[mpScannerDeviceView removeFromSuperview];
+	}
+
+	// Add a subview for the device in the empty view
 	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
 	{
-		IKCameraDeviceView *pCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpSplitView bounds]];
-		if ( pCameraDeviceView )
-		{
-			[pCameraDeviceView autorelease];
-			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
-			pCameraDeviceView.delegate = self;
-			pNewSubview = pCameraDeviceView;
-		}
+		[mpCameraDeviceView setFrame:[mpEmptyView bounds]];
+		mpCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+		mpCameraDeviceView.delegate = self;
+		[mpEmptyView addSubview:mpCameraDeviceView];
 	}
 	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
 	{
-		IKScannerDeviceView *pScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpSplitView bounds]];
-		if ( pScannerDeviceView )
-		{
-			[pScannerDeviceView autorelease];
-			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
-			pScannerDeviceView.delegate = self;
-			pNewSubview = pScannerDeviceView;
-		}
-	}
-
-	// Remove all subviews of the split view except for the device browser view
-	// and add the new view
-	NSArray *pSubviews = [mpSplitView subviews];
-	if ( pSubviews )
-	{
-		NSUInteger nCount = [pSubviews count];
-		NSUInteger i = 0;
-		for ( ; i < nCount; i++ )
-		{
-			NSView *pSubview = [pSubviews objectAtIndex:i];
-			if ( pSubview && pSubview != mpDeviceBrowserView && pSubview != pNewSubview )
-			{
-				[mpSplitView replaceSubview:pSubview with:pNewSubview];
-				break;
-			}
-		}
+		[mpScannerDeviceView setFrame:[mpEmptyView bounds]];
+		mpScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+		mpScannerDeviceView.delegate = self;
+		[mpEmptyView addSubview:mpScannerDeviceView];
 	}
 }
 
@@ -605,7 +623,9 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	// Set delegate to nil otherwise crashing will occur when pressing
 	// the red window close button
-	mpDeviceBrowserView.delegate = nil;
+	ResetDeviceViewProperties( mpDeviceBrowserView );
+	ResetDeviceViewProperties( mpCameraDeviceView );
+	ResetDeviceViewProperties( mpScannerDeviceView );
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
