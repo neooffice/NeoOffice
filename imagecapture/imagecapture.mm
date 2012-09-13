@@ -97,15 +97,24 @@ typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
-@interface ImageCaptureImpl : NSObject
+@interface ImageCaptureImpl : NSObject < IKDeviceBrowserViewDelegate, IKCameraDeviceViewDelegate, IKScannerDeviceViewDelegate >
 {
 	bool gotImage;
+	NSPanel *mpPanel;
+	NSSplitView *mpSplitView;
+	IKDeviceBrowserView *mpDeviceBrowserView;
+	NSView *mpEmptyView;
 }
 - (id)init;
 - (void)doImageCapture: (id)pObj;
 - (bool)capturedImage;
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
+- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
+- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError;
+- (void)cameraDeviceViewSelectionDidChange:(IKCameraDeviceView *)pCameraDeviceView;
+- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError;
+- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice;
 - (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError;
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
 - (void)windowWillClose:(NSNotification *)pNotification;
 @end
 
@@ -118,7 +127,18 @@ using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 using namespace ::vos;
 
+static void ShowAlertWithError( NSError *pError )
+{
+	if ( pError )
+	{
+		NSAlert *pAlert = [NSAlert alertWithError:pError];
+		if ( pAlert )
+			[pAlert runModal];
+	}
+}
+
 //========================================================================
+
 class MacOSXImageCaptureImpl
 	: public ::cppu::WeakImplHelper2<XServiceInfo, XImageCapture>
 {
@@ -336,38 +356,87 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (id)init
 {
 	self = [super init];
+
 	gotImage=false;
+	mpPanel=nil;
+	mpSplitView=nil;
+	mpDeviceBrowserView=nil;
+	mpEmptyView=nil;
+
 	return(self);
 }
 
 - (void)doImageCapture: (id)pObj
 {
+	// Do nothing if we are recursing
+	if ( gotImage || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView )
+		return;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSPanel *pPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 700, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( pPanel )
+		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpPanel )
 		{
-			[pPanel autorelease];
-
-			NSView *pContentView = [pPanel contentView];
+			NSView *pContentView = [mpPanel contentView];
 			if ( pContentView )
 			{
-				IKScannerDeviceView *pScannerView = [[IKScannerDeviceView alloc] initWithFrame:[pContentView frame]];
-				if ( pScannerView )
+				mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
+				if ( mpSplitView )
 				{
-					[pScannerView autorelease];
+					[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+					[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
+					[mpSplitView setVertical:YES];
+					[pContentView addSubview:mpSplitView];
 
-					pScannerView.delegate = self;
-					[pScannerView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-					[pContentView addSubview:pScannerView];
+					NSRect aSplitViewBounds = [mpSplitView bounds];
+					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
+					if ( mpDeviceBrowserView )
+					{
+						[mpDeviceBrowserView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+						mpDeviceBrowserView.delegate = self;
+						[mpSplitView addSubview:mpDeviceBrowserView];
 
-					[pPanel setDelegate:self];
-					[pApp runModalForWindow:pPanel];
-					[pPanel setDelegate:nil];
+						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
+						if ( mpEmptyView )
+						{
+							[mpEmptyView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+							[mpSplitView addSubview:mpEmptyView];
+							[mpSplitView setPosition:aSplitViewBounds.size.width / 3 ofDividerAtIndex:0];
+
+							[mpPanel setDelegate:self];
+							[pApp runModalForWindow:mpPanel];
+						}
+					}
 				}
 			}
 		}
+	}
+
+	// Remove views from superview to prevent crashing after pressing the red
+	// window close button
+	if ( mpEmptyView )
+	{
+		[mpEmptyView removeFromSuperview];
+		[mpEmptyView release];
+		mpEmptyView = nil;
+	}
+	if ( mpDeviceBrowserView )
+	{
+		[mpDeviceBrowserView removeFromSuperview];
+		[mpDeviceBrowserView release];
+		mpDeviceBrowserView = nil;
+	}
+	if ( mpSplitView )
+	{
+		[mpSplitView removeFromSuperview];
+		[mpSplitView release];
+		mpSplitView = nil;
+	}
+	if ( mpPanel )
+	{
+		[mpPanel release];
+		mpPanel = nil;
 	}
 }
 
@@ -376,8 +445,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	return(gotImage);
 }
 
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
+- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
+	if ( !pCameraDeviceView )
+		return;
+
+	NSWindow *pWindow = [pCameraDeviceView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
 	NSPasteboard *pPasteboard = [NSPasteboard generalPasteboard];
 	if ( pPasteboard )
 	{
@@ -411,26 +487,134 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			[pPasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:nil];
 			[pPasteboard setData:pTIFFData forType:NSTIFFPboardType];
 			gotImage = true;
+
+			// Close modal panel after pasting data to pasteboard
+			if ( [pWindow isVisible] )
+				[pWindow close];
+		}
+	}
+}
+
+- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError
+{
+	ShowAlertWithError( pError );
+}
+
+- (void)cameraDeviceViewSelectionDidChange:(IKCameraDeviceView *)pCameraDeviceView
+{
+}
+
+- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError
+{
+	ShowAlertWithError( pError );
+}
+
+- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
+{
+	// Do nothing if we aren't in running the modal panel
+	if ( !pDeviceBrowserView || gotImage || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView )
+		return;
+
+	NSWindow *pWindow = [pDeviceBrowserView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
+	// Determine which subview to add
+	NSView *pNewSubview = mpEmptyView;
+	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
+	{
+		IKCameraDeviceView *pCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpSplitView bounds]];
+		if ( pCameraDeviceView )
+		{
+			[pCameraDeviceView autorelease];
+			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+			pCameraDeviceView.delegate = self;
+			pNewSubview = pCameraDeviceView;
+		}
+	}
+	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
+	{
+		IKScannerDeviceView *pScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpSplitView bounds]];
+		if ( pScannerDeviceView )
+		{
+			[pScannerDeviceView autorelease];
+			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+			pScannerDeviceView.delegate = self;
+			pNewSubview = pScannerDeviceView;
 		}
 	}
 
-	// Close modal panel
-	if ( pScannerDeviceView )
+	// Remove all subviews of the split view except for the device browser view
+	// and add the new view
+	NSArray *pSubviews = [mpSplitView subviews];
+	if ( pSubviews )
 	{
-		NSWindow *pWindow = [pScannerDeviceView window];
-		if ( pWindow )
-			[pWindow close];
+		NSUInteger nCount = [pSubviews count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSView *pSubview = [pSubviews objectAtIndex:i];
+			if ( pSubview && pSubview != mpDeviceBrowserView && pSubview != pNewSubview )
+			{
+				[mpSplitView replaceSubview:pSubview with:pNewSubview];
+				break;
+			}
+		}
 	}
 }
 
 - (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
 {
-	// Show an alert
-	if ( pError )
+	ShowAlertWithError( pError );
+}
+
+- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
+{
+	if ( !pScannerDeviceView )
+		return;
+
+	NSWindow *pWindow = [pScannerDeviceView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
+	NSPasteboard *pPasteboard = [NSPasteboard generalPasteboard];
+	if ( pPasteboard )
 	{
-		NSAlert *pAlert = [NSAlert alertWithError:pError];
-		if ( pAlert )
-			[pAlert runModal];
+		// Convert image into TIFF so we can put it on the pasteboard
+		NSData *pTIFFData = nil;
+
+		// Try file data first
+		if ( pFileData )
+		{
+			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			if ( pImage )
+			{
+				[pImage autorelease];
+				pTIFFData = [pImage TIFFRepresentation];
+			}
+		}
+
+		// Try URL second
+		if ( !pTIFFData && pURL )
+		{
+			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			if ( pImage )
+			{
+				[pImage autorelease];
+				pTIFFData = [pImage TIFFRepresentation];
+			}
+		}
+
+		if ( pTIFFData )
+		{
+			[pPasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:nil];
+			[pPasteboard setData:pTIFFData forType:NSTIFFPboardType];
+			gotImage = true;
+
+			// Close modal panel after pasting data to pasteboard
+			if ( [pWindow isVisible] )
+				[pWindow close];
+		}
 	}
 }
 
