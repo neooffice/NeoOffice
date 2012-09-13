@@ -393,14 +393,12 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
 					if ( mpDeviceBrowserView )
 					{
-						[mpDeviceBrowserView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 						mpDeviceBrowserView.delegate = self;
 						[mpSplitView addSubview:mpDeviceBrowserView];
 
 						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
 						if ( mpEmptyView )
 						{
-							[mpEmptyView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 							[mpSplitView addSubview:mpEmptyView];
 							[mpSplitView setPosition:aSplitViewBounds.size.width / 3 ofDividerAtIndex:0];
 
