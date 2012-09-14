@@ -438,7 +438,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 									[mpPanel setDelegate:self];
 									mpDeviceBrowserView.delegate = self;
-									[pApp runModalForWindow:mpPanel];
+									@try
+									{
+										[pApp runModalForWindow:mpPanel];
+									}
+									@catch ( NSException *pExc )
+									{
+										if ( pExc )
+											NSLog( @"%s: %s", [pExc name], [pExc reason] );
+									}
 								}
 							}
 						}
@@ -490,7 +498,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		// Try URL second
 		if ( !pTIFFData && pURL )
 		{
-			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			NSImage *pImage = [[NSImage alloc] initByReferencingURL:pURL];
 			if ( pImage )
 			{
 				[pImage autorelease];
@@ -598,7 +606,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		// Try URL second
 		if ( !pTIFFData && pURL )
 		{
-			NSImage *pImage = [[NSImage alloc] initWithData:pFileData];
+			NSImage *pImage = [[NSImage alloc] initByReferencingURL:pURL];
 			if ( pImage )
 			{
 				[pImage autorelease];
