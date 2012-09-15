@@ -49,6 +49,7 @@
  *************************************************************************
  *************************************************************************/
 
+#include <dlfcn.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/module.hxx>
@@ -67,6 +68,8 @@
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
+// Need to include for ICAImportImagePB struct but we don't link to it
+#import <Carbon/Carbon.h>
 #undef MAC_OS_X_VERSION_MIN_REQUIRED
 #define MAC_OS_X_VERSION_MIN_REQUIRED MAC_OS_X_VERSION_10_6
 #import <Quartz/Quartz.h>
@@ -91,7 +94,9 @@
  
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
- 
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+typedef ICAError ICAImportImage_Type( ICAImportImagePB *pPB, ICACompletion nCompletion );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -388,6 +393,86 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	// Do nothing if we are recursing
 	if ( gotImage || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
 		return;
+
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		bool bUseICAImageImport = false;
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			// Use ICAImportImage() if we are running on Mac OS X 10.7 or
+			// earlier as IKDeviceBrowserView does not work on 10.7
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				if ( res <= 7 )
+				{
+					bUseICAImageImport = true;
+
+					CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", @"pdf", @"bmp", NULL];
+					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
+					if (theTypes && thePasteboard)
+					{
+						ICAImportImage_Type *pICAImportImage = (ICAImportImage_Type *)dlsym( pLib, "ICAImportImage" );
+						if ( pICAImportImage )
+						{
+							ICAImportImagePB thePB;
+							memset(&thePB, '\0', sizeof(thePB));
+
+							// Fix bug 3641 by passing a pointer to NULL
+							CFArrayRef importedImages = NULL;
+							thePB.importedImages = &importedImages;
+							thePB.supportedFileTypes = theTypes;
+							ICAError error = pICAImportImage(&thePB, NULL);
+							if(thePB.importedImages && *thePB.importedImages)
+							{
+								if((error==noErr) && CFArrayGetCount(*thePB.importedImages))
+								{
+									CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
+									if(theImage)
+									{
+										// convert image into TIFF so we can put
+										// it on the pasteboard
+										NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+										if(theNSImage)
+										{
+											NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+											if(theNSTIFFData)
+											{
+												// no need to acquire global
+												// mutex now that libdtransjava
+												// does all pasteboard actions
+												// on the main thread
+												[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
+												[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
+												// mark that we've successfully
+												// imported the image and placed
+												// it onto the clipboard
+												gotImage=true;
+											}
+
+											[theNSImage release];
+										}
+									}
+								}
+
+								CFRelease(*thePB.importedImages);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		dlclose( pLib );
+
+		if ( bUseICAImageImport )
+			return;
+	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
