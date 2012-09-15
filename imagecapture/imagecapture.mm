@@ -445,7 +445,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 									@catch ( NSException *pExc )
 									{
 										if ( pExc )
-											NSLog( @"%s: %s", [pExc name], [pExc reason] );
+											CFShow( pExc );
 									}
 								}
 							}
