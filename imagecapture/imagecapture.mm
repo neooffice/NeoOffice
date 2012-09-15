@@ -444,6 +444,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 									}
 									@catch ( NSException *pExc )
 									{
+										// Close the window after catching an
+										// exception as the device browser view
+										// will likely crash
+										[mpPanel close];
 										if ( pExc )
 											CFShow( pExc );
 									}
