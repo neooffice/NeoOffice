@@ -512,7 +512,6 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
 		if ( mpPanel )
 		{
-			[mpPanel autorelease];
 			[mpPanel setReleasedWhenClosed:NO];
 			[mpPanel setTitle:mpDefaultTitle];
 
@@ -522,7 +521,6 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 				mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
 				if ( mpSplitView )
 				{
-					[mpSplitView autorelease];
 					[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 					[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
 					[mpSplitView setVertical:YES];
@@ -532,26 +530,22 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
 					if ( mpDeviceBrowserView )
 					{
-						[mpDeviceBrowserView autorelease];
 						[mpSplitView addSubview:mpDeviceBrowserView];
 
 						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
 						if ( mpEmptyView )
 						{
-							[mpEmptyView autorelease];
 							[mpSplitView addSubview:mpEmptyView];
 							[mpSplitView setPosition:aSplitViewBounds.size.width / 4 ofDividerAtIndex:0];
 
 							mpCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
 							if ( mpCameraDeviceView )
 							{
-								[mpCameraDeviceView autorelease];
 								[mpCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 
 								mpScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
 								if ( mpScannerDeviceView )
 								{
-									[mpScannerDeviceView autorelease];
 									[mpScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 
 									[mpPanel setDelegate:self];
@@ -580,12 +574,41 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		}
 	}
 
-	mpPanel = nil;
-	mpSplitView = nil;
-	mpDeviceBrowserView = nil;
-	mpEmptyView = nil;
-	mpCameraDeviceView = nil;
-	mpScannerDeviceView = nil;
+	if ( mpPanel )
+	{
+		[mpPanel release];
+		mpPanel = nil;
+	}
+
+	if ( mpSplitView )
+	{
+		[mpSplitView release];
+		mpSplitView = nil;
+	}
+
+	if ( mpDeviceBrowserView )
+	{
+		[mpDeviceBrowserView release];
+		mpDeviceBrowserView = nil;
+	}
+
+	if ( mpEmptyView )
+	{
+		[mpEmptyView release];
+		mpEmptyView = nil;
+	}
+
+	if ( mpCameraDeviceView )
+	{
+		[mpCameraDeviceView release];
+		mpCameraDeviceView = nil;
+	}
+
+	if ( mpScannerDeviceView )
+	{
+		[mpScannerDeviceView release];
+		mpScannerDeviceView = nil;
+	}
 }
 
 - (bool)capturedImage
