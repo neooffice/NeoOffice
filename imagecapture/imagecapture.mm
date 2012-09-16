@@ -105,6 +105,7 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 @interface ImageCaptureImpl : NSObject < IKDeviceBrowserViewDelegate, IKCameraDeviceViewDelegate, IKScannerDeviceViewDelegate >
 {
 	bool gotImage;
+	bool mbPanelIsInModal;
 	NSPanel *mpPanel;
 	NSSplitView *mpSplitView;
 	IKDeviceBrowserView *mpDeviceBrowserView;
@@ -378,6 +379,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	self = [super init];
 
 	gotImage=false;
+	mbPanelIsInModal=false;
 	mpPanel=nil;
 	mpSplitView=nil;
 	mpDeviceBrowserView=nil;
@@ -391,7 +393,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)doImageCapture: (id)pObj
 {
 	// Do nothing if we are recursing
-	if ( gotImage || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
+	if ( gotImage || mbPanelIsInModal || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
 		return;
 
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
@@ -523,6 +525,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 									[mpPanel setDelegate:self];
 									mpDeviceBrowserView.delegate = self;
+									mbPanelIsInModal = true;
 									@try
 									{
 										[pApp runModalForWindow:mpPanel];
@@ -536,6 +539,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 										if ( pExc )
 											CFShow( pExc );
 									}
+									mbPanelIsInModal = false;
 								}
 							}
 						}
@@ -560,7 +564,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( !pCameraDeviceView )
+	if ( !pCameraDeviceView || !mbPanelIsInModal || !mpPanel )
 		return;
 
 	NSWindow *pWindow = [pCameraDeviceView window];
@@ -602,8 +606,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			gotImage = true;
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [pWindow isVisible] )
-				[pWindow close];
+			if ( [mpPanel isVisible] )
+				[mpPanel close];
 		}
 	}
 }
@@ -625,7 +629,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
 {
 	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || gotImage || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView || !mpCameraDeviceView || !mpScannerDeviceView )
+	if ( !pDeviceBrowserView || gotImage || !mbPanelIsInModal || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView || !mpCameraDeviceView || !mpScannerDeviceView )
 		return;
 
 	NSWindow *pWindow = [pDeviceBrowserView window];
@@ -668,7 +672,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( !pScannerDeviceView )
+	if ( !pScannerDeviceView || !mbPanelIsInModal || !mpPanel )
 		return;
 
 	NSWindow *pWindow = [pScannerDeviceView window];
@@ -710,8 +714,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			gotImage = true;
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [pWindow isVisible] )
-				[pWindow close];
+			if ( [mpPanel isVisible] )
+				[mpPanel close];
 		}
 	}
 }
@@ -724,9 +728,12 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	ResetDeviceViewProperties( mpCameraDeviceView );
 	ResetDeviceViewProperties( mpScannerDeviceView );
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-		[pApp stopModal];
+	if ( mbPanelIsInModal )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp abortModal];
+	}
 }
 
 @end
