@@ -51,6 +51,9 @@
 
 #include <dlfcn.h>
 #include <rtl/ustring.hxx>
+#include <sfx2/sfx.hrc>
+#include <tools/resmgr.hxx>
+#include <tools/simplerm.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/module.hxx>
  
@@ -106,6 +109,7 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 {
 	bool gotImage;
 	bool mbPanelIsInModal;
+	NSString *mpDefaultTitle;
 	NSPanel *mpPanel;
 	NSSplitView *mpSplitView;
 	IKDeviceBrowserView *mpDeviceBrowserView;
@@ -113,8 +117,9 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 	IKCameraDeviceView *mpCameraDeviceView;
 	IKScannerDeviceView *mpScannerDeviceView;
 }
-- (id)init;
-- (void)doImageCapture: (id)pObj;
+- (id)initWithDefaultTitle:(NSString *)pDefaultTitle;
+- (void)dealloc;
+- (void)doImageCapture:(id)pObj;
 - (bool)capturedImage;
 - (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
 - (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError;
@@ -354,7 +359,19 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] init];
+	// Get STR_NONE localized string
+	NSString *pTitle = nil;
+	SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( sfx ) );
+	if ( pResMgr )
+	{
+		XubString aNone( pResMgr->ReadString( STR_NONE ) );
+		aNone.EraseAllChars( '~' );
+		if ( aNone.Len() );
+			pTitle = [NSString stringWithCharacters:aNone.GetBuffer() length:aNone.Len()];
+		delete pResMgr;
+	}
+
+	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] initWithDefaultTitle:pTitle];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
@@ -374,11 +391,16 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 @implementation ImageCaptureImpl
 
-- (id)init
+- (id)initWithDefaultTitle:(NSString *)pDefaultTitle
 {
 	self = [super init];
 
 	gotImage=false;
+	mpDefaultTitle = pDefaultTitle;
+	if ( !mpDefaultTitle )
+		mpDefaultTitle = @"- None -";
+	if ( mpDefaultTitle )
+		[mpDefaultTitle retain];
 	mbPanelIsInModal=false;
 	mpPanel=nil;
 	mpSplitView=nil;
@@ -390,7 +412,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	return(self);
 }
 
-- (void)doImageCapture: (id)pObj
+- (void)dealloc
+{
+	if ( mpDefaultTitle )
+		[mpDefaultTitle release];
+
+	[super dealloc];
+}
+
+- (void)doImageCapture:(id)pObj
 {
 	// Do nothing if we are recursing
 	if ( gotImage || mbPanelIsInModal || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
@@ -484,6 +514,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		{
 			[mpPanel autorelease];
 			[mpPanel setReleasedWhenClosed:NO];
+			[mpPanel setTitle:mpDefaultTitle];
 
 			NSView *pContentView = [mpPanel contentView];
 			if ( pContentView )
@@ -649,12 +680,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	}
 
 	// Add a subview for the device in the empty view
+	[mpPanel setTitle:mpDefaultTitle];
 	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
 	{
 		[mpCameraDeviceView setFrame:[mpEmptyView bounds]];
 		mpCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
 		mpCameraDeviceView.delegate = self;
 		[mpEmptyView addSubview:mpCameraDeviceView];
+		[mpPanel setTitle:[pDevice name]];
 	}
 	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
 	{
@@ -662,6 +695,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		mpScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
 		mpScannerDeviceView.delegate = self;
 		[mpEmptyView addSubview:mpScannerDeviceView];
+		[mpPanel setTitle:[pDevice name]];
 	}
 }
 
