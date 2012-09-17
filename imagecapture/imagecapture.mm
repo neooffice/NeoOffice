@@ -585,11 +585,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 										}
 										@catch ( NSException *pExc )
 										{
-											// Rerun modal loop as Mac OS X
+											// If panel is still visible,
+											// rerun modal loop as Mac OS X
 											// 10.8 will throw KVO-compliance
 											// exceptions when the selected
 											// device or the number of devices
 											// changes
+											if ( ![mpPanel isVisible] )
+												mbPanelIsInModal = true;
 											if ( pExc )
 												CFShow( pExc );
 										}
