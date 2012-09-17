@@ -155,11 +155,36 @@ static void ResetDeviceViewProperties( NSView *pView )
 	if ( pView )
 	{
 		if ( [pView isKindOfClass:[IKDeviceBrowserView class]] )
-			((IKDeviceBrowserView *)pView).delegate = nil;
+		{
+			IKDeviceBrowserView *pDeviceBrowserView = (IKDeviceBrowserView *)pView;
+			pDeviceBrowserView.delegate = nil;
+			if ( [pDeviceBrowserView superview] )
+				[pDeviceBrowserView removeFromSuperview];
+		}
 		else if ( [pView isKindOfClass:[IKCameraDeviceView class]] )
-			((IKCameraDeviceView *)pView).delegate = nil;
+		{
+			IKCameraDeviceView *pCameraDeviceView = (IKCameraDeviceView *)pView;
+			pCameraDeviceView.delegate = nil;
+			if ( pCameraDeviceView.cameraDevice )
+			{
+				[pCameraDeviceView.cameraDevice release];
+				pCameraDeviceView.cameraDevice = nil;
+			}
+			if ( [pCameraDeviceView superview] )
+				[pCameraDeviceView removeFromSuperview];
+		}
 		else if ( [pView isKindOfClass:[IKScannerDeviceView class]] )
-			((IKScannerDeviceView *)pView).delegate = nil;
+		{
+			IKScannerDeviceView *pScannerDeviceView = (IKScannerDeviceView *)pView;
+			pScannerDeviceView.delegate = nil;
+			if ( pScannerDeviceView.scannerDevice )
+			{
+				[pScannerDeviceView.scannerDevice release];
+				pScannerDeviceView.scannerDevice = nil;
+			}
+			if ( [pScannerDeviceView superview] )
+				[pScannerDeviceView removeFromSuperview];
+		}
 	}
 }
 
@@ -691,16 +716,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		return;
 
 	// Remove all device subviews from the empty view
-	if ( [mpCameraDeviceView superview] )
-	{
-		ResetDeviceViewProperties( mpCameraDeviceView );
-		[mpCameraDeviceView removeFromSuperview];
-	}
-	if ( [mpScannerDeviceView superview] )
-	{
-		ResetDeviceViewProperties( mpScannerDeviceView );
-		[mpScannerDeviceView removeFromSuperview];
-	}
+	ResetDeviceViewProperties( mpCameraDeviceView );
+	ResetDeviceViewProperties( mpScannerDeviceView );
 
 	// Add a subview for the device in the empty view
 	[mpPanel setTitle:mpDefaultTitle];
@@ -708,6 +725,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	{
 		[mpCameraDeviceView setFrame:[mpEmptyView bounds]];
 		mpCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+		[mpCameraDeviceView.cameraDevice retain];
 		mpCameraDeviceView.delegate = self;
 		[mpEmptyView addSubview:mpCameraDeviceView];
 		[mpPanel setTitle:[pDevice name]];
@@ -716,6 +734,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	{
 		[mpScannerDeviceView setFrame:[mpEmptyView bounds]];
 		mpScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+		[mpScannerDeviceView.scannerDevice retain];
 		mpScannerDeviceView.delegate = self;
 		[mpEmptyView addSubview:mpScannerDeviceView];
 		[mpPanel setTitle:[pDevice name]];
