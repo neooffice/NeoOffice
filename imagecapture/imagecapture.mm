@@ -576,27 +576,20 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 									[mpPanel setDelegate:self];
 									mpDeviceBrowserView.delegate = self;
 									mbPanelIsInModal = true;
-									while ( mbPanelIsInModal )
+									@try
 									{
-										@try
-										{
-											[pApp runModalForWindow:mpPanel];
-											mbPanelIsInModal = false;
-										}
-										@catch ( NSException *pExc )
-										{
-											// If panel is still visible,
-											// rerun modal loop as Mac OS X
-											// 10.8 will throw KVO-compliance
-											// exceptions when the selected
-											// device or the number of devices
-											// changes
-											if ( ![mpPanel isVisible] )
-												mbPanelIsInModal = true;
-											if ( pExc )
-												CFShow( pExc );
-										}
+										[pApp runModalForWindow:mpPanel];
 									}
+									@catch ( NSException *pExc )
+									{
+										// Close the window after catching an
+										// exception as the device browser view
+										// will likely crash
+										[mpPanel close];
+										if ( pExc )
+											CFShow( pExc );
+									}
+									mbPanelIsInModal = false;
 								}
 							}
 						}
