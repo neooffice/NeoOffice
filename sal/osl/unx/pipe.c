@@ -38,13 +38,10 @@
 
 #include "sockimpl.h"
 
-#ifdef USE_JAVA
-#define PIPEDEFAULTPATH		"/var/tmp"
-#define PIPEALTERNATEPATH	"/tmp"
-#else	/* USE_JAVA */
+#ifndef USE_JAVA
 #define PIPEDEFAULTPATH		"/tmp"
 #define PIPEALTERNATEPATH	"/var/tmp"
-#endif	/* USE_JAVA */
+#endif	/* !USE_JAVA */
 
 #define PIPENAMEMASK	"OSL_PIPE_%s"
 #define SECPIPENAMEMASK	"OSL_PIPE_%s_%s"
@@ -174,11 +171,37 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 {
 	int    Flags;
 	size_t	   len;
+#ifdef USE_JAVA
+	/*
+	 * Allocate memory equal to the maximum value we can assign to the
+	 * sockaddr_un.sun_len struct member which is an unsigned char. We need
+	 * this extra memory to increase the path length that can be held in the
+	 * sockaddr_un.sun_path struct member since Mac OS X sandboxing only
+	 * allows binding of Unix domain sockets in the user's home directory and
+	 * the home directory will be in a very lengthy path when sandboxing is
+	 * enabled.
+	 */
+	size_t nAddrSize = (sizeof(struct sockaddr_un) > UINT8_MAX ? sizeof(struct sockaddr_un) : UINT8_MAX);
+	struct sockaddr_un *pAddr = (struct sockaddr_un *)rtl_allocateMemory(nAddrSize);
+	if (!pAddr)
+		return NULL;
+#else	/* USE_JAVA */
 	struct sockaddr_un addr;
+#endif	/* USE_JAVA */
 
     sal_Char  	 name[PATH_MAX + 1];
 	oslPipe  pPipe;
 
+#ifdef USE_JAVA
+	name[0] = '\0';
+	if (!macxp_getNSHomeDirectory(name, sizeof(name)) || !strlen(name) || !access(name, R_OK|W_OK) == 0)
+	{
+		rtl_freeMemory(pAddr);
+		return NULL;
+	}
+
+	strncat(name, "/.", sizeof(name));
+#else	/* USE_JAVA */
 	if (access(PIPEDEFAULTPATH, R_OK|W_OK) == 0)
     {
 		strncpy(name, PIPEDEFAULTPATH, sizeof(name));
@@ -189,18 +212,6 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
     }
 
 
-#ifdef USE_JAVA
-	strncat(name, "/.", sizeof(name));
-
-	sal_Char  	 realname[PATH_MAX + 1];
-	realname[0] = '\0';
-	if (macxp_getNSHomeDirectory(realname, sizeof(realname)) && access(realname, R_OK|W_OK) == 0)
-	{
-		strncat(realname, "/.", sizeof(realname));
-		if (strcmp(realname, name) == 0)
-			realname[0] = '\0';
-	}
-#else	/* USE_JAVA */
 	strncat(name, "/", sizeof(name));
 #endif	/* USE_JAVA */
 
@@ -213,44 +224,12 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 		OSL_VERIFY(osl_psz_getUserIdent(Security, Ident, sizeof(Ident)));
 
 		snprintf(&name[strlen(name)], sizeof(name), SECPIPENAMEMASK, Ident, pszPipeName);
-#ifdef USE_JAVA
-		if (strlen(realname))
-			snprintf(&realname[strlen(realname)], sizeof(realname), SECPIPENAMEMASK, Ident, pszPipeName);
-#endif	/* USE_JAVA */
 	}
 	else
 	{
 		snprintf(&name[strlen(name)], sizeof(name), PIPENAMEMASK, pszPipeName);
-#ifdef USE_JAVA
-		if (strlen(realname))
-			snprintf(&realname[strlen(realname)], sizeof(realname), PIPENAMEMASK, pszPipeName);
-#endif	/* USE_JAVA */
 	}
 
-#ifdef USE_JAVA
-	/* Truncate to length of sockaddr_un.sun_path */
-	if (strlen(name) > sizeof(addr.sun_path))
-		name[sizeof(addr.sun_path)] = '\0';
-
-	/*
-	 * Make sockaddr_un.sun_path a symlink to a path in user's home directory
-	 * since the Mac OS X sandbox will only allow binding to paths in the
-	 * application's container
-	 */
-	if (strlen(realname))
-	{
-		struct stat status;
-
-		symlink(realname, name);
-		if (lstat(name, &status) != 0 || !S_ISLNK(status.st_mode))
-		{
-			unlink(name);
-			symlink(realname, name);
-			if (lstat(name, &status) != 0 || !S_ISLNK(status.st_mode))
-				return NULL;
-		}
-	}
-#endif	/* USE_JAVA */
 
 	/* alloc memory */
 	pPipe= __osl_createPipeImpl();
@@ -261,6 +240,9 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 	{
 		OSL_TRACE("osl_createPipe socket failed. Errno: %d; %s\n",errno, strerror(errno));
 		__osl_destroyPipeImpl(pPipe);
+#ifdef USE_JAVA
+		rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 		return NULL;
 	}
 
@@ -276,6 +258,16 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 		}
 	}
 
+#ifdef USE_JAVA
+	memset(pAddr, 0, nAddrSize);
+
+    OSL_TRACE("osl_createPipe : Pipe Name '%s'",name);
+
+	pAddr->sun_family = AF_UNIX;
+	strncpy(pAddr->sun_path, name, nAddrSize - sizeof(pAddr->sun_len) - sizeof(pAddr->sun_family) - 1);
+	len = SUN_LEN(pAddr);
+	pAddr->sun_len = len;
+#else	/* USE_JAVA */
 	memset(&addr, 0, sizeof(addr));
 
     OSL_TRACE("osl_createPipe : Pipe Name '%s'",name);
@@ -287,41 +279,47 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 #else
 	len = sizeof(addr);
 #endif
+#endif	/* USE_JAVA */
 
 	if ( Options & osl_Pipe_CREATE )
 	{
 		struct stat status;
 
 		/* check if there exists an orphan filesystem entry */
-#ifdef USE_JAVA
-		if ( ( stat(strlen(realname) ? realname : name, &status) == 0) &&
-#else	/* USE_JAVA */
 		if ( ( stat(name, &status) == 0) &&
-#endif	/* USE_JAVA */
 			 ( S_ISSOCK(status.st_mode) || S_ISFIFO(status.st_mode) ) )
 		{
+#ifdef USE_JAVA
+			if ( connect(pPipe->m_Socket,(struct sockaddr *)pAddr,len) >= 0 )
+#else	/* USE_JAVA */
 			if ( connect(pPipe->m_Socket,(struct sockaddr *)&addr,len) >= 0 )
+#endif	/* USE_JAVA */
 			{
 				OSL_TRACE("osl_createPipe : Pipe already in use. Errno: %d; %s\n",errno,strerror(errno));
 				close (pPipe->m_Socket);
 				__osl_destroyPipeImpl(pPipe);
+#ifdef USE_JAVA
+				rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 				return NULL;
 			}
 
-#ifdef USE_JAVA
-			if (strlen(realname))
-				unlink(realname);
-			else
-#endif	/* USE_JAVA */
 			unlink(name);
 		}
 
 		/* ok, fs clean */
+#ifdef USE_JAVA
+		if ( bind(pPipe->m_Socket, (struct sockaddr *)pAddr, len) < 0 )
+#else	/* USE_JAVA */
 		if ( bind(pPipe->m_Socket, (struct sockaddr *)&addr, len) < 0 )
+#endif	/* USE_JAVA */
 		{
 			OSL_TRACE("osl_createPipe : failed to bind socket. Errno: %d; %s\n",errno,strerror(errno));
 			close (pPipe->m_Socket);
 			__osl_destroyPipeImpl(pPipe);
+#ifdef USE_JAVA
+			rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 			return NULL;
 		}
 
@@ -333,31 +331,37 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 
 
 		strncpy(pPipe->m_Name, name, sizeof(pPipe->m_Name));
-#ifdef USE_JAVA
-		strncpy(pPipe->m_RealName, realname, sizeof(pPipe->m_RealName));
-#endif	/* USE_JAVA */
 
 		if ( listen(pPipe->m_Socket, 5) < 0 )
 		{
 			OSL_TRACE("osl_createPipe failed to listen. Errno: %d; %s\n",errno,strerror(errno));
 			unlink(name);	/* remove filesystem entry */
-#ifdef USE_JAVA
-			if (strlen(realname))
-				unlink(realname);
-#endif	/* USE_JAVA */
 			close (pPipe->m_Socket);
 			__osl_destroyPipeImpl(pPipe);
+#ifdef USE_JAVA
+			rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 			return NULL;
 		}
 
+#ifdef USE_JAVA
+		rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 		return (pPipe);
 	}
 	else
 	{   /* osl_pipe_OPEN */
 		if ( access(name, F_OK) != -1 )
 		{
+#ifdef USE_JAVA
+			if ( connect( pPipe->m_Socket, (struct sockaddr *)pAddr, len) >= 0 )
+#else	/* USE_JAVA */
 			if ( connect( pPipe->m_Socket, (struct sockaddr *)&addr, len) >= 0 )
+#endif	/* USE_JAVA */
 			{
+#ifdef USE_JAVA
+				rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 				return (pPipe);
 			}
 
@@ -366,6 +370,9 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 
 		close (pPipe->m_Socket);
 		__osl_destroyPipeImpl(pPipe);
+#ifdef USE_JAVA
+		rtl_freeMemory(pAddr);
+#endif	/* USE_JAVA */
 		return NULL;
 	}
 }
@@ -458,12 +465,6 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
 	{
 		unlink(pPipe->m_Name);
 	}
-#ifdef USE_JAVA
-	if ( strlen(pPipe->m_RealName) > 0 )
-	{
-		unlink(pPipe->m_RealName);
-	}
-#endif	/* USE_JAVA */
 	pPipe->m_bClosed = sal_True;
 
 /*      OSL_TRACE("Out osl_destroyPipe");     */
