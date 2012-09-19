@@ -680,6 +680,10 @@ static USHORT GetKeyCode( unsigned short nKey )
 - (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
+@interface VCLWindow (ICAImageImport)
+- (void)setStyleMask:(unsigned int)nStyleMask;
+@end
+
 static MacOSBOOL bJavaAWTInitialized = NO;
 static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
@@ -1051,6 +1055,31 @@ static NSUInteger nMouseMask = 0;
 							[pWindow makeKeyWindow];
 							break;
 						}
+					}
+				}
+			}
+		}
+	}
+	else if ( nOrderingMode != NSWindowOut && [self isKindOfClass:[NSPanel class]] && [self isFloatingPanel] && [self respondsToSelector:@selector(setStyleMask:)] )
+	{
+		// Fix bug in ICAImageImport()'s window by removing its close button.
+		// Pressing that button on Mac OS X 10.6 and higher causes that
+		// function to never return.
+		NSView *pContentView = [self contentView];
+		if ( pContentView )
+		{
+			NSArray *pSubviews = [pContentView subviews];
+			if ( pSubviews )
+			{
+				unsigned int nCount = [pSubviews count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+					if ( pSubview && [[pSubview className] isEqualToString:@"IKDeviceBrowserView"] )
+					{
+						[self setStyleMask:[self styleMask] & ~NSClosableWindowMask];
+						break;
 					}
 				}
 			}
