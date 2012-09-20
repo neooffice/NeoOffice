@@ -71,8 +71,10 @@
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
+#ifdef USE_ICAIMAGEPORT
 // Need to include for ICAImportImagePB struct but we don't link to it
 #import <Carbon/Carbon.h>
+#endif	// USE_ICAIMAGEPORT
 #undef MAC_OS_X_VERSION_MIN_REQUIRED
 #define MAC_OS_X_VERSION_MIN_REQUIRED MAC_OS_X_VERSION_10_6
 #import <Quartz/Quartz.h>
@@ -98,8 +100,10 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
+#ifdef USE_ICAIMAGEPORT
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef ICAError ICAImportImage_Type( ICAImportImagePB *pPB, ICACompletion nCompletion );
+#endif	// USE_ICAIMAGEPORT
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -114,8 +118,6 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 	NSSplitView *mpSplitView;
 	IKDeviceBrowserView *mpDeviceBrowserView;
 	NSView *mpEmptyView;
-	IKCameraDeviceView *mpCameraDeviceView;
-	IKScannerDeviceView *mpScannerDeviceView;
 }
 - (id)initWithDefaultTitle:(NSString *)pDefaultTitle;
 - (void)dealloc;
@@ -158,32 +160,18 @@ static void ResetDeviceViewProperties( NSView *pView )
 		{
 			IKDeviceBrowserView *pDeviceBrowserView = (IKDeviceBrowserView *)pView;
 			pDeviceBrowserView.delegate = nil;
-			if ( [pDeviceBrowserView superview] )
-				[pDeviceBrowserView removeFromSuperview];
 		}
 		else if ( [pView isKindOfClass:[IKCameraDeviceView class]] )
 		{
 			IKCameraDeviceView *pCameraDeviceView = (IKCameraDeviceView *)pView;
+			pCameraDeviceView.cameraDevice = nil;
 			pCameraDeviceView.delegate = nil;
-			if ( pCameraDeviceView.cameraDevice )
-			{
-				[pCameraDeviceView.cameraDevice release];
-				pCameraDeviceView.cameraDevice = nil;
-			}
-			if ( [pCameraDeviceView superview] )
-				[pCameraDeviceView removeFromSuperview];
 		}
 		else if ( [pView isKindOfClass:[IKScannerDeviceView class]] )
 		{
 			IKScannerDeviceView *pScannerDeviceView = (IKScannerDeviceView *)pView;
+			pScannerDeviceView.scannerDevice = nil;
 			pScannerDeviceView.delegate = nil;
-			if ( pScannerDeviceView.scannerDevice )
-			{
-				[pScannerDeviceView.scannerDevice release];
-				pScannerDeviceView.scannerDevice = nil;
-			}
-			if ( [pScannerDeviceView superview] )
-				[pScannerDeviceView removeFromSuperview];
 		}
 	}
 }
@@ -405,7 +393,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	
 	bool toReturn=[imp capturedImage];
 	
-	[imp release];
+	// [imp release];
 	
 	[pool release];
 	
@@ -431,8 +419,6 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	mpSplitView=nil;
 	mpDeviceBrowserView=nil;
 	mpEmptyView=nil;
-	mpCameraDeviceView=nil;
-	mpScannerDeviceView=nil;
 
 	return(self);
 }
@@ -448,9 +434,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)doImageCapture:(id)pObj
 {
 	// Do nothing if we are recursing
-	if ( gotImage || mbPanelIsInModal || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView || mpCameraDeviceView || mpScannerDeviceView )
+	if ( gotImage || mbPanelIsInModal || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView )
 		return;
 
+#ifdef USE_ICAIMAGEPORT
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
 	if ( pLib )
 	{
@@ -458,15 +445,16 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
 		if ( pGestalt )
 		{
-			// Use ICAImportImage() if we are running on Mac OS X 10.7 or
-			// earlier as IKDeviceBrowserView does not work on 10.7
+			// Use ICAImportImage() if we are running on Mac OS X 10.6 or
+			// earlier as IKDeviceBrowserView opens imported images in the
+			// Preview application
 			SInt32 res = 0;
 			pGestalt( gestaltSystemVersionMajor, &res );
 			if ( res == 10 )
 			{
 				res = 0;
 				pGestalt( gestaltSystemVersionMinor, &res );
-				if ( res <= 7 )
+				if ( res <= 6 )
 				{
 					bUseICAImageImport = true;
 
@@ -530,6 +518,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		if ( bUseICAImageImport )
 			return;
 	}
+#endif	// USE_ICAIMAGEPORT
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
@@ -537,6 +526,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
 		if ( mpPanel )
 		{
+			[mpPanel autorelease];
+
 			[mpPanel setReleasedWhenClosed:NO];
 			[mpPanel setTitle:mpDefaultTitle];
 
@@ -546,6 +537,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 				mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
 				if ( mpSplitView )
 				{
+					[mpSplitView autorelease];
+
 					[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 					[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
 					[mpSplitView setVertical:YES];
@@ -555,43 +548,50 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
 					if ( mpDeviceBrowserView )
 					{
+						[mpDeviceBrowserView autorelease];
+
+						// On Mac OS X 10.7, the awakeFromNib selector needs
+						// to be invoked or else no devices will be listed
+						if ( [mpDeviceBrowserView respondsToSelector:@selector(awakeFromNib)] )
+							[mpDeviceBrowserView awakeFromNib];
 						[mpSplitView addSubview:mpDeviceBrowserView];
 
 						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
 						if ( mpEmptyView )
 						{
+							[mpEmptyView autorelease];
+
 							[mpSplitView addSubview:mpEmptyView];
-							[mpSplitView setPosition:aSplitViewBounds.size.width / 4 ofDividerAtIndex:0];
+							[mpSplitView setPosition:125.0f ofDividerAtIndex:0];
 
-							mpCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
-							if ( mpCameraDeviceView )
+							[mpPanel setDelegate:self];
+							mpDeviceBrowserView.mode = IKDeviceBrowserViewDisplayModeIcon;
+							mpDeviceBrowserView.displaysLocalCameras = YES;
+							mpDeviceBrowserView.displaysNetworkCameras = YES;
+							mpDeviceBrowserView.displaysLocalScanners = YES;
+							mpDeviceBrowserView.displaysNetworkScanners = YES;
+							mpDeviceBrowserView.delegate = self;
+
+							mbPanelIsInModal = true;
+							@try
 							{
-								[mpCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-
-								mpScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
-								if ( mpScannerDeviceView )
-								{
-									[mpScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-
-									[mpPanel setDelegate:self];
-									mpDeviceBrowserView.delegate = self;
-									mbPanelIsInModal = true;
-									@try
-									{
-										[pApp runModalForWindow:mpPanel];
-									}
-									@catch ( NSException *pExc )
-									{
-										// Close the window after catching an
-										// exception as the device browser view
-										// will likely crash
-										[mpPanel close];
-										if ( pExc )
-											CFShow( pExc );
-									}
-									mbPanelIsInModal = false;
-								}
+								[self deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
+								[pApp runModalForWindow:mpPanel];
 							}
+							@catch ( NSException *pExc )
+							{
+								// Close the window after catching an exception
+								// as the device browser view will likely crash
+								[mpPanel close];
+								if ( pExc )
+									CFShow( pExc );
+							}
+
+							// Run default run loop to clear the asynchronous
+							// timers that ImageKit queues before our objects
+							// are released
+							CFRunLoopRunInMode( kCFRunLoopDefaultMode, 0, false );
+							mbPanelIsInModal = false;
 						}
 					}
 				}
@@ -601,39 +601,18 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 	if ( mpPanel )
 	{
-		[mpPanel release];
+		[mpPanel close];
 		mpPanel = nil;
 	}
 
 	if ( mpSplitView )
-	{
-		[mpSplitView release];
 		mpSplitView = nil;
-	}
 
 	if ( mpDeviceBrowserView )
-	{
-		[mpDeviceBrowserView release];
 		mpDeviceBrowserView = nil;
-	}
 
 	if ( mpEmptyView )
-	{
-		[mpEmptyView release];
 		mpEmptyView = nil;
-	}
-
-	if ( mpCameraDeviceView )
-	{
-		[mpCameraDeviceView release];
-		mpCameraDeviceView = nil;
-	}
-
-	if ( mpScannerDeviceView )
-	{
-		[mpScannerDeviceView release];
-		mpScannerDeviceView = nil;
-	}
 }
 
 - (bool)capturedImage
@@ -708,7 +687,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
 {
 	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || gotImage || !mbPanelIsInModal || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView || !mpCameraDeviceView || !mpScannerDeviceView )
+	if ( !pDeviceBrowserView || gotImage || !mbPanelIsInModal || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView )
 		return;
 
 	NSWindow *pWindow = [pDeviceBrowserView window];
@@ -716,28 +695,55 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		return;
 
 	// Remove all device subviews from the empty view
-	ResetDeviceViewProperties( mpCameraDeviceView );
-	ResetDeviceViewProperties( mpScannerDeviceView );
+	NSArray *pSubviews = [mpEmptyView subviews];
+	if ( pSubviews )
+	{
+		NSArray *pSubviewsCopy = [NSArray arrayWithArray:pSubviews];
+		if ( pSubviewsCopy )
+		{
+			NSUInteger nCount = [pSubviewsCopy count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSView *pSubview = [pSubviewsCopy objectAtIndex:i];
+				if ( pSubview )
+				{
+					[pSubview removeFromSuperview];
+					ResetDeviceViewProperties( pSubview );
+				}
+			}
+		}
+	}
 
 	// Add a subview for the device in the empty view
 	[mpPanel setTitle:mpDefaultTitle];
 	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
 	{
-		[mpCameraDeviceView setFrame:[mpEmptyView bounds]];
-		mpCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
-		[mpCameraDeviceView.cameraDevice retain];
-		mpCameraDeviceView.delegate = self;
-		[mpEmptyView addSubview:mpCameraDeviceView];
-		[mpPanel setTitle:[pDevice name]];
+		IKCameraDeviceView *pCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+		if ( pCameraDeviceView )
+		{
+			[pCameraDeviceView autorelease];
+
+			[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+			pCameraDeviceView.delegate = self;
+			[mpEmptyView addSubview:pCameraDeviceView];
+			[mpPanel setTitle:[pDevice name]];
+		}
 	}
 	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
 	{
-		[mpScannerDeviceView setFrame:[mpEmptyView bounds]];
-		mpScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
-		[mpScannerDeviceView.scannerDevice retain];
-		mpScannerDeviceView.delegate = self;
-		[mpEmptyView addSubview:mpScannerDeviceView];
-		[mpPanel setTitle:[pDevice name]];
+		IKScannerDeviceView *pScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+		if ( pScannerDeviceView )
+		{
+			[pScannerDeviceView autorelease];
+
+			[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+			pScannerDeviceView.delegate = self;
+			[mpEmptyView addSubview:pScannerDeviceView];
+			[mpPanel setTitle:[pDevice name]];
+		}
 	}
 }
 
@@ -798,11 +804,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)windowWillClose:(NSNotification *)pNotification
 {
-	// Set delegate to nil otherwise crashing will occur when pressing
-	// the red window close button
+	// Remove the empty view's subviews and set delegate to nil otherwise
+	// crashing will occur when pressing the red window close button
+	[self deviceBrowserView:mpDeviceBrowserView selectionDidChange:nil];
 	ResetDeviceViewProperties( mpDeviceBrowserView );
-	ResetDeviceViewProperties( mpCameraDeviceView );
-	ResetDeviceViewProperties( mpScannerDeviceView );
 
 	if ( mbPanelIsInModal )
 	{
