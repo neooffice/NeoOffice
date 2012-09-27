@@ -1790,7 +1790,11 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSRange)selectedRange
 {
-	return maSelectedRange;
+	// Fix bug when using the Mac OS X 10.8 dictation input method reported in
+	// the following NeoOffice forum topic by never returning NSNotFound in the
+	// selected range's location:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8514
+	return ( maSelectedRange.location == NSNotFound ? NSMakeRange( 0, 0 ) : maSelectedRange );
 }
 
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)aSelectedRange replacementRange:(NSRange)aReplacementRange
