@@ -183,11 +183,11 @@ build.ooo-build_checkout: $(OOO-BUILD_PATCHES_HOME)/$(OOO-BUILD_PACKAGE).tar.gz
 	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
-build.sun-template_checkout: build.ooo-build_checkout
-	cp "$(OOO-BUILD_PATCHES_HOME)"/Sun_ODF_Template_Pack_*.oxt "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src"
+build.sun-source_download: build.ooo-build_checkout
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ( ( cd "$(PWD)/$(OOO-BUILD_PATCHES_HOME)" ; gnutar cvf - --exclude CVS src ) | gnutar xvf - )
 	touch "$@"
 
-build.ooo-build_configure: build.ooo-build_checkout build.sun-template_checkout
+build.ooo-build_configure: build.ooo-build_checkout build.sun-source_download
 # Include OpenOffice.org extenstions and templates. Note that we exclude the
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
