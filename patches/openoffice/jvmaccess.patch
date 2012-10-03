@@ -1,5 +1,5 @@
---- jvmaccess/util/gcc3.map	2008-04-24 11:04:22.000000000 -0700
-+++ jvmaccess/util/gcc3.map	2012-09-24 11:50:39.000000000 -0700
+--- util/gcc3.map	2008-04-24 11:04:22.000000000 -0700
++++ util/gcc3.map	2012-09-24 11:50:39.000000000 -0700
 @@ -42,7 +42,7 @@
          _ZN9jvmaccess14VirtualMachine11AttachGuardC2ERKN3rtl9ReferenceIS0_EE; # jvmaccess::VirtualMachine::AttachGuard::AttachGuard(rtl::Reference< VirtualMachine > const &)
          _ZN9jvmaccess14VirtualMachine11AttachGuardD1Ev; # jvmaccess::VirtualMachine::AttachGuard::~AttachGuard()

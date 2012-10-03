@@ -23,8 +23,8 @@ diff -u -r1.6 saxnamespacefilter.cxx
  }
  
  void SAL_CALL SaxNamespaceFilter::endElement(const OUString& aName)
---- framework/source/uielement/rootitemcontainer.cxx	2008-06-24 10:02:19.000000000 -0700
-+++ framework/source/uielement/rootitemcontainer.cxx	2012-09-24 13:42:08.000000000 -0700
+--- source/uielement/rootitemcontainer.cxx	2008-06-24 10:02:19.000000000 -0700
++++ source/uielement/rootitemcontainer.cxx	2012-09-24 13:42:08.000000000 -0700
 @@ -335,13 +335,13 @@
  Reference< XInterface > SAL_CALL RootItemContainer::createInstanceWithContext( const Reference< XComponentContext >& )
  throw ( Exception, RuntimeException)
@@ -41,8 +41,8 @@ diff -u -r1.6 saxnamespacefilter.cxx
  }
  
  // XPropertySet helper
---- framework/source/uifactory/windowcontentfactorymanager.cxx	2009-02-18 08:07:12.000000000 -0800
-+++ framework/source/uifactory/windowcontentfactorymanager.cxx	2012-09-24 13:49:23.000000000 -0700
+--- source/uifactory/windowcontentfactorymanager.cxx	2009-02-18 08:07:12.000000000 -0800
++++ source/uifactory/windowcontentfactorymanager.cxx	2012-09-24 13:49:23.000000000 -0700
 @@ -452,7 +452,7 @@
      uno::Reference< uno::XInterface > xWindow( xDialogControl->getPeer(), uno::UNO_QUERY );
  */

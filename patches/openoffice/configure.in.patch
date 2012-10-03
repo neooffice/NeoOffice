@@ -1,5 +1,5 @@
 --- configure.in	2010-02-10 00:15:20.000000000 -0800
-+++ configure.in.bak.orig	2010-02-10 00:24:15.000000000 -0800
++++ configure.in	2010-02-10 00:24:15.000000000 -0800
 @@ -2559,7 +2559,7 @@
        LDFLAGS=$sharedlink_ldflags_save
     fi

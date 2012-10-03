@@ -37,8 +37,8 @@
  
  #endif
  
---- scp2/prj/build.lst	2008-07-30 06:38:31.000000000 -0700
-+++ scp2/prj/build.lst	2012-09-29 16:18:12.000000000 -0700
+--- prj/build.lst	2008-07-30 06:38:31.000000000 -0700
++++ prj/build.lst	2012-09-29 16:18:12.000000000 -0700
 @@ -1,4 +1,4 @@
 -cp    scp2    :    setup_native transex3 PYTHON:python ICU:icu REDLAND:redland LIBXSLT:libxslt NULL
 +cp    scp2    :    setup_native transex3 ICU:icu REDLAND:redland LIBXSLT:libxslt NULL
@@ -59,8 +59,8 @@
  cp    scp2\source\onlineupdate    nmake    -    all    cp_update cp_langmacros cp_langtemplates NULL
 -cp    scp2\util                   nmake    -    all    cp_util cp_activex cp_binfilter cp_calc cp_canvas cp_crashrep cp_draw cp_gnome cp_graphicfilter cp_impress cp_javafilter cp_kde cp_layout cp_math cp_ooo cp_python cp_quickstart cp_testtool cp_writer cp_base cp_xsltfilter cp_winexplorerext cp_sdkoo cp_update NULL
 +cp    scp2\util                   nmake    -    all    cp_util cp_activex cp_binfilter cp_calc cp_canvas cp_crashrep cp_draw cp_gnome cp_graphicfilter cp_impress cp_javafilter cp_kde cp_layout cp_math cp_ooo cp_quickstart cp_testtool cp_writer cp_base cp_xsltfilter cp_winexplorerext cp_sdkoo cp_update NULL
---- scp2/util/makefile.mk	2009-02-16 04:45:52.000000000 -0800
-+++ scp2/util/makefile.mk	2012-09-29 16:19:36.000000000 -0700
+--- util/makefile.mk	2009-02-16 04:45:52.000000000 -0800
++++ util/makefile.mk	2012-09-29 16:19:36.000000000 -0700
 @@ -81,10 +81,6 @@
               file_testtool.par             \
               module_xsltfilter.par         \
