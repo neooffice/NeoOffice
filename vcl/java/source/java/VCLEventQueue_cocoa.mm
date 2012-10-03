@@ -50,15 +50,8 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
-#ifndef NSEventTypeMagnify
-#define NSEventTypeMagnify 30
-#endif	// !NSEventTypeMagnify
-
-#ifndef NSEventTypeSwipe
-#define NSEventTypeSwipe 31
-#endif	// !NSEventTypeSwipe
-
 #define MODIFIER_RELEASE_INTERVAL 100
+#define UNDEFINED_KEY_CODE 0xffff
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
@@ -232,12 +225,123 @@ static USHORT GetEventCode( NSUInteger nModifiers )
 	return nRet;
 }
 
-static USHORT GetKeyCode( unsigned short nKey )
+static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 {
 	USHORT nRet = 0;
 
 	switch ( nKey )
 	{
+		case UNDEFINED_KEY_CODE:
+			if (nChar >= '0' && nChar <= '9')
+				nRet = KEYGROUP_NUM + nChar - '0';
+			else if (nChar >= 'A' && nChar <= 'Z')
+				nRet = KEYGROUP_ALPHA + nChar - 'A';
+			else if (nChar >= 'a' && nChar <= 'z')
+				nRet = KEYGROUP_ALPHA + nChar - 'a';
+			else if (nChar == 0x08)
+				nRet = KEY_BACKSPACE;
+			else if (nChar == 0x09)
+				nRet = KEY_TAB;
+			else if (nChar == 0x03 || nChar == 0x0a || nChar == 0x0d)
+				nRet = KEY_RETURN;
+			else if (nChar == 0x1b)
+				nRet = KEY_ESCAPE;
+			else if (nChar == 0x20)
+				nRet = KEY_SPACE;
+			else if (nChar == 0x7f)
+				nRet = KEY_DELETE;
+			else if (nChar == 0x2b)
+				nRet = KEY_ADD;
+			else if (nChar == 0x2d)
+				nRet = KEY_SUBTRACT;
+			else if (nChar == 0x2e)
+				nRet = KEY_POINT;
+			else if (nChar == 0x2f)
+				nRet = KEY_DIVIDE;
+			else if (nChar == 0x3d)
+				nRet = KEY_EQUAL;
+			// 0xf700 and higher are NSEvent action constants
+			else if (nChar == 0xf700)
+				nRet = KEY_UP;
+			else if (nChar == 0xf701)
+				nRet = KEY_DOWN;
+			else if (nChar == 0xf702)
+				nRet = KEY_LEFT;
+			else if (nChar == 0xf703)
+				nRet = KEY_RIGHT;
+			else if (nChar == 0xf704)
+				nRet = KEY_F1;
+			else if (nChar == 0xf705)
+				nRet = KEY_F2;
+			else if (nChar == 0xf706)
+				nRet = KEY_F3;
+			else if (nChar == 0xf707)
+				nRet = KEY_F4;
+			else if (nChar == 0xf708)
+				nRet = KEY_F5;
+			else if (nChar == 0xf709)
+				nRet = KEY_F6;
+			else if (nChar == 0xf70a)
+				nRet = KEY_F7;
+			else if (nChar == 0xf70b)
+				nRet = KEY_F8;
+			else if (nChar == 0xf70c)
+				nRet = KEY_F9;
+			else if (nChar == 0xf70d)
+				nRet = KEY_F10;
+			else if (nChar == 0xf70e)
+				nRet = KEY_F11;
+			else if (nChar == 0xf70f)
+				nRet = KEY_F12;
+			else if (nChar == 0xf710)
+				nRet = KEY_F13;
+			else if (nChar == 0xf711)
+				nRet = KEY_F14;
+			else if (nChar == 0xf712)
+				nRet = KEY_F15;
+			else if (nChar == 0xf713)
+				nRet = KEY_F16;
+			else if (nChar == 0xf714)
+				nRet = KEY_F17;
+			else if (nChar == 0xf715)
+				nRet = KEY_F18;
+			else if (nChar == 0xf716)
+				nRet = KEY_F19;
+			else if (nChar == 0xf717)
+				nRet = KEY_F20;
+			else if (nChar == 0xf718)
+				nRet = KEY_F21;
+			else if (nChar == 0xf719)
+				nRet = KEY_F22;
+			else if (nChar == 0xf71a)
+				nRet = KEY_F23;
+			else if (nChar == 0xf71b)
+				nRet = KEY_F24;
+			else if (nChar == 0xf71c)
+				nRet = KEY_F25;
+			else if (nChar == 0xf71d)
+				nRet = KEY_F26;
+			else if (nChar == 0xf727)
+				nRet = KEY_INSERT;
+			else if (nChar == 0xf728)
+				nRet = KEY_DELETE;
+			else if (nChar == 0xf729)
+				nRet = KEY_HOME;
+			else if (nChar == 0xf72b)
+				nRet = KEY_END;
+			else if (nChar == 0xf72c)
+				nRet = KEY_PAGEUP;
+			else if (nChar == 0xf72d)
+				nRet = KEY_PAGEDOWN;
+			else if (nChar == 0xf743)
+				nRet = KEY_UNDO;
+			else if (nChar == 0xf745)
+				nRet = KEY_FIND;
+			else if (nChar == 0xf746)
+				nRet = KEY_HELP;
+			else
+				nRet = 0;
+			break;
 		case kVK_ANSI_0:
 		case kVK_ANSI_Keypad0:
 			nRet = KEY_0;
@@ -2051,16 +2155,18 @@ static CFDataRef aRTFSelection = nil;
 				// do it here because we need to let the Alt modifier through
 				// for action keys.
 				NSUInteger nModifiers = ( ( mpLastKeyDownEvent ? [mpLastKeyDownEvent modifierFlags] : 0 ) & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
-				USHORT nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : 0 ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
 
 				NSUInteger i = 0;
 				NSUInteger nLength = [pChars length];
 				for ( ; i < nLength; i++ )
 				{
+					USHORT nChar = (USHORT)[pChars characterAtIndex:i];
+					USHORT nCode = GetKeyCode( mpLastKeyDownEvent ? [mpLastKeyDownEvent keyCode] : UNDEFINED_KEY_CODE, nChar ) | GetEventCode( nModifiers & ~NSAlternateKeyMask );
+
 					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
 					pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 					pKeyDownEvent->mnCode = nCode;
-					pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
+					pKeyDownEvent->mnCharCode = nChar;
 					pKeyDownEvent->mnRepeat = 0;
 
 					SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
@@ -2191,16 +2297,18 @@ static CFDataRef aRTFSelection = nil;
 		if ( pChars && [pChars length] )
 		{
 			NSUInteger nModifiers = ( [mpLastKeyDownEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) | nMouseMask;
-			USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode] ) | GetEventCode( nModifiers );
 
 			NSUInteger i = 0;
 			NSUInteger nLength = [pChars length];
 			for ( ; i < nLength; i++ )
 			{
+				USHORT nChar = (USHORT)[pChars characterAtIndex:i];
+				USHORT nCode = GetKeyCode( [mpLastKeyDownEvent keyCode], nChar ) | GetEventCode( nModifiers );
+
 				SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
 				pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pKeyDownEvent->mnCode = nCode;
-				pKeyDownEvent->mnCharCode = [pChars characterAtIndex:i];
+				pKeyDownEvent->mnCharCode = nChar;
 				pKeyDownEvent->mnRepeat = 0;
 
 				SalKeyEvent *pKeyUpEvent = new SalKeyEvent();

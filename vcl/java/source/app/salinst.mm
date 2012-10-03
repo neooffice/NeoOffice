@@ -429,7 +429,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
 	sal_Bool bRet = sal_False;
 
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
 		Application::GetSolarMutex().acquire();
 		bRet = sal_True;
@@ -444,7 +444,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst )
 		Application::GetSolarMutex().release();
 }
 
