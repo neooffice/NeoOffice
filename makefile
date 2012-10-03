@@ -92,6 +92,8 @@ INSTALL_HOME:=install
 PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
+MOZILLA_PATCHES_HOME:=patches/mozilla
+NEOOFFICE_PATCHES_HOME:=patches/neooffice
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
@@ -160,7 +162,6 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 endif
 
 # CVS macros
-MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
@@ -264,7 +265,7 @@ build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
 ifeq ("$(OS_TYPE)","MacOSX")
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; curl -L -C - -O "$(MOZ_SOURCE_URL)"
+	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/mozilla-source-1.7.5.tar.gz" .
 endif
 	touch "$@"
 
