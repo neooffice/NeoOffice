@@ -250,7 +250,7 @@ build.oo_patches: \
 	build.oo_vcl_patch \
 	build.oo_vos_patch \
 	build.oo_wizards_patch \
-	build.oo_xmlhelp.patch
+	build.oo_xmlhelp_patch
 # Copy modified compiler scripts to force 32 bit compilation of all binaries
 	mkdir -p "$(COMPILERDIR)"
 	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
