@@ -125,15 +125,15 @@ OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION_BASE=3.3
+PRODUCT_VERSION_BASE=SandboxDevTest
 PRODUCT_VERSION=$(PRODUCT_VERSION_BASE)
 PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE)
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
-PREVIOUS_PRODUCT_VERSION_BASE=3.2
+PREVIOUS_PRODUCT_VERSION_BASE=3.3
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 2
-PRODUCT_DIR_PATCH_VERSION=Patch-2
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
@@ -154,7 +154,7 @@ PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it
 ifeq ("$(OS_TYPE)","MacOSX")
 PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
-PRODUCT_COMPONENT_PATCH_MODULES=imagecapture neomobile
+PRODUCT_COMPONENT_PATCH_MODULES=imagecapture
 INSTALLATION_CHECK_REQUIRED_COMMANDS=awk basename chmod chown defaults dirname echo file find grep id mv open pax ps rm sed sort touch uname unzip
 else
 PRODUCT_COMPONENT_MODULES=
@@ -676,8 +676,7 @@ ifneq (,$(CERTAPPIDENTITY)$(CERTPKGIDENTITY))
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjavaes.res" "MacOS/resource"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fpicker.uno.dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
 ifneq (,$(CERTSANDBOXTEAMIDENTIFIER))
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#org\.neooffice\.#$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.#g' > "Info.plist"
