@@ -1,5 +1,5 @@
---- binfilter/bf_sc/source/ui/unoobj/sc_notesuno.cxx	2008-04-10 03:00:03.000000000 -0700
-+++ binfilter/bf_sc/source/ui/unoobj/sc_notesuno.cxx	2012-09-25 21:12:09.000000000 -0700
+--- bf_sc/source/ui/unoobj/sc_notesuno.cxx	2008-04-10 03:00:03.000000000 -0700
++++ bf_sc/source/ui/unoobj/sc_notesuno.cxx	2012-09-25 21:12:09.000000000 -0700
 @@ -131,9 +131,9 @@
  	//!	existierendes Objekt finden und zurueckgeben ???
  
