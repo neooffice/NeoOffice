@@ -1,0 +1,13 @@
+--- extensions/source/plugin/base/nfuncs.cxx	2008-04-11 03:22:47.000000000 -0700
++++ extensions/source/plugin/base/nfuncs.cxx	2012-09-26 23:41:12.000000000 -0700
+@@ -102,8 +102,8 @@
+ 	NPN_MemFree,
+ 	NPN_MemFlush,
+ 	NPN_ReloadPlugins,
+-	NPN_GetJavaEnv,
+-	NPN_GetJavaPeer,
++	NULL,
++	NULL,
+ 	NPN_GetURLNotify,
+ 	NPN_PostURLNotify,
+ 	NPN_GetValue,

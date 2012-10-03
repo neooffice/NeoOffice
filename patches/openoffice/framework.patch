@@ -23,3 +23,41 @@ diff -u -r1.6 saxnamespacefilter.cxx
  }
  
  void SAL_CALL SaxNamespaceFilter::endElement(const OUString& aName)
+--- framework/source/uielement/rootitemcontainer.cxx	2008-06-24 10:02:19.000000000 -0700
++++ framework/source/uielement/rootitemcontainer.cxx	2012-09-24 13:42:08.000000000 -0700
+@@ -335,13 +335,13 @@
+ Reference< XInterface > SAL_CALL RootItemContainer::createInstanceWithContext( const Reference< XComponentContext >& )
+ throw ( Exception, RuntimeException)
+ {
+-    return (OWeakObject *)(new ItemContainer( m_aShareMutex ));
++    return Reference< XInterface >((OWeakObject *)(new ItemContainer( m_aShareMutex )));
+ }
+ 
+ Reference< XInterface > SAL_CALL RootItemContainer::createInstanceWithArgumentsAndContext( const Sequence< Any >&, const Reference< XComponentContext >& )
+ throw (Exception, RuntimeException)
+ {
+-    return (OWeakObject *)(new ItemContainer( m_aShareMutex ));
++    return Reference< XInterface >((OWeakObject *)(new ItemContainer( m_aShareMutex )));
+ }
+ 
+ // XPropertySet helper
+--- framework/source/uifactory/windowcontentfactorymanager.cxx	2009-02-18 08:07:12.000000000 -0800
++++ framework/source/uifactory/windowcontentfactorymanager.cxx	2012-09-24 13:49:23.000000000 -0700
+@@ -452,7 +452,7 @@
+     uno::Reference< uno::XInterface > xWindow( xDialogControl->getPeer(), uno::UNO_QUERY );
+ */
+     uno::Reference< uno::XInterface > xWindow;
+-    return xWindow;
++    return uno::Reference< uno::XInterface >(xWindow);
+ }
+ 
+ uno::Reference< uno::XInterface > SAL_CALL WindowContentFactoryManager::createInstanceWithArgumentsAndContext( 
+@@ -544,7 +544,7 @@
+         xWindow = createInstanceWithContext(Context);
+     }
+ 
+-    return xWindow;
++    return uno::Reference< uno::XInterface >(xWindow);
+ }
+ 
+ } // namespace framework
