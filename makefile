@@ -160,9 +160,8 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 endif
 
 # CVS macros
-IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
-IMEDIA_TAG:=--revision '{2008-12-11}'
+IMEDIA_SOURCE_FILENAME=imedia-read-only.tar.gz
 REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
@@ -365,15 +364,15 @@ build.neo_%_component: % build.neo_configure
 build.imedia_checkout:
 	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; mkdir "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(IMEDIA_PATCHES_HOME)/$(IMEDIA_SOURCE_FILENAME)"
 	touch "$@"
 
 build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
 
 build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
