@@ -90,6 +90,7 @@ NPError JavaPluginComm::NPP_Initialize()
 #ifdef DEBUG
 	fprintf( stderr, "JavaPluginComm::NPP_Initialize not implemented\n" );
 #endif
+	return NPERR_GENERIC_ERROR;
 }
 
 // ----------------------------------------------------------------------------

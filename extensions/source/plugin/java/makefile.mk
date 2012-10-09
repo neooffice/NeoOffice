@@ -46,11 +46,9 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  ..$/util$/makefile.pmk
 
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/plugin
-.IF "$(SOLAR_JAVA)" != ""
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/java
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/nspr
 CDEFS+=-DOJI
-.ENDIF
 
 # --- Types -------------------------------------
 
