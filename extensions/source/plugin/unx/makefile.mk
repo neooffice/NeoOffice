@@ -49,11 +49,9 @@ dummy:
 # --- Files --------------------------------------------------------
 
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/plugin
-.IF "$(SOLAR_JAVA)" != ""
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/java
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/nspr
 CDEFS+=-DOJI
-.ENDIF
 
 .IF "$(WITH_MOZILLA)" != "NO"
 
