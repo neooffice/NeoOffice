@@ -109,17 +109,6 @@ static NSString *pBlankItem = @" ";
 
 @end
 
-@interface NSURL (ShowFileDialog)
-- (NSURL *)filePathURL;
-- (NSURL *)URLByStandardizingPath;
-@end
-
-@interface NSSavePanel (ShowFileDialog)
-- (NSURL *)directoryURL;
-- (void)setDirectoryURL:(NSURL *)pURL;
-- (void)setNameFieldStringValue:(NSString *)pValue;
-@end
-
 @interface ShowFileDialog : NSObject
 {
 	BOOL					mbChooseFiles;
@@ -325,18 +314,7 @@ static NSString *pBlankItem = @" ";
 
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs
 {
-	NSURL *pRet = nil;
-
-	if ( [mpFilePanel respondsToSelector:@selector(directoryURL)] )
-	{
-		pRet = [mpFilePanel directoryURL];
-	}
-	else
-	{
-		NSString *pPath = [mpFilePanel directory];
-		if ( pPath )
-			pRet = [NSURL URLWithString:pPath];
-	}
+	NSURL *pRet = [mpFilePanel directoryURL];
 
 	if ( pArgs )
 		[pArgs setResult:pRet];
@@ -359,7 +337,7 @@ static NSString *pBlankItem = @" ";
 		NSURL *pURL = [mpFilePanel URL];
 		// Fix bug 3662 by ensuring that the save panel does not append a
 		// trailing "/" character
-		if ( pURL && [pURL isFileURL] && [pURL respondsToSelector:@selector(URLByStandardizingPath)] )
+		if ( pURL && [pURL isFileURL] )
 			pURL = [pURL URLByStandardizingPath];
 		if ( pURL )
 			pRet = [NSArray arrayWithObject:pURL];
@@ -749,7 +727,7 @@ static NSString *pBlankItem = @" ";
 	if ( !pURL )
 		return;
 
-	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+	if ( ![pURL isFileURL] )
 		pURL = [pURL filePathURL];
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
@@ -758,25 +736,12 @@ static NSString *pBlankItem = @" ";
 	// file list will go into a infinite repainting loop.
 	if ( pURL && [pURL isFileURL] )
 	{
-		if ( [mpFilePanel respondsToSelector:@selector(directoryURL)] && [mpFilePanel respondsToSelector:@selector(setDirectoryURL:)] )
+		NSString *pPath = [pURL absoluteString];
+		if ( pPath )
 		{
-			NSString *pPath = [pURL absoluteString];
-			if ( pPath )
-			{
-				NSURL *pCurrentURL = [mpFilePanel directoryURL];
-				if ( !pCurrentURL || ![pPath isEqualToString:[pCurrentURL absoluteString]] )
-					[mpFilePanel setDirectoryURL:pURL];
-			}
-		}
-		else
-		{
-			NSString *pPath = [pURL path];
-			if ( pPath )
-			{
-				NSString *pCurrentPath = [mpFilePanel directory];
-				if ( !pCurrentPath || ![pPath isEqualToString:pCurrentPath] )
-					[mpFilePanel setDirectory:pPath];
-			}
+			NSURL *pCurrentURL = [mpFilePanel directoryURL];
+			if ( !pCurrentURL || ![pPath isEqualToString:[pCurrentURL absoluteString]] )
+				[mpFilePanel setDirectoryURL:pURL];
 		}
 	}
 }
@@ -785,7 +750,7 @@ static NSString *pBlankItem = @" ";
 {
 	BOOL bRet = NO;
 
-	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+	if ( ![pURL isFileURL] )
 		pURL = [pURL filePathURL];
 
 	if ( pURL && [pURL isFileURL] )
@@ -1023,24 +988,13 @@ static NSString *pBlankItem = @" ";
 	if ( !pURL )
 		return;
 
-	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+	if ( ![pURL isFileURL] )
 		pURL = [pURL filePathURL];
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user
 	if ( pURL && [pURL isFileURL] )
-	{
-		if ( [mpFilePanel respondsToSelector:@selector(setDirectoryURL:)] )
-		{
-			[mpFilePanel setDirectoryURL:pURL];
-		}
-		else
-		{
-			NSString *pPath = [pURL path];
-			if ( pPath )
-				[mpFilePanel setDirectory:pPath];
-		}
-	}
+		[mpFilePanel setDirectoryURL:pURL];
 }
 
 - (void)setEnabled:(ShowFileDialogArgs *)pArgs
@@ -1192,7 +1146,7 @@ static NSString *pBlankItem = @" ";
     static bool recursing=false;
 
     // When sandboxed the NSSavePanel does not derive direclty from a widget
-    // but is routed through powerbox objects.  It may notrespond to is visible
+    // but is routed through powerbox objects. It may not respond to isVisible.
     if ( [mpFilePanel respondsToSelector:@selector(isVisible)] )
     {
         if ( [mpFilePanel isVisible] )
@@ -1316,24 +1270,9 @@ static NSString *pBlankItem = @" ";
 			[self setSelectedFilter:pSelectedFilterArgs];
 		}
 
-		if ( [mpFilePanel respondsToSelector:@selector(setNameFieldStringValue:)] )
-		{
-			if ( mpDefaultName )
-				[mpFilePanel setNameFieldStringValue:mpDefaultName];
-			nRet = [mpFilePanel runModal];
-		}
-		else
-		{
-			if ( mbUseFileOpenDialog )
-			{
-				NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-				nRet = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
-			}
-			else
-			{
-				nRet = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
-			}
-		}
+		if ( mpDefaultName )
+			[mpFilePanel setNameFieldStringValue:mpDefaultName];
+		nRet = [mpFilePanel runModal];
 
 		[mpFilePanel setAccessoryView:pOldAccessoryView];
 
