@@ -24,6 +24,23 @@ At this time, the NeoOffice build only supports building on Mac OS X 10.6 Snow L
    sudo /opt/local/bin/port install flex
    sudo /opt/local/bin/port install wget
 
+   On some machines, the p5.12-locale-gettext port will fail to build due to
+   the following MacPorts bug:
+
+      https://trac.macports.org/ticket/28789
+
+   To workaround this bug, edit the p5.12-locale-gettext port's compilation using the following steps:
+
+   -  Edit the port file by executing the following command:
+
+      sudo /opt/local/bin/port edit p5.12-locale-gettext
+
+   -  Append the following line at the end of the file:
+
+      configure.cc cc -L/opt/local/lib -I/opt/local/include -arch i386
+
+   -  Save the file, exit the file, and repeat the port installation commands listed at the beginning of this step.
+
    After running the above commands, execute the following command to ensure
    that 32 bit versions of the packages are available otherwise the build will
    fail:
