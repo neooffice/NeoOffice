@@ -66,18 +66,6 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/help" || exit 1
 	fi
 
-	# Put back user's custom jar files
-	if [ -d "$2/classes" ]; then
-		for i in `cd "$2/classes" ; find . -maxdepth 1`; do
-			if [ ! -e "$2/Contents/basis-link/program/classes/$i" ]; then
-				mv -f "$2/classes/$i" "$2/Contents/basis-link/program/classes" || exit 1
-			fi
-		done
-		chown -Rf root:admin "$2/Contents/basis-link/program/classes" || exit 1
-		chmod -Rf a+r,a-w "$2/Contents/basis-link/program/classes" || exit 1
-		rm -Rf "$2/classes" || exit 1
-	fi
-
 	# Put back user's custom resource files
 	if [ -d "$2/resource" ]; then
 		for i in `cd "$2/resource" ; find . -maxdepth 1`; do
