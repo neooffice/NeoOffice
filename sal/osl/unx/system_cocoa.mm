@@ -39,6 +39,7 @@
 
 #include "system.h"
 
+typedef int access_Type(const char *path, int amode);
 typedef int chmod_Type(const char *path, mode_t mode);
 typedef int link_Type(const char *path1, const char *path2);
 typedef int mkdir_Type(const char *path, mode_t mode);
@@ -49,6 +50,7 @@ typedef int rmdir_Type(const char *path);
 typedef int symlink_Type(const char *path1, const char *path2);
 typedef int unlink_Type(const char *path);
 
+static access_Type *pAccess = NULL;
 static chmod_Type *pChmod = NULL;
 static link_Type *pLink = NULL;
 static mkdir_Type *pMkdir = NULL;
@@ -58,6 +60,21 @@ static rename_Type *pRename = NULL;
 static rmdir_Type *pRmdir = NULL;
 static symlink_Type *pSymlink = NULL;
 static unlink_Type *pUnlink = NULL;
+
+extern "C" int access(const char *path, int amode)
+{
+	int nRet = -1;
+
+	if ( !pAccess )
+		pAccess = (access_Type *)dlsym( RTLD_NEXT, "access");
+
+	if ( pAccess )
+		nRet = pAccess( path, amode );
+	else
+		errno = EFAULT;
+
+	return nRet;
+}
 
 extern "C" int chmod(const char *path, mode_t mode)
 {
