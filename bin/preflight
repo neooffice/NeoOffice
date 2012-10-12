@@ -49,6 +49,10 @@ if [ -d "$2" ] ; then
 fi
 
 if [ -d "$2/Contents" ] ; then
+	# Delete jar files
+	if [ -d "$2/Contents/basis-link/program/classes" ]; then
+		rm -Rf "$2/Contents/basis-link/program/classes" || exit 1
+	fi
 
 	# Save font files for postflight scripts
 	if [ -d "$2/Contents/basis-link/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
