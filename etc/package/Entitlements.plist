@@ -3,23 +3,29 @@
 <dict>
 	<key>com.apple.application-identifier</key>
 	<string>$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)</string>
-<!-- Disable iCloud until sandboxing is working properly
+	<!-- Uncomment when iCloud support is implemented
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
 		<string>$(CERTSANDBOXTEAMIDENTIFIER).*</string>
 	</array>
--->
+	-->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!-- Enable downloads from WebKit instances -->
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
-	<key>com.apple.security.assets.music.read-write</key>
+	<!-- Enable iMedia browser's audio panel -->
+	<key>com.apple.security.assets.music.read-only</key>
 	<true/>
-	<key>com.apple.security.assets.movies.read-write</key>
+	<!-- Enable iMedia browser's movies panel -->
+	<key>com.apple.security.assets.movies.read-only</key>
 	<true/>
-	<key>com.apple.security.assets.pictures.read-write</key>
+	<!-- Enable iMedia browser's pictures panel -->
+	<key>com.apple.security.assets.pictures.read-only</key>
 	<true/>
 	<!-- Enable Apple Remote Control controller -->
 	<key>com.apple.security.device.usb</key>
