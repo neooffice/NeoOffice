@@ -43,10 +43,6 @@
 #import <objc/objc-class.h>
 #include "postmac.h"
 
-#ifndef NSDownloadsDirectory
-#define NSDownloadsDirectory ((NSSearchPathDirectory)15)
-#endif
-
 // Comment out the following line to disaable the native login window
 #define USE_NATIVE_LOGIN_WINDOW
 
