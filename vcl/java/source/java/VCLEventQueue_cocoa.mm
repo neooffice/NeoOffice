@@ -60,104 +60,6 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
-static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
-{
-	MacOSBOOL bRet = NO;
-
-	if ( !pEvent || [pEvent type] != NSKeyDown )
-		return bRet;
-
-	CFPreferencesAppSynchronize( CFSTR( "com.apple.symbolichotkeys" ) );
-	CFPropertyListRef pPref = CFPreferencesCopyAppValue( CFSTR( "AppleSymbolicHotKeys" ), CFSTR( "com.apple.symbolichotkeys" ) );
-	if ( pPref )
-	{
-		if ( CFGetTypeID( pPref ) == CFDictionaryGetTypeID() )
-		{
-			NSString *pKey = [[NSNumber numberWithUnsignedInt:nKey] stringValue];
-			if ( pKey )
-			{
-				NSDictionary *pDict = (NSDictionary *)[(NSDictionary *)pPref objectForKey:pKey];
-				if ( pDict && CFGetTypeID( pDict ) == CFDictionaryGetTypeID() )
-				{
-					NSNumber *pEnabled = (NSNumber *)[pDict valueForKey:@"enabled"];
-					if ( pEnabled && [pEnabled intValue] )
-					{
-						NSDictionary *pValue = (NSDictionary *)[pDict objectForKey:@"value"];
-						if ( pValue && CFGetTypeID( pValue ) == CFDictionaryGetTypeID() )
-						{
-							NSArray *pParams = (NSArray *)[pValue objectForKey:@"parameters"];
-							if ( pParams && CFGetTypeID( pParams ) == CFArrayGetTypeID() && [pParams count] > 2 )
-							{
-								NSString *pChars = nil;
-								NSNumber *pChar = (NSNumber *)[pParams objectAtIndex:0];
-								if ( pChar )
-								{
-									unichar nChar = [pChar unsignedCharValue];
-									pChars = [NSString stringWithCharacters:&nChar length:1];
-								}
-
-								NSNumber *pKeyCode = (NSNumber *)[pParams objectAtIndex:1];
-								if ( ( pChars && [pChars isEqualToString:[pEvent characters]] ) || ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] ) )
-								{
-									NSNumber *pModifiers = (NSNumber *)[pParams objectAtIndex:2];
-									if ( pModifiers && ( [pModifiers unsignedIntValue] & ( NSCommandKeyMask | NSShiftKeyMask ) ) == ( (unsigned int)[pEvent modifierFlags] & ( NSCommandKeyMask | NSShiftKeyMask ) ) )
-										bRet = YES;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		CFRelease( pPref );
-	}
-
-	if ( !bRet )
-	{
-		CFPreferencesAppSynchronize( CFSTR( "com.apple.universalaccess" ) );
-		pPref = CFPreferencesCopyAppValue( CFSTR( "UserAssignableHotKeys" ), CFSTR( "com.apple.universalaccess" ) );
-		if ( pPref )
-		{
-			if ( CFGetTypeID( pPref ) == CFArrayGetTypeID() )
-			{
-				CFIndex nCount = CFArrayGetCount( (CFArrayRef)pPref );
-				CFIndex i = 0;
-				for ( ; i < nCount; i++ ) {
-					NSDictionary *pDict = (NSDictionary *)CFArrayGetValueAtIndex( (CFArrayRef)pPref, i );
-					if ( pDict && CFGetTypeID( pDict ) == CFDictionaryGetTypeID() )
-					{
-						// Note that Apple uses an odd spelling for this key
-						NSNumber *pSybmolicHotKey = (NSNumber *)[pDict valueForKey:@"sybmolichotkey"];
-						if ( pSybmolicHotKey && [pSybmolicHotKey unsignedIntValue] == nKey )
-						{
-							NSNumber *pEnabled = (NSNumber *)[pDict valueForKey:@"enabled"];
-							if ( pEnabled && [pEnabled intValue] )
-							{
-								NSNumber *pKeyCode = (NSNumber *)[pDict valueForKey:@"key"];
-								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
-								{
-									NSNumber *pModifiers = (NSNumber *)[pDict valueForKey:@"modifier"];
-									if ( pModifiers && ( [pModifiers unsignedIntValue]  & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) )
-{
-										bRet = YES;
-}
-								}
-							}
-
-							break;
-						}
-					}
-				}
-			}
-
-			CFRelease( pPref );
-		}
-	}
-
-	return bRet;
-}
-
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
 {
 	NSPoint aRet = NSZeroPoint;
@@ -1079,17 +981,7 @@ static NSUInteger nMouseMask = 0;
 		// tracking the menubar and never allow a borderless window to grab
 		// focus
 		if ( bTrackingMenuBar && ! ( [self styleMask] & NSTitledWindowMask ) )
-		{
 			return;
-		}
-		else if ( [self styleMask] & NSUtilityWindowMask )
-		{
-			// Do not allow utility windows to grab the focus except when the
-			// user presses Control-F6
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
-				return;
-		}
 	}
 
 	if ( [super respondsToSelector:@selector(poseAsMakeKeyWindow)] )
@@ -1283,30 +1175,6 @@ static NSUInteger nMouseMask = 0;
 			JavaSalEvent *pFocusEvent = new JavaSalEvent( SALEVENT_LOSEFOCUS, mpFrame, NULL );
 			JavaSalEventQueue::postCachedEvent( pFocusEvent );
 			pFocusEvent->release();
-		}
-
-		// Fix bug 3557 by forcing any non-utility windows to the back when
-		// they lose focus while cycling through windows with the Command-`
-		// shortcut. Fix bug 3557 by including the event's device dependent
-		// modifiers if the Shift key is pressed and excluding the Control key
-		// modifier if the Control key is pressed.
-		if ( ! ( [self styleMask] & NSUtilityWindowMask ) )
-		{
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
-			{
-				NSArray *pWindows = [pApp orderedWindows];
-				if ( pWindows )
-				{
-					unsigned int nCount = [pWindows count];
-					if ( nCount )
-					{
-						NSWindow *pBackWindow = [pWindows objectAtIndex:nCount - 1];
-						if ( pBackWindow && pBackWindow != self && [pBackWindow isVisible] )
-							[self orderWindow:NSWindowBelow relativeTo:[pBackWindow windowNumber]];
-					}
-				}
-			}
 		}
 	}
 
