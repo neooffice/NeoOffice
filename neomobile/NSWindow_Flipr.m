@@ -31,8 +31,4 @@
  *
  *************************************************************************/
 
-// Redefine class name to avoid namespace conflict with the iMedia browser
-#define FliprView NeoMobileFlipperView
-#define FliprAnimation NeoMobileFliprAnimation
-
 #import "Flipr/NSWindow_Flipr.m"

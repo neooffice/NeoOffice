@@ -1732,7 +1732,7 @@ static NeoMobileNonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 			}
 		}
 
-		[sharedFlipsidePanel flipToShowWindow:self forward:NO];
+		[sharedFlipsidePanel neoMobileFlipToShowWindow:self forward:NO];
 	}
 #endif	// USE_NATIVE_LOGIN_WINDOW
 }
@@ -1873,7 +1873,7 @@ static NeoMobileNonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 
 	if ( sharedFlipsidePanel )
 	{
-		[self flipToShowWindow:sharedFlipsidePanel forward:YES];
+		[self neoMobileFlipToShowWindow:sharedFlipsidePanel forward:YES];
 
 		// Clear web view content and history list
 		NSString *javaScriptCode = @"document.body.innerHTML = ''";
