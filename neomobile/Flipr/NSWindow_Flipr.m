@@ -17,11 +17,20 @@
 
 // We subclass NSAnimation to maximize frame rate, instead of using progress marks.
 
+#ifdef USE_JAVA
+// Redefine class name to avoid namespace conflict with the iMedia browser
+@interface NeoMobileFliprAnimation : NSAnimation {
+#else	// USE_JAVA
 @interface FliprAnimation : NSAnimation {
+#endif	// USE_JAVA
 }
 @end
 
+#ifdef USE_JAVA
+@implementation NeoMobileFliprAnimation
+#else	// USE_JAVA
 @implementation FliprAnimation
+#endif	// USE_JAVA
 
 // We initialize the animation with some huge default value.
 
@@ -54,20 +63,33 @@
 
 // This is the flipping window's content view.
 
+#ifdef USE_JAVA
+// Redefine class name to avoid namespace conflict with the iMedia browser
+@interface NeoMobileFliprView : NSView {
+#else	// USE_JAVA
 @interface FliprView : NSView {
+#endif	// USE_JAVA
 	NSRect originalRect;			// this rect covers the initial and final windows.
 	NSWindow* initialWindow;
 	NSWindow* finalWindow;
     CIImage* finalImage;			// this is the rendered image of the final window.
 	CIFilter* transitionFilter;
 	NSShadow* shadow;
+#ifdef USE_JAVA
+	NeoMobileFliprAnimation* animation;
+#else	// USE_JAVA
 	FliprAnimation* animation;
+#endif	// USE_JAVA
 	float direction;				// this will be 1 (forward) or -1 (backward).
 	float frameTime;				// time for last drawRect:
 }
 @end
 
+#ifdef USE_JAVA
+@implementation NeoMobileFliprView
+#else	// USE_JAVA
 @implementation FliprView
+#endif	// USE_JAVA
 
 // The designated initializer; will be called when the flipping window is set up.
 
@@ -116,7 +138,11 @@
 // they go away during the animation. We assume both windows have the exact same frame.
 
 - (void)setInitialWindow:(NSWindow*)initial andFinalWindow:(NSWindow*)final forward:(BOOL)forward {
+#ifdef USE_JAVA
+	NSWindow* flipr = [NSWindow neoMobileFlippingWindow];
+#else	// USE_JAVA
 	NSWindow* flipr = [NSWindow flippingWindow];
+#endif	// USE_JAVA
 	if (flipr) {
 		[NSCursor hide];
 		initialWindow = initial;
@@ -156,7 +182,11 @@
 // This will draw the first frame at value 0, duplicating the initial window. This is not really optimal,
 // but we need to compensate for the time spent here, which seems to be about 3 to 5x what's needed
 // for subsequent frames.
+#ifdef USE_JAVA
+		animation = [[NeoMobileFliprAnimation alloc] initWithAnimationCurve:NSAnimationEaseInOut];
+#else	// USE_JAVA
 		animation = [[FliprAnimation alloc] initWithAnimationCurve:NSAnimationEaseInOut];
+#endif	// USE_JAVA
 		[animation setDelegate:self];
 // This is probably redundant...
 		[animation setCurrentProgress:0.0];
@@ -189,7 +219,11 @@
 - (void)animationDidEnd:(NSAnimation*)theAnimation {
 // We order the flipping window out and make the final window visible again.
 	NSDisableScreenUpdates();
+#ifdef USE_JAVA
+	[[NSWindow neoMobileFlippingWindow] orderOut:self];
+#else	// USE_JAVA
 	[[NSWindow flippingWindow] orderOut:self];
+#endif	// USE_JAVA
 	[finalWindow setAlphaValue:1.0];
 	[finalWindow display];
 	NSEnableScreenUpdates();
@@ -258,7 +292,11 @@
 
 @end
 
+#ifdef USE_JAVA
+@implementation NSWindow (NeoMobileFlipperWindow)
+#else	// USE_JAVA
 @implementation NSWindow (NSWindow_Flipr)
+#endif	// USE_JAVA
 
 // This function checks if the CPU can perform flipping. We assume all Intel Macs can do it,
 // but PowerPC Macs need AltiVec.
@@ -280,7 +318,11 @@ static NSWindow* flippingWindow = nil;
 
 // Get (and initialize, if necessary) the flipping window.
 
+#ifdef USE_JAVA
++ (NSWindow*)neoMobileFlippingWindow {
+#else	// USE_JAVA
 + (NSWindow*)flippingWindow {
+#endif	// USE_JAVA
 	if (!flippingWindow) {
 // We initialize the flipping window if the CPU can do it...
 		if (CPUIsSuitable()) {
@@ -294,7 +336,11 @@ static NSWindow* flippingWindow = nil;
 			frame.origin = NSZeroPoint;
 // The inset values seem large enough so the animation doesn't slop over the frame.
 // They could be calculated more exactly, though.
+#ifdef USE_JAVA
+			NeoMobileFliprView* view = [[[NeoMobileFliprView alloc] initWithFrame:frame andOriginalRect:NSInsetRect(frame,64,256)] autorelease];
+#else	// USE_JAVA
 			FliprView* view = [[[FliprView alloc] initWithFrame:frame andOriginalRect:NSInsetRect(frame,64,256)] autorelease];
+#endif	// USE_JAVA
 			[view setAutoresizingMask:NSViewWidthSizable|NSViewHeightSizable];
 			[flippingWindow setContentView:view];
 		}
@@ -304,24 +350,40 @@ static NSWindow* flippingWindow = nil;
 
 // Release the flipping window.
 
+#ifdef USE_JAVA
++ (void)neoMobileReleaseFlippingWindow {
+#else	// USE_JAVA
 + (void)releaseFlippingWindow {
+#endif	// USE_JAVA
 	[flippingWindow autorelease];
 	flippingWindow = nil;
 }
 
 // This is called from outside to start the animation process.
 
+#ifdef USE_JAVA
+- (void)neoMobileFlipToShowWindow:(NSWindow*)window forward:(BOOL)forward {
+#else	// USE_JAVA
 - (void)flipToShowWindow:(NSWindow*)window forward:(BOOL)forward {
+#endif	// USE_JAVA
 // We resize the final window to exactly the same frame.
 	[window setFrame:[self frame] display:NO];
+#ifdef USE_JAVA
+	NSWindow* flipr = [NSWindow neoMobileFlippingWindow];
+#else	// USE_JAVA
 	NSWindow* flipr = [NSWindow flippingWindow];
+#endif	// USE_JAVA
 	if (!flipr) {
 // If we fall in here, the CPU isn't able to animate and we just change windows.
 		[window makeKeyAndOrderFront:self];
 		[self orderOut:self];
 		return;
 	}
+#ifdef USE_JAVA
+	[(NeoMobileFliprView*)[flipr contentView] setInitialWindow:self andFinalWindow:window forward:forward];
+#else	// USE_JAVA
 	[(FliprView*)[flipr contentView] setInitialWindow:self andFinalWindow:window forward:forward];
+#endif	// USE_JAVA
 }
 
 @end
