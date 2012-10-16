@@ -750,7 +750,7 @@
 	<key>CFBundleIconFile</key>
 	<string>ship.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.neooffice.$(PRODUCT_DIR_NAME)</string>
+	<string>$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
