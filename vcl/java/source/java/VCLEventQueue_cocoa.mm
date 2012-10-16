@@ -1082,7 +1082,7 @@ static NSUInteger nMouseMask = 0;
 		{
 			return;
 		}
-		else if ( [self styleMask] & NSUtilityWindowMask )
+		else if ( [self styleMask] & NSUtilityWindowMask && IsRunningSnowLeopard() )
 		{
 			// Do not allow utility windows to grab the focus except when the
 			// user presses Control-F6
@@ -1290,7 +1290,7 @@ static NSUInteger nMouseMask = 0;
 		// shortcut. Fix bug 3557 by including the event's device dependent
 		// modifiers if the Shift key is pressed and excluding the Control key
 		// modifier if the Control key is pressed.
-		if ( ! ( [self styleMask] & NSUtilityWindowMask ) )
+		if ( ! ( [self styleMask] & NSUtilityWindowMask ) && IsRunningSnowLeopard() )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
