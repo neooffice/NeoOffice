@@ -71,3 +71,28 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 
 	return bRet;
 }
+
+void macxp_setFileType(const sal_Char* path)
+{
+#ifdef PRODUCT_FILETYPE
+	if ( path && strlen( path ) )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pPath = [NSString stringWithUTF8String:path];
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if ( pPath && pFileManager )
+		{
+			NSDictionary *pAttributes = [pFileManager attributesOfItemAtPath:pPath error:nil];
+			if ( !pAttributes || ![pAttributes fileHFSTypeCode] )
+			{
+				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)PRODUCT_FILETYPE] forKey:NSFileHFSTypeCode];
+				if ( pAttributes )
+					[pFileManager setAttributes:pAttributes ofItemAtPath:pPath error:nil];
+			}
+		}
+
+		[pPool release];
+	}
+#endif	// PRODUCT_FILETYPE
+}
