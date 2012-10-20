@@ -39,186 +39,197 @@
 
 #include "system.h"
 
-typedef int access_Type(const char *path, int amode);
-typedef int chmod_Type(const char *path, mode_t mode);
-typedef int link_Type(const char *path1, const char *path2);
-typedef int mkdir_Type(const char *path, mode_t mode);
-typedef int open_Type(const char *path, int oflag, ...);
-typedef DIR *opendir_Type(const char *dirname);
-typedef int rename_Type(const char *oldpath, const char *newpath);
-typedef int rmdir_Type(const char *path);
-typedef int symlink_Type(const char *path1, const char *path2);
-typedef int unlink_Type(const char *path);
+// Redefine Cocoa YES and NO defines types for convenience
+#ifdef YES
+#undef YES
+#define YES (MacOSBOOL)1
+#endif
+#ifdef NO
+#undef NO
+#define NO (MacOSBOOL)0
+#endif
 
-static access_Type *pAccess = NULL;
-static chmod_Type *pChmod = NULL;
-static link_Type *pLink = NULL;
-static mkdir_Type *pMkdir = NULL;
-static open_Type *pOpen = NULL;
-static opendir_Type *pOpendir = NULL;
-static rename_Type *pRename = NULL;
-static rmdir_Type *pRmdir = NULL;
-static symlink_Type *pSymlink = NULL;
-static unlink_Type *pUnlink = NULL;
-
-extern "C" int access(const char *path, int amode)
+static NSString *macxp_resolveAliasImpl(const char *path)
 {
-	int nRet = -1;
+	NSString *pRet = NULL;
 
-	if ( !pAccess )
-		pAccess = (access_Type *)dlsym( RTLD_NEXT, "access");
-
-	if ( pAccess )
-		nRet = pAccess( path, amode );
-	else
-		errno = EFAULT;
-
-	return nRet;
-}
-
-extern "C" int chmod(const char *path, mode_t mode)
-{
-	int nRet = -1;
-
-	if ( !pChmod )
-		pChmod = (chmod_Type *)dlsym( RTLD_NEXT, "chmod");
-
-	if ( pChmod )
-		nRet = pChmod( path, mode );
-	else
-		errno = EFAULT;
-
-	return nRet;
-}
-
-extern "C" int link(const char *path1, const char *path2)
-{
-	int nRet = -1;
-
-	if ( !pLink )
-		pLink = (link_Type *)dlsym( RTLD_NEXT, "link");
-
-	if ( pLink )
-		nRet = pLink( path1, path2 );
-	else
-		errno = EFAULT;
-
-	return nRet;
-}
-
-extern "C" int mkdir(const char *path, mode_t mode)
-{
-	int nRet = -1;
-
-	if ( !pMkdir )
-		pMkdir = (mkdir_Type *)dlsym( RTLD_NEXT, "mkdir");
-
-	if ( pMkdir )
-		nRet = pMkdir( path, mode );
-	else
-		errno = EFAULT;
-
-	return nRet;
-}
-
-extern "C" int open(const char *path, int oflag, ...)
-{
-	int nRet = -1;
-
-	if ( !pOpen )
-		pOpen = (open_Type *)dlsym( RTLD_NEXT, "open" );
-
-	if ( pOpen )
+	if ( path && strlen( path ) )
 	{
-		if ( oflag & O_CREAT )
+		NSURL *pURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
+		if ( pURL )
+			pURL = [pURL URLByStandardizingPath];
+		if ( pURL )
+			pURL = [pURL URLByResolvingSymlinksInPath];
+		if ( pURL )
 		{
-			va_list argp;
-			va_start( argp, oflag );
-			nRet = pOpen( path, oflag, (mode_t)va_arg( argp, int ) );
-			va_end( argp );
-		}
-		else
-		{
-			nRet = pOpen( path, oflag );
+			NSNumber *bAlias = nil;
+			if ( [pURL getResourceValue:&bAlias forKey:NSURLIsAliasFileKey error:nil] )
+			{
+				if ( bAlias && [bAlias boolValue] )
+				{
+					NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
+					if ( pData )
+					{
+						MacOSBOOL bStale = NO;
+						pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+						if ( pURL )
+						{
+ 							if ( bStale )
+								pURL = nil;
+							if ( pURL )
+								pURL = [pURL URLByStandardizingPath];
+							if ( pURL )
+								pURL = [pURL URLByResolvingSymlinksInPath];
+
+							// Recurse to check if the URL is also an alias
+							if ( pURL )
+							{
+								NSString *pPath = [pURL path];
+								if ( pPath )
+								{
+									NSString *pRecursedPath = macxp_resolveAliasImpl( [pPath UTF8String] );
+									if ( pRecursedPath )
+										pURL = [NSURL fileURLWithPath:pRecursedPath];
+										
+								}
+							}
+						}
+					}
+					else
+					{
+						pURL = nil;
+					}
+				}
+
+				if ( pURL )
+					pRet = [pURL path];
+			}
 		}
 	}
-	else
-	{
-		errno = EFAULT;
-	}
-
-	return nRet;
-}
-
-extern "C" DIR *opendir(const char *dirname)
-{
-	DIR *pRet = NULL;
-
-	if ( !pOpendir )
-		pOpendir = (opendir_Type *)dlsym( RTLD_NEXT, "opendir");
-
-	if ( pOpendir )
-		pRet = pOpendir( dirname );
 
 	return pRet;
 }
 
-extern "C" int rename(const char *oldpath, const char *newpath)
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 {
-	int nRet = -1;
+	int nRet = 0;
 
-	if ( !pRename )
-		pRename = (rename_Type *)dlsym( RTLD_NEXT, "rename");
+	if ( noResolveLastElement )
+	{
+		char *basePath = strrchr( path, '/' );
+		if ( !basePath )
+			return nRet;
+		basePath = strdup( basePath );
+		if ( !basePath )
+			return nRet;
+		path[ strlen( path ) - strlen( basePath ) ] = '\0';
 
-	if ( pRename )
-		nRet = pRename( oldpath, newpath );
-	else
-		errno = EFAULT;
+		sal_Bool bModified = sal_False;
+		if ( !macxp_resolveAlias( path, buflen, sal_False ) )
+		{
+			int nLen = strlen( path ) + strlen( basePath );
+			if ( nLen < buflen )
+			{
+				strcat( path, basePath );
+				bModified = sal_True;
+			}
+			else
+			{
+				errno = ENAMETOOLONG;
+				nRet = -1;
+			}
+		}
 
-	return nRet;
-}
+		if ( !bModified )
+			strcat( path, basePath );
+		free( basePath );
 
-extern "C" int rmdir(const char *path)
-{
-	int nRet = -1;
+		return nRet;
+	}
 
-	if ( !pRmdir )
-		pRmdir = (rmdir_Type *)dlsym( RTLD_NEXT, "rmdir");
+	// If the path exists and is not an alias, return without changing
+	// anything
+	struct stat aFileStat;
+	if ( !stat( path, &aFileStat ) )
+	{
+		if ( aFileStat.st_mode & S_IFREG )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pRmdir )
-		nRet = pRmdir( path );
-	else
-		errno = EFAULT;
+			NSString *pPath = macxp_resolveAliasImpl( path );
+			if ( pPath )
+			{
+				const char *tmpPath = [pPath UTF8String];
+				int nLen = strlen( tmpPath );
+				if ( nLen < buflen )
+					strcpy( path, tmpPath );
+			}
 
-	return nRet;
-}
+			[pPool release];
+		}
 
-extern "C" int symlink(const char *path1, const char *path2)
-{
-	int nRet = -1;
+		return nRet;
+	}
 
-	if ( !pSymlink )
-		pSymlink = (symlink_Type *)dlsym( RTLD_NEXT, "symlink");
+	// Iterate through the directories from the top down and resolve any
+	// aliases that might be encountered
+	const char *unprocessedPath = path;
+	if ( *unprocessedPath == '/' )
+		unprocessedPath++;
 
-	if ( pSymlink )
-		nRet = pSymlink( path1, path2 );
-	else
-		errno = EFAULT;
+	sal_Bool bContinue = sal_True;
+	while ( bContinue && unprocessedPath && *unprocessedPath )
+	{
+		unprocessedPath = strchr( unprocessedPath, '/' );
+		if ( !unprocessedPath )
+			unprocessedPath = "";
 
-	return nRet;
-}
+		char *basePath = strdup( unprocessedPath );
+		if ( !basePath )
+			return nRet;
+		path[ strlen( path ) - strlen( basePath ) ] = '\0';
 
-extern "C" int unlink(const char *path)
-{
-	int nRet = -1;
+		sal_Bool bModified = sal_False;
+		if ( !stat( path, &aFileStat ) )
+		{
+			if ( aFileStat.st_mode & S_IFREG )
+			{
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( !pUnlink )
-		pUnlink = (unlink_Type *)dlsym( RTLD_NEXT, "unlink");
+				NSString *pPath = macxp_resolveAliasImpl( path );
+				if ( pPath )
+				{
+					const char *tmpPath = [pPath UTF8String];
+					int nLen = strlen( tmpPath ) + strlen( basePath );
+					if ( nLen < buflen )
+					{
+						strcpy( path, tmpPath );
+						strcat( path, basePath );
+						bModified = sal_True;
+					}
+					else
+					{
+						errno = ENAMETOOLONG;
+						nRet = -1;
+						bContinue = sal_False;
+					}
+				}
 
-	if ( pUnlink )
-		nRet = pUnlink( path );
-	else
-		errno = EFAULT;
+				[pPool release];
+			}
+		}
+		else
+		{
+			 bContinue = sal_False;
+		}
+
+		if ( !bModified )
+			strcat( path, basePath );
+		unprocessedPath = path + strlen( path ) - strlen( basePath );
+		if ( *unprocessedPath == '/' )
+			unprocessedPath++;
+		free( basePath );
+	}
 
 	return nRet;
 }
@@ -236,17 +247,27 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 		NSString *pHomeDir = NSHomeDirectory();
 		if ( pHomeDir )
 		{
-			const char *pHomeDirStr = [pHomeDir UTF8String];
-			if ( pHomeDirStr && strlen( pHomeDirStr ) )
+			NSURL *pURL = [NSURL fileURLWithPath:pHomeDir];
+			if ( pURL )
+				pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
+				pURL = [pURL URLByResolvingSymlinksInPath];
+			if ( pURL )
 			{
-				strncpy( path, pHomeDirStr, buflen );
-
-				// Remove trailing directory separator
-				size_t len;
-				while ( ( len = strlen( path ) ) && path[ len - 1 ] == '/' )
-					path[ len - 1 ] = '\0';
-
-				bRet = sal_True;
+				NSString *pHomeDir = [pURL path];
+				if ( pHomeDir )
+				{
+					const char *pHomeDirStr = [pHomeDir UTF8String];
+					if ( pHomeDirStr )
+					{
+						int nLen = strlen( pHomeDirStr );
+						if ( nLen < buflen )
+						{
+							strcpy( path, pHomeDirStr );
+							bRet = sal_True;
+						}
+					}
+				}
 			}
 		}
 
@@ -254,4 +275,29 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 	}
 
 	return bRet;
+}
+
+void macxp_setFileType(const sal_Char* path)
+{
+#ifdef PRODUCT_FILETYPE
+	if ( path && strlen( path ) )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pPath = [NSString stringWithUTF8String:path];
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if ( pPath && pFileManager )
+		{
+			NSDictionary *pAttributes = [pFileManager attributesOfItemAtPath:pPath error:nil];
+			if ( !pAttributes || ![pAttributes fileHFSTypeCode] )
+			{
+				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)PRODUCT_FILETYPE] forKey:NSFileHFSTypeCode];
+				if ( pAttributes )
+					[pFileManager setAttributes:pAttributes ofItemAtPath:pPath error:nil];
+			}
+		}
+
+		[pPool release];
+	}
+#endif	// PRODUCT_FILETYPE
 }

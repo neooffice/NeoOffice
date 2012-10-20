@@ -125,7 +125,6 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 // add MACOSX Time Value
 
 #define TimeValue CFTimeValue
-#include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 
 #ifdef USE_JAVA
@@ -273,9 +272,6 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
-#if defined USE_JAVA && defined PRODUCT_FILETYPE
-static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
-#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /******************************************************************************
  *
@@ -909,10 +905,8 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         *pHandle = (oslFileHandle) pHandleImpl;
 
 #ifdef USE_JAVA
-#ifdef PRODUCT_FILETYPE
                         if ( uFlags & osl_File_OpenFlag_Create ) 
-                            oslSetFileTypeFromPsz( buffer );
-#endif	// PRODUCT_FILETYPE
+                            macxp_setFileType( buffer );
 
                         osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
                         aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl ) );
@@ -2429,9 +2423,9 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
         return nRet;
     }
 
-#if defined USE_JAVA && defined PRODUCT_FILETYPE
-    oslSetFileTypeFromPsz( pszDestFileName );
-#endif	/* USE_JAVA && PRODUCT_FILETYPE */
+#ifdef USE_JAVA
+    macxp_setFileType( pszDestFileName );
+#endif	/* USE_JAVA */
 
 	/* HACK: because memory mapping fails on various 
 	   platforms if the size of the source file is  0 byte */
@@ -2538,28 +2532,6 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
 }
 
 #ifdef USE_JAVA
-
-#ifdef PRODUCT_FILETYPE
-
-/*****************************************
- * oslSetFileTypeFromPsz
- ****************************************/
-
-static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
-{
-    FSRef aFSRef;
-    FSCatalogInfo aCatInfo;
-    if ( FSPathMakeRef( (const UInt8 *)pszStr, &aFSRef, 0 ) == noErr && FSGetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo, NULL, NULL, NULL) == noErr )
-    {
-        if ( ( (FileInfo *)&aCatInfo.finderInfo )->fileType == 0x00000000 )
-        {
-            ( (FileInfo *)&aCatInfo.finderInfo )->fileType = (OSType)PRODUCT_FILETYPE;
-            FSSetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo );
-        }
-    }
-}
-
-#endif	// PRODUCT_FILETYPE
 
 rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
 {

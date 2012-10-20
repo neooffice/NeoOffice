@@ -315,7 +315,7 @@ extern char *strdup(const char *);
 #ifdef MACOSX
 #define __OPENTRANSPORTPROVIDERS__ // these are already defined
 #define TimeValue CFTimeValue      // Do not conflict with TimeValue in sal/inc/osl/time.h
-#include <CoreServices/CoreServices.h>
+#include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 #	ifndef ETIME
 #		define  ETIME ETIMEDOUT
@@ -362,6 +362,7 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 void macxp_decomposeString(char *pszStr, int buflen);
 sal_Bool macxp_checkCreateDirectory(const char *pszStr);
 sal_Bool macxp_getNSHomeDirectory(char *path, int buflen);
+void macxp_setFileType(const sal_Char* path);
 #else	/* USE_JAVA */
 int macxp_resolveAlias(char *path, int buflen);
 #endif	/* USE_JAVA */
