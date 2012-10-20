@@ -147,7 +147,7 @@ SHL1STDLIBS+=$(LIBSTLPORT)
 
 .IF "$(OS)"=="MACOSX"
 .IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+=-framework CoreServices -framework Foundation
+SHL1STDLIBS+=-framework CoreFoundation -framework Foundation
 .ELSE		# "$(GUIBASE)"=="java"
 SHL1STDLIBS+=-framework CoreFoundation -framework Carbon
 .ENDIF		# "$(GUIBASE)"=="java"

@@ -315,7 +315,7 @@ extern char *strdup(const char *);
 #ifdef MACOSX
 #define __OPENTRANSPORTPROVIDERS__ // these are already defined
 #define TimeValue CFTimeValue      // Do not conflict with TimeValue in sal/inc/osl/time.h
-#include <CoreServices/CoreServices.h>
+#include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 #	ifndef ETIME
 #		define  ETIME ETIMEDOUT

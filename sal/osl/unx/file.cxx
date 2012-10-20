@@ -125,7 +125,6 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 // add MACOSX Time Value
 
 #define TimeValue CFTimeValue
-#include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 
 #ifdef USE_JAVA
