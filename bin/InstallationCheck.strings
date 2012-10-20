@@ -1,5 +1,5 @@
 "16" = "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
-"17" = "You cannot install $(PRODUCT_NAME) on this machine. Your version of Mac OS X is too old. $(PRODUCT_NAME) can only be installed on Mac OS X 10.6 or higher.";
+"17" = "You cannot install $(PRODUCT_NAME) on this machine. Your version of Mac OS X is too old. $(PRODUCT_NAME) can only be installed on Mac OS X 10.8 or higher.";
 "18" = "You are using the wrong installer. You have a Mac Intel machine and this installer only works on Mac PowerPC machines. You must download the $(PRODUCT_NAME) installer for Mac Intel machine.";
 "19" = "You are using the wrong installer. You have a Mac PowerPC machine and this installer only works on Mac Intel machines. You must download the $(PRODUCT_NAME) installer for Mac PowerPC machine.";
 "21" = "You cannot install $(PRODUCT_NAME) on this machine. You have a unknown type of Mac machine and $(PRODUCT_NAME) only works on Mac Intel machines.";
