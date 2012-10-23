@@ -31,6 +31,8 @@
  *
  *************************************************************************/
 
+#import <dlfcn.h>
+
 #import "neomobile.hxx"
 #import "neomobilei18n.hxx"
 #import "neomobilewebview.h"
@@ -50,6 +52,11 @@
 #define kNMBottomViewPadding 2
 #define kNMStatusLabelFontHeight 16.0f
 
+typedef NSURL *Application_acquireSecurityScopedURL_Type( const ::rtl::OUString *pPath );
+typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
+
+static Application_acquireSecurityScopedURL_Type *pApplication_acquireSecurityScopedURL = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @"/neofiles/download";
 
@@ -1069,24 +1076,33 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!decodedFilename)
 		decodedFilename = filename;
 
+	NSMutableArray *downloadPaths = [NSMutableArray arrayWithCapacity:10];
 	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSString *basePath = nil;
-	NSArray *downloadPaths = nil;
-
-	// Use NSDownloadsDirectory
-	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-	if (!downloadPaths)
-		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
-
 	if (downloadPaths && fileManager)
 	{
+		// Use NSDownloadsDirectory
+		NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+
+		// Use NSDesktopDirectory
+		paths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+		
+		// Use TMPDIR environment variable
+		const char *env = getenv("TMPDIR");
+		if (env)
+			[downloadPaths addObject:[NSString stringWithUTF8String:env]];
+
  		unsigned int dirCount = [downloadPaths count];
  		unsigned int i = 0;
 		for (; i < dirCount && !basePath; i++)
 		{
 			MacOSBOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
-			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir && [fileManager isWritableFileAtPath:downloadPath])
 			{
 				basePath = downloadPath;
 				break;
@@ -1223,11 +1239,25 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		NSString *path = [it->second path];
 		if (path)
 		{
+			NSURL *pSecurityScopedURL = nil;
+			if ( !pApplication_acquireSecurityScopedURL )
+				pApplication_acquireSecurityScopedURL = (Application_acquireSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURL" );
+			if ( !pApplication_releaseSecurityScopedURL )
+				pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+			if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+			{
+				OUString aPath( NeoMobileNSStringToOUString( path ) );
+				pSecurityScopedURL = pApplication_acquireSecurityScopedURL( &aPath );
+			}
+
 			// Check if downloaded file size matches content length header
 			unsigned long long nExpectedContentLength=[it->second expectedContentLength];
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			if(nExpectedContentLength > 0 && pFileManager && GetFileSize(path) != nExpectedContentLength)
 			{
+				if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+					pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+
 				NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
 				[self download:download didFailWithError:pError];
 				return;
@@ -1283,6 +1313,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				if (pAlert)
 					[pAlert runModal];
 			}
+
+			if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+				pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
 		}
 
 		[it->second release];
