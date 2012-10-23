@@ -189,7 +189,7 @@ using namespace vos;
 
 - (void)requestSecurityScopedURL:(id)pObject
 {
-	if ( mpSecurityScopedURL || !mpURL )
+	if ( mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
 
 	NSURL *pURL = mpURL;
@@ -226,16 +226,16 @@ using namespace vos;
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSOpenPanel *pOpenPanel = [NSOpenPanel openPanel];
-		if ( pOpenPanel )
+		mpOpenPanel = [NSOpenPanel openPanel];
+		if ( mpOpenPanel )
 		{
-			[pOpenPanel setDirectoryURL:mpURL];
-			[pOpenPanel setCanChooseDirectories:YES];
-			[pOpenPanel setCanChooseFiles:NO];
-			[pOpenPanel setDelegate:self];
-			if ( [pOpenPanel runModal] == NSFileHandlingPanelOKButton )
+			[mpOpenPanel setDirectoryURL:mpURL];
+			[mpOpenPanel setCanChooseDirectories:YES];
+			[mpOpenPanel setCanChooseFiles:NO];
+			[mpOpenPanel setDelegate:self];
+			if ( [mpOpenPanel runModal] == NSFileHandlingPanelOKButton )
 			{
-				NSURL *pDirURL = [pOpenPanel directoryURL];
+				NSURL *pDirURL = [mpOpenPanel directoryURL];
 				if ( pDirURL && [pDirURL isFileURL] )
 				{
 					pDirURL = [pDirURL URLByStandardizingPath];
@@ -266,7 +266,8 @@ using namespace vos;
 				}
 			}
 
-			[pOpenPanel setDelegate:nil];
+			[mpOpenPanel setDelegate:nil];
+			mpOpenPanel = nil;
 		}
 
 		[pPool release];
