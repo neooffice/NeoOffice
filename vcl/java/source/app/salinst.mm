@@ -75,6 +75,14 @@
 #include "salinst_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
 
+#ifndef NSURLBookmarkCreationWithSecurityScope
+#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
+#endif	// !NSURLBookmarkCreationWithSecurityScope
+
+#ifndef NSURLBookmarkResolutionWithSecurityScope
+#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
+#endif	// !NSURLBookmarkResolutionWithSecurityScope
+
 class JavaSalI18NImeStatus : public SalI18NImeStatus
 {
 public:
@@ -106,6 +114,171 @@ using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+
+@interface NSURL (VCLURL)
+- (MacOSBOOL)startAccessingSecurityScopedResource;
+- (void)stopAccessingSecurityScopedResource;
+@end
+
+@interface VCLRequestSecurityScopedURL : NSObject
+{
+	NSOpenPanel*			mpOpenPanel;
+	NSURL*					mpSecurityScopedURL;
+	NSURL*					mpURL;
+}
++ (id)createWithURL:(NSURL *)pURL;
+- (id)initWithURL:(NSURL *)pURL;
+- (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
+- (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
+- (void)requestSecurityScopedURL:(id)pObject;
+- (NSURL *)securityScopedURL;
+@end
+
+@implementation VCLRequestSecurityScopedURL
+
++ (id)createWithURL:(NSURL *)pURL
+{
+	VCLRequestSecurityScopedURL *pRet = [[VCLRequestSecurityScopedURL alloc] initWithURL:pURL];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)dealloc
+{
+	if ( mpSecurityScopedURL )
+		[mpSecurityScopedURL release];
+
+	if ( mpURL )
+		[mpURL release];
+
+	[super dealloc];
+}
+
+- (id)initWithURL:(NSURL *)pURL
+{
+	[super init];
+
+	mpOpenPanel = nil;
+	mpSecurityScopedURL = nil;
+	mpURL = nil;
+	if ( pURL && [pURL isFileURL] )
+	{
+		mpURL = pURL;
+		if ( mpURL )
+			[mpURL retain];
+	}
+
+	return self;
+}
+
+- (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
+{
+	if ( pURL )
+		pURL = [pURL URLByStandardizingPath];
+	if ( pURL )
+		pURL = [pURL URLByResolvingSymlinksInPath];
+
+	return ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
+}
+
+- (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
+{
+	if ( mpURL && mpOpenPanel )
+		[mpOpenPanel setDirectoryURL:mpURL];
+}
+
+- (void)requestSecurityScopedURL:(id)pObject
+{
+	if ( mpSecurityScopedURL || !mpURL )
+		return;
+
+	NSURL *pURL = mpURL;
+	pURL = [pURL URLByStandardizingPath];
+	if ( pURL )
+	{
+		pURL = [pURL URLByResolvingSymlinksInPath];
+		if ( pURL )
+		{
+			// Check if URL is a directory otherwise use parent directory
+			NSNumber *pDir = nil;
+			if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
+			{
+				pURL = [pURL URLByDeletingLastPathComponent];
+				if ( pURL )
+				{
+					pDir = nil;
+					if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
+						pURL = nil;
+				}
+			}
+		}
+	}
+
+	if ( mpURL != pURL )
+	{
+		[mpURL release];
+		mpURL = pURL;
+		if ( mpURL )
+			[mpURL retain];
+	}
+
+	if ( mpURL )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSOpenPanel *pOpenPanel = [NSOpenPanel openPanel];
+		if ( pOpenPanel )
+		{
+			[pOpenPanel setDirectoryURL:mpURL];
+			[pOpenPanel setCanChooseDirectories:YES];
+			[pOpenPanel setCanChooseFiles:NO];
+			[pOpenPanel setDelegate:self];
+			if ( [pOpenPanel runModal] == NSFileHandlingPanelOKButton )
+			{
+				NSURL *pDirURL = [pOpenPanel directoryURL];
+				if ( pDirURL && [pDirURL isFileURL] )
+				{
+					pDirURL = [pDirURL URLByStandardizingPath];
+					if ( pDirURL )
+						pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+					if ( pDirURL )
+					{
+						NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+						if ( pData )
+						{
+							MacOSBOOL bStale = NO;
+							NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+							if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+							{
+								pResolvedURL = [pResolvedURL URLByStandardizingPath];
+								if ( pResolvedURL )
+									pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+								if ( pResolvedURL )
+								{
+									mpSecurityScopedURL = pResolvedURL;
+									[mpSecurityScopedURL retain];
+
+									[[NSUserDefaults standardUserDefaults] setObject:pData forKey:[mpSecurityScopedURL absoluteString]];
+								}
+							}
+						}
+					}
+				}
+			}
+
+			[pOpenPanel setDelegate:nil];
+		}
+
+		[pPool release];
+	}
+}
+
+- (NSURL *)securityScopedURL
+{
+	return mpSecurityScopedURL;
+}
+
+@end
 
 // ============================================================================
 
@@ -446,6 +619,76 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
 	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst )
 		Application::GetSolarMutex().release();
+}
+
+// -----------------------------------------------------------------------
+
+extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( const OUString *pPath )
+{
+	NSURL *pRet = nil;
+
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pPath && pPath->getLength() )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pString = [NSString stringWithCharacters:pPath->getStr() length:pPath->getLength()];
+		if ( pString )
+		{
+			NSURL *pURL = [NSURL fileURLWithPath:pString];
+			if ( pURL )
+				pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
+				pURL = [pURL URLByResolvingSymlinksInPath];
+			if ( pURL )
+			{
+				// Check if URL is a directory otherwise use parent directory
+				NSNumber *pDir = nil;
+				if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
+				{
+					pURL = [pURL URLByDeletingLastPathComponent];
+					if ( pURL )
+					{
+						pDir = nil;
+						if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
+							pURL = nil;
+					}
+				}
+
+				if ( pURL )
+				{
+					VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL];
+					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+					[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+					NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+					if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+					{
+						pRet = pSecurityScopedURL;
+						[pRet retain];
+					}
+				}
+			}
+		}
+
+		[pPool release];
+	}
+
+	return pRet;
+}
+
+// -----------------------------------------------------------------------
+
+extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( NSURL *pURL )
+{
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pURL )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		if ( [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
+			[pURL stopAccessingSecurityScopedResource];
+		[pURL release];
+
+		[pPool release];
+	}
 }
 
 // =======================================================================
