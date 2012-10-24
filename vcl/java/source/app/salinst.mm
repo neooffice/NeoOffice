@@ -258,7 +258,10 @@ using namespace vos;
 									mpSecurityScopedURL = pResolvedURL;
 									[mpSecurityScopedURL retain];
 
-									[[NSUserDefaults standardUserDefaults] setObject:pData forKey:[mpSecurityScopedURL absoluteString]];
+									NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+									NSString *pKey = [mpSecurityScopedURL absoluteString];
+									if ( pUserDefaults && pKey )
+										[pUserDefaults setObject:pData forKey:pKey];
 								}
 							}
 						}
@@ -657,14 +660,39 @@ extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( con
 
 				if ( pURL )
 				{
-					VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL];
-					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-					[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-					NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-					if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+					MacOSBOOL bShowOpenPanel = YES;
+					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+					NSString *pKey = [pURL absoluteString];
+					if ( pUserDefaults && pKey )
 					{
-						pRet = pSecurityScopedURL;
-						[pRet retain];
+						NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
+						if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
+						{
+							MacOSBOOL bStale = NO;
+							NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+							if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
+							{
+								bShowOpenPanel = NO;
+								if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
+								{
+									pRet = pSecurityScopedURL;
+									[pRet retain];
+								}
+							}
+						}
+					}
+
+					if ( bShowOpenPanel )
+					{
+						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL];
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+						{
+							pRet = pSecurityScopedURL;
+							[pRet retain];
+						}
 					}
 				}
 			}
