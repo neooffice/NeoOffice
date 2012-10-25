@@ -388,48 +388,12 @@ int java_main( int argc, char **argv )
 			pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
 		if ( pHTMLPath )
 		{
-			bool bOpened = false;
-
-			// Try to use the /usr/bin/open command as NSWorkspace can
-			// cause Java menu weirdness on some platforms
-			if ( !access( "/usr/bin/open", R_OK | X_OK ) )
+			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+			if ( pWorkspace )
 			{
-				int nCurrentArg = 0;
-				char *pOpenArgs[ 3 ];
-				pOpenArgs[ nCurrentArg++ ] = "/usr/bin/open";
-				pOpenArgs[ nCurrentArg++ ] = (char *)[pHTMLPath UTF8String];
-				pOpenArgs[ nCurrentArg++ ] = NULL;
-
-				// Execute the open command in child process
-				pid_t pid = fork();
-				if ( !pid )
-				{
-					close( 0 );
-					execvp( pOpenArgs[ 0 ], pOpenArgs );
-					_exit( 1 );
-				}
-				else if ( pid > 0 )
-				{
-					// Invoke waitpid to prevent zombie processes
-					int status;
-					while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-						usleep( 10 );
-					if ( WIFEXITED( status ) && ! WEXITSTATUS( status ) )
-						bOpened = true;
-				}
-			}
-
-			if ( !bOpened )
-			{
-				NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-				if ( pWorkspace )
-				{
-					// Use [NSWorkspace openURL] as [NSWorkspace openFile] will
-					// cause Java menu load failures
-					NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
-					if ( pURL )
-						[pWorkspace openURL:pURL];
-				}
+				NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
+				if ( pURL )
+					[pWorkspace openURL:pURL];
 			}
 		}
 	}
