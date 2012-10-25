@@ -627,7 +627,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 
 // -----------------------------------------------------------------------
 
-extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( const OUString *pPath )
+extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( const OUString *pPath, sal_Bool bMustShowDialogIfNoBookmark )
 {
 	NSURL *pRet = nil;
 
@@ -680,6 +680,14 @@ extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( con
 								}
 							}
 						}
+					}
+
+					if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark )
+					{
+						NSString *pDirPath = [pURL path];
+						NSFileManager *pFileManager = [NSFileManager defaultManager];
+						if ( pDirPath && [pDirPath length] && pFileManager && ( [pFileManager isReadableFileAtPath:pDirPath] || [pFileManager isWritableFileAtPath:pDirPath] ) )
+							bShowOpenPanel = NO;
 					}
 
 					if ( bShowOpenPanel )

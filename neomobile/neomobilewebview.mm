@@ -52,7 +52,7 @@
 #define kNMBottomViewPadding 2
 #define kNMStatusLabelFontHeight 16.0f
 
-typedef NSURL *Application_acquireSecurityScopedURL_Type( const ::rtl::OUString *pPath );
+typedef NSURL *Application_acquireSecurityScopedURL_Type( const ::rtl::OUString *pPath, sal_Bool bMustShowDialogIfNoBookmark );
 typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
 
 static Application_acquireSecurityScopedURL_Type *pApplication_acquireSecurityScopedURL = NULL;
@@ -1247,7 +1247,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
 			{
 				OUString aPath( NeoMobileNSStringToOUString( path ) );
-				pSecurityScopedURL = pApplication_acquireSecurityScopedURL( &aPath );
+				pSecurityScopedURL = pApplication_acquireSecurityScopedURL( &aPath, sal_True );
 			}
 
 			// Check if downloaded file size matches content length header
