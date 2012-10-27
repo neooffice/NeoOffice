@@ -44,6 +44,10 @@ PRJINC += ..$/..$/deployment ..$/..
 .INCLUDE : settings.mk
 .INCLUDE : $(PRJ)$/source$/deployment$/inc$/dp_misc.mk
 
+.IF "$(PRODUCT_DIR_NAME)" != ""
+CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
+.ENDIF
+
 .IF "$(SYSTEM_DB)" == "YES"
 CFLAGS+=-DSYSTEM_DB -I$(DB_INCLUDES)
 .ENDIF
@@ -51,7 +55,7 @@ CFLAGS+=-DSYSTEM_DB -I$(DB_INCLUDES)
 APP1TARGET = so$/unopkg
 APP1OBJS = $(OBJFILES)
 .IF "$(GUIBASE)" == "java"
-APP1STDLIBS =
+APP1STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
 .ELSE	# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(UNOPKGAPPLIB)
 .ENDIF		# "$(GUIBASE)" == "java"
@@ -66,7 +70,7 @@ APP1LINKRES = $(MISC)$/$(TARGET)1.res
 APP2TARGET = unopkg
 APP2OBJS = $(OBJFILES)
 .IF "$(GUIBASE)" == "java"
-APP2STDLIBS =
+APP2STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
 .ELSE	# "$(GUIBASE)" == "java"
 APP2STDLIBS = $(SALLIB) $(UNOPKGAPPLIB)
 .ENDIF		# "$(GUIBASE)" == "java"

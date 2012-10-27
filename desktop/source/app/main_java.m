@@ -405,16 +405,17 @@ int java_main( int argc, char **argv )
 	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
 	void *pSofficeLib = dlopen( [pSofficeLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
 
+	int nRet = 0;
 	if ( pSofficeLib )
 	{
 		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pSofficeLib, "soffice_main" );
 		if ( pSofficeMain )
-			return pSofficeMain( argc, argv );
+			nRet = pSofficeMain( argc, argv );
 	}
 
 	// Don't release the pool until after soffice_main() returns otherwise
 	// spellchecking and the Services menu will not work
 	[pPool release];
 
-	return 0;
+	return nRet;
 }
