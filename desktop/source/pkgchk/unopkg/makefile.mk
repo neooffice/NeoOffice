@@ -44,10 +44,6 @@ PRJINC += ..$/..$/deployment ..$/..
 .INCLUDE : settings.mk
 .INCLUDE : $(PRJ)$/source$/deployment$/inc$/dp_misc.mk
 
-.IF "$(PRODUCT_DIR_NAME)" != ""
-CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
-.ENDIF
-
 .IF "$(SYSTEM_DB)" == "YES"
 CFLAGS+=-DSYSTEM_DB -I$(DB_INCLUDES)
 .ENDIF

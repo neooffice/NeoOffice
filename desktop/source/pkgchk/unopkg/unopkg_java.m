@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#import <crt_externs.h>
 #include <dlfcn.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -66,12 +67,16 @@ static NSString *GetNSTemporaryDirectory()
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
-					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_DIR_NAME]];
-					bDir = NO;
-					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
+					char **pProgName = _NSGetProgname();
+					if ( pProgName && *pProgName )
 					{
-						pTempDir = pCachePath;
-						break;
+						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*pProgName]];
+						bDir = NO;
+						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
+						{
+							pTempDir = pCachePath;
+							break;
+						}
 					}
 				}
 			}
