@@ -66,15 +66,12 @@ static NSString *GetNSTemporaryDirectory( const char *pProgName )
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
-					if ( pProgName )
+					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_DIR_NAME]];
+					bDir = NO;
+					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 					{
-						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:pProgName]];
-						bDir = NO;
-						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
-						{
-							pTempDir = pCachePath;
-							break;
-						}
+						pTempDir = pCachePath;
+						break;
 					}
 				}
 			}
@@ -120,6 +117,20 @@ int java_main( int argc, char **argv )
 		_exit( 1 );
 	}
 
+	// Check if application's directory softlinks have been converted to
+	// regular directories. If they have, the application has been moved or
+	// copied to a file system that does not support softlinks.
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	NSString *pProgramPath = [pBundlePath stringByAppendingPathComponent:@"Contents"];
+	if ( pProgramPath )
+		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
+	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
+	{
+		fprintf( stderr, "%s: application's main bundle path missing program softlink\n", argv[ 0 ] );
+		[pPool release];
+		_exit( 1 );
+	}
+
 	NSString *pCmdPath = nil;
 	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
 	if ( aCmdURL )
@@ -152,19 +163,20 @@ int java_main( int argc, char **argv )
 		if ( i < nLen - 1 )
 			pHomePath = [pHomePath substringToIndex:i + 1];
 		NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomePath];
-		putenv( (char *)[pHomeEnv UTF8String] );
+		putenv( strdup( [pHomeEnv UTF8String] ) );
   	}
 
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
-	// periodically
+	// periodically. Note that sources in sal/osl/unx will use these environment
+	// variables as well.
 	NSString *pTmpDir = GetNSTemporaryDirectory( argv[ 0 ] );
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TEMP=%@", pTmpDir];
-	putenv( (char *)[pTmpEnv UTF8String] );
+	putenv( strdup( [pTmpEnv UTF8String] ) );
 
 	// Unset the CLASSPATH environment variable
 	unsetenv( "CLASSPATH" );
@@ -178,12 +190,11 @@ int java_main( int argc, char **argv )
 		NSString *pPathEnv = [NSString stringWithFormat:@"PATH=%@", pStandardPath];
 		if ( pPath )
 			pPathEnv = [pPathEnv stringByAppendingFormat:@":%@", pPath];
-		putenv( (char *)[pPathEnv UTF8String] );
+		putenv( strdup( [pPathEnv UTF8String] ) );
 	}
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
-	bool bRestart = false;
   	const char *pEnvFrameworkPath = getenv( "DYLD_FRAMEWORK_PATH" );
 	// Always unset DYLD_FRAMEWORK_PATH
 	unsetenv( "DYLD_FRAMEWORK_PATH" );
@@ -193,13 +204,10 @@ int java_main( int argc, char **argv )
   		const char *pEnvFallbackFrameworkPath = getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" );
 		if ( pEnvFallbackFrameworkPath )
 			pFrameworkPathEnv = [pFrameworkPathEnv stringByAppendingFormat:@":%@", [NSString stringWithUTF8String:pEnvFallbackFrameworkPath]];
-		putenv( (char *)[pFrameworkPathEnv UTF8String] );
-		bRestart = true;
+		putenv( strdup( [pFrameworkPathEnv UTF8String] ) );
 	}
 
 	NSString *pStandardLibPath = [NSString stringWithFormat:@"%@/Contents/MacOS:%@/Contents/basis-link/program:%@/Contents/basis-link/ure-link/lib:/usr/lib:/usr/local/lib:", pBundlePath, pBundlePath, pBundlePath];
-  	if ( pEnvHome )
-		pStandardLibPath = [pStandardLibPath stringByAppendingFormat:@"%@/lib:", [NSString stringWithUTF8String:pEnvHome]];
 	const char *pEnvLibPath = getenv( "LD_LIBRARY_PATH" );
 	NSString *pLibPath = ( pEnvLibPath ? [NSString stringWithUTF8String:pEnvLibPath] : nil );
 	const char *pEnvDyLibPath = getenv( "DYLD_LIBRARY_PATH" );
@@ -218,19 +226,7 @@ int java_main( int argc, char **argv )
 			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyLibPath];
 		if ( pDyFallbackLibPath )
 			pDyFallbackLibPathEnv = [pDyFallbackLibPathEnv stringByAppendingFormat:@":%@", pDyFallbackLibPath];
-		putenv( (char *)[pDyFallbackLibPathEnv UTF8String] );
-		bRestart = true;
-	}
-
-	// Restart if necessary since most library path changes don't have any
-	// effect after the application has already started on most platforms
-	if ( bRestart )
-	{
-		// Reexecute the parent process
-		execv( [pCmdPath UTF8String], argv );
-		fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
-		[pPool release];
-		_exit( 1 );
+		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
 	}
 
 	// File locking is enabled by default
@@ -240,14 +236,15 @@ int java_main( int argc, char **argv )
 	NSString *pUnopkgLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libunopkgapp.dylib", pBundlePath];
 	void *pUnopkgLib = dlopen( [pUnopkgLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
 
-	[pPool release];
-
+	int nRet = 0;
 	if ( pUnopkgLib )
 	{
 		UnopkgMain_Type *pUnopkgMain = (UnopkgMain_Type *)dlsym( pUnopkgLib, "unopkg_main" );
 		if ( pUnopkgMain )
-			return pUnopkgMain( argc, argv );
+			nRet = pUnopkgMain( argc, argv );
 	}
 
-	return 0;
+	[pPool release];
+
+	return nRet;
 }
