@@ -43,7 +43,7 @@
 
 typedef int UnopkgMain_Type( int argc, char **argv );
 
-static NSString *GetNSTemporaryDirectory( const char *pProgName )
+static NSString *GetNSTemporaryDirectory()
 {
 	NSString *pTempDir = nil;
 
@@ -170,7 +170,7 @@ int java_main( int argc, char **argv )
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
 	// periodically. Note that sources in sal/osl/unx will use these environment
 	// variables as well.
-	NSString *pTmpDir = GetNSTemporaryDirectory( argv[ 0 ] );
+	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
 	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
