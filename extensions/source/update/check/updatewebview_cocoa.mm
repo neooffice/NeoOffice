@@ -42,10 +42,6 @@
 #include "updatei18n_cocoa.hxx"
 #include "updatewebview_cocoa.h"
 
-#ifndef NSDownloadsDirectory
-#define NSDownloadsDirectory ((NSSearchPathDirectory)15)
-#endif
-
 #define kUpdateMaxInZoomHeight ( kUpdateDefaultBrowserHeight / 2 )
 #define kUpdateBottomViewPadding 2
 #define kUpdateStatusLabelFontHeight 16.0f
@@ -1009,24 +1005,33 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!decodedFilename)
 		decodedFilename = filename;
 
+	NSMutableArray *downloadPaths = [NSMutableArray arrayWithCapacity:10];
 	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSString *basePath = nil;
-	NSArray *downloadPaths = nil;
-
-	// Use NSDownloadsDirectory
-	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-	if (!downloadPaths)
-		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
-
 	if (downloadPaths && fileManager)
 	{
+		// Use NSDownloadsDirectory
+		NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+
+		// Use NSDesktopDirectory
+		paths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+		
+		// Use TMPDIR environment variable
+		const char *env = getenv("TMPDIR");
+		if (env)
+			[downloadPaths addObject:[NSString stringWithUTF8String:env]];
+
  		unsigned int dirCount = [downloadPaths count];
  		unsigned int i = 0;
 		for (; i < dirCount && !basePath; i++)
 		{
 			MacOSBOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
-			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir && [fileManager isWritableFileAtPath:downloadPath])
 			{
 				basePath = downloadPath;
 				break;
@@ -1346,7 +1351,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				@try
 				{
-					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+					NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+					NSArray *pURLs = [NSArray arrayWithObject:[NSURL fileURLWithPath:path]];
+					NSString *pBundleID = [[NSBundle mainBundle] bundleIdentifier];
+					if (pWorkspace && pURLs && pBundleID)
+						[pWorkspace openURLs:pURLs withAppBundleIdentifier:pBundleID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 				}
 				@catch (NSException *pExc)
 				{
@@ -1360,7 +1369,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			{
 				@try
 				{
-					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+					NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+					NSURL *pURL = [NSURL fileURLWithPath:path];
+					if (pWorkspace && pURL)
+						[pWorkspace openURL:pURL];
 				}
 				@catch (NSException *pExc)
 				{

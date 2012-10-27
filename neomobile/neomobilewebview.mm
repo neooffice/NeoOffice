@@ -1069,24 +1069,33 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!decodedFilename)
 		decodedFilename = filename;
 
+	NSMutableArray *downloadPaths = [NSMutableArray arrayWithCapacity:10];
 	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSString *basePath = nil;
-	NSArray *downloadPaths = nil;
-
-	// Use NSDownloadsDirectory
-	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-	if (!downloadPaths)
-		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
-
 	if (downloadPaths && fileManager)
 	{
+		// Use NSDownloadsDirectory
+		NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+
+		// Use NSDesktopDirectory
+		paths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
+		if (paths)
+			[downloadPaths addObjectsFromArray:paths];
+		
+		// Use TMPDIR environment variable
+		const char *env = getenv("TMPDIR");
+		if (env)
+			[downloadPaths addObject:[NSString stringWithUTF8String:env]];
+
  		unsigned int dirCount = [downloadPaths count];
  		unsigned int i = 0;
 		for (; i < dirCount && !basePath; i++)
 		{
 			MacOSBOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
-			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir && [fileManager isWritableFileAtPath:downloadPath])
 			{
 				basePath = downloadPath;
 				break;
