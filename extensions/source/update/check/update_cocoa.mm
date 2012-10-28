@@ -140,7 +140,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 			[pSharedPanel setFrameOrigin:windowPos];
 
 			// Make sure window is visible
-			[pSharedPanel orderFront:self];
+			[pSharedPanel makeKeyAndOrderFront:self];
 
 			[defaults setBool:YES forKey:kUpdateVisiblePref];
 			[defaults synchronize];
