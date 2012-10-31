@@ -41,6 +41,10 @@
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
+@interface NSBundle (VCLBundle)
+- (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
+@end
+
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -48,7 +52,9 @@ void NSApplication_run()
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		[NSBundle loadNibNamed:@"MainMenu" owner:pApp];
+		NSBundle *pBundle = [NSBundle mainBundle];
+		if ( pBundle && [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
+ 			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
 		VCLEventQueue_installVCLEventQueueClasses();
 		[pApp run];
 	}
