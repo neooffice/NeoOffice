@@ -765,6 +765,12 @@ static sal_Bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszD
 		pStr = getenv("HOME");
 #endif
 
+#ifdef USE_JAVA
+		sal_Char name[PATH_MAX];
+		name[0] = '\0';
+		if (!macxp_getNSHomeDirectory(name, sizeof(name)))
+			pStr = name;
+#endif	/* USE_JAVA */
 		if ((pStr != NULL) && (strlen(pStr) > 0) &&
 		    (access(pStr, 0) == 0))
 			strncpy(pszDirectory, pStr, nMax);
