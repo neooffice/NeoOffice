@@ -358,7 +358,7 @@ extern char *strdup(const char *);
 extern "C" {
 #endif
 #ifdef USE_JAVA
-int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
+int macxp_resolveAlias(char *path, unsigned int buflen, sal_Bool noResolveLastElement);
 void macxp_decomposeString(char *pszStr, int buflen);
 sal_Bool macxp_checkCreateDirectory(const char *pszStr);
 sal_Bool macxp_getNSHomeDirectory(char *path, int buflen);

@@ -49,60 +49,29 @@
 #define NO (MacOSBOOL)0
 #endif
 
-static NSString *macxp_resolveAliasImpl(const char *path)
+static NSURL *macxp_resolveAliasImpl(const NSURL *url )
 {
-	NSString *pRet = NULL;
+	NSURL *pRet = nil;
 
-	if ( path && strlen( path ) )
+	if ( url )
 	{
-		NSURL *pURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
-		if ( pURL )
-			pURL = [pURL URLByStandardizingPath];
-		if ( pURL )
-			pURL = [pURL URLByResolvingSymlinksInPath];
-		if ( pURL )
+		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:url error:nil];
+		if ( pData )
 		{
-			NSNumber *bAlias = nil;
-			if ( [pURL getResourceValue:&bAlias forKey:NSURLIsAliasFileKey error:nil] )
+			MacOSBOOL bStale = NO;
+			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+			if ( !bStale && pURL )
 			{
-				if ( bAlias && [bAlias boolValue] )
-				{
-					NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
-					if ( pData )
-					{
-						MacOSBOOL bStale = NO;
-						pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-						if ( pURL )
-						{
- 							if ( bStale )
-								pURL = nil;
-							if ( pURL )
-								pURL = [pURL URLByStandardizingPath];
-							if ( pURL )
-								pURL = [pURL URLByResolvingSymlinksInPath];
-
-							// Recurse to check if the URL is also an alias
-							if ( pURL )
-							{
-								NSString *pPath = [pURL path];
-								if ( pPath )
-								{
-									NSString *pRecursedPath = macxp_resolveAliasImpl( [pPath UTF8String] );
-									if ( pRecursedPath )
-										pURL = [NSURL fileURLWithPath:pRecursedPath];
-										
-								}
-							}
-						}
-					}
-					else
-					{
-						pURL = nil;
-					}
-				}
-
+				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
-					pRet = [pURL path];
+				{
+					// Recurse to check if the URL is also an alias
+					NSURL *pRecursedURL = macxp_resolveAliasImpl( pURL );
+					if ( pRecursedURL )
+						pRet = pRecursedURL;
+					else
+						pRet = pURL;
+				}
 			}
 		}
 	}
@@ -110,126 +79,104 @@ static NSString *macxp_resolveAliasImpl(const char *path)
 	return pRet;
 }
 
-int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
+int macxp_resolveAlias(char *path, unsigned int buflen, sal_Bool noResolveLastElement)
 {
 	int nRet = 0;
 
-	if ( noResolveLastElement )
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSString *pString = [NSString stringWithUTF8String:path];
+	if ( pString )
 	{
-		char *basePath = strrchr( path, '/' );
-		if ( !basePath )
-			return nRet;
-		basePath = strdup( basePath );
-		if ( !basePath )
-			return nRet;
-		path[ strlen( path ) - strlen( basePath ) ] = '\0';
-
-		sal_Bool bModified = sal_False;
-		if ( !macxp_resolveAlias( path, buflen, sal_False ) )
+		NSURL *pURL = [NSURL fileURLWithPath:pString];
+		if ( pURL )
 		{
-			int nLen = strlen( path ) + strlen( basePath );
-			if ( nLen < buflen )
+			pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
 			{
-				strcat( path, basePath );
-				bModified = sal_True;
-			}
-			else
-			{
-				errno = ENAMETOOLONG;
-				nRet = -1;
-			}
-		}
-
-		if ( !bModified )
-			strcat( path, basePath );
-		free( basePath );
-
-		return nRet;
-	}
-
-	// If the path exists and is not an alias, return without changing
-	// anything
-	struct stat aFileStat;
-	if ( !stat( path, &aFileStat ) )
-	{
-		if ( aFileStat.st_mode & S_IFREG )
-		{
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-			NSString *pPath = macxp_resolveAliasImpl( path );
-			if ( pPath )
-			{
-				const char *tmpPath = [pPath UTF8String];
-				int nLen = strlen( tmpPath );
-				if ( nLen < buflen )
-					strcpy( path, tmpPath );
-			}
-
-			[pPool release];
-		}
-
-		return nRet;
-	}
-
-	// Iterate through the directories from the top down and resolve any
-	// aliases that might be encountered
-	const char *unprocessedPath = path;
-	if ( *unprocessedPath == '/' )
-		unprocessedPath++;
-
-	sal_Bool bContinue = sal_True;
-	while ( bContinue && unprocessedPath && *unprocessedPath )
-	{
-		unprocessedPath = strchr( unprocessedPath, '/' );
-		if ( !unprocessedPath )
-			unprocessedPath = "";
-
-		char *basePath = strdup( unprocessedPath );
-		if ( !basePath )
-			return nRet;
-		path[ strlen( path ) - strlen( basePath ) ] = '\0';
-
-		sal_Bool bModified = sal_False;
-		if ( !stat( path, &aFileStat ) )
-		{
-			if ( aFileStat.st_mode & S_IFREG )
-			{
-				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-				NSString *pPath = macxp_resolveAliasImpl( path );
-				if ( pPath )
+				// Find lowest part of path that exists and see if it is an
+				// alias
+				NSURL *pTmpURL = pURL;
+				while ( pTmpURL && ![pTmpURL checkResourceIsReachableAndReturnError:nil] )
 				{
-					const char *tmpPath = [pPath UTF8String];
-					int nLen = strlen( tmpPath ) + strlen( basePath );
-					if ( nLen < buflen )
+					NSURL *pOldTmpURL = pTmpURL;
+					pTmpURL = [pTmpURL URLByDeletingLastPathComponent];
+					if ( pTmpURL )
 					{
-						strcpy( path, tmpPath );
-						strcat( path, basePath );
-						bModified = sal_True;
-					}
-					else
-					{
-						errno = ENAMETOOLONG;
-						nRet = -1;
-						bContinue = sal_False;
+						pTmpURL = [pTmpURL URLByStandardizingPath];
+						if ( pTmpURL && [pTmpURL isEqual:pOldTmpURL] )
+							pTmpURL = nil;
 					}
 				}
 
-				[pPool release];
+				if ( pTmpURL )
+				{
+					// We can skip checking if the URL is an alias if the
+					// original URL exists and the noResolveLastElement
+					// flag is true
+					if ( noResolveLastElement && pTmpURL == pURL )
+					{
+						pURL = nil;
+					}
+					else
+					{
+						NSNumber *pAlias = nil;
+						if ( [pTmpURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && ![pAlias boolValue] )
+							pURL = nil;
+					}
+            	}
+
+				if ( pURL )
+				{
+					// Iterate through path and resolve any aliases
+					NSArray *pPathComponents = [pURL pathComponents];
+					if ( pPathComponents && [pPathComponents count] )
+					{
+						pURL = [NSURL fileURLWithPath:[pPathComponents objectAtIndex:0]];
+						if ( pURL )
+						{
+							NSUInteger nCount = [pPathComponents count];
+							NSUInteger i = 1;
+							for ( ; i < nCount ; i++ )
+							{
+								pURL = [pURL URLByAppendingPathComponent:[pPathComponents objectAtIndex:i]];
+								if ( !pURL || ( noResolveLastElement && i == nCount - 1 ) )
+									break;
+
+								NSNumber *pAlias = nil;
+								if ( [pURL checkResourceIsReachableAndReturnError:nil] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+								{
+									NSURL *pResolvedURL = macxp_resolveAliasImpl( pURL );
+									if ( pResolvedURL )
+										pURL = pResolvedURL;
+								}
+							}
+
+							if ( pURL )
+							{
+								NSString *pURLPath = [pURL path];
+								if ( pURLPath )
+								{
+									const char *pURLPathString = [pURLPath UTF8String];
+									if ( pURLPathString && strlen( pURLPathString ) < buflen )
+									{
+										strcpy( path, pURLPathString );
+									}
+									else
+									{
+										errno = ENAMETOOLONG;
+										nRet = -1;
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
-		else
-		{
-			 bContinue = sal_False;
-		}
-
-		if ( !bModified )
-			strcat( path, basePath );
-		unprocessedPath = path + strlen( path ) - strlen( basePath );
-		if ( *unprocessedPath == '/' )
-			unprocessedPath++;
-		free( basePath );
 	}
+
+	[pPool release];
 
 	return nRet;
 }
@@ -249,22 +196,22 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 		{
 			NSURL *pURL = [NSURL fileURLWithPath:pHomeDir];
 			if ( pURL )
-				pURL = [pURL URLByStandardizingPath];
-			if ( pURL )
-				pURL = [pURL URLByResolvingSymlinksInPath];
-			if ( pURL )
 			{
-				NSString *pHomeDir = [pURL path];
-				if ( pHomeDir )
+				pURL = [pURL URLByStandardizingPath];
+				if ( pURL )
 				{
-					const char *pHomeDirStr = [pHomeDir UTF8String];
-					if ( pHomeDirStr )
+					NSString *pHomeDir = [pURL path];
+					if ( pHomeDir )
 					{
-						int nLen = strlen( pHomeDirStr );
-						if ( nLen < buflen )
+						const char *pHomeDirStr = [pHomeDir UTF8String];
+						if ( pHomeDirStr )
 						{
-							strcpy( path, pHomeDirStr );
-							bRet = sal_True;
+							int nLen = strlen( pHomeDirStr );
+							if ( nLen < buflen )
+							{
+								strcpy( path, pHomeDirStr );
+								bRet = sal_True;
+							}
 						}
 					}
 				}
