@@ -193,23 +193,29 @@ int java_main( int argc, char **argv )
 	}
 
   	// Fix bug 3182 by detecting incorrectly formatted HOME values
-  	const char *pEnvHome = getenv( "HOME" );
-  	if ( pEnvHome )
-  	{
-  		// Make path absolute
-		NSString *pHomePath = [NSString stringWithUTF8String:pEnvHome];
-  		if ( *pEnvHome != '/' )
-			pHomePath = [@"/" stringByAppendingString:pHomePath];
-  		// Trim any trailing '/' characters
-  		unsigned int nLen = [pHomePath length];
-  		unsigned int i = nLen - 1;
-  		while ( i && [pHomePath characterAtIndex:i] == '/' )
-  			i--;
-		if ( i < nLen - 1 )
-			pHomePath = [pHomePath substringToIndex:i + 1];
-		NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomePath];
-		putenv( strdup( [pHomeEnv UTF8String] ) );
-  	}
+	NSString *pHomeDir = NSHomeDirectory();
+	if ( pHomeDir )
+	{
+		NSURL *pURL = [NSURL fileURLWithPath:pHomeDir];
+		if ( pURL )
+		{
+			pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
+			{
+				NSString *pHomeDir = [pURL path];
+				if ( pHomeDir )
+				{
+					NSString *pHomeEnv = [NSString stringWithFormat:@"HOME=%@", pHomeDir];
+					if ( pHomeEnv )
+					{
+						const char *pHomeEnvStr = [pHomeEnv UTF8String];
+						if ( pHomeEnvStr )
+							putenv( strdup( pHomeEnvStr ) );
+					}
+				}
+			}
+		}
+	}
 
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
