@@ -504,6 +504,62 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Plugin;
  		};
+Index: MetadataUtility.m
+===================================================================
+--- MetadataUtility.m	2012-10-03 17:14:25.000000000 -0700
++++ MetadataUtility.m	2012-11-04 10:44:56.000000000 -0800
+@@ -62,6 +62,12 @@
+     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+     
+     [myLock lock];
++    
++    myServerIdentifier = nil;
++    myServerTask = nil;
++    myServerProxy = nil;
++    
++    /*
+     myServerIdentifier = [[[NSProcessInfo processInfo] globallyUniqueString] retain];
+     
+     myServerTask = [[NSTask alloc] init];
+@@ -82,6 +88,7 @@
+     {
+         [myServerProxy setProtocolForProxy:@protocol(MetadataToolProtocol)];
+     }
++    */
+     
+     [myLock unlockWithCondition:1];
+     
+@@ -115,9 +122,18 @@
+ 
+ - (void)dealloc
+ {
+-    [myServerIdentifier release]; myServerIdentifier = nil;
+-    [myServerTask release]; myServerTask = nil;
+-    [myServerProxy release]; myServerProxy = nil;
++	if(myServerIdentifier)
++	{
++	    [myServerIdentifier release]; myServerIdentifier = nil;
++	}
++	if(myServerTask)
++	{
++	    [myServerTask release]; myServerTask = nil;
++	}
++	if(myServerProxy)
++	{
++	    [myServerProxy release]; myServerProxy = nil;
++	}
+     
+     [myLock release]; myLock = nil;
+     
+@@ -248,7 +264,7 @@
+         
+         [self performSelectorOnMainThread:@selector(getMetadataWithArguments:) withObject:arguments waitUntilDone:YES];
+         
+-        NSArray *mediaTypes = [attributes objectForKey:@"kMDItemMediaTypes"];
++        NSArray *mediaTypes = [arguments objectForKey:@"kMDItemMediaTypes"];
+         if ( mediaTypes != nil && [mediaTypes containsObject:@"Sound"] )
+         {
+             return [NSDictionary dictionaryWithDictionary:arguments];
 Index: iMediaBrowser.m
 ===================================================================
 --- iMediaBrowser.m	(revision 677)
