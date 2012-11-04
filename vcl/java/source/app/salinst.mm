@@ -167,9 +167,16 @@ using namespace vos;
 	mpURL = nil;
 	if ( pURL && [pURL isFileURL] )
 	{
-		mpURL = pURL;
-		if ( mpURL )
-			[mpURL retain];
+		pURL = [pURL URLByStandardizingPath];
+		if ( pURL )
+		{
+			pURL = [pURL URLByResolvingSymlinksInPath];
+			if ( pURL )
+			{
+				mpURL = pURL;
+				[mpURL retain];
+			}
+		}
 	}
 
 	return self;
@@ -178,9 +185,11 @@ using namespace vos;
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
 {
 	if ( pURL )
+	{
 		pURL = [pURL URLByStandardizingPath];
-	if ( pURL )
-		pURL = [pURL URLByResolvingSymlinksInPath];
+		if ( pURL )
+			pURL = [pURL URLByResolvingSymlinksInPath];
+	}
 
 	return ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
 }
@@ -196,18 +205,18 @@ using namespace vos;
 	if ( mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
 
+	// Check if URL is a directory otherwise use parent directory
 	NSURL *pURL = mpURL;
-	pURL = [pURL URLByStandardizingPath];
-	if ( pURL )
+	NSNumber *pDir = nil;
+	if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
 	{
-		pURL = [pURL URLByResolvingSymlinksInPath];
+		pURL = [pURL URLByDeletingLastPathComponent];
 		if ( pURL )
 		{
-			// Check if URL is a directory otherwise use parent directory
-			NSNumber *pDir = nil;
-			if ( ![pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] || !pDir || ![pDir boolValue] )
+			pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
 			{
-				pURL = [pURL URLByDeletingLastPathComponent];
+				pURL = [pURL URLByResolvingSymlinksInPath];
 				if ( pURL )
 				{
 					pDir = nil;
@@ -244,28 +253,32 @@ using namespace vos;
 				{
 					pDirURL = [pDirURL URLByStandardizingPath];
 					if ( pDirURL )
-						pDirURL = [pDirURL URLByResolvingSymlinksInPath];
-					if ( pDirURL )
 					{
-						NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-						if ( pData )
+						pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+						if ( pDirURL )
 						{
-							MacOSBOOL bStale = NO;
-							NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-							if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+							NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+							if ( pData )
 							{
-								pResolvedURL = [pResolvedURL URLByStandardizingPath];
-								if ( pResolvedURL )
-									pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-								if ( pResolvedURL )
+								MacOSBOOL bStale = NO;
+								NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+								if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
 								{
-									mpSecurityScopedURL = pResolvedURL;
-									[mpSecurityScopedURL retain];
+									pResolvedURL = [pResolvedURL URLByStandardizingPath];
+									if ( pResolvedURL )
+									{
+										pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+										if ( pResolvedURL )
+										{
+											mpSecurityScopedURL = pResolvedURL;
+											[mpSecurityScopedURL retain];
 
-									NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-									NSString *pKey = [mpSecurityScopedURL absoluteString];
-									if ( pUserDefaults && pKey )
-										[pUserDefaults setObject:pData forKey:pKey];
+											NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+											NSString *pKey = [mpSecurityScopedURL absoluteString];
+											if ( pUserDefaults && pKey )
+												[pUserDefaults setObject:pData forKey:pKey];
+										}
+									}
 								}
 							}
 						}
@@ -289,6 +302,12 @@ using namespace vos;
 @end
 
 // ============================================================================
+
+static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark, sal_Bool bResolveAliasURLs );
+
+static void ReleaseSecurityScopedURL( NSURL *pURL );
+
+// ----------------------------------------------------------------------------
 
 static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rScreenPoint )
 {
@@ -402,6 +421,171 @@ static void InitializeMacOSXVersion()
 	}
 
 	nInitialized = true;
+}
+
+// ----------------------------------------------------------------------------
+
+static NSURL *ResolveAliasURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark )
+{
+	NSURL *pRet = nil;
+
+	if ( pURL )
+	{
+		NSURL *pSecurityScopedURL = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, sal_False );
+		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
+		if ( pData )
+		{
+			MacOSBOOL bStale = NO;
+			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+			if ( !bStale && pURL )
+			{
+				pURL = [pURL URLByStandardizingPath];
+				if ( pURL )
+				{
+					pURL = [pURL URLByResolvingSymlinksInPath];
+					if ( pURL )
+					{
+						// Recurse to check if the URL is also an alias
+						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark );
+						if ( pRecursedURL )
+							pRet = pRecursedURL;
+						else
+							pRet = pURL;
+					}
+				}
+			}
+		}
+
+		if ( pSecurityScopedURL )
+			ReleaseSecurityScopedURL( pSecurityScopedURL );
+	}
+
+	return pRet;
+}
+
+// ----------------------------------------------------------------------------
+
+static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark, sal_Bool bResolveAliasURLs )
+{
+	NSURL *pRet = nil;
+
+	if ( pURL && [pURL isFileURL] )
+	{
+		// Iterate through path and resolve any aliases
+		NSArray *pPathComponents = [pURL pathComponents];
+		if ( pPathComponents && [pPathComponents count] )
+		{
+			pURL = [NSURL fileURLWithPath:[pPathComponents objectAtIndex:0]];
+			if ( pURL )
+			{
+				NSUInteger nCount = [pPathComponents count];
+				NSUInteger i = 1;
+				for ( ; i < nCount ; i++ )
+				{
+					pURL = [pURL URLByAppendingPathComponent:[pPathComponents objectAtIndex:i]];
+					if ( pURL )
+						pURL = [pURL URLByResolvingSymlinksInPath];
+
+					// If the path does not exist, use partial URL
+					if ( !pURL || ![pURL checkResourceIsReachableAndReturnError:nil] )
+						break;
+
+					if ( bResolveAliasURLs )
+					{
+						NSNumber *pAlias = nil;
+						if ( [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+						{
+							NSURL *pResolvedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark );
+							if ( pResolvedURL )
+								pURL = pResolvedURL;
+						}
+					}
+				}
+
+				if ( pURL )
+				{
+					// Check if there are any cached security scoped bookmarks
+					// for this URL or any of its parent folders
+					MacOSBOOL bShowOpenPanel = YES;
+					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+					NSURL *pTmpURL = pURL;
+					while ( pUserDefaults && pTmpURL && !pRet )
+					{
+						NSString *pKey = [pTmpURL absoluteString];
+						if ( pKey )
+						{
+							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
+							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
+							{
+								MacOSBOOL bStale = NO;
+								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+								if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
+								{
+									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
+										pRet = pSecurityScopedURL;
+
+									bShowOpenPanel = NO;
+									break;
+								}
+							}
+						}
+
+						NSURL *pOldTmpURL = pTmpURL;
+						pTmpURL = [pTmpURL URLByDeletingLastPathComponent];
+						if ( pTmpURL )
+						{
+							pTmpURL = [pTmpURL URLByStandardizingPath];
+							if ( pTmpURL )
+							{
+								pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
+								if ( pTmpURL && [pTmpURL isEqual:pOldTmpURL] )
+									pTmpURL = nil;
+							}
+						}
+					}
+
+					if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark )
+					{
+						if ( !pNSURLIsReadableKey )
+							pNSURLIsReadableKey = (NSURLIsReadableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsReadableKey" );
+						if ( !pNSURLIsWritableKey )
+							pNSURLIsWritableKey = (NSURLIsWritableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsWritableKey" );
+						if ( pNSURLIsReadableKey && pNSURLIsWritableKey && *pNSURLIsReadableKey && *pNSURLIsWritableKey )
+						{
+							NSNumber *pReadable = nil;
+							NSNumber *pWritable = nil;
+							if ( ( [pURL getResourceValue:&pReadable forKey:*pNSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:*pNSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
+								bShowOpenPanel = NO;
+						}
+					}
+
+					if ( bShowOpenPanel && !pRet )
+					{
+						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL];
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+							pRet = pSecurityScopedURL;
+					}
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
+// ----------------------------------------------------------------------------
+
+static void ReleaseSecurityScopedURL( NSURL *pURL )
+{
+	if ( pURL )
+	{
+		if ( [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
+			[pURL stopAccessingSecurityScopedResource];
+		[pURL release];
+	}
 }
 
 // ============================================================================
@@ -644,91 +828,16 @@ extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( con
 		{
 			NSURL *pURL = [NSURL fileURLWithPath:pString];
 			if ( pURL )
+			{
 				pURL = [pURL URLByStandardizingPath];
-			if ( pURL )
-				pURL = [pURL URLByResolvingSymlinksInPath];
-
-			// Find lowest part of path that exists
-			while ( pURL && ![pURL checkResourceIsReachableAndReturnError:nil] )
-			{
-				NSURL *pParentURL = [pURL URLByDeletingLastPathComponent];
-				if ( pParentURL )
-					pParentURL = [pParentURL URLByStandardizingPath];
-				if ( pParentURL )
-					pParentURL = [pParentURL URLByResolvingSymlinksInPath];
-				if ( pParentURL && ![pParentURL isEqual:pURL] )
-					pURL = pParentURL;
-				else
-					pURL = nil;
-			}
-
-			if ( pURL )
-			{
-				// Check if there are any cached security scoped bookmarks for
-				// this URL or any of its parent folders
-				MacOSBOOL bShowOpenPanel = YES;
-				NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-				NSURL *pTmpURL = pURL;
-				while ( pUserDefaults && pTmpURL && !pRet )
+				if ( pURL )
 				{
-					NSString *pKey = [pTmpURL absoluteString];
-					if ( pKey )
+					pURL = [pURL URLByResolvingSymlinksInPath];
+					if ( pURL )
 					{
-						NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
-						if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
-						{
-							MacOSBOOL bStale = NO;
-							NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-							if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
-							{
-								if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
-								{
-									pRet = pSecurityScopedURL;
-									[pRet retain];
-								}
-
-								bShowOpenPanel = NO;
-								break;
-							}
-						}
-					}
-
-					NSURL *pTmpParentURL = [pTmpURL URLByDeletingLastPathComponent];
-					if ( pTmpParentURL )
-						pTmpParentURL = [pTmpParentURL URLByStandardizingPath];
-					if ( pTmpParentURL )
-						pTmpParentURL = [pTmpParentURL URLByResolvingSymlinksInPath];
-					if ( pTmpParentURL && ![pTmpParentURL isEqual:pTmpURL] )
-						pTmpURL = pTmpParentURL;
-					else
-						pTmpURL = nil;
-				}
-
-				if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark )
-				{
-					if ( !pNSURLIsReadableKey )
-						pNSURLIsReadableKey = (NSURLIsReadableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsReadableKey" );
-					if ( !pNSURLIsWritableKey )
-						pNSURLIsWritableKey = (NSURLIsWritableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsWritableKey" );
-					if ( pNSURLIsReadableKey && pNSURLIsWritableKey && *pNSURLIsReadableKey && *pNSURLIsWritableKey )
-					{
-						NSNumber *pReadable = nil;
-						NSNumber *pWritable = nil;
-						if ( ( [pURL getResourceValue:&pReadable forKey:*pNSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:*pNSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
-							bShowOpenPanel = NO;
-					}
-				}
-
-				if ( bShowOpenPanel && !pRet )
-				{
-					VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL];
-					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-					[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-					NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-					if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
-					{
-						pRet = pSecurityScopedURL;
-						[pRet retain];
+						pRet = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, sal_True );
+						if ( pRet )
+							[pRet retain];
 					}
 				}
 			}
@@ -748,9 +857,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( NSURL
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		if ( [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
-			[pURL stopAccessingSecurityScopedResource];
-		[pURL release];
+		ReleaseSecurityScopedURL( pURL );
 
 		[pPool release];
 	}
