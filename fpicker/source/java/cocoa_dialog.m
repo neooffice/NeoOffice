@@ -144,7 +144,6 @@ static NSString *pBlankItem = @" ";
 - (NSSavePanel *)panel;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
 - (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
-- (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (void *)picker;
 - (void)release:(id)pObject;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
@@ -724,25 +723,15 @@ static NSString *pBlankItem = @" ";
 
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
 {
-	if ( !pURL )
-		return;
-
-	if ( ![pURL isFileURL] )
-		pURL = [pURL filePathURL];
-
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user. Note that we only do this if the file URL is
 	// different than the panel's directory URL or else on Mac OS X 10.7 the
 	// file list will go into a infinite repainting loop.
 	if ( pURL && [pURL isFileURL] )
 	{
-		NSString *pPath = [pURL absoluteString];
-		if ( pPath )
-		{
-			NSURL *pCurrentURL = [mpFilePanel directoryURL];
-			if ( !pCurrentURL || ![pPath isEqualToString:[pCurrentURL absoluteString]] )
-				[mpFilePanel setDirectoryURL:pURL];
-		}
+		NSURL *pCurrentURL = [mpFilePanel directoryURL];
+		if ( !pCurrentURL || ![pURL isEqual:pCurrentURL] )
+			[mpFilePanel setDirectoryURL:pURL];
 	}
 }
 
@@ -750,83 +739,76 @@ static NSString *pBlankItem = @" ";
 {
 	BOOL bRet = NO;
 
-	if ( ![pURL isFileURL] )
-		pURL = [pURL filePathURL];
-
-	if ( pURL && [pURL isFileURL] )
-		bRet = [self panel:pObject shouldShowFilename:[pURL path]];
-	else
-		bRet = YES;
-
-	return bRet;
-}
-
-- (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
-{
-	BOOL bRet = NO;
-
 	// Fix bug 1622 by checking for nil argument
-	if ( !pFilename )
+	if ( !pURL )
 		return bRet;
 
-	CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, (CFStringRef)pFilename, kCFURLPOSIXPathStyle, NO );
-	if ( aURL )
+	if ( [pURL isFileURL] )
 	{
-		FSRef aFSRef;
-		if ( CFURLGetFSRef( aURL, &aFSRef ) )
+		NSNumber *pAlias = nil;
+		while ( pURL && [pURL checkResourceIsReachableAndReturnError:nil] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
 		{
-			Boolean bFolder;
-			Boolean bAliased;
-			if ( FSResolveAliasFileWithMountFlags( &aFSRef, YES, &bFolder, &bAliased, kResolveAliasFileNoUI ) == noErr )
+			// Resolve alias
+			NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
+			if ( pData )
 			{
-				if ( bFolder )
+				BOOL bStale = NO;
+				NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+				if ( !bStale && pResolvedURL )
+					pURL = pResolvedURL;
+			}
+		}
+
+		if ( pURL && [pURL isFileURL] )
+		{
+			NSNumber *pDir = nil;
+			if ( [pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] && pDir && [pDir boolValue] )
+			{
+				bRet = YES;
+			}
+			else if ( mbChooseFiles )
+			{
+				NSString *pResolvedPath = [pURL path];
+				if ( pResolvedPath )
 				{
-					bRet = YES;
-				}
-				else if ( mbChooseFiles )
-				{
-					CFURLRef aResolvedURL = CFURLCreateFromFSRef( NULL, &aFSRef );
-					if ( aResolvedURL )
+					NSString *pItem = [self selectedFilter:nil];
+					if ( pItem )
 					{
-						NSString *pResolvedPath = (NSString *)CFURLCopyFileSystemPath( aResolvedURL, kCFURLPOSIXPathStyle );
-						if ( pResolvedPath )
+						NSArray *pArray = (NSArray *)[mpFilters objectForKey:pItem];
+						if ( pArray )
 						{
-							NSString *pItem = [self selectedFilter:nil];
-							if ( pItem )
+							NSString *pExt = [pResolvedPath pathExtension];
+							if ( pExt )
 							{
-								NSArray *pArray = (NSArray *)[mpFilters objectForKey:pItem];
-								if ( pArray )
+								int nCount = [pArray count];
+								int i = 0;
+								for ( ; i < nCount; i++ )
 								{
-									NSString *pExt = (NSString *)[pResolvedPath pathExtension];
-									if ( pExt )
+									NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
+									if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType caseInsensitiveCompare:pExt] == NSOrderedSame ) )
 									{
-										int nCount = [pArray count];
-										int i = 0;
-										for ( ; i < nCount; i++ )
-										{
-											NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
-											if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType caseInsensitiveCompare:pExt] == NSOrderedSame ) )
-											{
-												bRet = YES;
-												break;
-											}
-										}
+										bRet = YES;
+										break;
 									}
 								}
-								else
-								{
-									bRet = YES;
-								}
-							}
-							else
-							{
-								bRet = YES;
 							}
 						}
+						else
+						{
+							bRet = YES;
+						}
+					}
+					else
+					{
+						bRet = YES;
 					}
 				}
 			}
 		}
+	}
+	else
+	{
+		bRet = YES;
 	}
 
 	return bRet;
@@ -987,9 +969,6 @@ static NSString *pBlankItem = @" ";
 	NSURL *pURL = [NSURL URLWithString:pDirectory];
 	if ( !pURL )
 		return;
-
-	if ( ![pURL isFileURL] )
-		pURL = [pURL filePathURL];
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user
