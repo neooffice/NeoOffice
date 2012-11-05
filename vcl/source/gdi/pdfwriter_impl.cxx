@@ -12567,17 +12567,9 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-#ifdef USE_CORETEXT_TEXT_RENDERING
         CGFontRef aFont = NULL;
         if ( it->first )
             aFont = CTFontCopyGraphicsFont( (CTFontRef)it->first, NULL );
-#else	// USE_CORETEXT_TEXT_RENDERING
-        ATSFontRef aATSFont = SalATSLayout::GetATSFontRefFromNativeFont( it->first );
-        if ( !aATSFont )
-            continue;
-
-        CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
         if ( !aFont )
             continue;
 

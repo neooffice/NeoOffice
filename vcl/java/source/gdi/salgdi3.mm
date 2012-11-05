@@ -150,13 +150,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFont *pNSFont = [pFonts objectAtIndex:i];
 						if ( !pNSFont )
 							continue;
-#ifdef USE_CORETEXT_TEXT_RENDERING
 						CTFontRef aFont = (CTFontRef)pNSFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-						ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
-						if ( !aFont )
-							continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 						// Get font attributes
 						FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
@@ -164,14 +158,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 						FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
 						CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
-#else	// USE_CORETEXT_TEXT_RENDERING
-						CFStringRef aPSString;
-						if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
-							continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
 						OUString aPSName;
 						if ( aPSString )
 						{
@@ -188,11 +175,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							continue;
 
 						// Get the font family name
-#ifdef USE_CORETEXT_TEXT_RENDERING
 						CFStringRef aFamilyString = CTFontCopyFamilyName( aFont );
-#else	// USE_CORETEXT_TEXT_RENDERING
-						CFStringRef aFamilyString = NSFont_familyName( pNSFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 						if ( !aFamilyString )
 							continue;
 
@@ -209,23 +192,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
 							continue;
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
 						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 
 						CFStringRef aDisplayString = CTFontCopyFullName( aFont );
 						if ( !aDisplayString )
 							continue;
-#else	// USE_CORETEXT_TEXT_RENDERING
-						sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-						if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
-							continue;
-
-						// Get the ATS font name as the Cocoa name on some
-						// Mac OS X versions adds extraneous words
-						CFStringRef aDisplayString;
-						if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
-							continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 						CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
 						CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
@@ -331,20 +302,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFont *pNSFont = [pFonts objectAtIndex:i];
 						if ( !pNSFont )
 							continue;
-#ifdef USE_CORETEXT_TEXT_RENDERING
 						CTFontRef aFont = (CTFontRef)pNSFont;
 						sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 						if ( !nNativeFont )
 							continue;
-#else	// USE_CORETEXT_TEXT_RENDERING
-						ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
-						if ( !aFont )
-							continue;
-
-						sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-						if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
-							continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 						::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
 						if ( nfit == pSalData->maNativeFontMapping.end() )
@@ -357,13 +318,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFont *pBoldFont = NSFont_findFontWithStyle( pNSFont, TRUE, FALSE );
 						if ( pBoldFont )
 						{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 							CTFontRef aBoldFont = (CTFontRef)pBoldFont;
 							sal_IntPtr nBoldNativeFont = (sal_IntPtr)aBoldFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							ATSFontRef aBoldFont = NSFont_getATSFontRef( pBoldFont );
-							sal_IntPtr nBoldNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 							if ( nBoldNativeFont && nBoldNativeFont != nNativeFont )
 							{
 								nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
@@ -382,13 +338,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFont *pItalicFont = NSFont_findFontWithStyle( pNSFont, FALSE, TRUE );
 						if ( pItalicFont )
 						{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 							CTFontRef aItalicFont = (CTFontRef)pItalicFont;
 							sal_IntPtr nItalicNativeFont = (sal_IntPtr)aItalicFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							ATSFontRef aItalicFont = NSFont_getATSFontRef( pItalicFont );
-							sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 							if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
 							{
 								nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
@@ -407,13 +358,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFont *pBoldItalicFont = NSFont_findFontWithStyle( pNSFont, TRUE, TRUE );
 						if ( pBoldItalicFont )
 						{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 							CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
 							sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)aBoldItalicFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							ATSFontRef aBoldItalicFont = NSFont_getATSFontRef( pBoldItalicFont );
-							sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 							if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
 							{
 								nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
@@ -439,9 +385,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			if ( !aFontNotification )
 				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
-			SalATSLayout::SetFontFallbacks();
-#endif	// !USE_CORETEXT_TEXT_RENDERING
 			OutputDevice::ImplUpdateAllFontData( true );
 
 			rSolarMutex.release();
@@ -503,7 +446,6 @@ void JavaImplFontData::ClearNativeFonts()
 {
 	JavaImplFontData::maBadNativeFontIDMap.clear();
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	for ( ::std::map< JavaImplFontData*, JavaImplFontData* >::const_iterator it = JavaImplFontData::maInstancesMap.begin(); it != JavaImplFontData::maInstancesMap.end(); ++it )
 	{
 		if ( it->second->mnNativeFontID )
@@ -512,7 +454,6 @@ void JavaImplFontData::ClearNativeFonts()
 			it->second->mnNativeFontID = 0;
 		}
 	}
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // -----------------------------------------------------------------------
@@ -574,12 +515,10 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCall
 
 JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
 
 	JavaImplFontData::maInstancesMap[ this ] = this;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
 	// as zero. The single size zero causes higher-level font elements to treat
@@ -592,14 +531,12 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 
 JavaImplFontData::~JavaImplFontData()
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	::std::map< JavaImplFontData*, JavaImplFontData* >::iterator it = JavaImplFontData::maInstancesMap.find( this );
 	if ( it != JavaImplFontData::maInstancesMap.end() )
 		JavaImplFontData::maInstancesMap.erase( it );
 
 	if ( mnNativeFontID )
 		CFRelease( (CTFontRef)mnNativeFontID );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	while ( maChildren.size() )
 	{
@@ -849,7 +786,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	{
 		if ( pMetric->mnWidth )
 		{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFontData->mnNativeFontID, pMetric->mnWidth, NULL, NULL );
 			if ( aFont )
 			{
@@ -865,22 +801,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 
 				CFRelease( aFont );
 			}
-#else	// USE_CORETEXT_TEXT_RENDERING
-			ATSFontMetrics aFontMetrics;
-			ATSFontRef aFont = SalATSLayout::GetATSFontRefFromNativeFont( mpFontData->mnNativeFontID );
-			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-			{
-				// Mac OS X seems to overstate the leading for some fonts
-				// (usually CJK fonts like Hiragino) so fix fix bugs 2827 and
-				// 2847 by adding combining the leading with descent
-				pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
-				// Fix bug 2881 by handling cases where font does not have
-				// negative descent
-				pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
-				if ( pMetric->mnDescent < 0 )
-					pMetric->mnDescent = 0;
-			}
-#endif	// USE_CORETEXT_TEXT_RENDERING
 			else
 			{
 				// Fix bug 3446 by treating a font that don't have horizontal
@@ -979,13 +899,7 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 
 	if ( pFont )
 	{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 		SalATSLayout::GetGlyphBounds( nIndex, pFont, rRect );
-#else	// USE_CORETEXT_TEXT_RENDERING
-#ifdef DEBUG
-		fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
-#endif
-#endif	// USE_CORETEXT_TEXT_RENDERING
 		rRect.Justify();
 	}
 

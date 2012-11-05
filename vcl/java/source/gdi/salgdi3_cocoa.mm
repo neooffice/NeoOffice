@@ -39,57 +39,6 @@
 
 #include "salgdi3_cocoa.h"
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
-
-@interface NSFont (ATSFontRef)
-- (ATSFontRef)_atsFontID;
-@end
-
-ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont )
-{
-	ATSFontRef aRet = (ATSFontRef)nil;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pNSFont )
-	{
-		if ( [pNSFont respondsToSelector:@selector(_atsFontID)] )
-		{
-			aRet = [pNSFont _atsFontID];
-			if ( aRet )
-			{
-				FSRef aFile;
-				if ( ATSFontGetFileReference( aRet, &aFile ) != noErr )
-					aRet = (ATSFontRef)nil;
-			}
-		}
-	}
-
-	[pPool release];
-
-	return aRet;
-}
-
-CFStringRef NSFont_familyName( NSFont *pNSFont )
-{
-	CFStringRef aRet = nil;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pNSFont )
-	{
-		NSString *pFamilyName = [pNSFont familyName];
-		if ( pFamilyName )
-			aRet = CFStringCreateCopy( NULL, (CFStringRef)pFamilyName );
-	}
-
-	[pPool release];
-
-	return aRet;
-}
-
-#endif	// !USE_CORETEXT_TEXT_RENDERING
-
 NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic )
 {
 	NSFont *pRet = nil;

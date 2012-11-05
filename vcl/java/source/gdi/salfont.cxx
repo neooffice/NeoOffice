@@ -47,7 +47,6 @@ using namespace rtl;
 
 void JavaImplFont::clearNativeFonts()
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	for ( ::std::map< JavaImplFont*, JavaImplFont* >::const_iterator vfit = JavaImplFont::maInstancesMap.begin(); vfit != JavaImplFont::maInstancesMap.end(); ++vfit )
 	{
 		if ( vfit->second->mnNativeFont )
@@ -59,42 +58,35 @@ void JavaImplFont::clearNativeFonts()
 	}
 
 	GetSalData()->maJavaNativeFontMapping.clear();
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
 
 JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : maPSName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	JavaImplFont::maInstancesMap[ this ] = this;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
 
 JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : maPSName( pFont->maPSName ), mnNativeFont( pFont->mnNativeFont ), mnOrientation( pFont->mnOrientation ), mfScaleX( pFont->mfScaleX ), mfSize( pFont->mfSize ), mbAntialiased( pFont->mbAntialiased ), mbVertical( pFont->mbVertical ), mbNativeFontOwner( sal_True )
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFont )
 		CFRetain( (CTFontRef)mnNativeFont );
 
 	JavaImplFont::maInstancesMap[ this ] = this;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
 
 JavaImplFont::~JavaImplFont()
 {
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	::std::map< JavaImplFont*, JavaImplFont* >::iterator it = JavaImplFont::maInstancesMap.find( this );
 	if ( it != JavaImplFont::maInstancesMap.end() )
 		JavaImplFont::maInstancesMap.erase( it );
 
 	if ( mnNativeFont && mbNativeFontOwner )
 		CFRelease( (CTFontRef)mnNativeFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
@@ -121,7 +113,6 @@ sal_IntPtr JavaImplFont::getNativeFont()
 				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
 				if ( aString )
 				{
-#ifdef USE_CORETEXT_TEXT_RENDERING
 					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
 					if ( aFont )
 					{
@@ -132,14 +123,6 @@ sal_IntPtr JavaImplFont::getNativeFont()
 						mnNativeFont = (sal_IntPtr)aFont;
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
-#else	// USE_CORETEXT_TEXT_RENDERING
-					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
-					if ( aFont )
-					{
-						mnNativeFont = (int)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-					}
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 					CFRelease( aString );
 				}
@@ -150,13 +133,11 @@ sal_IntPtr JavaImplFont::getNativeFont()
 			mnNativeFont = it->second;
 		}
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
 		// Fix bug 3653 by always retaining any native font as even when
 		// CTFontCreateWithName() is called, the returned font will be
 		// released if Mac OS X removes or disables the underlying font
 		if ( mnNativeFont )
 			CFRetain( (CTFontRef)mnNativeFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 
 	return mnNativeFont;

@@ -41,10 +41,6 @@
 
 #include <vcl/sallayout.hxx>
 
-// Comment out the following line to use the older ATSUI-based text rendering
-// APIs
-#define USE_CORETEXT_TEXT_RENDERING
-
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
@@ -75,13 +71,7 @@ class SalATSLayout : public GenericSalLayout
 	float				mfGlyphScaleX;
 
 public:
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectangle &rRect );
-#else	// USE_CORETEXT_TEXT_RENDERING
-	static ATSFontRef	GetATSFontRefFromNativeFont( sal_IntPtr nFont );
-	static sal_IntPtr	GetNativeFontFromATSFontRef( ATSFontRef aFont );
-	static void			SetFontFallbacks();
-#endif	// USE_CORETEXT_TEXT_RENDERING
 	static void			ClearLayoutDataCache();
 
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
