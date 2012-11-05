@@ -196,7 +196,7 @@ using namespace vos;
 
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
 {
-	if ( mpURL && mpOpenPanel )
+	if ( mpURL && mpOpenPanel && ( !pURL || ![pURL isEqual:mpURL] ) )
 		[mpOpenPanel setDirectoryURL:mpURL];
 }
 
@@ -242,41 +242,47 @@ using namespace vos;
 		mpOpenPanel = [NSOpenPanel openPanel];
 		if ( mpOpenPanel )
 		{
+			[mpOpenPanel setAllowsMultipleSelection:NO];
 			[mpOpenPanel setDirectoryURL:mpURL];
 			[mpOpenPanel setCanChooseDirectories:YES];
 			[mpOpenPanel setCanChooseFiles:NO];
 			[mpOpenPanel setDelegate:self];
 			if ( [mpOpenPanel runModal] == NSFileHandlingPanelOKButton )
 			{
-				NSURL *pDirURL = [mpOpenPanel directoryURL];
-				if ( pDirURL && [pDirURL isFileURL] )
+				NSArray *pURLs = [mpOpenPanel URLs];
+				if ( pURLs && [pURLs count] )
 				{
-					pDirURL = [pDirURL URLByStandardizingPath];
-					if ( pDirURL )
+					// There should only be one selected URL
+					NSURL *pDirURL = [pURLs objectAtIndex:0];
+					if ( pDirURL && [pDirURL isFileURL] )
 					{
-						pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+						pDirURL = [pDirURL URLByStandardizingPath];
 						if ( pDirURL )
 						{
-							NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-							if ( pData )
+							pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+							if ( pDirURL )
 							{
-								MacOSBOOL bStale = NO;
-								NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-								if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+								if ( pData )
 								{
-									pResolvedURL = [pResolvedURL URLByStandardizingPath];
-									if ( pResolvedURL )
+									MacOSBOOL bStale = NO;
+									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
 									{
-										pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+										pResolvedURL = [pResolvedURL URLByStandardizingPath];
 										if ( pResolvedURL )
 										{
-											mpSecurityScopedURL = pResolvedURL;
-											[mpSecurityScopedURL retain];
+											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+											if ( pResolvedURL )
+											{
+												mpSecurityScopedURL = pResolvedURL;
+												[mpSecurityScopedURL retain];
 
-											NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-											NSString *pKey = [mpSecurityScopedURL absoluteString];
-											if ( pUserDefaults && pKey )
-												[pUserDefaults setObject:pData forKey:pKey];
+												NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+												NSString *pKey = [mpSecurityScopedURL absoluteString];
+												if ( pUserDefaults && pKey )
+													[pUserDefaults setObject:pData forKey:pKey];
+											}
 										}
 									}
 								}
