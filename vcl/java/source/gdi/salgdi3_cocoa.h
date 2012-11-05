@@ -38,10 +38,6 @@
 
 #include <salgdi.h>
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
-SAL_DLLPRIVATE ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont );
-SAL_DLLPRIVATE CFStringRef NSFont_familyName( NSFont *pNSFont );
-#endif	// !USE_CORETEXT_TEXT_RENDERING
 SAL_DLLPRIVATE NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic );
 SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
 SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
