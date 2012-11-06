@@ -104,12 +104,8 @@
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
-// Need to include for SetSystemUIMode constants but we don't link to it
-#include <Carbon/Carbon.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
-
-typedef EventLoopRef GetMainEventLoop_Type();
 
 using namespace utl;
 
@@ -299,19 +295,10 @@ BOOL SVMain()
 
 #if defined USE_JAVA && defined MACOSX
     // Attempt to fix haxie bugs that cause bug 2912 by calling
-    // GetMainEventLoop() in the main thread before we have created a
+    // CFRunLoopGetMain() in the main thread before we have created a
     // secondary thread
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		GetMainEventLoop_Type *pGetMainEventLoop = (GetMainEventLoop_Type *)dlsym( pLib, "GetMainEventLoop" );
-		if ( pGetMainEventLoop )
-			pGetMainEventLoop();
-
-		dlclose( pLib );
-	}
-
-    if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+    CFRunLoopRef aMainRunLoop = CFRunLoopGetMain();
+    if ( CFRunLoopGetCurrent() == aMainRunLoop )
     {
         // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
         // Leopard by loading the fonts before Java is ever loaded.
