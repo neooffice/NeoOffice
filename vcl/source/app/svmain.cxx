@@ -122,12 +122,10 @@ using namespace ::com::sun::star::lang;
 
 #if defined USE_JAVA && defined MACOSX
 
-static BOOL ImplLoadNativeFont( OUString aPath )
+static void ImplLoadNativeFont( OUString aPath )
 {
-	BOOL bRet = FALSE;
-
 	if ( !aPath.getLength() )
-		return bRet;
+		return;
 
 	oslDirectory aDir = NULL;
 	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
@@ -138,10 +136,7 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 			oslFileStatus aStatus;
 			memset( &aStatus, 0, sizeof( oslFileStatus ) );
 			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
-			{
-				if ( ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) ) )
-					bRet = TRUE;
-			}
+				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
 		}
 		if ( aDirItem )
 			osl_releaseDirectoryItem( aDirItem );
@@ -151,21 +146,25 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 		OUString aSysPath;
 		if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
 		{
-			FSRef aFontPath;
-			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
-			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr )
+			CFStringRef aString = CFStringCreateWithCharacters( NULL, aSysPath.getStr(), aSysPath.getLength() );
+			if ( aString )
 			{
-				if ( ATSFontActivateFromFileReference( &aFontPath, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL ) == noErr )
-					bRet = TRUE;
+				CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+				if ( aURL )
+				{
+					CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeUser, NULL );
 
-				// Loading our private fonts is a bit flaky so try loading
-				// using the local context just to be safe
-				ATSFontActivateFromFileReference( &aFontPath, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL );
+					// Loading our private fonts is a bit flaky so try loading
+					// using the process context just to be safe
+					CTFontManagerRegisterFontsForURL( aURL, kCTFontManagerScopeProcess, NULL );
+
+					CFRelease( aURL );
+				}
+
+				CFRelease( aString );
 			}
 		}
 	}
-
-	return bRet;
 }
 
 #endif	// USE_JAVA && MACOSX
@@ -316,15 +315,13 @@ BOOL SVMain()
     {
         // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
         // Leopard by loading the fonts before Java is ever loaded.
-		BOOL bNotify = FALSE;
         OUString aUserPath;
         if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
         {
             if ( aUserPath.getLength() )
             {
                 aUserPath += OUString::createFromAscii( "/user/fonts" );
-                if ( ImplLoadNativeFont( aUserPath ) )
-					bNotify = TRUE;
+                ImplLoadNativeFont( aUserPath );
             }
         }
 
@@ -335,13 +332,9 @@ BOOL SVMain()
             if ( aBasePath.getLength() )
             {
                 aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
-                if ( ImplLoadNativeFont( aBasePath ) )
-					bNotify = TRUE;
+                ImplLoadNativeFont( aBasePath );
             }
         }
-
-		if ( bNotify )
-			ATSFontNotify( kATSFontNotifyActionFontsChanged, NULL );
     }
 #endif	// USE_JAVA && MACOSX
 
