@@ -50,9 +50,9 @@
 
 #include "salgdi3_cocoa.h"
 
-static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData );
+static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo );
 
-static ATSFontNotificationRef aFontNotification = NULL;
+static bool bFontListChangedObserverAdded = false;
 static bool bNativeFontsLoaded = false;
 
 using namespace basegfx;
@@ -75,14 +75,14 @@ using namespace vos;
 
 - (void)loadNativeFonts:(id)pObject
 {
-	ImplFontListChangedCallback( NULL, NULL );
+	ImplFontListChangedCallback( NULL, NULL, kCTFontManagerRegisteredFontsChangedNotification, NULL, NULL );
 }
 
 @end
 
 // ============================================================================
 
-static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
+static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo )
 {
 	static bool bInLoad = false;
 
@@ -382,8 +382,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			}
 
 			// Fix bug 3095 by handling font change notifications
-			if ( !aFontNotification )
-				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
+			if ( !bFontListChangedObserverAdded )
+			{
+				CFNotificationCenterAddObserver( CFNotificationCenterGetLocalCenter(), NULL, ImplFontListChangedCallback, kCTFontManagerRegisteredFontsChangedNotification, NULL, CFNotificationSuspensionBehaviorDeliverImmediately );
+				bFontListChangedObserverAdded = true;
+			}
 
 			OutputDevice::ImplUpdateAllFontData( true );
 
