@@ -53,6 +53,14 @@
 // Comment out the following line to disable native resume support
 #define USE_NATIVE_RESUME
 
+#ifndef NSURLBookmarkCreationWithSecurityScope
+#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
+#endif	// !NSURLBookmarkCreationWithSecurityScope
+
+#ifndef NSURLBookmarkResolutionWithSecurityScope
+#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
+#endif	// !NSURLBookmarkResolutionWithSecurityScope
+
 typedef void KeyScript_Type( short nCode );
 
 struct ImplPendingOpenPrintFileRequest
@@ -189,6 +197,42 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
+static void CacheSecurityScopedURL( const NSURL *pURL )
+{
+	if ( pURL && [pURL isFileURL] )
+	{
+		pURL = [pURL URLByStandardizingPath];
+		if ( pURL )
+		{
+			pURL = [pURL URLByResolvingSymlinksInPath];
+			if ( pURL )
+			{
+				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+				if ( pData )
+				{
+					MacOSBOOL bStale = NO;
+					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+					if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+					{
+						pResolvedURL = [pResolvedURL URLByStandardizingPath];
+						if ( pResolvedURL )
+						{
+							pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+							if ( pResolvedURL )
+							{
+								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+								NSString *pKey = [pResolvedURL absoluteString];
+								if ( pUserDefaults && pKey )
+									[pUserDefaults setObject:pData forKey:pKey];
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
@@ -318,6 +362,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_False );
 	}
 
+	CacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
+
 	return YES;
 }
 
@@ -333,6 +379,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] && !bDir )
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_True );
 	}
+
+	CacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
 	return YES;
 }
