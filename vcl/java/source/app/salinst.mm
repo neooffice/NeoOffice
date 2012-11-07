@@ -1170,6 +1170,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
                 if ( pEvent->getModifiers() & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
 					bContinue = false;
 				break;
+			default:
+				// Fix bug that causes slideshows to display a blank black
+				// first slide to break if bHandleAllCurrentEvents is false
+				// when the event type does not requiring continuing
+				if ( !bHandleAllCurrentEvents && pSalData->mpPresentationFrame && pSalData->mpPresentationFrame == pSalData->mpFocusFrame )
+					bContinue = false;
+				break;
 		}
 		pEvent->release();
 
