@@ -3615,7 +3615,7 @@ void JavaSalFrame::Flush()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(flush:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+		[mpWindow performSelectorOnMainThread:@selector(flush:) withObject:mpWindow waitUntilDone:NO modes:pModes];
 
 		[pPool release];
 	}
