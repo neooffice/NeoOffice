@@ -3565,10 +3565,7 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 	// If Java has set the focus, update it now in the OOo code as it may
 	// take a while before the Java event shows up in the queue. Fix bug
 	// 1203 by not doing this update if we are in the Show() method.
-	// Fix bug that causes the initial slide in a slideshow to not draw by
-	// update the focus even when we are the Show() method if the frame is
-	// the presentation frame.
-	if ( bSuccess && ( !mbInShow || this == GetSalData()->mpPresentationFrame ) )
+	if ( bSuccess && !mbInShow )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 		pEvent->dispatch();
