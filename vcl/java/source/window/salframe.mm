@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
-
 #include <salframe.h>
 #include <salgdi.h>
 #include <salinst.h>
@@ -49,17 +47,12 @@
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
-// Need to include for SetSystemUIMode constants but we don't link to it
-#import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
 
 #include "../java/VCLEventQueue_cocoa.h"
 
 #define MIN_CONTENT_WIDTH 130
-
-typedef UInt32 GetDblTime_Type();
-typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOptions );
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
@@ -252,53 +245,47 @@ static NSTimer *pUpdateTimer = nil;
 
 - (void)setSystemUIMode:(id)pObject
 {
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
 	{
-		SetSystemUIMode_Type *pSetSystemUIMode = (SetSystemUIMode_Type *)dlsym( pLib, "SetSystemUIMode" );
-		if ( pSetSystemUIMode )
+		if ( mbFullScreen )
 		{
-			if ( mbFullScreen )
-			{
-				pSetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+			[pApp setPresentationOptions:NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar | NSApplicationPresentationDisableAppleMenu | NSApplicationPresentationDisableProcessSwitching];
 
-				// Run the update timer every 15 seconds
-				if ( !pUpdateTimer )
+			// Run the update timer every 15 seconds
+			if ( !pUpdateTimer )
+			{
+				SEL aSelector = @selector(updateSystemActivity);
+				NSMethodSignature *pSignature = [[self class] instanceMethodSignatureForSelector:aSelector];
+				if ( pSignature )
 				{
-					SEL aSelector = @selector(updateSystemActivity);
-					NSMethodSignature *pSignature = [[self class] instanceMethodSignatureForSelector:aSelector];
-					if ( pSignature )
+					NSInvocation *pInvocation = [NSInvocation invocationWithMethodSignature:pSignature];
+					if ( pInvocation )
 					{
-						NSInvocation *pInvocation = [NSInvocation invocationWithMethodSignature:pSignature];
-						if ( pInvocation )
+						[pInvocation setSelector:aSelector];
+						[pInvocation setTarget:self];
+						pUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:15 invocation:pInvocation repeats:YES];
+						if ( pUpdateTimer )
 						{
-							[pInvocation setSelector:aSelector];
-							[pInvocation setTarget:self];
-							pUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:15 invocation:pInvocation repeats:YES];
-							if ( pUpdateTimer )
-							{
-								[pUpdateTimer retain];
-								[self updateSystemActivity];
-							}
+							[pUpdateTimer retain];
+							[self updateSystemActivity];
 						}
 					}
 				}
 			}
-			else
-			{
-				pSetSystemUIMode( kUIModeNormal, 0 );
+		}
+		else
+		{
+			[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
-				// Stop the update timer
-				if ( pUpdateTimer )
-				{
-					[pUpdateTimer invalidate];
-					[pUpdateTimer release];
-					pUpdateTimer = nil;
-				}
+			// Stop the update timer
+			if ( pUpdateTimer )
+			{
+				[pUpdateTimer invalidate];
+				[pUpdateTimer release];
+				pUpdateTimer = nil;
 			}
 		}
-
-		dlclose( pLib );
 	}
 }
 
@@ -3699,35 +3686,10 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
-	float fDoubleClickThreshold = 0;
-	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
-	if ( pDefaults )
-		fDoubleClickThreshold = [pDefaults floatForKey:@"com.apple.mouse.doubleClickThreshold"];
-
-	if ( fDoubleClickThreshold > 0 )
-	{
-		if ( fDoubleClickThreshold < 0.25 )
-			fDoubleClickThreshold = 0.25;
-		aMouseSettings.SetDoubleClickTime( fDoubleClickThreshold * 1000 );
-	}
-	else
-	{
-		ULONG nDblTime = 25;
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			GetDblTime_Type *pGetDblTime = (GetDblTime_Type *)dlsym( pLib, "GetDblTime" );
-			if ( pGetDblTime )
-			{
-				nDblTime = (ULONG)pGetDblTime();
-				if ( nDblTime < 25 )
-					nDblTime = 25;
-			}
-
-			dlclose( pLib );
-		}
-		aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
-	}
+	NSTimeInterval fDoubleClickInterval = [NSEvent doubleClickInterval];
+	if ( fDoubleClickInterval < 0.25 )
+		fDoubleClickInterval = 0.25;
+	aMouseSettings.SetDoubleClickTime( fDoubleClickInterval * 1000 );
 	aMouseSettings.SetStartDragWidth( 6 );
 	aMouseSettings.SetStartDragHeight( 6 );
 	rSettings.SetMouseSettings( aMouseSettings );
@@ -3735,6 +3697,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 
 	long nBlinkRate = 500;
+	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
 	if ( pDefaults )
 	{
 		nBlinkRate = [pDefaults integerForKey:@"NSTextInsertionPointBlinkPeriod"];
