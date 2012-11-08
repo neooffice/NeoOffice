@@ -911,7 +911,9 @@ namespace vclcanvas
                 // drawBitmap() in disguise
                 // =========================================
 
+#if !defined USE_JAVA || !defined MACOSX
                 const bool bRectangularPolygon( tools::isRectangle( aPolyPoly ) );
+#endif	// !USE_JAVA || !MACOSX
 
                 ::basegfx::B2DHomMatrix aTotalTransform;
                 ::canvas::tools::mergeViewAndRenderTransform(aTotalTransform,
