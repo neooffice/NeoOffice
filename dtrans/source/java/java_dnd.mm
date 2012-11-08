@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #include <stdio.h>
-#include <dlfcn.h>
 
 #include "java_dnd.hxx"
 #include "java_dndcontext.hxx"
@@ -46,12 +45,7 @@
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
-// Need to include for SetThemeCursor constants but we don't link to it
-#import <Carbon/Carbon.h>
-#import <objc/objc-class.h>
 #include <postmac.h>
-
-typedef OSStatus SetThemeCursor_Type( ThemeCursor nCursor );
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::dnd;
@@ -84,11 +78,6 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 @interface NSView (VCLView)
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
-@end
-
-@interface NSCursor (VCLCursor)
-+ (NSCursor *)dragCopyCursor;
-+ (NSCursor *)dragLinkCursor;
 @end
 
 @interface JavaDNDDraggingDestination : NSObject
@@ -877,48 +866,20 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 	}
 	else if ( nAction == DNDConstants::ACTION_COPY )
 	{
-		if ( class_getClassMethod( [NSCursor class], @selector(dragCopyCursor) ) )
+		NSCursor *pCursor = [NSCursor dragCopyCursor];
+		if ( pCursor )
 		{
-			NSCursor *pCursor = [NSCursor dragCopyCursor];
-			if ( pCursor )
-			{
-				[pCursor set];
-				bSet = true;
-			}
-		}
-		else if ( !bSet )
-		{
-			void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-			if ( pLib )
-			{
-				SetThemeCursor_Type *pSetThemeCursor = (SetThemeCursor_Type *)dlsym( pLib, "SetThemeCursor" );
-				if ( pSetThemeCursor && pSetThemeCursor( kThemeCopyArrowCursor ) == noErr )
-					bSet = true;
-				dlclose( pLib );
-			}
+			[pCursor set];
+			bSet = true;
 		}
 	}
 	else if ( nAction == DNDConstants::ACTION_LINK )
 	{
-		if ( class_getClassMethod( [NSCursor class], @selector(dragLinkCursor) ) )
+		NSCursor *pCursor = [NSCursor dragLinkCursor];
+		if ( pCursor )
 		{
-			NSCursor *pCursor = [NSCursor dragLinkCursor];
-			if ( pCursor )
-			{
-				[pCursor set];
-				bSet = true;
-			}
-		}
-		else if ( !bSet )
-		{
-			void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-			if ( pLib )
-			{
-				SetThemeCursor_Type *pSetThemeCursor = (SetThemeCursor_Type *)dlsym( pLib, "SetThemeCursor" );
-				if ( pSetThemeCursor && pSetThemeCursor( kThemeAliasArrowCursor ) == noErr )
-					bSet = true;
-				dlclose( pLib );
-			}
+			[pCursor set];
+			bSet = true;
 		}
 	}
 
