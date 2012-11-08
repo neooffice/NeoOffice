@@ -713,7 +713,7 @@ namespace vclcanvas
                 }
             }
             else
-#if defined(QUARTZ) && !defined USE_JAVA // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
+#if defined(QUARTZ) // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
             {
                 const Region aPolyClipRegion( rPoly );
 
@@ -745,76 +745,9 @@ namespace vclcanvas
                     p2ndOutDev->Pop();
                 }
             }
-#else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
+#else // TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
             {
                 // output gradient the hard way: XORing out the polygon
-#if defined USE_JAVA && defined MACOSX
-                MapMode aVDevMap;
-                VirtualDevice aVDev( rOutDev );
-                if ( aVDev.SetOutputSizePixel( aPolygonDeviceRectOrig.GetSize() ) )
-                {
-                    aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
-                    rOutDev.Push( PUSH_CLIPREGION );
-                    rOutDev.IntersectClipRegion( aPolygonDeviceRectOrig );
-                    doGradientFill( rOutDev,
-                                    rValues,
-                                    rColor1,
-                                    rColor2,
-                                    aTextureTransform,
-                                    aPolygonDeviceRectOrig,
-                                    nStepCount,
-                                    true );
-                    rOutDev.Pop();
-                    aVDev.Push( PUSH_RASTEROP );
-                    aVDev.SetRasterOp( ROP_XOR );
-                    aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
-                    aVDev.SetFillColor( COL_BLACK );
-                    aVDev.SetRasterOp( ROP_0 );
-                    aVDevMap.SetOrigin( Point( -aPolygonDeviceRectOrig.Left(), -aPolygonDeviceRectOrig.Top() ) );
-                    aVDev.SetMapMode( aVDevMap );
-                    aVDev.DrawPolyPolygon( rPoly );
-                    aVDevMap.SetOrigin( Point() );
-                    aVDev.SetMapMode( aVDevMap );
-                    aVDev.Pop();
-                    rOutDev.Push( PUSH_RASTEROP );
-                    rOutDev.SetRasterOp( ROP_XOR );
-                    rOutDev.DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), Point(), aPolygonDeviceRectOrig.GetSize(), aVDev );
-                    rOutDev.Pop();
-                    if( p2ndOutDev )
-                    {
-                        aVDev.SetLineColor();
-                        aVDev.SetFillColor( COL_BLACK );
-                        aVDev.DrawRect( Rectangle( Point(), aPolygonDeviceRectOrig.GetSize() ) );
-                        aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), *p2ndOutDev );
-                        p2ndOutDev->Push( PUSH_CLIPREGION );
-                        p2ndOutDev->IntersectClipRegion( aPolygonDeviceRectOrig );
-                        doGradientFill( *p2ndOutDev,
-                                        rValues,
-                                        rColor1,
-                                        rColor2,
-                                        aTextureTransform,
-                                        aPolygonDeviceRectOrig,
-                                        nStepCount,
-                                        true );
-                        p2ndOutDev->Pop();
-                        aVDev.Push( PUSH_RASTEROP );
-                        aVDev.SetRasterOp( ROP_XOR );
-                        aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), *p2ndOutDev );
-                        aVDev.SetFillColor( COL_BLACK );
-                        aVDev.SetRasterOp( ROP_0 );
-                        aVDevMap.SetOrigin( Point( -aPolygonDeviceRectOrig.Left(), -aPolygonDeviceRectOrig.Top() ) );
-                        aVDev.SetMapMode( aVDevMap );
-                        aVDev.DrawPolyPolygon( rPoly );
-                        aVDevMap.SetOrigin( Point() );
-                        aVDev.SetMapMode( aVDevMap );
-                        aVDev.Pop();
-                        p2ndOutDev->Push( PUSH_RASTEROP );
-                        p2ndOutDev->SetRasterOp( ROP_XOR );
-                        p2ndOutDev->DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), Point(), aPolygonDeviceRectOrig.GetSize(), aVDev );
-                        p2ndOutDev->Pop();
-                    }
-                }
-#else	// USE_JAVA && MACOSX
                 rOutDev.Push( PUSH_RASTEROP );
                 rOutDev.SetRasterOp( ROP_XOR );
                 doGradientFill( rOutDev,
@@ -865,9 +798,8 @@ namespace vclcanvas
                                     true );
                     p2ndOutDev->Pop();
                 }
-#endif	// USE_JAVA && MACOSX
             }
-#endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
+#endif // complex-clipping vs. XOR-trick
 
 #if defined(VERBOSE) && OSL_DEBUG_LEVEL > 0        
             {
@@ -1000,8 +932,12 @@ namespace vclcanvas
                 const ::Rectangle aIntegerTextureDeviceRect( 
                     ::vcl::unotools::rectangleFromB2DRectangle( aTextureDeviceRect ) );
 
+#if defined USE_JAVA && defined MACOSX
+                if( aIntegerTextureDeviceRect == aPolygonDeviceRect )
+#else	// USE_JAVA && MACOSX
                 if( bRectangularPolygon &&
                     aIntegerTextureDeviceRect == aPolygonDeviceRect )
+#endif	// USE_JAVA && MACOSX
                 {
                     rendering::RenderState aLocalState( renderState );
                     ::canvas::tools::appendToRenderState(aLocalState,
@@ -1182,7 +1118,9 @@ namespace vclcanvas
 
                     OutputDevice& rOutDev( mpOutDev->getOutDev() );
 
+#if !defined USE_JAVA || !defined MACOSX
                     if( bRectangularPolygon )
+#endif	// !USE_JAVA || !MACOSX
                     {
                         // use optimized output path
                         // -------------------------
@@ -1212,7 +1150,11 @@ namespace vclcanvas
                                     ::basegfx::fround( 255.0*( 1.0 - textures[0].Alpha ) ) ) );
                         }
 
+#if defined USE_JAVA && defined MACOSX
+                        rOutDev.IntersectClipRegion( aPolyPoly );
+#else	// USE_JAVA && MACOSX
                         rOutDev.IntersectClipRegion( aPolygonDeviceRect );
+#endif	// USE_JAVA && MACOSX
                         textureFill( rOutDev,
                                      *pGrfObj,
                                      aPt,
@@ -1226,7 +1168,11 @@ namespace vclcanvas
                         if( mp2ndOutDev )
                         {
                             OutputDevice& r2ndOutDev( mp2ndOutDev->getOutDev() );
+#if defined USE_JAVA && defined MACOSX
+                            r2ndOutDev.IntersectClipRegion( aPolyPoly );
+#else	// USE_JAVA && MACOSX
                             r2ndOutDev.IntersectClipRegion( aPolygonDeviceRect );
+#endif	// USE_JAVA && MACOSX
                             textureFill( r2ndOutDev,
                                          *pGrfObj,
                                          aPt,
@@ -1238,6 +1184,7 @@ namespace vclcanvas
                                          aGrfAttr );
                         }
                     }
+#if !defined USE_JAVA || !defined MACOSX
                     else
                     {
                         // output texture the hard way: XORing out the
@@ -1304,7 +1251,7 @@ namespace vclcanvas
                                                                        aOutputBmpEx );
                         }
                         else
-#if defined(QUARTZ) && !defined USE_JAVA // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
+#if defined(QUARTZ) // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
                         {
                             const Region aPolyClipRegion( aPolyPoly );
 
@@ -1340,7 +1287,7 @@ namespace vclcanvas
                                 r2ndOutDev.Pop();
                             }
                         }
-#else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
+#else // TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
                         {
                             // output via repeated XORing
                             rOutDev.Push( PUSH_RASTEROP );
@@ -1399,8 +1346,9 @@ namespace vclcanvas
                                 r2ndOutDev.Pop();
                             }
                         }
-#endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
+#endif // complex-clipping vs. XOR-trick
                     }
+#endif	// !USE_JAVA || !MACOSX
                 }
             }
         }
