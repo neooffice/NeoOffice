@@ -348,10 +348,13 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
 		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
 		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
-		aPoly[2].X() += aLogSize.Width();
-		aPoly[2].Y() += aLogSize.Height();
-		aPoly[3].X() += aLogSize.Width();
-		aPoly[3].Y() += aLogSize.Height();
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			aPoly[2].X() += aLogSize.Width();
+			aPoly[2].Y() += aLogSize.Height();
+			aPoly[3].X() += aLogSize.Width();
+			aPoly[3].Y() += aLogSize.Height();
+		}
 #endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
@@ -359,10 +362,13 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
 #if defined USE_JAVA && defined MACOSX
-		aPoly[2].X() -= aLogSize.Width();
-		aPoly[2].Y() -= aLogSize.Height();
-		aPoly[3].X() -= aLogSize.Width();
-		aPoly[3].Y() -= aLogSize.Height();
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			aPoly[2].X() -= aLogSize.Width();
+			aPoly[2].Y() -= aLogSize.Height();
+			aPoly[3].X() -= aLogSize.Width();
+			aPoly[3].Y() -= aLogSize.Height();
+		}
 #endif	// USE_JAVA && MACOSX
 
 		// neues Polygon berechnen
@@ -639,15 +645,22 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 			// by drawing entire polygon so that there are no gaps between
 			// bands in elliptical or radial gradients:
 			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-			if( bMtf )
-				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+			if ( meRasterOp == ROP_OVERPAINT )
+			{
+				if( bMtf )
+					mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+				else
+					ImplDrawPolygon( aPoly, pClipPolyPoly );
+			}
 			else
-				ImplDrawPolygon( aPoly, pClipPolyPoly );
-#else	// USE_JAVA && MACOSX
+			{
+#endif	// USE_JAVA && MACOSX
 			if( bMtf )
 				mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
 			else
 				ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
+#if defined USE_JAVA && defined MACOSX
+			}
 #endif	// USE_JAVA && MACOSX
 
             // #107349# Set fill color _after_ geometry painting:
