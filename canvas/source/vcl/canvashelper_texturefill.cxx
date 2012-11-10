@@ -259,7 +259,7 @@ namespace vclcanvas
                 aTempPoly[2] = ::Point( ::basegfx::fround( rPoint4.getX() ),
                                         ::basegfx::fround( rPoint4.getY() ) );
                 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 // Fix bug reported in the following NeoOffice forum post by
                 // extending the right edge by one pixel so that the left edge
                 // in the next iteration overlaps this iteration slightly:
@@ -269,14 +269,14 @@ namespace vclcanvas
                 aTempPoly[1].Y() += aLogSize.Height();
                 aTempPoly[2].X() += aLogSize.Width();
                 aTempPoly[2].Y() += aLogSize.Height();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 rOutDev.DrawPolygon( aTempPoly );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 aTempPoly[1].X() -= aLogSize.Width();
                 aTempPoly[1].Y() -= aLogSize.Height();
                 aTempPoly[2].X() -= aLogSize.Width();
                 aTempPoly[2].Y() -= aLogSize.Height();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             }
 
             // fill final strip (extending two times the bound rect's
