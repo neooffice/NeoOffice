@@ -264,17 +264,18 @@ namespace vclcanvas
                 // extending the right edge by one pixel so that the left edge
                 // in the next iteration overlaps this iteration slightly:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-                aTempPoly[1].X()++;
-                aTempPoly[1].Y()++;
-                aTempPoly[2].X()++;
-                aTempPoly[2].Y()++;
+                const Size aLogSize( rOutDev.PixelToLogic( Size( 1, 1 ) ) );
+                aTempPoly[1].X() += aLogSize.Width();
+                aTempPoly[1].Y() -= aLogSize.Height();
+                aTempPoly[2].X() += aLogSize.Width();
+                aTempPoly[2].Y() -= aLogSize.Height();
 #endif	// USE_JAVA
                 rOutDev.DrawPolygon( aTempPoly );
 #ifdef USE_JAVA
-                aTempPoly[1].X()--;
-                aTempPoly[1].Y()--;
-                aTempPoly[2].X()--;
-                aTempPoly[2].Y()--;
+                aTempPoly[1].X() -= aLogSize.Width();
+                aTempPoly[1].Y() -= aLogSize.Height();
+                aTempPoly[2].X() -= aLogSize.Width();
+                aTempPoly[2].Y() -= aLogSize.Height();
 #endif	// USE_JAVA
             }
 
