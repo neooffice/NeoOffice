@@ -259,7 +259,23 @@ namespace vclcanvas
                 aTempPoly[2] = ::Point( ::basegfx::fround( rPoint4.getX() ),
                                         ::basegfx::fround( rPoint4.getY() ) );
                 
+#ifdef USE_JAVA
+                // Fix bug reported in the following NeoOffice forum post by
+                // extending the right edge by one pixel so that the left edge
+                // in the next iteration overlaps this iteration slightly:
+                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+                aTempPoly[1].X()++;
+                aTempPoly[1].Y()++;
+                aTempPoly[2].X()++;
+                aTempPoly[2].Y()++;
+#endif	// USE_JAVA
                 rOutDev.DrawPolygon( aTempPoly );
+#ifdef USE_JAVA
+                aTempPoly[1].X()--;
+                aTempPoly[1].Y()--;
+                aTempPoly[2].X()--;
+                aTempPoly[2].Y()--;
+#endif	// USE_JAVA
             }
 
             // fill final strip (extending two times the bound rect's
