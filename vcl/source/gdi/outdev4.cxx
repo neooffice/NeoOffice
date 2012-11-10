@@ -341,11 +341,29 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	// Schleife, um rotierten Verlauf zu fuellen
 	for ( long i = 0; i < nSteps2; i++ )
 	{
+#ifdef USE_JAVA
+		// Fix printing bug reported in the following NeoOffice forum post by
+		// extending the right edge by one pixel so that the left edge
+		// in the next iteration overlaps this iteration slightly:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
+		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
+		aPoly[2].X() += aLogSize.Width();
+		aPoly[2].Y() += aLogSize.Height();
+		aPoly[3].X() += aLogSize.Width();
+		aPoly[3].Y() += aLogSize.Height();
+#endif	// USE_JAVA
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
 			mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
+#ifdef USE_JAVA
+		aPoly[2].X() -= aLogSize.Width();
+		aPoly[2].Y() -= aLogSize.Height();
+		aPoly[3].X() -= aLogSize.Width();
+		aPoly[3].Y() -= aLogSize.Height();
+#endif	// USE_JAVA
 
 		// neues Polygon berechnen
 		aRect.Top() = (long)(fScanLine += fScanInc);
@@ -616,10 +634,21 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 			pPolyPoly->Replace( pPolyPoly->GetObject( 1 ), 0 );
 			pPolyPoly->Replace( aPoly, 1 );
 
+#ifdef USE_JAVA
+			// Fix printing bug reported in the following NeoOffice forum post
+			// by drawing entire polygon so that there are no gaps between
+			// bands in elliptical or radial gradients:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+			if( bMtf )
+				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+			else
+				ImplDrawPolygon( aPoly, pClipPolyPoly );
+#else	// USE_JAVA
 			if( bMtf )
 				mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
 			else
 				ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
+#endif	// USE_JAVA
 
             // #107349# Set fill color _after_ geometry painting:
             // pPolyPoly's geometry is the band from last iteration's
