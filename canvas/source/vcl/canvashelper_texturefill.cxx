@@ -266,9 +266,9 @@ namespace vclcanvas
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
                 const Size aLogSize( rOutDev.PixelToLogic( Size( 1, 1 ) ) );
                 aTempPoly[1].X() += aLogSize.Width();
-                aTempPoly[1].Y() -= aLogSize.Height();
+                aTempPoly[1].Y() += aLogSize.Height();
                 aTempPoly[2].X() += aLogSize.Width();
-                aTempPoly[2].Y() -= aLogSize.Height();
+                aTempPoly[2].Y() += aLogSize.Height();
 #endif	// USE_JAVA
                 rOutDev.DrawPolygon( aTempPoly );
 #ifdef USE_JAVA
