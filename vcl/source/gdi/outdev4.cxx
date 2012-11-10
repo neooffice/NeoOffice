@@ -341,7 +341,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	// Schleife, um rotierten Verlauf zu fuellen
 	for ( long i = 0; i < nSteps2; i++ )
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Fix printing bug reported in the following NeoOffice forum post by
 		// extending the right edge by one pixel so that the left edge
 		// in the next iteration overlaps this iteration slightly:
@@ -352,18 +352,18 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		aPoly[2].Y() += aLogSize.Height();
 		aPoly[3].X() += aLogSize.Width();
 		aPoly[3].Y() += aLogSize.Height();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
 			mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		aPoly[2].X() -= aLogSize.Width();
 		aPoly[2].Y() -= aLogSize.Height();
 		aPoly[3].X() -= aLogSize.Width();
 		aPoly[3].Y() -= aLogSize.Height();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		// neues Polygon berechnen
 		aRect.Top() = (long)(fScanLine += fScanInc);
@@ -580,13 +580,13 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 	{   
     	pPolyPoly->Insert( aPoly = rRect );
 		pPolyPoly->Insert( aPoly );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Fix bug when drawing radial gradients to the printer found in the
 		// attachment in the following NeoOffice forum post by drawing the
 		// starting color to the intersection of the gradient and clip regions:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
 		ImplDrawPolygon( aPoly, pClipPolyPoly );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 	else
     {
@@ -634,7 +634,7 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 			pPolyPoly->Replace( pPolyPoly->GetObject( 1 ), 0 );
 			pPolyPoly->Replace( aPoly, 1 );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			// Fix printing bug reported in the following NeoOffice forum post
 			// by drawing entire polygon so that there are no gaps between
 			// bands in elliptical or radial gradients:
@@ -643,12 +643,12 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
 			else
 				ImplDrawPolygon( aPoly, pClipPolyPoly );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 			if( bMtf )
 				mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
 			else
 				ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
             // #107349# Set fill color _after_ geometry painting:
             // pPolyPoly's geometry is the band from last iteration's
