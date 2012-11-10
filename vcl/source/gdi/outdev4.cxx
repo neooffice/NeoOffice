@@ -341,11 +341,35 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	// Schleife, um rotierten Verlauf zu fuellen
 	for ( long i = 0; i < nSteps2; i++ )
 	{
+#if defined USE_JAVA && defined MACOSX
+		// Fix printing bug reported in the following NeoOffice forum post by
+		// extending the right edge by one pixel so that the left edge
+		// in the next iteration overlaps this iteration slightly:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
+		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			aPoly[2].X() += aLogSize.Width();
+			aPoly[2].Y() += aLogSize.Height();
+			aPoly[3].X() += aLogSize.Width();
+			aPoly[3].Y() += aLogSize.Height();
+		}
+#endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
 			mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
+#if defined USE_JAVA && defined MACOSX
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			aPoly[2].X() -= aLogSize.Width();
+			aPoly[2].Y() -= aLogSize.Height();
+			aPoly[3].X() -= aLogSize.Width();
+			aPoly[3].Y() -= aLogSize.Height();
+		}
+#endif	// USE_JAVA && MACOSX
 
 		// neues Polygon berechnen
 		aRect.Top() = (long)(fScanLine += fScanInc);
@@ -562,13 +586,13 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 	{   
     	pPolyPoly->Insert( aPoly = rRect );
 		pPolyPoly->Insert( aPoly );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Fix bug when drawing radial gradients to the printer found in the
 		// attachment in the following NeoOffice forum post by drawing the
 		// starting color to the intersection of the gradient and clip regions:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
 		ImplDrawPolygon( aPoly, pClipPolyPoly );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 	else
     {
@@ -616,10 +640,28 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 			pPolyPoly->Replace( pPolyPoly->GetObject( 1 ), 0 );
 			pPolyPoly->Replace( aPoly, 1 );
 
+#if defined USE_JAVA && defined MACOSX
+			// Fix printing bug reported in the following NeoOffice forum post
+			// by drawing entire polygon so that there are no gaps between
+			// bands in elliptical or radial gradients:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+			if ( meRasterOp == ROP_OVERPAINT )
+			{
+				if( bMtf )
+					mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+				else
+					ImplDrawPolygon( aPoly, pClipPolyPoly );
+			}
+			else
+			{
+#endif	// USE_JAVA && MACOSX
 			if( bMtf )
 				mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
 			else
 				ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
+#if defined USE_JAVA && defined MACOSX
+			}
+#endif	// USE_JAVA && MACOSX
 
             // #107349# Set fill color _after_ geometry painting:
             // pPolyPoly's geometry is the band from last iteration's
@@ -863,7 +905,12 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 			mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_BEGIN" ) );
 			mpMetaFile->AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 
+#if defined USE_JAVA && defined MACOSX
+			// Avoid expensive XORing to draw transparent objects
+			if( OUTDEV_PRINTER == meOutDevType || ImplGetSVData()->maGDIData.mbNoXORClipping )
+#else	// USE_JAVA && MACOSX
 			if( OUTDEV_PRINTER == meOutDevType )
+#endif	// USE_JAVA && MACOSX
 			{
 				Push( PUSH_CLIPREGION );
 				IntersectClipRegion( rPolyPoly );
