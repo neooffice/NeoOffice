@@ -892,7 +892,12 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 			mpMetaFile->AddAction( new MetaCommentAction( "XGRAD_SEQ_BEGIN" ) );
 			mpMetaFile->AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 
+#if defined USE_JAVA && defined MACOSX
+			// Avoid expensive XORing to draw transparent objects
+			if( OUTDEV_PRINTER == meOutDevType || ImplGetSVData()->maGDIData.mbNoXORClipping )
+#else	// USE_JAVA && MACOSX
 			if( OUTDEV_PRINTER == meOutDevType )
+#endif	// USE_JAVA && MACOSX
 			{
 				Push( PUSH_CLIPREGION );
 				IntersectClipRegion( rPolyPoly );

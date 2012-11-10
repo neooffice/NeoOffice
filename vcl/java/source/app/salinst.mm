@@ -510,6 +510,9 @@ SalInstance* CreateSalInstance()
 	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
 	ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
 
+	// Avoid expensive XORing to draw transparent objects
+	ImplGetSVData()->maGDIData.mbNoXORClipping = true;
+
 	return pInst;
 }
 
