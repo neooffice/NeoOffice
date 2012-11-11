@@ -261,26 +261,26 @@ namespace vclcanvas
                 
 #if defined USE_JAVA && defined MACOSX
                 // Fix bug reported in the following NeoOffice forum post by
-                // extending the right edge by one pixel so that the left edge
-                // in the next iteration overlaps this iteration slightly:
+                // underlapping all successive stipes with the current color:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-                const Size aLogSize( rOutDev.PixelToLogic( Size( 1, 1 ) ) );
                 if ( rOutDev.GetRasterOp() == ROP_OVERPAINT )
                 {
-                    aTempPoly[1].X() += aLogSize.Width();
-                    aTempPoly[1].Y() += aLogSize.Height();
-                    aTempPoly[2].X() += aLogSize.Width();
-                    aTempPoly[2].Y() += aLogSize.Height();
+                	Polygon aUnderlayPoly( aTempPoly );
+                    const ::basegfx::B2DPoint& rPoint5( aRightTop + 2.0*nDiagonalLength*aDirection );
+                    aUnderlayPoly[1] = ::Point( ::basegfx::fround( rPoint5.getX() ),
+                                            ::basegfx::fround( rPoint5.getY() ) );
+
+                    const ::basegfx::B2DPoint& rPoint6( aRightBottom + 2.0*nDiagonalLength*aDirection );
+                    aUnderlayPoly[2] = ::Point( ::basegfx::fround( rPoint6.getX() ),
+                                            ::basegfx::fround( rPoint6.getY() ) );
+
+                    rOutDev.DrawPolygon( aUnderlayPoly );
                 }
+                else
+                {
 #endif	// USE_JAVA && MACOSX
                 rOutDev.DrawPolygon( aTempPoly );
 #if defined USE_JAVA && defined MACOSX
-                if ( rOutDev.GetRasterOp() == ROP_OVERPAINT )
-                {
-                    aTempPoly[1].X() -= aLogSize.Width();
-                    aTempPoly[1].Y() -= aLogSize.Height();
-                    aTempPoly[2].X() -= aLogSize.Width();
-                    aTempPoly[2].Y() -= aLogSize.Height();
                 }
 #endif	// USE_JAVA && MACOSX
             }
