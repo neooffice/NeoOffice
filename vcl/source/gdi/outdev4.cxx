@@ -346,15 +346,16 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		// extending the right edge by one pixel so that the left edge
 		// in the next iteration overlaps this iteration slightly:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
-		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
 		RasterOp eRasterOp = meRasterOp;
 		if ( eRasterOp == ROP_OVERPAINT )
 		{
-			aPoly[2].X() += aLogSize.Width();
-			aPoly[2].Y() += aLogSize.Height();
-			aPoly[3].X() += aLogSize.Width();
-			aPoly[3].Y() += aLogSize.Height();
+			aTempPoly[0] = aFullRect.BottomLeft();
+			aTempPoly[1] = aFullRect.BottomRight();
+			aTempPoly.Rotate( aCenter, nAngle );
+			aTempPoly[1] -= aPoly[2];
+			aTempPoly[0] -= aPoly[3];
+			aPoly[2] += aTempPoly[1];
+			aPoly[3] += aTempPoly[0];
 		}
 #endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
@@ -365,10 +366,8 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 #if defined USE_JAVA && defined MACOSX
 		if ( eRasterOp == ROP_OVERPAINT )
 		{
-			aPoly[2].X() -= aLogSize.Width();
-			aPoly[2].Y() -= aLogSize.Height();
-			aPoly[3].X() -= aLogSize.Width();
-			aPoly[3].Y() -= aLogSize.Height();
+			aPoly[2] -= aTempPoly[1];
+			aPoly[3] -= aTempPoly[0];
 		}
 #endif	// USE_JAVA && MACOSX
 
