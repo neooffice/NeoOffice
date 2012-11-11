@@ -587,11 +587,18 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
     	pPolyPoly->Insert( aPoly = rRect );
 		pPolyPoly->Insert( aPoly );
 #if defined USE_JAVA && defined MACOSX
-		// Fix bug when drawing radial gradients to the printer found in the
-		// attachment in the following NeoOffice forum post by drawing the
-		// starting color to the intersection of the gradient and clip regions:
+		// Fix bug when drawing radial gradients to the printer or exporting to
+		// PDF found in the attachment in the following NeoOffice forum post by
+		// drawing the starting color to the intersection of the gradient and
+		// clip regions:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
-		ImplDrawPolygon( aPoly, pClipPolyPoly );
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			if( bMtf )
+				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+			else
+				ImplDrawPolygon( aPoly, pClipPolyPoly );
+		}
 #endif	// USE_JAVA && MACOSX
 	}
 	else
