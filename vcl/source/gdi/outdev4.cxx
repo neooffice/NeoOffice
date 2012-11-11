@@ -343,18 +343,24 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	{
 #if defined USE_JAVA && defined MACOSX
 		// Fix printing bug reported in the following NeoOffice forum post by
-		// extending the right edge by one pixel so that the left edge
-		// in the next iteration overlaps this iteration slightly:
+		// underlapping all successive stipes with the current color:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
-		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
 		if ( meRasterOp == ROP_OVERPAINT )
 		{
-			aPoly[2].X() += aLogSize.Width();
-			aPoly[2].Y() += aLogSize.Height();
-			aPoly[3].X() += aLogSize.Width();
-			aPoly[3].Y() += aLogSize.Height();
+			Polygon aUnderlayPoly( aPoly );
+			aTempPoly[0] = aFullRect.BottomLeft();
+			aTempPoly[1] = aFullRect.BottomRight();
+			aTempPoly.Rotate( aCenter, nAngle );
+			aUnderlayPoly[2] = aTempPoly[1];
+			aUnderlayPoly[3] = aTempPoly[0];
+			// berechnetesPolygon ausgeben
+			if ( bMtf )
+				mpMetaFile->AddAction( new MetaPolygonAction( aUnderlayPoly ) );
+			else
+				ImplDrawPolygon( aUnderlayPoly, pClipPolyPoly );
 		}
+		else
+		{
 #endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
@@ -362,12 +368,6 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
 #if defined USE_JAVA && defined MACOSX
-		if ( meRasterOp == ROP_OVERPAINT )
-		{
-			aPoly[2].X() -= aLogSize.Width();
-			aPoly[2].Y() -= aLogSize.Height();
-			aPoly[3].X() -= aLogSize.Width();
-			aPoly[3].Y() -= aLogSize.Height();
 		}
 #endif	// USE_JAVA && MACOSX
 
@@ -587,11 +587,18 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
     	pPolyPoly->Insert( aPoly = rRect );
 		pPolyPoly->Insert( aPoly );
 #if defined USE_JAVA && defined MACOSX
-		// Fix bug when drawing radial gradients to the printer found in the
-		// attachment in the following NeoOffice forum post by drawing the
-		// starting color to the intersection of the gradient and clip regions:
+		// Fix bug when drawing radial gradients to the printer or exporting to
+		// PDF found in the attachment in the following NeoOffice forum post by
+		// drawing the starting color to the intersection of the gradient and
+		// clip regions:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
-		ImplDrawPolygon( aPoly, pClipPolyPoly );
+		if ( meRasterOp == ROP_OVERPAINT )
+		{
+			if( bMtf )
+				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+			else
+				ImplDrawPolygon( aPoly, pClipPolyPoly );
+		}
 #endif	// USE_JAVA && MACOSX
 	}
 	else
