@@ -348,7 +348,8 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
 		const long nPixels = ( meOutDevType == OUTDEV_PRINTER ? 10 : 1 );
 		const Size aLogSize( PixelToLogic( Size( nPixels, nPixels ) ) );
-		if ( meRasterOp == ROP_OVERPAINT )
+		RasterOp eRasterOp = meRasterOp;
+		if ( eRasterOp == ROP_OVERPAINT )
 		{
 			aPoly[2].X() += aLogSize.Width();
 			aPoly[2].Y() += aLogSize.Height();
@@ -362,7 +363,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
 #if defined USE_JAVA && defined MACOSX
-		if ( meRasterOp == ROP_OVERPAINT )
+		if ( eRasterOp == ROP_OVERPAINT )
 		{
 			aPoly[2].X() -= aLogSize.Width();
 			aPoly[2].Y() -= aLogSize.Height();
