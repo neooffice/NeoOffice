@@ -265,7 +265,8 @@ namespace vclcanvas
                 // in the next iteration overlaps this iteration slightly:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
                 const Size aLogSize( rOutDev.PixelToLogic( Size( 1, 1 ) ) );
-                if ( rOutDev.GetRasterOp() == ROP_OVERPAINT )
+                RasterOp eRasterOp = rOutDev.GetRasterOp();
+                if ( eRasterOp == ROP_OVERPAINT )
                 {
                     aTempPoly[1].X() += aLogSize.Width();
                     aTempPoly[1].Y() += aLogSize.Height();
@@ -275,7 +276,7 @@ namespace vclcanvas
 #endif	// USE_JAVA && MACOSX
                 rOutDev.DrawPolygon( aTempPoly );
 #if defined USE_JAVA && defined MACOSX
-                if ( rOutDev.GetRasterOp() == ROP_OVERPAINT )
+                if ( eRasterOp == ROP_OVERPAINT )
                 {
                     aTempPoly[1].X() -= aLogSize.Width();
                     aTempPoly[1].Y() -= aLogSize.Height();
