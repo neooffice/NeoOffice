@@ -343,20 +343,24 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	{
 #if defined USE_JAVA && defined MACOSX
 		// Fix printing bug reported in the following NeoOffice forum post by
-		// extending the right edge by one pixel so that the left edge
-		// in the next iteration overlaps this iteration slightly:
+		// underlapping all successive stipes with the current color:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-		RasterOp eRasterOp = meRasterOp;
-		if ( eRasterOp == ROP_OVERPAINT )
+		if ( meRasterOp == ROP_OVERPAINT )
 		{
+			Polygon aUnderlayPoly( aPoly );
 			aTempPoly[0] = aFullRect.BottomLeft();
 			aTempPoly[1] = aFullRect.BottomRight();
 			aTempPoly.Rotate( aCenter, nAngle );
-			aTempPoly[1] -= aPoly[2];
-			aTempPoly[0] -= aPoly[3];
-			aPoly[2] += aTempPoly[1];
-			aPoly[3] += aTempPoly[0];
+			aUnderlayPoly[2] = aTempPoly[1];
+			aUnderlayPoly[3] = aTempPoly[0];
+			// berechnetesPolygon ausgeben
+			if ( bMtf )
+				mpMetaFile->AddAction( new MetaPolygonAction( aUnderlayPoly ) );
+			else
+				ImplDrawPolygon( aUnderlayPoly, pClipPolyPoly );
 		}
+		else
+		{
 #endif	// USE_JAVA && MACOSX
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
@@ -364,10 +368,6 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
 #if defined USE_JAVA && defined MACOSX
-		if ( eRasterOp == ROP_OVERPAINT )
-		{
-			aPoly[2] -= aTempPoly[1];
-			aPoly[3] -= aTempPoly[0];
 		}
 #endif	// USE_JAVA && MACOSX
 
