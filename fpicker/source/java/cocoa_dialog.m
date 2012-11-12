@@ -758,6 +758,7 @@ static NSString *pBlankItem = @" ";
 		{
 			// Resolve alias
 			NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
+			pURL = nil;
 			if ( pData )
 			{
 				BOOL bStale = NO;
