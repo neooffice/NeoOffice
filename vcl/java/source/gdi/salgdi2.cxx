@@ -768,7 +768,7 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 			}
 			else if ( nFlags & SAL_INVERT_TRACKFRAME )
 			{
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, true, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 			}
 			else
 			{
@@ -817,7 +817,7 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 				}
 				else if ( nFlags & SAL_INVERT_TRACKFRAME )
 				{
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, true, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 				}
 				else
 				{
