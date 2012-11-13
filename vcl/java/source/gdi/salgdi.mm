@@ -70,14 +70,14 @@ using namespace osl;
 
 // =======================================================================
 
-void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath, CGRect aUnflippedBounds )
+bool AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath, CGRect aUnflippedBounds )
 {
 	if ( !aCGPath )
-		return;
+		return false;
 
 	const sal_uInt32 nCount = rPolygon.count();
 	if ( !nCount )
-		return;
+		return false;
 
 	const bool bHasCurves = rPolygon.areControlPointsUsed();
 	bool bPendingCurve = false;
@@ -121,21 +121,29 @@ void AddPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& r
 
 	if ( bClosePath )
 		CGPathCloseSubpath( aCGPath );
+
+	return !bHasCurves;
 }
 
 // -----------------------------------------------------------------------
 
-void AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly, CGRect aUnflippedBounds )
+bool AddPolyPolygonToPaths( CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly, CGRect aUnflippedBounds )
 {
+	bool bRet = false;
+
 	const sal_uInt32 nCount = rPolyPoly.count();
 	if ( !nCount )
-		return;
+		return bRet;
 
+	bRet = true;
 	for ( sal_uInt32 i = 0; i < nCount; i++ )
 	{
 		const ::basegfx::B2DPolygon rPolygon = rPolyPoly.getB2DPolygon( i );
-		AddPolygonToPaths( aCGPath, rPolygon, true, aUnflippedBounds );
+		if ( !AddPolygonToPaths( aCGPath, rPolygon, true, aUnflippedBounds ) )
+			bRet = false;
 	}
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -334,12 +342,13 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 
 // =======================================================================
 
-JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash ) :
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aFrameClipPath, const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, bool bShiftLines, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash ) :
 	JavaSalGraphicsOp( aFrameClipPath, aNativeClipPath, bInvert, bXOR, fLineWidth ),
 	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
 	mnLineColor( nLineColor ),
 	maPath( NULL ),
+	mbShiftLines( bShiftLines ),
 	meLineJoin( eLineJoin ),
 	mbLineDash( bLineDash )
 {
@@ -435,7 +444,11 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					// Shift half the line width to fix the bug reported in the
 					// following NeoOffice forum post:
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8467
-					if ( !pGraphics->mpPrinter )
+					// Fix overshifting of curves reported in the following
+					// NeoOffice forum topic by shifting lines only when the
+					// polygon consists of straight lines straight lines:
+					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63692#63692
+					if ( mbShiftLines && !pGraphics->mpPrinter )
 						CGContextTranslateCTM( aContext, mbAntialias ? mfLineWidth / 2 : 0, mfLineWidth / -2 );
 
 					CGContextBeginPath( aContext );
@@ -968,7 +981,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolyPolygonToPaths( aPath, rPolyPoly, maNativeBounds );
+			bool bShiftLines = AddPolyPolygonToPaths( aPath, rPolyPoly, maNativeBounds );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			if ( !mnLineColor && CGRectIsEmpty( aRect ) )
 			{
@@ -978,7 +991,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 			if ( aPath )
 			{
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath, bShiftLines ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -1001,11 +1014,11 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 		CGMutablePathRef aPath = CGPathCreateMutable();
 		if ( aPath )
 		{
-			AddPolygonToPaths( aPath, rPoly, rPoly.isClosed(), maNativeBounds );
+			bool bShiftLines = AddPolygonToPaths( aPath, rPoly, rPoly.isClosed(), maNativeBounds );
 			float fNativeLineWidth = rLineWidths.getX();
 			if ( fNativeLineWidth <= 0 )
 				fNativeLineWidth = getNativeLineWidth();
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, fNativeLineWidth, eLineJoin ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maFrameClipPath, maNativeClipPath, mbInvert, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, bShiftLines, fNativeLineWidth, eLineJoin ) );
 			CGPathRelease( aPath );
 		}
 	}
