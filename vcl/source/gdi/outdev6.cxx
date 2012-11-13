@@ -350,7 +350,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 			((JavaSalGraphics *)mpGraphics)->setLineTransparency( 0 );
 			((JavaSalGraphics *)mpGraphics)->setFillTransparency( 0 );
 		}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		if( OUTDEV_PRINTER == meOutDevType )
 		{
 			Rectangle		aPolyRect( LogicToPixel( rPolyPoly ).GetBoundRect() );
@@ -598,7 +598,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                 }
             }
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		mpMetaFile = pOldMetaFile;
 
