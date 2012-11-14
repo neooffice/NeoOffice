@@ -261,28 +261,19 @@ namespace vclcanvas
                 
 #if defined USE_JAVA && defined MACOSX
                 // Fix bug reported in the following NeoOffice forum post by
-                // underlapping all successive stipes with the current color:
+                // using the slice as the clip and drawing the clip:
                 // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-                if ( rOutDev.GetRasterOp() == ROP_OVERPAINT )
+                if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygon() )
                 {
-                	Polygon aUnderlayPoly( aTempPoly );
-                    const ::basegfx::B2DPoint& rPoint5( aRightTop + 2.0*nDiagonalLength*aDirection );
-                    aUnderlayPoly[1] = ::Point( ::basegfx::fround( rPoint5.getX() ),
-                                            ::basegfx::fround( rPoint5.getY() ) );
-
-                    const ::basegfx::B2DPoint& rPoint6( aRightBottom + 2.0*nDiagonalLength*aDirection );
-                    aUnderlayPoly[2] = ::Point( ::basegfx::fround( rPoint6.getX() ),
-                                            ::basegfx::fround( rPoint6.getY() ) );
-
-                    rOutDev.DrawPolygon( aUnderlayPoly );
+                    Region aClipRgn( rOutDev.GetClipRegion() );
+                    rOutDev.Push( PUSH_CLIPREGION );
+                    rOutDev.IntersectClipRegion( aTempPoly );
+                    rOutDev.DrawPolyPolygon( aClipRgn.GetPolyPolygon() );
+                    rOutDev.Pop();
                 }
                 else
-                {
 #endif	// USE_JAVA && MACOSX
                 rOutDev.DrawPolygon( aTempPoly );
-#if defined USE_JAVA && defined MACOSX
-                }
-#endif	// USE_JAVA && MACOSX
             }
 
             // fill final strip (extending two times the bound rect's
@@ -310,6 +301,20 @@ namespace vclcanvas
             else
                 rOutDev.SetFillColor( rColor2 );
 
+#if defined USE_JAVA && defined MACOSX
+            // Fix bug reported in the following NeoOffice forum post by
+            // using the slice as the clip and drawing the clip:
+            // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+            if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygon() )
+            {
+                Region aClipRgn( rOutDev.GetClipRegion() );
+                rOutDev.Push( PUSH_CLIPREGION );
+                rOutDev.IntersectClipRegion( aTempPoly );
+                rOutDev.DrawPolyPolygon( aClipRgn.GetPolyPolygon() );
+                rOutDev.Pop();
+            }
+            else
+#endif	// USE_JAVA && MACOSX
             rOutDev.DrawPolygon( aTempPoly );
         }
 
@@ -451,6 +456,20 @@ namespace vclcanvas
             {
                 // fill background
                 rOutDev.SetFillColor( rColor1 );
+#if defined USE_JAVA && defined MACOSX
+                // Fix bug reported in the following NeoOffice forum post by
+                // using the slice as the clip and drawing the clip:
+                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+                if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygon() )
+                {
+                    Region aClipRgn( rOutDev.GetClipRegion() );
+                    rOutDev.Push( PUSH_CLIPREGION );
+                    rOutDev.IntersectClipRegion( rBounds );
+                    rOutDev.DrawPolyPolygon( aClipRgn.GetPolyPolygon() );
+                    rOutDev.Pop();
+                }
+                else
+#endif	// USE_JAVA && MACOSX
                 rOutDev.DrawRect( rBounds );
 
                 // render polygon
@@ -487,6 +506,20 @@ namespace vclcanvas
                     // OutputDevice::ImplDrawComplexGradient(), there's a note
                     // that on some VDev's, rendering disjunct poly-polygons
                     // is faster!
+#if defined USE_JAVA && defined MACOSX
+                    // Fix bug reported in the following NeoOffice forum post by
+                    // using the slice as the clip and drawing the clip:
+                    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+                    if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygon() )
+                    {
+                        Region aClipRgn( rOutDev.GetClipRegion() );
+                        rOutDev.Push( PUSH_CLIPREGION );
+                        rOutDev.IntersectClipRegion( aTempPoly );
+                        rOutDev.DrawPolyPolygon( aClipRgn.GetPolyPolygon() );
+                        rOutDev.Pop();
+                    }
+                    else
+#endif	// USE_JAVA && MACOSX
                     rOutDev.DrawPolygon( aTempPoly );
                 }
             }
@@ -564,6 +597,20 @@ namespace vclcanvas
                         aTempPolyPoly.Remove( 1 );
                     }
 
+#if defined USE_JAVA && defined MACOSX
+                    // Fix bug reported in the following NeoOffice forum post by
+                    // using the slice as the clip and drawing the clip:
+                    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
+                    if ( rOutDev.IsClipRegion() && rOutDev.GetClipRegion().HasPolyPolygon() )
+                    {
+                        Region aClipRgn( rOutDev.GetClipRegion() );
+                        rOutDev.Push( PUSH_CLIPREGION );
+                        rOutDev.IntersectClipRegion( aTempPolyPoly );
+                        rOutDev.DrawPolyPolygon( aClipRgn.GetPolyPolygon() );
+                        rOutDev.Pop();
+                    }
+                    else
+#endif	// USE_JAVA && MACOSX
                     rOutDev.DrawPolyPolygon( aTempPolyPoly );
                 }
             }
