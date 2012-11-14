@@ -355,9 +355,20 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 			aUnderlayPoly[3] = aTempPoly[0];
 			// berechnetesPolygon ausgeben
 			if ( bMtf )
+			{
+				if ( pClipPolyPoly )
+				{
+					mpMetaFile->AddAction( new MetaPushAction( PUSH_CLIPREGION ) );
+					mpMetaFile->AddAction( new MetaISectRegionClipRegionAction( *pClipPolyPoly ) );
+				}
 				mpMetaFile->AddAction( new MetaPolygonAction( aUnderlayPoly ) );
+				if ( pClipPolyPoly )
+					mpMetaFile->AddAction( new MetaPopAction() );
+			}
 			else
+			{
 				ImplDrawPolygon( aUnderlayPoly, pClipPolyPoly );
+			}
 		}
 		else
 		{
@@ -595,9 +606,20 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 		if ( meRasterOp == ROP_OVERPAINT )
 		{
 			if( bMtf )
+			{
+				if ( pClipPolyPoly )
+				{
+					mpMetaFile->AddAction( new MetaPushAction( PUSH_CLIPREGION ) );
+					mpMetaFile->AddAction( new MetaISectRegionClipRegionAction( *pClipPolyPoly ) );
+				}
 				mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+				if ( pClipPolyPoly )
+					mpMetaFile->AddAction( new MetaPopAction() );
+			}
 			else
+			{
 				ImplDrawPolygon( aPoly, pClipPolyPoly );
+			}
 		}
 #endif	// USE_JAVA && MACOSX
 	}
@@ -655,9 +677,20 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 			if ( meRasterOp == ROP_OVERPAINT )
 			{
 				if( bMtf )
+				{
+					if ( pClipPolyPoly )
+					{
+						mpMetaFile->AddAction( new MetaPushAction( PUSH_CLIPREGION ) );
+						mpMetaFile->AddAction( new MetaISectRegionClipRegionAction( *pClipPolyPoly ) );
+					}
 					mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
+					if ( pClipPolyPoly )
+						mpMetaFile->AddAction( new MetaPopAction() );
+				}
 				else
+				{
 					ImplDrawPolygon( aPoly, pClipPolyPoly );
+				}
 			}
 			else
 			{
