@@ -64,7 +64,11 @@
 #endif	// MACOSX
 
 #define MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ( 4 * 1024 * 1024 )
-#define MIN_TRANSPARENT_GRADIENT_RESOLUTION 72
+#ifdef MACOSX
+#define MIN_TRANSPARENT_GRADIENT_RESOLUTION ( 2 * MIN_SCREEN_RESOLUTION )
+#else	// MACOSX
+#define MIN_TRANSPARENT_GRADIENT_RESOLUTION ( 2 * 72 )
+#endif	// MACOSX
 
 #endif	// USE_JAVA
 
@@ -662,36 +666,31 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 		{
 			VirtualDevice* pVDev = new VirtualDevice;
 
+			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
+			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
+
 #ifdef USE_JAVA
 			// Prevent runaway memory usage when drawing to the printer by
-			// lower the resolution of the temporary buffer if necessary
+			// lowering the resolution of the temporary buffer if necessary
 			Rectangle aVirDevRect( Point( 0, 0 ), aDstRect.GetSize() );
 			float fExcessPixelRatio = (float)MAX_TRANSPARENT_GRADIENT_BMP_PIXELS / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
 			if ( fExcessPixelRatio < 1.0 )
 			{
-				((OutputDevice*)pVDev)->mnDPIX = (sal_uInt32)( mnDPIX * fExcessPixelRatio );
-				((OutputDevice*)pVDev)->mnDPIY = (sal_uInt32)( mnDPIY * fExcessPixelRatio );
-
-				if ( ((OutputDevice*)pVDev)->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
-					((OutputDevice*)pVDev)->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
-				if ( ((OutputDevice*)pVDev)->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
-					((OutputDevice*)pVDev)->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
-				Fraction aScaleX( ((OutputDevice*)pVDev)->mnDPIX, mnDPIX );
-				Fraction aScaleY( ((OutputDevice*)pVDev)->mnDPIY, mnDPIY );
-
-				aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
+				((OutputDevice*)pVDev)->mnDPIX = (sal_uInt32)( ( fExcessPixelRatio * mnDPIX ) + 0.5f );
+				((OutputDevice*)pVDev)->mnDPIY = (sal_uInt32)( ( fExcessPixelRatio * mnDPIY ) + 0.5f );
 			}
-			else
-			{
-				((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
-				((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
-			}
+
+			if ( ((OutputDevice*)pVDev)->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
+				((OutputDevice*)pVDev)->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+			if ( ((OutputDevice*)pVDev)->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
+				((OutputDevice*)pVDev)->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+			Fraction aScaleX( ((OutputDevice*)pVDev)->mnDPIX, mnDPIX );
+			Fraction aScaleY( ((OutputDevice*)pVDev)->mnDPIY, mnDPIY );
+
+			aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
 
 			if( pVDev->SetOutputSizePixel( aVirDevRect.GetSize() ) )
 #else	// USE_JAVA
-			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
-			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
-
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
 #endif	// USE_JAVA
 			{
@@ -702,6 +701,12 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				const BOOL	bOldMap = mbMap;
 
 				aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
+#ifdef USE_JAVA
+				if ( (double)aScaleX > 1.0f )
+					aMap.SetScaleX( aScaleX );
+				if ( (double)aScaleY > 1.0f )
+					aMap.SetScaleY( aScaleY );
+#endif	// USE_JAVA
 				pVDev->SetMapMode( aMap );
 				const BOOL	bVDevOldMap = pVDev->IsMapModeEnabled();
 
