@@ -1252,7 +1252,12 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 					const Gradient&	rTransparenceGradient = pA->GetGradient();
 
 					const Size	aDstSizeTwip( rDummyVDev.PixelToLogic( rDummyVDev.LogicToPixel( rSize ), MAP_TWIP ) );
+#ifdef USE_JAVA
+					// Always use 300 DPI as 72 results in very jagged shapes
+					sal_Int32	nMaxBmpDPI = 300;
+#else	// USE_JAVA
 					sal_Int32	nMaxBmpDPI = mbUseLosslessCompression ? 300 : 72;
+#endif	// USE_JAVA
 					if ( mbReduceImageResolution )
 					{
 						if ( nMaxBmpDPI > mnMaxImageResolution )
