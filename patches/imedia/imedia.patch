@@ -560,6 +560,49 @@ Index: MetadataUtility.m
          if ( mediaTypes != nil && [mediaTypes containsObject:@"Sound"] )
          {
              return [NSDictionary dictionaryWithDictionary:arguments];
+Index: iMBMusicFolder.m
+===================================================================
+--- iMBMusicFolder.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBMusicFolder.m	2012-11-17 11:43:20.000000000 -0800
+@@ -90,13 +90,25 @@
+     NSString *musicFolderName = LocalizedStringInIMedia(@"Music Folder", @"Name of your 'Music' folder in your home directory");
+     NSString *unknownArtistName = LocalizedStringInIMedia(@"Unknown", @"Unknown music/sound artist");
+     NSString *iconName = @"folder";
+-
++	
+ 	return [self initWithContentsOfFile:file musicFolderName:musicFolderName unknownArtistName:unknownArtistName iconName:iconName parseMetadata:YES];
+ }
+ 
+ - (id)init
+ {
+-	return [self initWithContentsOfFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Music"]];
++	NSString *musicDirPath = nil;
++	
++	NSArray *musicDirURLs = [[NSFileManager defaultManager] URLsForDirectory:NSMusicDirectory inDomains:NSUserDomainMask];
++	if( [musicDirURLs count] )
++	{
++		NSURL *firstURL = (NSURL *)[musicDirURLs objectAtIndex:0];
++		if( [firstURL isFileURL] )
++		{
++			musicDirPath = [firstURL path];
++		}
++	}
++    
++	return [self initWithContentsOfFile:musicDirPath];
+ }
+ 
+ - (void)dealloc
+@@ -126,8 +138,8 @@
+ 		NSString *filePath = [path stringByAppendingPathComponent:currentFile];
+ 
+         // skip files that are likely to be included elsewhere or have been explicitly excluded
+-		if ([[filePath lastPathComponent] isEqualToString:@"iTunes"]) continue;
+-		if ([[filePath lastPathComponent] isEqualToString:@"GarageBand"]) continue;
++		//if ([[filePath lastPathComponent] isEqualToString:@"iTunes"]) continue;
++		//if ([[filePath lastPathComponent] isEqualToString:@"GarageBand"]) continue;
+ 		if ([excludedFolders containsObject:filePath]) continue;
+         
+         BOOL isDirectory;
 Index: iMediaBrowser.m
 ===================================================================
 --- iMediaBrowser.m	(revision 677)
