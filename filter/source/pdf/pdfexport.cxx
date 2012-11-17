@@ -1252,7 +1252,12 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 					const Gradient&	rTransparenceGradient = pA->GetGradient();
 
 					const Size	aDstSizeTwip( rDummyVDev.PixelToLogic( rDummyVDev.LogicToPixel( rSize ), MAP_TWIP ) );
+#ifdef USE_JAVA
+					// Always use 300 DPI as 72 results in very jagged shapes
+					sal_Int32	nMaxBmpDPI = 300;
+#else	// USE_JAVA
 					sal_Int32	nMaxBmpDPI = mbUseLosslessCompression ? 300 : 72;
+#endif	// USE_JAVA
 					if ( mbReduceImageResolution )
 					{
 						if ( nMaxBmpDPI > mnMaxImageResolution )
@@ -1313,6 +1318,74 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 							pVDev->EnableMapMode( FALSE );
 							pVDev->DrawMask( aPoint, aDstSizePixel, aMask, Color( COL_WHITE ) );
 							aAlpha = pVDev->GetBitmap( aPoint, aDstSizePixel );
+
+#ifdef USE_JAVA
+							// Reset temporary metafile to reset map mode
+							aTmpMtf = pA->GetGDIMetaFile();
+
+							ULONG nTransGradPushClipBeginPos = GDI_METAFILE_END;
+							ULONG nTransGradPushClipEndPos = GDI_METAFILE_END;
+							ULONG nTransGradPopClipBeginPos = GDI_METAFILE_END;
+							ULONG nTransGradPopClipEndPos = GDI_METAFILE_END;
+							ULONG nCount = aTmpMtf.GetActionCount();
+							ULONG nPos;
+							for ( nPos = 0; nPos < nCount; nPos++ )
+							{
+								MetaAction *pAct = aTmpMtf.GetAction( nPos );
+								if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
+								{
+									if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+										nTransGradPushClipBeginPos = nPos;
+									else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_END" ) == COMPARE_EQUAL )
+										nTransGradPushClipEndPos = nPos;
+									else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+										nTransGradPopClipBeginPos = nPos;
+									else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_END" ) == COMPARE_EQUAL )
+										nTransGradPopClipEndPos = nPos;
+								}
+							}
+
+							// Only use metafile's clip if the clip commands
+							// are at the beginning and end of the metafile
+							if ( !nTransGradPushClipBeginPos &&
+								nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
+								nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
+								nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
+								nTransGradPopClipEndPos == nCount - 1 )
+							{
+								rWriter.Push();
+
+								GDIMetaFile aTransGradClipPushMtf( aTmpMtf );
+								aTransGradClipPushMtf.Clear();
+								for ( nPos = nTransGradPushClipBeginPos; nPos < nTransGradPushClipEndPos; nPos++ )
+								{
+									MetaAction *pAct = aTmpMtf.GetAction( nPos );
+									if ( pAct )
+									{
+										pAct->Duplicate();
+										aTransGradClipPushMtf.AddAction( pAct );
+									}
+								}
+								ImplWriteActions( rWriter, NULL, aTransGradClipPushMtf, rDummyVDev );
+
+								ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize, BitmapEx( aPaint, aAlpha ) );
+
+								GDIMetaFile aTransGradClipPopMtf( aTmpMtf );
+								aTransGradClipPopMtf.Clear();
+								for ( nPos = nTransGradPopClipBeginPos; nPos < nTransGradPopClipEndPos; nPos++ )
+								{
+									MetaAction *pAct = aTmpMtf.GetAction( nPos );
+									if ( pAct )
+									{
+										pAct->Duplicate();
+										aTransGradClipPopMtf.AddAction( pAct );
+									}
+								}
+    							ImplWriteActions( rWriter, NULL, aTransGradClipPopMtf, rDummyVDev );
+								rWriter.Pop();
+							}
+							else
+#endif	// USE_JAVA
 							ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize, BitmapEx( aPaint, aAlpha ) );
 						}
 						delete pVDev;
