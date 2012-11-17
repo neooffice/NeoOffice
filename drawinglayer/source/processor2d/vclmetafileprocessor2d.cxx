@@ -1520,7 +1520,7 @@ namespace drawinglayer
 							aVCLGradient.SetEndIntensity(100);
 							aVCLGradient.SetSteps(2);
 							
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
 							// Fix stray lines drawn at top of transparent
 							// gradients that occurs when running slideshows on
 							// a Retina display by passing the gradient's shape
@@ -1549,7 +1549,7 @@ namespace drawinglayer
 									}
 								}
 							}
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 							// render it to VCL
 							mpOutputDevice->DrawTransparent(
@@ -1596,7 +1596,7 @@ namespace drawinglayer
 							Gradient aVCLGradient;
                             impConvertFillGradientAttributeToVCLGradient(aVCLGradient, pFiGradient->getFillGradient(), true);
 							
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
 							// Fix stray lines drawn at top of transparent
 							// gradients that occurs when running slideshows on
 							// a Retina display by passing the gradient's shape
@@ -1625,7 +1625,7 @@ namespace drawinglayer
 									}
 								}
 							}
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 							// render it to VCL
 							mpOutputDevice->DrawTransparent(
