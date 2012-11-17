@@ -309,7 +309,7 @@ using namespace vos;
 
 // ============================================================================
 
-static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark, sal_Bool bResolveAliasURLs );
+static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs );
 
 static void ReleaseSecurityScopedURL( NSURL *pURL );
 
@@ -431,13 +431,13 @@ static void InitializeMacOSXVersion()
 
 // ----------------------------------------------------------------------------
 
-static NSURL *ResolveAliasURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark )
+static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark )
 {
 	NSURL *pRet = nil;
 
 	if ( pURL )
 	{
-		NSURL *pSecurityScopedURL = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, sal_False );
+		NSURL *pSecurityScopedURL = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO );
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
 		if ( pData )
 		{
@@ -471,7 +471,7 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBo
 
 // ----------------------------------------------------------------------------
 
-static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, sal_Bool bMustShowDialogIfNoBookmark, sal_Bool bResolveAliasURLs )
+static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs )
 {
 	NSURL *pRet = nil;
 
@@ -821,15 +821,15 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 
 // -----------------------------------------------------------------------
 
-extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( const OUString *pPath, sal_Bool bMustShowDialogIfNoBookmark )
+extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( const char *pPath, MacOSBOOL bMustShowDialogIfNoBookmark, const char *pDialogTitle )
 {
 	NSURL *pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pPath && pPath->getLength() )
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pPath && strlen( pPath ) )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithCharacters:pPath->getStr() length:pPath->getLength()];
+		NSString *pString = [NSString stringWithUTF8String:pPath];
 		if ( pString )
 		{
 			NSURL *pURL = [NSURL fileURLWithPath:pString];
@@ -841,7 +841,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT NSURL *Application_acquireSecurityScopedURL( con
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( pURL )
 					{
-						pRet = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, sal_True );
+						pRet = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, YES );
 						if ( pRet )
 							[pRet retain];
 					}
