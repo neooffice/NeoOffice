@@ -64,7 +64,11 @@
 #endif	// MACOSX
 
 #define MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ( 4 * 1024 * 1024 )
-#define MIN_TRANSPARENT_GRADIENT_RESOLUTION 72
+#ifdef MACOSX
+#define MIN_TRANSPARENT_GRADIENT_RESOLUTION ( 2 * MIN_SCREEN_RESOLUTION )
+#else	// MACOSX
+#define MIN_TRANSPARENT_GRADIENT_RESOLUTION ( 2 * 72 )
+#endif	// MACOSX
 
 #endif	// USE_JAVA
 
@@ -662,36 +666,32 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 		{
 			VirtualDevice* pVDev = new VirtualDevice;
 
+			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
+			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
+
 #ifdef USE_JAVA
 			// Prevent runaway memory usage when drawing to the printer by
-			// lower the resolution of the temporary buffer if necessary
+			// lowering the resolution of the temporary buffer if necessary
 			Rectangle aVirDevRect( Point( 0, 0 ), aDstRect.GetSize() );
 			float fExcessPixelRatio = (float)MAX_TRANSPARENT_GRADIENT_BMP_PIXELS / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
 			if ( fExcessPixelRatio < 1.0 )
 			{
-				((OutputDevice*)pVDev)->mnDPIX = (sal_uInt32)( mnDPIX * fExcessPixelRatio );
-				((OutputDevice*)pVDev)->mnDPIY = (sal_uInt32)( mnDPIY * fExcessPixelRatio );
+				((OutputDevice*)pVDev)->mnDPIX = (sal_uInt32)( ( fExcessPixelRatio * mnDPIX ) + 0.5f );
+				((OutputDevice*)pVDev)->mnDPIY = (sal_uInt32)( ( fExcessPixelRatio * mnDPIY ) + 0.5f );
 
 				if ( ((OutputDevice*)pVDev)->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
 					((OutputDevice*)pVDev)->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
 				if ( ((OutputDevice*)pVDev)->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
 					((OutputDevice*)pVDev)->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
-				Fraction aScaleX( ((OutputDevice*)pVDev)->mnDPIX, mnDPIX );
-				Fraction aScaleY( ((OutputDevice*)pVDev)->mnDPIY, mnDPIY );
+			}
 
-				aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
-			}
-			else
-			{
-				((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
-				((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
-			}
+			Fraction aScaleX( ((OutputDevice*)pVDev)->mnDPIX, mnDPIX );
+			Fraction aScaleY( ((OutputDevice*)pVDev)->mnDPIY, mnDPIY );
+
+			aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
 
 			if( pVDev->SetOutputSizePixel( aVirDevRect.GetSize() ) )
 #else	// USE_JAVA
-			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
-			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
-
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
 #endif	// USE_JAVA
 			{
@@ -702,6 +702,12 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				const BOOL	bOldMap = mbMap;
 
 				aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
+#ifdef USE_JAVA
+				if ( (double)aScaleX > 1.0f )
+					aMap.SetScaleX( aScaleX );
+				if ( (double)aScaleY > 1.0f )
+					aMap.SetScaleY( aScaleY );
+#endif	// USE_JAVA
 				pVDev->SetMapMode( aMap );
 				const BOOL	bVDevOldMap = pVDev->IsMapModeEnabled();
 
@@ -737,13 +743,103 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 
 				delete pVDev;
 
-				EnableMapMode( FALSE );
 #ifdef USE_JAVA
-				DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
+				ULONG nTransGradPushClipBeginPos = GDI_METAFILE_END;
+				ULONG nTransGradPushClipEndPos = GDI_METAFILE_END;
+				ULONG nTransGradPopClipBeginPos = GDI_METAFILE_END;
+				ULONG nTransGradPopClipEndPos = GDI_METAFILE_END;
+				ULONG nCount = ( (GDIMetaFile&) rMtf ).GetActionCount();
+				ULONG nPos;
+				for ( nPos = 0; nPos < nCount; nPos++ )
+				{
+					MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+					if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
+					{
+						if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+							nTransGradPushClipBeginPos = nPos;
+						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPUSHCLIP_SEQ_END" ) == COMPARE_EQUAL )
+							nTransGradPushClipEndPos = nPos;
+						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) == COMPARE_EQUAL )
+							nTransGradPopClipBeginPos = nPos;
+						else if ( ((MetaCommentAction *)pAct)->GetComment().CompareIgnoreCaseToAscii( "XTRANSGRADPOPCLIP_SEQ_END" ) == COMPARE_EQUAL )
+							nTransGradPopClipEndPos = nPos;
+					}
+				}
+
+				// Only use metafile's clip if the clip commands are at the
+				// beginning and end of the metafile
+				if ( !nTransGradPushClipBeginPos &&
+					nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
+					nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
+					nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
+					nTransGradPopClipEndPos == nCount - 1 )
+				{
+					// Copy code from GDIMetaFile::Play for creating map mode
+					// to use when executing metafile commands
+					MapMode aOldMap( GetMapMode() );
+					MapMode aGDIMap( ( (GDIMetaFile&) rMtf ).GetPrefMapMode() );
+					if ( aOutRect.GetWidth() && aOutRect.GetHeight() )
+					{
+						Size aTmpPrefSize( LogicToPixel( ( (GDIMetaFile&) rMtf ).GetPrefSize(), aGDIMap ) );
+						if ( !aTmpPrefSize.Width() )
+							aTmpPrefSize.Width() = aOutRect.GetWidth();
+
+						if ( !aTmpPrefSize.Height() )
+							aTmpPrefSize.Height() = aOutRect.GetHeight();
+
+						Fraction aGDIScaleX( aOutRect.GetWidth(), aTmpPrefSize.Width() );
+						Fraction aGDIScaleY( aOutRect.GetHeight(), aTmpPrefSize.Height() );
+
+						aGDIScaleX *= aGDIMap.GetScaleX(); aGDIMap.SetScaleX( aGDIScaleX );
+						aGDIScaleY *= aGDIMap.GetScaleY(); aGDIMap.SetScaleY( aGDIScaleY );
+        
+        				const Size& rOldOffset( GetPixelOffset() );
+        				const Size aEmptySize;
+        				SetPixelOffset( aEmptySize );
+						aGDIMap.SetOrigin( PixelToLogic( LogicToPixel( rPos ), aGDIMap ) );
+        				SetPixelOffset( rOldOffset );
+
+						Push();
+						SetMapMode( aGDIMap );
+
+						for ( nPos = nTransGradPushClipBeginPos; nPos < nTransGradPushClipEndPos; nPos++ )
+						{
+							MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+							if ( pAct )
+								pAct->Execute( this );
+						}
+
+						SetMapMode( aOldMap );
+
+						EnableMapMode( FALSE );
+						DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
+						EnableMapMode( bOldMap );
+
+						SetMapMode( aGDIMap );
+
+						for ( nPos = nTransGradPopClipBeginPos; nPos < nTransGradPopClipEndPos; nPos++ )
+						{
+							MetaAction *pAct = ( (GDIMetaFile&) rMtf ).GetAction( nPos );
+							if ( pAct )
+								pAct->Execute( this );
+						}
+
+
+						SetMapMode( aOldMap );
+						Pop();
+					}
+				}
+				else
+				{
+					EnableMapMode( FALSE );
+					DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
+					EnableMapMode( bOldMap );
+				}
 #else	// USE_JAVA
+				EnableMapMode( FALSE );
 				DrawBitmapEx( aDstRect.TopLeft(), BitmapEx( aPaint, aAlpha ) );
-#endif	// USE_JAVA
 				EnableMapMode( bOldMap );
+#endif	// USE_JAVA
 			}
 			else
 				delete pVDev;
