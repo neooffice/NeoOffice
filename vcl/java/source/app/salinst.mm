@@ -1816,9 +1816,13 @@ void JavaSalEvent::dispatch()
 			{
 				// Do not shutdown if any popups are visible since any shutdown
 				// event dispatched will cause a crash when a second level
-				// popup menu is open
+				// popup menu is open. Fix crashing bug while saving reported
+				// in the following NeoOffice support forum post by ignoring
+				// shutdown requests when JavaSalInstance::Yield() has been
+				// recursively called:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63716#63716
 				ImplSVData *pSVData = ImplGetSVData();
-				if ( pSVData && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+				if ( pSVData && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() && pSVData->maAppData.mnDispatchLevel < 3 )
 				{
 					JavaSalFrame *pFrame = pSalData->maFrameList.front();
 					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
