@@ -81,6 +81,7 @@
 #define SCROLLBAR_WIDTH_SLOP			0
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
+#define PROGRESS_WIDTH_SLOP				( IsRunningSnowLeopard() ? 1 : 0 )
 #define PROGRESS_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 0 : 1 )
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
@@ -1248,9 +1249,9 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue, bSmall );
 
 		HIRect destRect;
-		destRect.origin.x = 0;
+		destRect.origin.x = PROGRESS_WIDTH_SLOP * -1;
 		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.width = rDestBounds.GetWidth() + ( PROGRESS_WIDTH_SLOP * 2 );
 		destRect.size.height = rDestBounds.GetHeight();
 
 		// clear the background of the control with the fill color
@@ -3048,7 +3049,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				HIRect bounds;
 				pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
 
-				bounds.size.height += PROGRESS_HEIGHT_SLOP;
+				bounds.origin.y += PROGRESS_HEIGHT_SLOP;
+				bounds.size.height -= PROGRESS_HEIGHT_SLOP;
 
 				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
