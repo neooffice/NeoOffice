@@ -58,11 +58,11 @@
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
-#define COMBOBOX_BUTTON_WIDTH			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 25 : 24 )
+#define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 25 : 24 )
 #define COMBOBOX_BUTTON_HEIGHT_SLOP		0
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define COMBOBOX_BUTTON_TRIMHEIGHT		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
-#define COMBOBOX_HEIGHT					( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 28 : 29 )
+#define COMBOBOX_BUTTON_TRIMHEIGHT		( IsRunningSnowLeopard() ? 0 : 1 )
+#define COMBOBOX_HEIGHT					( IsRunningSnowLeopard() ? 28 : 29 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
@@ -75,13 +75,13 @@
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
-#define SCROLLBAR_THUMB_MIN_WIDTH		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 20 )
-#define SCROLLBAR_THUMB_TRIMWIDTH		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
-#define SCROLLBAR_SUPPRESS_ARROWS		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? false : true )
+#define SCROLLBAR_THUMB_MIN_WIDTH		( IsRunningSnowLeopard() ? 0 : 20 )
+#define SCROLLBAR_THUMB_TRIMWIDTH		( IsRunningSnowLeopard() ? 0 : 1 )
+#define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SCROLLBAR_WIDTH_SLOP			0
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
-#define PROGRESS_HEIGHT_SLOP			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
+#define PROGRESS_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 0 : 1 )
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
@@ -1897,7 +1897,7 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 	Region aRegion( rControlRegion );
 
 	// Only adjust for grow box on pre-Mac OS X 10.7 releases
-	if ( ( IsRunningLeopard() || IsRunningSnowLeopard() ) && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+	if ( IsRunningSnowLeopard() && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 	{
 		HIPoint origin;
 		origin.x = 0;
