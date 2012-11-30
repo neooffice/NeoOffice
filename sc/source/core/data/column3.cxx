@@ -1564,8 +1564,16 @@ void ScColumn::GetFilterEntries(SCROW nStartRow, SCROW nEndRow, TypedScStrCollec
 
 //	DATENT_MAX		- max. Anzahl Eintrage in Liste fuer Auto-Eingabe
 //	DATENT_SEARCH	- max. Anzahl Zellen, die durchsucht werden - neu: nur Strings zaehlen
+#ifdef USE_JAVA
+// Increase overly restrictive autocorrection limits found in the following
+// NeoOffice support forum post:
+// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63752#63752
+#define DATENT_MAX		MAXCOLLECTIONSIZE
+#define DATENT_SEARCH	USHRT_MAX
+#else	// USE_JAVA
 #define DATENT_MAX		200
 #define DATENT_SEARCH	2000
+#endif	// USE_JAVA
 
 
 BOOL ScColumn::GetDataEntries(SCROW nStartRow, TypedScStrCollection& rStrings, BOOL bLimit)

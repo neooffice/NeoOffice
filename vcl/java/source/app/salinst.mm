@@ -101,7 +101,6 @@ typedef void NativePreferencesMenuHandler_Type();
 
 static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
 static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
-static bool isLeopard = false;
 static bool isSnowLeopard = false;
 static bool isLion = false;
 static bool isMountainLion = false;
@@ -405,9 +404,6 @@ static void InitializeMacOSXVersion()
 				pGestalt( gestaltSystemVersionMinor, &res );
 				switch ( res )
 				{
-					case 5:
-						isLeopard = true;
-						break;
 					case 6:
 						isSnowLeopard = true;
 						break;
@@ -740,14 +736,6 @@ BOOL VCLInstance_updateNativeMenus()
 	aEventQueueMutex.release();
 
 	return bRet;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningLeopard( )
-{
-	InitializeMacOSXVersion();
-	return isLeopard;
 }
 
 // ----------------------------------------------------------------------------

@@ -226,7 +226,6 @@ public:
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
-SAL_DLLPRIVATE bool IsRunningLeopard();
 SAL_DLLPRIVATE bool IsRunningSnowLeopard();
 SAL_DLLPRIVATE bool IsRunningLion();
 SAL_DLLPRIVATE bool IsRunningMountainLion();
