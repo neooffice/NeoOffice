@@ -804,7 +804,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         <info>
           <desc>An instance UUID associated with the product version ID.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
     </group>
   </templates>
@@ -840,7 +840,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         <info>
           <desc>Contains the master password encrypted by itself.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <set oor:name="Store" oor:node-type="Passwordstorage">
         <info>
@@ -1278,13 +1278,13 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <deprecated/>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="OfficeInstallURL" oor:type="xs:string">
           <info>
             <deprecated/>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Addin" oor:type="xs:string">
           <info>
@@ -1553,7 +1553,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <desc>Specifies the default directories for the global user interface configuration. The final user interface configuration is merged from UserConfig and from these folders.</desc>
           </info>
-          <value oor:separator=":"></value>
+          <value oor:separator=":"/>
         </prop>
         <prop oor:name="UserConfig" oor:type="xs:string">
           <info>
@@ -1780,7 +1780,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         <info>
           <desc>Specifies the current or last temp directory. This directory will be removed during shutdown or next office start.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <set oor:name="RecoveryList" oor:node-type="RecoveryEntry">
         <info>
@@ -2017,7 +2017,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <desc>Lists all trustworthy URLs: file: All scripts from the local file system including a LAN; private:explorer: Scripts from the Explorer; private:help: Scripts in the help system; private:newmenu: Scripts that are executed by the commands File-New and AutoPilot; private:schedule: Scripts of the scheduler; private:searchfolder: Scripts of the searchfolder; private:user: Scripts that are entered in the URL field.</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="OfficeBasic" oor:type="xs:int">
           <info>
@@ -2388,7 +2388,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <deprecated/>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="State" oor:type="xs:boolean">
           <info>
@@ -2405,7 +2405,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <deprecated/>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="SplitWindow">
@@ -2416,7 +2416,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <deprecated/>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Version" oor:type="xs:int">
           <info>
@@ -2748,13 +2748,13 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         <info>
           <desc>Determines the locale for the help pages.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <prop oor:name="System" oor:type="xs:string">
         <info>
           <desc>Determines the operating system on which the help system is displayed.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <prop oor:name="Tip" oor:type="xs:boolean">
         <info>
@@ -2816,19 +2816,19 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <desc>Contains a string specifying the URL to be browsed for additional features (e.g. extensions)</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="InfoURL" oor:type="xs:string">
           <info>
             <desc>Contains a string specifying the URL to be browsed for information about the product</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="TemplateRepositoryURL" oor:type="xs:string">
           <info>
             <desc>Contains a string specifying the URL to be browsed for additional template documents</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Registration">
@@ -2839,19 +2839,19 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
           <info>
             <desc>Contains a string specifying the URL with placeholders to be used for online registration.</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="URL" oor:type="xs:string">
           <info>
             <desc>Contains a string specifying the real URL to be used for online registration.</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="ReminderDate" oor:type="xs:string">
           <info>
             <desc>Contains a string representation of the date on which the user receives a reminder (e.g. "13.02.2002").</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="RequestDialog" oor:type="xs:int">
           <info>
@@ -4917,7 +4917,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         <info>
           <desc>Specifies the external mail application to be used.</desc>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <prop oor:name="CommandProfile" oor:type="xs:string">
         <info>

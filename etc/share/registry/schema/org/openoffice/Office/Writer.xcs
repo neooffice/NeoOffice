@@ -63,13 +63,13 @@
       <prop oor:name="Width" oor:type="xs:int">
         <info>
           <desc>Specifies the width. [UNIT=1/100 mm]</desc>
-          <label></label>
+          <label/>
         </info>
       </prop>
       <prop oor:name="Height" oor:type="xs:int">
         <info>
           <desc>Specifies the height. [UNIT=1/100 mm]</desc>
-          <label></label>
+          <label/>
         </info>
       </prop>
     </group>
@@ -212,13 +212,13 @@
       <prop oor:name="X" oor:type="xs:int">
         <info>
           <desc>Specifies the X-value. [UNIT=1/100 mm]</desc>
-          <label></label>
+          <label/>
         </info>
       </prop>
       <prop oor:name="Y" oor:type="xs:int">
         <info>
           <desc>Specifies the Y-value. [UNIT=1/100 mm]</desc>
-          <label></label>
+          <label/>
         </info>
       </prop>
     </group>
@@ -718,7 +718,7 @@
         <info>
           <desc>Lists the file global templates loaded when importing writer documents.</desc>
         </info>
-        <value oor:separator=";"></value>
+        <value oor:separator=";"/>
       </prop>
     </group>
     <group oor:name="MailMergeWizard">
@@ -744,7 +744,7 @@
           <desc>If the property IncludeCountry is true it all countries/regions are included into the address block except for this country or region.</desc>
           <label>ExcludeCountry</label>
         </info>
-        <value></value>
+        <value/>
       </prop>
       <prop oor:name="SavedDocuments" oor:type="oor:string-list">
         <info>
@@ -1900,7 +1900,7 @@
             <desc>Specifies the fax machine that is used when faxing directly from the document.</desc>
             <label>Fax</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Papertray">
@@ -4201,14 +4201,14 @@
             <desc>Specifies the label text (address).</desc>
             <label>Label text</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Database" oor:type="xs:string">
           <info>
             <desc>Specifies the database used.</desc>
             <label>Database</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Medium">
@@ -4227,14 +4227,14 @@
             <desc>Specifies the brand name of the label format.</desc>
             <label>Brand</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Type" oor:type="xs:string">
           <info>
             <desc>Specifies the type of the label format.</desc>
             <label>Type</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Format">
@@ -4352,14 +4352,14 @@
             <desc>Specifies the brand name of the business card format.</desc>
             <label>Brand</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Type" oor:type="xs:string">
           <info>
             <desc>Specifies the type of the business card format.</desc>
             <label>Type</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Format">
@@ -4821,7 +4821,7 @@
             <desc>Specifies the recipient's address.</desc>
             <label>Addressee</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <prop oor:name="Sender" oor:type="xs:string">
           <info>
@@ -4841,7 +4841,7 @@
             <desc>Specifies the database to be used for the addressee.</desc>
             <label>Database</label>
           </info>
-          <value></value>
+          <value/>
         </prop>
       </group>
       <group oor:name="Format">
@@ -5265,7 +5265,7 @@
           <info>
             <desc>Specifies the path for the form letter file.</desc>
           </info>
-          <value></value>
+          <value/>
         </prop>
         <group oor:name="FileName">
           <info>
