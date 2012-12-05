@@ -107,7 +107,9 @@ public:
 	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData );
 	virtual BOOL			EndPage();
 	virtual ULONG			GetErrorCode();
+	virtual XubString		GetJobDisposition();
 	virtual XubString		GetPageRange();
+	virtual void			SetJobDisposition( const XubString *pJobDisposition );
 
 	void					RunPrintOperation();
 };
