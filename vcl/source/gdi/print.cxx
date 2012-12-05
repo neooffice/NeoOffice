@@ -1440,6 +1440,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	{
 		ImplSVData* pSVData = ImplGetSVData();
 #if defined USE_JAVA && defined MACOSX
+		XubString aJobDisposition( GetJobValue( XubString::CreateFromAscii( "JOBDISPOSITION" ) ) );
 		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
@@ -1450,6 +1451,13 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		else if ( !mpPrinter )
 		{
 			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+
+			// Set native job disposition when using the separate print jobs
+			// option as used in the sample document in the following NeoOffice
+			// forum topic:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
+			if ( mpPrinter )
+				mpPrinter->SetJobDisposition( &aJobDisposition );
 		}
 #else	// USE_JAVA && MACOSX
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
@@ -1569,6 +1577,8 @@ BOOL Printer::StartJob( const XubString& rJobName )
 #if defined USE_JAVA && defined MACOSX
 		else if ( mpQPrinter->mpPrinter )
 		{
+			// Get and store job disposition
+			SetJobValue( XubString::CreateFromAscii( "JOBDISPOSITION" ), mpQPrinter->mpPrinter->GetJobDisposition() );
 			// Get and store the page range
 			SetJobValue( XubString::CreateFromAscii( "PAGERANGE" ), mpQPrinter->mpPrinter->GetPageRange() );
 			return TRUE;

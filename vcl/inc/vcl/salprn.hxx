@@ -136,7 +136,9 @@ public: 					// public for Sal Implementation
 	virtual BOOL					EndPage() = 0;
 	virtual ULONG					GetErrorCode() = 0;
 #if defined USE_JAVA && defined MACOSX
+	virtual XubString				GetJobDisposition() = 0;
 	virtual XubString				GetPageRange() = 0;
+	virtual void					SetJobDisposition( const XubString *pJobDisposition ) = 0;
 #endif	// USE_JAVA && MACOSX
     
 };

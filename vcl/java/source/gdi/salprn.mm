@@ -1460,6 +1460,35 @@ ULONG JavaSalPrinter::GetErrorCode()
 
 // -----------------------------------------------------------------------
 
+XubString JavaSalPrinter::GetJobDisposition()
+{
+	XubString aRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpInfo )
+	{
+		NSString *pJobDisposition = [mpInfo jobDisposition];
+		if ( pJobDisposition && ![pJobDisposition isEqualToString:NSPrintCancelJob] )
+		{
+			unsigned int nLen = [pJobDisposition length];
+			if ( nLen )
+			{
+				sal_Unicode aBuf[ nLen + 1 ];
+				[pJobDisposition getCharacters:aBuf];
+				aBuf[ nLen ] = 0;
+				aRet = XubString( aBuf );
+			}
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
 XubString JavaSalPrinter::GetPageRange()
 {
 	XubString aRet;
@@ -1498,6 +1527,25 @@ XubString JavaSalPrinter::GetPageRange()
 
 	return aRet;
 }
+
+// -----------------------------------------------------------------------
+
+void JavaSalPrinter::SetJobDisposition( const XubString *pJobDisposition )
+{
+	if ( !mpInfo || !pJobDisposition || !pJobDisposition->Len() )
+		return;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSString *pString = [NSString stringWithCharacters:pJobDisposition->GetBuffer() length:pJobDisposition->Len()];
+	if ( pString && ![pString isEqualToString:NSPrintCancelJob] )
+		[mpInfo setJobDisposition:pString];
+CFShow( [mpInfo jobDisposition] );
+
+	[pPool release];
+}
+
+// -----------------------------------------------------------------------
 
 void JavaSalPrinter::RunPrintOperation()
 {

@@ -1063,8 +1063,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		AcquireYieldMutex( nCount );
 	}
 
-	// Check timer
-	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
+	// Check timer. Fix document lockup bug reported in the following NeoOffice
+	// forum topic by not running the timer if a modal sheet is displayed:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
+	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval && !pSalData->mbInNativeModalSheet )
 	{
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, NULL );
