@@ -108,8 +108,10 @@ public:
 	virtual BOOL			EndPage();
 	virtual ULONG			GetErrorCode();
 	virtual XubString		GetJobDisposition();
+	virtual XubString		GetJobSavingPath();
 	virtual XubString		GetPageRange();
 	virtual void			SetJobDisposition( const XubString *pJobDisposition );
+	virtual void			SetJobSavingPath( const XubString *pJobSavingPath, sal_Int32 nIteration );
 
 	void					RunPrintOperation();
 };

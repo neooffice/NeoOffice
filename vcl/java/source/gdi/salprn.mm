@@ -1489,6 +1489,47 @@ XubString JavaSalPrinter::GetJobDisposition()
 
 // -----------------------------------------------------------------------
 
+XubString JavaSalPrinter::GetJobSavingPath()
+{
+	XubString aRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpInfo )
+	{
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
+		{
+			NSURL *pJobSavingURL = [pDictionary objectForKey:NSPrintJobSavingURL];
+			if ( pJobSavingURL )
+			{
+				pJobSavingURL = [pJobSavingURL filePathURL];
+				if ( pJobSavingURL )
+				{
+					NSString *pJobSavingPath = [pJobSavingURL path];
+					if ( pJobSavingPath )
+					{
+						unsigned int nLen = [pJobSavingPath length];
+						if ( nLen )
+						{
+							sal_Unicode aBuf[ nLen + 1 ];
+							[pJobSavingPath getCharacters:aBuf];
+							aBuf[ nLen ] = 0;
+							aRet = XubString( aBuf );
+						}
+					}
+				}
+			}
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
+// -----------------------------------------------------------------------
+
 XubString JavaSalPrinter::GetPageRange()
 {
 	XubString aRet;
@@ -1540,7 +1581,34 @@ void JavaSalPrinter::SetJobDisposition( const XubString *pJobDisposition )
 	NSString *pString = [NSString stringWithCharacters:pJobDisposition->GetBuffer() length:pJobDisposition->Len()];
 	if ( pString && ![pString isEqualToString:NSPrintCancelJob] )
 		[mpInfo setJobDisposition:pString];
-CFShow( [mpInfo jobDisposition] );
+
+	[pPool release];
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int32 nIteration )
+{
+	if ( !mpInfo || !pJobSavingPath || !pJobSavingPath->Len() )
+		return;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSMutableDictionary *pDictionary = [mpInfo dictionary];
+	if ( pDictionary )
+	{
+		NSString *pString = [NSString stringWithCharacters:pJobSavingPath->GetBuffer() length:pJobSavingPath->Len()];
+		if ( pString )
+		{
+			pString = [NSString stringWithFormat:@"%@ %d.%@", [pString stringByDeletingPathExtension], nIteration, [pString pathExtension]];
+			if ( pString )
+			{
+				NSURL *pURL = [NSURL fileURLWithPath:pString];
+				if ( pURL )
+					[pDictionary setObject:pURL forKey:NSPrintJobSavingURL];
+			}
+		}
+	}
 
 	[pPool release];
 }

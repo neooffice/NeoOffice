@@ -67,6 +67,10 @@ using namespace com::sun::star::lang;
 
 int nImplSysDialog = 0;
 
+#if defined USE_JAVA && defined MACOSX
+static sal_Int32 nJobIteration = 0;
+#endif	// USE_JAVA && MACOSX
+
 // =======================================================================
 
 #define PAPER_SLOPPY	50	// Bigger sloppy value as PaperInfo uses only mm accuracy!
@@ -1440,13 +1444,13 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	{
 		ImplSVData* pSVData = ImplGetSVData();
 #if defined USE_JAVA && defined MACOSX
-		XubString aJobDisposition( GetJobValue( XubString::CreateFromAscii( "JOBDISPOSITION" ) ) );
 		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
 			if ( mpPrinter )
 				pSVData->mpDefInst->DestroyPrinter( mpPrinter );
 			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+			nJobIteration = 0;
 		}
 		else if ( !mpPrinter )
 		{
@@ -1457,7 +1461,15 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			// forum topic:
 			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
 			if ( mpPrinter )
+			{
+				// Set job disposition
+				XubString aJobDisposition( GetJobValue( XubString::CreateFromAscii( "JOBDISPOSITION" ) ) );
 				mpPrinter->SetJobDisposition( &aJobDisposition );
+
+				// Set job saving path
+				XubString aJobSavingPath( GetJobValue( XubString::CreateFromAscii( "JOBSAVINGPATH" ) ) );
+				mpPrinter->SetJobSavingPath( &aJobSavingPath, ++nJobIteration );
+			}
 		}
 #else	// USE_JAVA && MACOSX
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
@@ -1579,6 +1591,8 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		{
 			// Get and store job disposition
 			SetJobValue( XubString::CreateFromAscii( "JOBDISPOSITION" ), mpQPrinter->mpPrinter->GetJobDisposition() );
+			// Get and store job saving path 
+			SetJobValue( XubString::CreateFromAscii( "JOBSAVINGPATH" ), mpQPrinter->mpPrinter->GetJobSavingPath() );
 			// Get and store the page range
 			SetJobValue( XubString::CreateFromAscii( "PAGERANGE" ), mpQPrinter->mpPrinter->GetPageRange() );
 			return TRUE;

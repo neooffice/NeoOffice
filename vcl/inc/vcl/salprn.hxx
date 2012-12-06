@@ -137,8 +137,10 @@ public: 					// public for Sal Implementation
 	virtual ULONG					GetErrorCode() = 0;
 #if defined USE_JAVA && defined MACOSX
 	virtual XubString				GetJobDisposition() = 0;
+	virtual XubString				GetJobSavingPath() = 0;
 	virtual XubString				GetPageRange() = 0;
 	virtual void					SetJobDisposition( const XubString *pJobDisposition ) = 0;
+	virtual void					SetJobSavingPath( const XubString *pJobSavingPath, sal_Int32 nIteration ) = 0;
 #endif	// USE_JAVA && MACOSX
     
 };
