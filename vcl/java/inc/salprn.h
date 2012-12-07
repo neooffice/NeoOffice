@@ -36,6 +36,8 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
+#include <list>
+
 #include <vcl/prntypes.hxx>
 #include <vcl/salprn.hxx>
 #include <vcl/sv.h>
@@ -96,6 +98,7 @@ class JavaSalPrinter : public SalPrinter
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
+	::std::list< id >		maSecurityScopeURLList;
 
 public:
 							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );

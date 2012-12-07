@@ -55,9 +55,13 @@
 #include <postmac.h>
 
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
+typedef NSURL *Application_acquireSecurityScopedURL_Type( const char *pPath, MacOSBOOL bMustShowDialogIfNoBookmark, const char *pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 static ResMgr *pSfxResMgr = NULL;
+static Application_acquireSecurityScopedURL_Type *pApplication_acquireSecurityScopedURL = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 
 using namespace osl;
 using namespace rtl;
@@ -1138,6 +1142,16 @@ JavaSalPrinter::~JavaSalPrinter()
 	if ( mpPrintView )
 		[mpPrintView release];
 
+	// This should have been initialized when items were added to the list
+	if ( pApplication_releaseSecurityScopedURL )
+	{
+		while ( maSecurityScopeURLList.size() )
+		{
+			pApplication_releaseSecurityScopedURL( maSecurityScopeURLList.front() );
+			maSecurityScopeURLList.pop_front();
+		}
+	}
+
 	[pPool release];
 
 	// Delete graphics last as it may be needed by a JavaSalBitmap
@@ -1605,7 +1619,24 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pString];
 				if ( pURL )
+				{
+					NSString *pPath = [pURL path];
+					if ( pPath )
+					{
+						if ( !pApplication_acquireSecurityScopedURL )
+								pApplication_acquireSecurityScopedURL = (Application_acquireSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURL" );
+						if ( !pApplication_releaseSecurityScopedURL )
+							pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+						if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+						{
+							NSURL *pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [pPath UTF8String], YES, NULL );
+							if ( pSecurityScopedURL )
+								maSecurityScopeURLList.push_back( pSecurityScopedURL );
+						}
+					}
+
 					[pDictionary setObject:pURL forKey:NSPrintJobSavingURL];
+				}
 			}
 		}
 	}
