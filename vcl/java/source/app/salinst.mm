@@ -1063,32 +1063,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		AcquireYieldMutex( nCount );
 	}
 
-	// Check timer. Fix document lockup bug reported in the following NeoOffice
-	// forum topic by not running the timer if a modal sheet is displayed:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
-	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval && !pSalData->mbInNativeModalSheet )
-	{
-		timeval aCurrentTime;
-		gettimeofday( &aCurrentTime, NULL );
-		if ( aCurrentTime >= pSalData->maTimeout )
-		{
-			gettimeofday( &pSalData->maTimeout, NULL );
-			pSalData->maTimeout += pSalData->mnTimerInterval;
-			pSVData->mpSalTimer->CallCallback();
-
-			JavaSalFrame::FlushAllFrames();
-
-			// Reduce noticeable pause when opening a new document by delaying
-			// update of submenus until next available timer timeout.
-			// Fix bug 3669 by not invoking menu updates while dragging.
-			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && !pSalData->mpLastDragFrame )
-			{
-				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
-					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
-			}
-		}
-	}
-
 	// Determine timeout
 	ULONG nTimeout = 0;
 	if ( !bMainEventLoop && bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
@@ -1184,6 +1158,33 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	nCurrentTimeout = 0;
 
 	AcquireYieldMutex( nCount );
+
+	// Check timer. Fix document lockup bug reported in the following NeoOffice
+	// forum topic by not running the timer until after native event timeout
+	// and event dispatching have been finished:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
+	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
+	{
+		timeval aCurrentTime;
+		gettimeofday( &aCurrentTime, NULL );
+		if ( aCurrentTime >= pSalData->maTimeout )
+		{
+			gettimeofday( &pSalData->maTimeout, NULL );
+			pSalData->maTimeout += pSalData->mnTimerInterval;
+			pSVData->mpSalTimer->CallCallback();
+
+			JavaSalFrame::FlushAllFrames();
+
+			// Reduce noticeable pause when opening a new document by delaying
+			// update of submenus until next available timer timeout.
+			// Fix bug 3669 by not invoking menu updates while dragging.
+			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && !pSalData->mpLastDragFrame )
+			{
+				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
+					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
+			}
+		}
+	}
 
 	if ( !bMainEventLoop )
 		aEventQueueMutex.release();
