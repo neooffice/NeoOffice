@@ -50,6 +50,14 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
+#ifndef NSURLBookmarkCreationWithSecurityScope
+#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
+#endif	// !NSURLBookmarkCreationWithSecurityScope
+
+#ifndef NSURLBookmarkResolutionWithSecurityScope
+#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
+#endif	// !NSURLBookmarkResolutionWithSecurityScope
+
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
@@ -2397,6 +2405,47 @@ static CFDataRef aRTFSelection = nil;
 
 - (MacOSBOOL)performDragOperation:(id < NSDraggingInfo >)pSender
 {
+	if ( pSender )
+	{
+		NSPasteboard *pPasteboard = [pSender draggingPasteboard];
+		if ( pPasteboard )
+		{
+			NSURL *pCurrentURL = [NSURL URLFromPasteboard:pPasteboard];
+			if ( pCurrentURL && [pCurrentURL isFileURL] )
+			{
+				pCurrentURL = [pCurrentURL URLByStandardizingPath];
+				if ( pCurrentURL )
+				{
+					pCurrentURL = [pCurrentURL URLByResolvingSymlinksInPath];
+					if ( pCurrentURL )
+					{
+						NSData *pData = [pCurrentURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+						if ( pData )
+						{
+							MacOSBOOL bStale = NO;
+							NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+							if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+							{
+								pResolvedURL = [pResolvedURL URLByStandardizingPath];
+								if ( pResolvedURL )
+								{
+									pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+									if ( pResolvedURL )
+									{
+										NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+										NSString *pKey = [pResolvedURL absoluteString];
+										if ( pUserDefaults && pKey )
+											[pUserDefaults setObject:pData forKey:pKey];
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
 		return [pDelegate performDragOperation:pSender];
