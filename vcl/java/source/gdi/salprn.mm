@@ -54,6 +54,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "../../../../sfx2/source/doc/doc.hrc"
+
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
 typedef NSURL *Application_acquireSecurityScopedURL_Type( const char *pPath, MacOSBOOL bMustShowDialogIfNoBookmark, const char *pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
@@ -1629,7 +1631,13 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 							pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
 						if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
 						{
-							NSURL *pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [pPath UTF8String], YES, NULL );
+							NSString *pTitle = nil;
+							XubString aTitle( GetSfxResString( STR_SAVEDOC ) );
+							aTitle.EraseAllChars( '~' );
+							if ( aTitle.Len() )
+								pTitle = [NSString stringWithCharacters:aTitle.GetBuffer() length:aTitle.Len()];
+
+							NSURL *pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [pPath UTF8String], YES, pTitle ? [pTitle UTF8String] : nil );
 							if ( pSecurityScopedURL )
 								maSecurityScopeURLList.push_back( pSecurityScopedURL );
 						}
