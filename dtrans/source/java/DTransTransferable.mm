@@ -79,12 +79,12 @@ static UInt32 nSupportedTypes = 8;
 static const NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	// NSPasteboard does not provide the URL type in a format that we can handle
 	@"NSURLPboardType", nil, URL_TYPE_TAG,
-	@"NSRTFPboardType", @"NSPasteboardTypeRTF", nil,
-	@"NSHTMLPboardType", @"NSPasteboardTypeHTML", HTML_TYPE_TAG,
-	@"NSStringPboardType", @"NSPasteboardTypeString", STRING_TYPE_TAG,
-	@"NSPDFPboardType", @"NSPasteboardTypePDF", PDF_TYPE_TAG,
-	nil, @"NSPasteboardTypePNG", nil,
-	@"NSTIFFPboardType", @"NSPasteboardTypeTIFF", nil,
+	@"NSRTFPboardType", NSPasteboardTypeRTF, nil,
+	@"NSHTMLPboardType", NSPasteboardTypeHTML, HTML_TYPE_TAG,
+	@"NSStringPboardType", NSPasteboardTypeString, STRING_TYPE_TAG,
+	@"NSPDFPboardType", NSPasteboardTypePDF, PDF_TYPE_TAG,
+	nil, NSPasteboardTypePNG, nil,
+	@"NSTIFFPboardType", NSPasteboardTypeTIFF, nil,
 	@"NSPICTPboardType", nil, nil
 };
 
