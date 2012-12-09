@@ -372,6 +372,8 @@ static void ReleaseSecurityScopedURL( NSURL *pURL )
 					NSURL *pDirURL = [pURLs objectAtIndex:0];
 					if ( pDirURL && [pDirURL isFileURL] )
 					{
+						Application_cacheSecurityScopedURL( pDirURL );
+
 						pDirURL = [pDirURL URLByStandardizingPath];
 						if ( pDirURL )
 						{
@@ -391,8 +393,6 @@ static void ReleaseSecurityScopedURL( NSURL *pURL )
 											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
 											if ( pResolvedURL )
 											{
-												Application_cacheSecurityScopedURL( pResolvedURL );
-
 												mpSecurityScopedURL = pResolvedURL;
 												[mpSecurityScopedURL retain];
 											}
