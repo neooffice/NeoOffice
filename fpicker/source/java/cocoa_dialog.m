@@ -33,19 +33,17 @@
  *
  ************************************************************************/
 
+#import <dlfcn.h>
+
 #import <Cocoa/Cocoa.h>
 
 #ifndef _COCOA_FILEDIALOG_H_
 #import "cocoa_dialog.h"
 #endif
 
-#ifndef NSURLBookmarkCreationWithSecurityScope
-#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
-#endif	// !NSURLBookmarkCreationWithSecurityScope
+typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
-#ifndef NSURLBookmarkResolutionWithSecurityScope
-#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
-#endif	// !NSURLBookmarkResolutionWithSecurityScope
+static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 
 static NSString *pBlankItem = @" ";
 
@@ -1281,39 +1279,10 @@ static NSString *pBlankItem = @" ";
 				NSUInteger i = 0;
 				for ( ; i < nCount; i++ )
 				{
-					NSURL *pCurrentURL = [pURLs objectAtIndex:i];
-					if ( pCurrentURL && [pCurrentURL isFileURL] )
-					{
-						pCurrentURL = [pCurrentURL URLByStandardizingPath];
-						if ( pCurrentURL )
-						{
-							pCurrentURL = [pCurrentURL URLByResolvingSymlinksInPath];
-							if ( pCurrentURL )
-							{
-								NSData *pData = [pCurrentURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-								if ( pData )
-								{
-									BOOL bStale = NO;
-									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
-									{
-										pResolvedURL = [pResolvedURL URLByStandardizingPath];
-										if ( pResolvedURL )
-										{
-											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-											if ( pResolvedURL )
-											{
-												NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-												NSString *pKey = [pResolvedURL absoluteString];
-												if ( pUserDefaults && pKey )
-													[pUserDefaults setObject:pData forKey:pKey];
-											}
-										}
-									}
-								}
-							}
-						}
-					}
+					if ( !pApplication_cacheSecurityScopedURL )
+						pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+					if ( pApplication_cacheSecurityScopedURL )
+						pApplication_cacheSecurityScopedURL( [pURLs objectAtIndex:i] );
 				}
 			}
 		}
