@@ -52,8 +52,8 @@
 #define kNMBottomViewPadding 2
 #define kNMStatusLabelFontHeight 16.0f
 
-typedef NSURL *Application_acquireSecurityScopedURL_Type( const char *pPath, MacOSBOOL bMustShowDialogIfNoBookmark, const char *pDialogTitle );
-typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
+typedef id Application_acquireSecurityScopedURL_Type( const char *pPath, unsigned char bMustShowDialogIfNoBookmark, const char *pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( id pURL );
 
 static Application_acquireSecurityScopedURL_Type *pApplication_acquireSecurityScopedURL = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
@@ -1239,13 +1239,13 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		NSString *path = [it->second path];
 		if (path)
 		{
-			NSURL *pSecurityScopedURL = nil;
+			id pSecurityScopedURL = nil;
 			if ( !pApplication_acquireSecurityScopedURL )
 				pApplication_acquireSecurityScopedURL = (Application_acquireSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURL" );
 			if ( !pApplication_releaseSecurityScopedURL )
 				pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
 			if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-				pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [path UTF8String], YES, NULL );
+				pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [path UTF8String], sal_True, NULL );
 
 			// Check if downloaded file size matches content length header
 			unsigned long long nExpectedContentLength=[it->second expectedContentLength];
