@@ -391,13 +391,10 @@ static void ReleaseSecurityScopedURL( NSURL *pURL )
 											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
 											if ( pResolvedURL )
 											{
+												Application_cacheSecurityScopedURL( pResolvedURL );
+
 												mpSecurityScopedURL = pResolvedURL;
 												[mpSecurityScopedURL retain];
-
-												NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-												NSString *pKey = [mpSecurityScopedURL absoluteString];
-												if ( pUserDefaults && pKey )
-													[pUserDefaults setObject:pData forKey:pKey];
 											}
 										}
 									}
