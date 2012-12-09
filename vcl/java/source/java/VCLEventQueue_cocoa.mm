@@ -50,14 +50,6 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
-#ifndef NSURLBookmarkCreationWithSecurityScope
-#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
-#endif	// !NSURLBookmarkCreationWithSecurityScope
-
-#ifndef NSURLBookmarkResolutionWithSecurityScope
-#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
-#endif	// !NSURLBookmarkResolutionWithSecurityScope
-
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
@@ -2409,41 +2401,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		NSPasteboard *pPasteboard = [pSender draggingPasteboard];
 		if ( pPasteboard )
-		{
-			NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
-			if ( pURL && [pURL isFileURL] )
-			{
-				pURL = [pURL URLByStandardizingPath];
-				if ( pURL )
-				{
-					pURL = [pURL URLByResolvingSymlinksInPath];
-					if ( pURL )
-					{
-						NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-						if ( pData )
-						{
-							MacOSBOOL bStale = NO;
-							NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-							if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
-							{
-								pResolvedURL = [pResolvedURL URLByStandardizingPath];
-								if ( pResolvedURL )
-								{
-									pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-									if ( pResolvedURL )
-									{
-										NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-										NSString *pKey = [pResolvedURL absoluteString];
-										if ( pUserDefaults && pKey )
-											[pUserDefaults setObject:pData forKey:pKey];
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+			Application_cacheSecurityScopedURL( [NSURL URLFromPasteboard:pPasteboard] );
 	}
 
 	id pDelegate = [self draggingDestinationDelegate];
