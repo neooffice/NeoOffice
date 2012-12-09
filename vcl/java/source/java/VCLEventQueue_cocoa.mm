@@ -2410,16 +2410,16 @@ static CFDataRef aRTFSelection = nil;
 		NSPasteboard *pPasteboard = [pSender draggingPasteboard];
 		if ( pPasteboard )
 		{
-			NSURL *pCurrentURL = [NSURL URLFromPasteboard:pPasteboard];
-			if ( pCurrentURL && [pCurrentURL isFileURL] )
+			NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
+			if ( pURL && [pURL isFileURL] )
 			{
-				pCurrentURL = [pCurrentURL URLByStandardizingPath];
-				if ( pCurrentURL )
+				pURL = [pURL URLByStandardizingPath];
+				if ( pURL )
 				{
-					pCurrentURL = [pCurrentURL URLByResolvingSymlinksInPath];
-					if ( pCurrentURL )
+					pURL = [pURL URLByResolvingSymlinksInPath];
+					if ( pURL )
 					{
-						NSData *pData = [pCurrentURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+						NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 						if ( pData )
 						{
 							MacOSBOOL bStale = NO;

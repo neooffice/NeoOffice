@@ -197,42 +197,6 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
-static void CacheSecurityScopedURL( const NSURL *pURL )
-{
-	if ( pURL && [pURL isFileURL] )
-	{
-		pURL = [pURL URLByStandardizingPath];
-		if ( pURL )
-		{
-			pURL = [pURL URLByResolvingSymlinksInPath];
-			if ( pURL )
-			{
-				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-				if ( pData )
-				{
-					MacOSBOOL bStale = NO;
-					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-					if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
-					{
-						pResolvedURL = [pResolvedURL URLByStandardizingPath];
-						if ( pResolvedURL )
-						{
-							pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-							if ( pResolvedURL )
-							{
-								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-								NSString *pKey = [pResolvedURL absoluteString];
-								if ( pUserDefaults && pKey )
-									[pUserDefaults setObject:pData forKey:pKey];
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
@@ -362,7 +326,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_False );
 	}
 
-	CacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
+	Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
 	return YES;
 }
@@ -380,7 +344,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_True );
 	}
 
-	CacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
+	Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
 	return YES;
 }

@@ -37,10 +37,23 @@
 #define __SALINST_COCOA_H__
 
 #include <salinst.h>
+#include <sal/types.h>
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents();
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
 SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
 SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
+
+// Note: these must not be static as the symbol will be loaded by various
+// modules
+#ifdef __cplusplus
+BEGIN_C
+#endif	// __cplusplus
+SAL_DLLPUBLIC_EXPORT id Application_acquireSecurityScopedURL( const char *pPath, unsigned char bMustShowDialogIfNoBookmark, const char *pDialogTitle );
+SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL );
+SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pURL );
+#ifdef __cplusplus
+END_C
+#endif	// __cplusplus
 
 #endif

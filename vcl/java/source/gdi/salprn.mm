@@ -54,16 +54,13 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "../app/salinst_cocoa.h"
 #include "../../../../sfx2/source/doc/doc.hrc"
 
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
-typedef NSURL *Application_acquireSecurityScopedURL_Type( const char *pPath, MacOSBOOL bMustShowDialogIfNoBookmark, const char *pDialogTitle );
-typedef void Application_releaseSecurityScopedURL_Type( NSURL *pURL );
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 static ResMgr *pSfxResMgr = NULL;
-static Application_acquireSecurityScopedURL_Type *pApplication_acquireSecurityScopedURL = NULL;
-static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 
 using namespace osl;
 using namespace rtl;
@@ -1144,14 +1141,10 @@ JavaSalPrinter::~JavaSalPrinter()
 	if ( mpPrintView )
 		[mpPrintView release];
 
-	// This should have been initialized when items were added to the list
-	if ( pApplication_releaseSecurityScopedURL )
+	while ( maSecurityScopeURLList.size() )
 	{
-		while ( maSecurityScopeURLList.size() )
-		{
-			pApplication_releaseSecurityScopedURL( maSecurityScopeURLList.front() );
-			maSecurityScopeURLList.pop_front();
-		}
+		Application_releaseSecurityScopedURL( maSecurityScopeURLList.front() );
+		maSecurityScopeURLList.pop_front();
 	}
 
 	[pPool release];
@@ -1522,6 +1515,8 @@ XubString JavaSalPrinter::GetJobSavingPath()
 				pJobSavingURL = [pJobSavingURL filePathURL];
 				if ( pJobSavingURL )
 				{
+					Application_cacheSecurityScopedURL( pJobSavingURL );
+
 					NSString *pJobSavingPath = [pJobSavingURL path];
 					if ( pJobSavingPath )
 					{
@@ -1625,22 +1620,15 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 					NSString *pPath = [pURL path];
 					if ( pPath )
 					{
-						if ( !pApplication_acquireSecurityScopedURL )
-								pApplication_acquireSecurityScopedURL = (Application_acquireSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURL" );
-						if ( !pApplication_releaseSecurityScopedURL )
-							pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-						if ( pApplication_acquireSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-						{
-							NSString *pTitle = nil;
-							XubString aTitle( GetSfxResString( STR_SAVEDOC ) );
-							aTitle.EraseAllChars( '~' );
-							if ( aTitle.Len() )
-								pTitle = [NSString stringWithCharacters:aTitle.GetBuffer() length:aTitle.Len()];
+						NSString *pTitle = nil;
+						XubString aTitle( GetSfxResString( STR_SAVEDOC ) );
+						aTitle.EraseAllChars( '~' );
+						if ( aTitle.Len() )
+							pTitle = [NSString stringWithCharacters:aTitle.GetBuffer() length:aTitle.Len()];
 
-							NSURL *pSecurityScopedURL = pApplication_acquireSecurityScopedURL( [pPath UTF8String], YES, pTitle ? [pTitle UTF8String] : nil );
-							if ( pSecurityScopedURL )
-								maSecurityScopeURLList.push_back( pSecurityScopedURL );
-						}
+						id pSecurityScopedURL = Application_acquireSecurityScopedURL( [pPath UTF8String], sal_True, pTitle ? [pTitle UTF8String] : NULL );
+						if ( pSecurityScopedURL )
+							maSecurityScopeURLList.push_back( pSecurityScopedURL );
 					}
 
 					[pDictionary setObject:pURL forKey:NSPrintJobSavingURL];
