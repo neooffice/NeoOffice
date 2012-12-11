@@ -513,19 +513,36 @@ id NSApplication_getModalWindow()
 	return pModalWindow;
 }
 
-id Application_acquireSecurityScopedURL( const char *pPath, unsigned char bMustShowDialogIfNoBookmark, const char *pDialogTitle )
+id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
 {
 	id pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pPath && strlen( pPath ) )
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithUTF8String:pPath];
+		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
+			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
+
+		[pPool release];
+	}
+
+	return pRet;
+}
+
+id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle )
+{
+	id pRet = nil;
+
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		if ( [pNonSecurityScopedURL isKindOfClass:[NSURL class]] )
 		{
-			NSURL *pURL = [NSURL fileURLWithPath:pString];
-			if ( pURL )
+			NSURL *pURL = (NSURL *)pNonSecurityScopedURL;
+			if ( [pURL isFileURL] )
 			{
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
@@ -533,7 +550,7 @@ id Application_acquireSecurityScopedURL( const char *pPath, unsigned char bMustS
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( pURL )
 					{
-						pRet = AcquireSecurityScopedURL( pURL, (MacOSBOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle ? [NSString stringWithUTF8String:pDialogTitle] : nil );
+						pRet = AcquireSecurityScopedURL( pURL, (MacOSBOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle );
 						if ( pRet )
 							[pRet retain];
 					}

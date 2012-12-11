@@ -1626,7 +1626,7 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 						if ( aTitle.Len() )
 							pTitle = [NSString stringWithCharacters:aTitle.GetBuffer() length:aTitle.Len()];
 
-						id pSecurityScopedURL = Application_acquireSecurityScopedURL( [pPath UTF8String], sal_True, pTitle ? [pTitle UTF8String] : NULL );
+						id pSecurityScopedURL = Application_acquireSecurityScopedURLFromNSURL( pURL, sal_True, pTitle );
 						if ( pSecurityScopedURL )
 							maSecurityScopeURLList.push_back( pSecurityScopedURL );
 					}
