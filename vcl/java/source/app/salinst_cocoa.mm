@@ -125,6 +125,32 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 
 	if ( pURL && [pURL isFileURL] )
 	{
+		NSURL *pHomeURL = nil;
+		NSString *pHomeDir = NSHomeDirectory();
+		if ( pHomeDir )
+		{
+			pHomeURL = [NSURL fileURLWithPath:pHomeDir];
+			if ( pHomeURL )
+			{
+				pHomeURL = [pHomeURL URLByStandardizingPath];
+				if ( pHomeURL )
+					pHomeURL = [pHomeURL URLByResolvingSymlinksInPath];
+			}
+		}
+
+		NSURL *pMainBundleURL = nil;
+		NSBundle *pMainBundle = [NSBundle mainBundle];
+		if ( pMainBundle )
+		{
+			pMainBundleURL = [pMainBundle bundleURL];
+			if ( pMainBundleURL )
+			{
+				pMainBundleURL = [pMainBundleURL URLByStandardizingPath];
+				if ( pMainBundleURL )
+					pMainBundleURL = [pMainBundleURL URLByResolvingSymlinksInPath];
+			}
+		}
+
 		// Iterate through path and resolve any aliases
 		NSArray *pPathComponents = [pURL pathComponents];
 		if ( pPathComponents && [pPathComponents count] )
@@ -137,10 +163,11 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 				for ( ; i < nCount ; i++ )
 				{
 					pURL = [pURL URLByAppendingPathComponent:[pPathComponents objectAtIndex:i]];
-					if ( pURL )
-						pURL = [pURL URLByResolvingSymlinksInPath];
+					if ( !pURL )
+						break;
 
 					// If the path does not exist, use partial URL
+					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( !pURL || ![pURL checkResourceIsReachableAndReturnError:nil] )
 						break;
 
@@ -153,6 +180,13 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 							if ( pResolvedURL )
 								pURL = pResolvedURL;
 						}
+					}
+
+					// Ignore container and main bundle folders
+					if ( ( pHomeURL && [pHomeURL isEqual:pURL] ) || ( pMainBundleURL && [pMainBundleURL isEqual:pURL] ) )
+					{
+						pURL = nil;
+						break;
 					}
 				}
 
@@ -215,9 +249,12 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 
 					if ( bShowOpenPanel && !pRet )
 					{
+						ULONG nCount = Application::ReleaseSolarMutex();
 						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
 						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						Application::AcquireSolarMutex( nCount );
+
 						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
 						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
 							pRet = pSecurityScopedURL;
