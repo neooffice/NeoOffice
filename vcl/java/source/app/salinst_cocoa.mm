@@ -218,6 +218,32 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 							}
 						}
 
+						if ( !pRet )
+						{
+							NSURL *pTmpFileReferenceURL = [pTmpURL fileReferenceURL];
+							if ( pTmpFileReferenceURL )
+							{
+								pKey = [pTmpFileReferenceURL absoluteString];
+								if ( pKey )
+								{
+									NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
+									if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
+									{
+										MacOSBOOL bStale = NO;
+										NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+										if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
+										{
+											if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
+												pRet = pSecurityScopedURL;
+
+											bShowOpenPanel = NO;
+											break;
+										}
+									}
+								}
+							}
+						}
+
 						NSURL *pOldTmpURL = pTmpURL;
 						pTmpURL = [pTmpURL URLByDeletingLastPathComponent];
 						if ( pTmpURL )
@@ -628,9 +654,20 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 							if ( pResolvedURL )
 							{
 								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-								NSString *pKey = [pResolvedURL absoluteString];
-								if ( pUserDefaults && pKey )
-									[pUserDefaults setObject:pData forKey:pKey];
+								if ( pUserDefaults )
+								{
+									NSString *pKey = [pResolvedURL absoluteString];
+									if ( pKey )
+										[pUserDefaults setObject:pData forKey:pKey];
+
+									NSURL *pResolvedFileReferenceURL = [pResolvedURL fileReferenceURL];
+									if ( pResolvedFileReferenceURL )
+									{
+										pKey = [pResolvedFileReferenceURL absoluteString];
+										if ( pKey )
+											[pUserDefaults setObject:pData forKey:pKey];
+									}
+								}
 							}
 						}
 					}
