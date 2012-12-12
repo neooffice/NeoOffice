@@ -199,46 +199,24 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 					NSURL *pTmpURL = pURL;
 					while ( pUserDefaults && pTmpURL && !pRet )
 					{
-						NSString *pKey = [pTmpURL absoluteString];
-						if ( pKey )
+						NSURL *pTmpFileReferenceURL = [pTmpURL fileReferenceURL];
+						if ( pTmpFileReferenceURL )
 						{
-							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
-							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
+							NSString *pKey = [pTmpFileReferenceURL absoluteString];
+							if ( pKey )
 							{
-								MacOSBOOL bStale = NO;
-								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-								if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
+								NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
+								if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
 								{
-									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
-										pRet = pSecurityScopedURL;
-
-									bShowOpenPanel = NO;
-									break;
-								}
-							}
-						}
-
-						if ( !pRet )
-						{
-							NSURL *pTmpFileReferenceURL = [pTmpURL fileReferenceURL];
-							if ( pTmpFileReferenceURL )
-							{
-								pKey = [pTmpFileReferenceURL absoluteString];
-								if ( pKey )
-								{
-									NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
-									if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
+									MacOSBOOL bStale = NO;
+									NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+									if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
 									{
-										MacOSBOOL bStale = NO;
-										NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-										if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
-										{
-											if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
-												pRet = pSecurityScopedURL;
+										if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
+											pRet = pSecurityScopedURL;
 
-											bShowOpenPanel = NO;
-											break;
-										}
+										bShowOpenPanel = NO;
+										break;
 									}
 								}
 							}
@@ -653,17 +631,12 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 							pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
 							if ( pResolvedURL )
 							{
+								NSURL *pResolvedFileReferenceURL = [pResolvedURL fileReferenceURL];
 								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
-								if ( pUserDefaults )
+								if ( pResolvedFileReferenceURL && pUserDefaults )
 								{
-									NSString *pKey = [pResolvedURL absoluteString];
-									if ( pKey )
-										[pUserDefaults setObject:pData forKey:pKey];
-
-									NSURL *pResolvedFileReferenceURL = [pResolvedURL fileReferenceURL];
-									if ( pResolvedFileReferenceURL )
 									{
-										pKey = [pResolvedFileReferenceURL absoluteString];
+										NSString *pKey = [pResolvedFileReferenceURL absoluteString];
 										if ( pKey )
 											[pUserDefaults setObject:pData forKey:pKey];
 									}
