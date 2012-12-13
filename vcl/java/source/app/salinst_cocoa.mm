@@ -273,12 +273,8 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 
 static void ReleaseSecurityScopedURL( NSURL *pURL )
 {
-	if ( pURL )
-	{
-		if ( [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
-			[pURL stopAccessingSecurityScopedResource];
-		[pURL release];
-	}
+	if ( pURL && [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
+		[pURL stopAccessingSecurityScopedResource];
 }
 
 @implementation VCLRequestSecurityScopedURL
@@ -656,8 +652,12 @@ void Application_releaseSecurityScopedURL( id pURL )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pURL && [pURL isKindOfClass:[NSURL class]] )
-		ReleaseSecurityScopedURL( (NSURL *)pURL );
+	if ( pURL )
+	{
+		if ( [pURL isKindOfClass:[NSURL class]] )
+			ReleaseSecurityScopedURL( (NSURL *)pURL );
+		[pURL release];
+	}
 
 	[pPool release];
 }
