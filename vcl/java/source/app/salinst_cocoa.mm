@@ -58,8 +58,7 @@ typedef NSString* const NSURLIsWritableKey_Type;
 static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
 static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
 
-static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle );
-static void ReleaseSecurityScopedURL( NSURL *pURL );
+static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
 @interface NSURL (VCLURL)
 - (MacOSBOOL)startAccessingSecurityScopedResource;
@@ -81,13 +80,15 @@ static void ReleaseSecurityScopedURL( NSURL *pURL );
 - (NSURL *)securityScopedURL;
 @end
 
-static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle )
+static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	NSURL *pRet = nil;
 
 	if ( pURL )
 	{
-		NSURL *pSecurityScopedURL = AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle );
+		if ( pSecurityScopedURLs )
+			AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle, pSecurityScopedURLs );
+
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
 		if ( pData )
 		{
@@ -102,7 +103,7 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 					if ( pURL )
 					{
 						// Recurse to check if the URL is also an alias
-						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle );
+						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
 						if ( pRecursedURL )
 							pRet = pRecursedURL;
 						else
@@ -111,19 +112,14 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 				}
 			}
 		}
-
-		if ( pSecurityScopedURL )
-			ReleaseSecurityScopedURL( pSecurityScopedURL );
 	}
 
 	return pRet;
 }
 
-static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle )
+static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
-	NSURL *pRet = nil;
-
-	if ( pURL && [pURL isFileURL] )
+	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
 		NSURL *pHomeURL = nil;
 		NSString *pHomeDir = NSHomeDirectory();
@@ -176,7 +172,7 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 						NSNumber *pAlias = nil;
 						if ( [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
 						{
-							NSURL *pResolvedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle );
+							NSURL *pResolvedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
 							if ( pResolvedURL )
 								pURL = pResolvedURL;
 						}
@@ -197,7 +193,8 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 					MacOSBOOL bShowOpenPanel = YES;
 					NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 					NSURL *pTmpURL = pURL;
-					while ( pUserDefaults && pTmpURL && !pRet )
+					MacOSBOOL bSecurityScopedURLFound = NO;
+					while ( pUserDefaults && pTmpURL && !bSecurityScopedURLFound )
 					{
 						NSURL *pTmpFileReferenceURL = [pTmpURL fileReferenceURL];
 						if ( pTmpFileReferenceURL )
@@ -213,7 +210,10 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 									if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
 									{
 										if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
-											pRet = pSecurityScopedURL;
+										{
+											bSecurityScopedURLFound = YES;
+											[pSecurityScopedURLs addObject:pSecurityScopedURL];
+										}
 
 										bShowOpenPanel = NO;
 										break;
@@ -251,7 +251,7 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 						}
 					}
 
-					if ( bShowOpenPanel && !pRet )
+					if ( bShowOpenPanel && !bSecurityScopedURLFound )
 					{
 						ULONG nCount = Application::ReleaseSolarMutex();
 						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
@@ -261,20 +261,15 @@ static NSURL *AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDi
 
 						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
 						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
-							pRet = pSecurityScopedURL;
+						{
+							bSecurityScopedURLFound = YES;
+							[pSecurityScopedURLs addObject:pSecurityScopedURL];
+						}
 					}
 				}
 			}
 		}
 	}
-
-	return pRet;
-}
-
-static void ReleaseSecurityScopedURL( NSURL *pURL )
-{
-	if ( pURL && [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
-		[pURL stopAccessingSecurityScopedResource];
 }
 
 @implementation VCLRequestSecurityScopedURL
@@ -487,8 +482,8 @@ static void ReleaseSecurityScopedURL( NSURL *pURL )
 			NSArray *pWindows = [pApp windows];
 			if ( pWindows )
 			{
-				unsigned int nCount = [pWindows count];
-				unsigned int i = 0;
+				NSUInteger nCount = [pWindows count];
+				NSUInteger i = 0;
 				for ( ; i < nCount ; i++ )
 				{
 					NSWindow *pWindow = [pWindows objectAtIndex:i];
@@ -550,7 +545,7 @@ id NSApplication_getModalWindow()
 	return pModalWindow;
 }
 
-id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
+id Application_acquireSecurityScopedURLsFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
 {
 	id pRet = nil;
 
@@ -560,7 +555,7 @@ id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurit
 
 		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
-			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
+			pRet = Application_acquireSecurityScopedURLsFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
 
 		[pPool release];
 	}
@@ -568,7 +563,7 @@ id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurit
 	return pRet;
 }
 
-id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle )
+id Application_acquireSecurityScopedURLsFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle )
 {
 	id pRet = nil;
 
@@ -587,9 +582,13 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( pURL )
 					{
-						pRet = AcquireSecurityScopedURL( pURL, (MacOSBOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle );
-						if ( pRet )
+						NSMutableArray *pSecurityScopedURLs = [NSMutableArray arrayWithCapacity:2];
+						AcquireSecurityScopedURL( pURL, (MacOSBOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle, pSecurityScopedURLs );
+						if ( pSecurityScopedURLs && [pSecurityScopedURLs count] )
+						{
+							pRet = pSecurityScopedURLs;
 							[pRet retain];
+						}
 					}
 				}
 			}
@@ -648,15 +647,26 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 	[pPool release];
 }
 
-void Application_releaseSecurityScopedURL( id pURL )
+void Application_releaseSecurityScopedURL( id pSecurityScopedURLs )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pURL )
+	if ( pSecurityScopedURLs )
 	{
-		if ( [pURL isKindOfClass:[NSURL class]] )
-			ReleaseSecurityScopedURL( (NSURL *)pURL );
-		[pURL release];
+		if ( [pSecurityScopedURLs isKindOfClass:[NSArray class]] )
+		{
+			NSArray *pArray = (NSArray *)pSecurityScopedURLs;
+			NSUInteger nCount = [pArray count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSURL *pURL = [pArray objectAtIndex:i];
+				if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
+					[(NSURL *)pURL stopAccessingSecurityScopedResource];
+			}
+		}
+
+		[pSecurityScopedURLs release];
 	}
 
 	[pPool release];
