@@ -545,7 +545,7 @@ id NSApplication_getModalWindow()
 	return pModalWindow;
 }
 
-id Application_acquireSecurityScopedURLsFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
+id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
 {
 	id pRet = nil;
 
@@ -555,7 +555,7 @@ id Application_acquireSecurityScopedURLsFromOUString( const OUString *pNonSecuri
 
 		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
-			pRet = Application_acquireSecurityScopedURLsFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
+			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
 
 		[pPool release];
 	}
@@ -563,7 +563,7 @@ id Application_acquireSecurityScopedURLsFromOUString( const OUString *pNonSecuri
 	return pRet;
 }
 
-id Application_acquireSecurityScopedURLsFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle )
+id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle )
 {
 	id pRet = nil;
 
