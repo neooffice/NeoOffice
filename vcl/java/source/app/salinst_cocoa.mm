@@ -70,8 +70,8 @@
 			NSArray *pWindows = [pApp windows];
 			if ( pWindows )
 			{
-				unsigned int nCount = [pWindows count];
-				unsigned int i = 0;
+				NSUInteger nCount = [pWindows count];
+				NSUInteger i = 0;
 				for ( ; i < nCount ; i++ )
 				{
 					NSWindow *pWindow = [pWindows objectAtIndex:i];
