@@ -64,7 +64,7 @@
 #include <dlfcn.h>
 
 typedef id Application_acquireSecurityScopedURLFromOUString_Type( const ::rtl::OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const ::rtl::OUString *pDialogTitle );
-typedef void Application_releaseSecurityScopedURL_Type( id pURL );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
 static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;

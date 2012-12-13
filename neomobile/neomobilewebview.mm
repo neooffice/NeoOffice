@@ -53,7 +53,7 @@
 #define kNMStatusLabelFontHeight 16.0f
 
 typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
-typedef void Application_releaseSecurityScopedURL_Type( id pURL );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
 
 static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
