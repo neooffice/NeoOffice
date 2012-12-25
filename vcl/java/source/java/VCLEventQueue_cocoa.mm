@@ -1202,7 +1202,16 @@ static NSUInteger nMouseMask = 0;
 	if ( bIsVCLWindow && [self isVisible] && nType == NSFlagsChanged && [pEvent modifierFlags] & NSCommandKeyMask )
 	{
 		[self retain];
-		VCLInstance_updateNativeMenus();
+
+		if ( VCLInstance_updateNativeMenus() )
+		{
+			// Fix bug reported in the following NeoOffice forum topic by
+			// forcing any pending menu changes to be done before any key 
+			// shortcuts are matched to menu items:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
+			[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
+		}
+
 		MacOSBOOL bVisible = [self isVisible];
 		[self release];
 		if ( !bVisible )

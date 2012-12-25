@@ -133,11 +133,6 @@ using namespace vcl;
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent;
 @end
 
-@interface VCLMainMenuDidEndTracking : NSObject
-+ (void)mainMenuDidEndTracking;
-- (void)handlePendingMainMenuChanges;
-@end
-
 @interface VCLMenuWrapper : NSObject
 {
 	JavaSalFrame*			mpFrame;
@@ -192,7 +187,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @implementation VCLMainMenuDidEndTracking
 
-+ (void)mainMenuDidEndTracking
++ (void)mainMenuDidEndTracking:(MacOSBOOL)bNoDelay
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
@@ -207,17 +202,24 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	// Queue processing to occur after a very slight delay
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL inModes:pModes];
+	if ( bNoDelay )
+		[pVCLMainMenuDidEndTracking performSelectorOnMainThread:@selector(handlePendingMainMenuChanges:) withObject:[NSNumber numberWithBool:bNoDelay] waitUntilDone:YES modes:pModes];
+	else
+		[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL inModes:pModes];
 }
 
-- (void)handlePendingMainMenuChanges
+- (void)handlePendingMainMenuChanges:(id)pObject
 {
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( bInPerformKeyEquivalent || ( pAppDelegate && [pAppDelegate isInTracking] ) || nLastMenuItemSelectedTime > [NSDate timeIntervalSinceReferenceDate] || NSApplication_getModalWindow() )
 	{
-		// Requeue this operation to occur later
-		[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
-		return;
+		// Requeue this operation to occur later if the no delay flag is not set
+		if ( !pObject || ![pObject isKindOfClass:[NSNumber class]] || ![(NSNumber *)pObject boolValue] )
+		{
+			if ( pPendingSetMenuAsMainMenu )
+				[VCLMainMenuDidEndTracking mainMenuDidEndTracking:NO];
+			return;
+		}
 	}
 
 	if ( pPendingSetMenuAsMainMenu )
@@ -386,7 +388,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 			bRemovePendingSetMenuAsMainMenu = YES;
 		}
 
-		[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
+		[VCLMainMenuDidEndTracking mainMenuDidEndTracking:NO];
 
 		return;
 	}
@@ -479,7 +481,7 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 		bRemovePendingSetMenuAsMainMenu = NO;
 
-		[VCLMainMenuDidEndTracking mainMenuDidEndTracking];
+		[VCLMainMenuDidEndTracking mainMenuDidEndTracking:NO];
 
 		return;
 	}

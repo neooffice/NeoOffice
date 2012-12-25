@@ -667,9 +667,19 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					mbCancelTracking = NO;
 					mbInTracking = NO;
 					if ( VCLInstance_updateNativeMenus() )
+					{
 						mbInTracking = YES;
+
+						// Fix bug reported in the following NeoOffice forum
+						// topic by forcing any pending menu changes to be done
+						// before any menus are displayed:
+						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
+						[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
+					}
 					else
+					{
 						mbCancelTracking = YES;
+					}
 				}
 				else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
 				{

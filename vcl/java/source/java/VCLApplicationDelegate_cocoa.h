@@ -40,6 +40,11 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+@interface VCLMainMenuDidEndTracking : NSObject
++ (void)mainMenuDidEndTracking:(MacOSBOOL)bNoDelay;
+- (void)handlePendingMainMenuChanges:(id)pObject;
+@end
+
 @interface VCLApplicationDelegate : NSObject
 {
 	MacOSBOOL				mbAppMenuInitialized;
