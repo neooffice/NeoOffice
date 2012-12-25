@@ -41,6 +41,7 @@
 #undef check
 
 #include <vcl/svdata.hxx>
+#include <osl/mutex.hxx>
 
 #include "salinst_cocoa.h"
 
@@ -55,8 +56,12 @@
 typedef NSString* const NSURLIsReadableKey_Type;
 typedef NSString* const NSURLIsWritableKey_Type;
 
+static MacOSBOOL bCachedSecurityURLsUpdated = NO;
+static ::osl::Mutex aUpdatedCachedSecurityURLsMutex;
 static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
 static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
+
+using namespace osl;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
@@ -79,6 +84,74 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject;
 - (NSURL *)securityScopedURL;
 @end
+
+static void UpdateCachedSecurityScopedURLs()
+{
+	if ( !bCachedSecurityURLsUpdated )
+	{
+		MutexGuard aGuard( aUpdatedCachedSecurityURLsMutex );
+
+		if ( !bCachedSecurityURLsUpdated )
+		{
+			bCachedSecurityURLsUpdated = YES;
+
+			NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
+			if ( pUserDefaults )
+			{
+				NSDictionary *pDict = [pUserDefaults dictionaryRepresentation];
+				if ( pDict )
+				{
+					NSEnumerator *pEnum = [pDict keyEnumerator];
+					if ( pEnum )
+					{
+						NSString *pKey;
+						while ( ( pKey = [pEnum nextObject] ) )
+						{
+							if ( !pKey || ![pKey isKindOfClass:[NSString class]] )
+								continue;
+
+							NSURL *pKeyURL = [NSURL URLWithString:pKey];
+							if ( !pKeyURL || ![pKeyURL isFileReferenceURL] )
+								continue;
+
+							NSData *pData = [pDict objectForKey:pKey];
+							if ( !pData || ![pData isKindOfClass:[NSData class]] )
+								continue;
+
+							MacOSBOOL bStale = NO;
+							NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+							if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+							{
+								pResolvedURL = [pResolvedURL URLByStandardizingPath];
+								if ( pResolvedURL )
+								{
+									pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+									if ( pResolvedURL )
+									{
+										NSURL *pResolvedFileReferenceURL = [pResolvedURL fileReferenceURL];
+										if ( pResolvedFileReferenceURL )
+										{
+											NSString *pNewKey = [pResolvedFileReferenceURL absoluteString];
+											if ( pNewKey && ![pNewKey isEqualToString:pKey] )
+											{
+												[pUserDefaults removeObjectForKey:pKey];
+												[pUserDefaults setObject:pData forKey:pNewKey];
+											}
+										}
+									}
+								}
+							}
+							else
+							{
+								[pUserDefaults removeObjectForKey:pKey];
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
@@ -188,6 +261,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 				if ( pURL )
 				{
+					UpdateCachedSecurityScopedURLs();
+
 					// Check if there are any cached security scoped bookmarks
 					// for this URL or any of its parent folders
 					MacOSBOOL bShowOpenPanel = YES;
@@ -630,11 +705,9 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 								if ( pResolvedFileReferenceURL && pUserDefaults )
 								{
-									{
-										NSString *pKey = [pResolvedFileReferenceURL absoluteString];
-										if ( pKey )
-											[pUserDefaults setObject:pData forKey:pKey];
-									}
+									NSString *pKey = [pResolvedFileReferenceURL absoluteString];
+									if ( pKey )
+										[pUserDefaults setObject:pData forKey:pKey];
 								}
 							}
 						}
