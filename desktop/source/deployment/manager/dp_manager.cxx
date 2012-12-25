@@ -295,10 +295,12 @@ Reference<deployment::XPackageManager> PackageManagerImpl::create(
             
             try {
 #if defined USE_JAVA && defined MACOSX
-                // Eliminate sandbox file-deny-write errors by testing if the
-                // file is writable before trying to write to it
-                ::rtl::OUString stampPath;
-                if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( stampURL, stampPath ) && !access( ::rtl::OUStringToOString( stampPath, osl_getThreadTextEncoding() ).getStr(), W_OK ) )
+                // Eliminate sandbox file-deny-write errors by treating the file
+                // as read only if we this executable is sandboxed
+                ::rtl::OUString executableFile;
+                osl_getExecutableFile( &executableFile.pData );
+                sal_Int32 lastIndex = executableFile.lastIndexOf( '/' );
+                if ( lastIndex < 0 || executableFile.copy( lastIndex + 1 ) != ::rtl::OUString::createFromAscii( "soffice.bin" ) )
                 {
 #endif	// USE_JAVA && MACOSX
                 // probe writing:
