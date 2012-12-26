@@ -1208,8 +1208,10 @@ JavaSalEvent::JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const
 		case SALEVENT_MOUSEBUTTONUP:
 		case SALEVENT_MOUSELEAVE:
 		case SALEVENT_MOUSEMOVE:
+		case SALEVENT_MOVE:
 		case SALEVENT_MOVERESIZE:
 		case SALEVENT_PAINT:
+		case SALEVENT_RESIZE:
 		case SALEVENT_WHEELMOUSE:
 			mbNative = true;
 	}
@@ -1485,7 +1487,21 @@ void JavaSalEvent::dispatch()
 		if ( NSApplication_isActive() )
 			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
-		return;
+		// Fix document lockup bug reported in the following NeoOffice forum
+		// topic by dispatching bounds change, paint events, and user events
+		// even through we are ignoring other events:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
+		switch ( nID )
+		{
+			case SALEVENT_MOVE:
+			case SALEVENT_MOVERESIZE:
+			case SALEVENT_PAINT:
+			case SALEVENT_RESIZE:
+			case SALEVENT_USEREVENT:
+				break;
+			default:
+				return;
+		}
 	}
 
 	switch ( nID )
