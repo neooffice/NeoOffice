@@ -787,8 +787,8 @@ void OApplicationDetailView::impl_fillTaskPaneData( ElementType _eType, TaskPane
 #ifdef SOLAR_JAVA
         rList.push_back( TaskEntry( ".uno:DBNewReport", RID_STR_REPORT_HELP_TEXT, RID_STR_NEW_REPORT, true ) );
 		rList.push_back( TaskEntry( ".uno:DBNewReportAutoPilot", RID_STR_REPORTS_HELP_TEXT_WIZARD, RID_STR_NEW_REPORT_AUTO ) );
-#endif	// SOLAR_JAVA
 		_rData.nTitleId = RID_STR_REPORTS_CONTAINER;
+#endif	// SOLAR_JAVA
 		break;
 
 	case E_QUERY:
