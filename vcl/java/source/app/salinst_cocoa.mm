@@ -148,6 +148,8 @@ static void UpdateCachedSecurityScopedURLs()
 						}
 					}
 				}
+
+				[pUserDefaults synchronize];
 			}
 		}
 	}
@@ -707,7 +709,10 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 								{
 									NSString *pKey = [pResolvedFileReferenceURL absoluteString];
 									if ( pKey )
+									{
 										[pUserDefaults setObject:pData forKey:pKey];
+										[pUserDefaults synchronize];
+									}
 								}
 							}
 						}
