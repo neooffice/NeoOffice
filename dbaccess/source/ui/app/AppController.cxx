@@ -1553,10 +1553,12 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:Save",               ID_BROWSER_SAVEDOC,        CommandGroup::DOCUMENT );
     implDescribeSupportedFeature( ".uno:SaveAs",             ID_BROWSER_SAVEASDOC,      CommandGroup::DOCUMENT );
 	implDescribeSupportedFeature( ".uno:SendMail",			 SID_MAIL_SENDDOC,			CommandGroup::DOCUMENT );
+#ifdef SOLAR_JAVA
 	implDescribeSupportedFeature( ".uno:DBSendReportAsMail",SID_DB_APP_SENDREPORTASMAIL,
 																						CommandGroup::DOCUMENT );
 	implDescribeSupportedFeature( ".uno:DBSendReportToWriter",SID_DB_APP_SENDREPORTTOWRITER,
 																						CommandGroup::DOCUMENT );
+#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewForm",          SID_APP_NEW_FORM,          CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFolder",        SID_APP_NEW_FOLDER,        CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilot", SID_DB_FORM_NEW_PILOT,     CommandGroup::INSERT );
@@ -1564,12 +1566,14 @@ void OApplicationController::describeSupportedFeatures()
                                                              SID_FORM_CREATE_REPWIZ_PRE_SEL,
                                                                                         CommandGroup::APPLICATION );
 
+#ifdef SOLAR_JAVA
 	implDescribeSupportedFeature( ".uno:DBNewReport",		 SID_APP_NEW_REPORT,		CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewReportAutoPilot",
                                                              ID_DOCUMENT_CREATE_REPWIZ, CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewReportAutoPilotWithPreSelection",
                                                              SID_REPORT_CREATE_REPWIZ_PRE_SEL,
                                                                                         CommandGroup::APPLICATION );
+#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewQuery",         ID_NEW_QUERY_DESIGN,       CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewQuerySql",      ID_NEW_QUERY_SQL,          CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewQueryAutoPilot",ID_APP_NEW_QUERY_AUTO_PILOT,
@@ -1602,10 +1606,12 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBFormEdit",         SID_DB_APP_FORM_EDIT,      CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBFormOpen",         SID_DB_APP_FORM_OPEN,      CommandGroup::EDIT );
 
+#ifdef SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBReportDelete",     SID_DB_APP_REPORT_DELETE,  CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportRename",     SID_DB_APP_REPORT_RENAME,  CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportEdit",       SID_DB_APP_REPORT_EDIT,    CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportOpen",       SID_DB_APP_REPORT_OPEN,    CommandGroup::EDIT );
+#endif	// SOLAR_JAVA
 
     implDescribeSupportedFeature( ".uno:SelectAll",          SID_SELECTALL,             CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:Undo",               ID_BROWSER_UNDO,           CommandGroup::EDIT );
@@ -1629,7 +1635,9 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBViewTables",       SID_DB_APP_VIEW_TABLES,    CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBViewQueries",      SID_DB_APP_VIEW_QUERIES,   CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBViewForms",        SID_DB_APP_VIEW_FORMS,     CommandGroup::VIEW );
+#ifdef SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBViewReports",      SID_DB_APP_VIEW_REPORTS,   CommandGroup::VIEW );
+#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBDisablePreview",   SID_DB_APP_DISABLE_PREVIEW,CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBShowDocInfoPreview",
                                                              SID_DB_APP_VIEW_DOCINFO_PREVIEW,
@@ -1639,9 +1647,11 @@ void OApplicationController::describeSupportedFeatures()
 
     implDescribeSupportedFeature( ".uno:OpenUrl",            SID_OPENURL,               CommandGroup::APPLICATION );
 
+#ifdef SOLAR_JAVA
     // this one should not appear under Tools->Customize->Keyboard
     implDescribeSupportedFeature( ".uno:DBNewReportWithPreSelection",		 
                                                              SID_APP_NEW_REPORT_PRE_SEL,CommandGroup::INTERNAL );
+#endif	// SOLAR_JAVA
 	implDescribeSupportedFeature( ".uno:DBDSImport",		SID_DB_APP_DSIMPORT, CommandGroup::INTERNAL);
 	implDescribeSupportedFeature( ".uno:DBDSExport",		SID_DB_APP_DSEXPORT, CommandGroup::INTERNAL);
 	implDescribeSupportedFeature( ".uno:DBDBAdmin",			SID_DB_APP_DBADMIN, CommandGroup::INTERNAL);
