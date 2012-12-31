@@ -45,6 +45,41 @@
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
 
+@interface VCLPostWillTerminateNotification : NSObject
++ (id)create;
+- (void)postWillTerminateNotification:(id)pObj;
+@end
+
+@implementation VCLPostWillTerminateNotification
+
++ (id)create
+{
+	VCLPostWillTerminateNotification *pRet = [[VCLPostWillTerminateNotification alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)postWillTerminateNotification:(id)pObj
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+	if ( pApp && pNotificationCenter )
+		[pNotificationCenter postNotificationName:NSApplicationWillTerminateNotification object:pApp];
+}
+
+@end
+
+void NSApplication_postWillTerminateNotification()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	VCLPostWillTerminateNotification *pVCLPostWillTerminateNotification = [VCLPostWillTerminateNotification create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLPostWillTerminateNotification performSelectorOnMainThread:@selector(postWillTerminateNotification:) withObject:pVCLPostWillTerminateNotification waitUntilDone:YES modes:pModes];
+
+	[pPool release];
+}
+
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
