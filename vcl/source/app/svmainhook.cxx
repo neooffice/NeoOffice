@@ -127,6 +127,12 @@ static void RunSVMain(void *pData)
     	
     *tcx->pRet = ImplSVMain();
 
+#ifdef USE_JAVA
+    // Fire a "will termination" notification since our app delegate in vcl
+    // never returns YES when queried if we should terminate
+    NSApplication_postWillTerminateNotification();
+#endif	// USE_JAVA
+
     // Force exit since some JVMs won't shutdown when only exit() is invoked
     _exit( 0 );
 }
