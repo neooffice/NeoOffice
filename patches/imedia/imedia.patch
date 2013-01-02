@@ -515,7 +515,7 @@ Index: iMBAbstractView.m
 +
 +// as the lifetime of the media viewer may be the lifetime of the application
 +// we need to retain bookmarks for the entire application run.
-+static NSMutableSet * retainedBookmarks = NULL;
++static NSMutableArray * retainedBookmarks = NULL;
 +
  
  NSString *iMBNativePasteboardFlavor=@"iMBNativePasteboardFlavor";
@@ -528,7 +528,7 @@ Index: iMBAbstractView.m
 ++ (void)initialize
 +{
 +	if(!retainedBookmarks)
-+		retainedBookmarks = [[NSMutableSet alloc] init];
++		retainedBookmarks = [[NSMutableArray alloc] initWithCapacity:10];
 +}
 +
 +// free our security scoped references when we are exiting
@@ -541,18 +541,18 @@ Index: iMBAbstractView.m
 +		
 +		if(retainedBookmarks)
 +		{
-+			NSMutableSet *set=retainedBookmarks;
++			NSMutableArray *oldBookmarks=retainedBookmarks;
 +			retainedBookmarks=NULL;
 +			
 +			if(pApplication_releaseSecurityScopedURL)
 +			{
-+				NSEnumerator *urlEnum = [set objectEnumerator];
++				NSEnumerator *urlEnum = [oldBookmarks objectEnumerator];
 +				id theURL=nil;
 +				while(theURL = [urlEnum nextObject])
 +					pApplication_releaseSecurityScopedURL(theURL);
 +			}
 +			
-+			[set release];
++			[oldBookmarks release];
 +		}
 +	}
 +}
@@ -976,7 +976,7 @@ Index: iMBMusicFolder.m
 +
 +// as the lifetime of the media viewer may be the lifetime of the application
 +// we need to retain bookmarks for the entire application run.
-+static NSMutableSet * retainedBookmarks = NULL;
++static NSMutableArray * retainedBookmarks = NULL;
  
  // put this here to compile cleanly under 10.4 SDK
  @interface QTMovie (iMedia_10_5_Additions)
@@ -988,7 +988,7 @@ Index: iMBMusicFolder.m
 ++ (void)initialize
 +{
 +	if(!retainedBookmarks)
-+		retainedBookmarks = [[NSMutableSet alloc] init];
++		retainedBookmarks = [[NSMutableArray alloc] initWithCapacity:10];
 +}
 +
 +// free our security scoped references when we are exiting
@@ -1001,18 +1001,18 @@ Index: iMBMusicFolder.m
 +		
 +		if(retainedBookmarks)
 +		{
-+			NSMutableSet *set=retainedBookmarks;
++			NSMutableArray *oldBookmarks=retainedBookmarks;
 +			retainedBookmarks=NULL;
 +			
 +			if(pApplication_releaseSecurityScopedURL)
 +			{
-+				NSEnumerator *urlEnum = [set objectEnumerator];
++				NSEnumerator *urlEnum = [oldBookmarks objectEnumerator];
 +				id theURL=nil;
 +				while(theURL = [urlEnum nextObject])
 +					pApplication_releaseSecurityScopedURL(theURL);
 +			}
 +			
-+			[set release];
++			[oldBookmarks release];
 +		}
 +	}
 +}
