@@ -2022,10 +2022,11 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     // polypolygon:
                     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
                     pOutDev->SetFillColor( aNativeHighlightColor );
-                    pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawRect( aRegion[i].SVRect() );
+                    pOutDev->SetLineColor();
+                    pOutDev->DrawRect( aNativeHighlightPolyPoly.GetBoundRect() );
                     pOutDev->Pop();
                 }
             }
@@ -2052,10 +2053,11 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     // polypolygon:
                     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
                     pOutDev->SetFillColor( aNativeHighlightColor );
-                    pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawRect( aRegion[i].SVRect() );
+                    pOutDev->SetLineColor();
+                    pOutDev->DrawRect( aNativeHighlightPolyPoly.GetBoundRect() );
                     pOutDev->Pop();
                 }
 #endif  // USE_JAVA

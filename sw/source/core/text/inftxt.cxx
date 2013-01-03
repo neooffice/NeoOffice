@@ -746,10 +746,11 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
             // polygons by setting the clip to the polypolygon:
             // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
             pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+            pOutDev->IntersectClipRegion( aPaintRect.SVRect() );
             pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
             pOutDev->SetFillColor( aNativeHighlightColor );
-            pOutDev->SetLineColor( aNativeHighlightColor );
-            pOutDev->DrawTransparent( PolyPolygon( Polygon( aPaintRect.SVRect() ) ), 25 );
+            pOutDev->SetLineColor();
+            pOutDev->DrawTransparent( PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
             pOutDev->Pop();
         }
     }
