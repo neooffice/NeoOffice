@@ -953,10 +953,11 @@ void ScOutputData::DrawBackground()
 								// polypolygon:
 								// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
 								pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+								pDev->IntersectClipRegion( aRect );
 								pDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
 								pDev->SetFillColor( aNativeHighlightColor );
-								pDev->SetLineColor( aNativeHighlightColor );
-								pDev->DrawTransparent( PolyPolygon( Polygon( aRect ) ), 25 );
+								pDev->SetLineColor();
+								pDev->DrawTransparent( PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
 								pDev->Pop();
 							}
 #endif	// USE_JAVA
@@ -992,10 +993,11 @@ void ScOutputData::DrawBackground()
 						// clip to the polypolygon:
 						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
 						pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+						pDev->IntersectClipRegion( aRect );
 						pDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
 						pDev->SetFillColor( aNativeHighlightColor );
-						pDev->SetLineColor( aNativeHighlightColor );
-						pDev->DrawTransparent( PolyPolygon( Polygon( aRect ) ), 25 );
+						pDev->SetLineColor();
+						pDev->DrawTransparent( PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
 						pDev->Pop();
 					}
 #endif	// USE_JAVA
