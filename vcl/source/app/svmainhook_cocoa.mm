@@ -45,6 +45,7 @@
 @interface NSBundle (VCLBundle)
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
+
 @interface VCLPostWillTerminateNotification : NSObject
 + (id)create;
 - (void)postWillTerminateNotification:(id)pObj;
@@ -79,7 +80,6 @@ void NSApplication_postWillTerminateNotification()
 
 	[pPool release];
 }
-
 
 void NSApplication_run()
 {
