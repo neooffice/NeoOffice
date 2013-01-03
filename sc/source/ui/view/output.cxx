@@ -830,16 +830,7 @@ void ScOutputData::DrawBackground()
 		for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin(); it != aPixelRects.end(); ++it )
 		{
 			if ( !it->IsEmpty() )
-			{
-				// Eliminate any overlapping polygons so that no even odd
-				// filling is triggered
-				Polygon aTmpPoly( pDev->PixelToLogic( *it ) );
-				PolyPolygon aTmpPolyPoly;
-				aTmpPoly.GetDifference( aNativeHighlightPolyPoly, aTmpPolyPoly );
-				USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
-				for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
-					aNativeHighlightPolyPoly.Insert( aTmpPolyPoly[ i ] );
-			}
+				aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
 		}
 	}
 #endif	 // USE_JAVA
@@ -955,11 +946,17 @@ void ScOutputData::DrawBackground()
 #ifdef USE_JAVA
 							if ( aNativeHighlightPolyPoly.Count() && !aRect.IsEmpty() )
 							{
+								// Fix slowness in drawing reported in the
+								// following NeoOffice forum topic while
+								// avoiding even-odd drawing of any overlapping
+								// polygons by setting the clip to the
+								// polypolygon:
+								// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
 								pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
-								pDev->IntersectClipRegion( aRect );
+								pDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
 								pDev->SetFillColor( aNativeHighlightColor );
 								pDev->SetLineColor( aNativeHighlightColor );
-								pDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+								pDev->DrawTransparent( PolyPolygon( Polygon( aRect ) ), 25 );
 								pDev->Pop();
 							}
 #endif	// USE_JAVA
@@ -989,11 +986,16 @@ void ScOutputData::DrawBackground()
 #ifdef USE_JAVA
 					if ( aNativeHighlightPolyPoly.Count() && !aRect.IsEmpty() )
 					{
+						// Fix slowness in drawing reported in the following
+						// NeoOffice forum topic while avoiding even-odd
+						// drawing of any overlapping polygons by setting the
+						// clip to the polypolygon:
+						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
 						pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
-						pDev->IntersectClipRegion( aRect );
+						pDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
 						pDev->SetFillColor( aNativeHighlightColor );
 						pDev->SetLineColor( aNativeHighlightColor );
-						pDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+						pDev->DrawTransparent( PolyPolygon( Polygon( aRect ) ), 25 );
 						pDev->Pop();
 					}
 #endif	// USE_JAVA
