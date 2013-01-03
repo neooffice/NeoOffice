@@ -2913,12 +2913,17 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 	if ( aNativeHighlightPolyPoly.Count() && !aClipRec.IsEmpty() )
 	{
 		// Fix bug 3605 by setting the clip on the device instead of drawing
-		// an intersection of the native polypolygon and the clip
+		// an intersection of the native polypolygon and the clip. Fix slowness
+		// in drawing reported in the following NeoOffice forum topic while
+		// avoiding even-odd drawing of any overlapping polygons by setting the
+		// clip to the polypolygon:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
 		pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
 		pOutDev->IntersectClipRegion( aClipRec );
+		pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
 		pOutDev->SetFillColor( aNativeHighlightColor );
 		pOutDev->SetLineColor();
-		pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+		pOutDev->DrawTransparent( PolyPolygon( Polygon( aNativeHighlightPolyPoly.GetBoundRect() ) ), 25 );
 		pOutDev->Pop();
 	}
 #endif	// USE_JAVA
