@@ -1968,16 +1968,7 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
             }
 
             for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
-            {
-                // Eliminate any overlapping polygons so that no even odd
-                // filling is triggered
-                Polygon aTmpPoly( *it );
-                PolyPolygon aTmpPolyPoly;
-                aTmpPoly.GetDifference( aNativeHighlightPolyPoly, aTmpPolyPoly );
-                USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
-                for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
-                    aNativeHighlightPolyPoly.Insert( aTmpPolyPoly[ i ] );
-            }
+                aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
         }
 #endif	// USE_JAVA
 
@@ -2025,11 +2016,16 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     aRegion -= aGrf;
                 for( USHORT i = 0; i < aRegion.Count(); ++i )
                 {
+                    // Fix slowness in drawing reported in the following
+                    // NeoOffice forum topic while avoiding even-odd drawing of
+                    // any overlapping polygons by setting the clip to the
+                    // polypolygon:
+                    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
-                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
+                    pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->DrawRect( aRegion[i].SVRect() );
                     pOutDev->Pop();
                 }
             }
@@ -2050,11 +2046,16 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
 #ifdef USE_JAVA
                 if ( aNativeHighlightPolyPoly.Count() )
                 {
+                    // Fix slowness in drawing reported in the following
+                    // NeoOffice forum topic while avoiding even-odd drawing of
+                    // any overlapping polygons by setting the clip to the
+                    // polypolygon:
+                    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
                     pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
-                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
+                    pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->DrawRect( aRegion[i].SVRect() );
                     pOutDev->Pop();
                 }
 #endif  // USE_JAVA
