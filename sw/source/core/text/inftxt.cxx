@@ -737,24 +737,19 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
         }
 
         for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
-        {
-            // Eliminate any overlapping polygons so that no even odd
-            // filling is triggered
-            Polygon aTmpPoly( *it );
-            PolyPolygon aTmpPolyPoly;
-            aTmpPoly.GetDifference( aNativeHighlightPolyPoly, aTmpPolyPoly );
-            USHORT nTmpPolyPolyCount = aTmpPolyPoly.Count();
-            for ( USHORT i = 0 ; i < nTmpPolyPolyCount; i++ )
-                aNativeHighlightPolyPoly.Insert( aTmpPolyPoly[ i ] );
-        }
+            aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
 
         if ( aNativeHighlightPolyPoly.Count() )
         {
+            // Fix slowness in drawing reported in the following NeoOffice
+            // forum topic while avoiding even-odd drawing of any overlapping
+            // polygons by setting the clip to the polypolygon:
+            // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8537
             pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
-            pOutDev->IntersectClipRegion( aPaintRect.SVRect() );
+            pOutDev->IntersectClipRegion( Region( aNativeHighlightPolyPoly ) );
             pOutDev->SetFillColor( aNativeHighlightColor );
             pOutDev->SetLineColor( aNativeHighlightColor );
-            pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+            pOutDev->DrawTransparent( PolyPolygon( Polygon( aPaintRect.SVRect() ) ), 25 );
             pOutDev->Pop();
         }
     }
