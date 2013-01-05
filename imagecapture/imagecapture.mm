@@ -739,6 +739,11 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			[pScannerDeviceView autorelease];
 
 			[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+			pScannerDeviceView.hasDisplayModeSimple = YES;
+			pScannerDeviceView.hasDisplayModeAdvanced = YES;
+			pScannerDeviceView.mode = IKScannerDeviceViewDisplayModeAdvanced;
+			pScannerDeviceView.displaysDownloadsDirectoryControl = YES;
+			pScannerDeviceView.displaysPostProcessApplicationControl = YES;
 			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
 			pScannerDeviceView.delegate = self;
 			[mpEmptyView addSubview:pScannerDeviceView];
