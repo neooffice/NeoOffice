@@ -402,6 +402,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 #pragma mark -
 
+@interface NSView (ImageCaptureImpl)
+- (void)setTranslatesAutoresizingMaskIntoConstraints:(MacOSBOOL)bFlag;
+@end
+
 @implementation ImageCaptureImpl
 
 - (id)initWithDefaultTitle:(NSString *)pDefaultTitle
@@ -530,6 +534,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 			[mpPanel setReleasedWhenClosed:NO];
 			[mpPanel setTitle:mpDefaultTitle];
+
+			// Set background to a slightly dark gray since the text is white
+			// in the scanner device view on Mac OS X 10.8
+			[mpPanel setBackgroundColor:[NSColor grayColor]];
 
 			NSView *pContentView = [mpPanel contentView];
 			if ( pContentView )
@@ -672,6 +680,13 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError
 {
+	if ( !pCameraDeviceView || !mbPanelIsInModal || !mpPanel )
+		return;
+
+	NSWindow *pWindow = [pCameraDeviceView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
 	ShowAlertWithError( pError );
 }
 
@@ -725,6 +740,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			[pCameraDeviceView autorelease];
 
 			[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+			pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
+			pCameraDeviceView.displaysPostProcessApplicationControl = NO;
 			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
 			pCameraDeviceView.delegate = self;
 			[mpEmptyView addSubview:pCameraDeviceView];
@@ -739,11 +756,16 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			[pScannerDeviceView autorelease];
 
 			[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-			pScannerDeviceView.hasDisplayModeSimple = YES;
-			pScannerDeviceView.hasDisplayModeAdvanced = YES;
-			pScannerDeviceView.mode = IKScannerDeviceViewDisplayModeAdvanced;
-			pScannerDeviceView.displaysDownloadsDirectoryControl = YES;
-			pScannerDeviceView.displaysPostProcessApplicationControl = YES;
+			// Setting translates autoresizing mask is needed for view to
+			// resize on Mac OS X 10.8
+			if ( [pScannerDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
+				[pScannerDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
+			// If no display mode available, enable simple mode to avoid an
+			// empty view
+			if ( !pScannerDeviceView.hasDisplayModeSimple && !pScannerDeviceView.hasDisplayModeAdvanced )
+				pScannerDeviceView.hasDisplayModeSimple = YES;
+			pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
+			pScannerDeviceView.displaysPostProcessApplicationControl = NO;
 			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
 			pScannerDeviceView.delegate = self;
 			[mpEmptyView addSubview:pScannerDeviceView];
@@ -754,6 +776,13 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
 {
+	if ( !pScannerDeviceView || !mbPanelIsInModal || !mpPanel )
+		return;
+
+	NSWindow *pWindow = [pScannerDeviceView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
 	ShowAlertWithError( pError );
 }
 
