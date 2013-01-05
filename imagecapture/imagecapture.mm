@@ -523,7 +523,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 550 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
 		if ( mpPanel )
 		{
 			[mpPanel autorelease];
