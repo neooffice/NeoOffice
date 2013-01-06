@@ -49,7 +49,9 @@
  *************************************************************************
  *************************************************************************/
 
+#include <map>
 #include <dlfcn.h>
+
 #include <rtl/ustring.hxx>
 #include <sfx2/sfx.hrc>
 #include <tools/resmgr.hxx>
@@ -71,10 +73,6 @@
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
-#ifdef USE_ICAIMAGEPORT
-// Need to include for ICAImportImagePB struct but we don't link to it
-#import <Carbon/Carbon.h>
-#endif	// USE_ICAIMAGEPORT
 #undef MAC_OS_X_VERSION_MIN_REQUIRED
 #define MAC_OS_X_VERSION_MIN_REQUIRED MAC_OS_X_VERSION_10_6
 #import <Quartz/Quartz.h>
@@ -100,37 +98,45 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
-#ifdef USE_ICAIMAGEPORT
-typedef OSErr Gestalt_Type( OSType selector, long *response );
-typedef ICAError ICAImportImage_Type( ICAImportImagePB *pPB, ICACompletion nCompletion );
-#endif	// USE_ICAIMAGEPORT
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
-@interface ImageCaptureImpl : NSObject < IKDeviceBrowserViewDelegate, IKCameraDeviceViewDelegate, IKScannerDeviceViewDelegate >
+@interface NSView (ImageCaptureImpl)
+- (void)setTranslatesAutoresizingMaskIntoConstraints:(MacOSBOOL)bFlag;
+@end
+
+@interface ImageCaptureImplNSPanel : NSPanel
+- (void)windowWillClose:(NSNotification *)pNotification;
+@end
+
+@interface ImageCaptureImplIKCameraDeviceView : IKCameraDeviceView < IKCameraDeviceViewDelegate >
+- (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
+- (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError;
+- (void)cameraDeviceViewSelectionDidChange:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView;
+@end
+
+@interface ImageCaptureImplIKDeviceBrowserView : IKDeviceBrowserView < IKDeviceBrowserViewDelegate >
+- (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError;
+- (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice;
+@end
+
+@interface ImageCaptureImplIKScannerDeviceView : IKScannerDeviceView < IKScannerDeviceViewDelegate >
+- (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError;
+- (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
+@end
+
+@interface ImageCaptureImpl : NSObject
 {
 	bool gotImage;
-	bool mbPanelIsInModal;
-	NSString *mpDefaultTitle;
-	NSPanel *mpPanel;
-	NSSplitView *mpSplitView;
-	IKDeviceBrowserView *mpDeviceBrowserView;
-	NSView *mpEmptyView;
 }
-- (id)initWithDefaultTitle:(NSString *)pDefaultTitle;
-- (void)dealloc;
++ (id)create;
++ (NSString *)defaultTitle;
+- (id)init;
 - (void)doImageCapture:(id)pObj;
 - (bool)capturedImage;
-- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
-- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError;
-- (void)cameraDeviceViewSelectionDidChange:(IKCameraDeviceView *)pCameraDeviceView;
-- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError;
-- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice;
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError;
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError;
-- (void)windowWillClose:(NSNotification *)pNotification;
+- (void)setCapturedImage:(bool)bCaptured;
 @end
 
 using namespace ::rtl;
@@ -149,30 +155,6 @@ static void ShowAlertWithError( NSError *pError )
 		NSAlert *pAlert = [NSAlert alertWithError:pError];
 		if ( pAlert )
 			[pAlert runModal];
-	}
-}
-
-static void ResetDeviceViewProperties( NSView *pView )
-{
-	if ( pView )
-	{
-		if ( [pView isKindOfClass:[IKDeviceBrowserView class]] )
-		{
-			IKDeviceBrowserView *pDeviceBrowserView = (IKDeviceBrowserView *)pView;
-			pDeviceBrowserView.delegate = nil;
-		}
-		else if ( [pView isKindOfClass:[IKCameraDeviceView class]] )
-		{
-			IKCameraDeviceView *pCameraDeviceView = (IKCameraDeviceView *)pView;
-			pCameraDeviceView.cameraDevice = nil;
-			pCameraDeviceView.delegate = nil;
-		}
-		else if ( [pView isKindOfClass:[IKScannerDeviceView class]] )
-		{
-			IKScannerDeviceView *pScannerDeviceView = (IKScannerDeviceView *)pView;
-			pScannerDeviceView.scannerDevice = nil;
-			pScannerDeviceView.delegate = nil;
-		}
 	}
 }
 
@@ -372,19 +354,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	// Get STR_NONE localized string
-	NSString *pTitle = nil;
-	SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( sfx ) );
-	if ( pResMgr )
-	{
-		XubString aNone( pResMgr->ReadString( STR_NONE ) );
-		aNone.EraseAllChars( '~' );
-		if ( aNone.Len() );
-			pTitle = [NSString stringWithCharacters:aNone.GetBuffer() length:aNone.Len()];
-		delete pResMgr;
-	}
-
-	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] initWithDefaultTitle:pTitle];
+	ImageCaptureImpl *imp=[ImageCaptureImpl create];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
@@ -393,8 +363,6 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	
 	bool toReturn=[imp capturedImage];
 	
-	// [imp release];
-	
 	[pool release];
 	
 	return(toReturn);
@@ -402,227 +370,39 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 #pragma mark -
 
-@implementation ImageCaptureImpl
+static ImageCaptureImpl *mpCurrentImageCaptureImpl = nil;
+static NSModalSession maModalSession = nil;
+static NSString *mpDefaultTitle = nil;
+static NSPanel *mpPanel = nil;
+static NSSplitView *mpSplitView = nil;
+static ImageCaptureImplIKDeviceBrowserView *mpDeviceBrowserView = nil;
+static NSView *mpEmptyView = nil;
+static ::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* > aCameraDeviceViewMap;
+static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aScannerDeviceViewMap;
 
-- (id)initWithDefaultTitle:(NSString *)pDefaultTitle
+@implementation ImageCaptureImplNSPanel
+
+- (void)windowWillClose:(NSNotification *)pNotification
 {
-	self = [super init];
-
-	gotImage=false;
-	mpDefaultTitle = pDefaultTitle;
-	if ( !mpDefaultTitle )
-		mpDefaultTitle = @"- None -";
-	if ( mpDefaultTitle )
-		[mpDefaultTitle retain];
-	mbPanelIsInModal=false;
-	mpPanel=nil;
-	mpSplitView=nil;
-	mpDeviceBrowserView=nil;
-	mpEmptyView=nil;
-
-	return(self);
-}
-
-- (void)dealloc
-{
-	if ( mpDefaultTitle )
-		[mpDefaultTitle release];
-
-	[super dealloc];
-}
-
-- (void)doImageCapture:(id)pObj
-{
-	// Do nothing if we are recursing
-	if ( gotImage || mbPanelIsInModal || mpPanel || mpSplitView || mpDeviceBrowserView || mpEmptyView )
-		return;
-
-#ifdef USE_ICAIMAGEPORT
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
+	if ( maModalSession )
 	{
-		bool bUseICAImageImport = false;
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			// Use ICAImportImage() if we are running on Mac OS X 10.6 or
-			// earlier as IKDeviceBrowserView opens imported images in the
-			// Preview application
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
-			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				if ( res <= 6 )
-				{
-					bUseICAImageImport = true;
-
-					CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", @"pdf", @"bmp", NULL];
-					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
-					if (theTypes && thePasteboard)
-					{
-						ICAImportImage_Type *pICAImportImage = (ICAImportImage_Type *)dlsym( pLib, "ICAImportImage" );
-						if ( pICAImportImage )
-						{
-							ICAImportImagePB thePB;
-							memset(&thePB, '\0', sizeof(thePB));
-
-							// Fix bug 3641 by passing a pointer to NULL
-							CFArrayRef importedImages = NULL;
-							thePB.importedImages = &importedImages;
-							thePB.supportedFileTypes = theTypes;
-							ICAError error = pICAImportImage(&thePB, NULL);
-							if(thePB.importedImages && *thePB.importedImages)
-							{
-								if((error==noErr) && CFArrayGetCount(*thePB.importedImages))
-								{
-									CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
-									if(theImage)
-									{
-										// convert image into TIFF so we can put
-										// it on the pasteboard
-										NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-										if(theNSImage)
-										{
-											NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-											if(theNSTIFFData)
-											{
-												// no need to acquire global
-												// mutex now that libdtransjava
-												// does all pasteboard actions
-												// on the main thread
-												[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
-												[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
-												// mark that we've successfully
-												// imported the image and placed
-												// it onto the clipboard
-												gotImage=true;
-											}
-
-											[theNSImage release];
-										}
-									}
-								}
-
-								CFRelease(*thePB.importedImages);
-							}
-						}
-					}
-				}
-			}
-		}
-
-		dlclose( pLib );
-
-		if ( bUseICAImageImport )
-			return;
-	}
-#endif	// USE_ICAIMAGEPORT
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 500 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpPanel )
-		{
-			[mpPanel autorelease];
-
-			[mpPanel setReleasedWhenClosed:NO];
-			[mpPanel setTitle:mpDefaultTitle];
-
-			NSView *pContentView = [mpPanel contentView];
-			if ( pContentView )
-			{
-				mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
-				if ( mpSplitView )
-				{
-					[mpSplitView autorelease];
-
-					[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-					[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
-					[mpSplitView setVertical:YES];
-					[pContentView addSubview:mpSplitView];
-
-					NSRect aSplitViewBounds = [mpSplitView bounds];
-					mpDeviceBrowserView = [[IKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
-					if ( mpDeviceBrowserView )
-					{
-						[mpDeviceBrowserView autorelease];
-
-						// On Mac OS X 10.7, the awakeFromNib selector needs
-						// to be invoked or else no devices will be listed
-						if ( [mpDeviceBrowserView respondsToSelector:@selector(awakeFromNib)] )
-							[mpDeviceBrowserView awakeFromNib];
-						[mpSplitView addSubview:mpDeviceBrowserView];
-
-						mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
-						if ( mpEmptyView )
-						{
-							[mpEmptyView autorelease];
-
-							[mpSplitView addSubview:mpEmptyView];
-							[mpSplitView setPosition:125.0f ofDividerAtIndex:0];
-
-							[mpPanel setDelegate:self];
-							mpDeviceBrowserView.mode = IKDeviceBrowserViewDisplayModeIcon;
-							mpDeviceBrowserView.displaysLocalCameras = YES;
-							mpDeviceBrowserView.displaysNetworkCameras = YES;
-							mpDeviceBrowserView.displaysLocalScanners = YES;
-							mpDeviceBrowserView.displaysNetworkScanners = YES;
-							mpDeviceBrowserView.delegate = self;
-
-							mbPanelIsInModal = true;
-							@try
-							{
-								[self deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
-								[pApp runModalForWindow:mpPanel];
-							}
-							@catch ( NSException *pExc )
-							{
-								// Close the window after catching an exception
-								// as the device browser view will likely crash
-								[mpPanel close];
-								if ( pExc )
-									CFShow( pExc );
-							}
-
-							// Run default run loop to clear the asynchronous
-							// timers that ImageKit queues before our objects
-							// are released
-							CFRunLoopRunInMode( kCFRunLoopDefaultMode, 0, false );
-							mbPanelIsInModal = false;
-						}
-					}
-				}
-			}
-		}
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp stopModal];
 	}
 
-	if ( mpPanel )
-	{
-		[mpPanel close];
-		mpPanel = nil;
-	}
-
+	// Remove the split view to stop CGSGetSurfaceBounds errors on Mac OS X 10.6
 	if ( mpSplitView )
-		mpSplitView = nil;
-
-	if ( mpDeviceBrowserView )
-		mpDeviceBrowserView = nil;
-
-	if ( mpEmptyView )
-		mpEmptyView = nil;
+		[mpSplitView removeFromSuperview];
 }
 
-- (bool)capturedImage
-{
-	return(gotImage);
-}
+@end
 
-- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
+@implementation ImageCaptureImplIKCameraDeviceView
+
+- (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( !pCameraDeviceView || !mbPanelIsInModal || !mpPanel )
+	if ( !pCameraDeviceView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
 		return;
 
 	NSWindow *pWindow = [pCameraDeviceView window];
@@ -661,7 +441,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		{
 			[pPasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:nil];
 			[pPasteboard setData:pTIFFData forType:NSTIFFPboardType];
-			gotImage = true;
+			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
 			if ( [mpPanel isVisible] )
@@ -670,24 +450,43 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	}
 }
 
-- (void)cameraDeviceView:(IKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError
+- (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError
 {
+	if ( !pCameraDeviceView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+		return;
+
+	NSWindow *pWindow = [pCameraDeviceView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
 	ShowAlertWithError( pError );
 }
 
-- (void)cameraDeviceViewSelectionDidChange:(IKCameraDeviceView *)pCameraDeviceView
+- (void)cameraDeviceViewSelectionDidChange:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView
 {
 }
 
-- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError
-{
-	ShowAlertWithError( pError );
-}
+@end
 
-- (void)deviceBrowserView:(IKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
+@implementation ImageCaptureImplIKDeviceBrowserView
+
+- (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError
 {
 	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || gotImage || !mbPanelIsInModal || !mpPanel || !mpSplitView || !mpDeviceBrowserView || !mpEmptyView )
+	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+		return;
+
+	NSWindow *pWindow = [pDeviceBrowserView window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
+	ShowAlertWithError( pError );
+}
+
+- (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
+{
+	// Do nothing if we aren't in running the modal panel
+	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
 		return;
 
 	NSWindow *pWindow = [pDeviceBrowserView window];
@@ -707,57 +506,107 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			{
 				NSView *pSubview = [pSubviewsCopy objectAtIndex:i];
 				if ( pSubview )
-				{
 					[pSubview removeFromSuperview];
-					ResetDeviceViewProperties( pSubview );
-				}
 			}
 		}
 	}
 
 	// Add a subview for the device in the empty view
-	[mpPanel setTitle:mpDefaultTitle];
+	[mpPanel setTitle:[ImageCaptureImpl defaultTitle]];
 	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
 	{
-		IKCameraDeviceView *pCameraDeviceView = [[IKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+		ImageCaptureImplIKCameraDeviceView *pCameraDeviceView = nil;
+		::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* >::const_iterator it = aCameraDeviceViewMap.find( (ICCameraDevice *)pDevice );
+		if ( it != aCameraDeviceViewMap.end() )
+			pCameraDeviceView = it->second;
+
+		if ( !pCameraDeviceView )
+		{
+			pCameraDeviceView = [[ImageCaptureImplIKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+			if ( pCameraDeviceView )
+			{
+				pCameraDeviceView.delegate = pCameraDeviceView;
+
+				[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+				pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
+				pCameraDeviceView.displaysPostProcessApplicationControl = NO;
+				// Stop opening of Preview application after import
+				pCameraDeviceView.postProcessApplication = nil;
+
+				aCameraDeviceViewMap[ (ICCameraDevice *)pDevice ] = pCameraDeviceView;
+			}
+		}
+
 		if ( pCameraDeviceView )
 		{
-			[pCameraDeviceView autorelease];
-
-			[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
-			pCameraDeviceView.delegate = self;
 			[mpEmptyView addSubview:pCameraDeviceView];
+			// Set device after display to eliminate Mac OS X 10.6 log messages
+			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
 			[mpPanel setTitle:[pDevice name]];
 		}
 	}
 	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
 	{
-		IKScannerDeviceView *pScannerDeviceView = [[IKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+		ImageCaptureImplIKScannerDeviceView *pScannerDeviceView = nil;
+		::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* >::const_iterator it = aScannerDeviceViewMap.find( (ICScannerDevice *)pDevice );
+		if ( it != aScannerDeviceViewMap.end() )
+			pScannerDeviceView = it->second;
+
+		if ( !pScannerDeviceView )
+		{
+			pScannerDeviceView = [[ImageCaptureImplIKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+			if ( pScannerDeviceView )
+			{
+				pScannerDeviceView.delegate = pScannerDeviceView;
+
+				[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+				// Setting translates autoresizing mask is needed for view to
+				// resize on Mac OS X 10.8
+				if ( [pScannerDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
+					[pScannerDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
+				pScannerDeviceView.hasDisplayModeSimple = YES;
+				pScannerDeviceView.hasDisplayModeAdvanced = YES;
+				pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
+				pScannerDeviceView.displaysPostProcessApplicationControl = NO;
+				// Stop opening of Preview application after import
+				pScannerDeviceView.postProcessApplication = nil;
+
+				aScannerDeviceViewMap[ (ICScannerDevice *)pDevice ] = pScannerDeviceView;
+			}
+		}
+
 		if ( pScannerDeviceView )
 		{
-			[pScannerDeviceView autorelease];
-
-			[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
-			pScannerDeviceView.delegate = self;
 			[mpEmptyView addSubview:pScannerDeviceView];
+			// Set device after display to eliminate Mac OS X 10.6 log messages
+			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
 			[mpPanel setTitle:[pDevice name]];
 		}
 	}
 }
 
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
+@end
+
+@implementation ImageCaptureImplIKScannerDeviceView
+
+- (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
 {
+	if ( pScannerDeviceView != self || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+		return;
+
+	NSWindow *pWindow = [self window];
+	if ( !pWindow || pWindow != mpPanel )
+		return;
+
 	ShowAlertWithError( pError );
 }
 
-- (void)scannerDeviceView:(IKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
+- (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( !pScannerDeviceView || !mbPanelIsInModal || !mpPanel )
+	if ( pScannerDeviceView != self || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
 		return;
 
-	NSWindow *pWindow = [pScannerDeviceView window];
+	NSWindow *pWindow = [self window];
 	if ( !pWindow || pWindow != mpPanel )
 		return;
 
@@ -793,7 +642,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		{
 			[pPasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:nil];
 			[pPasteboard setData:pTIFFData forType:NSTIFFPboardType];
-			gotImage = true;
+			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
 			if ( [mpPanel isVisible] )
@@ -802,19 +651,168 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	}
 }
 
-- (void)windowWillClose:(NSNotification *)pNotification
-{
-	// Remove the empty view's subviews and set delegate to nil otherwise
-	// crashing will occur when pressing the red window close button
-	[self deviceBrowserView:mpDeviceBrowserView selectionDidChange:nil];
-	ResetDeviceViewProperties( mpDeviceBrowserView );
+@end
 
-	if ( mbPanelIsInModal )
+@implementation ImageCaptureImpl
+
++ (id)create
+{
+	ImageCaptureImpl *pRet = [[ImageCaptureImpl alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
++ (NSString *)defaultTitle
+{
+	if ( !mpDefaultTitle )
 	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
-			[pApp abortModal];
+		// Get STR_NONE localized string
+		SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( sfx ) );
+		if ( pResMgr )
+		{
+			XubString aNone( pResMgr->ReadString( STR_NONE ) );
+			aNone.EraseAllChars( '~' );
+			if ( aNone.Len() );
+				mpDefaultTitle = [NSString stringWithCharacters:aNone.GetBuffer() length:aNone.Len()];
+			delete pResMgr;
+		}
+
+		if ( !mpDefaultTitle )
+			mpDefaultTitle = @"- None -";
+
+		if ( mpDefaultTitle )
+			[mpDefaultTitle retain];
 	}
+
+	return mpDefaultTitle;
+}
+
+- (id)init
+{
+	self = [super init];
+
+	gotImage=false;
+
+	return(self);
+}
+
+- (void)doImageCapture:(id)pObj
+{
+	// Do nothing if we are recursing
+	if ( gotImage || maModalSession || ( mpPanel && [mpPanel isVisible] ) )
+		return;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		if ( !mpPanel )
+			mpPanel = [[ImageCaptureImplNSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 550 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpPanel )
+		{
+			[mpPanel setDelegate:mpPanel];
+			[mpPanel setReleasedWhenClosed:NO];
+			[mpPanel setTitle:[ImageCaptureImpl defaultTitle]];
+
+			// Set background to a slightly dark gray since the text is white
+			// in the scanner device view on Mac OS X 10.8
+			[mpPanel setBackgroundColor:[NSColor grayColor]];
+
+			NSView *pContentView = [mpPanel contentView];
+			if ( pContentView )
+			{
+				if ( !mpSplitView )
+				{
+					mpSplitView = [[NSSplitView alloc] initWithFrame:[pContentView bounds]];
+					if ( mpSplitView )
+					{
+						[mpSplitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+						[mpSplitView setDividerStyle:NSSplitViewDividerStyleThin];
+						[mpSplitView setVertical:YES];
+					}
+				}
+
+				if ( mpSplitView )
+				{
+					if ( [mpSplitView superview] != pContentView )
+					{
+						[mpSplitView removeFromSuperview];
+						[pContentView addSubview:mpSplitView];
+					}
+
+					NSRect aSplitViewBounds = [mpSplitView bounds];
+					if ( !mpDeviceBrowserView )
+					{
+						mpDeviceBrowserView = [[ImageCaptureImplIKDeviceBrowserView alloc] initWithFrame:aSplitViewBounds];
+						if ( mpDeviceBrowserView )
+						{
+							// On Mac OS X 10.7, the awakeFromNib selector needs
+							// to be invoked or else no devices will be listed
+							if ( [mpDeviceBrowserView respondsToSelector:@selector(awakeFromNib)] )
+								[mpDeviceBrowserView awakeFromNib];
+
+							mpDeviceBrowserView.delegate = mpDeviceBrowserView;
+
+							mpDeviceBrowserView.mode = IKDeviceBrowserViewDisplayModeIcon;
+							mpDeviceBrowserView.displaysLocalCameras = YES;
+							mpDeviceBrowserView.displaysNetworkCameras = YES;
+							mpDeviceBrowserView.displaysLocalScanners = YES;
+							mpDeviceBrowserView.displaysNetworkScanners = YES;
+						}
+					}
+
+					if ( mpDeviceBrowserView )
+					{
+						if ( [mpDeviceBrowserView superview] != mpSplitView )
+						{
+							[mpDeviceBrowserView removeFromSuperview];
+							[mpSplitView addSubview:mpDeviceBrowserView];
+						}
+
+						if ( !mpEmptyView )
+						{
+							mpEmptyView = [[NSView alloc] initWithFrame:aSplitViewBounds];
+							if ( mpEmptyView )
+							{
+								if ( [mpEmptyView superview] != mpSplitView )
+								{
+									[mpEmptyView removeFromSuperview];
+									[mpSplitView addSubview:mpEmptyView];
+								}
+
+								[mpSplitView setPosition:125.0f ofDividerAtIndex:0];
+							}
+						}
+
+						if ( mpEmptyView )
+						{
+							mpCurrentImageCaptureImpl = self;
+							[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
+
+							// Run modal session
+							maModalSession = [pApp beginModalSessionForWindow:mpPanel];
+							while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse )
+								;
+							[pApp endModalSession:maModalSession];
+							maModalSession = nil;
+
+							[mpPanel close];
+							mpCurrentImageCaptureImpl = nil;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+- (bool)capturedImage
+{
+	return(gotImage);
+}
+
+- (void)setCapturedImage:(bool)bCaptured
+{
+	gotImage = bCaptured;
 }
 
 @end
