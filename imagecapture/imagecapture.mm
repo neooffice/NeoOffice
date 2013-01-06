@@ -742,9 +742,12 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 			pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
 			pCameraDeviceView.displaysPostProcessApplicationControl = NO;
-			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+			// Stop opening of Preview application after import
+			pCameraDeviceView.postProcessApplication = nil;
 			pCameraDeviceView.delegate = self;
 			[mpEmptyView addSubview:pCameraDeviceView];
+			// Set device after display to eliminate Mac OS X 10.6 log messages
+			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
 			[mpPanel setTitle:[pDevice name]];
 		}
 	}
@@ -766,9 +769,12 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 				pScannerDeviceView.hasDisplayModeSimple = YES;
 			pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
 			pScannerDeviceView.displaysPostProcessApplicationControl = NO;
-			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+			// Stop opening of Preview application after import
+			pScannerDeviceView.postProcessApplication = nil;
 			pScannerDeviceView.delegate = self;
 			[mpEmptyView addSubview:pScannerDeviceView];
+			// Set device after display to eliminate Mac OS X 10.6 log messages
+			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
 			[mpPanel setTitle:[pDevice name]];
 		}
 	}
