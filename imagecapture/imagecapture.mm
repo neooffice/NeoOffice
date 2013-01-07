@@ -391,6 +391,11 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			[pApp stopModal];
 	}
 
+	// Clear all of the device views from the empty view so that the panel is
+	// in a "no selected device" state when reopened
+	if ( mpDeviceBrowserView )
+		[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:nil];
+
 	// Remove the split view to stop CGSGetSurfaceBounds errors on Mac OS X 10.6
 	if ( mpSplitView )
 		[mpSplitView removeFromSuperview];
@@ -820,6 +825,12 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 							// Run modal session
 							maModalSession = [pApp beginModalSessionForWindow:mpPanel];
+
+							// Forcefully set the device view to the selected
+							// device after the start of the modal session
+							// makes the panel visible since the empty view
+							// will be in a "no selected device" state
+							[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
 							while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse )
 								;
 							[pApp endModalSession:maModalSession];
