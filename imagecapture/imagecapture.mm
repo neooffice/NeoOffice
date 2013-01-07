@@ -506,7 +506,28 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			{
 				NSView *pSubview = [pSubviewsCopy objectAtIndex:i];
 				if ( pSubview )
+				{
+					if ( [pSubview isKindOfClass:[IKCameraDeviceView class]] )
+					{
+						IKCameraDeviceView *pCameraDeviceView = (IKCameraDeviceView *)pSubview;
+						if ( pCameraDeviceView.cameraDevice )
+						{
+							[pCameraDeviceView.cameraDevice cancelDownload];
+							pCameraDeviceView.cameraDevice = nil;
+						}
+					}
+					else if ( [pSubview isKindOfClass:[IKScannerDeviceView class]] )
+					{
+						IKScannerDeviceView *pScannerDeviceView = (IKScannerDeviceView *)pSubview;
+						if ( pScannerDeviceView.scannerDevice )
+						{
+							[pScannerDeviceView.scannerDevice cancelScan];
+							pScannerDeviceView.scannerDevice = nil;
+						}
+					}
+
 					[pSubview removeFromSuperview];
+				}
 			}
 		}
 	}
@@ -528,10 +549,17 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 				pCameraDeviceView.delegate = pCameraDeviceView;
 
 				[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+				// Setting translates autoresizing mask is needed for view to
+				// resize on Mac OS X 10.8
+				if ( [pCameraDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
+					[pCameraDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
+
 				pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
 				pCameraDeviceView.displaysPostProcessApplicationControl = NO;
+				pCameraDeviceView.mode = IKCameraDeviceViewDisplayModeTable;
 				// Stop opening of Preview application after import
 				pCameraDeviceView.postProcessApplication = nil;
+				pCameraDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
 
 				aCameraDeviceViewMap[ (ICCameraDevice *)pDevice ] = pCameraDeviceView;
 			}
@@ -564,12 +592,15 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 				// resize on Mac OS X 10.8
 				if ( [pScannerDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
 					[pScannerDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
-				pScannerDeviceView.hasDisplayModeSimple = YES;
+
 				pScannerDeviceView.hasDisplayModeAdvanced = YES;
+				pScannerDeviceView.hasDisplayModeSimple = YES;
 				pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
 				pScannerDeviceView.displaysPostProcessApplicationControl = NO;
+				pScannerDeviceView.mode = IKScannerDeviceViewDisplayModeSimple;
 				// Stop opening of Preview application after import
 				pScannerDeviceView.postProcessApplication = nil;
+				pScannerDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
 
 				aScannerDeviceViewMap[ (ICScannerDevice *)pDevice ] = pScannerDeviceView;
 			}
@@ -786,7 +817,6 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 						if ( mpEmptyView )
 						{
 							mpCurrentImageCaptureImpl = self;
-							[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
 
 							// Run modal session
 							maModalSession = [pApp beginModalSessionForWindow:mpPanel];
