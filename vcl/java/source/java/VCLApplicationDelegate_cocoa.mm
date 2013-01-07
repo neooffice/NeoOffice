@@ -157,19 +157,19 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 			}
 		}
 
+		if ( Application::IsShutDown() )
+		{
+			nRet = NSTerminateLater;
+
+			// Fire a "will termination" notification since our app delegate
+			// never returns YES when queried if we should terminate
+			NSApplication *pApp = [NSApplication sharedApplication];
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pApp && pNotificationCenter )
+				[pNotificationCenter postNotificationName:NSApplicationWillTerminateNotification object:pApp];
+		}
+
 		rSolarMutex.release();
-	}
-
-	if ( Application::IsShutDown() )
-	{
-		nRet = NSTerminateLater;
-
-		// Fire a "will termination" notification since our app delegate
-		// never returns YES when queried if we should terminate
-		NSApplication *pApp = [NSApplication sharedApplication];
-		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-		if ( pApp && pNotificationCenter )
-			[pNotificationCenter postNotificationName:NSApplicationWillTerminateNotification object:pApp];
 	}
 
 	return nRet;
