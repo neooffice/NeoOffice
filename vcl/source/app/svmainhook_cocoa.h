@@ -38,7 +38,6 @@
 
 #include <sal/types.h>
 
-SAL_DLLPRIVATE void NSApplication_postWillTerminateNotification();
 SAL_DLLPRIVATE void NSApplication_run();
 
 #endif
