@@ -378,6 +378,7 @@ static NSPanel *mpPanel = nil;
 static NSSplitView *mpSplitView = nil;
 static ImageCaptureImplIKDeviceBrowserView *mpDeviceBrowserView = nil;
 static NSView *mpEmptyView = nil;
+static NSProgressIndicator *mpWaitingView = nil;
 static ::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* > aCameraDeviceViewMap;
 static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aScannerDeviceViewMap;
 
@@ -535,6 +536,10 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							pScannerDeviceView.scannerDevice = nil;
 						}
 					}
+					else if ( [pSubview isKindOfClass:[NSProgressIndicator class]] )
+					{
+						[mpWaitingView stopAnimation:self];
+					}
 
 					[pSubview removeFromSuperview];
 				}
@@ -548,6 +553,17 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 	{
 		if ( pDevice.hasOpenSession )
 		{
+			if ( mpWaitingView )
+			{
+				// Center in content view
+				NSRect aEmptyBounds = [mpEmptyView bounds];
+				NSRect aWaitingFrame = [mpWaitingView frame];
+				[mpWaitingView setFrameOrigin:NSMakePoint( ( aEmptyBounds.size.width - aWaitingFrame.size.width ) / 2, ( aEmptyBounds.size.height - aWaitingFrame.size.height ) / 2 )];
+
+				[mpEmptyView addSubview:mpWaitingView];
+				[mpWaitingView startAnimation:self];
+			}
+
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[self performSelector:@selector(selectionDidChangeToSelectedDevice) withObject:nil afterDelay:(NSTimeInterval)1.0f inModes:pModes];
 		}
@@ -839,6 +855,16 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 						if ( mpEmptyView )
 						{
+							mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+							if ( mpWaitingView )
+							{
+								[mpWaitingView setIndeterminate:YES];
+								[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+								[mpWaitingView setDisplayedWhenStopped:NO];
+								[mpWaitingView sizeToFit];
+								[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
+							}
+
 							mpCurrentImageCaptureImpl = self;
 
 							// Run modal session
