@@ -120,6 +120,7 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 @interface ImageCaptureImplIKDeviceBrowserView : IKDeviceBrowserView < IKDeviceBrowserViewDelegate >
 - (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError;
 - (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice;
+- (void)selectionDidChangeToSelectedDevice;
 @end
 
 @interface ImageCaptureImplIKScannerDeviceView : IKScannerDeviceView < IKScannerDeviceViewDelegate >
@@ -377,6 +378,7 @@ static NSPanel *mpPanel = nil;
 static NSSplitView *mpSplitView = nil;
 static ImageCaptureImplIKDeviceBrowserView *mpDeviceBrowserView = nil;
 static NSView *mpEmptyView = nil;
+static NSProgressIndicator *mpWaitingView = nil;
 static ::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* > aCameraDeviceViewMap;
 static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aScannerDeviceViewMap;
 
@@ -490,6 +492,8 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 - (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
 {
+	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(selectionDidChangeToSelectedDevice) object:nil];
+
 	// Do nothing if we aren't in running the modal panel
 	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
 		return;
@@ -518,6 +522,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 						if ( pCameraDeviceView.cameraDevice )
 						{
 							[pCameraDeviceView.cameraDevice cancelDownload];
+							[pCameraDeviceView.cameraDevice requestCloseSession];
 							pCameraDeviceView.cameraDevice = nil;
 						}
 					}
@@ -527,8 +532,13 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 						if ( pScannerDeviceView.scannerDevice )
 						{
 							[pScannerDeviceView.scannerDevice cancelScan];
+							[pScannerDeviceView.scannerDevice requestCloseSession];
 							pScannerDeviceView.scannerDevice = nil;
 						}
+					}
+					else if ( [pSubview isKindOfClass:[NSProgressIndicator class]] )
+					{
+						[mpWaitingView stopAnimation:self];
 					}
 
 					[pSubview removeFromSuperview];
@@ -539,86 +549,110 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 	// Add a subview for the device in the empty view
 	[mpPanel setTitle:[ImageCaptureImpl defaultTitle]];
-	if ( pDevice && [pDevice isKindOfClass:[ICCameraDevice class]] )
+	if ( pDevice )
 	{
-		ImageCaptureImplIKCameraDeviceView *pCameraDeviceView = nil;
-		::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* >::const_iterator it = aCameraDeviceViewMap.find( (ICCameraDevice *)pDevice );
-		if ( it != aCameraDeviceViewMap.end() )
-			pCameraDeviceView = it->second;
-
-		if ( !pCameraDeviceView )
+		if ( pDevice.hasOpenSession )
 		{
-			pCameraDeviceView = [[ImageCaptureImplIKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+			if ( mpWaitingView )
+			{
+				// Center in content view
+				NSRect aEmptyBounds = [mpEmptyView bounds];
+				NSRect aWaitingFrame = [mpWaitingView frame];
+				[mpWaitingView setFrameOrigin:NSMakePoint( ( aEmptyBounds.size.width - aWaitingFrame.size.width ) / 2, ( aEmptyBounds.size.height - aWaitingFrame.size.height ) / 2 )];
+
+				[mpEmptyView addSubview:mpWaitingView];
+				[mpWaitingView startAnimation:self];
+			}
+
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[self performSelector:@selector(selectionDidChangeToSelectedDevice) withObject:nil afterDelay:(NSTimeInterval)1.0f inModes:pModes];
+		}
+		else if ( [pDevice isKindOfClass:[ICCameraDevice class]] )
+		{
+			ImageCaptureImplIKCameraDeviceView *pCameraDeviceView = nil;
+			::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* >::const_iterator it = aCameraDeviceViewMap.find( (ICCameraDevice *)pDevice );
+			if ( it != aCameraDeviceViewMap.end() )
+				pCameraDeviceView = it->second;
+
+			if ( !pCameraDeviceView )
+			{
+				pCameraDeviceView = [[ImageCaptureImplIKCameraDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+				if ( pCameraDeviceView )
+				{
+					pCameraDeviceView.delegate = pCameraDeviceView;
+
+					[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+					// Setting translates autoresizing mask is needed for view
+					// to resize on Mac OS X 10.8
+					if ( [pCameraDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
+						[pCameraDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
+
+					pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
+					pCameraDeviceView.displaysPostProcessApplicationControl = NO;
+					pCameraDeviceView.mode = IKCameraDeviceViewDisplayModeTable;
+					// Stop opening of Preview application after import
+					pCameraDeviceView.postProcessApplication = nil;
+					pCameraDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
+
+					aCameraDeviceViewMap[ (ICCameraDevice *)pDevice ] = pCameraDeviceView;
+				}
+			}
+
 			if ( pCameraDeviceView )
 			{
-				pCameraDeviceView.delegate = pCameraDeviceView;
-
-				[pCameraDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-				// Setting translates autoresizing mask is needed for view to
-				// resize on Mac OS X 10.8
-				if ( [pCameraDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
-					[pCameraDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
-
-				pCameraDeviceView.displaysDownloadsDirectoryControl = NO;
-				pCameraDeviceView.displaysPostProcessApplicationControl = NO;
-				pCameraDeviceView.mode = IKCameraDeviceViewDisplayModeTable;
-				// Stop opening of Preview application after import
-				pCameraDeviceView.postProcessApplication = nil;
-				pCameraDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
-
-				aCameraDeviceViewMap[ (ICCameraDevice *)pDevice ] = pCameraDeviceView;
+				[mpEmptyView addSubview:pCameraDeviceView];
+				// Set device after display to eliminate Mac OS X 10.6 log messages
+				pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
+				[mpPanel setTitle:[pDevice name]];
 			}
 		}
-
-		if ( pCameraDeviceView )
+		else if ( [pDevice isKindOfClass:[ICScannerDevice class]] )
 		{
-			[mpEmptyView addSubview:pCameraDeviceView];
-			// Set device after display to eliminate Mac OS X 10.6 log messages
-			pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
-			[mpPanel setTitle:[pDevice name]];
-		}
-	}
-	else if ( pDevice && [pDevice isKindOfClass:[ICScannerDevice class]] )
-	{
-		ImageCaptureImplIKScannerDeviceView *pScannerDeviceView = nil;
-		::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* >::const_iterator it = aScannerDeviceViewMap.find( (ICScannerDevice *)pDevice );
-		if ( it != aScannerDeviceViewMap.end() )
-			pScannerDeviceView = it->second;
+			ImageCaptureImplIKScannerDeviceView *pScannerDeviceView = nil;
+			::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* >::const_iterator it = aScannerDeviceViewMap.find( (ICScannerDevice *)pDevice );
+			if ( it != aScannerDeviceViewMap.end() )
+				pScannerDeviceView = it->second;
 
-		if ( !pScannerDeviceView )
-		{
-			pScannerDeviceView = [[ImageCaptureImplIKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+			if ( !pScannerDeviceView )
+			{
+				pScannerDeviceView = [[ImageCaptureImplIKScannerDeviceView alloc] initWithFrame:[mpEmptyView bounds]];
+				if ( pScannerDeviceView )
+				{
+					pScannerDeviceView.delegate = pScannerDeviceView;
+
+					[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+					// Setting translates autoresizing mask is needed for view
+					// to resize on Mac OS X 10.8
+					if ( [pScannerDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
+						[pScannerDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
+
+					pScannerDeviceView.hasDisplayModeAdvanced = YES;
+					pScannerDeviceView.hasDisplayModeSimple = YES;
+					pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
+					pScannerDeviceView.displaysPostProcessApplicationControl = NO;
+					pScannerDeviceView.mode = IKScannerDeviceViewDisplayModeSimple;
+					// Stop opening of Preview application after import
+					pScannerDeviceView.postProcessApplication = nil;
+					pScannerDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
+
+					aScannerDeviceViewMap[ (ICScannerDevice *)pDevice ] = pScannerDeviceView;
+				}
+			}
+
 			if ( pScannerDeviceView )
 			{
-				pScannerDeviceView.delegate = pScannerDeviceView;
-
-				[pScannerDeviceView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-				// Setting translates autoresizing mask is needed for view to
-				// resize on Mac OS X 10.8
-				if ( [pScannerDeviceView respondsToSelector:@selector(setTranslatesAutoresizingMaskIntoConstraints:)] )
-					[pScannerDeviceView setTranslatesAutoresizingMaskIntoConstraints:YES];
-
-				pScannerDeviceView.hasDisplayModeAdvanced = YES;
-				pScannerDeviceView.hasDisplayModeSimple = YES;
-				pScannerDeviceView.displaysDownloadsDirectoryControl = NO;
-				pScannerDeviceView.displaysPostProcessApplicationControl = NO;
-				pScannerDeviceView.mode = IKScannerDeviceViewDisplayModeSimple;
-				// Stop opening of Preview application after import
-				pScannerDeviceView.postProcessApplication = nil;
-				pScannerDeviceView.transferMode = IKScannerDeviceViewTransferModeMemoryBased;
-
-				aScannerDeviceViewMap[ (ICScannerDevice *)pDevice ] = pScannerDeviceView;
+				[mpEmptyView addSubview:pScannerDeviceView];
+				// Set device after display to eliminate Mac OS X 10.6 log messages
+				pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
+				[mpPanel setTitle:[pDevice name]];
 			}
 		}
-
-		if ( pScannerDeviceView )
-		{
-			[mpEmptyView addSubview:pScannerDeviceView];
-			// Set device after display to eliminate Mac OS X 10.6 log messages
-			pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
-			[mpPanel setTitle:[pDevice name]];
-		}
 	}
+}
+
+- (void)selectionDidChangeToSelectedDevice
+{
+	[self deviceBrowserView:self selectionDidChange:self.selectedDevice];
 }
 
 @end
@@ -821,6 +855,16 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 						if ( mpEmptyView )
 						{
+							mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+							if ( mpWaitingView )
+							{
+								[mpWaitingView setIndeterminate:YES];
+								[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+								[mpWaitingView setDisplayedWhenStopped:NO];
+								[mpWaitingView sizeToFit];
+								[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
+							}
+
 							mpCurrentImageCaptureImpl = self;
 
 							// Run modal session
@@ -830,7 +874,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							// device after the start of the modal session
 							// makes the panel visible since the empty view
 							// will be in a "no selected device" state
-							[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:mpDeviceBrowserView.selectedDevice];
+							[mpDeviceBrowserView selectionDidChangeToSelectedDevice];
 							while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse )
 								;
 							[pApp endModalSession:maModalSession];
