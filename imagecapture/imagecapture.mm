@@ -876,7 +876,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							// will be in a "no selected device" state
 							[mpDeviceBrowserView selectionDidChangeToSelectedDevice];
 							while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse )
-								;
+								[pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate distantFuture] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:NO];
 							[pApp endModalSession:maModalSession];
 							maModalSession = nil;
 
