@@ -716,7 +716,7 @@ Index: iMBMusicFolder.m
 ===================================================================
 --- iMBMusicFolder.m	2012-10-03 17:14:25.000000000 -0700
 +++ iMBMusicFolder.m	2012-11-17 11:43:20.000000000 -0800
-@@ -90,13 +133,28 @@
+@@ -90,13 +133,25 @@
      NSString *musicFolderName = LocalizedStringInIMedia(@"Music Folder", @"Name of your 'Music' folder in your home directory");
      NSString *unknownArtistName = LocalizedStringInIMedia(@"Unknown", @"Unknown music/sound artist");
      NSString *iconName = @"folder";
@@ -740,9 +740,6 @@ Index: iMBMusicFolder.m
 +		}
 +	}
 +    
-+	// register for termination notifications so we can release any bookmarks if needed
-+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(doTerminate:) name:NSApplicationWillTerminateNotification object:NSApp];
-+	
 +	return [self initWithContentsOfFile:musicDirPath];
  }
  
