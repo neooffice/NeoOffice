@@ -875,8 +875,22 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							// makes the panel visible since the empty view
 							// will be in a "no selected device" state
 							[mpDeviceBrowserView selectionDidChangeToSelectedDevice];
-							while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse )
-								[pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate distantFuture] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:NO];
+							@try
+							{
+								while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse && [mpPanel isVisible] )
+									[pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate distantFuture] inMode:NSModalPanelRunLoopMode dequeue:NO];
+							}
+							@catch ( NSException *pExc )
+							{
+								if ( pExc )
+								{
+									NSString *pReason = [pExc reason];
+									NSAlert *pAlert = [NSAlert alertWithMessageText:[pExc name] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@"%@", pReason ? pReason : @""];
+									if ( pAlert )
+										[pAlert runModal];
+								}
+							}
+
 							[pApp endModalSession:maModalSession];
 							maModalSession = nil;
 
