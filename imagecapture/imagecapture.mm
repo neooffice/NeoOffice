@@ -107,7 +107,7 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 - (void)setTranslatesAutoresizingMaskIntoConstraints:(MacOSBOOL)bFlag;
 @end
 
-@interface ImageCaptureImplNSPanel : NSPanel
+@interface ImageCaptureImplNSWindow : NSWindow
 - (void)windowWillClose:(NSNotification *)pNotification;
 @end
 
@@ -148,16 +148,6 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 using namespace ::vos;
-
-static void ShowAlertWithError( NSError *pError )
-{
-	if ( pError )
-	{
-		NSAlert *pAlert = [NSAlert alertWithError:pError];
-		if ( pAlert )
-			[pAlert runModal];
-	}
-}
 
 //========================================================================
 
@@ -374,7 +364,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 static ImageCaptureImpl *mpCurrentImageCaptureImpl = nil;
 static NSModalSession maModalSession = nil;
 static NSString *mpDefaultTitle = nil;
-static NSPanel *mpPanel = nil;
+static NSWindow *mpWindow = nil;
 static NSSplitView *mpSplitView = nil;
 static ImageCaptureImplIKDeviceBrowserView *mpDeviceBrowserView = nil;
 static NSView *mpEmptyView = nil;
@@ -382,7 +372,7 @@ static NSProgressIndicator *mpWaitingView = nil;
 static ::std::map< ICCameraDevice*, ImageCaptureImplIKCameraDeviceView* > aCameraDeviceViewMap;
 static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aScannerDeviceViewMap;
 
-@implementation ImageCaptureImplNSPanel
+@implementation ImageCaptureImplNSWindow
 
 - (void)windowWillClose:(NSNotification *)pNotification
 {
@@ -409,11 +399,11 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 - (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didDownloadFile:(ICCameraFile *)pFile location:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( !pCameraDeviceView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+	if ( !pCameraDeviceView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpWindow || ![mpWindow isVisible] )
 		return;
 
 	NSWindow *pWindow = [pCameraDeviceView window];
-	if ( !pWindow || pWindow != mpPanel )
+	if ( !pWindow || pWindow != mpWindow )
 		return;
 
 	NSPasteboard *pPasteboard = [NSPasteboard generalPasteboard];
@@ -451,22 +441,14 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [mpPanel isVisible] )
-				[mpPanel close];
+			if ( [mpWindow isVisible] )
+				[mpWindow close];
 		}
 	}
 }
 
 - (void)cameraDeviceView:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView didEncounterError:(NSError *)pError
 {
-	if ( !pCameraDeviceView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
-		return;
-
-	NSWindow *pWindow = [pCameraDeviceView window];
-	if ( !pWindow || pWindow != mpPanel )
-		return;
-
-	ShowAlertWithError( pError );
 }
 
 - (void)cameraDeviceViewSelectionDidChange:(ImageCaptureImplIKCameraDeviceView *)pCameraDeviceView
@@ -479,15 +461,6 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 - (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView didEncounterError:(NSError *)pError
 {
-	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
-		return;
-
-	NSWindow *pWindow = [pDeviceBrowserView window];
-	if ( !pWindow || pWindow != mpPanel )
-		return;
-
-	ShowAlertWithError( pError );
 }
 
 - (void)deviceBrowserView:(ImageCaptureImplIKDeviceBrowserView *)pDeviceBrowserView selectionDidChange:(ICDevice *)pDevice
@@ -495,11 +468,11 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(selectionDidChangeToSelectedDevice) object:nil];
 
 	// Do nothing if we aren't in running the modal panel
-	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+	if ( !pDeviceBrowserView || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpWindow || ![mpWindow isVisible] )
 		return;
 
 	NSWindow *pWindow = [pDeviceBrowserView window];
-	if ( !pWindow || pWindow != mpPanel )
+	if ( !pWindow || pWindow != mpWindow )
 		return;
 
 	// Remove all device subviews from the empty view
@@ -548,7 +521,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 	}
 
 	// Add a subview for the device in the empty view
-	[mpPanel setTitle:[ImageCaptureImpl defaultTitle]];
+	[mpWindow setTitle:[ImageCaptureImpl defaultTitle]];
 	if ( pDevice )
 	{
 		if ( pDevice.hasOpenSession )
@@ -603,7 +576,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 				[mpEmptyView addSubview:pCameraDeviceView];
 				// Set device after display to eliminate Mac OS X 10.6 log messages
 				pCameraDeviceView.cameraDevice = (ICCameraDevice *)pDevice;
-				[mpPanel setTitle:[pDevice name]];
+				[mpWindow setTitle:[pDevice name]];
 			}
 		}
 		else if ( [pDevice isKindOfClass:[ICScannerDevice class]] )
@@ -644,7 +617,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 				[mpEmptyView addSubview:pScannerDeviceView];
 				// Set device after display to eliminate Mac OS X 10.6 log messages
 				pScannerDeviceView.scannerDevice = (ICScannerDevice *)pDevice;
-				[mpPanel setTitle:[pDevice name]];
+				[mpWindow setTitle:[pDevice name]];
 			}
 		}
 	}
@@ -661,23 +634,15 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 - (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didEncounterError:(NSError *)pError
 {
-	if ( pScannerDeviceView != self || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
-		return;
-
-	NSWindow *pWindow = [self window];
-	if ( !pWindow || pWindow != mpPanel )
-		return;
-
-	ShowAlertWithError( pError );
 }
 
 - (void)scannerDeviceView:(ImageCaptureImplIKScannerDeviceView *)pScannerDeviceView didScanToURL:(NSURL *)pURL fileData:(NSData *)pFileData error:(NSError *)pError
 {
-	if ( pScannerDeviceView != self || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpPanel || ![mpPanel isVisible] )
+	if ( pScannerDeviceView != self || !mpCurrentImageCaptureImpl || [mpCurrentImageCaptureImpl capturedImage] || !maModalSession || !mpWindow || ![mpWindow isVisible] )
 		return;
 
 	NSWindow *pWindow = [self window];
-	if ( !pWindow || pWindow != mpPanel )
+	if ( !pWindow || pWindow != mpWindow )
 		return;
 
 	NSPasteboard *pPasteboard = [NSPasteboard generalPasteboard];
@@ -715,8 +680,8 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [mpPanel isVisible] )
-				[mpPanel close];
+			if ( [mpWindow isVisible] )
+				[mpWindow close];
 		}
 	}
 }
@@ -769,25 +734,25 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 - (void)doImageCapture:(id)pObj
 {
 	// Do nothing if we are recursing
-	if ( gotImage || maModalSession || ( mpPanel && [mpPanel isVisible] ) )
+	if ( gotImage || maModalSession || ( mpWindow && [mpWindow isVisible] ) )
 		return;
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		if ( !mpPanel )
-			mpPanel = [[ImageCaptureImplNSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 550 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpPanel )
+		if ( !mpWindow )
+			mpWindow = [[ImageCaptureImplNSWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 800, 550 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpWindow )
 		{
-			[mpPanel setDelegate:mpPanel];
-			[mpPanel setReleasedWhenClosed:NO];
-			[mpPanel setTitle:[ImageCaptureImpl defaultTitle]];
+			[mpWindow setDelegate:mpWindow];
+			[mpWindow setReleasedWhenClosed:NO];
+			[mpWindow setTitle:[ImageCaptureImpl defaultTitle]];
 
 			// Set background to a slightly dark gray since the text is white
 			// in the scanner device view on Mac OS X 10.8
-			[mpPanel setBackgroundColor:[NSColor grayColor]];
+			[mpWindow setBackgroundColor:[NSColor grayColor]];
 
-			NSView *pContentView = [mpPanel contentView];
+			NSView *pContentView = [mpWindow contentView];
 			if ( pContentView )
 			{
 				if ( !mpSplitView )
@@ -868,7 +833,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							mpCurrentImageCaptureImpl = self;
 
 							// Run modal session
-							maModalSession = [pApp beginModalSessionForWindow:mpPanel];
+							maModalSession = [pApp beginModalSessionForWindow:mpWindow];
 
 							// Forcefully set the device view to the selected
 							// device after the start of the modal session
@@ -877,7 +842,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							[mpDeviceBrowserView selectionDidChangeToSelectedDevice];
 							@try
 							{
-								while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse && [mpPanel isVisible] )
+								while ( [pApp runModalSession:maModalSession] == NSRunContinuesResponse && [mpWindow isVisible] )
 									[pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate distantFuture] inMode:NSModalPanelRunLoopMode dequeue:NO];
 							}
 							@catch ( NSException *pExc )
@@ -889,12 +854,14 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 									if ( pAlert )
 										[pAlert runModal];
 								}
+
+								[mpWindow close];
 							}
 
 							[pApp endModalSession:maModalSession];
 							maModalSession = nil;
 
-							[mpPanel close];
+							[mpWindow close];
 							mpCurrentImageCaptureImpl = nil;
 						}
 					}
