@@ -108,6 +108,7 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 @end
 
 @interface ImageCaptureImplNSWindow : NSWindow
+- (void)windowWillBeginSheet:(NSNotification *)pNotification;
 - (void)windowWillClose:(NSNotification *)pNotification;
 @end
 
@@ -374,6 +375,17 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 
 @implementation ImageCaptureImplNSWindow
 
+- (void)windowWillBeginSheet:(NSNotification *)pNotification
+{
+	// Force reset of device views so that garbage is not pushed to the
+	// pasteboard
+	if ( mpDeviceBrowserView && [self isVisible] )
+	{
+		[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:nil];
+		[mpDeviceBrowserView deviceBrowserView:mpDeviceBrowserView selectionDidChange:[mpDeviceBrowserView selectedDevice]];
+	}
+}
+
 - (void)windowWillClose:(NSNotification *)pNotification
 {
 	if ( maModalSession )
@@ -441,8 +453,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [mpWindow isVisible] )
-				[mpWindow close];
+			[mpWindow close];
 		}
 	}
 }
@@ -680,8 +691,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 			[mpCurrentImageCaptureImpl setCapturedImage:true];
 
 			// Close modal panel after pasting data to pasteboard
-			if ( [mpWindow isVisible] )
-				[mpWindow close];
+			[mpWindow close];
 		}
 	}
 }
@@ -847,6 +857,7 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 							}
 							@catch ( NSException *pExc )
 							{
+								[mpWindow close];
 								if ( pExc )
 								{
 									NSString *pReason = [pExc reason];
@@ -854,14 +865,12 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 									if ( pAlert )
 										[pAlert runModal];
 								}
-
-								[mpWindow close];
 							}
 
+							[mpWindow close];
 							[pApp endModalSession:maModalSession];
 							maModalSession = nil;
 
-							[mpWindow close];
 							mpCurrentImageCaptureImpl = nil;
 						}
 					}
