@@ -531,9 +531,7 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 {
 	const Size	aSize( rBmp.GetSizePixel() );
 	Bitmap		aRetBmp;
-#ifndef USE_JAVA
 	BOOL		bRet = FALSE;
-#endif	// !USE_JAVA
 
 	if( ( aSize.Width() > 2L ) && ( aSize.Height() > 2L ) )
 	{
@@ -541,13 +539,12 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 
 #ifdef USE_JAVA
 		// Fix contour edge detection bug reported in the following NeoOffice
-		// forum topic by converting the bitmap to a 1 bit, black and white
-		// bitmap:
+		// forum topic by not converting the image to grayscale and, instead,
+		// only trimming out pixels that are absolutely white:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8538
-		if( aWorkBmp.Convert( BMP_CONVERSION_1BIT_MATRIX ) )
-			aRetBmp = aWorkBmp;
 #else	// USE_JAVA
 		if( aWorkBmp.Convert( BMP_CONVERSION_8BIT_GREYS ) )
+#endif	// USE_JAVA
 		{
 			Bitmap				aDstBmp( aSize, 1 );
 			BitmapReadAccess*	pReadAcc = aWorkBmp.AcquireReadAccess();
@@ -559,12 +556,17 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 				const long			nWidth2 = nWidth - 2L;
 				const long			nHeight = aSize.Height();
 				const long			nHeight2 = nHeight - 2L;
+#ifdef USE_JAVA
+				const BitmapColor	aWhite( Color( COL_WHITE ) );
+				const BitmapColor	aBlack( Color( COL_BLACK ) );
+#else	// USE_JAVA
 				const long			lThres2 = (long) cThreshold * cThreshold;
 				const BitmapColor	aWhite = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) );
 				const BitmapColor	aBlack = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_BLACK ) );
 				long				nSum1;
 				long				nSum2;
 				long				lGray;
+#endif	// USE_JAVA
 
 				// Rand mit Weiss init.
 				pWriteAcc->SetLineColor( Color( COL_WHITE) );
@@ -575,6 +577,15 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 
 				for( long nY = 0L, nY1 = 1L, nY2 = 2; nY < nHeight2; nY++, nY1++, nY2++ )
 				{
+#ifdef USE_JAVA
+					for( long nX = 0L, nXDst = 1L; nX < nWidth2; nX++, nXDst++ )
+					{
+						if ( pReadAcc->GetPixel( nY1, nXDst ) == aWhite )
+							pWriteAcc->SetPixel( nY1, nXDst, aWhite );
+						else
+							pWriteAcc->SetPixel( nY1, nXDst, aBlack );
+					}
+#else	// USE_JAVA
 					for( long nX = 0L, nXDst = 1L, nXTmp; nX < nWidth2; nX++, nXDst++ )
 					{
 						nXTmp = nX;
@@ -598,6 +609,7 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 						else
 							pWriteAcc->SetPixel( nY1, nXDst, aBlack );
 					}
+#endif	// USE_JAVA
 				}
 
 				bRet = TRUE;
@@ -609,7 +621,6 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 			if( bRet )
 				aRetBmp = aDstBmp;
 		}
-#endif	// USE_JAVA
 	}
 
 	if( !aRetBmp )
