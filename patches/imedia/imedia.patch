@@ -1,6 +1,119 @@
+Index: FMDatabase.m
+--- FMDatabase.m	2012-10-03 17:14:25.000000000 -0700
++++ FMDatabase.m	2013-01-12 15:16:51.000000000 -0800
+@@ -233,8 +233,12 @@
+                 NSLog(@"DB Query: %@", sql);
+                 if (crashOnErrors) {
+ #ifdef __BIG_ENDIAN__
++#if __GNUC__ < 4
++                    __asm__( "trap" );
++#else
+                     asm{ trap };
+ #endif
++#endif
+                     *(long*)0 = 0xDEADBEEF;
+                 }
+             }
+@@ -324,7 +328,11 @@
+                 NSLog(@"DB Query: %@", sql);
+                 if (crashOnErrors) {
+                     #ifdef __BIG_ENDIAN__
++#if __GNUC__ < 4
++                    __asm__( "trap" );
++#else
+                     asm{ trap };
++#endif
+                     #endif
+                     *(long*)0 = 0xDEADBEEF;
+                 }
+Index: MUPhotoView.h
+--- MUPhotoView.h	2012-10-03 17:14:25.000000000 -0700
++++ MUPhotoView.h	2013-01-12 15:16:51.000000000 -0800
+@@ -178,7 +178,6 @@
+ 
+ #pragma mark -
+ // Seriously, Don't Mess With Texas
+-#pragma mark Seriously, Don't Mess With Texas
+ // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
+ - (float)photoVerticalSpacing;
+ - (void)setPhotoVerticalSpacing:(float)aPhotoVerticalSpacing;
+Index: MUPhotoView.m
+--- MUPhotoView.m	2012-10-03 17:14:25.000000000 -0700
++++ MUPhotoView.m	2013-01-12 15:16:51.000000000 -0800
+@@ -630,7 +630,6 @@
+ 
+ #pragma mark -
+ // Don't Mess With Texas
+-#pragma mark Don't Mess With Texas
+ // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
+ 
+ - (float)photoVerticalSpacing
+Index: MetadataUtility.m
+--- MetadataUtility.m	2012-10-03 17:14:25.000000000 -0700
++++ MetadataUtility.m	2013-01-12 15:16:51.000000000 -0800
+@@ -115,9 +122,18 @@
+ 
+ - (void)dealloc
+ {
+-    [myServerIdentifier release]; myServerIdentifier = nil;
+-    [myServerTask release]; myServerTask = nil;
+-    [myServerProxy release]; myServerProxy = nil;
++	if(myServerIdentifier)
++	{
++	    [myServerIdentifier release]; myServerIdentifier = nil;
++	}
++	if(myServerTask)
++	{
++	    [myServerTask release]; myServerTask = nil;
++	}
++	if(myServerProxy)
++	{
++	    [myServerProxy release]; myServerProxy = nil;
++	}
+     
+     [myLock release]; myLock = nil;
+     
+@@ -248,7 +264,7 @@
+         
+         [self performSelectorOnMainThread:@selector(getMetadataWithArguments:) withObject:arguments waitUntilDone:YES];
+         
+-        NSArray *mediaTypes = [attributes objectForKey:@"kMDItemMediaTypes"];
++        NSArray *mediaTypes = [arguments objectForKey:@"kMDItemMediaTypes"];
+         if ( mediaTypes != nil && [mediaTypes containsObject:@"Sound"] )
+         {
+             return [NSDictionary dictionaryWithDictionary:arguments];
+Index: NSWindow_Flipr.h
+--- NSWindow_Flipr.h	2012-10-03 17:14:25.000000000 -0700
++++ NSWindow_Flipr.h	2013-01-12 15:16:50.000000000 -0800
+@@ -10,21 +10,21 @@
+ 
+ // Read the "ReadMe.rtf" file for general discussion.
+ 
+-@interface NSWindow (NSWindow_Flipr)
++@interface NSWindow (NSWindow_Flipr_iMediaBrowse)
+ 
+ // Call during initialization this to prepare the flipping window.
+ // If you don't call this, the first flip will take a little longer.
+ 
+-+ (NSWindow*)flippingWindow;
+++ (NSWindow*)flippingWindow_iMediaBrowse;
+ 
+ // Call this if you want to release the flipping window. If you flip
+ // again after calling this, it will take a little longer.
+ 
+-+ (void)releaseFlippingWindow;
+++ (void)releaseFlippingWindow_iMediaBrowse;
+ 
+ // Call this on a visible window to flip it and show the parameter window,
+ // which is supposed to not be on-screen.
+ 
+-- (void)flipToShowWindow:(NSWindow*)window forward:(BOOL)forward reflectInto:(NSImageView*)reflection;
++- (void)flipToShowWindow_iMediaBrowse:(NSWindow*)window forward:(BOOL)forward reflectInto:(NSImageView*)reflection;
+ 
+ @end
 Index: NSWindow_Flipr.m
---- ../../patches/imedia/imedia-read-only-orig/./NSWindow_Flipr.m	2012-10-03 17:14:25.000000000 -0700
-+++ ./NSWindow_Flipr.m	2012-12-30 14:26:32.000000000 -0800
+--- NSWindow_Flipr.m	2012-10-03 17:14:25.000000000 -0700
++++ NSWindow_Flipr.m	2013-01-12 15:16:50.000000000 -0800
 @@ -17,11 +17,11 @@
  
  // We subclass NSAnimation to maximize frame rate, instead of using progress marks.
@@ -132,78 +245,42 @@ Index: NSWindow_Flipr.m
  }
  
  @end
-
-Index: NSWindow_Flipr.h
---- NSWindow_Flipr.h	2012-10-03 17:14:25.000000000 -0700
-+++ NSWindow_Flipr.h	2012-12-30 14:26:32.000000000 -0800
-@@ -10,21 +10,21 @@
+Index: iMBAbstractView.m
+--- iMBAbstractView.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBAbstractView.m	2013-01-14 10:08:50.000000000 -0800
+@@ -402,6 +467,7 @@
+ 		
+ 		[d setObject:customFolders forKey:[NSString stringWithFormat:@"%@Dropped", [(NSObject*)self className]]];
+ 		[[NSUserDefaults standardUserDefaults] setObject:d forKey:[NSString stringWithFormat:@"iMB-%@", [[iMediaConfiguration sharedConfiguration] identifier]]];
++		[[NSUserDefaults standardUserDefaults] synchronize];
+ 	}
  
- // Read the "ReadMe.rtf" file for general discussion.
- 
--@interface NSWindow (NSWindow_Flipr)
-+@interface NSWindow (NSWindow_Flipr_iMediaBrowse)
- 
- // Call during initialization this to prepare the flipping window.
- // If you don't call this, the first flip will take a little longer.
- 
--+ (NSWindow*)flippingWindow;
-++ (NSWindow*)flippingWindow_iMediaBrowse;
- 
- // Call this if you want to release the flipping window. If you flip
- // again after calling this, it will take a little longer.
- 
--+ (void)releaseFlippingWindow;
-++ (void)releaseFlippingWindow_iMediaBrowse;
- 
- // Call this on a visible window to flip it and show the parameter window,
- // which is supposed to not be on-screen.
- 
--- (void)flipToShowWindow:(NSWindow*)window forward:(BOOL)forward reflectInto:(NSImageView*)reflection;
-+- (void)flipToShowWindow_iMediaBrowse:(NSWindow*)window forward:(BOOL)forward reflectInto:(NSImageView*)reflection;
- 
- @end
-Index: iMediaBrowser.h
---- iMediaBrowser.h	2012-10-03 17:14:25.000000000 -0700
-+++ iMediaBrowser.h	2012-12-30 12:43:37.000000000 -0800
-@@ -48,7 +48,7 @@
- @protocol iMediaBrowser;
- @class iMBLibraryNode, RBSplitView, iMBBackgroundImageView;
- 
--@interface iMediaBrowser : NSWindowController
-+@interface iMediaBrowser : NSWindowController <NSWindowDelegate, NSToolbarDelegate>
- {
- 	IBOutlet id						myDelegate;
- 	IBOutlet NSTabView				*browserTabView;
-Index: iMBParserController.m
---- iMBParserController.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMBParserController.m	2012-12-30 13:54:30.000000000 -0800
-@@ -295,7 +295,8 @@
- 
- - (void)recursiveLogNode:(iMBLibraryNode *)inNode
- {
--	NSLog(@"%@",[inNode recursiveIdentifier]);
-+	if(!inNode)
-+		return;
- 	
- 	NSEnumerator* e = [[inNode allItems] objectEnumerator];
- 	iMBLibraryNode *node;
-Index: iMBLibraryNode.m
---- iMBLibraryNode.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMBLibraryNode.m	2012-12-30 13:54:30.000000000 -0800
-@@ -417,6 +417,9 @@
- 
- - (void)fromThreadSetAttribute:(id)attrib forKey:(NSString *)key
- {
-+	if(!attrib || !key)
-+		return;
-+	
-     NSDictionary *arguments = [NSDictionary dictionaryWithObjectsAndKeys:attrib, @"attrib", key, @"key", NULL];
-     [self performSelectorOnMainThread:@selector(setAttributeForKeyFromArguments:) withObject:arguments waitUntilDone:YES];
+ 	return results;
+@@ -514,13 +515,6 @@
+ 	[[NSNotificationCenter defaultCenter] postNotificationName:iMediaBrowserSelectionDidChangeNotification
+ 														object:self
+ 													  userInfo:info];
+-	
+-	if ([selectedObjects count] > 0) {
+-		NSDictionary *record = [selectedObjects objectAtIndex:0];
+-		NSString *path = [record valueForKey:@"ImagePath"];
+-		
+-		NSLog(@"%@", [iMediaBrowser enhancedRecordForPath:path ofMediaType:@"photos"]);
+-	}
  }
+ 
+ - (NSArray *)rootNodes
+@@ -643,6 +718,7 @@
+ 	
+ 	[d setObject:customFolders forKey:[NSString stringWithFormat:@"%@Dropped", [(NSObject*)self className]]];
+ 	[[NSUserDefaults standardUserDefaults] setObject:d forKey:[NSString stringWithFormat:@"iMB-%@", [[iMediaConfiguration sharedConfiguration] identifier]]];
++	[[NSUserDefaults standardUserDefaults] synchronize];
+ }
+ 
+ #pragma mark -
 Index: iMBFireFoxParser.m
-===================================================================
---- iMBFireFoxParser.m	(revision 647)
-+++ iMBFireFoxParser.m	(working copy)
+--- iMBFireFoxParser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBFireFoxParser.m	2013-01-12 15:16:51.000000000 -0800
 @@ -54,11 +54,13 @@
  
  + (void)load
@@ -219,10 +296,9 @@ Index: iMBFireFoxParser.m
  
  - (id)init
 Index: iMBGarageBandParser.m
-===================================================================
---- iMBGarageBandParser.m	(revision 542)
-+++ iMBGarageBandParser.m	(working copy)
-@@ -53,11 +53,13 @@
+--- iMBGarageBandParser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBGarageBandParser.m	2013-01-12 15:16:51.000000000 -0800
+@@ -56,11 +56,13 @@
  
  + (void)load
  {
@@ -236,40 +312,97 @@ Index: iMBGarageBandParser.m
  }
  
  - (id)init
-Index: FMDatabase.m
-===================================================================
---- FMDatabase.m        (revision 647)
-+++ FMDatabase.m        (working copy)
-@@ -233,8 +233,12 @@
-                 NSLog(@"DB Query: %@", sql);
-                 if (crashOnErrors) {
- #ifdef __BIG_ENDIAN__
-+#if __GNUC__ < 4
-+                    __asm__( "trap" );
-+#else
-                     asm{ trap };
- #endif
-+#endif
-                     *(long*)0 = 0xDEADBEEF;
-                 }
-             }
-@@ -324,7 +328,11 @@
-                 NSLog(@"DB Query: %@", sql);
-                 if (crashOnErrors) {
-                     #ifdef __BIG_ENDIAN__
-+#if __GNUC__ < 4
-+                    __asm__( "trap" );
-+#else
-                     asm{ trap };
-+#endif
-                     #endif
-                     *(long*)0 = 0xDEADBEEF;
-                 }
+Index: iMBLibraryNode.m
+--- iMBLibraryNode.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBLibraryNode.m	2013-01-12 15:16:51.000000000 -0800
+@@ -417,6 +417,9 @@
+ 
+ - (void)fromThreadSetAttribute:(id)attrib forKey:(NSString *)key
+ {
++	if(!attrib || !key)
++		return;
++	
+     NSDictionary *arguments = [NSDictionary dictionaryWithObjectsAndKeys:attrib, @"attrib", key, @"key", NULL];
+     [self performSelectorOnMainThread:@selector(setAttributeForKeyFromArguments:) withObject:arguments waitUntilDone:YES];
+ }
+Index: iMBLinksView.m
+--- iMBLinksView.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBLinksView.m	2013-01-12 15:16:51.000000000 -0800
+@@ -96,9 +96,16 @@
+ 	 toPasteboard:(NSPasteboard*)pboard
+ {
+ 	NSMutableArray *types = [NSMutableArray array]; // OLD BEHAVIOR: arrayWithArray:[pboard types]];
++	if([rows count]==1)
++	{
++		[types addObject:NSStringPboardType];
++	}
++	else
++	{
+ 	[types addObjectsFromArray:[NSPasteboard URLTypes]];
+    [types addObject:iMBNativePasteboardFlavor]; // Native iMB Data
+-
++	}
++	
+ 	[pboard declareTypes:types owner:nil];
+ 	
+ 	NSArray *content = [oLinkController arrangedObjects];
+@@ -125,8 +132,15 @@
+                                              [self className], iMBControllerClassName,
+                                              nativeDataArray, iMBNativeDataArray,
+                                              nil];
++	if([rows count]==1)
++	{
++		[pboard setString:[((NSURL *)[urls objectAtIndex:0]) absoluteString] forType:NSStringPboardType];
++	}
++	else
++	{
+    [pboard setData:[NSArchiver archivedDataWithRootObject:nativeData] forType:iMBNativePasteboardFlavor]; // Native iMB Data
+  	[pboard writeURLs:urls files:nil names:titles];
++   }
+    
+ 	return YES;
+ }
+Index: iMBMusicFolder.m
+--- iMBMusicFolder.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBMusicFolder.m	2013-01-14 12:02:17.000000000 -0800
+@@ -96,7 +104,19 @@
+ 
+ - (id)init
+ {
+-	return [self initWithContentsOfFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Music"]];
++	NSString *musicDirPath = nil;
++	
++	NSArray *musicDirURLs = [[NSFileManager defaultManager] URLsForDirectory:NSMusicDirectory inDomains:NSUserDomainMask];
++	if( [musicDirURLs count] )
++	{
++		NSURL *firstURL = (NSURL *)[musicDirURLs objectAtIndex:0];
++		if( [firstURL isFileURL] )
++		{
++			musicDirPath = [firstURL path];
++		}
++	}
++	
++	return [self initWithContentsOfFile:musicDirPath];
+ }
+ 
+ - (void)dealloc
+Index: iMBParserController.m
+--- iMBParserController.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBParserController.m	2013-01-12 15:16:51.000000000 -0800
+@@ -295,7 +295,8 @@
+ 
+ - (void)recursiveLogNode:(iMBLibraryNode *)inNode
+ {
+-	NSLog(@"%@",[inNode recursiveIdentifier]);
++	if(!inNode)
++		return;
+ 	
+ 	NSEnumerator* e = [[inNode allItems] objectEnumerator];
+ 	iMBLibraryNode *node;
 Index: iMBPhotosView.m
-===================================================================
---- iMBPhotosView.m	(revision 536)
-+++ iMBPhotosView.m	(working copy)
-@@ -275,11 +275,18 @@
+--- iMBPhotosView.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBPhotosView.m	2013-01-12 15:16:51.000000000 -0800
+@@ -289,11 +289,18 @@
  	[album setObject:imageCount forKey:@"KeyList"];
  	
  	NSMutableArray *types = [NSMutableArray array]; // OLD BEHAVIOR: arrayWithArray:[pboard types]];
@@ -291,7 +424,7 @@ Index: iMBPhotosView.m
  	[pboard declareTypes:types owner:nil];
  	
  	NSEnumerator *e = [items objectEnumerator];
-@@ -297,12 +304,35 @@
+@@ -311,12 +318,35 @@
                                               [self className], iMBControllerClassName,
                                               items, iMBNativeDataArray,
                                               nil];
@@ -334,12 +467,11 @@ Index: iMBPhotosView.m
  
  - (void)writePlaylist:(iMBLibraryNode *)playlist toPasteboard:(NSPasteboard *)pboard
 Index: iMBSafariBookmarkParser.m
-===================================================================
---- iMBSafariBookmarkParser.m	(revision 536)
-+++ iMBSafariBookmarkParser.m	(working copy)
+--- iMBSafariBookmarkParser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBSafariBookmarkParser.m	2013-01-12 15:16:51.000000000 -0800
 @@ -50,10 +50,19 @@
- #import "iMedia.h"
  #import "WebIconDatabase.h"
+ #import "NSImage+iMedia.h"
  
 +static int gInited=0;
 +
@@ -391,98 +523,9 @@ Index: iMBSafariBookmarkParser.m
  	if (self = [super initWithContentsOfFile:[NSString stringWithFormat:@"%@/Library/Safari/Bookmarks.plist", NSHomeDirectory()]])
  	{
  		mySafariFaviconCache = [[NSMutableDictionary dictionary] retain];
-Index: iMBLinksView.m
-===================================================================
---- iMBLinksView.m	(revision 536)
-+++ iMBLinksView.m	(working copy)
-@@ -94,9 +94,16 @@
- 	 toPasteboard:(NSPasteboard*)pboard
- {
- 	NSMutableArray *types = [NSMutableArray array]; // OLD BEHAVIOR: arrayWithArray:[pboard types]];
-+	if([rows count]==1)
-+	{
-+		[types addObject:NSStringPboardType];
-+	}
-+	else
-+	{
- 	[types addObjectsFromArray:[NSPasteboard URLTypes]];
-    [types addObject:iMBNativePasteboardFlavor]; // Native iMB Data
--
-+	}
-+	
- 	[pboard declareTypes:types owner:nil];
- 	
- 	NSArray *content = [oLinkController arrangedObjects];
-@@ -123,8 +130,15 @@
-                                              [self className], iMBControllerClassName,
-                                              nativeDataArray, iMBNativeDataArray,
-                                              nil];
-+	if([rows count]==1)
-+	{
-+		[pboard setString:[((NSURL *)[urls objectAtIndex:0]) absoluteString] forType:NSStringPboardType];
-+	}
-+	else
-+	{
-    [pboard setData:[NSArchiver archivedDataWithRootObject:nativeData] forType:iMBNativePasteboardFlavor]; // Native iMB Data
-  	[pboard writeURLs:urls files:nil names:titles];
-+   }
-    
- 	return YES;
- }
-Index: MUPhotoView.h
-===================================================================
---- MUPhotoView.h	(revision 541)
-+++ MUPhotoView.h	(working copy)
-@@ -175,7 +175,6 @@
- 
- #pragma mark -
- // Seriously, Don't Mess With Texas
--#pragma mark Seriously, Don't Mess With Texas
- // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
- - (float)photoVerticalSpacing;
- - (void)setPhotoVerticalSpacing:(float)aPhotoVerticalSpacing;
-Index: MUPhotoView.m
-===================================================================
---- MUPhotoView.m	(revision 541)
-+++ MUPhotoView.m	(working copy)
-@@ -624,7 +624,6 @@
- 
- #pragma mark -
- // Don't Mess With Texas
--#pragma mark Don't Mess With Texas
- // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
- 
- - (float)photoVerticalSpacing
-Index: iMBAbstractView.m
-===================================================================
---- iMBAbstractView.m	(revision 647)
-+++ iMBAbstractView.m	(working copy)
-@@ -402,6 +475,7 @@
- 		
- 		[d setObject:customFolders forKey:[NSString stringWithFormat:@"%@Dropped", [(NSObject*)self className]]];
- 		[[NSUserDefaults standardUserDefaults] setObject:d forKey:[NSString stringWithFormat:@"iMB-%@", [[iMediaConfiguration sharedConfiguration] identifier]]];
-+		[[NSUserDefaults standardUserDefaults] synchronize];
- 	}
- 
- 	return results;
-@@ -514,13 +588,6 @@
- 	[[NSNotificationCenter defaultCenter] postNotificationName:iMediaBrowserSelectionDidChangeNotification
- 														object:self
- 													  userInfo:info];
--	
--	if ([selectedObjects count] > 0) {
--		NSDictionary *record = [selectedObjects objectAtIndex:0];
--		NSString *path = [record valueForKey:@"ImagePath"];
--		
--		NSLog(@"%@", [iMediaBrowser enhancedRecordForPath:path ofMediaType:@"photos"]);
--	}
- }
- 
- - (NSArray *)rootNodes
 Index: iMediaBrowse.xcodeproj/project.pbxproj
-===================================================================
---- iMediaBrowse.xcodeproj/project.pbxproj	(revision 647)
-+++ iMediaBrowse.xcodeproj/project.pbxproj	(working copy)
+--- iMediaBrowse.xcodeproj/project.pbxproj	2012-10-03 17:14:21.000000000 -0700
++++ iMediaBrowse.xcodeproj/project.pbxproj	2013-01-12 15:16:51.000000000 -0800
 @@ -108,6 +108,11 @@
  		A93A6A770AE77F2B00C77AA4 /* UKFileWatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */; };
  		A9FECB070ADA696A00AB3426 /* iMBLibraryOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */; };
@@ -495,7 +538,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		CE05E0C00DF74B84001D2356 /* i.tiff in Resources */ = {isa = PBXBuildFile; fileRef = CE05E0BD0DF74B84001D2356 /* i.tiff */; };
  		CE05E0C10DF74B84001D2356 /* i2.tiff in Resources */ = {isa = PBXBuildFile; fileRef = CE05E0BE0DF74B84001D2356 /* i2.tiff */; };
  		CE05E0C20DF74B84001D2356 /* iMedia.tiff in Resources */ = {isa = PBXBuildFile; fileRef = CE05E0BF0DF74B84001D2356 /* iMedia.tiff */; };
-@@ -324,6 +329,9 @@
+@@ -327,6 +332,9 @@
  		3C371AFC09AD501A00501C1F /* Framework Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Framework Debug.xcconfig"; sourceTree = "<group>"; };
  		3C371B0009AD502700501C1F /* Framework Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Framework Release.xcconfig"; sourceTree = "<group>"; };
  		3C3A131D09EAFB8100AF41BF /* en */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; lineEnding = 0; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -505,7 +548,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		5B0628CF0AEDF38300419AEB /* sv */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; lineEnding = 0; name = sv; path = sv.lproj/Localizable.strings; sourceTree = "<group>"; };
  		5B1AA7240D6C72CA003585CD /* MovieCache.xcdatamodel */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = wrapper.xcdatamodel; path = MovieCache.xcdatamodel; sourceTree = "<group>"; };
  		5B1AA7250D6C72CA003585CD /* movietool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = movietool.m; sourceTree = "<group>"; };
-@@ -341,7 +349,7 @@
+@@ -344,7 +352,7 @@
  		7910D40A0A2C11C200094548 /* iMBMusicFolder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBMusicFolder.h; sourceTree = "<group>"; };
  		7910D40B0A2C11C200094548 /* iMBMusicFolder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = iMBMusicFolder.m; sourceTree = "<group>"; };
  		791679FE0975255000D9EF74 /* iMediaBrowser.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = iMediaBrowser.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -514,7 +557,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		791F553E0A2C0BFC00D557F3 /* iMBFavouriteMoviesParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBFavouriteMoviesParser.h; sourceTree = "<group>"; };
  		791F553F0A2C0BFC00D557F3 /* iMBFavouriteMoviesParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = iMBFavouriteMoviesParser.m; sourceTree = "<group>"; };
  		791F55FB0A2C0E7000D557F3 /* iMBFavouriteMusicParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBFavouriteMusicParser.h; sourceTree = "<group>"; };
-@@ -438,6 +446,14 @@
+@@ -441,6 +449,14 @@
  		A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = UKFileWatcher.m; sourceTree = "<group>"; };
  		A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBLibraryOutlineView.h; sourceTree = "<group>"; };
  		A9FECB060ADA696A00AB3426 /* iMBLibraryOutlineView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = iMBLibraryOutlineView.m; sourceTree = "<group>"; };
@@ -529,7 +572,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		CE05E0BD0DF74B84001D2356 /* i.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = i.tiff; sourceTree = "<group>"; };
  		CE05E0BE0DF74B84001D2356 /* i2.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = i2.tiff; sourceTree = "<group>"; };
  		CE05E0BF0DF74B84001D2356 /* iMedia.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = iMedia.tiff; sourceTree = "<group>"; };
-@@ -567,7 +583,7 @@
+@@ -570,7 +586,7 @@
  		E5DF5B4C0D68B57B00E2FF8A /* AppDelegateSingle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegateSingle.h; sourceTree = "<group>"; };
  		E5DF5B4D0D68B57B00E2FF8A /* AppDelegateSingle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegateSingle.m; sourceTree = "<group>"; };
  		E5DF5D160D68C03000E2FF8A /* iMediaTesterSingle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iMediaTesterSingle.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -538,7 +581,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		FC6810360B1771ED0063CF05 /* iMBAperturePhotosParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBAperturePhotosParser.h; sourceTree = "<group>"; };
  		FC6810370B1771ED0063CF05 /* iMBAperturePhotosParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = iMBAperturePhotosParser.m; sourceTree = "<group>"; };
  		FD0220B40D8F19DC00B48AAB /* sv */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = sv; path = sv.lproj/MainMenu.nib; sourceTree = "<group>"; };
-@@ -806,6 +822,8 @@
+@@ -809,6 +825,8 @@
  		7953E6450A2E896700C7AFBB /* Photo */ = {
  			isa = PBXGroup;
  			children = (
@@ -547,7 +590,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				FC6810360B1771ED0063CF05 /* iMBAperturePhotosParser.h */,
  				FC6810370B1771ED0063CF05 /* iMBAperturePhotosParser.m */,
  				795D715F09D3AB55005F166D /* iMBiPhotoPhotosParser.h */,
-@@ -849,6 +867,8 @@
+@@ -852,6 +870,8 @@
  				79430F1B0A2C2C88009E0FC7 /* iMBiMovieSoundEffectsParser.m */,
  				CE11017C0B69080B00783570 /* iMBLibrarySoundsParser.h */,
  				CE11017D0B69080B00783570 /* iMBLibrarySoundsParser.m */,
@@ -556,7 +599,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			name = Audio;
  			sourceTree = "<group>";
-@@ -971,6 +991,7 @@
+@@ -974,6 +994,7 @@
  		968BEF3E090E904100D00E5C /* images */ = {
  			isa = PBXGroup;
  			children = (
@@ -564,7 +607,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				CE05E0DE0DF74B96001D2356 /* larger.png */,
  				CE05E1010DF74B96001D2356 /* smaller.png */,
  				CE05E1450DF74BB1001D2356 /* spotlight.gif */,
-@@ -1215,6 +1236,9 @@
+@@ -1218,6 +1239,9 @@
  				E549259E0D53418D002B9F89 /* iMediaConfiguration.h in Headers */,
  				5B29F47C0D6EB38B0045CD86 /* iMBMovieReference.h in Headers */,
  				5B29F47D0D6EB38C0045CD86 /* iMBMovieCacheDB.h in Headers */,
@@ -574,7 +617,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				CEEE54150DAC30EF00B7F6A2 /* iMBVerticallyAlignedTextCell.h in Headers */,
  				79F4DC4B0E1AC1630001C072 /* iMedia.pch in Headers */,
  				FDE557E70E22C386007E4706 /* iMBParserController.h in Headers */,
-@@ -1338,6 +1362,8 @@
+@@ -1344,6 +1368,8 @@
  				it,
  				zh_CN,
  				sv,
@@ -583,7 +626,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			mainGroup = 29B97314FDCFA39411CA2CEA /* iMediaBrowse */;
  			projectDirPath = "";
-@@ -1369,6 +1395,7 @@
+@@ -1375,6 +1401,7 @@
  				FD6008F20D6A552000A1146F /* MediaBrowser.nib in Resources */,
  				E541A96D0D3539740056AEC5 /* Abstract.nib in Resources */,
  				5B1AA7310D6C72CA003585CD /* minimovie.atomdata in Resources */,
@@ -591,7 +634,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				CE05E0C00DF74B84001D2356 /* i.tiff in Resources */,
  				CE05E0C10DF74B84001D2356 /* i2.tiff in Resources */,
  				CE05E0C20DF74B84001D2356 /* iMedia.tiff in Resources */,
-@@ -1452,7 +1479,6 @@
+@@ -1458,7 +1485,6 @@
  			runOnlyForDeploymentPostprocessing = 1;
  			shellPath = /bin/sh;
  			shellScript = "\n# see Comments for information on this script\n\necho \"Generating Localizable.strings ...\"\n\ncd ${SRCROOT}\ngenstrings -littleEndian -q -u -s LocalizedStringInIMedia -o en.lproj *.m\n\n";
@@ -599,7 +642,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  		};
  /* End PBXShellScriptBuildPhase section */
  
-@@ -1538,6 +1564,8 @@
+@@ -1544,6 +1570,8 @@
  				5B1AA72B0D6C72CA003585CD /* MovieCache.xcdatamodel in Sources */,
  				5B29F2850D6D726F0045CD86 /* iMBMovieCacheDB.m in Sources */,
  				5B29F28A0D6D72960045CD86 /* iMBMovieReference.m in Sources */,
@@ -608,7 +651,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				CEEE54160DAC30EF00B7F6A2 /* iMBVerticallyAlignedTextCell.m in Sources */,
  				FDE557E80E22C386007E4706 /* iMBParserController.m in Sources */,
  				FDD974F50E23EA9800C2A092 /* iMBPhotoFolderParser.m in Sources */,
-@@ -1611,6 +1639,8 @@
+@@ -1617,6 +1645,8 @@
  				CE1AD3860A7E83F20083C01E /* it */,
  				CE55A6A10AD194C70091C8AE /* zh_CN */,
  				5B0628CF0AEDF38300419AEB /* sv */,
@@ -617,7 +660,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			name = Localizable.strings;
  			sourceTree = "<group>";
-@@ -1643,6 +1673,8 @@
+@@ -1649,6 +1679,8 @@
  				CE4E790D0C5E77120044A5F9 /* sv */,
  				CE4E790E0C5E77170044A5F9 /* zh_CN */,
  				CE4E790F0C5E771C0044A5F9 /* zh_TW */,
@@ -626,7 +669,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			name = Info.html;
  			sourceTree = "<group>";
-@@ -1659,6 +1691,8 @@
+@@ -1665,6 +1697,8 @@
  				FD0220CC0D8F1A5100B48AAB /* de */,
  				FD0220CD0D8F1A5100B48AAB /* fr */,
  				CE2A55000E1DDE3200AC9DE2 /* zh_TW */,
@@ -635,7 +678,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			name = MediaBrowser.nib;
  			sourceTree = "<group>";
-@@ -1734,6 +1768,7 @@
+@@ -1740,6 +1774,7 @@
  				);
  				PRODUCT_NAME = iMediaBrowser;
  				SKIP_INSTALL = YES;
@@ -643,7 +686,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -1865,8 +1865,6 @@
+@@ -1830,8 +1865,6 @@
  			buildSettings = {
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -652,7 +695,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -1879,8 +1877,6 @@
+@@ -1844,8 +1877,6 @@
  				);
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -661,7 +704,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Release;
  		};
-@@ -1945,8 +1941,6 @@
+@@ -1910,8 +1941,6 @@
  			buildSettings = {
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -670,7 +713,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Plugin;
  		};
-@@ -1979,7 +1973,6 @@
+@@ -1944,7 +1973,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -678,7 +721,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -2014,7 +2007,6 @@
+@@ -1979,7 +2007,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -686,7 +729,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -2049,7 +2041,6 @@
+@@ -2014,7 +2041,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -694,7 +737,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -2034,7 +2069,7 @@
+@@ -2040,7 +2066,7 @@
  				);
  				PREBINDING = NO;
  				PRODUCT_NAME = MetadataTool;
@@ -703,7 +746,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -2077,7 +2112,7 @@
+@@ -2083,7 +2109,7 @@
  				);
  				PREBINDING = NO;
  				PRODUCT_NAME = MetadataTool;
@@ -712,42 +755,21 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Plugin;
  		};
-Index: iMBMusicFolder.m
-===================================================================
---- iMBMusicFolder.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMBMusicFolder.m	2012-11-17 11:43:20.000000000 -0800
-@@ -90,13 +133,25 @@
-     NSString *musicFolderName = LocalizedStringInIMedia(@"Music Folder", @"Name of your 'Music' folder in your home directory");
-     NSString *unknownArtistName = LocalizedStringInIMedia(@"Unknown", @"Unknown music/sound artist");
-     NSString *iconName = @"folder";
--
-+	
- 	return [self initWithContentsOfFile:file musicFolderName:musicFolderName unknownArtistName:unknownArtistName iconName:iconName parseMetadata:YES];
- }
+Index: iMediaBrowser.h
+--- iMediaBrowser.h	2012-10-03 17:14:25.000000000 -0700
++++ iMediaBrowser.h	2013-01-12 15:16:51.000000000 -0800
+@@ -48,7 +48,7 @@
+ @protocol iMediaBrowser;
+ @class iMBLibraryNode, RBSplitView, iMBBackgroundImageView;
  
- - (id)init
+-@interface iMediaBrowser : NSWindowController
++@interface iMediaBrowser : NSWindowController <NSWindowDelegate, NSToolbarDelegate>
  {
--	return [self initWithContentsOfFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Music"]];
-+	NSString *musicDirPath = nil;
-+	
-+	NSArray *musicDirURLs = [[NSFileManager defaultManager] URLsForDirectory:NSMusicDirectory inDomains:NSUserDomainMask];
-+	if( [musicDirURLs count] )
-+	{
-+		NSURL *firstURL = (NSURL *)[musicDirURLs objectAtIndex:0];
-+		if( [firstURL isFileURL] )
-+		{
-+			musicDirPath = [firstURL path];
-+		}
-+	}
-+    
-+	return [self initWithContentsOfFile:musicDirPath];
- }
- 
- - (void)dealloc
+ 	IBOutlet id						myDelegate;
+ 	IBOutlet NSTabView				*browserTabView;
 Index: iMediaBrowser.m
-===================================================================
---- iMediaBrowser.m	(revision 677)
-+++ iMediaBrowser.m	(working copy)
+--- iMediaBrowser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMediaBrowser.m	2013-01-12 15:16:51.000000000 -0800
 @@ -57,6 +57,12 @@
  static iMediaBrowser *_sharedMediaBrowser = nil;
  static NSMutableArray *_browserClasses = nil;
