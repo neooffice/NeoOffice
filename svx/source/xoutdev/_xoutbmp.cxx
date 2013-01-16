@@ -557,8 +557,9 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 				const long			nHeight = aSize.Height();
 				const long			nHeight2 = nHeight - 2L;
 #ifdef USE_JAVA
-				const BitmapColor	aWhite( Color( COL_WHITE ) );
-				const BitmapColor	aBlack( Color( COL_BLACK ) );
+				const BitmapColor	aSrcWhite( pReadAcc->GetBestMatchingColor( Color( COL_WHITE ) ) );
+				const BitmapColor	aDstWhite( pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) ) );
+				const BitmapColor	aDstBlack( pWriteAcc->GetBestMatchingColor( Color( COL_BLACK ) ) );
 #else	// USE_JAVA
 				const long			lThres2 = (long) cThreshold * cThreshold;
 				const BitmapColor	aWhite = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) );
@@ -580,10 +581,10 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 #ifdef USE_JAVA
 					for( long nX = 0L, nXDst = 1L; nX < nWidth2; nX++, nXDst++ )
 					{
-						if ( pReadAcc->GetPixel( nY1, nXDst ) == aWhite )
-							pWriteAcc->SetPixel( nY1, nXDst, aWhite );
+						if ( pReadAcc->GetPixel( nY1, nXDst ) == aSrcWhite )
+							pWriteAcc->SetPixel( nY1, nXDst, aDstWhite );
 						else
-							pWriteAcc->SetPixel( nY1, nXDst, aBlack );
+							pWriteAcc->SetPixel( nY1, nXDst, aDstBlack );
 					}
 #else	// USE_JAVA
 					for( long nX = 0L, nXDst = 1L, nXTmp; nX < nWidth2; nX++, nXDst++ )
