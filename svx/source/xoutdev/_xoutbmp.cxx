@@ -553,21 +553,55 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 			if( pReadAcc && pWriteAcc )
 			{
 				const long			nWidth = aSize.Width();
+#ifndef USE_JAVA
 				const long			nWidth2 = nWidth - 2L;
+#endif	// !USE_JAVA
 				const long			nHeight = aSize.Height();
-				const long			nHeight2 = nHeight - 2L;
 #ifdef USE_JAVA
 				const BitmapColor	aSrcWhite( pReadAcc->GetBestMatchingColor( Color( COL_WHITE ) ) );
 				const BitmapColor	aDstWhite( pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) ) );
 				const BitmapColor	aDstBlack( pWriteAcc->GetBestMatchingColor( Color( COL_BLACK ) ) );
+
+				for( long nY = 0L; nY < nHeight; nY++ )
+				{
+					for( long nX = 0L; nX < nWidth; nX++ )
+					{
+						// Ensure that the edge does not clip out any of the
+						// image's non-white pixels by only setting the
+						// destination to white if all surrounding source
+						// pixels are also white
+						bool bWhite = false;
+						if( pReadAcc->GetPixel( nY, nX ) == aSrcWhite )
+						{
+							bool bLeft = ( nX > 0 );
+							bool bRight = ( nX < nWidth - 1 );
+							bool bTop = ( nY > 0 );
+							bool bBottom = ( nY < nHeight - 1 );
+							if( ( !bLeft || !bTop || pReadAcc->GetPixel( nY - 1, nX - 1 ) == aSrcWhite ) &&
+								( !bTop || pReadAcc->GetPixel( nY - 1, nX ) == aSrcWhite ) &&
+								( !bRight || !bTop || pReadAcc->GetPixel( nY - 1, nX + 1 ) == aSrcWhite ) &&
+								( !bRight || pReadAcc->GetPixel( nY, nX + 1 ) == aSrcWhite ) &&
+								( !bRight || !bBottom || pReadAcc->GetPixel( nY + 1, nX + 1 ) == aSrcWhite ) &&
+								( !bBottom || pReadAcc->GetPixel( nY + 1, nX ) == aSrcWhite ) &&
+								( !bLeft || !bBottom || pReadAcc->GetPixel( nY + 1, nX - 1 ) == aSrcWhite ) &&
+								( !bLeft || pReadAcc->GetPixel( nY, nX - 1 ) == aSrcWhite ) )
+									bWhite = true;
+						}
+
+						if( bWhite )
+							pWriteAcc->SetPixel( nY, nX, aDstWhite );
+						else
+							pWriteAcc->SetPixel( nY, nX, aDstBlack );
+					}
+				}
 #else	// USE_JAVA
+				const long			nHeight2 = nHeight - 2L;
 				const long			lThres2 = (long) cThreshold * cThreshold;
 				const BitmapColor	aWhite = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) );
 				const BitmapColor	aBlack = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_BLACK ) );
 				long				nSum1;
 				long				nSum2;
 				long				lGray;
-#endif	// USE_JAVA
 
 				// Rand mit Weiss init.
 				pWriteAcc->SetLineColor( Color( COL_WHITE) );
@@ -578,15 +612,6 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 
 				for( long nY = 0L, nY1 = 1L, nY2 = 2; nY < nHeight2; nY++, nY1++, nY2++ )
 				{
-#ifdef USE_JAVA
-					for( long nX = 0L, nXDst = 1L; nX < nWidth2; nX++, nXDst++ )
-					{
-						if ( pReadAcc->GetPixel( nY1, nXDst ) == aSrcWhite )
-							pWriteAcc->SetPixel( nY1, nXDst, aDstWhite );
-						else
-							pWriteAcc->SetPixel( nY1, nXDst, aDstBlack );
-					}
-#else	// USE_JAVA
 					for( long nX = 0L, nXDst = 1L, nXTmp; nX < nWidth2; nX++, nXDst++ )
 					{
 						nXTmp = nX;
@@ -610,8 +635,8 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 						else
 							pWriteAcc->SetPixel( nY1, nXDst, aBlack );
 					}
-#endif	// USE_JAVA
 				}
+#endif	// USE_JAVA
 
 				bRet = TRUE;
 			}
