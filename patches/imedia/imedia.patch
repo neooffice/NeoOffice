@@ -553,7 +553,7 @@ Index: iMBLinksView.m
  }
 Index: iMBMusicFolder.m
 --- iMBMusicFolder.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMBMusicFolder.m	2013-01-14 12:02:17.000000000 -0800
++++ iMBMusicFolder.m	2013-01-23 19:45:16.000000000 -0800
 @@ -52,7 +52,15 @@
  #import "NSString+iMedia.h"
  
@@ -682,6 +682,15 @@ Index: iMBMusicFolder.m
  }
  
  
+@@ -275,7 +331,7 @@
+ 					}
+ 				}
+ 				
+-				if (UTTypeConformsTo((CFStringRef)uti,kUTTypeAudio))
++				if (UTTypeConformsTo((CFStringRef)uti,kUTTypeAudio) || UTTypeConformsTo((CFStringRef)uti,kUTTypeMovie))
+ 				{
+ 					CFDictionaryRef utiDeclaration = UTTypeCopyDeclaration((CFStringRef)uti);
+ 					if (utiDeclaration)
 Index: iMBParserController.m
 --- iMBParserController.m	2012-10-03 17:14:25.000000000 -0700
 +++ iMBParserController.m	2013-01-12 15:16:51.000000000 -0800
