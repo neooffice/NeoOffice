@@ -1074,7 +1074,7 @@ Index: iMediaBrowser.h
  	IBOutlet NSTabView				*browserTabView;
 Index: iMediaBrowser.m
 --- iMediaBrowser.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMediaBrowser.m	2013-01-12 15:16:51.000000000 -0800
++++ iMediaBrowser.m	2013-01-24 12:01:30.000000000 -0800
 @@ -57,6 +57,12 @@
  static iMediaBrowser *_sharedMediaBrowser = nil;
  static NSMutableArray *_browserClasses = nil;
@@ -1232,6 +1232,15 @@ Index: iMediaBrowser.m
  }
  
  - (void)windowDidBecomeKey:(NSNotification *)aNotification
+@@ -993,7 +1088,7 @@
+     [bundles addObjectsFromArray:[iMediaBrowser findModulesInDirectory:[[NSBundle mainBundle] resourcePath]
+ 														 withExtension:ext]];
+ 
+-	NSArray *dirs = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSAllDomainsMask, YES);
++	NSArray *dirs = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask|NSLocalDomainMask, YES);
+ 	NSEnumerator *e = [dirs objectEnumerator];
+ 	NSString *cur;
+ 	
 @@ -1005,4 +1100,4 @@
  	return bundles;
  }
@@ -1239,3 +1248,15 @@ Index: iMediaBrowser.m
 -@end
 \ No newline at end of file
 +@end
+Index: iMBScreenSaverPicturesParser.m
+--- iMBScreenSaverPicturesParser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMBScreenSaverPicturesParser.m	2013-01-24 12:01:04.000000000 -0800
+@@ -68,7 +68,7 @@
+ {
+ 	NSFileManager *fm = [NSFileManager defaultManager];
+ 	
+-	NSArray *searchPaths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,NSAllDomainsMask,YES);
++	NSArray *searchPaths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,NSUserDomainMask|NSLocalDomainMask,YES);
+ 	NSEnumerator *pathEnum = [searchPaths objectEnumerator];
+ 	NSString *libraryPath;
+ 	NSMutableArray *screensaverPaths = [NSMutableArray array];
