@@ -42,8 +42,12 @@
 #include <com/sun/star/beans/XMaterialHolder.hpp>
 
 #ifdef USE_JAVA
-#include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_acquireSolarMutexFunc();
+typedef void Application_releaseSolarMutexFunc();
+
 #endif	// USE_JAVA
 
 using rtl::OUString;
@@ -1006,16 +1010,22 @@ PyThreadAttach::PyThreadAttach( PyInterpreterState *interp)
         throw RuntimeException(
             OUString(RTL_CONSTASCII_USTRINGPARAM( "Couldn't create a pythreadstate" ) ),
             Reference< XInterface > () );
+
 #ifdef USE_JAVA
     // Fix deadlock reported in the following NeoOffice forum topic by locking
     // the application mutex before locking the Python thread lock:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63412#63412
-    ::vos::IMutex &rSolarMutex = Application::GetSolarMutex();
-    rSolarMutex.acquire();
+    Application_acquireSolarMutexFunc *pAcquireFunc = (Application_acquireSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" );
+    Application_releaseSolarMutexFunc *pReleaseFunc = (Application_releaseSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" );
+
+    sal_Bool bSolarMutexAcquired = sal_False;
+    if ( pAcquireFunc && pReleaseFunc )
+        bSolarMutexAcquired = pAcquireFunc();
 #endif	// USE_JAVA
     PyEval_AcquireThread( tstate);
 #ifdef USE_JAVA
-    rSolarMutex.release();
+    if ( bSolarMutexAcquired && pAcquireFunc && pReleaseFunc )
+        pReleaseFunc();
 #endif	// USE_JAVA
     // set LC_NUMERIC to "C"
     const char * oldLocale =
@@ -1058,12 +1068,17 @@ PyThreadDetach::~PyThreadDetach()
     // Fix deadlock reported in the following NeoOffice forum topic by locking
     // the application mutex before locking the Python thread lock:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63412#63412
-    ::vos::IMutex &rSolarMutex = Application::GetSolarMutex();
-    rSolarMutex.acquire();
+    Application_acquireSolarMutexFunc *pAcquireFunc = (Application_acquireSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" );
+    Application_releaseSolarMutexFunc *pReleaseFunc = (Application_releaseSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" );
+
+    sal_Bool bSolarMutexAcquired = sal_False;
+    if ( pAcquireFunc && pReleaseFunc )
+        bSolarMutexAcquired = pAcquireFunc();
 #endif	// USE_JAVA
     PyEval_AcquireThread( tstate );
 #ifdef USE_JAVA
-    rSolarMutex.release();
+    if ( bSolarMutexAcquired && pAcquireFunc && pReleaseFunc )
+        pReleaseFunc();
 #endif	// USE_JAVA
 //     PyObject *value =
 //         PyDict_GetItemString( PyThreadState_GetDict( ), g_NUMERICID );
