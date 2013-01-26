@@ -38,10 +38,16 @@
 
 #include "sockimpl.h"
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+
+#include <poll.h>
+
+#include "pipe_socketpair.h"
+
+#else	/* USE_JAVA */
 #define PIPEDEFAULTPATH		"/tmp"
 #define PIPEALTERNATEPATH	"/var/tmp"
-#endif	/* !USE_JAVA */
+#endif	/* USE_JAVA */
 
 #define PIPENAMEMASK	"OSL_PIPE_%s"
 #define SECPIPENAMEMASK	"OSL_PIPE_%s_%s"
@@ -155,6 +161,14 @@ oslPipe SAL_CALL osl_createPipe(rtl_uString *ustrPipeName, oslPipeOptions Option
                             OUSTRING_TO_OSTRING_CVTFLAGS );
         pszPipeName = rtl_string_getStr(strPipeName);
         pPipe = osl_psz_createPipe(pszPipeName, Options, Security);
+#ifdef USE_JAVA
+        // Fix bug reported in the following NeoOffice forum topic by using
+        // socket pairs as a fallback for when a Unix domain socket cannot be
+        // be created:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8542
+        if ( !pPipe )
+            pPipe = osl_psz_createSocketPairPipe(pszPipeName, Options);
+#endif	/* USE_JAVA */
 
         if ( strPipeName != 0 )
         {
@@ -448,8 +462,11 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
     }
 #endif /* LINUX */
 
-
+#ifdef USE_JAVA
+	nRet = shutdown(ConnFD, SHUT_RDWR);
+#else	/* USE_JAVA */
 	nRet = shutdown(ConnFD, 2);
+#endif	/* USE_JAVA */
     if ( nRet < 0 )
     {
         OSL_TRACE("shutdown in destroyPipe failed : '%s'\n",strerror(errno));
@@ -466,6 +483,10 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
 		unlink(pPipe->m_Name);
 	}
 	pPipe->m_bClosed = sal_True;
+
+#ifdef USE_JAVA
+	osl_psz_closeSocketPairPipe(pPipe);
+#endif	/* USE_JAVA */
 
 /*      OSL_TRACE("Out osl_destroyPipe");     */
 }
@@ -492,6 +513,19 @@ oslPipe SAL_CALL osl_acceptPipe(oslPipe pPipe)
 #endif
 
     s = accept(pPipe->m_Socket, NULL, NULL);
+#ifdef USE_JAVA
+    // If accept() failed because this is a socket from socketpair(), let poll()
+    // block until there is data to read
+    if (s < 0 && errno == EINVAL)
+    {
+        struct pollfd aPollFD;
+        aPollFD.fd = pPipe->m_Socket;
+        aPollFD.events = POLLIN;
+        aPollFD.revents = 0;
+        if ( poll( &aPollFD, 1, -1 ) > 0 )
+            s = dup(pPipe->m_Socket);
+    }
+#endif	/* USE_JAVA */
 
 #if defined(LINUX)
     pPipe->m_bIsAccepting = sal_False;
