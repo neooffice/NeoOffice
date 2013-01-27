@@ -124,8 +124,8 @@ OBJFILES += $(OBJ)$/backtrace.obj
 .ENDIF
 
 .IF "$(GUIBASE)"=="java"
-SLOFILES += $(SLO)$/pipe_socketpair.obj $(SLO)$/system_cocoa.obj
-OBJFILES += $(OBJ)$/pipe_socketpair.obj $(OBJ)$/system_cocoa.obj
+SLOFILES += $(SLO)$/system_cocoa.obj
+OBJFILES += $(OBJ)$/system_cocoa.obj
 .ENDIF		# "$(GUIBASE)"=="java"
 
 # --- Targets ------------------------------------------------------
