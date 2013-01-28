@@ -30,7 +30,7 @@
 	<!-- Enable Apple Remote Control controller -->
 	<key>com.apple.security.device.usb</key>
 	<true/>
-	<!-- Allow creation of Unix domain sockets within our container folder -->
+	<!-- Allow creation of TCP sockets bound only to localhost for IPC -->
 	<key>com.apple.security.network.server</key>
 	<true/>
 	<key>com.apple.security.network.client</key>
