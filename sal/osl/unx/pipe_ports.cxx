@@ -43,7 +43,65 @@
 using namespace osl;
 using namespace rtl;
 
-static OUString ImplPipePortFileURLForName( OUString& rName )
+static OUString ImplParentURL( const OUString& aURL )
+{
+	sal_Int32 nLastIndex = aURL.lastIndexOf( sal_Unicode( '/' ) );
+	OUString aParentURL = aURL.copy( 0, nLastIndex );
+
+	if ( aParentURL[ aParentURL.getLength() - 1 ] == sal_Unicode(':') && aParentURL.getLength() == 6 )
+		aParentURL += OUString( RTL_CONSTASCII_USTRINGPARAM( "/" ) );
+
+	if ( !aParentURL.compareToAscii( "file://" ) )
+		aParentURL = OUString( RTL_CONSTASCII_USTRINGPARAM( "file:///" ) );
+
+	return aParentURL;
+}
+
+static sal_Bool ImplEnsureDirURL( const OUString& rURL )
+{
+	if ( !rURL.getLength() )
+		return sal_False;
+
+	// Remove trailing slash
+	OUString aURL;
+	if ( rURL[ rURL.getLength() - 1 ] == sal_Unicode( '/' ) )
+		aURL = rURL.copy( 0, rURL.getLength() - 1 );
+	else
+		aURL = rURL;
+
+	Directory aDirectory( aURL );
+
+	// Temporarily set umask to read/write only for the user when creating
+	// directory
+	mode_t nOldMode = umask( 077 );
+	FileBase::RC nError = aDirectory.open();
+	umask( nOldMode );
+	aDirectory.close();
+	if ( nError == File::E_None )
+		return sal_True;
+
+	// Try to create the directory
+	nError = Directory::create( aURL );
+	sal_Bool bRet = ( nError == File::E_None || nError == FileBase::E_EXIST );
+	if ( !bRet )
+	{
+		OUString aParentURL = ImplParentURL( aURL );
+		if ( aParentURL != aURL )
+		{
+			// Try to create parent directories and then try again
+			bRet = ImplEnsureDirURL( aParentURL );
+			if ( bRet )
+			{
+				nError = Directory::create( aURL );
+				bRet = ( nError == File::E_None || nError == FileBase::E_EXIST );
+			}
+		}
+	}
+
+	return bRet;
+}
+
+static OUString ImplPipePortFileURLForName( const OUString& rName )
 {
 	static bool bUserInstallInitialized = false;
 	static OUString aUserInstallURL;
@@ -61,15 +119,17 @@ static OUString ImplPipePortFileURLForName( OUString& rName )
 			Bootstrap::get( OUString( RTL_CONSTASCII_USTRINGPARAM( "BRAND_BASE_DIR" ) ), aURI );
 			Bootstrap aData( aURI + OUString( RTL_CONSTASCII_USTRINGPARAM( "/program/" SAL_CONFIGFILE( "bootstrap" ) ) ) );
 			aData.getFrom( OUString( RTL_CONSTASCII_USTRINGPARAM( "UserInstallation" ) ), aUserInstallURL );
-			bUserInstallInitialized = true;
+
+			// Make sure that the user installation directory is created
+			bUserInstallInitialized = ImplEnsureDirURL( aUserInstallURL );
 		}
 	}
 
 	if ( rName.getLength() && aUserInstallURL.getLength() )
 	{
 		aRet = aUserInstallURL;
-    	aRet += OUString( RTL_CONSTASCII_USTRINGPARAM( "/.pipe_port_" ) );
-    	aRet += rName;
+		aRet += OUString( RTL_CONSTASCII_USTRINGPARAM( "/.pipe_port_" ) );
+		aRet += rName;
 	}
 
 	return aRet;
@@ -89,7 +149,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	socklen_t len = sizeof(addr);
-	if (getsockname(pPipe->m_Socket, (struct sockaddr *)&addr, &len) < 0 || addr.sin_family != AF_INET || ntohs( addr.sin_port )== 0 )
+	if (getsockname(pPipe->m_Socket, (struct sockaddr *)&addr, &len) < 0 || addr.sin_family != AF_INET || ntohs( addr.sin_port ) == 0 )
 		return bRet;
 
 	OString aPort = OString::valueOf( (sal_Int32)ntohs( addr.sin_port ) );
@@ -102,7 +162,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 
 	// Create the port file
 	File aFile( aPipePortFileURL );
-    FileBase::RC nError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
+	FileBase::RC nError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
 	if ( nError != FileBase::E_None )
 		nError = aFile.open( osl_File_OpenFlag_Write );
 	if ( nError == FileBase::E_None )
@@ -136,7 +196,7 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 
 	// Read the port file if it exists
 	File aFile( aPipePortFileURL );
-    FileBase::RC nError = aFile.open( osl_File_OpenFlag_Read );
+	FileBase::RC nError = aFile.open( osl_File_OpenFlag_Read );
 	if ( nError == FileBase::E_None )
 	{
 		ByteSequence aBytes;
