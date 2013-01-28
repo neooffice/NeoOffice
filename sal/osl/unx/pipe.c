@@ -38,10 +38,23 @@
 
 #include "sockimpl.h"
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+
+#include "pipe_ports.h"
+
+/*
+ * Use strl* functions in place of strn* functions to ensure that all strings
+ * are NULL terminated
+ */
+#undef strncat
+#define strncat strlcat
+#undef strncpy
+#define strncpy strlcpy
+
+#else	/* USE_JAVA */
 #define PIPEDEFAULTPATH		"/tmp"
 #define PIPEALTERNATEPATH	"/var/tmp"
-#endif	/* !USE_JAVA */
+#endif	/* USE_JAVA */
 
 #define PIPENAMEMASK	"OSL_PIPE_%s"
 #define SECPIPENAMEMASK	"OSL_PIPE_%s_%s"
@@ -172,19 +185,7 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 	int    Flags;
 	size_t	   len;
 #ifdef USE_JAVA
-	/*
-	 * Allocate memory equal to the maximum value we can assign to the
-	 * sockaddr_un.sun_len struct member which is an unsigned char. We need
-	 * this extra memory to increase the path length that can be held in the
-	 * sockaddr_un.sun_path struct member since Mac OS X sandboxing only
-	 * allows binding of Unix domain sockets in the user's home directory and
-	 * the home directory will be in a very lengthy path when sandboxing is
-	 * enabled.
-	 */
-	size_t nAddrSize = (sizeof(struct sockaddr_un) > UINT8_MAX ? sizeof(struct sockaddr_un) : UINT8_MAX);
-	struct sockaddr_un *pAddr = (struct sockaddr_un *)rtl_allocateMemory(nAddrSize);
-	if (!pAddr)
-		return NULL;
+	struct sockaddr_in addr;
 #else	/* USE_JAVA */
 	struct sockaddr_un addr;
 #endif	/* USE_JAVA */
@@ -194,13 +195,6 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 
 #ifdef USE_JAVA
 	name[0] = '\0';
-	if (!macxp_getNSHomeDirectory(name, sizeof(name)) || !strlen(name) || !access(name, R_OK|W_OK) == 0)
-	{
-		rtl_freeMemory(pAddr);
-		return NULL;
-	}
-
-	strncat(name, "/.", sizeof(name));
 #else	/* USE_JAVA */
 	if (access(PIPEDEFAULTPATH, R_OK|W_OK) == 0)
     {
@@ -235,14 +229,15 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 	pPipe= __osl_createPipeImpl();
 
 	/* create socket */
+#ifdef USE_JAVA
+	pPipe->m_Socket = socket(AF_INET, SOCK_STREAM, 0);
+#else	/* USE_JAVA */
 	pPipe->m_Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+#endif	/* USE_JAVA */
 	if ( pPipe->m_Socket < 0 )
 	{
 		OSL_TRACE("osl_createPipe socket failed. Errno: %d; %s\n",errno, strerror(errno));
 		__osl_destroyPipeImpl(pPipe);
-#ifdef USE_JAVA
-		rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 		return NULL;
 	}
 
@@ -258,110 +253,114 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 		}
 	}
 
-#ifdef USE_JAVA
-	memset(pAddr, 0, nAddrSize);
-
-    OSL_TRACE("osl_createPipe : Pipe Name '%s'",name);
-
-	pAddr->sun_family = AF_UNIX;
-	strncpy(pAddr->sun_path, name, nAddrSize - sizeof(pAddr->sun_len) - sizeof(pAddr->sun_family) - 1);
-	len = SUN_LEN(pAddr);
-	pAddr->sun_len = len;
-#else	/* USE_JAVA */
 	memset(&addr, 0, sizeof(addr));
 
     OSL_TRACE("osl_createPipe : Pipe Name '%s'",name);
 
+#ifdef USE_JAVA
+	addr.sin_len = sizeof(addr);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htonl(INADDR_ANY);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+#else	/* USE_JAVA */
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, name, sizeof(addr.sun_path));
+#endif	/* USE_JAVA */
 #if defined(FREEBSD)
 	len = SUN_LEN(&addr);
 #else
 	len = sizeof(addr);
 #endif
-#endif	/* USE_JAVA */
 
 	if ( Options & osl_Pipe_CREATE )
 	{
+#ifdef USE_JAVA
+		/* check if there exists an orphan filesystem entry */
+		sal_uInt16 nPort = osl_getPortForPipeName( name );
+		if ( nPort > 0 )
+		{
+			addr.sin_port = htons( nPort );
+#else	/* USE_JAVA */
 		struct stat status;
 
-		/* check if there exists an orphan filesystem entry */
 		if ( ( stat(name, &status) == 0) &&
 			 ( S_ISSOCK(status.st_mode) || S_ISFIFO(status.st_mode) ) )
 		{
-#ifdef USE_JAVA
-			if ( connect(pPipe->m_Socket,(struct sockaddr *)pAddr,len) >= 0 )
-#else	/* USE_JAVA */
-			if ( connect(pPipe->m_Socket,(struct sockaddr *)&addr,len) >= 0 )
 #endif	/* USE_JAVA */
+			if ( connect(pPipe->m_Socket,(struct sockaddr *)&addr,len) >= 0 )
 			{
 				OSL_TRACE("osl_createPipe : Pipe already in use. Errno: %d; %s\n",errno,strerror(errno));
 				close (pPipe->m_Socket);
 				__osl_destroyPipeImpl(pPipe);
-#ifdef USE_JAVA
-				rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 				return NULL;
 			}
 
+#ifdef USE_JAVA
+			addr.sin_port = htonl(INADDR_ANY);
+			osl_unlinkPortFileForPipeName(name);
+#else	/* USE_JAVA */
 			unlink(name);
+#endif	/* USE_JAVA */
 		}
 
 		/* ok, fs clean */
-#ifdef USE_JAVA
-		if ( bind(pPipe->m_Socket, (struct sockaddr *)pAddr, len) < 0 )
-#else	/* USE_JAVA */
 		if ( bind(pPipe->m_Socket, (struct sockaddr *)&addr, len) < 0 )
-#endif	/* USE_JAVA */
 		{
 			OSL_TRACE("osl_createPipe : failed to bind socket. Errno: %d; %s\n",errno,strerror(errno));
 			close (pPipe->m_Socket);
 			__osl_destroyPipeImpl(pPipe);
-#ifdef USE_JAVA
-			rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 			return NULL;
 		}
 
+#ifndef USE_JAVA
 		/*	Only give access to all if no security handle was specified, otherwise security
 			depends on umask */
 
 		if ( !Security )
 			chmod(name,S_IRWXU | S_IRWXG |S_IRWXO);
+#endif	/* !USE_JAVA */
 
 
 		strncpy(pPipe->m_Name, name, sizeof(pPipe->m_Name));
 
+#ifdef USE_JAVA
+		if ( !osl_createPortFileForPipe(pPipe) )
+		{
+			OSL_TRACE("osl_createPipe : failed to get port number for socket. Errno: %d; %s\n",errno,strerror(errno));
+			close (pPipe->m_Socket);
+			__osl_destroyPipeImpl(pPipe);
+			return NULL;
+		}
+#endif	/* !USE_JAVA */
+
 		if ( listen(pPipe->m_Socket, 5) < 0 )
 		{
 			OSL_TRACE("osl_createPipe failed to listen. Errno: %d; %s\n",errno,strerror(errno));
+#ifdef USE_JAVA
+			osl_unlinkPortFileForPipeName(name);
+#else	/* USE_JAVA */
 			unlink(name);	/* remove filesystem entry */
+#endif	/* USE_JAVA */
 			close (pPipe->m_Socket);
 			__osl_destroyPipeImpl(pPipe);
-#ifdef USE_JAVA
-			rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 			return NULL;
 		}
 
-#ifdef USE_JAVA
-		rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 		return (pPipe);
 	}
 	else
 	{   /* osl_pipe_OPEN */
+#ifdef USE_JAVA
+		sal_uInt16 nPort = osl_getPortForPipeName( name );
+		if ( nPort > 0 )
+		{
+			addr.sin_port = htons( nPort );
+#else	/* USE_JAVA */
 		if ( access(name, F_OK) != -1 )
 		{
-#ifdef USE_JAVA
-			if ( connect( pPipe->m_Socket, (struct sockaddr *)pAddr, len) >= 0 )
-#else	/* USE_JAVA */
+#endif	/* USE_JAVA */
 			if ( connect( pPipe->m_Socket, (struct sockaddr *)&addr, len) >= 0 )
-#endif	/* USE_JAVA */
 			{
-#ifdef USE_JAVA
-				rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 				return (pPipe);
 			}
 
@@ -370,9 +369,6 @@ oslPipe SAL_CALL osl_psz_createPipe(const sal_Char *pszPipeName, oslPipeOptions 
 
 		close (pPipe->m_Socket);
 		__osl_destroyPipeImpl(pPipe);
-#ifdef USE_JAVA
-		rtl_freeMemory(pAddr);
-#endif	/* USE_JAVA */
 		return NULL;
 	}
 }
@@ -463,7 +459,11 @@ void SAL_CALL osl_closePipe( oslPipe pPipe )
 	/* remove filesystem entry */
 	if ( strlen(pPipe->m_Name) > 0 )
 	{
+#ifdef USE_JAVA
+		osl_unlinkPortFileForPipeName(pPipe->m_Name);
+#else	/* USE_JAVA */
 		unlink(pPipe->m_Name);
+#endif	/* USE_JAVA */
 	}
 	pPipe->m_bClosed = sal_True;
 
