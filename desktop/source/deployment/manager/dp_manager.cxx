@@ -296,11 +296,9 @@ Reference<deployment::XPackageManager> PackageManagerImpl::create(
             try {
 #if defined USE_JAVA && defined MACOSX
                 // Eliminate sandbox file-deny-write errors by treating the file
-                // as read only if we this executable is sandboxed
-                ::rtl::OUString executableFile;
-                osl_getExecutableFile( &executableFile.pData );
-                sal_Int32 lastIndex = executableFile.lastIndexOf( '/' );
-                if ( lastIndex < 0 || executableFile.copy( lastIndex + 1 ) != ::rtl::OUString::createFromAscii( "soffice.bin" ) )
+                // as read only if the context is "shared" and we are not
+                // running as root (i.e. not running sudo unopkg.bin)
+                if ( getuid() == 0 || !context.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "shared" ) ) )
                 {
 #endif	// USE_JAVA && MACOSX
                 // probe writing:
