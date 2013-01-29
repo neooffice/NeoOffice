@@ -30,7 +30,9 @@
 // MARKER(update_precomp.py): autogen include statement, do not remove
 
 #include "dp_misc.h"
+#if !defined USE_JAVA || !defined MACOSX
 #include "unopkg_main.h"
+#endif	// !USE_JAVA || !MACOSX
 #include "unopkg_shared.h"
 #include "dp_identifier.hxx"
 #include "sal/main.h"
@@ -209,7 +211,7 @@ void disposeBridges(Reference<css::uno::XComponentContext> ctx)
 
 //##############################################################################
 #if defined USE_JAVA && defined MACOSX
-// All references to main() need to be redefined to soffice_main()
+// All references to main() need to be redefined to unopkg_main()
 #define main unopkg_main
 extern "C"
 {
@@ -269,6 +271,12 @@ extern "C" int unopkg_main()
             dp_misc::writeConsole("\n"APP_NAME" Version 3.0\n");
             return 0;
         }
+#if defined USE_JAVA && defined MACOSX
+        else if (nCount == 1 && isBootstrapVariable(&nPos)) {
+            dp_misc::writeConsole(s_usingText);
+            return 0;
+        }
+#endif	// USE_JAVA && MACOSX
         //consume all bootstrap variables which may occur before the subcommannd
         while(isBootstrapVariable(&nPos));
        

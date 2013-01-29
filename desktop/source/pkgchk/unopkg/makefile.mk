@@ -48,13 +48,10 @@ PRJINC += ..$/..$/deployment ..$/..
 CFLAGS+=-DSYSTEM_DB -I$(DB_INCLUDES)
 .ENDIF
 
+.IF "$(GUIBASE)" != "java"
 APP1TARGET = so$/unopkg
 APP1OBJS = $(OBJFILES)
-.IF "$(GUIBASE)" == "java"
-APP1STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
-.ELSE	# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(UNOPKGAPPLIB)
-.ENDIF		# "$(GUIBASE)" == "java"
 APP1DEPN = $(SHL1TARGETN)
 APP1NOSAL = TRUE
 APP1RPATH = BRAND
@@ -62,14 +59,12 @@ APP1RPATH = BRAND
 APP1ICON = $(SOLARRESDIR)$/icons/so9_main_app.ico
 APP1LINKRES = $(MISC)$/$(TARGET)1.res
 .ENDIF
+.ENDIF		# "$(GUIBASE)" != "java"
 
+.IF "$(GUIBASE)" != "java"
 APP2TARGET = unopkg
 APP2OBJS = $(OBJFILES)
-.IF "$(GUIBASE)" == "java"
-APP2STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
-.ELSE	# "$(GUIBASE)" == "java"
 APP2STDLIBS = $(SALLIB) $(UNOPKGAPPLIB)
-.ENDIF		# "$(GUIBASE)" == "java"
 APP2DEPN = $(SHL1TARGETN)
 APP2NOSAL = TRUE
 APP2RPATH = BRAND
@@ -77,6 +72,7 @@ APP2RPATH = BRAND
 APP2ICON = $(SOLARRESDIR)$/icons/ooo3_main_app.ico
 APP2LINKRES = $(MISC)$/$(TARGET)2.res
 .ENDIF
+.ENDIF		# "$(GUIBASE)" != "java"
 
 SHL1TARGET = unopkgapp
 SHL1OBJS = $(SLOFILES) $(SLO)$/lockfile.obj
@@ -99,12 +95,9 @@ SLOFILES = \
     $(SLO)$/unopkg_cmdenv.obj \
     $(SLO)$/unopkg_misc.obj
 
+.IF "$(GUIBASE)" != "java"
 OBJFILES = $(OBJ)$/unopkg_main.obj
-
-.IF "$(GUIBASE)" == "java"
-OBJFILES += \
-    $(OBJ)$/unopkg_java.obj
-.ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" != "java"
 
 .INCLUDE : target.mk
 
