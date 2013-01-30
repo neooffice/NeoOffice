@@ -50,22 +50,6 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
 using namespace ::com::sun::star::uno;
 
-static MacOSBOOL isRunningPanther()
-{
-	static bool initializedOnce = NO;
-	static bool isPanther = NO;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isPanther = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x3 ) );
-		initializedOnce = YES;
-	}
-
-	return isPanther;
-}
-
 namespace avmedia
 {
 namespace quicktime
@@ -497,20 +481,15 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 {
 	Reference< XPlayerWindow > xRet;
 
-	// Don't allow running with Panther as our RAGE 128 graphics card hack in
-	// the vcl module is incompatible with the JVMs on Mac OS X 10.3.9
-	if ( !isRunningPanther() )
+	Size aSize = getPreferredPlayerWindowSize();
+	if ( aSize.Width > 0 && aSize.Height > 0 )
 	{
-		Size aSize = getPreferredPlayerWindowSize();
-		if ( aSize.Width > 0 && aSize.Height > 0 )
+		Window *pWindow = new Window( mxMgr );
+		if ( pWindow )
 		{
-			Window *pWindow = new Window( mxMgr );
-			if ( pWindow )
-			{
-				xRet = pWindow;
-				if ( !pWindow->create( mpMoviePlayer, rArguments ) )
-					xRet.clear();
-			}
+			xRet = pWindow;
+			if ( !pWindow->create( mpMoviePlayer, rArguments ) )
+				xRet.clear();
 		}
 	}
 
