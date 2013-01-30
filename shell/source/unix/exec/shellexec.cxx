@@ -163,6 +163,28 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 static_cast< cppu::OWeakObject * >(this));
         }
         
+#ifdef USE_JAVA
+        // Replace ".go-oo.org" with ".services.openoffice.org" since go-oo.org
+        // is now dead and the Go-oo code merely redirected to matching
+        // services.openoffice.org URLs
+        static const OUString aGoOODomain( RTL_CONSTASCII_USTRINGPARAM( ".go-oo.org" ) );
+        static const OUString aOOoServicesDomain( RTL_CONSTASCII_USTRINGPARAM( ".services.openoffice.org" ) );
+        sal_Int32 nGoOODomainIndex = aURL.indexOf( aGoOODomain );
+        if ( nGoOODomainIndex >= 0 )
+        {
+            aURL = aURL.replaceAt( nGoOODomainIndex, aGoOODomain.getLength(), aOOoServicesDomain );
+            if ( aURL.getLength() == 0 && aCommand.getLength() != 0 )
+            {
+                throw RuntimeException(
+                    (OUString(
+                        RTL_CONSTASCII_USTRINGPARAM(
+                            "Cannot replace Go-oo domain with OOo domain in URL: "))
+                     + aCommand),
+                    static_cast< cppu::OWeakObject * >(this));
+            }
+        }
+#endif	// USE_JAVA
+
 #ifdef MACOSX
         aBuffer.append("open");
 #else
