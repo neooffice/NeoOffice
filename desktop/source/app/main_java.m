@@ -63,7 +63,6 @@ static BOOL IsSupportedMacOSXVersion()
 		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
 		if ( pGestalt )
 		{
-			// Currently we only support Mac OS X 10.4.x through 10.6.x
 			SInt32 res = 0;
 			pGestalt( gestaltSystemVersionMajor, &res );
 			if ( res == 10 )
