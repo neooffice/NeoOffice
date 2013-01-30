@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
-
 #include <saldata.hxx>
 #include <vos/mutex.hxx>
 
@@ -52,8 +50,6 @@
 
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
-
-typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
