@@ -38,47 +38,10 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define MIN_MACOSX_MAJOR_VERSION 8
-#define MAX_MACOSX_MAJOR_VERSION 9
 #define TMPDIR "/var/tmp"
 
-typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef int SofficeMain_Type( int argc, char **argv );
 typedef int UnoPkgMain_Type( int argc, char **argv );
-
-static BOOL IsSupportedMacOSXVersion()
-{
-	// Allow users to disable the Mac OS X version check by using the
-	// following command:
-	//   defaults write org.neooffice.NeoOffice DisableMacOSXVersionCheck -bool YES
-	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableMacOSXVersionCheck" ), kCFPreferencesCurrentApplication );
-	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( (CFBooleanRef)aPref ) )
-		return YES;
-
-	BOOL bRet = NO;
-
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			// Currently we only support Mac OS X 10.4.x through 10.6.x
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
-			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				bRet = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
-			}
-		}
-
-		dlclose( pLib );
-	}
-
-	return bRet;
-}
 
 static NSString *GetNSTemporaryDirectory()
 {
@@ -374,38 +337,6 @@ int java_main( int argc, char **argv )
 				int status;
 				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
 					usleep( 10 );
-			}
-		}
-
-		// If this Mac OS X version is not supported, try to open the bundled
-		// "unsupported_macosx_version.html" file in the default web browser
-		if ( !IsSupportedMacOSXVersion() )
-		{
-			CFStringRef aFile = CFSTR( "unsupported_macosx_version" );
-			CFStringRef aType = CFSTR( "html" );
-			CFURLRef aHTMLURL = CFBundleCopyResourceURL( aMainBundle, aFile, aType, CFSTR( "" ) );
-			if ( !aHTMLURL )
-				aHTMLURL = CFBundleCopyResourceURLForLocalization( aMainBundle, aFile, aType, CFSTR( "" ), CFSTR( "en" ) );
-
-			NSString *pHTMLPath = nil;
-			if ( aHTMLURL )
-			{
-				pHTMLPath = (NSString *)CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle );
-				if ( pHTMLPath )
-					[pHTMLPath autorelease];
-				CFRelease( aHTMLURL );
-			}
-			if ( !pHTMLPath )
-				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
-			if ( pHTMLPath )
-			{
-				NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-				if ( pWorkspace )
-				{
-					NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
-					if ( pURL )
-						[pWorkspace openURL:pURL];
-				}
 			}
 		}
 	}
