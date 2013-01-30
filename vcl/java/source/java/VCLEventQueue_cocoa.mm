@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
-
 #include <saldata.hxx>
 #include <vos/mutex.hxx>
 
