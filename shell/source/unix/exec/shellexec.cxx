@@ -167,21 +167,28 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         // Replace ".go-oo.org" with ".services.openoffice.org" since go-oo.org
         // is now dead and the Go-oo code merely redirected to matching
         // services.openoffice.org URLs
-        static const OUString aGoOODomain( RTL_CONSTASCII_USTRINGPARAM( ".go-oo.org" ) );
-        static const OUString aOOoServicesDomain( RTL_CONSTASCII_USTRINGPARAM( ".services.openoffice.org" ) );
-        sal_Int32 nGoOODomainIndex = aURL.indexOf( aGoOODomain );
-        if ( nGoOODomainIndex >= 0 )
+        static const OUString aGoOOExtensions( RTL_CONSTASCII_USTRINGPARAM( "http://extensions.go-oo.org" ) );
+        static const OUString aOOoExtensions( RTL_CONSTASCII_USTRINGPARAM( "http://extensions.services.openoffice.org" ) );
+        static const OUString aGoOOTemplates( RTL_CONSTASCII_USTRINGPARAM( "http://templates.go-oo.org" ) );
+        static const OUString aOOoTemplates( RTL_CONSTASCII_USTRINGPARAM( "http://templates.services.openoffice.org" ) );
+        static const OUString aGoOOWWW( RTL_CONSTASCII_USTRINGPARAM( "http://www.go-oo.org" ) );
+        static const OUString aOOoWWW( RTL_CONSTASCII_USTRINGPARAM( "http://www.openoffice.org" ) );
+
+        if ( aURL.indexOf( aGoOOExtensions ) == 0 )
+            aURL = aURL.replaceAt( 0, aGoOOExtensions.getLength(), aOOoExtensions );
+        else if ( aURL.indexOf( aGoOOTemplates ) == 0 )
+            aURL = aURL.replaceAt( 0, aGoOOTemplates.getLength(), aOOoTemplates );
+        else if ( aURL.indexOf( aGoOOWWW ) == 0 )
+            aURL = aURL.replaceAt( 0, aGoOOWWW.getLength(), aOOoWWW );
+
+        if ( aURL.getLength() == 0 && aCommand.getLength() != 0 )
         {
-            aURL = aURL.replaceAt( nGoOODomainIndex, aGoOODomain.getLength(), aOOoServicesDomain );
-            if ( aURL.getLength() == 0 && aCommand.getLength() != 0 )
-            {
-                throw RuntimeException(
-                    (OUString(
-                        RTL_CONSTASCII_USTRINGPARAM(
-                            "Cannot replace Go-oo domain with OOo domain in URL: "))
-                     + aCommand),
-                    static_cast< cppu::OWeakObject * >(this));
-            }
+            throw RuntimeException(
+                (OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "Cannot replace Go-oo domain with OOo domain in URL: "))
+                 + aCommand),
+                static_cast< cppu::OWeakObject * >(this));
         }
 #endif	// USE_JAVA
 
