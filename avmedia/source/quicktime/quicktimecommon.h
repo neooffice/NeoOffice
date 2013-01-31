@@ -115,7 +115,7 @@
 }
 - (MacOSBOOL)becomeFirstResponder;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame;
+- (id)init;
 - (MacOSBOOL)isFlipped;
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent;
 - (void)mouseDown:(NSEvent *)pEvent;

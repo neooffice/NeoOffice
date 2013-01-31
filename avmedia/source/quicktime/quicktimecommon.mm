@@ -326,7 +326,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			maPreferredSize = NSMakeSize( 0, 0 );
 		maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
 
-		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
+		mpMovieView = [[AvmediaMovieView alloc] init];
 		[mpMovieView setMoviePlayer:self];
 		[mpMovieView setControllerVisible:NO];
 		if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
@@ -336,6 +336,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovieView setShowsResizeIndicator:NO];
 		[mpMovieView setMovie:mpMovie];
 		[mpMovieView setEditable:NO];
+		[mpMovieView setFrame:maRealFrame];
 	}
 }
 
@@ -782,9 +783,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[super dealloc];
 }
 
-- (id)initWithFrame:(NSRect)aFrame
+- (id)init
 {
-	[super initWithFrame:aFrame];
+	[super init];
 
 	mpCursor = nil;
 	mpMoviePlayer = nil;
