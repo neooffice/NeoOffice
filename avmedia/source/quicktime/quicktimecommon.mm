@@ -49,6 +49,13 @@
 #include <com/sun/star/media/ZoomLevel.hpp>
 #endif
 
+#include <dlfcn.h>
+
+typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+
+static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
 
@@ -233,6 +240,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( mpSuperview )
 		[mpSuperview release];
 
+	if ( mpSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+		pApplication_releaseSecurityScopedURL( mpSecurityScopedURL );
+
 	[super dealloc];
 }
 
@@ -305,12 +315,23 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	maPreferredSize = NSMakeSize( 0, 0 );
 	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
 	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
+	mpSecurityScopedURL = nil;
 
 	return self;
 }
 
 - (void)initialize:(NSURL *)pURL
 {
+	if ( !pURL )
+		return;
+
+	if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+		pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+	if ( !pApplication_releaseSecurityScopedURL )
+		pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+	if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+		mpSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( pURL, sal_True, nil );
+
 	NSError *pError = nil;
 	mpMovie = [QTMovie movieWithURL:pURL error:&pError];
 	if ( mpMovie && !pError )

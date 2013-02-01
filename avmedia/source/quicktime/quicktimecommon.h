@@ -74,6 +74,7 @@
 	NSSize					maPreferredSize;
 	NSRect					maRealFrame;
 	int						mnZoomLevel;
+	id						mpSecurityScopedURL;
 }
 - (void)bounds:(AvmediaArgs *)pArgs;
 - (double)currentTime:(AvmediaArgs *)pArgs;
