@@ -78,7 +78,7 @@
 }
 - (void)bounds:(AvmediaArgs *)pArgs;
 - (double)currentTime:(AvmediaArgs *)pArgs;
-- (void)dealloc;
+- (void)destroy:(id)pObject;
 - (double)duration:(AvmediaArgs *)pArgs;
 - (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs;
 - (id)init;
@@ -90,7 +90,6 @@
 - (void)play:(id)pObject;
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
-- (void)release:(id)pObject;
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
 - (void)setBounds:(AvmediaArgs *)pArgs;
 - (void)setCurrentTime:(AvmediaArgs *)pArgs;
