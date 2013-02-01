@@ -33,10 +33,10 @@
  *
  ************************************************************************/
 
-#import "quicktimecommon.h"
-#import "quicktimeframegrabber.hxx"
-#import "quicktimeplayer.hxx"
-#import "quicktimewindow.hxx"
+#include "quicktimecommon.h"
+#include "quicktimeframegrabber.hxx"
+#include "quicktimeplayer.hxx"
+#include "quicktimewindow.hxx"
 
 #ifndef _RTL_URI_HXX_
 #include <rtl/uri.hxx>

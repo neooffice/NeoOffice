@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#import "quicktimecommon.h"
-#import "quicktimewindow.hxx"
+#include "quicktimecommon.h"
+#include "quicktimewindow.hxx"
 
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>

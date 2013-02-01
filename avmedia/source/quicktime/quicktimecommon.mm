@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#import "quicktimecommon.h"
-#import "quicktimewindow.hxx"
+#include "quicktimecommon.h"
+#include "quicktimewindow.hxx"
 
 #ifndef _COM_SUN_STAR_AWT_KEYMODIFIER_HDL_
 #include <com/sun/star/awt/KeyModifier.hpp>

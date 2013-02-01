@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#import "quicktimecommon.h"
-#import "quicktimeframegrabber.hxx"
+#include "quicktimecommon.h"
+#include "quicktimeframegrabber.hxx"
 
 #ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
