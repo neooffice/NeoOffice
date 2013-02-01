@@ -441,16 +441,15 @@ void Window::dispose() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	if ( mpMoviePlayer )
 	{
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
 		mpMoviePlayer = NULL;
 	}
 
 	if ( mpParentView )
 	{
-		[(NSView *)mpParentView performSelectorOnMainThread:@selector(release) withObject:nil waitUntilDone:YES modes:pModes];
+		[(NSView *)mpParentView release];
 		mpParentView = NULL;
 	}
 

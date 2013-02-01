@@ -214,7 +214,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return fRet;
 }
 
-- (void)dealloc
+- (void)destroy:(id)pObject
 {
 	if ( mpMovie )
 		[mpMovie stop];
@@ -225,15 +225,20 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovieView setMoviePlayer:nil];
 		[mpMovieView setMovie:nil];
 		[mpMovieView release];
+		mpMovieView = nil;
 	}
 
 	if ( mpMovie )
+	{
 		[mpMovie release];
+		mpMovie = nil;
+	}
 
 	if ( mpSuperview )
+	{
 		[mpSuperview release];
-
-	[super dealloc];
+		mpSuperview = nil;
+	}
 }
 
 - (double)duration:(AvmediaArgs *)pArgs
@@ -311,6 +316,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)initialize:(NSURL *)pURL
 {
+	[self destroy:self];
+
+	if ( !pURL )
+		return;
+
 	NSError *pError = nil;
 	mpMovie = [QTMovie movieWithURL:pURL error:&pError];
 	if ( mpMovie && !pError )
@@ -384,11 +394,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
 
 	return fRet;
-}
-
-- (void)release:(id)pObject
-{
-	[self release];
 }
 
 - (MacOSBOOL)mute:(AvmediaArgs *)pArgs

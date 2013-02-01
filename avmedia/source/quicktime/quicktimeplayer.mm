@@ -73,7 +73,8 @@ Player::~Player()
 	if ( mpMoviePlayer )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(destroy:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
 	}
 
 	[pPool release];
@@ -104,7 +105,8 @@ bool Player::create( const ::rtl::OUString& rURL )
 			else
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+				[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(destroy:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+				[(AvmediaMoviePlayer *)mpMoviePlayer release];
 				mpMoviePlayer = NULL;
 			}
 		}
@@ -131,7 +133,8 @@ bool Player::create( const ::rtl::OUString& rURL )
 
 							if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
 							{
-								[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+								[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(destroy:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+								[(AvmediaMoviePlayer *)mpMoviePlayer release];
 								mpMoviePlayer = NULL;
 							}
 							else
