@@ -223,7 +223,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)destroy:(id)pObject
 {
-	if ( mpMovie )
+	if ( mpMovie || [mpMovie rate] != 0 )
 		[mpMovie stop];
 
 	if ( mpMovieView )
@@ -320,7 +320,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	mpMovie = nil;
 	mpMovieView = nil;
-	mbPlaying = NO;
 	maPreferredSize = NSMakeSize( 0, 0 );
 	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
 	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
@@ -384,28 +383,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs
 {
-	// Check if we are at the end of the movie
-	if ( mbPlaying )
-	{
-		NSTimeInterval aCurrentInterval;
-		NSTimeInterval aDurationInterval;
-		if ( QTGetTimeInterval( [mpMovie currentTime], &aCurrentInterval ) && QTGetTimeInterval( [mpMovie duration], &aDurationInterval ) && aCurrentInterval >= aDurationInterval )
-		{
-			NSNumber *pLooping = [mpMovie attributeForKey:QTMovieLoopsAttribute];
-			if ( pLooping && ![pLooping boolValue] )
-				mbPlaying = NO;
-		}
-	}
-
-	if ( mbPlaying )
-		[mpMovie play];
-	else
-		[mpMovie stop];
+	MacOSBOOL bRet = ( [mpMovie rate] != 0 );
 
 	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithBool:mbPlaying]];
+		[pArgs setResult:[NSNumber numberWithBool:bRet]];
 
-	return mbPlaying;
+	return bRet;
 }
 
 - (double)rate:(AvmediaArgs *)pArgs
@@ -430,8 +413,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)play:(id)pObject
 {
-	[mpMovie play];
-	mbPlaying = YES;
+	if ( [mpMovie rate] == 0 )
+		[mpMovie play];
 }
 
 - (void)preferredSize:(AvmediaArgs *)pArgs
@@ -755,8 +738,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)stop:(id)pObject
 {
-	[mpMovie stop];
-	mbPlaying = NO;
+	if ( [mpMovie rate] != 0 )
+		[mpMovie stop];
 }
 
 - (short)volumeDB:(AvmediaArgs *)pArgs
@@ -765,16 +748,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithShort:nRet]];
-
-	return nRet;
-}
-
-- (int)zoomLevel:(AvmediaArgs *)pArgs
-{
-	int nRet = mnZoomLevel;
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
 	return nRet;
 }
