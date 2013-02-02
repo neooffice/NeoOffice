@@ -45,6 +45,22 @@
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
+static MacOSBOOL isRunningSnowLeopard()
+{
+	static bool initializedOnce = NO;
+	static bool isSnowLeopard = NO;
+	
+	if ( ! initializedOnce )
+	{
+		long res = 0;
+		Gestalt( gestaltSystemVersion, &res );
+		isSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x6 ) );
+		initializedOnce = YES;
+	}
+
+	return isSnowLeopard;
+}
+
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
@@ -252,6 +268,11 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
+	// Avoid invoking [QTMovie setCurrentTime:] on Mac OS X 10.6 because it
+	// causes the current and all subsequent movies to only play a few seconds
+	if ( isRunningSnowLeopard() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
@@ -269,6 +290,11 @@ void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 {
 	double fRet = 0;
+
+	// Avoid invoking [QTMovie currentTime] on Mac OS X 10.6 because it
+	// causes the current and all subsequent movies to only play a few seconds
+	if ( isRunningSnowLeopard() )
+		return fRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -320,6 +346,11 @@ double SAL_CALL Player::getStopTime() throw( RuntimeException )
 
 void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 {
+	// Avoid invoking [QTMovie setRate:] on Mac OS X 10.6 because it
+	// causes the current and all subsequent movies to only play a few seconds
+	if ( isRunningSnowLeopard() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
@@ -336,7 +367,12 @@ void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 
 double SAL_CALL Player::getRate() throw( RuntimeException )
 {
-	double fRet = 0;
+	double fRet = 1.0f;
+
+	// Avoid invoking [QTMovie rate] on Mac OS X 10.6 because it
+	// causes the current and all subsequent movies to only play a few seconds
+	if ( isRunningSnowLeopard() )
+		return fRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
