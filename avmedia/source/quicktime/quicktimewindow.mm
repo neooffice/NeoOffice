@@ -182,7 +182,8 @@ Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
 	mpMoviePlayer( NULL ),
 	mpParentView( NULL ),
-	mbVisible( sal_False )
+	mbVisible( sal_False ),
+	mnZoomLevel( ZoomLevel_NOT_AVAILABLE )
 {
 	Window::maWindows.push_back( this );
 }
@@ -217,6 +218,8 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setZoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		bRet = sal_True;
+		if ( bRet )
+			mnZoomLevel = nZoomLevel;
 	}
 
 	[pPool release];
@@ -228,23 +231,7 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 
 ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 {
-	ZoomLevel nRet = ZoomLevel_NOT_AVAILABLE;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( mpMoviePlayer )
-	{
-		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(zoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSNumber *pRet = (NSNumber *)[pArgs result];
-		if ( pRet )
-			nRet = (ZoomLevel)[pRet intValue];
-	}
-
-	[pPool release];
-
-	return nRet;
+	return mnZoomLevel;
 }
 
 // ----------------------------------------------------------------------------

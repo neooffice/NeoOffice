@@ -69,7 +69,6 @@
 {
 	QTMovie*				mpMovie;
 	AvmediaMovieView*		mpMovieView;
-	MacOSBOOL				mbPlaying;
 	NSView*					mpSuperview;
 	NSSize					maPreferredSize;
 	NSRect					maRealFrame;
@@ -104,7 +103,6 @@
 - (void)setZoomLevel:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
-- (int)zoomLevel:(AvmediaArgs *)pArgs;
 @end
 
 @interface AvmediaMovieView : QTMovieView
