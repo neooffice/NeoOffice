@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include "quicktimecommon.h"
 #include "quicktimeframegrabber.hxx"
 #include "quicktimeplayer.hxx"
@@ -45,6 +47,8 @@
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
 static MacOSBOOL isRunningSnowLeopard()
 {
 	static bool initializedOnce = NO;
@@ -52,9 +56,20 @@ static MacOSBOOL isRunningSnowLeopard()
 	
 	if ( ! initializedOnce )
 	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x6 ) );
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersion, &res );
+				isSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x6 ) );
+			}
+
+			dlclose( pLib );
+		}
+
 		initializedOnce = YES;
 	}
 
