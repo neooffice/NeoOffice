@@ -308,12 +308,10 @@ void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 
 double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 {
-	double fRet = mfMediaTime;
-
 	// Avoid invoking [QTMovie currentTime] on Mac OS X 10.6 because it
 	// causes the current and all subsequent movies to only play a few seconds
 	if ( isRunningSnowLeopard() )
-		return fRet;
+		return mfMediaTime;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -324,12 +322,12 @@ double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(currentTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
-			fRet = [pRet doubleValue];
+			mfMediaTime = [pRet doubleValue];
 	}
 
 	[pPool release];
 
-	return fRet;
+	return mfMediaTime;
 }
 
 // ----------------------------------------------------------------------------
