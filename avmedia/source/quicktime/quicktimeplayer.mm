@@ -91,6 +91,7 @@ namespace quicktime
 Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mfDuration( 0 ),
 	mbLooping( sal_False ),
+	mfMediaTime( 0 ),
 	mxMgr( rxMgr ),
 	mpMoviePlayer( NULL ),
 	mbMute( sal_False ),
@@ -150,6 +151,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 		{
 			mfDuration = 0;
 			mbLooping = sal_False;
+			mfMediaTime = 0;
 			mbMute = sal_False;
 			maPreferredSize = Size( 0, 0 );
 			mfStopTime = 0;
@@ -201,6 +203,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 
 								// Push default settings to movie
 								setPlaybackLoop( mbLooping );
+								setMediaTime( mfMediaTime );
 								setMute( mbMute );
 								setStopTime( mfDuration );
 								setVolumeDB( mnVolumeDB );
@@ -283,18 +286,19 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
-	// Avoid invoking [QTMovie setCurrentTime:] on Mac OS X 10.6 because it
-	// causes the current and all subsequent movies to only play a few seconds
-	if ( isRunningSnowLeopard() )
-		return;
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
+		if ( fTime < 0 )
+			fTime = 0;
+		else if ( fTime > mfDuration )
+			fTime = mfDuration;
+
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setCurrentTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		mfMediaTime = fTime;
 	}
 
 	[pPool release];
@@ -304,7 +308,7 @@ void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 
 double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 {
-	double fRet = 0;
+	double fRet = mfMediaTime;
 
 	// Avoid invoking [QTMovie currentTime] on Mac OS X 10.6 because it
 	// causes the current and all subsequent movies to only play a few seconds

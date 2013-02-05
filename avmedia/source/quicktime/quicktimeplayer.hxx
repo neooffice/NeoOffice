@@ -62,6 +62,7 @@ class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer,
 {
 	double				mfDuration;
 	sal_Bool			mbLooping;
+	double				mfMediaTime;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	void*				mpMoviePlayer;
 	sal_Bool			mbMute;
