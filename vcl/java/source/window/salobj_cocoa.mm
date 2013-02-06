@@ -131,7 +131,7 @@
 	NSRect aChildFrame = NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height );
 	[super initWithFrame:aChildFrame];
 
-	mpBackgroundColor = [NSColor clearColor];
+	mpBackgroundColor = [NSColor whiteColor];
 	if ( mpBackgroundColor )
 		[mpBackgroundColor retain];
 	maClipRect = NSZeroRect;
@@ -158,7 +158,9 @@
 	}
 
 	if ( !pColor )
-		pColor = [NSColor clearColor];
+		pColor = [NSColor whiteColor];
+	else if ( [pColor alphaComponent] != 1.0f )
+		pColor = [pColor colorWithAlphaComponent:1.0f];
 
 	if ( pColor )
 	{
