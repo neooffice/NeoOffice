@@ -104,37 +104,53 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 		NSBitmapImageRep *pImageRep = (NSBitmapImageRep *)[pArgs result];
 		if ( pImageRep )
 		{
-			NSSize aSize = [pImageRep size];
-			unsigned char *pBits = [pImageRep bitmapData];
-			USHORT nBitCount = (USHORT)[pImageRep bitsPerPixel];
-			long nHeight = (long)aSize.height;
-			ULONG nScanlineSize = (ULONG)[pImageRep bytesPerRow];
-			Size aBitmapSize( (long)aSize.width, nHeight );
-			if ( pBits && ( nBitCount == 24 || nBitCount == 32 ) && nScanlineSize && aBitmapSize.Width() > 0 && aBitmapSize.Height() > 0 )
+			// Fix the color shifting reported in the following NeoOffice forum
+			// post by copying the image to the 32 bit format expected by the
+			// code in vcl/java/source/gdi/salbmp.cxx:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63924#63924
+			CGImageRef aImage = [pImageRep CGImage];
+			if ( aImage )
 			{
-				Bitmap aBitmap( aBitmapSize, nBitCount );
-				if ( !aBitmap.IsEmpty() )
+				Size aBitmapSize( CGImageGetWidth( aImage ), CGImageGetHeight( aImage ) );
+				
+				if ( aBitmapSize.Width() > 0 && aBitmapSize.Height() > 0 )
 				{
-					BitmapWriteAccess *pAccess = aBitmap.AcquireWriteAccess();
-					if ( pAccess )
+					Bitmap aBitmap( aBitmapSize, 32 );
+					if ( !aBitmap.IsEmpty() )
 					{
-						Scanline aScanline = (Scanline)pBits;
-						ULONG nFormat = BMP_FORMAT_TOP_DOWN;
-						if ( nBitCount == 24 )
-							nFormat |= BMP_FORMAT_24BIT_TC_RGB;
-						else
-							nFormat |= BMP_FORMAT_32BIT_TC_ARGB;
-
-						for ( long i = 0; i < nHeight; i++ )
+						BitmapWriteAccess *pAccess = aBitmap.AcquireWriteAccess();
+						if ( pAccess )
 						{
-							pAccess->CopyScanline( i, aScanline, nFormat, nScanlineSize );
-							aScanline += nScanlineSize;
+							MacOSBOOL bDrawn = NO;
+							long nWidth = pAccess->Width();
+							long nHeight = pAccess->Height();
+							ULONG nScanlineSize = pAccess->GetScanlineSize();
+							Scanline pBits = pAccess->GetBuffer();
+							if ( nWidth > 0 && nHeight > 0 && nScanlineSize > 0 && pBits )
+							{
+								CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+								if ( aColorSpace )
+								{
+									CGContextRef aContext = CGBitmapContextCreate( pBits, nWidth, nHeight, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+									if ( aContext )
+									{
+										bDrawn = YES;
+									    CGContextDrawImage( aContext, CGRectMake( 0, 0, nWidth, nHeight ), aImage );
+									    CGContextRelease( aContext );
+									}
+
+									CGColorSpaceRelease( aColorSpace );
+								}
+							}
+
+							aBitmap.ReleaseAccess( pAccess );
+
+							if ( bDrawn )
+							{
+								Graphic aGraphic( aBitmap );
+								xRet = aGraphic.GetXGraphic();
+							}
 						}
-
-						aBitmap.ReleaseAccess( pAccess );
-
-						Graphic aGraphic( aBitmap );
-						xRet = aGraphic.GetXGraphic();
 					}
 				}
 			}
