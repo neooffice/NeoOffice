@@ -199,7 +199,7 @@ void JavaSalObject::GrabFocus()
 
 void JavaSalObject::SetBackground()
 {
-	VCLChildView_setBackgroundColor( mpChildView, 0x00000000 );
+	VCLChildView_setBackgroundColor( mpChildView, 0xffffffff );
 }
 
 // -----------------------------------------------------------------------
