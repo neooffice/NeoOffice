@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <crt_externs.h>
 #include <dlfcn.h>
 #include <stdio.h>
 
@@ -45,6 +44,7 @@
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef int SofficeMain_Type( int argc, char **argv );
+typedef int UnoPkgMain_Type( int argc, char **argv );
 
 static BOOL IsSupportedMacOSXVersion()
 {
@@ -126,9 +126,12 @@ static NSString *GetNSTemporaryDirectory()
 
 int java_main( int argc, char **argv )
 {
+	// Determine if we are running in unopkg mode
+	BOOL bUnoPkg = ( argc >= 2 && !strcmp( "-unopkg", argv[ 1 ] ) ? YES : NO );
+
 	// Don't allow running as root as we really cannot trust that we won't
 	// do any accidental damage
-	if ( getuid() == 0 )
+	if ( !bUnoPkg && getuid() == 0 )
 	{
 		fprintf( stderr, "%s: running as root user is not allowed\n", argv[ 0 ] );
 		_exit( 1 );
@@ -279,126 +282,129 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
 	}
 
-	// Use default launch options if there are no application arguments
-	if ( argc < 2 || ( argc == 2 && !strncmp( "-psn", argv[ 1 ], 4 ) ) )
+	if ( !bUnoPkg )
 	{
-		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DefaultLaunchOptions" ), kCFPreferencesCurrentApplication );
-		if ( aPref )
+		// Use default launch options if there are no application arguments
+		if ( argc < 2 || ( argc == 2 && !strncmp( "-psn", argv[ 1 ], 4 ) ) )
 		{
-			if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
+			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DefaultLaunchOptions" ), kCFPreferencesCurrentApplication );
+			if ( aPref )
 			{
-				char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
-				memcpy( pNewArgv, argv, sizeof( char** ) * argc );
-
-				pNewArgv[ argc ] = (char *)[(NSString *)aPref UTF8String];
-				if ( pNewArgv[ argc ] )
+				if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
 				{
-					pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
-					argc++;
-				}
+					char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+					memcpy( pNewArgv, argv, sizeof( char** ) * argc );
 
-				pNewArgv[ argc ] = NULL;
-				argv = pNewArgv;
-			}
-			else if ( CFGetTypeID( aPref ) == CFArrayGetTypeID() )
-			{
-				CFIndex nArrayLen = CFArrayGetCount( (CFArrayRef)aPref );
-				char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + nArrayLen + 1 ) );
-				memcpy( pNewArgv, argv, sizeof( char** ) * argc );
-
-				int i = 0;
-				for ( ; i < nArrayLen; i++ )
-				{
-					CFStringRef aElement = (CFStringRef)CFArrayGetValueAtIndex( (CFArrayRef)aPref, i );
-					if ( aElement )
+					pNewArgv[ argc ] = (char *)[(NSString *)aPref UTF8String];
+					if ( pNewArgv[ argc ] )
 					{
-						pNewArgv[ argc ] = (char *)[(NSString *)aElement UTF8String];
-						if ( pNewArgv[ argc ] )
+						pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
+						argc++;
+					}
+
+					pNewArgv[ argc ] = NULL;
+					argv = pNewArgv;
+				}
+				else if ( CFGetTypeID( aPref ) == CFArrayGetTypeID() )
+				{
+					CFIndex nArrayLen = CFArrayGetCount( (CFArrayRef)aPref );
+					char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + nArrayLen + 1 ) );
+					memcpy( pNewArgv, argv, sizeof( char** ) * argc );
+
+					int i = 0;
+					for ( ; i < nArrayLen; i++ )
+					{
+						CFStringRef aElement = (CFStringRef)CFArrayGetValueAtIndex( (CFArrayRef)aPref, i );
+						if ( aElement )
 						{
-							pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
-							argc++;
+							pNewArgv[ argc ] = (char *)[(NSString *)aElement UTF8String];
+							if ( pNewArgv[ argc ] )
+							{
+								pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
+								argc++;
+							}
 						}
 					}
+
+					pNewArgv[ argc ] = NULL;
+					argv = pNewArgv;
 				}
 
-				pNewArgv[ argc ] = NULL;
-				argv = pNewArgv;
+				CFRelease( aPref );
 			}
-
-			CFRelease( aPref );
 		}
-	}
 
-	NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/pagein", pBundlePath];
-	if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
-	{
-		int nCurrentArg = 0;
-		char *pPageinArgs[ argc + 3 ];
-		pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
-		NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/basis-link/program", pBundlePath];
-		pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
-		int i = 1;
-		for ( ; i < argc; i++ )
+		NSString *pPageinPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/pagein", pBundlePath];
+		if ( !access( [pPageinPath UTF8String], R_OK | X_OK ) )
 		{
-			if ( !strcmp( "-calc", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
-			else if ( !strcmp( "-draw", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
-			else if ( !strcmp( "-impress", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
-			else if ( !strcmp( "-writer", argv[ i ] ) )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
-		}
-		if ( nCurrentArg == 1 )
-			pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
-		pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
-		pPageinArgs[ nCurrentArg++ ] = NULL;
-
-		// Execute the pagein command in child process
-		pid_t pid = fork();
-		if ( !pid )
-		{
-			close( 0 );
-			execvp( [pPageinPath UTF8String], pPageinArgs );
-			_exit( 1 );
-		}
-		else if ( pid > 0 )
-		{
-			// Invoke waitpid to prevent zombie processes
-			int status;
-			while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-				usleep( 10 );
-		}
-	}
-
-	// If this Mac OS X version is not supported, try to open the bundled
-	// "unsupported_macosx_version.html" file in the default web browser
-	if ( !IsSupportedMacOSXVersion() )
-	{
-		CFStringRef aFile = CFSTR( "unsupported_macosx_version" );
-		CFStringRef aType = CFSTR( "html" );
-		CFURLRef aHTMLURL = CFBundleCopyResourceURL( aMainBundle, aFile, aType, CFSTR( "" ) );
-		if ( !aHTMLURL )
-			aHTMLURL = CFBundleCopyResourceURLForLocalization( aMainBundle, aFile, aType, CFSTR( "" ), CFSTR( "en" ) );
-
-		NSString *pHTMLPath = nil;
-		if ( aHTMLURL )
-		{
-			pHTMLPath = (NSString *)CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle );
-			if ( pHTMLPath )
-				[pHTMLPath autorelease];
-			CFRelease( aHTMLURL );
-		}
-		if ( !pHTMLPath )
-			pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
-		if ( pHTMLPath )
-		{
-			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-			if ( pWorkspace )
+			int nCurrentArg = 0;
+			char *pPageinArgs[ argc + 3 ];
+			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinPath UTF8String];
+			NSString *pPageinSearchArg = [NSString stringWithFormat:@"-L%@/Contents/basis-link/program", pBundlePath];
+			pPageinArgs[ nCurrentArg++ ] = (char *)[pPageinSearchArg UTF8String];
+			int i = 1;
+			for ( ; i < argc; i++ )
 			{
-				NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
-				if ( pURL )
-					[pWorkspace openURL:pURL];
+				if ( !strcmp( "-calc", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
+				else if ( !strcmp( "-draw", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
+				else if ( !strcmp( "-impress", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
+				else if ( !strcmp( "-writer", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			}
+			if ( nCurrentArg == 1 )
+				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
+			pPageinArgs[ nCurrentArg++ ] = NULL;
+
+			// Execute the pagein command in child process
+			pid_t pid = fork();
+			if ( !pid )
+			{
+				close( 0 );
+				execvp( [pPageinPath UTF8String], pPageinArgs );
+				_exit( 1 );
+			}
+			else if ( pid > 0 )
+			{
+				// Invoke waitpid to prevent zombie processes
+				int status;
+				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+					usleep( 10 );
+			}
+		}
+
+		// If this Mac OS X version is not supported, try to open the bundled
+		// "unsupported_macosx_version.html" file in the default web browser
+		if ( !IsSupportedMacOSXVersion() )
+		{
+			CFStringRef aFile = CFSTR( "unsupported_macosx_version" );
+			CFStringRef aType = CFSTR( "html" );
+			CFURLRef aHTMLURL = CFBundleCopyResourceURL( aMainBundle, aFile, aType, CFSTR( "" ) );
+			if ( !aHTMLURL )
+				aHTMLURL = CFBundleCopyResourceURLForLocalization( aMainBundle, aFile, aType, CFSTR( "" ), CFSTR( "en" ) );
+
+			NSString *pHTMLPath = nil;
+			if ( aHTMLURL )
+			{
+				pHTMLPath = (NSString *)CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle );
+				if ( pHTMLPath )
+					[pHTMLPath autorelease];
+				CFRelease( aHTMLURL );
+			}
+			if ( !pHTMLPath )
+				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
+			if ( pHTMLPath )
+			{
+				NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+				if ( pWorkspace )
+				{
+					NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
+					if ( pURL )
+						[pWorkspace openURL:pURL];
+				}
 			}
 		}
 	}
@@ -406,19 +412,35 @@ int java_main( int argc, char **argv )
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
 
-	// Dynamically load soffice_main symbol to improve startup speed
-	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
-	void *pSofficeLib = dlopen( [pSofficeLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
+	// Dynamically load app's main symbol to improve startup speed
+	NSString *pAppMainLibPath = nil;
+	if ( bUnoPkg )
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libunopkgapp.dylib", pBundlePath];
+	else
+		pAppMainLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
+
+	void *pAppMainLib = NULL;
+	if ( pAppMainLibPath )
+		pAppMainLib = dlopen( [pAppMainLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
 
 	int nRet = 0;
-	if ( pSofficeLib )
+	if ( pAppMainLib )
 	{
-		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pSofficeLib, "soffice_main" );
-		if ( pSofficeMain )
-			nRet = pSofficeMain( argc, argv );
+		if ( bUnoPkg )
+		{
+			UnoPkgMain_Type *pUnoPkgMain = (UnoPkgMain_Type *)dlsym( pAppMainLib, "unopkg_main" );
+			if ( pUnoPkgMain )
+				nRet = pUnoPkgMain( argc, argv );
+		}
+		else
+		{
+			SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pAppMainLib, "soffice_main" );
+			if ( pSofficeMain )
+				nRet = pSofficeMain( argc, argv );
+		}
 	}
 
-	// Don't release the pool until after soffice_main() returns otherwise
+	// Don't release the pool until after app's main function returns otherwise
 	// spellchecking and the Services menu will not work
 	[pPool release];
 

@@ -240,8 +240,22 @@ bool office_is_running()
     if (osl_Process_E_None == err)
     {
         sFile = sFile.copy(sFile.lastIndexOf('/') + 1);
+#if defined USE_JAVA && defined MACOSX
+        bool bUnoPkg = false;
+        if (osl_getCommandArgCount())
+        {
+            OUString arg;
+            osl_getCommandArg(0, &arg.pData);
+            // If first argument is "-unopkg", we are running in unopkg mode
+            if (arg.equalsAscii("-unopkg"))
+                bUnoPkg = true;
+        }
+#endif	// USE_JAVA && MACOSX
         if (
 #if defined UNIX            
+#if defined USE_JAVA && defined MACOSX
+            !bUnoPkg &&
+#endif	// USE_JAVA && MACOSX
             sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SOFFICE2)))
 #elif defined WNT || defined OS2
             //osl_getExecutableFile should deliver "soffice.bin" on windows
