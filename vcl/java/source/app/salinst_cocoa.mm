@@ -192,33 +192,54 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 	return pRet;
 }
 
+static NSURL *pHomeURL = nil;
+static NSURL *pMainBundleURL = nil;
+
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
-		NSURL *pHomeURL = nil;
-		NSString *pHomeDir = NSHomeDirectory();
-		if ( pHomeDir )
+		if ( !pHomeURL )
 		{
-			pHomeURL = [NSURL fileURLWithPath:pHomeDir];
-			if ( pHomeURL )
+			NSString *pHomeDir = NSHomeDirectory();
+			if ( pHomeDir )
 			{
-				pHomeURL = [pHomeURL URLByStandardizingPath];
-				if ( pHomeURL )
-					pHomeURL = [pHomeURL URLByResolvingSymlinksInPath];
+				NSURL *pTmpURL = [NSURL fileURLWithPath:pHomeDir];
+				if ( pTmpURL )
+				{
+					pTmpURL = [pTmpURL URLByStandardizingPath];
+					if ( pTmpURL )
+					{
+						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
+						if ( pTmpURL )
+						{
+							pHomeURL = pTmpURL;
+							[pHomeURL retain];
+						}
+					}
+				}
 			}
 		}
 
-		NSURL *pMainBundleURL = nil;
-		NSBundle *pMainBundle = [NSBundle mainBundle];
-		if ( pMainBundle )
+		if ( !pMainBundleURL )
 		{
-			pMainBundleURL = [pMainBundle bundleURL];
-			if ( pMainBundleURL )
+			NSBundle *pMainBundle = [NSBundle mainBundle];
+			if ( pMainBundle )
 			{
-				pMainBundleURL = [pMainBundleURL URLByStandardizingPath];
-				if ( pMainBundleURL )
-					pMainBundleURL = [pMainBundleURL URLByResolvingSymlinksInPath];
+				NSURL *pTmpURL = [pMainBundle bundleURL];
+				if ( pTmpURL )
+				{
+					pTmpURL = [pTmpURL URLByStandardizingPath];
+					if ( pTmpURL )
+					{
+						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
+						if ( pTmpURL )
+						{
+							pMainBundleURL = pTmpURL;
+							[pMainBundleURL retain];
+						}
+					}
+				}
 			}
 		}
 
