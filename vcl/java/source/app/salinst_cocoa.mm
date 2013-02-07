@@ -261,7 +261,13 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					// If the path does not exist, use partial URL
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( !pURL || ![pURL checkResourceIsReachableAndReturnError:nil] )
+					{
+						// Abort if the parent folder is "/"
+						if ( i == 1 )
+							pURL = nil;
+
 						break;
+					}
 
 					if ( bResolveAliasURLs )
 					{
