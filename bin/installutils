@@ -77,7 +77,7 @@ check_installation() {
 
 check_running() {
 
-	productname=`echo "$1" | grep "/$(PRODUCT_DIR_NAME)\.app\$"`
+	productname=`echo "$1" | grep "/$(PRODUCT_NAME)\.app\$"`
 
 	if [ -z "$productname" ] ; then
 		return 1;
