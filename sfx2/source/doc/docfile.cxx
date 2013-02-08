@@ -3121,9 +3121,36 @@ void SfxMedium::UnlockFile()
         try
         {
             pImp->m_bLocked = sal_False;
+#ifdef USE_JAVA
+            // check whether system file locking has been used, the default value is false
+            sal_Bool bUseSystemLock = sal_False;
+            try
+            {
+                uno::Reference< uno::XInterface > xCommonConfig = ::comphelper::ConfigurationHelper::openConfig(
+                                ::comphelper::getProcessServiceFactory(),
+                                ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/org.openoffice.Office.Common" ) ),
+                                ::comphelper::ConfigurationHelper::E_STANDARD );
+                if ( !xCommonConfig.is() )
+                    throw uno::RuntimeException();
+
+                ::comphelper::ConfigurationHelper::readRelativeKey(
+                    xCommonConfig,
+                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Misc/" ) ),
+                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "UseDocumentSystemFileLocking" ) ) ) >>= bUseSystemLock;
+            }
+            catch( const uno::Exception& )
+            {
+            }
+
+            if ( !bUseSystemLock )
+            {
+#endif	// USE_JAVA
             ::svt::DocumentLockFile aLockFile( aLogicName );
             // TODO/LATER: A warning could be shown in case the file is not the own one
             aLockFile.RemoveFile();
+#ifdef USE_JAVA
+            }
+#endif	// USE_JAVA
         }
         catch( uno::Exception& )
         {}
