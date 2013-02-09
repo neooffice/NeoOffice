@@ -941,6 +941,9 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
         case SID_BACKGROUND_COLOR:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackgroundColor" )));
             break;
+        case SID_EXTRUSION_3D_COLOR:
+            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Extrusion3DColor" )));
+            break;
         default:
             break;
     }
