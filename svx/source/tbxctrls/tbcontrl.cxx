@@ -1063,14 +1063,28 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 				else
 					nBits |= WB_VSCROLL;
 				aColorSet.SetStyle( nBits );
+#ifdef USE_JAVA
+				aColorSetMap.clear();
+#endif	// USE_JAVA
 
 				for ( i = 0; i < nCount; ++i )
 				{
 					pEntry = pColorTable->GetColor(i);
 					aColorSet.SetItemColor( i + 1, pEntry->GetColor() );
 					aColorSet.SetItemText ( i + 1, pEntry->GetName() );
+#ifdef USE_JAVA
+					aColorSetMap[ pEntry->GetColor().GetColor() ] = i + 1;
+#endif	// USE_JAVA
 				}
 
+#ifdef USE_JAVA
+				if ( i < PALETTE_SIZE )
+				{
+					std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( aColWhite.GetColor() );
+					if ( it == aColorSetMap.end() )
+						aColorSetMap[ aColWhite.GetColor() ] = i + 1;
+				}
+#endif	// USE_JAVA
         		while ( i < PALETTE_SIZE )
 				{
 					aColorSet.SetItemColor( i + 1, aColWhite );
