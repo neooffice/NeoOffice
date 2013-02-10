@@ -1099,10 +1099,8 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 #ifdef USE_JAVA
 		else if ( pState->ISA( SvxColorItem ) )
 		{
-			BOOL bIsNoSelection = aColorSet.IsNoSelection();
 			Color aColor( ((SvxColorItem *)pState)->GetValue() );
-			Color aOldColor( bIsNoSelection ? Color( COL_TRANSPARENT ) : aColorSet.GetItemColor( aColorSet.GetSelectItemId() ) );
-			if ( bIsNoSelection || aColor != aOldColor )
+			if ( aColorSet.IsNoSelection() || aColor != aColorSet.GetItemColor( aColorSet.GetSelectItemId() ) )
 			{
 				aColorSet.EndSelection();
 				aColorSet.SetNoSelection();
