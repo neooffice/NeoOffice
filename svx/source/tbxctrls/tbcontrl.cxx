@@ -1099,13 +1099,19 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 #ifdef USE_JAVA
 		else if ( pState->ISA( SvxColorItem ) )
 		{
-			aColorSet.EndSelection();
-			aColorSet.SetNoSelection();
-			std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( ((SvxColorItem *)pState)->GetValue().GetColor() );
-			if ( it != aColorSetMap.end() )
-				aColorSet.SelectItem( it->second );
-			else
-				aColorSet.SelectItem( 0 );
+			BOOL bIsNoSelection = aColorSet.IsNoSelection();
+			Color aColor( ((SvxColorItem *)pState)->GetValue() );
+			Color aOldColor( bIsNoSelection ? Color( COL_TRANSPARENT ) : aColorSet.GetItemColor( aColorSet.GetSelectItemId() ) );
+			if ( bIsNoSelection || aColor != aOldColor )
+			{
+				aColorSet.EndSelection();
+				aColorSet.SetNoSelection();
+				std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( aColor.GetColor() );
+				if ( it != aColorSetMap.end() )
+					aColorSet.SelectItem( it->second );
+				else
+					aColorSet.SelectItem( 0 );
+			}
 		}
 #endif	// USE_JAVA
 	}
