@@ -92,6 +92,8 @@ INSTALL_HOME:=install
 PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
+MOZILLA_PATCHES_HOME:=patches/mozilla
+NEOOFFICE_PATCHES_HOME:=patches/neooffice
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
@@ -112,9 +114,7 @@ OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
 COMPILERDIR=$(OOO-BUILD_BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
-NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
-NEOPEEK_QLPLUGIN_URL:=http://trinity.neooffice.org/downloads/neopeek.qlgenerator.tgz
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
 # Product information
@@ -160,10 +160,8 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 endif
 
 # CVS macros
-MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
-IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
-IMEDIA_TAG:=--revision '{2008-12-11}'
+IMEDIA_SOURCE_FILENAME=imedia-read-only.tar.gz
 REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
@@ -183,11 +181,11 @@ build.ooo-build_checkout: $(OOO-BUILD_PATCHES_HOME)/$(OOO-BUILD_PACKAGE).tar.gz
 	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
-build.sun-template_checkout: build.ooo-build_checkout
-	cp "$(OOO-BUILD_PATCHES_HOME)"/Sun_ODF_Template_Pack_*.oxt "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src"
+build.sun-source_download: build.ooo-build_checkout
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ( ( cd "$(PWD)/$(OOO-BUILD_PATCHES_HOME)" ; gnutar cvf - --exclude CVS src ) | gnutar xvf - )
 	touch "$@"
 
-build.ooo-build_configure: build.ooo-build_checkout build.sun-template_checkout
+build.ooo-build_configure: build.ooo-build_checkout build.sun-source_download
 # Include OpenOffice.org extenstions and templates. Note that we exclude the
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
@@ -253,7 +251,7 @@ build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
 ifeq ("$(OS_TYPE)","MacOSX")
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; curl -L -C - -O "$(MOZ_SOURCE_URL)"
+	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/mozilla-source-1.7.5.tar.gz" .
 endif
 	touch "$@"
 
@@ -358,15 +356,15 @@ build.neo_%_component: % build.neo_configure
 build.imedia_checkout:
 	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; mkdir "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(IMEDIA_PATCHES_HOME)/$(IMEDIA_SOURCE_FILENAME)"
 	touch "$@"
 
 build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
 
 build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
@@ -558,12 +556,12 @@ endif
 # Install shared .oxt files
 	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `echo "$(PRODUCT_COMPONENT_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; ./unopkg.bin add --shared --verbose "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; fi ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
-	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
+	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neolight.mdimporter.tgz"
 # Make Spotlight plugin ID unique for each build. Fix bug 2711 by updating
 # plugin bundle IDs.
 	cd "$(INSTALL_HOME)/package/Contents/Library/SpotLight" ; sed 's#$(NEOLIGHT_MDIMPORTER_ID)#$(NEOLIGHT_MDIMPORTER_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).'"`date '+%Y%m%d%H%M%S'`"'#g' "neolight.mdimporter/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neolight.mdimporter/Contents/Info.plist"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/QuickLook"
-	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; curl -L "$(NEOPEEK_QLPLUGIN_URL)" | tar zxvf -
+	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; tar zxvf "$(PWD)/$(NEOOFFICE_PATCHES_HOME)/neopeek.qlgenerator.tgz"
 # Make QL plugin ID unique for each build. Fix bug 2711 by updating plugin
 # bundle IDs.
 	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).'"`date '+%Y%m%d%H%M%S'`"'#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
