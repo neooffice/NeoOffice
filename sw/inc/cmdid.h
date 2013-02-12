@@ -22,7 +22,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * Modified February 2010 by Patrick Luby. NeoOffice is distributed under
+ * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
@@ -1227,6 +1227,9 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_STAT_SELMODE 			(FN_STAT + 5)
 #define FN_STAT_CONTEXT 			(FN_STAT + 7)
 #define FN_STAT_BOOKMARK			(FN_STAT + 8)  /* Fuer Popup Bookmarks*/
+#ifndef NO_STATUSBAR_WORDCOUNT
+#define FN_STAT_WORDCOUNT			(FN_STAT + 9)
+#endif	// !NO_STATUSBAR_WORDCOUNT
 
 /*--------------------------------------------------------------------
 	Bereich: Seitenvorschau

@@ -10470,3 +10470,31 @@ SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 ]
 
 // #endif	// USE_JAVA
+// #ifndef NO_STATUSBAR_WORDCOUNT
+
+//--------------------------------------------------------------------------
+SfxStringItem StateWordCount FN_STAT_WORDCOUNT
+()
+[
+    /* flags: */
+    AutoUpdate = FALSE,
+    Cachable = Cachable,
+    FastCall = FALSE,
+    HasCoreId = FALSE,
+    HasDialog = FALSE,
+    ReadOnlyDoc = TRUE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+    Synchron;
+
+    /* config: */
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    StatusBarConfig = TRUE,
+    ToolBoxConfig = FALSE,
+    GroupId = GID_VIEW;
+]
+
+// #endif	// !NO_STATUSBAR_WORDCOUNT
