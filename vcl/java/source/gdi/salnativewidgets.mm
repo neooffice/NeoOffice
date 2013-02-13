@@ -58,6 +58,9 @@
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
+// Uncomment the following line to enable native frame
+// #define USE_NATIVE_CTRL_FRAME
+
 #define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 25 : 24 )
 #define COMBOBOX_BUTTON_HEIGHT_SLOP		0
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
@@ -78,7 +81,8 @@
 #define SCROLLBAR_THUMB_MIN_WIDTH		( IsRunningSnowLeopard() ? 0 : 20 )
 #define SCROLLBAR_THUMB_TRIMWIDTH		( IsRunningSnowLeopard() ? 0 : 1 )
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
-#define SCROLLBAR_WIDTH_SLOP			0
+#define SCROLLBAR_WIDTH_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
+#define SCROLLBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 0 : 1 )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define PROGRESS_WIDTH_SLOP				( IsRunningSnowLeopard() ? 1 : 0 )
@@ -1061,7 +1065,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		HIThemeTrackDrawInfo pTrackDrawInfo;
 		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
 		if ( bHorizontal )
-			pTrackDrawInfo.bounds.size.width -= SCROLLBAR_WIDTH_SLOP;
+			pTrackDrawInfo.bounds.origin.y += SCROLLBAR_HEIGHT_SLOP;
 		else
 			pTrackDrawInfo.bounds.origin.x += SCROLLBAR_WIDTH_SLOP;
 
@@ -2060,10 +2064,12 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = TRUE;
 			break;
 
+#ifdef USE_NATIVE_CTRL_FRAME
 		case CTRL_FRAME:
 			if ( nPart == PART_BORDER )
 				isSupported = TRUE;
 			break;
+#endif	// USE_NATIVE_CTRL_FRAME
 
 		default:
 			isSupported = FALSE;
