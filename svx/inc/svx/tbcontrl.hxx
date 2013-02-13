@@ -288,9 +288,6 @@ public:
 class SVX_DLLPUBLIC SvxFontColorToolBoxControl : public SfxToolBoxControl
 {
     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
-#ifdef USE_JAVA
-    Color                               aCurColor;
-#endif	// USE_JAVA
 
 public:
 	SFX_DECL_TOOLBOX_CONTROL();
@@ -301,9 +298,6 @@ public:
 											  const SfxPoolItem* pState );
 	virtual SfxPopupWindowType	GetPopupWindowType() const;
 	virtual SfxPopupWindow*		CreatePopupWindow();
-#ifdef USE_JAVA
-	virtual void				Select( BOOL bMod1 = FALSE );
-#endif	// USE_JAVA
 };
 
 
@@ -321,9 +315,6 @@ class SVX_DLLPUBLIC SvxFontColorExtToolBoxControl : public SfxToolBoxControl
 
 	//	SfxStatusForwarder 			aForward;
     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
-#ifdef USE_JAVA
-    Color                               aCurColor;
-#endif	// USE_JAVA
 
 public:
 	SFX_DECL_TOOLBOX_CONTROL();
@@ -362,6 +353,7 @@ public:
 	virtual SfxPopupWindow*		CreatePopupWindow();
 #ifdef USE_JAVA
 	virtual void				Select( BOOL bMod1 = FALSE );
+	DECL_LINK( ColorChangedHdl, Color * );
 #endif	// USE_JAVA
 };
 

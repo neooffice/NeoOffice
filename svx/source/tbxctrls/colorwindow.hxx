@@ -26,7 +26,8 @@ private:
 	ValueSet		                                                    aColorSet;
     rtl::OUString                                                       maCommand;
 #ifdef USE_JAVA
-    std::map< ColorData, USHORT >                                       aColorSetMap;
+    std::map< ColorData, USHORT >                                       maColorSetMap;
+    Link                                                                maColorChangedHdl;
 #endif	// USE_JAVA
 
 #if _SOLAR__PRIVATE
@@ -50,6 +51,10 @@ public:
     virtual void        StateChanged( USHORT nSID, SfxItemState eState, const SfxPoolItem* pState );
 
 	virtual SfxPopupWindow* Clone() const;
+
+#ifdef USE_JAVA
+    void                SetColorChangedHdl( const Link& rLink ) { maColorChangedHdl = rLink; }
+#endif	// USE_JAVA
 };
 
 #endif

@@ -891,16 +891,16 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
 			pEntry = pColorTable->GetColor(i);
 			aColorSet.InsertItem( i+1, pEntry->GetColor(), pEntry->GetName() );
 #ifdef USE_JAVA
-			aColorSetMap[ pEntry->GetColor().GetColor() ] = i+1;
+			maColorSetMap[ pEntry->GetColor().GetColor() ] = i+1;
 #endif	// USE_JAVA
 		}
 
 #ifdef USE_JAVA
 		if ( i < PALETTE_SIZE )
 		{
-			std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( aColWhite.GetColor() );
-			if ( it == aColorSetMap.end() )
-				aColorSetMap[ aColWhite.GetColor() ] = i+1;
+			std::map< ColorData, USHORT >::const_iterator it = maColorSetMap.find( aColWhite.GetColor() );
+			if ( it == maColorSetMap.end() )
+				maColorSetMap[ aColWhite.GetColor() ] = i+1;
 		}
 #endif	// USE_JAVA
         while ( i < PALETTE_SIZE )
@@ -1067,7 +1067,7 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 					nBits |= WB_VSCROLL;
 				aColorSet.SetStyle( nBits );
 #ifdef USE_JAVA
-				aColorSetMap.clear();
+				maColorSetMap.clear();
 #endif	// USE_JAVA
 
 				for ( i = 0; i < nCount; ++i )
@@ -1076,16 +1076,16 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 					aColorSet.SetItemColor( i + 1, pEntry->GetColor() );
 					aColorSet.SetItemText ( i + 1, pEntry->GetName() );
 #ifdef USE_JAVA
-					aColorSetMap[ pEntry->GetColor().GetColor() ] = i + 1;
+					maColorSetMap[ pEntry->GetColor().GetColor() ] = i + 1;
 #endif	// USE_JAVA
 				}
 
 #ifdef USE_JAVA
 				if ( i < PALETTE_SIZE )
 				{
-					std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( aColWhite.GetColor() );
-					if ( it == aColorSetMap.end() )
-						aColorSetMap[ aColWhite.GetColor() ] = i + 1;
+					std::map< ColorData, USHORT >::const_iterator it = maColorSetMap.find( aColWhite.GetColor() );
+					if ( it == maColorSetMap.end() )
+						maColorSetMap[ aColWhite.GetColor() ] = i + 1;
 				}
 #endif	// USE_JAVA
         		while ( i < PALETTE_SIZE )
@@ -1104,11 +1104,14 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 			{
 				aColorSet.EndSelection();
 				aColorSet.SetNoSelection();
-				std::map< ColorData, USHORT >::const_iterator it = aColorSetMap.find( aColor.GetColor() );
-				if ( it != aColorSetMap.end() )
+				std::map< ColorData, USHORT >::const_iterator it = maColorSetMap.find( aColor.GetColor() );
+				if ( it != maColorSetMap.end() )
 					aColorSet.SelectItem( it->second );
 				else
 					aColorSet.SelectItem( 0 );
+
+				if ( maColorChangedHdl.IsSet() )
+					maColorChangedHdl.Call( &aColor );
 			}
 		}
 #endif	// USE_JAVA
@@ -2376,14 +2379,8 @@ SvxFontColorToolBoxControl::SvxFontColorToolBoxControl(
 	:	SfxToolBoxControl( nSlotId, nId, rTbx ),
     pBtnUpdater( new ::svx::ToolboxButtonColorUpdater(
                     nSlotId, nId, &GetToolBox(), TBX_UPDATER_MODE_CHAR_COLOR_NEW ))
-#ifdef USE_JAVA
-    , aCurColor( COL_TRANSPARENT )
-#endif	// USE_JAVA
 {
 	rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
-#ifdef USE_JAVA
-	addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -2434,38 +2431,11 @@ void SvxFontColorToolBoxControl::StateChanged(
 	   pItem = PTR_CAST( SvxColorItem, pState );
 
 	if ( pItem )
-#ifdef USE_JAVA
-	{
-		aCurColor = pItem->GetValue();
-		pBtnUpdater->Update( aCurColor );
-	}
-#else	// USE_JAVA
 		pBtnUpdater->Update( pItem->GetValue());
-#endif	// USE_JAVA
 
 	rTbx.EnableItem( nId, SFX_ITEM_DISABLED != eState );
 	rTbx.SetItemState( nId, ( SFX_ITEM_DONTCARE == eState ) ? STATE_DONTKNOW : STATE_NOCHECK );
 }
-
-#ifdef USE_JAVA
-
-// -----------------------------------------------------------------------
-
-void SvxFontColorToolBoxControl::Select( BOOL )
-{
-    OUString aCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" ) );
-    SvxColorItem aColorItem( aCurColor.GetTransparency() ? COL_AUTO : aCurColor, GetSlotId() );
-    INetURLObject aObj( aCommand );
-
-    Any a;
-    Sequence< PropertyValue > aArgs( 1 );
-    aArgs[0].Name = aObj.GetURLPath();
-    aColorItem.QueryValue( a );
-    aArgs[0].Value = a;
-    Dispatch( aCommand, aArgs );
-}
-
-#endif	USE_JAVA
 
 //========================================================================
 // class SvxColorToolBoxControl --------------------------------
@@ -2474,19 +2444,17 @@ void SvxFontColorToolBoxControl::Select( BOOL )
 SvxColorToolBoxControl::SvxColorToolBoxControl(	USHORT nSlotId, USHORT nId, ToolBox& rTbx ) :
 
 	SfxToolBoxControl( nSlotId, nId, rTbx )
-#ifdef USE_JAVA
-	, aCurColor( COL_TRANSPARENT )
-#endif	// USE_JAVA
 {
     if ( nSlotId == SID_BACKGROUND_COLOR )
         rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
     else
         rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
 	rTbx.Invalidate();
-#ifdef USE_JAVA
-    addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackgroundColor" )));
-#endif	// USE_JAVA
     pBtnUpdater = new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox() );
+#ifdef USE_JAVA
+	aCurColor = Color( COL_TRANSPARENT );
+	pBtnUpdater->Update( aCurColor );
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -2520,6 +2488,9 @@ SfxPopupWindow*	SvxColorToolBoxControl::CreatePopupWindow()
         FLOATWIN_POPUPMODE_GRABFOCUS|FLOATWIN_POPUPMODE_ALLOWTEAROFF );
 	pColorWin->StartSelection();
     SetPopupWindow( pColorWin );
+#ifdef USE_JAVA
+    pColorWin->SetColorChangedHdl( LINK( this, SvxColorToolBoxControl, ColorChangedHdl ) );
+#endif	// USE_JAVA
 	return pColorWin;
 }
 
@@ -2530,19 +2501,14 @@ void SvxColorToolBoxControl::StateChanged(
 	USHORT , SfxItemState eState, const SfxPoolItem* pState )
 
 {
+#ifndef USE_JAVA
 	const SvxColorItem*	pItem	= 0;
 	if ( SFX_ITEM_DONTCARE != eState )
 		pItem = PTR_CAST( SvxColorItem, pState );
 
 	if ( pItem )
-#ifdef USE_JAVA
-	{
-		aCurColor = pItem->GetValue();
-		pBtnUpdater->Update( aCurColor );
-	}
-#else	// USE_JAVA
 		pBtnUpdater->Update( pItem->GetValue() );
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 
 	USHORT nId = GetId();
 	ToolBox& rTbx = GetToolBox();
@@ -2576,6 +2542,19 @@ void SvxColorToolBoxControl::Select( BOOL )
     }
 }
 
+// -----------------------------------------------------------------------
+
+IMPL_LINK( SvxColorToolBoxControl, ColorChangedHdl, Color *, pColor )
+{
+	if ( pColor )
+	{
+		aCurColor = *pColor;
+		pBtnUpdater->Update( aCurColor );
+	}
+
+	return 0;
+}
+
 #endif	USE_JAVA
 
 //========================================================================
@@ -2589,9 +2568,6 @@ SvxFontColorExtToolBoxControl::SvxFontColorExtToolBoxControl(
 
 	SfxToolBoxControl( nSlotId, nId, rTbx ),
 	pBtnUpdater(0)
-#ifdef USE_JAVA
-	, aCurColor( COL_TRANSPARENT )
-#endif	// USE_JAVA
 {
 	rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
     // The following commands are available at the writer module.
@@ -2599,13 +2575,6 @@ SvxFontColorExtToolBoxControl::SvxFontColorExtToolBoxControl(
         addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharColorExt" )));
     else
         addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharBackgroundExt" )));
-
-#ifdef USE_JAVA
-    if ( SID_ATTR_CHAR_COLOR2 == nSlotId )
-        addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
-    else
-        addStatusListener( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" )));
-#endif	// USE_JAVA
 
     USHORT nMode =	SID_ATTR_CHAR_COLOR2 == nSlotId
 		? TBX_UPDATER_MODE_CHAR_COLOR_NEW :	TBX_UPDATER_MODE_CHAR_COLOR_NEW;
@@ -2675,14 +2644,7 @@ void SvxFontColorExtToolBoxControl::StateChanged(
 		   pItem = PTR_CAST( SvxColorItem, pState );
 
 		if ( pItem )
-#ifdef USE_JAVA
-		{
-			aCurColor = pItem->GetValue();
-			pBtnUpdater->Update( aCurColor );
-		}
-#else	// USE_JAVA
 			pBtnUpdater->Update( pItem->GetValue() );
-#endif	// USE_JAVA
 	}
 }
 
@@ -2706,32 +2668,7 @@ void SvxFontColorExtToolBoxControl::Select( BOOL )
     Sequence< PropertyValue > aArgs( 1 );
     aArgs[0].Name  = aParamName;
     aArgs[0].Value = makeAny( GetToolBox().IsItemChecked( GetId() ));
-#ifdef USE_JAVA
-    BOOL bIsItemChecked = GetToolBox().IsItemChecked( GetId() );
-    if ( !bIsItemChecked )
-        Dispatch( aCommand, aArgs );
-    if ( SID_ATTR_CHAR_COLOR2 != GetSlotId() && aCurColor.GetTransparency() )
-    {
-        Sequence< PropertyValue > aColorArgs;
-        Dispatch( m_aCommandURL, aColorArgs );
-    }
-    else
-    {
-        SvxColorItem aColorItem( aCurColor.GetTransparency() ? COL_AUTO : aCurColor, GetSlotId() );
-        INetURLObject aObj( m_aCommandURL );
-
-        Any a;
-        Sequence< PropertyValue > aColorArgs( 1 );
-        aColorArgs[0].Name = aObj.GetURLPath();
-        aColorItem.QueryValue( a );
-        aColorArgs[0].Value = a;
-        Dispatch( m_aCommandURL, aColorArgs );
-    }
-    if ( bIsItemChecked )
-        Dispatch( aCommand, aArgs );
-#else	// USE_JAVA
     Dispatch( aCommand, aArgs );
-#endif	// USE_JAVA
 }
 
 //========================================================================
