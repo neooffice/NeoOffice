@@ -1812,6 +1812,7 @@ void JavaSalEvent::dispatch()
 
 				// Create a synthetic mouse leave event when a mouse move event
 				// resolves to a different window than the last mouse move event
+				// or mouse position is outside of the window's content area
 				if ( pSalData->mpLastMouseMoveFrame && nID == SALEVENT_MOUSEMOVE && !nButtons )
 				{
 					if ( pSalData->mpLastMouseMoveFrame != pFrame )
@@ -1826,7 +1827,10 @@ void JavaSalEvent::dispatch()
 					}
 					else
 					{
-						pSalData->mpLastMouseMoveFrame = pFrame;
+						Rectangle aBounds( Point( pFrame->maGeometry.nX, pFrame->maGeometry.nY ), Size( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						if ( !aBounds.IsInside( aScreenPoint ) )
+							nID = SALEVENT_MOUSELEAVE;
+
 					}
 				}
 				else
