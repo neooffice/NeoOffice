@@ -1102,7 +1102,6 @@ void SvxColorWindow_Impl::StateChanged( USHORT nSID, SfxItemState eState, const 
 			Color aColor( ((SvxColorItem *)pState)->GetValue() );
 			if ( aColorSet.IsNoSelection() || aColor != aColorSet.GetItemColor( aColorSet.GetSelectItemId() ) )
 			{
-				aColorSet.EndSelection();
 				aColorSet.SetNoSelection();
 				std::map< ColorData, USHORT >::const_iterator it = maColorSetMap.find( aColor.GetColor() );
 				if ( it != maColorSetMap.end() )
