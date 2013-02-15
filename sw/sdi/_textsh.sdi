@@ -1589,6 +1589,11 @@ interface BaseText
 		StateMethod = NoState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
+	SID_ATTR_CHAR_FILLCOLOR
+	[
+		StateMethod = GetState ;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
 // #endif	// USE_JAVA
 
 }  //ende interface text

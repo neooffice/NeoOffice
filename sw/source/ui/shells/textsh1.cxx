@@ -1705,6 +1705,22 @@ void SwTextShell::GetState( SfxItemSet &rSet )
                     rSet.DisableItem(nWhich);
             }
             break;
+#ifdef USE_JAVA
+            case SID_ATTR_CHAR_FILLCOLOR:
+            {
+                SfxItemSet aCoreSet(rSh.GetView().GetPool(), RES_CHRATR_BACKGROUND, RES_CHRATR_BACKGROUND, SID_BACKGROUND_COLOR, SID_BACKGROUND_COLOR, 0);
+                rSh.GetCurAttr(aCoreSet);
+
+                Color aColor(COL_TRANSPARENT);
+                const SfxPoolItem *pTmpItem;
+                if ( SFX_ITEM_SET == aCoreSet.GetItemState( SID_BACKGROUND_COLOR, TRUE, &pTmpItem ) )
+                    aColor = ((SvxColorItem *)pTmpItem)->GetValue();
+                else if ( SFX_ITEM_SET == aCoreSet.GetItemState( RES_CHRATR_BACKGROUND, TRUE, &pTmpItem ) )
+                    aColor = ((SvxBrushItem *)pTmpItem)->GetColor();
+                rSet.Put(SvxColorItem(aColor, SID_ATTR_CHAR_FILLCOLOR));
+            }
+            break;
+#endif	// USE_JAVA
         }
         nWhich = aIter.NextWhich();
 	}

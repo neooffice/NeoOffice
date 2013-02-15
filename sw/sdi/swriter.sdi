@@ -10469,6 +10469,33 @@ SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 	GroupId = GID_FORMAT;
 ]
 
+//--------------------------------------------------------------------------
+SvxColorItem FillColor SID_ATTR_CHAR_FILLCOLOR
+
+[
+	/* flags: */
+	AutoUpdate = TRUE,
+	Cachable = Cachable,
+	FastCall = FALSE,
+	HasCoreId = FALSE,
+	HasDialog = FALSE,
+	ReadOnlyDoc = FALSE,
+	Toggle = FALSE,
+	Container = FALSE,
+	RecordAbsolute = FALSE,
+	RecordPerSet;
+	Synchron;
+
+	Readonly = FALSE,
+
+	/* config: */
+	AccelConfig = FALSE,
+	MenuConfig = FALSE,
+	StatusBarConfig = FALSE,
+	ToolBoxConfig = TRUE,
+	GroupId = GID_FORMAT;
+]
+
 // #endif	// USE_JAVA
 // #ifndef NO_STATUSBAR_WORDCOUNT
 
