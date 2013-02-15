@@ -928,7 +928,7 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
     switch ( theSlotId )
     {
         case SID_ATTR_CHAR_COLOR_BACKGROUND:
-            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" )));
+            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FillColor" )));
             break;
         case SID_ATTR_CHAR_COLOR:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));

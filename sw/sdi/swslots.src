@@ -1500,5 +1500,9 @@ SfxSlotInfo FN_LOOKUP_IN_MACOSX_DICTIONARY
 {
     Slotname [ en-US ] = "Look Up in Dictionary";
 };
+SfxSlotInfo SID_ATTR_CHAR_FILLCOLOR
+{
+	Slotname [ en-US ] = "Highlight Color";
+};
 // #endif	// USE_JAVA
 
