@@ -929,13 +929,11 @@ SvxColorWindow_Impl::SvxColorWindow_Impl( const OUString&            rCommand,
     {
         case SID_ATTR_CHAR_COLOR_BACKGROUND:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" )));
-            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharBackgroundExt" )));
             break;
         case SID_ATTR_CHAR_COLOR:
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
             break;
         case SID_ATTR_CHAR_COLOR2:
-            AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:CharColorExt" )));
             AddStatusListener( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" )));
             break;
         case SID_BACKGROUND_COLOR:
