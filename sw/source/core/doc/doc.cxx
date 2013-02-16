@@ -999,9 +999,7 @@ const SwDocStat& SwDoc::GetDocStat() const
 
 const SwDocStat& SwDoc::GetUpdatedDocStat()
 {
-    if (pDocStat->bModified)
-        UpdateDocStat(*pDocStat);
-
+    UpdateDocStat(*pDocStat);
     return *pDocStat;
 }
 
@@ -1083,12 +1081,32 @@ void SwDoc::UpdateDocStat( SwDocStat& rStat )
 		aStat[n++].Value <<= (sal_Int32)rStat.nChar;
 
 		// For e.g. autotext documents there is no pSwgInfo (#i79945)
+#ifndef NO_STATUSBAR_WORDCOUNT
+        SfxObjectShell * const pObjShell( GetDocShell() );
+        if (pObjShell)
+        {
+            const uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
+                pObjShell->GetModel(), uno::UNO_QUERY_THROW);
+#else	// !NO_STATUSBAR_WORDCOUNT
         if (GetDocShell()) {
             uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
                 GetDocShell()->GetModel(), uno::UNO_QUERY_THROW);
+#endif	// !NO_STATUSBAR_WORDCOUNT
             uno::Reference<document::XDocumentProperties> xDocProps(
                 xDPS->getDocumentProperties());
+#ifndef NO_STATUSBAR_WORDCOUNT
+            // #i96786#: do not set modified flag when updating statistics
+            const bool bDocWasModified( IsModified() );
+            const ModifyBlocker_Impl b(pObjShell);
+#endif	// !NO_STATUSBAR_WORDCOUNT
             xDocProps->setDocumentStatistics(aStat);
+#ifndef NO_STATUSBAR_WORDCOUNT
+            if (!bDocWasModified)
+            {
+                ResetModified();
+                rStat.bModified = FALSE;
+            }
+#endif	// !NO_STATUSBAR_WORDCOUNT
         }
 
 		// event. Stat. Felder Updaten
@@ -1256,10 +1274,12 @@ void SwDoc::ResetModified()
 	//	Bit 1: 	-> neuer Zustand
     long nCall = mbModified ? 1 : 0;
 	mbModified = FALSE;
+#ifdef NO_STATUSBAR_WORDCOUNT
     // If there is already a document statistic, we assume that
     // it is correct. In this case we reset the modified flag.
     if ( 0 != pDocStat->nChar )
         pDocStat->bModified = FALSE;
+#endif	// NO_STATUSBAR_WORDCOUNT
     nUndoSavePos = nUndoPos;
 	if( nCall && aOle2Link.IsSet() )
 	{
