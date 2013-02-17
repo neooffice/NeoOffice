@@ -315,6 +315,9 @@ class SVX_DLLPUBLIC SvxFontColorExtToolBoxControl : public SfxToolBoxControl
 
 	//	SfxStatusForwarder 			aForward;
     ::svx::ToolboxButtonColorUpdater*   pBtnUpdater;
+#ifdef USE_JAVA
+    Color                               aCurColor;
+#endif	// USE_JAVA
 
 public:
 	SFX_DECL_TOOLBOX_CONTROL();
