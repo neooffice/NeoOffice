@@ -2576,6 +2576,9 @@ SvxFontColorExtToolBoxControl::SvxFontColorExtToolBoxControl(
     USHORT nMode =	SID_ATTR_CHAR_COLOR2 == nSlotId
 		? TBX_UPDATER_MODE_CHAR_COLOR_NEW :	TBX_UPDATER_MODE_CHAR_COLOR_NEW;
     pBtnUpdater = new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox(), nMode );
+#ifdef USE_JAVA
+    aCurColor = Color( COL_TRANSPARENT );
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -2641,7 +2644,14 @@ void SvxFontColorExtToolBoxControl::StateChanged(
 		   pItem = PTR_CAST( SvxColorItem, pState );
 
 		if ( pItem )
+#ifdef USE_JAVA
+		{
+			aCurColor = pItem->GetValue();
+			pBtnUpdater->Update( aCurColor );
+		}
+#else	// USE_JAVA
 			pBtnUpdater->Update( pItem->GetValue() );
+#endif	// USE_JAVA
 	}
 }
 
@@ -2662,10 +2672,31 @@ void SvxFontColorExtToolBoxControl::Select( BOOL )
         aParamName  = OUString( RTL_CONSTASCII_USTRINGPARAM( "CharBackgroundExt" ));
     }
 
+#ifdef USE_JAVA
+    // Fix bug reported in the following NeoOffice forum post by forcefully
+    // unsetting the highlight color when it was set to transparent via the
+    // color palette:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63965#63965
+    BOOL bIsItemChecked = GetToolBox().IsItemChecked( GetId() );
+    if ( bIsItemChecked && GetSlotId() == SID_ATTR_CHAR_COLOR_BACKGROUND && aCurColor.GetTransparency() )
+    {
+        Sequence< PropertyValue > aColorArgs;
+        Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" ) ), aColorArgs );
+    }
+#endif	// USE_JAVA
+
     Sequence< PropertyValue > aArgs( 1 );
     aArgs[0].Name  = aParamName;
     aArgs[0].Value = makeAny( GetToolBox().IsItemChecked( GetId() ));
     Dispatch( aCommand, aArgs );
+
+#ifdef USE_JAVA
+    if ( !bIsItemChecked && GetSlotId() == SID_ATTR_CHAR_COLOR_BACKGROUND && aCurColor.GetTransparency() )
+    {
+        Sequence< PropertyValue > aColorArgs;
+        Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:BackColor" ) ), aColorArgs );
+    }
+#endif	// USE_JAVA
 }
 
 //========================================================================
