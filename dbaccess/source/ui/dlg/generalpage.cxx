@@ -411,7 +411,7 @@ namespace dbaui
 #ifdef SOLAR_JAVA
             sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_JDBC);
 #else	// SOLAR_JAVA
-            sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_ODBC);
+            sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_DBASE);
 #endif	// SOLAR_JAVA
 		m_pDatasourceType->SelectEntry(sDisplayName);
 
@@ -438,10 +438,18 @@ namespace dbaui
 	bool OGeneralPage::approveDataSourceType( ::dbaccess::DATASOURCE_TYPE eType, String& _inout_rDisplayName )
 	{
 		if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_JDBC ) )
+#ifdef SOLAR_JAVA
 			_inout_rDisplayName = m_sMySQLEntry;
+#else	// SOLAR_JAVA
+            _inout_rDisplayName = String();
+#endif	// SOLAR_JAVA
 
         else if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_ODBC ) )
+#ifdef SOLAR_JAVA
             _inout_rDisplayName = String();
+#else	// SOLAR_JAVA
+			_inout_rDisplayName = m_sMySQLEntry;
+#endif	// SOLAR_JAVA
 
         else if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_NATIVE ) )
             _inout_rDisplayName = String();
