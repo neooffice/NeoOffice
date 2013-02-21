@@ -842,6 +842,7 @@ FeatureState OApplicationController::GetState(sal_uInt16 _nId) const
 			case SID_FORM_CREATE_REPWIZ_PRE_SEL:
 			case SID_REPORT_CREATE_REPWIZ_PRE_SEL:
             case SID_APP_NEW_REPORT_PRE_SEL:
+#ifdef SOLAR_JAVA
 				aReturn.bEnabled = !isDataSourceReadOnly()
 									&& SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SWRITER)
 									&& getContainer()->isALeafSelected();
@@ -861,6 +862,9 @@ FeatureState OApplicationController::GetState(sal_uInt16 _nId) const
                         }
                     }
 				}
+#else	// SOLAR_JAVA
+				aReturn.bEnabled = sal_False;
+#endif	// SOLAR_JAVA
 				break;
 			case SID_DB_APP_DELETE:
 			case SID_DB_APP_RENAME:
@@ -1562,11 +1566,11 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBNewForm",          SID_APP_NEW_FORM,          CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFolder",        SID_APP_NEW_FOLDER,        CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilot", SID_DB_FORM_NEW_PILOT,     CommandGroup::INSERT );
+#ifdef SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilotWithPreSelection",
                                                              SID_FORM_CREATE_REPWIZ_PRE_SEL,
                                                                                         CommandGroup::APPLICATION );
 
-#ifdef SOLAR_JAVA
 	implDescribeSupportedFeature( ".uno:DBNewReport",		 SID_APP_NEW_REPORT,		CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewReportAutoPilot",
                                                              ID_DOCUMENT_CREATE_REPWIZ, CommandGroup::INSERT );
@@ -2495,6 +2499,7 @@ PopupMenu* OApplicationController::getContextMenu( Control& /*_rControl*/ ) cons
 #ifdef SOLAR_JAVA
     return new PopupMenu( ModuleRes( RID_MENU_APP_EDIT ) );
 #else	// SOLAR_JAVA
+    static XubString aDBNewFormAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewFormAutoPilotWithPreSelection" ) );
     static XubString aDBNewReportWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportWithPreSelection" ) );
     static XubString aDBNewReportAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilotWithPreSelection" ) );
 
@@ -2505,7 +2510,7 @@ PopupMenu* OApplicationController::getContextMenu( Control& /*_rControl*/ ) cons
         while ( i )
         {
             XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
-            if ( aCommand == aDBNewReportWithPreSelection || aCommand == aDBNewReportAutoPilotWithPreSelection )
+            if ( aCommand == aDBNewFormAutoPilotWithPreSelection || aCommand == aDBNewReportWithPreSelection || aCommand == aDBNewReportAutoPilotWithPreSelection )
                 pPopup->RemoveItem( i );
         }
     }
