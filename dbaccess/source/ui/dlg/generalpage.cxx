@@ -208,6 +208,11 @@ namespace dbaui
 			{
 				::dbaccess::DATASOURCE_TYPE eType = aTypeLoop.getType();
 
+#ifndef SOLAR_JAVA
+				if ( eType == ::dbaccess::DST_JDBC || eType == ::dbaccess::DST_MYSQL_JDBC || eType == ::dbaccess::DST_ORACLE_JDBC )
+					continue;
+#endif	// !SOLAR_JAVA
+
 				if ( xDriverManager.is() )
 				{	// we have a driver manager to check
 					::rtl::OUString sURLPrefix = m_pCollection->getDatasourcePrefix(eType);
