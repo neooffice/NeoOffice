@@ -80,6 +80,10 @@ if [ -d "$2" ]; then
 
 	# Put back user's custom localization files
 	if [ -d "$2/share" ]; then
+		# Delete reportobjectbar.xml
+		if [ -e "$2/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml" ]; then
+			rm -f "$2/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml" || exit 1
+		fi
 		for i in `cd "$2/share" ; find . -type d`; do
 			mkdir -p "$2/Contents/basis-link/share/$i" || exit 1
 		done
