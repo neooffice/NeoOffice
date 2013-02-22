@@ -1565,8 +1565,8 @@ void OApplicationController::describeSupportedFeatures()
 #endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewForm",          SID_APP_NEW_FORM,          CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFolder",        SID_APP_NEW_FOLDER,        CommandGroup::INSERT );
-    implDescribeSupportedFeature( ".uno:DBNewFormAutoPilot", SID_DB_FORM_NEW_PILOT,     CommandGroup::INSERT );
 #ifdef SOLAR_JAVA
+    implDescribeSupportedFeature( ".uno:DBNewFormAutoPilot", SID_DB_FORM_NEW_PILOT,     CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilotWithPreSelection",
                                                              SID_FORM_CREATE_REPWIZ_PRE_SEL,
                                                                                         CommandGroup::APPLICATION );
@@ -1580,11 +1580,15 @@ void OApplicationController::describeSupportedFeatures()
 #endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewQuery",         ID_NEW_QUERY_DESIGN,       CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewQuerySql",      ID_NEW_QUERY_SQL,          CommandGroup::INSERT );
+#ifdef SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewQueryAutoPilot",ID_APP_NEW_QUERY_AUTO_PILOT,
                                                                                         CommandGroup::INSERT );
+#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewTable",         ID_NEW_TABLE_DESIGN,       CommandGroup::INSERT );
+#ifdef SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewTableAutoPilot",ID_NEW_TABLE_DESIGN_AUTO_PILOT,
                                                                                         CommandGroup::INSERT );
+#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewView",          ID_NEW_VIEW_DESIGN,        CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewViewSQL",       SID_DB_NEW_VIEW_SQL,       CommandGroup::INSERT );
 
