@@ -116,6 +116,9 @@ SHL1STDLIBS+=\
 .ELSE # WNT
 .IF "$(OS)" == "MACOSX"
 SHL1STDLIBS+= -framework Cocoa
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS+= -framework Quartz
+.ENDIF		# "$(GUIBASE)" == "java"
 .ENDIF # MACOSX
 .ENDIF # WNT
 
