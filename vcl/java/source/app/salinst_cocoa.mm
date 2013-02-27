@@ -194,6 +194,7 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 
 static NSURL *pHomeURL = nil;
 static NSURL *pMainBundleURL = nil;
+static NSURL *pDocumentRevisionsV100 = nil;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
@@ -243,6 +244,24 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			}
 		}
 
+		if ( !pDocumentRevisionsV100 )
+		{
+			NSURL *pTmpURL = [NSURL fileURLWithPath:@"/.DocumentRevisions-V100"];
+			if ( pTmpURL )
+			{
+				pTmpURL = [pTmpURL URLByStandardizingPath];
+				if ( pTmpURL )
+				{
+					pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
+					if ( pTmpURL )
+					{
+						pDocumentRevisionsV100 = pTmpURL;
+						[pDocumentRevisionsV100 retain];
+					}
+				}
+			}
+		}
+
 		// Iterate through path and resolve any aliases
 		NSArray *pPathComponents = [pURL pathComponents];
 		if ( pPathComponents && [pPathComponents count] )
@@ -281,7 +300,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					}
 
 					// Ignore container and main bundle folders
-					if ( ( pHomeURL && [pHomeURL isEqual:pURL] ) || ( pMainBundleURL && [pMainBundleURL isEqual:pURL] ) )
+					if ( ( pHomeURL && [pHomeURL isEqual:pURL] ) || ( pMainBundleURL && [pMainBundleURL isEqual:pURL] ) || ( pDocumentRevisionsV100 && [pDocumentRevisionsV100 isEqual:pURL] ) )
 					{
 						pURL = nil;
 						break;
