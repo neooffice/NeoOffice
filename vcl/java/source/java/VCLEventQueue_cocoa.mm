@@ -527,6 +527,20 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 	return nRet;
 }
 
+static void RegisterMainBundleWithLaunchServices()
+{
+	// Make sure our application is registered in launch services database as
+	// it can become disconnected after displaying the versions browser when
+	// running the Mac app sandbox
+	NSBundle *pBundle = [NSBundle mainBundle];
+	if ( pBundle )
+	{
+		NSURL *pBundleURL = [pBundle bundleURL];
+		if ( pBundleURL )
+			LSRegisterURL( (CFURLRef)pBundleURL, false );
+	}
+}
+
 @interface IsApplicationActive : NSObject
 {
 	MacOSBOOL					mbActive;
@@ -1666,18 +1680,14 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
+- (void)windowWillClose:(NSNotification *)pNotification
+{
+	RegisterMainBundleWithLaunchServices();
+}
+
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification
 {
-	// Make sure our application is registered in launch services database as
-	// it can become disconnected after displaying the versions browser when
-	// running the Mac app sandbox
-	NSBundle *pBundle = [NSBundle mainBundle];
-	if ( pBundle )
-	{
-		NSURL *pBundleURL = [pBundle bundleURL];
-		if ( pBundleURL )
-			LSRegisterURL( (CFURLRef)pBundleURL, false );
-	}
+	RegisterMainBundleWithLaunchServices();
 }
 
 @end

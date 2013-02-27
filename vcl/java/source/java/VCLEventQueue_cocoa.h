@@ -166,6 +166,7 @@
 - (void)windowWillMiniaturize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
 - (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
+- (void)windowWillClose:(NSNotification *)pNotification;
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification;
 @end
 
