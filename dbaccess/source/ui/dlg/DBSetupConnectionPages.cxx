@@ -938,7 +938,11 @@ DBG_NAME(OFinalDBPageSetup)
         String stext = m_aFTFinalHeader.GetText();
         SetControlFontWeight(&m_aFTFinalHeader);
 		m_aCBOpenAfterwards.SetClickHdl(LINK(this, OFinalDBPageSetup, OnOpenSelected));
+#ifdef SOLAR_JAVA
 		m_aCBStartTableWizard.SetClickHdl(getControlModifiedLink());
+#else	// SOLAR_JAVA
+		m_aCBStartTableWizard.Hide();
+#endif	// SOLAR_JAVA
 		m_aRBRegisterDataSource.SetState(sal_True);
         FreeResource();
 
@@ -951,7 +955,9 @@ DBG_NAME(OFinalDBPageSetup)
             ,::std::pair<Window*,sal_Int32>(&m_aRBDontregisterDataSource,nUnrelatedHeight)
             ,::std::pair<Window*,sal_Int32>(&m_aFTAdditionalSettings,nRelatedHeight)
             ,::std::pair<Window*,sal_Int32>(&m_aCBOpenAfterwards,nRelatedHeight)
+#ifdef SOLAR_JAVA
             ,::std::pair<Window*,sal_Int32>(&m_aCBStartTableWizard,nUnrelatedHeight)
+#endif	// SOLAR_JAVA
             ,::std::pair<Window*,sal_Int32>(&m_aFTFinalText,nUnrelatedHeight)
         };
 
