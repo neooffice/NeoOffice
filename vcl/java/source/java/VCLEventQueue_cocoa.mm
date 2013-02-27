@@ -1666,6 +1666,20 @@ static NSUInteger nMouseMask = 0;
 	return bRet;
 }
 
+- (void)windowWillExitVersionBrowser:(NSNotification *)pNotification
+{
+	// Make sure our application is registered in launch services database as
+	// it can become disconnected after displaying the versions browser when
+	// running the Mac app sandbox
+	NSBundle *pBundle = [NSBundle mainBundle];
+	if ( pBundle )
+	{
+		NSURL *pBundleURL = [pBundle bundleURL];
+		if ( pBundleURL )
+			LSRegisterURL( (CFURLRef)pBundleURL, false );
+	}
+}
+
 @end
 
 static CFStringRef aTextSelection = nil;

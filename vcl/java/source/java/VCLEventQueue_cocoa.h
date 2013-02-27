@@ -166,6 +166,7 @@
 - (void)windowWillMiniaturize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
 - (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
+- (void)windowWillExitVersionBrowser:(NSNotification *)pNotification;
 @end
 
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
