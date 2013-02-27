@@ -243,6 +243,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( ppError )
 		*ppError = nil;
 
+	Application_cacheSecurityScopedURL( pAbsoluteURL );
+
 #ifdef USE_NATIVE_RESUME
 	if ( pSharedAppDelegate && pAbsoluteURL && [pAbsoluteURL isFileURL] )
 	{
@@ -315,6 +317,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (MacOSBOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
+	if ( pFilename )
+		Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
+
 	if ( mbInTermination || !pFilename )
 		return NO;
 
@@ -326,13 +331,14 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_False );
 	}
 
-	Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
-
 	return YES;
 }
 
 - (MacOSBOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
 {
+	if ( pFilename )
+		Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
+
 	if ( mbInTermination || !pFilename )
 		return NO;
 
@@ -343,8 +349,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] && !bDir )
 			HandleOpenPrintFileRequest( [pFilename UTF8String], sal_True );
 	}
-
-	Application_cacheSecurityScopedURL( [NSURL fileURLWithPath:pFilename] );
 
 	return YES;
 }
