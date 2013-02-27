@@ -56,6 +56,13 @@ void NSApplication_run()
 		if ( pBundle && [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
  			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
 		VCLEventQueue_installVCLEventQueueClasses();
+		if ( pBundle )
+		{
+			// Make sure our application is registered with launch services
+			NSURL *pBundleURL = [pBundle bundleURL];
+			if ( pBundleURL )
+				LSRegisterURL( (CFURLRef)pBundleURL, false );
+		}
 		[pApp run];
 	}
 
