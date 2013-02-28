@@ -179,14 +179,16 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 	return pRet;
 }
 
-static MacOSBOOL bHomeURLCached = NO;
-static MacOSBOOL bMainBundleURLCached = NO;
+static NSString *pHomeURLString = nil;
+static NSString *pMainBundleURLString = nil;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
-		if ( !bHomeURLCached )
+		ClearableGuard< Mutex > aGuard( aCurrentInstanceSecurityURLCacheMutex );
+
+		if ( !pHomeURLString )
 		{
 			NSString *pHomeDir = NSHomeDirectory();
 			if ( pHomeDir )
@@ -200,15 +202,21 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
 						if ( pTmpURL )
 						{
-							bHomeURLCached = YES;
-							Application_cacheSecurityScopedURL( pTmpURL );
+							NSString *pTmpURLString = [pTmpURL absoluteString];
+							if ( pTmpURLString && [pTmpURLString length] )
+							{
+								pHomeURLString = pTmpURLString;
+								[pHomeURLString retain];
+
+								Application_cacheSecurityScopedURL( pTmpURL );
+							}
 						}
 					}
 				}
 			}
 		}
 
-		if ( !bMainBundleURLCached )
+		if ( !pMainBundleURLString )
 		{
 			NSBundle *pMainBundle = [NSBundle mainBundle];
 			if ( pMainBundle )
@@ -222,13 +230,37 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
 						if ( pTmpURL )
 						{
-							bMainBundleURLCached = YES;
-							Application_cacheSecurityScopedURL( pTmpURL );
+							NSString *pTmpURLString = [pTmpURL absoluteString];
+							if ( pTmpURLString && [pTmpURLString length] )
+							{
+								pMainBundleURLString = pTmpURLString;
+								[pMainBundleURLString retain];
+
+								Application_cacheSecurityScopedURL( pTmpURL );
+							}
 						}
 					}
 				}
 			}
 		}
+
+		// Improve performance by checking if the URL is within the home folder
+		// or the application's main bundle. These folders do not need a
+		// security scoped URL and the majority of calls to this function are
+		// for paths in these folders.
+		NSString *pURLString = [pURL absoluteString];
+		if ( !pURLString || ![pURLString length] )
+			return;
+
+		NSRange aHomeRange = [pURLString rangeOfString:pHomeURLString];
+		if ( !aHomeRange.location && aHomeRange.length )
+			return;
+
+		NSRange aMainBundleRange = [pURLString rangeOfString:pMainBundleURLString];
+		if ( !aMainBundleRange.location && aMainBundleRange.length )
+			return;
+
+		aGuard.clear();
 
 		// Iterate through path and resolve any aliases
 		NSArray *pPathComponents = [pURL pathComponents];
