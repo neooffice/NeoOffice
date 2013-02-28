@@ -58,6 +58,8 @@ typedef NSString* const NSURLIsWritableKey_Type;
 
 static MacOSBOOL bCachedSecurityURLsUpdated = NO;
 static ::osl::Mutex aUpdatedCachedSecurityURLsMutex;
+static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
+static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
 static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
 static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
 
@@ -84,6 +86,59 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject;
 - (NSURL *)securityScopedURL;
 @end
+
+static MacOSBOOL IsURLReadableOrWritable( NSURL *pURL )
+{
+	MacOSBOOL bRet = NO;
+
+	if ( pURL )
+	{
+		if ( !pNSURLIsReadableKey )
+			pNSURLIsReadableKey = (NSURLIsReadableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsReadableKey" );
+		if ( !pNSURLIsWritableKey )
+			pNSURLIsWritableKey = (NSURLIsWritableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsWritableKey" );
+		if ( pNSURLIsReadableKey && pNSURLIsWritableKey && *pNSURLIsReadableKey && *pNSURLIsWritableKey )
+		{
+			NSNumber *pReadable = nil;
+			NSNumber *pWritable = nil;
+			if ( ( [pURL getResourceValue:&pReadable forKey:*pNSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:*pNSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
+				bRet = YES;
+		}
+	}
+
+	return bRet;
+}
+
+static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExists )
+{
+	MacOSBOOL bRet = NO;
+
+	if ( pURL )
+	{
+		MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
+
+		if ( pCurrentInstanceSecurityURLCacheDictionary )
+		{
+			NSNumber *pValue = [pCurrentInstanceSecurityURLCacheDictionary objectForKey:pURL];
+			if ( pValue )
+			{
+				if ( bExists )
+				{
+					bRet = IsURLReadableOrWritable( pURL );
+
+					// Recache to force check if the file now exists
+					Application_cacheSecurityScopedURL( pURL );
+				}
+				else
+				{
+					bRet = ![pValue boolValue];
+				}
+			}
+		}
+	}
+
+	return bRet;
+}
 
 static void UpdateCachedSecurityScopedURLs()
 {
@@ -192,15 +247,14 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 	return pRet;
 }
 
-static NSURL *pHomeURL = nil;
-static NSURL *pMainBundleURL = nil;
-static NSURL *pDocumentRevisionsV100 = nil;
+static MacOSBOOL bHomeURLCached = NO;
+static MacOSBOOL bMainBundleURLCached = NO;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
-		if ( !pHomeURL )
+		if ( !bHomeURLCached )
 		{
 			NSString *pHomeDir = NSHomeDirectory();
 			if ( pHomeDir )
@@ -214,15 +268,15 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
 						if ( pTmpURL )
 						{
-							pHomeURL = pTmpURL;
-							[pHomeURL retain];
+							bHomeURLCached = YES;
+							Application_cacheSecurityScopedURL( pTmpURL );
 						}
 					}
 				}
 			}
 		}
 
-		if ( !pMainBundleURL )
+		if ( !bMainBundleURLCached )
 		{
 			NSBundle *pMainBundle = [NSBundle mainBundle];
 			if ( pMainBundle )
@@ -236,27 +290,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
 						if ( pTmpURL )
 						{
-							pMainBundleURL = pTmpURL;
-							[pMainBundleURL retain];
+							bMainBundleURLCached = YES;
+							Application_cacheSecurityScopedURL( pTmpURL );
 						}
-					}
-				}
-			}
-		}
-
-		if ( !pDocumentRevisionsV100 )
-		{
-			NSURL *pTmpURL = [NSURL fileURLWithPath:@"/.DocumentRevisions-V100"];
-			if ( pTmpURL )
-			{
-				pTmpURL = [pTmpURL URLByStandardizingPath];
-				if ( pTmpURL )
-				{
-					pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
-					if ( pTmpURL )
-					{
-						pDocumentRevisionsV100 = pTmpURL;
-						[pDocumentRevisionsV100 retain];
 					}
 				}
 			}
@@ -281,8 +317,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( !pURL || ![pURL checkResourceIsReachableAndReturnError:nil] )
 					{
-						// Abort if the parent folder is "/"
-						if ( i == 1 )
+						// Abort if the parent folder is "/" or if only last
+						// component is missing and the URL is in the current
+						// instance cache
+						if ( i == 1 || ( i == nCount - 1 && IsCurrentInstanceCacheSecurityURL( pURL, NO ) ) )
 							pURL = nil;
 
 						break;
@@ -299,8 +337,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						}
 					}
 
-					// Ignore container and main bundle folders
-					if ( ( pHomeURL && [pHomeURL isEqual:pURL] ) || ( pMainBundleURL && [pMainBundleURL isEqual:pURL] ) || ( pDocumentRevisionsV100 && [pDocumentRevisionsV100 isEqual:pURL] ) )
+					// Ignore current instance cached security URLs
+					if ( IsCurrentInstanceCacheSecurityURL( pURL, YES ) )
 					{
 						pURL = nil;
 						break;
@@ -359,20 +397,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						}
 					}
 
-					if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark )
-					{
-						if ( !pNSURLIsReadableKey )
-							pNSURLIsReadableKey = (NSURLIsReadableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsReadableKey" );
-						if ( !pNSURLIsWritableKey )
-							pNSURLIsWritableKey = (NSURLIsWritableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsWritableKey" );
-						if ( pNSURLIsReadableKey && pNSURLIsWritableKey && *pNSURLIsReadableKey && *pNSURLIsWritableKey )
-						{
-							NSNumber *pReadable = nil;
-							NSNumber *pWritable = nil;
-							if ( ( [pURL getResourceValue:&pReadable forKey:*pNSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:*pNSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
-								bShowOpenPanel = NO;
-						}
-					}
+					if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark && IsURLReadableOrWritable( pURL ) )
+						bShowOpenPanel = NO;
 
 					if ( bShowOpenPanel && !bSecurityScopedURLFound )
 					{
@@ -749,6 +775,8 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 							pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
 							if ( pResolvedURL )
 							{
+								UpdateCachedSecurityScopedURLs();
+
 								NSURL *pResolvedFileReferenceURL = [pResolvedURL fileReferenceURL];
 								NSUserDefaults *pUserDefaults = [NSUserDefaults standardUserDefaults];
 								if ( pResolvedFileReferenceURL && pUserDefaults )
@@ -764,6 +792,22 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 						}
 					}
 				}
+
+				// URLs from save panel and versions browser, even if
+				// non-existent are good for the life of the current instance.
+				// Note that it appears that the path is accessible even if
+				// the file reference for the path changes.
+				MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
+
+				if ( !pCurrentInstanceSecurityURLCacheDictionary )
+				{
+					pCurrentInstanceSecurityURLCacheDictionary = [NSMutableDictionary dictionaryWithCapacity:10];
+					if ( pCurrentInstanceSecurityURLCacheDictionary )
+						[pCurrentInstanceSecurityURLCacheDictionary retain];
+				}
+
+				if ( pCurrentInstanceSecurityURLCacheDictionary )
+					[pCurrentInstanceSecurityURLCacheDictionary setObject:[NSNumber numberWithBool:[pURL checkResourceIsReachableAndReturnError:nil]] forKey:pURL];
 			}
 		}
 	}
