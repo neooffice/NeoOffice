@@ -90,7 +90,7 @@ if check_installation "$lastcontentshome" ; then
 
 	# Launch installation
 	if [ ! -z "$sudouser" ] ; then
-		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read '$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)' updateSuppressLaunchAfterInstallation 2>/dev/null"`
+		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read \"$HOME/Library/Containers/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).plist\" updateSuppressLaunchAfterInstallation 2>/dev/null"`
 		if [ -z "$launch" -o "$launch" = "0" ] ; then
 			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""
 		fi
