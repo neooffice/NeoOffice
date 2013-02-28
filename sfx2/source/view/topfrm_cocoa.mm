@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#import <dlfcn.h>
+
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
@@ -51,6 +53,9 @@
 @class NSIBObjectData;
 @class NSNibConnector;
 
+typedef void Application_cacheSecurityScopedURL_Type( id pURL );
+
+static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 static NSString *pNSQuickLookWrapperDocument = @"NSQuickLookWrapperDocument";
 static NSString *pRevertDocumentToSavedLabel = @"revertDocumentToSaved:";
 
@@ -363,6 +368,11 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		NSURL *pFileURL = [self fileURL];
 		if ( pFileURL )
 		{
+			if ( !pApplication_cacheSecurityScopedURL )
+				pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+			if ( pApplication_cacheSecurityScopedURL )
+				pApplication_cacheSecurityScopedURL( pFileURL );
+
 			OUString aFileURL( NSStringToOUString( [pFileURL absoluteString] ) );
 			if ( aFileURL.getLength() )
 			{
