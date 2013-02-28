@@ -113,23 +113,27 @@ static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExis
 
 	if ( pURL )
 	{
-		MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
-
-		if ( pCurrentInstanceSecurityURLCacheDictionary )
+		NSString *pKey = [pURL absoluteString];
+		if ( pKey && [pKey length] )
 		{
-			NSNumber *pValue = [pCurrentInstanceSecurityURLCacheDictionary objectForKey:pURL];
-			if ( pValue && [pValue isKindOfClass:[NSNumber class]] )
-			{
-				if ( bExists )
-				{
-					bRet = IsURLReadableOrWritable( pURL );
+			MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
 
-					// Recache to force check if the file now exists
-					Application_cacheSecurityScopedURL( pURL );
-				}
-				else
+			if ( pCurrentInstanceSecurityURLCacheDictionary )
+			{
+				NSNumber *pValue = [pCurrentInstanceSecurityURLCacheDictionary objectForKey:pKey];
+				if ( pValue && [pValue isKindOfClass:[NSNumber class]] )
 				{
-					bRet = ![pValue boolValue];
+					if ( bExists )
+					{
+						bRet = IsURLReadableOrWritable( pURL );
+
+						// Recache to force check if the file now exists
+						Application_cacheSecurityScopedURL( pURL );
+					}
+					else
+					{
+						bRet = ![pValue boolValue];
+					}
 				}
 			}
 		}
@@ -284,7 +288,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					while ( pUserDefaults && pTmpURL && !bSecurityScopedURLFound )
 					{
 						NSString *pKey = [pTmpURL absoluteString];
-						if ( pKey )
+						if ( pKey && [pKey length] )
 						{
 							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
 							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
@@ -701,7 +705,7 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 								if ( pUserDefaults )
 								{
 									NSString *pKey = [pResolvedURL absoluteString];
-									if ( pKey )
+									if ( pKey && [pKey length] )
 									{
 										[pUserDefaults setObject:pData forKey:pKey];
 										[pUserDefaults synchronize];
@@ -712,21 +716,25 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 					}
 				}
 
-				// URLs from save panel and versions browser, even if
-				// non-existent are good for the life of the current instance.
-				// Note that it appears that the path is accessible even if
-				// the file reference for the path changes.
-				MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
-
-				if ( !pCurrentInstanceSecurityURLCacheDictionary )
+				NSString *pKey = [pURL absoluteString];
+				if ( pKey && [pKey length] )
 				{
-					pCurrentInstanceSecurityURLCacheDictionary = [NSMutableDictionary dictionaryWithCapacity:10];
-					if ( pCurrentInstanceSecurityURLCacheDictionary )
-						[pCurrentInstanceSecurityURLCacheDictionary retain];
-				}
+					// URLs from save panel and versions browser, even if
+					// non-existent are good for the life of the current
+					// instance. Note that it appears that the path is
+					// accessible even if the path's file reference changes.
+					MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
 
-				if ( pCurrentInstanceSecurityURLCacheDictionary )
-					[pCurrentInstanceSecurityURLCacheDictionary setObject:[NSNumber numberWithBool:[pURL checkResourceIsReachableAndReturnError:nil]] forKey:pURL];
+					if ( !pCurrentInstanceSecurityURLCacheDictionary )
+					{
+						pCurrentInstanceSecurityURLCacheDictionary = [NSMutableDictionary dictionaryWithCapacity:10];
+						if ( pCurrentInstanceSecurityURLCacheDictionary )
+							[pCurrentInstanceSecurityURLCacheDictionary retain];
+					}
+
+					if ( pCurrentInstanceSecurityURLCacheDictionary )
+						[pCurrentInstanceSecurityURLCacheDictionary setObject:[NSNumber numberWithBool:[pURL checkResourceIsReachableAndReturnError:nil]] forKey:pKey];
+				}
 			}
 		}
 	}
