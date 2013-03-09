@@ -110,7 +110,7 @@ using namespace vos;
 
 static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rScreenPoint )
 {
-	if ( !pFrame->mbVisible )
+	if ( !pFrame || !pFrame->mbVisible )
 		return NULL;
 
 	// Iterate through children
@@ -217,6 +217,28 @@ static void InitializeMacOSXVersion()
 	}
 
 	nInitialized = true;
+}
+
+// ----------------------------------------------------------------------------
+
+static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
+{
+	if ( !pFrame )
+		return NULL;
+
+	SalData *pSalData = GetSalData();
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	{
+		if ( pFrame == *it )
+		{
+			if ( pFrame->GetWindow() )
+				return pFrame;
+			else
+				break;
+		}
+	}
+
+	return NULL;
 }
 
 // ============================================================================
@@ -1461,23 +1483,7 @@ void JavaSalEvent::dispatch()
 	}
 	
 	// Handle events that require a JavaSalFrame pointer
-	JavaSalFrame *pFrame = getFrame();
-	bool bFound = false;
-	if ( pFrame )
-	{
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pFrame == *it )
-			{
-				if ( pFrame->GetWindow() )
-					bFound = true;
-				break;
-			}
-		}
-	}
-
-	if ( !bFound )
-		pFrame = NULL;
+	JavaSalFrame *pFrame = FindValidFrame( getFrame() );
 
 	if ( pSalData->mbInNativeModalSheet && pSalData->mpNativeModalSheetFrame && pFrame != pSalData->mpNativeModalSheetFrame )
 	{
@@ -1581,8 +1587,9 @@ void JavaSalEvent::dispatch()
 					aEvent.dispatch();
 				}
 				pFrame->CallCallback( nID, pInputEvent );
+				pFrame = FindValidFrame( pFrame );
 				// If there is no text, the character is committed
-				if ( pInputEvent->maText.Len() == nCommitted )
+				if ( pFrame && pInputEvent->maText.Len() == nCommitted )
 					pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, NULL );
 			}
 			break;
@@ -1608,12 +1615,16 @@ void JavaSalEvent::dispatch()
 			{
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->CallCallback( nID, NULL );
+				pFrame = FindValidFrame( pFrame );
 				JavaSalMenu::SetMenuBarToFocusFrame();
 
-				Window *pWindow = Application::GetFirstTopLevelWindow();
-				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
-					pWindow = Application::GetNextTopLevelWindow( pWindow );
-				InvalidateControls( pWindow );
+				if ( pFrame )
+				{
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					InvalidateControls( pWindow );
+				}
 			}
 			else
 			{
@@ -1623,35 +1634,30 @@ void JavaSalEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
+			if ( pFrame && pFrame == pSalData->mpFocusFrame )
+			{
+				pSalData->mpFocusFrame = NULL;
+				pFrame->CallCallback( nID, NULL );
+				pFrame = FindValidFrame( pFrame );
+				JavaSalMenu::SetMenuBarToFocusFrame();
+			}
+
 			if ( pFrame )
 			{
-				if ( pFrame == pSalData->mpFocusFrame )
-				{
-					pSalData->mpFocusFrame = NULL;
-					pFrame->CallCallback( nID, NULL );
-					JavaSalMenu::SetMenuBarToFocusFrame();
-				}
-
 				// Fix bug 3098 by hiding tooltip windows but leaving the
 				// visible flag set to true
 				for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
 				{
-						if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
-					(*cit)->SetVisible( sal_False, sal_False );
+					if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+						(*cit)->SetVisible( sal_False, sal_False );
 				}
 
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 				{
-					if ( pFrame == *it )
-					{
-						if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
-						{
-							Window *pWindow = Application::GetFirstTopLevelWindow();
-							while ( pWindow && pWindow->ImplGetFrame() != pFrame )
-								pWindow = Application::GetNextTopLevelWindow( pWindow );
-							InvalidateControls( pWindow );
-						}
-					}
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					InvalidateControls( pWindow );
 				}
 			}
 			break;
