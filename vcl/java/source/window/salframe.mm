@@ -2024,8 +2024,10 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 
 JavaSalFrame::~JavaSalFrame()
 {
+	SalData *pSalData = GetSalData();
+
 	// Remove this window from the window list
-	GetSalData()->maFrameList.remove( this );
+	pSalData->maFrameList.remove( this );
 
 	// Make sure that no native drawing is possible
 	maSysData.pView = NULL;
@@ -2056,6 +2058,22 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( maFrameLayer )
 		CGLayerRelease( maFrameLayer );
+
+	// Check for and remove any stale pointers to this instance
+	if ( pSalData->mpFocusFrame == this )
+		pSalData->mpFocusFrame = NULL;
+	if ( pSalData->mpPresentationFrame == this )
+		pSalData->mpPresentationFrame = NULL;
+	if ( pSalData->mpNativeModalSheetFrame == this )
+		pSalData->mpNativeModalSheetFrame = NULL;
+	if ( pSalData->mpLastDragFrame == this )
+		pSalData->mpLastDragFrame = NULL;
+	if ( pSalData->mpCaptureFrame == this )
+		pSalData->mpCaptureFrame = NULL;
+	if ( pSalData->mpLastResizeFrame == this )
+		pSalData->mpLastResizeFrame = NULL;
+	if ( pSalData->mpLastMouseMoveFrame == this )
+		pSalData->mpLastMouseMoveFrame = NULL;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
