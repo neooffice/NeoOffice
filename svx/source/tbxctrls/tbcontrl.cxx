@@ -985,6 +985,13 @@ IMPL_LINK( SvxColorWindow_Impl, SelectHdl, void *, EMPTYARG )
         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
                                      maCommand,
                                      aArgs );
+#ifdef USE_JAVA
+        if ( maColorChangedHdl.IsSet() )
+        {
+            Color aColor( COL_TRANSPARENT );
+            maColorChangedHdl.Call( &aColor );
+        }
+#endif	// USE_JAVA
     }
     else if ( !nItemId && (SID_ATTR_CHAR_COLOR == theSlotId || SID_ATTR_CHAR_COLOR2  == theSlotId || SID_EXTRUSION_3D_COLOR == theSlotId) )
     {
@@ -999,6 +1006,13 @@ IMPL_LINK( SvxColorWindow_Impl, SelectHdl, void *, EMPTYARG )
         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
                                      maCommand,
                                      aArgs );
+#ifdef USE_JAVA
+        if ( maColorChangedHdl.IsSet() )
+        {
+            Color aColor( COL_TRANSPARENT );
+            maColorChangedHdl.Call( &aColor );
+        }
+#endif	// USE_JAVA
     }
     else
 	{
@@ -1012,6 +1026,13 @@ IMPL_LINK( SvxColorWindow_Impl, SelectHdl, void *, EMPTYARG )
         SfxToolBoxControl::Dispatch( Reference< XDispatchProvider >( GetFrame()->getController(), UNO_QUERY ),
                                      maCommand,
                                      aArgs );
+#ifdef USE_JAVA
+        if ( maColorChangedHdl.IsSet() )
+        {
+            Color aColor( aColorItem.GetValue() );
+            maColorChangedHdl.Call( &aColor );
+        }
+#endif	// USE_JAVA
 	}
 
 	return 0;
@@ -2378,6 +2399,10 @@ SvxFontColorToolBoxControl::SvxFontColorToolBoxControl(
                     nSlotId, nId, &GetToolBox(), TBX_UPDATER_MODE_CHAR_COLOR_NEW ))
 {
 	rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+#ifdef USE_JAVA
+	aCurColor = Color( COL_TRANSPARENT );
+	pBtnUpdater->Update( aCurColor );
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -2410,6 +2435,9 @@ SfxPopupWindow*	SvxFontColorToolBoxControl::CreatePopupWindow()
         FLOATWIN_POPUPMODE_GRABFOCUS|FLOATWIN_POPUPMODE_ALLOWTEAROFF );
 	pColorWin->StartSelection();
     SetPopupWindow( pColorWin );
+#ifdef USE_JAVA
+    pColorWin->SetColorChangedHdl( LINK( this, SvxFontColorToolBoxControl, ColorChangedHdl ) );
+#endif	// USE_JAVA
 	return pColorWin;
 }
 
@@ -2422,6 +2450,7 @@ void SvxFontColorToolBoxControl::StateChanged(
 {
 	USHORT nId = GetId();
 	ToolBox& rTbx = GetToolBox();
+#ifndef USE_JAVA
 	const SvxColorItem*	pItem = 0;
 
 	if ( SFX_ITEM_DONTCARE != eState )
@@ -2429,10 +2458,44 @@ void SvxFontColorToolBoxControl::StateChanged(
 
 	if ( pItem )
 		pBtnUpdater->Update( pItem->GetValue());
+#endif	// !USE_JAVA
 
 	rTbx.EnableItem( nId, SFX_ITEM_DISABLED != eState );
 	rTbx.SetItemState( nId, ( SFX_ITEM_DONTCARE == eState ) ? STATE_DONTKNOW : STATE_NOCHECK );
 }
+
+#ifdef USE_JAVA
+
+// -----------------------------------------------------------------------
+
+void SvxFontColorToolBoxControl::Select( BOOL )
+{
+    OUString aCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Color" ) );
+    SvxColorItem aColorItem( aCurColor.GetTransparency() ? COL_AUTO : aCurColor, GetSlotId() );
+    INetURLObject aObj( aCommand );
+
+    Any a;
+    Sequence< PropertyValue > aArgs( 1 );
+    aArgs[0].Name = aObj.GetURLPath();
+    aColorItem.QueryValue( a );
+    aArgs[0].Value = a;
+    Dispatch( aCommand, aArgs );
+}
+
+// -----------------------------------------------------------------------
+
+IMPL_LINK( SvxFontColorToolBoxControl, ColorChangedHdl, Color *, pColor )
+{
+	if ( pColor )
+	{
+		aCurColor = *pColor;
+		pBtnUpdater->Update( aCurColor );
+	}
+
+	return 0;
+}
+
+#endif	USE_JAVA
 
 //========================================================================
 // class SvxColorToolBoxControl --------------------------------
