@@ -785,6 +785,13 @@ void DomainMapperTableHandler::startRow(unsigned int nCells,
         dmapper_logger->addTag(pProps->toTag());
 #endif
 
+#ifdef USE_JAVA
+    // Fix crash when opening the following .docx document reported in
+    // LibreOffice bug 42450 by ensuring that all rows have at least 1 cell:
+    // http://www.ott.nih.gov/docs/EIR-WORD-2007.docx
+    if ( !nCells )
+        nCells = 1;
+#endif	// USE_JAVA
     m_pRowSeq = RowSequencePointer_t(new RowSequence_t(nCells));
     m_nCellIndex = 0;
 }
