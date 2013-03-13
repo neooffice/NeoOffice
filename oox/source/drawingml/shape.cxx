@@ -438,6 +438,7 @@ Reference< XShape > Shape::createAndInsert(
 	    }
 	    catch ( ... )
 	    {
+	        rxShapes->remove( mxShape );
 	    }
 #endif	// USE_JAVA
 
