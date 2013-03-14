@@ -247,6 +247,20 @@ void SvxFrmValueSet_Impl::MouseButtonUp( const MouseEvent& rMEvt )
 	ValueSet::MouseButtonUp(rMEvt);
 }
 
+#ifdef USE_JAVA
+
+class SAL_DLLPRIVATE SvxFrameWindowState_Impl
+{
+public:
+	const SvxBoxItem		maBorderOuter;
+	const SvxBoxInfoItem	maBorderInner;
+
+							SvxFrameWindowState_Impl( SvxBoxItem& rBorderOuter, SvxBoxInfoItem& rBorderInner ) : maBorderOuter( rBorderOuter ), maBorderInner( rBorderInner ) {}
+							~SvxFrameWindowState_Impl() {}
+};
+
+#endif  // USE_JAVA
+
 class SvxFrameWindow_Impl : public SfxPopupWindow
 {
 	using FloatingWindow::StateChanged;
@@ -255,6 +269,9 @@ private:
     SvxFrmValueSet_Impl  aFrameSet;
 	ImageList 		aImgList;
     sal_Bool        bParagraphMode;
+#ifdef USE_JAVA
+    Link            maBorderChangedHdl;
+#endif  // USE_JAVA
 
 #if _SOLAR__PRIVATE
 	DECL_LINK( SelectHdl, void * );
@@ -277,6 +294,9 @@ public:
 	virtual void	DataChanged( const DataChangedEvent& rDCEvt );
 
 	inline BOOL		IsHighContrast( void ) const;
+#ifdef USE_JAVA
+	void			SetBorderChangedHdl( const Link& rLink ) { maBorderChangedHdl = rLink; }
+#endif  // USE_JAVA
 };
 
 inline BOOL SvxFrameWindow_Impl::IsHighContrast( void ) const
@@ -1334,6 +1354,14 @@ IMPL_LINK( SvxFrameWindow_Impl, SelectHdl, void *, EMPTYARG )
     aArgs[1].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "InnerBorder" ));
     aBorderInner.QueryValue( a );
     aArgs[1].Value = a;
+
+#ifdef USE_JAVA
+    if ( maBorderChangedHdl.IsSet() )
+    {
+        SvxFrameWindowState_Impl aBorderState( aBorderOuter, aBorderInner );
+        maBorderChangedHdl.Call( &aBorderState );
+    }
+#endif	// USE_JAVA
 
     /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
         This instance may be deleted in the meantime (i.e. when a dialog is opened
@@ -2772,6 +2800,10 @@ SvxFrameToolBoxControl::SvxFrameToolBoxControl(
 	ToolBox&    rTbx )
 
     :   SfxToolBoxControl( nSlotId, nId, rTbx )
+#ifdef USE_JAVA
+    , aCurBorderOuter( SID_ATTR_BORDER_OUTER )
+    , aCurBorderInner( SID_ATTR_BORDER_INNER )
+#endif	// USE_JAVA
 {
 	rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
 }
@@ -2793,6 +2825,9 @@ SfxPopupWindow*	SvxFrameToolBoxControl::CreatePopupWindow()
 	pFrameWin->StartPopupMode( &GetToolBox(), FLOATWIN_POPUPMODE_GRABFOCUS | FLOATWIN_POPUPMODE_ALLOWTEAROFF );
 	pFrameWin->StartSelection();
     SetPopupWindow( pFrameWin );
+#ifdef USE_JAVA
+    pFrameWin->SetBorderChangedHdl( LINK( this, SvxFrameToolBoxControl, BorderChangedHdl ) );
+#endif	// USE_JAVA
 
 	return pFrameWin;
 }
@@ -2812,6 +2847,38 @@ void SvxFrameToolBoxControl::StateChanged(
                             ? STATE_DONTKNOW
                             : STATE_NOCHECK );
 }
+
+#ifdef USE_JAVA
+
+// -----------------------------------------------------------------------
+
+void SvxFrameToolBoxControl::Select( BOOL )
+{
+	Any a;
+	Sequence< PropertyValue > aArgs( 2 );
+	aArgs[0].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "OuterBorder" ));
+	aCurBorderOuter.QueryValue( a );
+	aArgs[0].Value = a;
+	aArgs[1].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "InnerBorder" ));
+	aCurBorderInner.QueryValue( a );
+	aArgs[1].Value = a;
+	Dispatch( OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:SetBorderStyle" ) ), aArgs );
+}
+
+// -----------------------------------------------------------------------
+
+IMPL_LINK( SvxFrameToolBoxControl, BorderChangedHdl, SvxFrameWindowState_Impl *, pBorderState )
+{
+	if ( pBorderState )
+	{
+		aCurBorderOuter = pBorderState->maBorderOuter;
+		aCurBorderInner = pBorderState->maBorderInner;
+	}
+
+	return 0;
+}
+
+#endif	USE_JAVA
 
 //========================================================================
 // class SvxFrameLineStyleToolBoxControl ---------------------------------
