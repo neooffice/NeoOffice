@@ -374,8 +374,16 @@ public:
 //========================================================================
 
 
+#ifdef USE_JAVA
+class SvxFrameWindowState_Impl;
+#endif	// USE_JAVA
+
 class SVX_DLLPUBLIC SvxFrameToolBoxControl : public SfxToolBoxControl
 {
+#ifdef USE_JAVA
+    SvxBoxItem                          aCurBorderOuter;
+    SvxBoxInfoItem                      aCurBorderInner;
+#endif	// USE_JAVA
 public:
 	SFX_DECL_TOOLBOX_CONTROL();
 	SvxFrameToolBoxControl( USHORT nSlotId, USHORT nId, ToolBox& rTbx );
@@ -384,7 +392,10 @@ public:
 	virtual SfxPopupWindow*		CreatePopupWindow();
 	virtual void				StateChanged( USHORT nSID, SfxItemState eState,
 											  const SfxPoolItem* pState );
-
+#ifdef USE_JAVA
+	virtual void				Select( BOOL bMod1 = FALSE );
+	DECL_LINK( BorderChangedHdl, SvxFrameWindowState_Impl * );
+#endif	// USE_JAVA
 };
 
 
