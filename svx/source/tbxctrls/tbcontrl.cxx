@@ -2533,10 +2533,14 @@ SvxColorToolBoxControl::SvxColorToolBoxControl(	USHORT nSlotId, USHORT nId, Tool
 
 	SfxToolBoxControl( nSlotId, nId, rTbx )
 {
+#ifdef USE_JAVA
+    rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+#else	// !USE_JAVA
     if ( nSlotId == SID_BACKGROUND_COLOR )
         rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
     else
         rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+#endif	// !USE_JAVA
 	rTbx.Invalidate();
     pBtnUpdater = new ::svx::ToolboxButtonColorUpdater( nSlotId, nId, &GetToolBox() );
 #ifdef USE_JAVA
@@ -2805,7 +2809,11 @@ SvxFrameToolBoxControl::SvxFrameToolBoxControl(
     , aCurBorderInner( SID_ATTR_BORDER_INNER )
 #endif	// USE_JAVA
 {
+#ifdef USE_JAVA
+    rTbx.SetItemBits( nId, TIB_DROPDOWN | rTbx.GetItemBits( nId ) );
+#else	// !USE_JAVA
 	rTbx.SetItemBits( nId, TIB_DROPDOWNONLY | rTbx.GetItemBits( nId ) );
+#endif	// !USE_JAVA
 }
 
 // -----------------------------------------------------------------------
