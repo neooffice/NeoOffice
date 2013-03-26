@@ -1595,6 +1595,13 @@ void SAL_CALL ZipPackage::setPropertyValue( const OUString& aPropertyName, const
 		if (!( aValue >>= aEncryptionKey ) )
 			throw IllegalArgumentException();
 	}
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("EncryptionKeySHA256") ) )
+	{
+		if (!( aValue >>= aEncryptionKeySHA256 ) )
+			throw IllegalArgumentException();
+	}
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("UseManifest") ) )
 	{
 		if (!( aValue >>= bUseManifest ) )
@@ -1616,6 +1623,13 @@ Any SAL_CALL ZipPackage::getPropertyValue( const OUString& PropertyName )
 		aAny <<= aEncryptionKey;
 		return aAny;
 	}
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "EncryptionKeySHA256" ) ) )
+	{
+		aAny <<= aEncryptionKeySHA256;
+		return aAny;
+	}
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "HasEncryptedEntries" ) ) )
 	{
 		aAny <<= bHasEncryptedEntries;

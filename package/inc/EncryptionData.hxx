@@ -52,6 +52,9 @@ public:
 	// On export aKey holds the derived key
 	// On import aKey holds the hash of the user enterred key
 	com::sun::star::uno::Sequence < sal_Int8 > aKey;
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	com::sun::star::uno::Sequence < sal_Int8 > aKeySHA256;
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 	com::sun::star::uno::Sequence < sal_uInt8 > aSalt, aInitVector, aDigest;
 	sal_Int32 nIterationCount;
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
