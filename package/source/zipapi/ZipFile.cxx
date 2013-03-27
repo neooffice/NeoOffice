@@ -161,6 +161,82 @@ void ZipFile::StaticGetCipher ( const ORef < EncryptionData > & xEncryptionData,
 	}
 }
 
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+
+sal_Bool ZipFile::StaticGetDecryptedData( const ::com::sun::star::uno::Sequence< sal_Int8 > &aReadBuffer, const vos::ORef < EncryptionData > &rData, ::com::sun::star::uno::Sequence< sal_Int8 > &aDecryptedBuffer )
+{
+	sal_Bool bRet = sal_False;
+
+	if ( !rData.isValid() )
+		return bRet;
+
+	if ( rData->nAlgorithm == ENCRYPTION_DATA_AES_CBC_W3C_PADDING )
+	{
+		Sequence < sal_Int8 > aKey = rData->nStartKeyAlgorithm == ENCRYPTION_DATA_SHA256 ? rData->aKeySHA256 : rData->aKey;
+		if ( aKey.getLength() && rData->nDerivedKeySize > 0 && rData->aInitVector.getLength() )
+		{
+			// Get the key
+			Sequence< sal_uInt8 > aDerivedKey( rData->nDerivedKeySize );
+			rtl_digest_PBKDF2( aDerivedKey.getArray(), aDerivedKey.getLength(), reinterpret_cast< const sal_uInt8* >( aKey.getConstArray() ), aKey.getLength(), reinterpret_cast< const sal_uInt8* >( rData->aSalt.getConstArray() ), rData->aSalt.getLength(), rData->nIterationCount );
+
+			// Decrypt data
+			uno::Reference< xml::crypto::XSEInitializer > xSEInitializer( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.SEInitializer" ) ) ), uno::UNO_QUERY );
+			if ( xSEInitializer.is() )
+			{
+				uno::Reference< xml::crypto::XXMLSecurityContext > xSecurityContext = xSEInitializer->createSecurityContext( ::rtl::OUString() );
+				if ( xSecurityContext.is() )
+				{
+					CK_MECHANISM_TYPE nCipherType = CKM_AES_CBC;
+					PK11SlotInfo *pSlot = PK11_GetBestSlot( nCipherType, NULL );
+					if ( pSlot )
+					{
+						SECItem aKeyItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aDerivedKey.getConstArray() ) ), aDerivedKey.getLength() };
+						PK11SymKey *pSymKey = PK11_ImportSymKey( pSlot, nCipherType, PK11_OriginDerive, CKA_DECRYPT, &aKeyItem, NULL );
+						if ( pSymKey )
+						{
+							SECItem aIVItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( rData->aInitVector.getConstArray() ) ), rData->aInitVector.getLength() };
+							SECItem *pSecParam = PK11_ParamFromIV( nCipherType, &aIVItem );
+							if ( pSecParam )
+							{
+								PK11Context *pEncContext = PK11_CreateContextBySymKey( nCipherType, CKA_DECRYPT, pSymKey, pSecParam );
+								if ( pEncContext )
+								{
+									int nBlockSize = PK11_GetBlockSize( nCipherType, pSecParam );
+									aDecryptedBuffer.realloc( aReadBuffer.getLength() + nBlockSize );
+									int nDecryptedLen = 0;
+									if ( PK11_CipherOp( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() ), &nDecryptedLen, aDecryptedBuffer.getLength(), const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ) ), aReadBuffer.getLength() ) == SECSuccess )
+									{
+										unsigned int nFinalizedLen = 0;
+										aDecryptedBuffer.realloc( nDecryptedLen + ( nBlockSize * 2 ) );
+										if ( PK11_DigestFinal( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() + nDecryptedLen ), &nFinalizedLen, aDecryptedBuffer.getLength() - nDecryptedLen ) == SECSuccess )
+										{
+											aDecryptedBuffer.realloc( nDecryptedLen + nFinalizedLen );
+											bRet = sal_True;
+										}
+									}
+
+									PK11_DestroyContext( pEncContext, PR_TRUE );
+								}
+
+								SECITEM_FreeItem( pSecParam, PR_TRUE );
+							}
+
+							PK11_FreeSymKey( pSymKey );
+						}
+
+						PK11_FreeSlot( pSlot );
+					}
+
+      		 	 	xSEInitializer->freeSecurityContext( xSecurityContext );
+				}
+			}
+		}
+	}
+	return bRet;
+}
+
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+
 void ZipFile::StaticFillHeader ( const ORef < EncryptionData > & rData, 
 								sal_Int32 nSize,
 								const ::rtl::OUString& aMediaType,
@@ -342,84 +418,26 @@ sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffe
 	sal_Int32 nSize = aReadBuffer.getLength();
 
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
-	if ( rData->nAlgorithm == ENCRYPTION_DATA_AES_CBC_W3C_PADDING )
+	Sequence< sal_Int8 > aDecryptedBuffer;
+	if ( StaticGetDecryptedData( aReadBuffer, rData, aDecryptedBuffer ) )
 	{
-		Sequence < sal_Int8 > aKey = rData->nStartKeyAlgorithm == ENCRYPTION_DATA_SHA256 ? rData->aKeySHA256 : rData->aKey;
-		if ( aKey.getLength() && rData->nDerivedKeySize > 0 && rData->aInitVector.getLength() )
+		// Check digest of decrypted data
+		PK11Context *pDigestContext = PK11_CreateDigestContext( rData->nDigestType == ENCRYPTION_DATA_SHA256_1K ? SEC_OID_SHA256 : SEC_OID_SHA1 );
+		if ( pDigestContext && PK11_DigestBegin( pDigestContext ) == SECSuccess )
 		{
-			// Get the key
-			Sequence< sal_uInt8 > aDerivedKey( rData->nDerivedKeySize );
-			rtl_digest_PBKDF2( aDerivedKey.getArray(), aDerivedKey.getLength(), reinterpret_cast< const sal_uInt8* >( aKey.getConstArray() ), aKey.getLength(), reinterpret_cast< const sal_uInt8* >( rData->aSalt.getConstArray() ), rData->aSalt.getLength(), rData->nIterationCount );
-
-			// Decrypt data
-			uno::Reference< xml::crypto::XSEInitializer > xSEInitializer( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.SEInitializer" ) ) ), uno::UNO_QUERY );
-			if ( xSEInitializer.is() )
+			if ( PK11_DigestOp( pDigestContext, reinterpret_cast< const unsigned char* >( aDecryptedBuffer.getConstArray() ), aDecryptedBuffer.getLength() > 1024 ? 1024 : aDecryptedBuffer.getLength() ) == SECSuccess )
 			{
-				uno::Reference< xml::crypto::XXMLSecurityContext > xSecurityContext = xSEInitializer->createSecurityContext( ::rtl::OUString() );
-				if ( xSecurityContext.is() )
+				uno::Sequence< sal_Int8 > aDigestSeq( 32 );
+				unsigned int nDigestLen = 0;
+				if ( PK11_DigestFinal( pDigestContext, reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &nDigestLen, aDigestSeq.getLength() ) == SECSuccess )
 				{
-					CK_MECHANISM_TYPE nCipherType = CKM_AES_CBC;
-					PK11SlotInfo *pSlot = PK11_GetBestSlot( nCipherType, NULL );
-					if ( pSlot )
-					{
-						SECItem aKeyItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aDerivedKey.getConstArray() ) ), aDerivedKey.getLength() };
-						PK11SymKey *pSymKey = PK11_ImportSymKey( pSlot, nCipherType, PK11_OriginDerive, CKA_DECRYPT, &aKeyItem, NULL );
-						if ( pSymKey )
-						{
-							SECItem aIVItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( rData->aInitVector.getConstArray() ) ), rData->aInitVector.getLength() };
-							SECItem *pSecParam = PK11_ParamFromIV( nCipherType, &aIVItem );
-							if ( pSecParam )
-							{
-								PK11Context *pEncContext = PK11_CreateContextBySymKey( nCipherType, CKA_DECRYPT, pSymKey, pSecParam );
-								if ( pEncContext )
-								{
-									int nBlockSize = PK11_GetBlockSize( nCipherType, pSecParam );
-									Sequence< sal_Int8 > aDecryptedBuffer( aReadBuffer.getLength() + nBlockSize );
-									int nDecryptedLen = 0;
-									if ( PK11_CipherOp( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() ), &nDecryptedLen, aDecryptedBuffer.getLength(), const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ) ), aReadBuffer.getLength() ) == SECSuccess )
-									{
-										unsigned int nFinalizedLen = 0;
-										aDecryptedBuffer.realloc( nDecryptedLen + ( nBlockSize * 2 ) );
-										if ( PK11_DigestFinal( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() + nDecryptedLen ), &nFinalizedLen, aDecryptedBuffer.getLength() - nDecryptedLen ) == SECSuccess )
-										{
-											aDecryptedBuffer.realloc( nDecryptedLen + nFinalizedLen );
-
-											// Check digest of decrypted data
-											PK11Context *pDigestContext = PK11_CreateDigestContext( rData->nDigestType == ENCRYPTION_DATA_SHA256_1K ? SEC_OID_SHA256 : SEC_OID_SHA1 );
-											if ( pDigestContext && PK11_DigestBegin( pDigestContext ) == SECSuccess )
-											{
-												if ( PK11_DigestOp( pDigestContext, reinterpret_cast< const unsigned char* >( aDecryptedBuffer.getConstArray() ), aDecryptedBuffer.getLength() > 1024 ? 1024 : aDecryptedBuffer.getLength() ) == SECSuccess )
-												{
-													uno::Sequence< sal_Int8 > aDigestSeq( 32 );
-													unsigned int nDigestLen = 0;
-													if ( PK11_DigestFinal( pDigestContext, reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &nDigestLen, aDigestSeq.getLength() ) == SECSuccess )
-													{
-														aDigestSeq.realloc( nDigestLen );
-														if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
-															bRet = sal_True;
-													}
-												}
-
-												PK11_DestroyContext( pDigestContext, PR_TRUE );
-											}
-										}
-									}
-
-									PK11_DestroyContext( pEncContext, PR_TRUE );
-								}
-
-								SECITEM_FreeItem( pSecParam, PR_TRUE );
-							}
-
-							PK11_FreeSymKey( pSymKey );
-						}
-
-						PK11_FreeSlot( pSlot );
-					}
-
-      		 	 	xSEInitializer->freeSecurityContext( xSecurityContext );
+					aDigestSeq.realloc( nDigestLen );
+					if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
+						bRet = sal_True;
 				}
 			}
+
+			PK11_DestroyContext( pDigestContext, PR_TRUE );
 		}
 	}
 	else
