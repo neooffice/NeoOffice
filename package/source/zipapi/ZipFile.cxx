@@ -345,10 +345,10 @@ sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffe
 		{
 #ifdef MACOSX
 			AES_KEY aAESKey;
-			Sequence< sal_Int8 > aDecryptBuffer( nSize );
-			Sequence< sal_uInt8 > aInitVector = rData->aInitVector;
 			if ( !AES_set_decrypt_key( reinterpret_cast< const unsigned char* >( aKey.getConstArray() ), aKey.getLength() * 8, &aAESKey ) )
 			{
+				Sequence< sal_Int8 > aDecryptBuffer( nSize );
+				Sequence< sal_uInt8 > aInitVector = rData->aInitVector;
 				AES_cbc_encrypt( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ), reinterpret_cast< unsigned char* >( aDecryptBuffer.getArray() ), aDecryptBuffer.getLength(), &aAESKey, reinterpret_cast< unsigned char* >( aInitVector.getArray() ), AES_DECRYPT );
 
 				// Check digest of decrypted output
@@ -358,7 +358,7 @@ sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffe
 					aDigestSeq.realloc( SHA256_DIGEST_LENGTH );
 					SHA256_CTX aCtx;
 					SHA256_Init( &aCtx );
-					SHA256_Update( &aCtx, reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ), aReadBuffer.getLength() > 1024 ? 1024 : aReadBuffer.getLength() );
+					SHA256_Update( &aCtx, reinterpret_cast< const unsigned char* >( aDecryptBuffer.getConstArray() ), aDecryptBuffer.getLength() > 1024 ? 1024 : aDecryptBuffer.getLength() );
 					SHA256_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
 				}
 				else if ( rData->aDigest.getLength() == SHA_DIGEST_LENGTH )
@@ -366,11 +366,11 @@ sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffe
 					aDigestSeq.realloc( SHA_DIGEST_LENGTH );
 					SHA_CTX aCtx;
 					SHA1_Init( &aCtx );
-					SHA1_Update( &aCtx, reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ), aReadBuffer.getLength() > 1024 ? 1024 : aReadBuffer.getLength() );
+					SHA1_Update( &aCtx, reinterpret_cast< const unsigned char* >( aDecryptBuffer.getConstArray() ), aDecryptBuffer.getLength() > 1024 ? 1024 : aDecryptBuffer.getLength() );
 					SHA1_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
 				}
 
-				if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
+				if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
 					bRet = sal_True;
 			}
 #endif	// MACOSX
