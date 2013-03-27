@@ -361,7 +361,7 @@ void ZipPackage::parseManifest()
 											{
 												sal_Int32 nStartKeyAlgorithm = 0;
 												*pStartKeyAlgorithm >>= nStartKeyAlgorithm;
-												pStream->setAlgorithm( nStartKeyAlgorithm );
+												pStream->setStartKeyAlgorithm( nStartKeyAlgorithm );
 											}
 #endif  // !NO_OOO_3_4_1_AES_ENCRYPTION
 

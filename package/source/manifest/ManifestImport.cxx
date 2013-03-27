@@ -310,12 +310,12 @@ void SAL_CALL ManifestImport::startElement( const OUString& aName, const uno::Re
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 		}
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
-		else if (aStack.top() == e_EncryptionData && aName == sKeyDerivationElement)
+		else if (aStack.top() == e_EncryptionData && aName == sStartKeyAlgorithmElement)
 		{
 			aStack.push (e_StartKeyAlgorithm);
             if ( !bIgnoreEncryptData )
             {
-                OUString aStartKeyAlgString = xAttribs->getValueByName( sStartKeyAlgorithmElement );
+                OUString aStartKeyAlgString = xAttribs->getValueByName( OUString( RTL_CONSTASCII_USTRINGPARAM ( ATTRIBUTE_START_KEY_GENERATION_NAME ) ) );
                 if ( aStartKeyAlgString.equalsAscii( SHA1_NAME ) || aStartKeyAlgString.equalsAscii( SHA1_URL ) )
                 {
                     aSequence[nNumProperty].Name = sStartKeyAlgorithmProperty;
