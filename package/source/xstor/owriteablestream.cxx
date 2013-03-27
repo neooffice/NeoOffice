@@ -208,18 +208,10 @@ uno::Sequence< sal_Int8 > MakeKeyFromPass( ::rtl::OUString aPass, sal_Bool bUseU
 
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 
-uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass, sal_Bool bUseUTF )
+uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass )
 {
 #ifdef MACOSX
-	// MS_1252 encoding was used for SO60 document format password encoding,
-	// this encoding supports only a minor subset of nonascii characters,
-	// but for compatibility reasons it has to be used for old document formats
-
-	::rtl::OString aByteStrPass;
-	if ( bUseUTF )
-		aByteStrPass = ::rtl::OUStringToOString( aPass, RTL_TEXTENCODING_UTF8 );
-	else
-		aByteStrPass = ::rtl::OUStringToOString( aPass, RTL_TEXTENCODING_MS_1252 );
+	::rtl::OString aByteStrPass = ::rtl::OUStringToOString( aPass, RTL_TEXTENCODING_UTF8 );
 
 	sal_uInt8 pBuffer[SHA256_DIGEST_LENGTH];
 	SHA256_CTX aCtx;
@@ -1091,7 +1083,7 @@ uno::Reference< io::XStream > OWriteStream_Impl::GetStream( sal_Int32 nStreamMod
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass, sal_True ) );
+		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 
 		try {
@@ -1107,7 +1099,7 @@ uno::Reference< io::XStream > OWriteStream_Impl::GetStream( sal_Int32 nStreamMod
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass, sal_False ) );
+			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 			try {
 				// the stream must be cashed to be resaved
@@ -1477,7 +1469,7 @@ void OWriteStream_Impl::GetCopyOfLastCommit( uno::Reference< io::XStream >& xTar
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ) );
 #else	// NO_OOO_3_4_1_AES_ENCRYPTION
-		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass, sal_True ) );
+		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 
 		try {
@@ -1498,7 +1490,7 @@ void OWriteStream_Impl::GetCopyOfLastCommit( uno::Reference< io::XStream >& xTar
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass, sal_False ) );
+			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 			try {
 				xDataToCopy = m_xPackageStream->getDataStream();
