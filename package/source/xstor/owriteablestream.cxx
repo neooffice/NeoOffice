@@ -212,14 +212,12 @@ uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass )
 {
 #ifdef MACOSX
 	::rtl::OString aByteStrPass = ::rtl::OUStringToOString( aPass, RTL_TEXTENCODING_UTF8 );
-
-	sal_uInt8 pBuffer[SHA256_DIGEST_LENGTH];
+	uno::Sequence< sal_Int8 > aDigestSeq( SHA256_DIGEST_LENGTH );
 	SHA256_CTX aCtx;
 	SHA256_Init( &aCtx );
 	SHA256_Update( &aCtx, aByteStrPass.getStr(), aByteStrPass.getLength() );
-	SHA256_Final( pBuffer, &aCtx );
-
-	return uno::Sequence< sal_Int8 >( (sal_Int8*)pBuffer, SHA256_DIGEST_LENGTH );
+	SHA256_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
+	return aDigestSeq;
 #else	// MACOSX
 	return uno::Sequence< sal_Int8 >();
 #endif	// MACOSX
