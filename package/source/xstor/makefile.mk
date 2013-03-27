@@ -39,6 +39,19 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+.IF "$(SYSTEM_MOZILLA)" != "YES"
+MOZ_INC = $(SOLARVERSION)$/$(INPATH)$/inc$(UPDMINOREXT)$/mozilla
+NSS_INC = $(MOZ_INC)$/nss
+NSPR_INC = $(MOZ_INC)$/nspr
+.ELSE
+# MOZ_INC already defined from environment
+NSS_INC = $(MOZ_NSS_CFLAGS)
+NSPR_INC = $(MOZ_INC)$/nspr
+.ENDIF
+SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+
 # --- Files --------------------------------------------------------
 
 SLOFILES =  \
@@ -59,9 +72,9 @@ SHL1STDLIBS=\
 	$(CPPUHELPERLIB)	\
 	$(COMPHELPERLIB)
 
-.IF "$(GUIBASE)" == "java" && "$(OS)" == "MACOSX"
-SHL1STDLIBS+=-lcrypto
-.ENDIF		# "$(GUIBASE)" == "java" && "$(OS)" == "MACOSX"
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+SHL1STDLIBS += $(NSPR4LIB) $(NSS3LIB)
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
 SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(TARGET).def

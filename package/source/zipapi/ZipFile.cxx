@@ -56,8 +56,12 @@
 #include <comphelper/storagehelper.hxx>
 
 #if !defined NO_OOO_3_4_1_AES_ENCRYPTION && defined MACOSX
-#include <openssl/aes.h>
-#include <openssl/sha.h>
+
+#include <com/sun/star/xml/crypto/XSEInitializer.hpp>
+#include <com/sun/star/xml/crypto/XXMLSecurityContext.hpp>
+#include <comphelper/processfactory.hxx>
+#include <pk11func.h>
+
 #endif	// !NO_OOO_3_4_1_AES_ENCRYPTION && MACOSX
 
 using namespace vos;
@@ -341,39 +345,81 @@ sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffe
 	if ( rData->nAlgorithm == ENCRYPTION_DATA_AES_CBC_W3C_PADDING )
 	{
 		Sequence < sal_Int8 > aKey = rData->nStartKeyAlgorithm == ENCRYPTION_DATA_SHA256 ? rData->aKeySHA256 : rData->aKey;
-		if ( aKey.getLength() && rData->aInitVector.getLength() == AES_BLOCK_SIZE )
+		if ( aKey.getLength() && rData->nDerivedKeySize > 0 && rData->aInitVector.getLength() )
 		{
-#ifdef MACOSX
-			AES_KEY aAESKey;
-			if ( !AES_set_decrypt_key( reinterpret_cast< const unsigned char* >( aKey.getConstArray() ), aKey.getLength() * 8, &aAESKey ) )
+			// Get the key
+			Sequence< sal_uInt8 > aDerivedKey( rData->nDerivedKeySize );
+			rtl_digest_PBKDF2( aDerivedKey.getArray(), aDerivedKey.getLength(), reinterpret_cast< const sal_uInt8* >( aKey.getConstArray() ), aKey.getLength(), reinterpret_cast< const sal_uInt8* >( rData->aSalt.getConstArray() ), rData->aSalt.getLength(), rData->nIterationCount );
+
+			// Decrypt data
+			uno::Reference< xml::crypto::XSEInitializer > xSEInitializer( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.SEInitializer" ) ) ), uno::UNO_QUERY );
+			if ( xSEInitializer.is() )
 			{
-				Sequence< sal_Int8 > aDecryptBuffer( nSize );
-				Sequence< sal_uInt8 > aInitVector = rData->aInitVector;
-				AES_cbc_encrypt( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ), reinterpret_cast< unsigned char* >( aDecryptBuffer.getArray() ), aDecryptBuffer.getLength(), &aAESKey, reinterpret_cast< unsigned char* >( aInitVector.getArray() ), AES_DECRYPT );
-
-				// Check digest of decrypted output
-				Sequence< sal_uInt8 > aDigestSeq;
-				if ( rData->nDigestType == ENCRYPTION_DATA_SHA256_1K && rData->aDigest.getLength() == SHA256_DIGEST_LENGTH )
+				uno::Reference< xml::crypto::XXMLSecurityContext > xSecurityContext = xSEInitializer->createSecurityContext( ::rtl::OUString() );
+				if ( xSecurityContext.is() )
 				{
-					aDigestSeq.realloc( SHA256_DIGEST_LENGTH );
-					SHA256_CTX aCtx;
-					SHA256_Init( &aCtx );
-					SHA256_Update( &aCtx, reinterpret_cast< const unsigned char* >( aDecryptBuffer.getConstArray() ), aDecryptBuffer.getLength() > 1024 ? 1024 : aDecryptBuffer.getLength() );
-					SHA256_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
-				}
-				else if ( rData->aDigest.getLength() == SHA_DIGEST_LENGTH )
-				{
-					aDigestSeq.realloc( SHA_DIGEST_LENGTH );
-					SHA_CTX aCtx;
-					SHA1_Init( &aCtx );
-					SHA1_Update( &aCtx, reinterpret_cast< const unsigned char* >( aDecryptBuffer.getConstArray() ), aDecryptBuffer.getLength() > 1024 ? 1024 : aDecryptBuffer.getLength() );
-					SHA1_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
-				}
+					CK_MECHANISM_TYPE nCipherType = CKM_AES_CBC;
+					PK11SlotInfo *pSlot = PK11_GetBestSlot( nCipherType, NULL );
+					if ( pSlot )
+					{
+						SECItem aKeyItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aDerivedKey.getConstArray() ) ), aDerivedKey.getLength() };
+						PK11SymKey *pSymKey = PK11_ImportSymKey( pSlot, nCipherType, PK11_OriginDerive, CKA_DECRYPT, &aKeyItem, NULL );
+						if ( pSymKey )
+						{
+							SECItem aIVItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( rData->aInitVector.getConstArray() ) ), rData->aInitVector.getLength() };
+							SECItem *pSecParam = PK11_ParamFromIV( nCipherType, &aIVItem );
+							if ( pSecParam )
+							{
+								PK11Context *pEncContext = PK11_CreateContextBySymKey( nCipherType, CKA_DECRYPT, pSymKey, pSecParam );
+								if ( pEncContext )
+								{
+									int nBlockSize = PK11_GetBlockSize( nCipherType, pSecParam );
+									Sequence< sal_Int8 > aDecryptedBuffer( aReadBuffer.getLength() + nBlockSize );
+									int nDecryptedLen = 0;
+									if ( PK11_CipherOp( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() ), &nDecryptedLen, aDecryptedBuffer.getLength(), const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ) ), aReadBuffer.getLength() ) == SECSuccess )
+									{
+										unsigned int nFinalizedLen = 0;
+										aDecryptedBuffer.realloc( nDecryptedLen + ( nBlockSize * 2 ) );
+										if ( PK11_DigestFinal( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() + nDecryptedLen ), &nFinalizedLen, aDecryptedBuffer.getLength() - nDecryptedLen ) == SECSuccess )
+										{
+											aDecryptedBuffer.realloc( nDecryptedLen + nFinalizedLen );
 
-				if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
-					bRet = sal_True;
+											// Check digest of decrypted data
+											PK11Context *pDigestContext = PK11_CreateDigestContext( rData->nDigestType == ENCRYPTION_DATA_SHA256_1K ? SEC_OID_SHA256 : SEC_OID_SHA1 );
+											if ( pDigestContext && PK11_DigestBegin( pDigestContext ) == SECSuccess )
+											{
+												if ( PK11_DigestOp( pDigestContext, reinterpret_cast< const unsigned char* >( aDecryptedBuffer.getConstArray() ), aDecryptedBuffer.getLength() > 1024 ? 1024 : aDecryptedBuffer.getLength() ) == SECSuccess )
+												{
+													uno::Sequence< sal_Int8 > aDigestSeq( 32 );
+													unsigned int nDigestLen = 0;
+													if ( PK11_DigestFinal( pDigestContext, reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &nDigestLen, aDigestSeq.getLength() ) == SECSuccess )
+													{
+														aDigestSeq.realloc( nDigestLen );
+														if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
+															bRet = sal_True;
+													}
+												}
+
+												PK11_DestroyContext( pDigestContext, PR_TRUE );
+											}
+										}
+									}
+
+									PK11_DestroyContext( pEncContext, PR_TRUE );
+								}
+
+								SECITEM_FreeItem( pSecParam, PR_TRUE );
+							}
+
+							PK11_FreeSymKey( pSymKey );
+						}
+
+						PK11_FreeSlot( pSlot );
+					}
+
+      		 	 	xSEInitializer->freeSecurityContext( xSecurityContext );
+				}
 			}
-#endif	// MACOSX
 		}
 	}
 	else

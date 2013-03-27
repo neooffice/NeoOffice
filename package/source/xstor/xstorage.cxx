@@ -100,7 +100,7 @@ struct StorInternalData_Impl
 
 extern uno::Sequence< sal_Int8 > MakeKeyFromPass( ::rtl::OUString aPass, sal_Bool bUseUTF );
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
-extern uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass );
+uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass, const uno::Reference< lang::XMultiServiceFactory >& xFactory );
 #endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 ::rtl::OUString GetNewTempFileURL( const uno::Reference< lang::XMultiServiceFactory > xFactory );
@@ -4187,7 +4187,7 @@ void SAL_CALL OStorage::setEncryptionPassword( const ::rtl::OUString& aPass )
 											uno::makeAny( MakeKeyFromPass( aPass, sal_True ) ) );
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 			xPackPropSet->setPropertyValue( ::rtl::OUString::createFromAscii("EncryptionKeySHA256"),
-											uno::makeAny( MakeKeySHA256FromPass( aPass ) ) );
+											uno::makeAny( MakeKeySHA256FromPass( aPass, m_pImpl->m_xFactory ) ) );
 #endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 			m_pImpl->m_bHasCommonPassword = sal_True;

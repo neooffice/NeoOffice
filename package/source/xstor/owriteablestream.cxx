@@ -57,9 +57,13 @@
 #include <rtl/digest.h>
 #include <rtl/logfile.hxx>
 
-#if !defined NO_OOO_3_4_1_AES_ENCRYPTION && defined MACOSX
-#include <openssl/sha.h>
-#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION && MACOSX
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+
+#include <com/sun/star/xml/crypto/XSEInitializer.hpp>
+#include <com/sun/star/xml/crypto/XXMLSecurityContext.hpp>
+#include <pk11func.h>
+
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 using namespace ::com::sun::star;
 
@@ -208,19 +212,38 @@ uno::Sequence< sal_Int8 > MakeKeyFromPass( ::rtl::OUString aPass, sal_Bool bUseU
 
 #ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 
-uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass )
+uno::Sequence< sal_Int8 > MakeKeySHA256FromPass( ::rtl::OUString aPass, const uno::Reference< lang::XMultiServiceFactory >& xFactory )
 {
-#ifdef MACOSX
+	uno::Sequence< sal_Int8 > aRet;
+
 	::rtl::OString aByteStrPass = ::rtl::OUStringToOString( aPass, RTL_TEXTENCODING_UTF8 );
-	uno::Sequence< sal_Int8 > aDigestSeq( SHA256_DIGEST_LENGTH );
-	SHA256_CTX aCtx;
-	SHA256_Init( &aCtx );
-	SHA256_Update( &aCtx, aByteStrPass.getStr(), aByteStrPass.getLength() );
-	SHA256_Final( reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &aCtx );
-	return aDigestSeq;
-#else	// MACOSX
-	return uno::Sequence< sal_Int8 >();
-#endif	// MACOSX
+	uno::Reference< xml::crypto::XSEInitializer > xSEInitializer( xFactory->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.SEInitializer" ) ) ), uno::UNO_QUERY );
+	if ( xSEInitializer.is() )
+	{
+		uno::Reference< xml::crypto::XXMLSecurityContext > xSecurityContext = xSEInitializer->createSecurityContext( ::rtl::OUString() );
+		if ( xSecurityContext.is() )
+		{
+			PK11Context *pDigestContext = PK11_CreateDigestContext( SEC_OID_SHA256 );
+			if ( pDigestContext && PK11_DigestBegin( pDigestContext ) == SECSuccess )
+			{
+				if ( PK11_DigestOp( pDigestContext, reinterpret_cast< const unsigned char* >( aByteStrPass.getStr() ), aByteStrPass.getLength() ) == SECSuccess )
+				{
+					uno::Sequence< sal_Int8 > aDigestSeq( 32 );
+					unsigned int nDigestLen = 0;
+					if ( PK11_DigestFinal( pDigestContext, reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &nDigestLen, aDigestSeq.getLength() ) == SECSuccess )
+					{
+						aDigestSeq.realloc( nDigestLen );
+						aRet = aDigestSeq;
+					}
+				}
+				PK11_DestroyContext( pDigestContext, PR_TRUE );
+			}
+
+        	xSEInitializer->freeSecurityContext( xSecurityContext );
+		}
+	}
+
+	return aRet;
 }
 
 #endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
@@ -1081,7 +1104,7 @@ uno::Reference< io::XStream > OWriteStream_Impl::GetStream( sal_Int32 nStreamMod
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass ) );
+		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass, m_xFactory ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 
 		try {
@@ -1097,7 +1120,7 @@ uno::Reference< io::XStream > OWriteStream_Impl::GetStream( sal_Int32 nStreamMod
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass ) );
+			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass, m_xFactory ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 			try {
 				// the stream must be cashed to be resaved
@@ -1467,7 +1490,7 @@ void OWriteStream_Impl::GetCopyOfLastCommit( uno::Reference< io::XStream >& xTar
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ) );
 #else	// NO_OOO_3_4_1_AES_ENCRYPTION
-		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass ) );
+		SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_True ), MakeKeySHA256FromPass( aPass, m_xFactory ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 
 		try {
@@ -1488,7 +1511,7 @@ void OWriteStream_Impl::GetCopyOfLastCommit( uno::Reference< io::XStream >& xTar
 #ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ) );
 #else	 // NO_OOO_3_4_1_AES_ENCRYPTION
-			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass ) );
+			SetEncryptionKeyProperty_Impl( xPropertySet, MakeKeyFromPass( aPass, sal_False ), MakeKeySHA256FromPass( aPass, m_xFactory ) );
 #endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 			try {
 				xDataToCopy = m_xPackageStream->getDataStream();

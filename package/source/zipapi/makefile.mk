@@ -28,53 +28,45 @@
 #
 #*************************************************************************
 
-# 2 == Unicode
-MAJOR_VERSION=2
-
-PRJ=..
+PRJ=..$/..
 PRJNAME=package
-TARGET=package
+TARGET=zipapi
 
 ENABLE_EXCEPTIONS=TRUE
-USE_DEFFILE=TRUE
-NO_BSYMBOLIC=TRUE
-
 
 # --- Settings -----------------------------------------------------
 
-.INCLUDE :  settings.mk
-
-# --- General ----------------------------------------------------
-
-LIB1TARGET= $(SLB)$/$(TARGET).lib
-LIB1FILES=	\
-    $(SLB)$/zipapi.lib \
-    $(SLB)$/zippackage.lib \
-    $(SLB)$/manifest.lib
-
-# --- Shared-Library -----------------------------------------------
-
-SHL1TARGET=$(TARGET)$(MAJOR_VERSION)
-SHL1IMPLIB=i$(TARGET)
-SHL1VERSIONMAP=$(SOLARENV)$/src$/component.map
-
-SHL1STDLIBS=\
-	$(CPPULIB)		\
-	$(UCBHELPERLIB)		\
-	$(CPPUHELPERLIB)	\
-	$(COMPHELPERLIB)		\
-	$(SALLIB)		\
-	$(ZLIB3RDLIB)
+.INCLUDE : settings.mk
 
 .IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-SHL1STDLIBS += $(NSPR4LIB) $(NSS3LIB)
+.IF "$(SYSTEM_MOZILLA)" != "YES"
+MOZ_INC = $(SOLARVERSION)$/$(INPATH)$/inc$(UPDMINOREXT)$/mozilla
+NSS_INC = $(MOZ_INC)$/nss
+NSPR_INC = $(MOZ_INC)$/nspr
+.ELSE
+# MOZ_INC already defined from environment
+NSS_INC = $(MOZ_NSS_CFLAGS)
+NSPR_INC = $(MOZ_INC)$/nspr
+.ENDIF
+SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
-SHL1DEF=$(MISC)$/$(SHL1TARGET).def
-SHL1LIBS=$(LIB1TARGET)
-DEF1NAME=$(SHL1TARGET)
+# --- Files --------------------------------------------------------
+#CFLAGS+=/Ob0 /Od
+.IF "$(SYSTEM_ZLIB)" == "YES"
+CFLAGS+=-DSYSTEM_ZLIB
+.ENDIF
+SLOFILES= \
+		$(SLO)$/CRC32.obj			\
+		$(SLO)$/ByteChucker.obj		\
+		$(SLO)$/ByteGrabber.obj		\
+		$(SLO)$/Inflater.obj		\
+		$(SLO)$/Deflater.obj		\
+		$(SLO)$/ZipEnumeration.obj	\
+		$(SLO)$/ZipFile.obj			\
+		$(SLO)$/ZipOutputStream.obj	\
+		$(SLO)$/XUnbufferedStream.obj
 
-# --- Targets ----------------------------------------------------------
+# --- Targets ------------------------------------------------------
 
-.INCLUDE :  target.mk
-
+.INCLUDE : target.mk
