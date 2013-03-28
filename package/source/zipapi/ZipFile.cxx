@@ -55,14 +55,14 @@
 
 #include <comphelper/storagehelper.hxx>
 
-#if !defined NO_OOO_3_4_1_AES_ENCRYPTION && defined MACOSX
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 
 #include <com/sun/star/xml/crypto/XSEInitializer.hpp>
 #include <com/sun/star/xml/crypto/XXMLSecurityContext.hpp>
 #include <comphelper/processfactory.hxx>
 #include <pk11func.h>
 
-#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION && MACOSX
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 using namespace vos;
 using namespace rtl;
