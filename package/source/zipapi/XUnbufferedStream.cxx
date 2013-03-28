@@ -251,11 +251,14 @@ sal_Int32 SAL_CALL XUnbufferedStream::readBytes( Sequence< sal_Int8 >& aData, sa
 						if ( mbCheckCRC )
 							maCRC.update( maCompBuffer );
 
+#ifdef NO_OOO_3_4_1_AES_ENCRYPTION
 						Sequence < sal_Int8 > aCryptBuffer ( nZipRead );
-#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+#else	// NO_OOO_3_4_1_AES_ENCRYPTION
+						Sequence < sal_Int8 > aCryptBuffer;
 						if ( !ZipFile::StaticGetDecryptedData( maCompBuffer, mxData, aCryptBuffer ) )
 						{
-#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+							aCryptBuffer.realloc( nZipRead );
+#endif	// NO_OOO_3_4_1_AES_ENCRYPTION
  						rtlCipherError aResult = 
                             rtl_cipher_decode ( maCipher,
 									  maCompBuffer.getConstArray(),
