@@ -767,5 +767,7 @@
 	<string>6.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.8.0</string>
 </dict>
 </plist>
