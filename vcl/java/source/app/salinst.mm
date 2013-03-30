@@ -657,8 +657,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	if ( !bMainEventLoop && pSalData->maNativeEventCondition.check() )
 	{
-		nCount = ReleaseYieldMutex();
 		ULONG nEventQueueMutexCount = ReleaseEventQueueMutex();
+		nCount = ReleaseYieldMutex();
 		OThread::yield();
 		AcquireEventQueueMutex( nEventQueueMutexCount );
 		AcquireYieldMutex( nCount );
