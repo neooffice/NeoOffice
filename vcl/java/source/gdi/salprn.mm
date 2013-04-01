@@ -337,9 +337,19 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mbFinished )
 		return;
 
+	mbResult = NO;
+
 	NSPageLayout *pLayout = [NSPageLayout pageLayout];
-	if ( pLayout )
+	if ( pLayout && mpInfo && mpWindow && ![mpWindow attachedSheet] )
+	{
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
+		if ( ![mpWindow attachedSheet] )
+			mbFinished = YES;
+	}
+	else
+	{
+		mbFinished = YES;
+	}
 }
 
 @end
@@ -693,11 +703,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mbFinished )
 		return;
 
+	mbResult = NO;
+
 	// Set job title
 	[self setJobTitle];
 
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
-	if ( pPanel )
+	if ( pPanel && mpInfo )
 	{
 		// Fix bug 1548 by setting to print all pages
 		NSMutableDictionary *pDictionary = [mpInfo dictionary];
@@ -743,11 +755,23 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					[NSPrintOperation setCurrentOperation:pOldOperation];
 				}
 			}
+
+			mbFinished = YES;
+		}
+		else if ( ![mpWindow attachedSheet] )
+		{
+			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+			if ( ![mpWindow attachedSheet] )
+				mbFinished = YES;
 		}
 		else
 		{
-			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+			mbFinished = YES;
 		}
+	}
+	else
+	{
+		mbFinished = YES;
 	}
 }
 
