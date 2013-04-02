@@ -449,6 +449,7 @@ String RID_STR_COULDNOTCONNECT_NOJAVA
 	Text [ de ] = "Die Datenbank-Treiber wurde entfernt, weil es externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt.";
 	Text [ fr ] = "Le pilote de base de données a été supprimé car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.";
 	Text [ it ] = "Il driver di database è stato rimosso in quanto richiede un software esterno che è stata identificata come un rischio per la sicurezza.";
+	Text [ nl ] = "De database stuurprogramma is verwijderd, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
 };
 
 #endif	// !SOLAR_JAVA
