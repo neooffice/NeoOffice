@@ -1038,10 +1038,7 @@
 <xsl:template match="paragraph[@id='hd_id0804200803314150']" />
 <xsl:template match="paragraph[@id='par_id0804200803314235']" />
 
-<!-- Remove Java and Python text -->
-<xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
-<xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
-<xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
+<!-- Remove Java text -->
 <xsl:template match="paragraph[@id='par_id3152363']">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
@@ -1069,7 +1066,81 @@
 <xsl:template match="paragraph[@id='par_idN105AD']" />
 <xsl:template match="paragraph[@id='par_idN10686']" />
 
-<!-- Replace paragraph with "disable due to security risk" warning -->
+<!-- Remove Online Registration text -->
+<xsl:template match="paragraph[@id='par_id3153882']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
+<xsl:template match="paragraph[@id='hd_id3153624']" />
+<xsl:template match="paragraph[@id='par_id3150445']" />
+<xsl:template match="paragraph[@id='hd_id3145629']" />
+<xsl:template match="paragraph[@id='par_id3149999']" />
+<xsl:template match="paragraph[@id='hd_id3149760']" />
+<xsl:template match="paragraph[@id='par_id3151234']" />
+<xsl:template match="paragraph[@id='hd_id3147557']" />
+<xsl:template match="paragraph[@id='par_id3148548']" />
+<xsl:template match="paragraph[@id='par_id6797082']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id4218878']" />
+<xsl:template match="paragraph[@id='par_id8132267']" />
+<xsl:template match="paragraph[@id='par_id702230']" />
+<xsl:template match="listitem[paragraph[@id='par_id3422345']]" />
+<xsl:template match="paragraph[@id='par_id9313638']" />
+<xsl:template match="listitem[paragraph[@id='par_id9951780']]" />
+<xsl:template match="listitem[paragraph[@id='par_id6479384']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3639027']]" />
+<xsl:template match="paragraph[@id='par_id3722342']" />
+<xsl:template match="listitem[paragraph[@id='par_id5106662']]" />
+<xsl:template match="listitem[paragraph[@id='par_id4931485']]" />
+<xsl:template match="listitem[paragraph[@id='par_id9168980']]" />
+<xsl:template match="paragraph[@id='par_id9766533']" />
+<xsl:template match="paragraph[@id='par_id927152']" />
+<xsl:template match="paragraph[@id='par_id6081728']" />
+<xsl:template match="paragraph[@id='par_id9219641']" />
+
+<!-- Remove Online Update text -->
+<xsl:template match="paragraph[@id='par_id8754844']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#online_update']]" />
+<xsl:template match="paragraph[@id='hd_id2189397']" />
+<xsl:template match="paragraph[@id='par_id7523728']" />
+<xsl:template match="paragraph[@id='par_id8994109']" />
+<xsl:template match="paragraph[@id='par_id476699']" />
+<xsl:template match="paragraph[@id='par_id4057130']" />
+<xsl:template match="paragraph[@id='hd_id266426']" />
+<xsl:template match="paragraph[@id='par_id3031098']" />
+<xsl:template match="paragraph[@id='hd_id8276619']" />
+<xsl:template match="paragraph[@id='par_id7824030']" />
+<xsl:template match="paragraph[@id='hd_id7534104']" />
+<xsl:template match="paragraph[@id='par_id209051']" />
+<xsl:template match="paragraph[@id='hd_id1418805']" />
+<xsl:template match="paragraph[@id='par_id1743522']" />
+<xsl:template match="paragraph[@id='hd_id5994140']" />
+<xsl:template match="paragraph[@id='par_id7870113']" />
+<xsl:template match="paragraph[@id='hd_id3051545']" />
+<xsl:template match="paragraph[@id='par_id3061311']" />
+<xsl:template match="paragraph[@id='hd_id4814905']" />
+<xsl:template match="paragraph[@id='par_id2143925']" />
+
+<!-- Remove Python text -->
+<xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
+<xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
+
+<!-- Replace paragraph with "not available" warning -->
+<xsl:template match="paragraph" mode="notavailable">
+	<xsl:choose>
+		<xsl:when test="$lang='de'">Diese Funktion ist nicht verfügbar.</xsl:when>
+		<xsl:when test="$lang='fr'">Cette fonctionnalité n'est pas disponible.</xsl:when>
+		<xsl:when test="$lang='it'">Questa funzione non è disponibile.</xsl:when>
+		<xsl:when test="$lang='nl'">Deze functie is niet beschikbaar.</xsl:when>
+		<xsl:otherwise>This feature is not available.</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
+<!-- Replace paragraph with "not available due to security risk" warning -->
 <xsl:template match="paragraph" mode="securitywarning">
 	<xsl:choose>
 		<xsl:when test="$lang='de'">Diese Funktion ist nicht verfügbar, da externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt werden.</xsl:when>
