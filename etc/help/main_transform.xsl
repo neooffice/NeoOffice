@@ -1038,4 +1038,9 @@
 <xsl:template match="paragraph[@id='hd_id0804200803314150']" />
 <xsl:template match="paragraph[@id='par_id0804200803314235']" />
 
+<!-- Remove Python text -->
+<xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
+<xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
+
 </xsl:stylesheet>
