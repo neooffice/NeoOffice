@@ -445,11 +445,11 @@ Resource RSC_DATASOURCE_TYPE_UINAMES
 
 String RID_STR_COULDNOTCONNECT_NOJAVA
 {
-	Text [ en-US ] = "The database driver has been removed because it requires external software that has been identified as a security risk.";
-	Text [ de ] = "Die Datenbank-Treiber wurde entfernt, weil es externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt.";
-	Text [ fr ] = "Le pilote de base de données a été supprimé car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.";
-	Text [ it ] = "Il driver di database è stato rimosso in quanto richiede un software esterno che è stata identificata come un rischio per la sicurezza.";
-	Text [ nl ] = "De database stuurprogramma is verwijderd, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
+	Text [ en-US ] = "The database driver cannot be loaded because it requires external software that has been identified as a security risk.";
+	Text [ de ] = "Die Datenbank-Treiber kann nicht geladen werden, da externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt werden.";
+	Text [ fr ] = "Le pilote de base de données ne peut pas être chargée, car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.";
+	Text [ it ] = "Il driver di database non può essere caricato perché richiede software esterno che è stato identificato come un rischio per la sicurezza.";
+	Text [ nl ] = "De database stuurprogramma kan niet worden geladen, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
 };
 
 #endif	// !SOLAR_JAVA
