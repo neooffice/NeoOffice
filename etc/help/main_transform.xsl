@@ -1050,6 +1050,24 @@
 <xsl:template match="list[listitem[paragraph[@id='par_id3155892']]]" />
 <xsl:template match="paragraph[@id='par_id9116183']" />
 <xsl:template match="paragraph[@id='par_id3153822']" />
+<xsl:template match="paragraph[@id='par_id3153188']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_idN10568']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
+<xsl:template match="paragraph[@id='par_idN1056B']" />
+<xsl:template match="paragraph[@id='par_idN1057F']" />
+<xsl:template match="paragraph[@id='par_idN10583']" />
+<xsl:template match="paragraph[@id='par_idN10610']" />
+<xsl:template match="paragraph[@id='par_idN10614']" />
+<xsl:template match="paragraph[@id='par_idN105A5']" />
+<xsl:template match="paragraph[@id='par_idN10635']" />
+<xsl:template match="paragraph[@id='par_idN105A9']" />
+<xsl:template match="paragraph[@id='par_idN10657']" />
+<xsl:template match="paragraph[@id='par_idN105AD']" />
+<xsl:template match="paragraph[@id='par_idN10686']" />
 
 <!-- Replace paragraph with "disable due to security risk" warning -->
 <xsl:template match="paragraph" mode="securitywarning">
