@@ -1038,9 +1038,28 @@
 <xsl:template match="paragraph[@id='hd_id0804200803314150']" />
 <xsl:template match="paragraph[@id='par_id0804200803314235']" />
 
-<!-- Remove Python text -->
+<!-- Remove Java and Python text -->
 <xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
 <xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
 <xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
+<xsl:template match="paragraph[@id='par_id3152363']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id3154751']" />
+<xsl:template match="paragraph[@id='par_id3155338']" />
+<xsl:template match="list[listitem[paragraph[@id='par_id3155892']]]" />
+<xsl:template match="paragraph[@id='par_id9116183']" />
+<xsl:template match="paragraph[@id='par_id3153822']" />
+
+<!-- Replace paragraph with "disable due to security risk" warning -->
+<xsl:template match="paragraph" mode="securitywarning">
+	<xsl:choose>
+		<xsl:when test="$lang='de'">Diese Funktion ist nicht verfügbar, da externe Software, die als Sicherheitsrisiko identifiziert wurde benötigt werden.</xsl:when>
+		<xsl:when test="$lang='fr'">Cette fonctionnalité n'est pas disponible, car il nécessite un logiciel externe qui a été identifié comme un risque de sécurité.</xsl:when>
+		<xsl:when test="$lang='it'">Questa funzione non è disponibile perché richiede software esterno che è stato identificato come un rischio per la sicurezza.</xsl:when>
+		<xsl:when test="$lang='nl'">Deze functie is niet beschikbaar, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.</xsl:when>
+		<xsl:otherwise>This feature is not available because it requires external software that has been identified as a security risk.</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
 
 </xsl:stylesheet>
