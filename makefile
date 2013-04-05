@@ -149,7 +149,7 @@ PRODUCT_DOCUMENTATION_URL_TEXT=$(PRODUCT_NAME) Wiki
 PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL=http://neowiki.neooffice.org/index.php/NeoOffice_Launch_Shortcuts
 PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
-PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it nl
+PRODUCT_BUNDLED_LANG_PACKS=en-US de fr he it ja ar ru es nl en-GB sv pl # fi nb pt-BR zh-TW da cs th hu zh-CN el ko sk
 ifeq ("$(OS_TYPE)","MacOSX")
 PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=imagecapture neomobile
