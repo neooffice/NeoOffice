@@ -1038,4 +1038,29 @@
 <xsl:template match="paragraph[@id='hd_id0804200803314150']" />
 <xsl:template match="paragraph[@id='par_id0804200803314235']" />
 
+<!-- Remove Online Registration text -->
+<xsl:template match="paragraph[@id='par_id3153882']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
+<xsl:template match="paragraph[@id='hd_id3153624']" />
+<xsl:template match="paragraph[@id='par_id3150445']" />
+<xsl:template match="paragraph[@id='hd_id3145629']" />
+<xsl:template match="paragraph[@id='par_id3149999']" />
+<xsl:template match="paragraph[@id='hd_id3149760']" />
+<xsl:template match="paragraph[@id='par_id3151234']" />
+<xsl:template match="paragraph[@id='hd_id3147557']" />
+<xsl:template match="paragraph[@id='par_id3148548']" />
+
+<!-- Replace paragraph with "not available" warning -->
+<xsl:template match="paragraph" mode="notavailable">
+	<xsl:choose>
+		<xsl:when test="$lang='de'">Diese Funktion ist nicht verfügbar.</xsl:when>
+		<xsl:when test="$lang='fr'">Cette fonctionnalité n'est pas disponible.</xsl:when>
+		<xsl:when test="$lang='it'">Questa funzione non è disponibile.</xsl:when>
+		<xsl:when test="$lang='nl'">Deze functie is niet beschikbaar.</xsl:when>
+		<xsl:otherwise>This feature is not available.</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
 </xsl:stylesheet>
