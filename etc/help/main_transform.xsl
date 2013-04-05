@@ -1079,25 +1079,6 @@
 <xsl:template match="paragraph[@id='par_id3151234']" />
 <xsl:template match="paragraph[@id='hd_id3147557']" />
 <xsl:template match="paragraph[@id='par_id3148548']" />
-<xsl:template match="paragraph[@id='par_id6797082']">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
-<xsl:template match="paragraph[@id='par_id4218878']" />
-<xsl:template match="paragraph[@id='par_id8132267']" />
-<xsl:template match="paragraph[@id='par_id702230']" />
-<xsl:template match="listitem[paragraph[@id='par_id3422345']]" />
-<xsl:template match="paragraph[@id='par_id9313638']" />
-<xsl:template match="listitem[paragraph[@id='par_id9951780']]" />
-<xsl:template match="listitem[paragraph[@id='par_id6479384']]" />
-<xsl:template match="listitem[paragraph[@id='par_id3639027']]" />
-<xsl:template match="paragraph[@id='par_id3722342']" />
-<xsl:template match="listitem[paragraph[@id='par_id5106662']]" />
-<xsl:template match="listitem[paragraph[@id='par_id4931485']]" />
-<xsl:template match="listitem[paragraph[@id='par_id9168980']]" />
-<xsl:template match="paragraph[@id='par_id9766533']" />
-<xsl:template match="paragraph[@id='par_id927152']" />
-<xsl:template match="paragraph[@id='par_id6081728']" />
-<xsl:template match="paragraph[@id='par_id9219641']" />
 
 <!-- Remove Online Update text -->
 <xsl:template match="paragraph[@id='par_id8754844']">
@@ -1123,6 +1104,25 @@
 <xsl:template match="paragraph[@id='par_id3061311']" />
 <xsl:template match="paragraph[@id='hd_id4814905']" />
 <xsl:template match="paragraph[@id='par_id2143925']" />
+<xsl:template match="paragraph[@id='par_id6797082']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id4218878']" />
+<xsl:template match="paragraph[@id='par_id8132267']" />
+<xsl:template match="paragraph[@id='par_id702230']" />
+<xsl:template match="listitem[paragraph[@id='par_id3422345']]" />
+<xsl:template match="paragraph[@id='par_id9313638']" />
+<xsl:template match="listitem[paragraph[@id='par_id9951780']]" />
+<xsl:template match="listitem[paragraph[@id='par_id6479384']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3639027']]" />
+<xsl:template match="paragraph[@id='par_id3722342']" />
+<xsl:template match="listitem[paragraph[@id='par_id5106662']]" />
+<xsl:template match="listitem[paragraph[@id='par_id4931485']]" />
+<xsl:template match="listitem[paragraph[@id='par_id9168980']]" />
+<xsl:template match="paragraph[@id='par_id9766533']" />
+<xsl:template match="paragraph[@id='par_id927152']" />
+<xsl:template match="paragraph[@id='par_id6081728']" />
+<xsl:template match="paragraph[@id='par_id9219641']" />
 
 <!-- Remove Python text -->
 <xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
