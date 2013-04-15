@@ -780,10 +780,6 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 - (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
-@interface VCLWindow (ICAImageImport)
-- (void)setStyleMask:(unsigned int)nStyleMask;
-@end
-
 static MacOSBOOL bJavaAWTInitialized = NO;
 static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
