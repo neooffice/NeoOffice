@@ -1124,7 +1124,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// dispatch a get focus event to fill the menubar for one of the minimized
 	// windows:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63282#63282
-	if ( !bShow && pApp && ![pApp keyWindow] )
+	// Fix bug reported in the following NeoOffice forum topic by only forcing
+	// a focus change when the application is active:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8556
+	if ( !bShow && pApp && [pApp isActive] && ![pApp keyWindow] )
 	{
 		NSArray *pWindows = [pApp windows];
 		if ( pWindows )
