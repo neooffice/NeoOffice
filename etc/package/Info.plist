@@ -769,5 +769,7 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.8.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
 </dict>
 </plist>
