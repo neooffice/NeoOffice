@@ -2054,6 +2054,29 @@ void JavaSalEvent::dispatch()
 
 					mpData = pWheelMouseEvent;
 				}
+				// Fix misplaced tooltip windows reported in the following
+				// NeoOffice forum post by posting a synthetic mouse move event
+				// if the pointer state does not match the state in the mouse
+				// wheel event:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64100#64100
+				Point aScreenPoint( pWheelMouseEvent->mnX + pFrame->maGeometry.nX, pWheelMouseEvent->mnY + pFrame->maGeometry.nY );
+				if ( pWheelMouseEvent->mnCode != pSalData->maLastPointerState.mnState || pSalData->maLastPointerState.maPos.X() != aScreenPoint.X() || pSalData->maLastPointerState.maPos.Y() != aScreenPoint.Y() )
+				{
+					SalMouseEvent *pMouseEvent = new SalMouseEvent();
+					pMouseEvent->mnTime = pWheelMouseEvent->mnTime;
+					pMouseEvent->mnX = pWheelMouseEvent->mnX;
+					pMouseEvent->mnY = pWheelMouseEvent->mnY;
+					pMouseEvent->mnCode = pWheelMouseEvent->mnCode;
+					pMouseEvent->mnButton = 0;
+
+					JavaSalEvent aEvent( SALEVENT_MOUSEMOVE, pFrame, pMouseEvent );
+					aEvent.dispatch();
+
+					// Check if frame is still valid
+					pFrame = FindValidFrame( pFrame );
+					if ( !pFrame || !pFrame->mbVisible )
+						break;
+				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pWheelMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pWheelMouseEvent->mnX - 1;
