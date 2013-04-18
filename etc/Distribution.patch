@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-script minSpecVersion="1.000000" authoringTool="com.apple.PackageMaker" authoringToolVersion="3.0.4" authoringToolBuild="179">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</title>
-    <options customize="never" allow-external-scripts="yes"/>
+    <options customize="never" allow-external-scripts="yes" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
         <line choice="choice0"/>
     </choices-outline>
     <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)">
-        <pkg-ref id="org.neooffice.flat.$(PRODUCT_DIR_NAME)_patch.pkg"/>
+        <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg"/>
     </choice>
     <!--
         Note: CFBundleIdentifier must be different than the main installer's
         identifier or else the main installer's files will be deleted on
         Mac OS X 10.6 and higher
     -->
-    <pkg-ref id="org.neooffice.flat.$(PRODUCT_DIR_NAME)_patch.pkg" version="1.0" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg" version="$(PRODUCT_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg" version="$(PRODUCT_VERSION)" auth="root">
+        <must-close>
+            <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        </must-close>
+    </pkg-ref>

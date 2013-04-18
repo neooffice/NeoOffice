@@ -66,4 +66,8 @@ function runVolumeCheck() {
 
 <installation-check script="runInstallationCheck();"/>
 
-<volume-check script="runVolumeCheck();"/>
+<volume-check script="runVolumeCheck();">
+    <allowed-os-versions>
+        <os-version min="$(PRODUCT_MIN_OSVERSION)"/>
+    </allowed-os-versions>
+</volume-check>

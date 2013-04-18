@@ -45,32 +45,4 @@ for i in $commands ; do
 	fi
 done
 
-# Check that the user is running Mac OS X 10.8 or higher
-if [ -x "/usr/bin/sw_vers" ] ; then
-	version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
-	case "$version" in
-		10.[01234567]) exit 17;;
-		10.[01234567].*) exit 17;;
-	esac
-fi
-
-# Check that the user is running on the correct hardware
-target_machine="$(TARGET_MACHINE)"
-machine=`uname -p`
-if [ "$target_machine" != "$machine" ] ; then
-	case "$machine" in
-		i386) exit 18;;
-		powerpc) exit 19;;
-		x86_64) if [ "$target_machine" != "i386" ] ; then exit 18 ; fi;;
-		*) exit 21;;
-	esac
-fi
-
-# Check that no instances of the application are running
-while read i ; do
-	check_running "$i" && exit 25
-done << !
-`ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
-!
-
 exit 0

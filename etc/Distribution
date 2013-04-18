@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-script minSpecVersion="1.000000" authoringTool="com.apple.PackageMaker" authoringToolVersion="3.0.4" authoringToolBuild="179">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION)</title>
-    <options customize="never" allow-external-scripts="yes"/>
+    <options customize="never" allow-external-scripts="no" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
         <line choice="choice0"/>
     </choices-outline>
     <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)">
-        <pkg-ref id="org.neooffice.flat.$(PRODUCT_DIR_NAME).pkg"/>
+        <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg"/>
     </choice>
-    <pkg-ref id="org.neooffice.flat.$(PRODUCT_DIR_NAME).pkg" version="1.0" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg" version="$(PRODUCT_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg" version="$(PRODUCT_VERSION)" auth="root">
+        <must-close>
+            <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        </must-close>
+    </pkg-ref>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="$(PRODUCT_MIN_OSVERSION)"/>
+        </allowed-os-versions>
+    </volume-check>
