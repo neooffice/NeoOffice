@@ -36,6 +36,14 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
+# Check that the required BSD command are installed
+for i in $(CHECK_REQUIRED_COMMANDS) ; do
+	if [ ! -x "/usr/bin/$i" -a ! -x "/bin/$i" -a ! -x "/usr/sbin/$i" -a ! -x "/sbin/$i" ] ; then
+		echo "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine: $(CHECK_REQUIRED_COMMANDS)"
+		exit 1
+	fi
+done
+
 umask 022
 
 if [ -d "$2" ] ; then

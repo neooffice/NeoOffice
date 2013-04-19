@@ -36,12 +36,10 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-commands="$(PREFLIGHT_REQUIRED_COMMANDS)"
-
 # Check that the required BSD command are installed
-for i in $commands ; do
+for i in $(REQUIRED_COMMANDS) ; do
 	if [ ! -x "/usr/bin/$i" -a ! -x "/bin/$i" -a ! -x "/usr/sbin/$i" -a ! -x "/sbin/$i" ] ; then
-		echo "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine: $(PREFLIGHT_REQUIRED_COMMANDS)"
+		echo "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine: $(REQUIRED_COMMANDS)"
 		exit 1
 	fi
 done

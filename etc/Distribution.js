@@ -52,7 +52,39 @@ function runBashScriptAndSetResult(bashScript, volume) {
 var installationCheckBashScript = null;
 
 function runInstallationCheck() {
-    return runBashScriptAndSetResult(installationCheckBashScript, null);
+    var commandString = '$(REQUIRED_COMMANDS)';
+    var commands = commandString.split(' ');
+    for (var i = 0; i < commands.length; ++i) {
+        var command = commands[i];
+        if (command.length && !system.files.fileExistsAtPath('/usr/bin/' + command) && !system.files.fileExistsAtPath('/bin/' + command) && !system.files.fileExistsAtPath('/usr/sbin/' + command) && !system.files.fileExistsAtPath('/sbin/' + command)) {
+            my.result.type = 'Fatal';
+            my.result.title = '';
+            my.result.message = '';
+
+            var title = system.localizedStandardStringWithFormat('InstallationCheckError', '$(PRODUCT_NAME_AND_VERSION)');
+            if (title != null) {
+                my.result.title = title.toString();
+            }
+
+            var key = '16';
+            var message = system.localizedString(key);
+            if (message == key) {
+                message = null;
+            }
+
+            if (message == null) {
+                message = system.localizedStandardString('GENERIC_FAIL_VOLUME');
+            }
+
+            if (message != null) {
+                my.result.message = message.toString();
+            }
+
+            return false;
+        }
+    }
+
+    return true;
 }
 
 var volumeCheckBashScript = null;

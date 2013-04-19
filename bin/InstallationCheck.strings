@@ -1,1 +1,1 @@
-"16" = "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"16" = "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine:\n\n$(REQUIRED_COMMANDS)";

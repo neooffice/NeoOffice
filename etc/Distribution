@@ -15,8 +15,3 @@
             <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
         </must-close>
     </pkg-ref>
-    <volume-check>
-        <allowed-os-versions>
-            <os-version min="$(PRODUCT_MIN_OSVERSION)"/>
-        </allowed-os-versions>
-    </volume-check>
