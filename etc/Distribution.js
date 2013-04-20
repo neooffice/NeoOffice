@@ -52,7 +52,11 @@ function runBashScriptAndSetResult(bashScript, volume) {
 var installationCheckBashScript = null;
 
 function runInstallationCheck() {
-    var commandString = '$(REQUIRED_COMMANDS)';
+    if (installationCheckBashScript != null) {
+        return runBashScriptAndSetResult(installationCheckBashScript, null);
+    }
+
+    var commandString = '$(INSTALLATION_CHECK_REQUIRED_COMMANDS)';
     var commands = commandString.split(' ');
     for (var i = 0; i < commands.length; ++i) {
         var command = commands[i];

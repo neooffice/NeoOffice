@@ -1,3 +1,4 @@
+#!/bin/bash -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -51,71 +52,6 @@ if [ -d "$2" ]; then
 	tempfile="$INSTALLER_TEMP/out"
 	touch "$tempfile" || exit 1
 
-	# Put back user's custom help files
-	if [ -d "$2/help" ]; then
-		for i in `cd "$2/help" ; find . -maxdepth 1`; do
-			if [ -h "$2/Contents/basis-link/help/$i" ]; then
-				rm -f "$2/Contents/basis-link/help/$i" || exit 1
-			fi
-			if [ ! -e "$2/Contents/basis-link/help/$i" ]; then
-				mv -f "$2/help/$i" "$2/Contents/basis-link/help" || exit 1
-			fi
-		done
-		chown -Rf root:admin "$2/Contents/basis-link/help" || exit 1
-		chmod -Rf a+r,a-w "$2/Contents/basis-link/help" || exit 1
-		rm -Rf "$2/help" || exit 1
-	fi
-
-	# Put back user's custom resource files
-	if [ -d "$2/resource" ]; then
-		for i in `cd "$2/resource" ; find . -maxdepth 1`; do
-			if [ ! -e "$2/Contents/basis-link/program/resource/$i" ]; then
-				mv -f "$2/resource/$i" "$2/Contents/basis-link/program/resource" || exit 1
-			fi
-		done
-		chown -Rf root:admin "$2/Contents/basis-link/program/resource" || exit 1
-		chmod -Rf a+r,a-w "$2/Contents/basis-link/program/resource" || exit 1
-		rm -Rf "$2/resource" || exit 1
-	fi
-
-	# Put back user's custom localization files
-	if [ -d "$2/share" ]; then
-		# Delete reportobjectbar.xml
-		if [ -e "$2/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml" ]; then
-			rm -f "$2/share/config/soffice.cfg/modules/dbapp/toolbar/reportobjectbar.xml" || exit 1
-		fi
-		for i in `cd "$2/share" ; find . -type d`; do
-			mkdir -p "$2/Contents/basis-link/share/$i" || exit 1
-		done
-		for i in `cd "$2/share" ; find . -type f`; do
-			if [ ! -e "$2/Contents/basis-link/share/$i" ]; then
-				mv -f "$2/share/$i" "$2/Contents/basis-link/share/$i" || exit 1
-			fi
-		done
-		chown -Rf root:admin "$2/Contents/basis-link/share" || exit 1
-		chmod -Rf a+r,a-w "$2/Contents/basis-link/share" || exit 1
-		rm -Rf "$2/share" || exit 1
-	fi
-
-	# Put back user's custom font files
-	if [ -d "$2/truetype" ]; then
-		for i in `cd "$2/truetype" ; find . -maxdepth 1`; do
-			# Keep old fonts as they may have been loaded by the ATS server but
-			# fix bug 3273 by putting back only those fonts are duplicates
-			if [ ! -d "$2/Contents/basis-link/share/fonts/truetype/$i" ]; then
-				if [ -e "$2/Contents/basis-link/share/fonts/truetype/$i" ]; then
-					rm -f "$2/Contents/basis-link/share/fonts/truetype/$i"
-					mv -f "$2/truetype/$i" "$2/Contents/basis-link/share/fonts/truetype" || exit 1
-				fi
-			fi
-		done
-		chown -Rf root:admin "$2/Contents/basis-link/share/fonts/truetype" || exit 1
-		chmod -Rf a+r,a-w "$2/Contents/basis-link/share/fonts/truetype" || exit 1
-		rm -Rf "$2/truetype" || exit 1
-	fi
-
-	sync
-
 	# Mark certain directories writable for admin group
 	chmod -f 775 "$2" || exit 1
 	chmod -Rf a+r,a-w "$2/Contents" || exit 1
@@ -130,12 +66,9 @@ if [ -d "$2" ]; then
 	chmod -Rf u+w "$2/Contents/share/uno_packages" || exit 1
 
 	# Touch shared libraries to fix bug 280
-	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
+	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$2/Contents/$i"
 	done
-
-	# Touch file to save timestamp for update check
-	touch -f "$2/Contents/MacOS/.installed"
 
 	sudouser=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then

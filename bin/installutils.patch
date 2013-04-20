@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Patch ##'`
+product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Update ##'`
 userinstall="$HOME/Library/Containers/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DIR_NAME)"
 target_file_type="$(TARGET_FILE_TYPE)"
 last_installed_product_found=
@@ -69,7 +69,7 @@ check_installation() {
 			return 1;
 		fi
 		productkey=`echo $productkey | awk -F= '{ print $2 }'`
-		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
+		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Update ##'`
 
 		# Allow only an exact product version match
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then

@@ -15,8 +15,3 @@
         Mac OS X 10.6 and higher
     -->
     <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_VERSION)" auth="root">#contents.pkg</pkg-ref>
-    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_VERSION)" auth="root">
-        <must-close>
-            <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
-        </must-close>
-    </pkg-ref>
