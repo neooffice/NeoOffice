@@ -7,11 +7,12 @@
         <line choice="choice0"/>
     </choices-outline>
     <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)">
-        <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg"/>
+        <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </choice>
-    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg" version="$(PRODUCT_VERSION)" auth="root">#contents.pkg</pkg-ref>
-    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).pkg" version="$(PRODUCT_VERSION)" auth="root">
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)">
         <must-close>
             <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
         </must-close>
     </pkg-ref>
+    <product id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)"/>
