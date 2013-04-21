@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<installer-script minSpecVersion="1.000000" authoringTool="com.apple.PackageMaker" authoringToolVersion="3.0.4" authoringToolBuild="179">
+<installer-script minSpecVersion="2">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION)</title>
-    <options customize="never" allow-external-scripts="no" hostArchitectures="$(TARGET_MACHINE)"/>
+    <options customize="never" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
-        <line choice="choice0"/>
+        <line choice="default">
+            <line choice="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        </line>
     </choices-outline>
-    <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)">
+    <choice id="default" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)"/>
+    <choice id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false">
         <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </choice>
-    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>
     <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)">
+        <bundle-version>
+            <bundle id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" path="$(PRODUCT_NAME).app"/>
+        </bundle-version>
         <must-close>
             <app id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
         </must-close>

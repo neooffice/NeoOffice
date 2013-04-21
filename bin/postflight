@@ -40,34 +40,24 @@ unset DYLD_LIBRARY_PATH
 
 umask 022
 
-if [ -d "$2" ]; then
-
-	# Fix Apple installer bug described in bug 1373
-	REAL_2=`cd "$2" ; pwd`
-	REAL_INSTALLER_TEMP=`cd "$INSTALLER_TEMP" ; pwd`
-	if [ "$2" = "/" -o "$2" = "$3" -o "$REAL_2" = "/" -o "$REAL_2" = "$3" -o "$INSTALLER_TEMP" = "/" -o "$INSTALLER_TEMP" = "$3" -o "$REAL_INSTALLER_TEMP" = "/" -o "$REAL_INSTALLER_TEMP" = "$3" ]; then
-		exit 1;
-	fi
-
-	tempfile="$INSTALLER_TEMP/out"
-	touch "$tempfile" || exit 1
-
+productdir="$2/$(PRODUCT_NAME).app"
+if [ -d "$productdir" ]; then
 	# Mark certain directories writable for admin group
-	chmod -f 775 "$2" || exit 1
-	chmod -Rf a+r,a-w "$2/Contents" || exit 1
-	chmod -f 775 "$2/Contents" || exit 1
-	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
+	chmod -f 775 "$productdir" || exit 1
+	chmod -Rf a+r,a-w "$productdir/Contents" || exit 1
+	chmod -f 775 "$productdir/Contents" || exit 1
+	chmod -Rf ug+w "$productdir/Contents/Resources" || exit 1
 
 	# Fix bug 1584 by marking certain directories writable for root user
-	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
-	chmod -Rf u+w "$2/Contents/basis-link/share" || exit 1
+	chmod -Rf u+w "$productdir/Contents/basis-link/presets" || exit 1
+	chmod -Rf u+w "$productdir/Contents/basis-link/share" || exit 1
 
 	# Make shared extensions writable only for root user
-	chmod -Rf u+w "$2/Contents/share/uno_packages" || exit 1
+	chmod -Rf u+w "$productdir/Contents/share/uno_packages" || exit 1
 
 	# Touch shared libraries to fix bug 280
-	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
-		touch -f "$2/Contents/$i"
+	for i in `cd "$productdir/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
+		touch -f "$productdir/Contents/$i"
 	done
 
 	sudouser=
@@ -83,21 +73,21 @@ if [ -d "$2" ]; then
 	fi
 
 	if [ ! -z "$lsregister" ] ; then
-		"$lsregister" $lsregisterargs "$2"
+		"$lsregister" $lsregisterargs "$productdir"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" /bin/sh -l -c "$lsregister $lsregisterargs \"$2\""
+			sudo -H -u "$sudouser" /bin/sh -l -c "$lsregister $lsregisterargs \"$productdir\""
 		fi
 	fi
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
-	touch -f "$2"
+	touch -f "$productdir"
 
 	# Do a full reindexing of OOo file types
 	if [ -x "/usr/bin/mdimport" ] ; then
-		/usr/bin/mdimport -r "$2/Contents/Library/Spotlight/neolight.mdimporter"
+		/usr/bin/mdimport -r "$productdir/Contents/Library/Spotlight/neolight.mdimporter"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
+			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/mdimport -r \"$productdir\"/Contents/Library/Spotlight/neolight.mdimporter"
 		fi
 	fi
 
@@ -113,7 +103,7 @@ if [ -d "$2" ]; then
 	if [ ! -z "$sudouser" ] ; then
 		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read \"$HOME/Library/Containers/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME).plist\" updateSuppressLaunchAfterInstallation 2>/dev/null"`
 		if [ -z "$launch" -o "$launch" = "0" ] ; then
-			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$2/Contents/MacOS/soffice.bin\""
+			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$productdir/Contents/MacOS/soffice.bin\""
 		fi
 	fi
 fi
