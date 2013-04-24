@@ -155,8 +155,8 @@ PRODUCT_BUNDLED_LANG_PACKS=en-US de fr he it ja ar ru es nl en-GB sv pl # fi nb 
 ifeq ("$(OS_TYPE)","MacOSX")
 PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=
-PREFLIGHT_REQUIRED_COMMANDS=chmod defaults find id open touch
-INSTALLATION_CHECK_REQUIRED_COMMANDS=$(PREFLIGHT_REQUIRED_COMMANDS) awk basename chown dirname file grep mv pax rm ps pwd sed sort unzip
+PREFLIGHT_REQUIRED_COMMANDS=defaults find id open touch
+INSTALLATION_CHECK_REQUIRED_COMMANDS=$(PREFLIGHT_REQUIRED_COMMANDS) awk basename chmod dirname file grep mv pax rm ps pwd sed sort unzip
 else
 PRODUCT_COMPONENT_MODULES=
 PRODUCT_COMPONENT_PATCH_MODULES=
@@ -590,7 +590,11 @@ endif
 	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 	mkdir "$(INSTALL_HOME)/package/$(PRODUCT_NAME).app"
 	mv -f "$(INSTALL_HOME)/package/Contents" "$(INSTALL_HOME)/package/$(PRODUCT_NAME).app"
-	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
+# Mac App Store requires files to be writable by root
+	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/package"
+# Mark certain directories writable for group
+	chmod -f 775 "$(INSTALL_HOME)/package/$(PRODUCT_NAME).app"
+	chmod -f 775 "$(INSTALL_HOME)/package/$(PRODUCT_NAME).app/Contents/Resources"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(INSTALL_HOME)/package"
 	mkdir -p "$(INSTALL_HOME)/package.pkg/Resources"
@@ -677,7 +681,11 @@ build.patch_package_shared:
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
 	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
-	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
+# Mac App Store requires files to be writable by root
+	chmod -Rf u+w,og-w,a+r "$(PATCH_INSTALL_HOME)/package"
+# Mark certain directories writable for group
+	chmod -f 775 "$(PATCH_INSTALL_HOME)/package"
+	chmod -f 775 "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package.pkg/Resources"
@@ -750,7 +758,11 @@ build.package_%: $(INSTALL_HOME)/package_%
 	rm -Rf "$</Contents/Resources"
 	mkdir -p "$</Contents/Resources"
 	cd "$<" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
-	chmod -Rf a-w,a+r "$<"
+# Mac App Store requires files to be writable by root
+	chmod -Rf u+w,og-w,a+r "$<"
+# Mark certain directories writable for group
+	chmod -f 775 "$<"
+	chmod -f 775 "$</Contents/Resources"
 	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
 	sudo chown -Rf root:admin "$<"
 	mkdir -p "$<.pkg/Resources"

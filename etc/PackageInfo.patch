@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" identifier="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg" version="$(PRODUCT_VERSION)" install-location="/var/tmp/.$(PRODUCT_DIR_NAME).patch" auth="root">
+<pkg-info format-version="2" overwrite-permissions="true" relocatable="false" identifier="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg" version="$(PRODUCT_VERSION)" install-location="/var/tmp/.$(PRODUCT_DIR_NAME).patch" auth="root">
     <scripts>
         <preinstall file="./preflight"/>
         <postinstall file="./postflight"/>

@@ -9,7 +9,7 @@
         </line>
     </choices-outline>
     <choice id="default" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)"/>
-    <choice id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false">
+    <choice id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false" customLocation="/Applications">
         <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </choice>
     <pkg-ref id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>

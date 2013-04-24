@@ -100,7 +100,7 @@ update_installation() {
 	check_installation "$2" || return 0
 
 	# Unzip new files
-	( cd "$2" || exit 1 ; pax -r -z -f "$1/Archive.pax.gz" ) || return 1
+	( cd "$2" || exit 1 ; pax -r -z -p e -f "$1/Archive.pax.gz" ) || return 1
 
 	sync
 
@@ -114,19 +114,6 @@ update_installation() {
 			done
 		done
 	fi
-
-	# Mark certain directories writable for admin group
-	chmod -f 775 "$2" || return 1
-	chmod -Rf a+r,a-w "$2/Contents" || return 1
-	chmod -f 775 "$2/Contents" || return 1
-	chmod -Rf ug+w "$2/Contents/Resources" || return 1
-
-	# Fix bug 1584 by marking certain directories writable for root user
-	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
-	chmod -Rf u+w "$2/Contents/basis-link/share" || exit 1
-
-	# Make shared extensions writable only for root user
-	chmod -Rf u+w "$2/Contents/share/uno_packages" || exit 1
 
 	# Touch shared libraries to fix bug 280
 	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do

@@ -42,19 +42,6 @@ umask 022
 
 productdir="$2/$(PRODUCT_NAME).app"
 if [ -d "$productdir" ]; then
-	# Mark certain directories writable for admin group
-	chmod -f 775 "$productdir" || exit 1
-	chmod -Rf a+r,a-w "$productdir/Contents" || exit 1
-	chmod -f 775 "$productdir/Contents" || exit 1
-	chmod -Rf ug+w "$productdir/Contents/Resources" || exit 1
-
-	# Fix bug 1584 by marking certain directories writable for root user
-	chmod -Rf u+w "$productdir/Contents/basis-link/presets" || exit 1
-	chmod -Rf u+w "$productdir/Contents/basis-link/share" || exit 1
-
-	# Make shared extensions writable only for root user
-	chmod -Rf u+w "$productdir/Contents/share/uno_packages" || exit 1
-
 	# Touch shared libraries to fix bug 280
 	for i in `cd "$productdir/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$productdir/Contents/$i"
