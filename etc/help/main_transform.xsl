@@ -645,10 +645,6 @@
 		<xsl:when test="@href and parent::paragraph[@id='par_id3150667']">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
 		</xsl:when>
-		<!-- Replace the OOo download URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id3028143']">
-			<a href="$(PRODUCT_DOWNLOAD_URL)">$(PRODUCT_DOWNLOAD_URL_TEXT)</a>
-		</xsl:when>
 		<!-- Replace the OOo documentation URL -->
 		<xsl:when test="@href and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
@@ -676,10 +672,6 @@
 		</xsl:when>
 		<xsl:when test="@href and parent::paragraph[@id='par_id1683706']">
 			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<!-- Replace the OOo language pack URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id2216559']">
-			<a href="$(PRODUCT_DOWNLOADLANGPACK_URL)">$(PRODUCT_DOWNLOADLANGPACK_URL)</a>
 		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
 			<xsl:variable name="anchor"><xsl:value-of select="concat('#',substring-after(@href,'#'))"/></xsl:variable>
@@ -1037,6 +1029,15 @@
 <xsl:template match="paragraph[@id='par_id0915200811081778']" />
 <xsl:template match="paragraph[@id='hd_id0804200803314150']" />
 <xsl:template match="paragraph[@id='par_id0804200803314235']" />
+
+<!-- Remove Download and Language Pack text -->
+<xsl:template match="paragraph[@id='hd_id3168534']" />
+<xsl:template match="paragraph[@id='par_id3028143']" />
+<xsl:template match="paragraph[@id='hd_id9999694']" />
+<xsl:template match="listitem[paragraph[@id='par_id2216559']]" />
+<xsl:template match="listitem[paragraph[@id='par_id7869502']]" />
+<xsl:template match="listitem[paragraph[@id='par_id9852900']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3791924']]" />
 
 <!-- Remove Java text -->
 <xsl:template match="paragraph[@id='par_id3152363']">
