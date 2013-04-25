@@ -1041,7 +1041,7 @@
 
 <!-- Remove Help Find text -->
 <xsl:template match="paragraph[@id='par_id3155555']">
-	<xsl:apply-templates mode="notavailable" select="." />
+	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
 <xsl:template match="paragraph[@id='par_id3152552']" />
 <xsl:template match="paragraph[@id='par_id3153345']" />
@@ -1078,6 +1078,58 @@
 <xsl:template match="paragraph[@id='par_idN10657']" />
 <xsl:template match="paragraph[@id='par_idN105AD']" />
 <xsl:template match="paragraph[@id='par_idN10686']" />
+<xsl:template match="paragraph[@id='par_idN1056A']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
+<xsl:template match="paragraph[@id='par_idN10589']" />
+<xsl:template match="paragraph[@id='par_idN1059F']" />
+<xsl:template match="paragraph[@id='par_idN105D9']" />
+<xsl:template match="paragraph[@id='par_idN1060A']" />
+<xsl:template match="paragraph[@id='par_idN1060E']" />
+<xsl:template match="paragraph[@id='par_idN10625']" />
+<xsl:template match="paragraph[@id='par_idN10629']" />
+<xsl:template match="paragraph[@id='par_idN10640']" />
+<xsl:template match="paragraph[@id='par_idN10644']" />
+<xsl:template match="paragraph[@id='par_id3143267']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id8847010']" />
+<xsl:template match="paragraph[@id='hd_id3145345']" />
+<xsl:template match="listitem[paragraph[@id='par_id3147209']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3146797']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3149578']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3149762']]" />
+<xsl:template match="paragraph[@id='hd_id3149795']" />
+<xsl:template match="paragraph[@id='par_id3155419']" />
+<xsl:template match="listitem[paragraph[@id='par_id3156329']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3155628']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3148474']]" />
+<xsl:template match="paragraph[@id='hd_id3153061']" />
+<xsl:template match="paragraph[@id='par_id3156024']" />
+<xsl:template match="listitem[paragraph[@id='par_id3149045']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3152811']]" />
+<xsl:template match="listitem[paragraph[@id='par_id3153379']]" />
+<xsl:template match="paragraph[@id='par_id3149808']" />
+<xsl:template match="paragraph[@id='par_idN10549']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
+<xsl:template match="paragraph[@id='par_idN10568']" />
+<xsl:template match="paragraph[@id='par_idN1056C']" />
+<xsl:template match="paragraph[@id='par_id5404522']" />
+<xsl:template match="paragraph[@id='par_idN105D8']" />
+<xsl:template match="paragraph[@id='par_idN105DD']" />
+<xsl:template match="paragraph[@id='par_idN1057B']" />
+<xsl:template match="paragraph[@id='par_idN1057E']" />
+<xsl:template match="paragraph[@id='par_idN10581']" />
+<xsl:template match="paragraph[@id='par_idN1060C']" />
+<xsl:template match="paragraph[@id='par_idN1058C']" />
+<xsl:template match="paragraph[@id='par_idN10590']" />
+<xsl:template match="paragraph[@id='par_idN105A7']" />
+<xsl:template match="paragraph[@id='par_idN105AB']" />
+<xsl:template match="paragraph[@id='par_idN105C2']" />
+<xsl:template match="paragraph[@id='par_idN105C6']" />
 
 <!-- Remove Online Registration text -->
 <xsl:template match="paragraph[@id='par_id3153882']">
@@ -1137,10 +1189,16 @@
 <xsl:template match="paragraph[@id='par_id6081728']" />
 <xsl:template match="paragraph[@id='par_id9219641']" />
 
-<!-- Remove Python text -->
+<!-- Remove Python, JavaScript, and BeanShell text -->
 <xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
 <xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
 <xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
+<xsl:template match="paragraph[@id='par_idN1091F']" />
+<xsl:template match="paragraph[@id='par_idN105AA']" />
+<xsl:template match="paragraph[@id='par_idN105BA']" />
+<xsl:template match="paragraph[@id='par_idN10622']" />
+<xsl:template match="paragraph[@id='par_idN10597']" />
+<xsl:template match="paragraph[@id='par_idN109BB']" />
 
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
