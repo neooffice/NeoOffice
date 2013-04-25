@@ -1039,6 +1039,18 @@
 <xsl:template match="listitem[paragraph[@id='par_id9852900']]" />
 <xsl:template match="listitem[paragraph[@id='par_id3791924']]" />
 
+<!-- Remove Help Find text -->
+<xsl:template match="paragraph[@id='par_id3155555']">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_id3152552']" />
+<xsl:template match="paragraph[@id='par_id3153345']" />
+<xsl:template match="paragraph[@id='par_id3155941']" />
+<xsl:template match="paragraph[@id='par_id3157958']" />
+<xsl:template match="paragraph[@id='par_id3147210']" />
+<xsl:template match="paragraph[@id='par_id3146798']" />
+<xsl:template match="paragraph[@id='par_id3149732']" />
+
 <!-- Remove Java text -->
 <xsl:template match="paragraph[@id='par_id3152363']">
 	<xsl:apply-templates mode="securitywarning" select="." />
