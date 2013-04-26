@@ -344,6 +344,10 @@ int java_main( int argc, char **argv )
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
 
+	// Elminate libxml2 sandbox file-deny-read of /etc by turning off searching
+	// for XML catalogs
+	putenv( "XML_CATALOG_FILES=" );
+
 	// Dynamically load app's main symbol to improve startup speed
 	NSString *pAppMainLibPath = nil;
 	if ( bUnoPkg )
