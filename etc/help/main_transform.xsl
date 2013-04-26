@@ -1055,6 +1055,7 @@
 <xsl:template match="paragraph[@id='par_id3152363']">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
 <xsl:template match="paragraph[@id='par_id3154751']" />
 <xsl:template match="paragraph[@id='par_id3155338']" />
 <xsl:template match="list[listitem[paragraph[@id='par_id3155892']]]" />
@@ -1063,10 +1064,9 @@
 <xsl:template match="paragraph[@id='par_id3153188']">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
-<xsl:template match="paragraph[@id='par_idN10568']">
+<xsl:template match="paragraph[@id='par_idN10568' and preceding-sibling::paragraph[@id='par_idN10558']]">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
-<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
 <xsl:template match="paragraph[@id='par_idN1056B']" />
 <xsl:template match="paragraph[@id='par_idN1057F']" />
 <xsl:template match="paragraph[@id='par_idN10583']" />
@@ -1081,7 +1081,6 @@
 <xsl:template match="paragraph[@id='par_idN1056A']">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
-<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
 <xsl:template match="paragraph[@id='par_idN10589']" />
 <xsl:template match="paragraph[@id='par_idN1059F']" />
 <xsl:template match="paragraph[@id='par_idN105D9']" />
@@ -1111,11 +1110,10 @@
 <xsl:template match="listitem[paragraph[@id='par_id3152811']]" />
 <xsl:template match="listitem[paragraph[@id='par_id3153379']]" />
 <xsl:template match="paragraph[@id='par_id3149808']" />
-<xsl:template match="paragraph[@id='par_idN10549']">
+<xsl:template match="paragraph[@id='par_idN10549' and preceding-sibling::paragraph[@id='par_idN10545']]">
 	<xsl:apply-templates mode="securitywarning" select="." />
 </xsl:template>
-<xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#java']]" />
-<xsl:template match="paragraph[@id='par_idN10568']" />
+<xsl:template match="paragraph[@id='par_idN10568' and preceding-sibling::paragraph[@id='par_idN10545']]" />
 <xsl:template match="paragraph[@id='par_idN1056C']" />
 <xsl:template match="paragraph[@id='par_id5404522']" />
 <xsl:template match="paragraph[@id='par_idN105D8']" />
@@ -1130,6 +1128,45 @@
 <xsl:template match="paragraph[@id='par_idN105AB']" />
 <xsl:template match="paragraph[@id='par_idN105C2']" />
 <xsl:template match="paragraph[@id='par_idN105C6']" />
+<xsl:template match="paragraph[@id='par_idN10600']">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[@id='par_idN10623']" />
+<xsl:template match="paragraph[@id='par_idN10627']" />
+<xsl:template match="paragraph[@id='par_idN1062D']" />
+<xsl:template match="paragraph[@id='par_idN10634']" />
+<xsl:template match="paragraph[@id='par_idN10638']" />
+<xsl:template match="paragraph[@id='par_idN1064B']" />
+<xsl:template match="paragraph[@id='par_idN1064E']" />
+<xsl:template match="paragraph[@id='par_idN10661']" />
+<xsl:template match="paragraph[@id='par_idN10668']" />
+<xsl:template match="paragraph[@id='par_idN1066B']" />
+<xsl:template match="paragraph[@id='par_idN1066B']" />
+<xsl:template match="listitem[paragraph[@id='par_idN10674']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN10678']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN1067C']]" />
+<xsl:template match="paragraph[@id='par_idN1067F']" />
+<xsl:template match="paragraph[@id='par_idN10683']" />
+<xsl:template match="paragraph[@id='par_idN10689']" />
+<xsl:template match="paragraph[@id='par_idN1068C']" />
+<xsl:template match="listitem[paragraph[@id='par_idN10695']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN10699']]" />
+<xsl:template match="listitem[paragraph[@id='par_idN1069D']]" />
+<xsl:template match="paragraph[@id='par_idN106A0']" />
+<xsl:template match="paragraph[@id='par_idN106A4']" />
+<xsl:template match="paragraph[@id='par_idN106BB']" />
+<xsl:template match="paragraph[@id='par_idN106BF']" />
+<xsl:template match="paragraph[@id='par_id7953733']" />
+<xsl:template match="paragraph[@id='par_idN106CE']" />
+<xsl:template match="paragraph[@id='par_idN106E4']" />
+<xsl:template match="paragraph[@id='par_idN106E7']" />
+<xsl:template match="paragraph[@id='par_idN106F6']" />
+<xsl:template match="paragraph[@id='par_idN10569']" />
+<xsl:template match="paragraph[@id='par_idN1056D']" />
+<xsl:template match="paragraph[@id='par_idN10570']" />
+<xsl:template match="paragraph[@id='par_idN10582']" />
+<xsl:template match="paragraph[@id='par_id3152349']" />
+<xsl:template match="embed[@href='text/shared/optionen/java.xhp#java']" />
 
 <!-- Remove Online Registration text -->
 <xsl:template match="paragraph[@id='par_id3153882']">
@@ -1144,6 +1181,7 @@
 <xsl:template match="paragraph[@id='par_id3151234']" />
 <xsl:template match="paragraph[@id='hd_id3147557']" />
 <xsl:template match="paragraph[@id='par_id3148548']" />
+<xsl:template match="embed[@href='text/shared/optionen/online_update.xhp#online_update']" />
 
 <!-- Remove Online Update text -->
 <xsl:template match="paragraph[@id='par_id8754844']">
