@@ -1018,38 +1018,21 @@
 </xsl:template>
 
 <!-- Remove OpenOffice.org support text -->
-<xsl:template match="paragraph[@id='par_id9173253']" />
-<xsl:template match="paragraph[@id='par_id3149140']" />
-<xsl:template match="paragraph[@id='par_id3154230']" />
-<xsl:template match="paragraph[@id='hd_id26327']" />
-<xsl:template match="paragraph[@id='par_id1318380']" />
-<xsl:template match="paragraph[@id='hd_id2611386']" />
-<xsl:template match="paragraph[@id='par_id3166335']" />
-<xsl:template match="paragraph[@id='hd_id0915200811081722']" />
-<xsl:template match="paragraph[@id='par_id0915200811081778']" />
-<xsl:template match="paragraph[@id='hd_id0804200803314150']" />
-<xsl:template match="paragraph[@id='par_id0804200803314235']" />
+<xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3149140' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
 <!-- Remove Download and Language Pack text -->
-<xsl:template match="paragraph[@id='hd_id3168534']" />
-<xsl:template match="paragraph[@id='par_id3028143']" />
-<xsl:template match="paragraph[@id='hd_id9999694']" />
-<xsl:template match="listitem[paragraph[@id='par_id2216559']]" />
-<xsl:template match="listitem[paragraph[@id='par_id7869502']]" />
-<xsl:template match="listitem[paragraph[@id='par_id9852900']]" />
-<xsl:template match="listitem[paragraph[@id='par_id3791924']]" />
+<xsl:template match="paragraph[(@id='hd_id3168534' or @id='par_id3028143') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
+<xsl:template match="paragraph[@id='hd_id9999694' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]" />
+<xsl:template match="listitem[paragraph[(@id='par_id130619' or @id='par_id2216559' or @id='par_id7869502' or @id='par_id9852900' or @id='par_id3791924') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]]" />
 
 <!-- Remove Help Find text -->
-<xsl:template match="paragraph[@id='par_id3155555']">
-	<xsl:apply-templates mode="securitywarning" select="." />
+<xsl:template match="paragraph[@id='par_id3155555' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000140xml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
-<xsl:template match="paragraph[@id='par_id3152552']" />
-<xsl:template match="paragraph[@id='par_id3153345']" />
-<xsl:template match="paragraph[@id='par_id3155941']" />
-<xsl:template match="paragraph[@id='par_id3157958']" />
-<xsl:template match="paragraph[@id='par_id3147210']" />
-<xsl:template match="paragraph[@id='par_id3146798']" />
-<xsl:template match="paragraph[@id='par_id3149732']" />
+<xsl:template match="paragraph[not(@id='hd_id3148523') and not(@id='par_id3155555') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000140xml']]]" />
+<xsl:template match="paragraph[@id='par_id3154188' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000110xml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
 
 <!-- Remove Java text -->
 <xsl:template match="paragraph[@id='par_id3152363']">
@@ -1261,74 +1244,40 @@
 <xsl:template match="paragraph[(@id='hd_id3151172' or @id='par_id3148386') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000005xml']]]" />
 
 <!-- Remove Online Registration text -->
-<xsl:template match="paragraph[@id='par_id3153882']">
+<xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
+<xsl:template match="embed[@href='text/shared/01/08060100.xhp#registrierung']" />
+<xsl:template match="paragraph[@id='par_id3153882' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
-<xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
-<xsl:template match="paragraph[@id='hd_id3153624']" />
-<xsl:template match="paragraph[@id='par_id3150445']" />
-<xsl:template match="paragraph[@id='hd_id3145629']" />
-<xsl:template match="paragraph[@id='par_id3149999']" />
-<xsl:template match="paragraph[@id='hd_id3149760']" />
-<xsl:template match="paragraph[@id='par_id3151234']" />
-<xsl:template match="paragraph[@id='hd_id3147557']" />
-<xsl:template match="paragraph[@id='par_id3148548']" />
-<xsl:template match="embed[@href='text/shared/optionen/online_update.xhp#online_update']" />
+<xsl:template match="paragraph[not(@id='hd_id3147477') and not(@id='par_id3153882') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]" />
+<xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='par_idN1054C') and not(@id='par_idN1055C') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]" />
+<xsl:template match="paragraph[(@id='hd_id2926419' or @id='par_id2783898') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedmain0108xml']]]" />
 
 <!-- Remove Online Update text -->
-<xsl:template match="paragraph[@id='par_id8754844']">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
 <xsl:template match="section[embed[@href='text/shared/00/00000406.xhp#online_update']]" />
-<xsl:template match="paragraph[@id='hd_id2189397']" />
-<xsl:template match="paragraph[@id='par_id7523728']" />
-<xsl:template match="paragraph[@id='par_id8994109']" />
-<xsl:template match="paragraph[@id='par_id476699']" />
-<xsl:template match="paragraph[@id='par_id4057130']" />
-<xsl:template match="paragraph[@id='hd_id266426']" />
-<xsl:template match="paragraph[@id='par_id3031098']" />
-<xsl:template match="paragraph[@id='hd_id8276619']" />
-<xsl:template match="paragraph[@id='par_id7824030']" />
-<xsl:template match="paragraph[@id='hd_id7534104']" />
-<xsl:template match="paragraph[@id='par_id209051']" />
-<xsl:template match="paragraph[@id='hd_id1418805']" />
-<xsl:template match="paragraph[@id='par_id1743522']" />
-<xsl:template match="paragraph[@id='hd_id5994140']" />
-<xsl:template match="paragraph[@id='par_id7870113']" />
-<xsl:template match="paragraph[@id='hd_id3051545']" />
-<xsl:template match="paragraph[@id='par_id3061311']" />
-<xsl:template match="paragraph[@id='hd_id4814905']" />
-<xsl:template match="paragraph[@id='par_id2143925']" />
-<xsl:template match="paragraph[@id='par_id6797082']">
+<xsl:template match="embed[@href='text/shared/optionen/online_update.xhp#online_update']" />
+<xsl:template match="paragraph[@id='par_id8754844' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenonlineupdatexhp']]]">
 	<xsl:apply-templates mode="notavailable" select="." />
 </xsl:template>
-<xsl:template match="paragraph[@id='par_id4218878']" />
-<xsl:template match="paragraph[@id='par_id8132267']" />
-<xsl:template match="paragraph[@id='par_id702230']" />
-<xsl:template match="listitem[paragraph[@id='par_id3422345']]" />
-<xsl:template match="paragraph[@id='par_id9313638']" />
-<xsl:template match="listitem[paragraph[@id='par_id9951780']]" />
-<xsl:template match="listitem[paragraph[@id='par_id6479384']]" />
-<xsl:template match="listitem[paragraph[@id='par_id3639027']]" />
-<xsl:template match="paragraph[@id='par_id3722342']" />
-<xsl:template match="listitem[paragraph[@id='par_id5106662']]" />
-<xsl:template match="listitem[paragraph[@id='par_id4931485']]" />
-<xsl:template match="listitem[paragraph[@id='par_id9168980']]" />
-<xsl:template match="paragraph[@id='par_id9766533']" />
-<xsl:template match="paragraph[@id='par_id927152']" />
-<xsl:template match="paragraph[@id='par_id6081728']" />
-<xsl:template match="paragraph[@id='par_id9219641']" />
+<xsl:template match="paragraph[not(@id='hd_id29297') and not(@id='par_id8754844') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionenonlineupdatexhp']]]" />
+<xsl:template match="paragraph[@id='par_id6797082' and ancestor::body/preceding-sibling::meta[topic[@id='textshared01online_updatexml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='hd_id315256') and not(@id='par_id6797082') and ancestor::body/preceding-sibling::meta[topic[@id='textshared01online_updatexml']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textshared01online_updatexml']]]" />
+<xsl:template match="paragraph[@id='par_id1906491' and ancestor::body/preceding-sibling::meta[topic[@id='textshared01online_update_dialogxml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='hd_id4959257') and not(@id='par_id1906491') and not(parent::section[@id='relatedtopics']) and ancestor::body/preceding-sibling::meta[topic[@id='textshared01online_update_dialogxml']]]" />
 
 <!-- Remove Python, JavaScript, and BeanShell text -->
-<xsl:template match="listitem[paragraph[@id='par_idN10739']]" />
-<xsl:template match="listitem[paragraph[@id='par_idN1073D']]" />
-<xsl:template match="listitem[paragraph[@id='par_id6797082']]" />
-<xsl:template match="paragraph[@id='par_idN1091F']" />
-<xsl:template match="paragraph[@id='par_idN105AA']" />
-<xsl:template match="paragraph[@id='par_idN105BA']" />
-<xsl:template match="paragraph[@id='par_idN10622']" />
-<xsl:template match="paragraph[@id='par_idN10597']" />
-<xsl:template match="paragraph[@id='par_idN109BB']" />
+<xsl:template match="listitem[paragraph[(@id='par_idN10739' or @id='par_idN1073D' or @id='par_id6797082') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidescriptingxml']]]]" />
+<xsl:template match="paragraph[@id='par_idN1091F' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidescriptingxml']]]" />
+<xsl:template match="paragraph[(@id='par_idN105AA' or @id='par_idN105BA' or @id='par_idN10622' or @id='par_idN10597' or @id='par_idN105A7' or @id='par_idN105FB') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0106130200xml']]]" />
+<xsl:template match="paragraph[@id='par_idN109BB' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0106130000xml']]]" />
 
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
