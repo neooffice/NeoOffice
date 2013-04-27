@@ -642,7 +642,7 @@
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
 		<!-- Fix bug 1120 by replacing the OOo support URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id3150667']">
+		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3150667']">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo download URL -->
@@ -650,35 +650,19 @@
 			<a href="$(PRODUCT_DOWNLOAD_URL)">$(PRODUCT_DOWNLOAD_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo documentation URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id3497211']">
+		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]] and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo command line options URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id3150503']">
+		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidestart_parametersxml']]] and parent::paragraph[@id='par_id3150503']">
 			<a href="$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo spellchecking URLs -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id6434522']">
-			<a href="http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck">NeoOffice Wiki</a>
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:when test="@href and parent::paragraph[@id='par_id3552964']">
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:when test="@href and parent::paragraph[@id='par_id6434522']">
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:when test="@href and parent::paragraph[@id='par_id3552964']">
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:when test="@href and parent::paragraph[@id='par_id9625843']">
-			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:when test="@href and parent::paragraph[@id='par_id1683706']">
+		<xsl:when test="@href and (parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or parent::paragraph[@id='par_id6434522'] or parent::paragraph[@id='par_id3552964'] or paragraph[@id='par_id9625843'] or parent::paragraph[@id='par_id1683706'])">
 			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo language pack URL -->
-		<xsl:when test="@href and parent::paragraph[@id='par_id2216559']">
+		<xsl:when test="@href[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]] and parent::paragraph[@id='par_id2216559']">
 			<a href="$(PRODUCT_DOWNLOADLANGPACK_URL)">$(PRODUCT_DOWNLOADLANGPACK_URL)</a>
 		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
@@ -1026,31 +1010,20 @@
 </xsl:template>
 
 <!-- Remove OpenOffice.org support text -->
-<xsl:template match="paragraph[@id='par_id9173253']" />
-<xsl:template match="paragraph[@id='par_id3149140']" />
-<xsl:template match="paragraph[@id='par_id3154230']" />
-<xsl:template match="paragraph[@id='hd_id26327']" />
-<xsl:template match="paragraph[@id='par_id1318380']" />
-<xsl:template match="paragraph[@id='hd_id2611386']" />
-<xsl:template match="paragraph[@id='par_id3166335']" />
-<xsl:template match="paragraph[@id='hd_id0915200811081722']" />
-<xsl:template match="paragraph[@id='par_id0915200811081778']" />
-<xsl:template match="paragraph[@id='hd_id0804200803314150']" />
-<xsl:template match="paragraph[@id='par_id0804200803314235']" />
+<xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3149140' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
 <!-- Remove Online Registration text -->
-<xsl:template match="paragraph[@id='par_id3153882']">
-	<xsl:apply-templates mode="notavailable" select="." />
-</xsl:template>
 <xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
-<xsl:template match="paragraph[@id='hd_id3153624']" />
-<xsl:template match="paragraph[@id='par_id3150445']" />
-<xsl:template match="paragraph[@id='hd_id3145629']" />
-<xsl:template match="paragraph[@id='par_id3149999']" />
-<xsl:template match="paragraph[@id='hd_id3149760']" />
-<xsl:template match="paragraph[@id='par_id3151234']" />
-<xsl:template match="paragraph[@id='hd_id3147557']" />
-<xsl:template match="paragraph[@id='par_id3148548']" />
+<xsl:template match="embed[@href='text/shared/01/08060100.xhp#registrierung']" />
+<xsl:template match="paragraph[@id='par_id3153882' and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]">
+        <xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='hd_id3147477') and not(@id='par_id3153882') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0108060100xml']]]" />
+<xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]">
+        <xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[not(@id='par_idN1054C') and not(@id='par_idN1055C') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopistartupxhp']]]" />
+<xsl:template match="paragraph[(@id='hd_id2926419' or @id='par_id2783898') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedmain0108xml']]]" />
 
 <!-- Replace paragraph with "not available" warning -->
 <xsl:template match="paragraph" mode="notavailable">
