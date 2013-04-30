@@ -942,13 +942,15 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 	// empty menu to be set when editing an embedded OLE object by only setting
 	// the empty menu if the frame has no menu and has a visible parent:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63032#63032
+	// Allow empty menubar for help window by allowing non-floating, non-utility
+	// frames that have no parent to also have an empty menubar.
 	if ( pFrame && pFrame->mbVisible )
 	{
 		if ( pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu )
 		{
 			[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
 		}
-		else if ( pFrame->mpParent && pFrame->mpParent->mbVisible )
+		else if ( ( pFrame->mpParent && pFrame->mpParent->mbVisible ) || ( !pFrame->mpParent && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() ) )
 		{
 			static JavaSalMenu *pEmptyMenuBar = NULL;
 			if ( !pEmptyMenuBar )
