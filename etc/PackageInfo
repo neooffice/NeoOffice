@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <pkg-info format-version="2" overwrite-permissions="true" relocatable="false" identifier="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" install-location="/Applications" auth="root">
-    <scripts>
-        <preinstall file="./preflight"/>
-        <postinstall file="./postflight"/>
-    </scripts>
     <bundle path="./$(PRODUCT_NAME).app" id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)"/>
     <bundle-version>
         <bundle id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)"/>

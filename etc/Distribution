@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-script minSpecVersion="2">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION)</title>
-    <options customize="never" hostArchitectures="$(TARGET_MACHINE)"/>
+    <options customize="never" require-scripts="false" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
         <line choice="default">
