@@ -22,3 +22,9 @@
         </must-close>
     </pkg-ref>
     <product id="$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)"/>
+
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="$(PRODUCT_MIN_OSVERSION)"/>
+        </allowed-os-versions>
+    </volume-check>
