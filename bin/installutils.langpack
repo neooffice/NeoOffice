@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-userinstall="$HOME/Library/Containers/$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DIR_NAME)"
+userinstall="$HOME/Library/Containers/org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DIR_NAME)"
 target_file_type="$(TARGET_FILE_TYPE)"
 last_installed_product_found=
 
