@@ -3172,7 +3172,15 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		}
 
 		if ( pShowOnlyMenusFrame && pShowOnlyMenusFrame != this )
-			pShowOnlyMenusFrame->Show( TRUE, FALSE );
+		{
+			// Fix empty menubar when the help window is displayed and then
+			// closed and the show only menus frame's menubar fails to be
+			// set by ensuring that the show only menus frame gets focus
+			if ( pShowOnlyMenusFrame->mbVisible )
+				pShowOnlyMenusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			else
+				pShowOnlyMenusFrame->Show( TRUE, FALSE );
+		}
 	}
 
 	UpdateLayer();
