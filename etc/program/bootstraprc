@@ -4,6 +4,7 @@ ProductKey=
 ProductPatch=
 InstallMode=<installmode>
 UserInstallation=
+BuildMachine=
 [ErrorReport]
 ErrorReportPort=80
 ErrorReportServer=

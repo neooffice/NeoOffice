@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Update ##'`
+product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Patch ##'`
 userinstall="$HOME/Library/Containers/org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DIR_NAME)"
 target_file_type="$(TARGET_FILE_TYPE)"
 last_installed_product_found=
@@ -49,27 +49,27 @@ check_installation() {
 		return 1;
 	fi
 
-	# Check for matching build machine. Note: we trim "local." off the end of
-	# the build machine because some test patches were released with "local."
-	# truncated.
-	grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/Info.plist" >/dev/null 2>&1
-	if [ "$?" != "0" ] ; then
-		return 1;
-	fi
-
 	file_type=`file "$1/Contents/MacOS/soffice.bin" | sed 's#^.*: ##'`
 	if [ "$file_type" != "$target_file_type" ] ; then
 		return 1
 	fi
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
+		# Check for matching build machine. Note: we trim "local." off the end
+		# of the build machine because some test patches were released with
+		# "local." truncated.
+		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/MacOS/bootstraprc" >/dev/null 2>&1
+		if [ "$?" != "0" ] ; then
+			return 1;
+		fi
+
 		productkey=`grep '^ProductKey=' "$1/Contents/MacOS/bootstraprc"`
 		productpatch=`grep '^ProductPatch=' "$1/Contents/MacOS/bootstraprc"`
 		if [ -z "$productkey" -o -z "$productpatch" ] ; then
 			return 1;
 		fi
 		productkey=`echo $productkey | awk -F= '{ print $2 }'`
-		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Update ##'`
+		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
 
 		# Allow only an exact product version match
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then

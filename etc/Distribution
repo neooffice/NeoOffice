@@ -12,16 +12,16 @@
     <choice id="org.neooffice.$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false" customLocation="/Applications">
         <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </choice>
-    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>
+    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>
     <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)">
         <bundle-version>
-            <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)" path="$(PRODUCT_NAME).app"/>
+            <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_VERSION)" path="$(PRODUCT_NAME).app"/>
         </bundle-version>
         <must-close>
             <app id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
         </must-close>
     </pkg-ref>
-    <product id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)"/>
+    <product id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)"/>
     <volume-check>
         <allowed-os-versions>
             <os-version min="$(PRODUCT_MIN_OSVERSION)"/>

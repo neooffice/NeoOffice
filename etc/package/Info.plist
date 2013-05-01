@@ -746,7 +746,7 @@
 	<key>CFBundleExecutable</key>
 	<string>soffice.bin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</string>
+	<string>$(PRODUCT_VERSION)</string>
 	<key>CFBundleIconFile</key>
 	<string>ship.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -756,11 +756,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</string>
+	<string>$(PRODUCT_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
-	<string>$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION) $(ULONGNAME) ($(BUILD_MACHINE))</string>
+	<string>$(PRODUCT_VERSION)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleInfoDictionaryVersion</key>

@@ -48,20 +48,20 @@ check_installation() {
 		return 1;
 	fi
 
-	# Check for matching build machine. Note: we trim "local." off the end of
-	# the build machine because some test patches were released with "local."
-	# truncated.
-	grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/Info.plist" >/dev/null 2>&1
-	if [ "$?" != "0" ] ; then
-		return 1;
-	fi
-
 	file_type=`file "$1/Contents/MacOS/soffice.bin" | sed 's#^.*: ##'`
 	if [ "$file_type" != "$target_file_type" ] ; then
 		return 1
 	fi
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
+		# Check for matching build machine. Note: we trim "local." off the end
+		# of the build machine because some test patches were released with
+		# "local." truncated.
+		grep "`echo '$(BUILD_MACHINE)' | sed 's#\.local\.$#\.#'`" "$1/Contents/MacOS/bootstraprc" >/dev/null 2>&1
+		if [ "$?" != "0" ] ; then
+			return 1;
+		fi
+
 		# Allow a product base match
 		productnameversion="$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE)"
 		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
