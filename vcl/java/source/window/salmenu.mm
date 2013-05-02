@@ -233,6 +233,19 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @end
 
+@interface VCLMenuItem : NSMenuItem
+{
+	USHORT					mnID;
+	Menu*					mpMenu;
+	MacOSBOOL				mbReallyEnabled;
+}
+- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
+- (MacOSBOOL)isReallyEnabled;
+- (void)selected;
+- (void)setReallyEnabled:(MacOSBOOL)bEnabled;
+- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
+@end
+
 @implementation VCLMenuWrapper
 
 - (id)init:(MacOSBOOL)bMenuBar
@@ -307,7 +320,16 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
 		if ( pMenuItem )
-			[pMenuItem setEnabled:[pEnable boolValue]];
+		{
+			// Fix bug described at the end of the following NeoOffice forum
+			// post by ignoring any menu item disabling calls not made by our
+			// own code:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64112#64112
+			if ( [pMenuItem isKindOfClass:[VCLMenuItem class]] )
+				[(VCLMenuItem *)pMenuItem setReallyEnabled:[pEnable boolValue]];
+			else
+				[pMenuItem setEnabled:[pEnable boolValue]];
+		}
 	}
 }
 
@@ -635,16 +657,6 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 @end
 
-@interface VCLMenuItem : NSMenuItem
-{
-	USHORT					mnID;
-	Menu*					mpMenu;
-}
-- (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu;
-- (void)selected;
-- (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
-@end
-
 @implementation VCLMenuItem
 
 - (id)initWithTitle:(NSString *)pTitle type:(MenuItemType)eType id:(USHORT)nID menu:(Menu *)pMenu
@@ -653,11 +665,17 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	mnID = nID;
 	mpMenu = pMenu;
+	mbReallyEnabled = [self isEnabled];
 
 	[self setTarget:self];
 	[self setAction:@selector(selected)];
 
 	return self;
+}
+
+- (MacOSBOOL)isReallyEnabled
+{
+	return mbReallyEnabled;
 }
 
 - (void)selected
@@ -707,6 +725,12 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;
 }
 
+- (void)setReallyEnabled:(MacOSBOOL)bEnabled
+{
+	mbReallyEnabled = bEnabled;
+	[self setEnabled:mbReallyEnabled];
+}
+
 - (MacOSBOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
 	MacOSBOOL bRet = YES;
@@ -716,7 +740,15 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 		bRet = [pAppDelegate validateMenuItem:pMenuItem];
 
 	if ( bRet && pMenuItem )
-		bRet = [pMenuItem isEnabled];
+	{
+		// Fix bug described at the end of the following NeoOffice forum post
+		// by ignoring any menu item disabling calls not made by our own code:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64112#64112
+		if ( [pMenuItem isKindOfClass:[VCLMenuItem class]] )
+			bRet = [(VCLMenuItem *)pMenuItem isReallyEnabled];
+		else
+			bRet = [pMenuItem isEnabled];
+	}
 
 	return bRet;
 }
