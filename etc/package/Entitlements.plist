@@ -9,30 +9,33 @@
 	-->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Allow the user to open and edit any of their files that were created in other applications such as Microsoft Office, iWork, NeoOffice, OpenOffice, and LibreOffice -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
 	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
-	<!-- Enable downloads from WebKit instances -->
+	<!-- Allow the user to download and open their files that they have previously uploaded from the Mobile :: Open NeoOffice Mobile menu's window -->
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
-	<!-- Enable iMedia browser's audio panel -->
+	<!-- Allow the user to see a list of and play their music files in the Tools :: Add-ons :: Show Media Browser menu's Audio panel -->
 	<key>com.apple.security.assets.music.read-only</key>
 	<true/>
-	<!-- Enable iMedia browser's movies panel -->
+	<!-- Allow the user to see a list of and play their movie files in the Tools :: Add-ons :: Show Media Browser menu's Movies panel -->
 	<key>com.apple.security.assets.movies.read-only</key>
 	<true/>
-	<!-- Enable iMedia browser's pictures panel -->
+	<!-- Allow the user to see a list of and view their image files in the Tools :: Add-ons :: Show Media Browser menu's Photos panel -->
 	<key>com.apple.security.assets.pictures.read-only</key>
 	<true/>
-	<!-- Enable Apple Remote Control controller -->
+	<!-- Allow the user to use their Mac's remote control infrared receiver to control slide shows for their presentation documents -->
 	<key>com.apple.security.device.usb</key>
 	<true/>
-	<!-- Allow creation of TCP sockets bound only to localhost for IPC -->
+	<!-- Allow creation of a TCP socket on a unreserved port bound only to the localhost network interface to do interprocess communication between different threads or subprocesses of the application -->
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<!-- Allow the user to connect to their NeoOffice Mobile account in the Mobile :: Open NeoOffice Mobile menu's window and allow connection to the TCP socket created with the "com.apple.security.network.server" entitlement -->
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Allow the user to query their addressbook and use the query results for creating a "mail merge" from a template document -->
 	<key>com.apple.security.personal-information.addressbook</key>
 	<true/>
 	<key>com.apple.security.print</key>
