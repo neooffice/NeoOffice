@@ -108,6 +108,13 @@
 
 #include <sfxlocal.hrc>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <osl/file.hxx>
+#include <sys/stat.h>
+
+#endif	// USE_JAVA && MACOSX
+
 //-----------------------------------------------------------------------------
 
 using namespace ::com::sun::star;
@@ -2090,8 +2097,27 @@ namespace
 			sPathCheck += '.';
 			try
 			{
+#if defined USE_JAVA && defined MACOSX
+				// Fix unexpected display of native open dialog before expected
+				// native open or save dialog reported in the following
+				// NeoOffice forum post by using the stat() function to
+				// determine if the path is a folder:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64138#64138
+				::rtl::OUString aSystemPath;
+				if ( ::osl::FileBase::getSystemPathFromFileURL( sPathCheck, aSystemPath ) == ::osl::FileBase::E_None )
+				{
+					struct stat aSystemPathStat;
+					if ( !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+						bValid = sal_True;
+				}
+				else
+				{
+#endif	// USE_JAVA && MACOSX
 				::ucbhelper::Content aContent( sPathCheck, uno::Reference< ucb::XCommandEnvironment >() );
 				bValid = aContent.isFolder();
+#if defined USE_JAVA && defined MACOSX
+				}
+#endif	// USE_JAVA && MACOSX
 			}
 			catch( Exception& ) {}
 		}
@@ -2606,10 +2632,29 @@ static int impl_isFolder( const OUString& rPath )
 
 	try
 	{
+#if defined USE_JAVA && defined MACOSX
+		// Fix unexpected display of native open dialog before expected
+		// native open or save dialog reported in the following
+		// NeoOffice forum post by using the stat() function to
+		// determine if the path is a folder:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64138#64138
+		::rtl::OUString aSystemPath;
+		if ( ::osl::FileBase::getSystemPathFromFileURL( rPath, aSystemPath ) == ::osl::FileBase::E_None )
+		{
+			struct stat aSystemPathStat;
+			if ( !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+				return 1;
+		}
+		else
+		{
+#endif	// USE_JAVA && MACOSX
 		::ucbhelper::Content aContent(
 			rPath, new ::ucbhelper::CommandEnvironment( xHandler, uno::Reference< ucb::XProgressHandler >() ) );
 		if ( aContent.isFolder() )
 			return 1;
+#if defined USE_JAVA && defined MACOSX
+		}
+#endif	// USE_JAVA && MACOSX
 
 		return 0;
 	}
