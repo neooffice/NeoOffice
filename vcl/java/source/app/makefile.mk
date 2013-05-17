@@ -42,11 +42,6 @@ TARGET=salapp
 
 .INCLUDE :  settings.mk
 
-# Fix crashing bug reported in the following NeoOffice forum topic by turning
-# off compiler optimization:
-# http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8555
-CFLAGSOPT = -O0
-
 # --- Files --------------------------------------------------------
 
 .IF "$(GUIBASE)"!="java"

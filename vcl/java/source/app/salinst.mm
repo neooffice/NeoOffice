@@ -2519,15 +2519,23 @@ sal_Bool JavaSalEvent::isShutdownCancelled()
 // ----------------------------------------------------------------------------
 
 void JavaSalEvent::reference() const
-{ 
-	++mnRefCount;
+{
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// incrementing and decrementing the reference count in a thread safe
+	// manner:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8555
+	osl_incrementInterlockedCount( &mnRefCount );
 }
 
 // ----------------------------------------------------------------------------
 
 void JavaSalEvent::release() const
 {
-	if ( --mnRefCount > 0 )
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// incrementing and decrementing the reference count in a thread safe
+	// manner:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8555
+	if ( osl_decrementInterlockedCount( &mnRefCount ) > 0 )
 		return;
 
 	// const_cast because some compilers violate ANSI C++ spec

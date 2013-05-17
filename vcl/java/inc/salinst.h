@@ -41,6 +41,7 @@
 #include <vcl/sv.h>
 #include <vcl/svapp.hxx>
 #include <osl/conditn.hxx>
+#include <osl/interlck.h>
 #include <vos/mutex.hxx>
 #include <vos/thread.hxx>
 
@@ -133,7 +134,7 @@ class JavaSalEvent
 	ULONG					mnCommittedCharacters;
 	ULONG					mnCursorPosition;
 	void*					mpData;
-	mutable int				mnRefCount;
+	mutable oslInterlockedCount	mnRefCount;
 
 public:
 							JavaSalEvent( USHORT nID, JavaSalFrame *pFrame, void *pData, const ::rtl::OString& rPath = ::rtl::OString(), ULONG nCommittedCharacters = 0, ULONG nCursorPosition = 0 );
