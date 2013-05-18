@@ -179,86 +179,157 @@ static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoB
 	return pRet;
 }
 
-static NSString *pHomeURLString = nil;
-static NSString *pMainBundleURLString = nil;
+static NSMutableArray *pIgnoreURLStrings = nil;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
 {
 	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
 	{
-		ClearableGuard< Mutex > aGuard( aCurrentInstanceSecurityURLCacheMutex );
-
-		if ( !pHomeURLString )
-		{
-			NSString *pHomeDir = NSHomeDirectory();
-			if ( pHomeDir )
-			{
-				NSURL *pTmpURL = [NSURL fileURLWithPath:pHomeDir];
-				if ( pTmpURL )
-				{
-					pTmpURL = [pTmpURL URLByStandardizingPath];
-					if ( pTmpURL )
-					{
-						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
-						if ( pTmpURL )
-						{
-							NSString *pTmpURLString = [pTmpURL absoluteString];
-							if ( pTmpURLString && [pTmpURLString length] )
-							{
-								pHomeURLString = pTmpURLString;
-								[pHomeURLString retain];
-
-								Application_cacheSecurityScopedURL( pTmpURL );
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if ( !pMainBundleURLString )
-		{
-			NSBundle *pMainBundle = [NSBundle mainBundle];
-			if ( pMainBundle )
-			{
-				NSURL *pTmpURL = [pMainBundle bundleURL];
-				if ( pTmpURL )
-				{
-					pTmpURL = [pTmpURL URLByStandardizingPath];
-					if ( pTmpURL )
-					{
-						pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
-						if ( pTmpURL )
-						{
-							NSString *pTmpURLString = [pTmpURL absoluteString];
-							if ( pTmpURLString && [pTmpURLString length] )
-							{
-								pMainBundleURLString = pTmpURLString;
-								[pMainBundleURLString retain];
-
-								Application_cacheSecurityScopedURL( pTmpURL );
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Improve performance by checking if the URL is within the home folder
-		// or the application's main bundle. These folders do not need a
-		// security scoped URL and the majority of calls to this function are
-		// for paths in these folders.
 		NSString *pURLString = [pURL absoluteString];
 		if ( !pURLString || ![pURLString length] )
 			return;
 
-		NSRange aHomeRange = [pURLString rangeOfString:pHomeURLString];
-		if ( !aHomeRange.location && aHomeRange.length )
-			return;
+		ClearableGuard< Mutex > aGuard( aCurrentInstanceSecurityURLCacheMutex );
 
-		NSRange aMainBundleRange = [pURLString rangeOfString:pMainBundleURLString];
-		if ( !aMainBundleRange.location && aMainBundleRange.length )
-			return;
+		if ( !pIgnoreURLStrings )
+		{
+			// Readable system folders listed in the following URL's
+			// "Container Directories and File System Access :: PowerBox and
+			// File System Access Outside of Your Container" section:
+			// http://developer.apple.com/library/mac/#documentation/Security/Conceptual/AppSandboxDesignGuide/AppSandboxInDepth/AppSandboxInDepth.html
+			NSArray *pReadableSystemFolders = [NSArray arrayWithObjects:
+				@"/bin",
+				@"/sbin",
+				@"/usr/bin",
+				@"/usr/lib",
+				@"/usr/sbin",
+				@"/usr/share",
+				@"/System",
+				nil];
+
+			// Unreadable system folders
+			NSArray *pUnreadableSystemFolders = [NSArray arrayWithObjects:
+				@"/.vol",
+				@"/dev",
+				@"/etc",
+				@"/private",
+				@"/tmp",
+				@"/var",
+				nil];
+
+			// Appplications folder
+			NSArray *pApplicationFolders = NSSearchPathForDirectoriesInDomains( NSApplicationDirectory, NSLocalDomainMask, NO );
+
+			// Libary folder
+			NSArray *pLibraryFolders = NSSearchPathForDirectoriesInDomains( NSLibraryDirectory, NSLocalDomainMask, NO );
+
+			NSMutableArray *pTmpPaths = [NSMutableArray arrayWithCapacity:
+				( pReadableSystemFolders ? [pReadableSystemFolders count] : 0 ) +
+				( pUnreadableSystemFolders ? [pUnreadableSystemFolders count] : 0 ) +
+				( pApplicationFolders ? [pApplicationFolders count] : 0 ) +
+				( pLibraryFolders ? [pLibraryFolders count] : 0 )];
+			if ( pTmpPaths )
+			{
+				[pTmpPaths addObjectsFromArray:pReadableSystemFolders];
+				[pTmpPaths addObjectsFromArray:pUnreadableSystemFolders];
+				[pTmpPaths addObjectsFromArray:pApplicationFolders];
+				[pTmpPaths addObjectsFromArray:pLibraryFolders];
+
+				NSMutableArray *pTmpURLs = [NSMutableArray arrayWithCapacity:[pTmpPaths count] + 3];
+				if ( pTmpURLs )
+				{
+					NSUInteger nCount = [pTmpPaths count];
+					NSUInteger i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSString *pTmpPath = [pTmpPaths objectAtIndex:i];
+						if ( pTmpPath )
+						{
+							NSURL *pTmpURL = [NSURL fileURLWithPath:pTmpPath isDirectory:YES];
+							if ( pTmpURL )
+								[pTmpURLs addObject:pTmpURL];
+						}
+					}
+
+					// Add home folder
+					NSString *pHomeDir = NSHomeDirectory();
+					if ( pHomeDir )
+					{
+						NSURL *pTmpURL = [NSURL fileURLWithPath:pHomeDir isDirectory:YES];
+						if ( pTmpURL )
+							[pTmpURLs addObject:pTmpURL];
+					}
+
+					// Add main bundle folder
+					NSBundle *pMainBundle = [NSBundle mainBundle];
+					if ( pMainBundle )
+					{
+						NSURL *pTmpURL = [pMainBundle bundleURL];
+						if ( pTmpURL )
+							[pTmpURLs addObject:pTmpURL];
+					}
+
+					// Add temporary folder
+					NSString *pTemporaryDir = NSTemporaryDirectory();
+					if ( pTemporaryDir )
+					{
+						NSURL *pTmpURL = [NSURL fileURLWithPath:pTemporaryDir isDirectory:YES];
+						if ( pTmpURL )
+							[pTmpURLs addObject:pTmpURL];
+					}
+
+					// Convert URLs to absolute strings
+					nCount = [pTmpURLs count];
+					pIgnoreURLStrings = [NSMutableArray arrayWithCapacity:nCount];
+					if ( pIgnoreURLStrings )
+					{
+						[pIgnoreURLStrings retain];
+		
+						for ( i = 0; i < nCount; i++ )
+						{
+							NSURL *pTmpURL = [pTmpURLs objectAtIndex:i];
+							if ( pTmpURL )
+							{
+								pTmpURL = [pTmpURL URLByStandardizingPath];
+								if ( pTmpURL )
+								{
+									pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
+									if ( pTmpURL )
+									{
+										NSString *pTmpURLString = [pTmpURL absoluteString];
+										if ( pTmpURLString && [pTmpURLString length] )
+										{
+											[pIgnoreURLStrings addObject:pTmpURLString];
+											Application_cacheSecurityScopedURL( pTmpURL );
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Improve performance by checking if the URL is within the home, main
+		// bundle, temporary, or one of the safe system folders. These folders
+		// do not need a security scoped URL and the majority of calls to this
+		// function are for paths in these folders.
+		if ( pIgnoreURLStrings )
+		{
+			NSUInteger nCount = [pIgnoreURLStrings count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSString *pTmpURLString = [pIgnoreURLStrings objectAtIndex:i];
+				if ( pTmpURLString )
+				{
+					NSRange aTmpRange = [pURLString rangeOfString:pTmpURLString];
+					if ( !aTmpRange.location && aTmpRange.length )
+						return;
+				}
+			}
+		}
 
 		aGuard.clear();
 
