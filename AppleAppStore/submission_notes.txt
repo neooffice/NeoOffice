@@ -1,0 +1,63 @@
+This file contains notes for submitting a new version of NeoOffice Secure Edition to the Apple Mac App Store in iTunes Connect. 
+
+
+Rights and Pricing
+------------------
+Set to "Tier 10".
+
+
+Version Information
+-------------------
+
+Version:
+Use PRODUCT_VERSION macro value in main makefile.
+
+Copyright:
+Use "<current year> Planamesa Inc."
+
+Primary Category:
+Productivity
+
+Secondary Category:
+Business
+
+
+Metadata and Uploads
+--------------------
+
+Localizations:
+NeoOffice Secure Edition bundles many languages so add a localization for each of the following languages in iTunes Connect. Note that since we only have English descriptive text, use the English text below for all localizations:
+  German
+  French
+  Hebrew
+  Italian
+  Japanese
+  Arabic
+  Russian
+  Spanish
+  Dutch
+  British English
+  Swedish
+  Polish
+
+App Name:
+NeoOffice Secure Edition
+
+Description:
+NeoOffice Secure Edition is a full-featured set of office applications
+
+Keywords:
+neo office, open office, openoffice, office, word processing, spreadsheet, presentation
+
+Support URL:
+http://www.neooffice.org/neojava/secure.php
+
+Mac OS X App Screenshots:
+Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
+
+
+App Review Information
+----------------------
+
+App Sandbox Entitlement Usage Information:
+Add a comment for each entitlement key marked as required or optional in iTunes Connect that is also in the etc/package/Entitlements.plist file. Copy the matching comment in that file into each entitlement added in iTunes Connect.
