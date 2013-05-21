@@ -113,7 +113,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 static const sal_Char* MOUNTTAB="/etc/mtab";
 
 #elif defined(MACOSX)
-#include <ufs/ufs/quota.h>
+#include <sys/quota.h>
 #include <ctype.h>
 // static const sal_Char* MOUNTTAB="/etc/mtab";
 
