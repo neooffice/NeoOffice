@@ -171,6 +171,17 @@
  }
  
  #############################################
+--- bin/modules/macosxotoolhelper.pm	2013-05-20 21:23:36.000000000 -0700
++++ bin/modules/macosxotoolhelper.pm	2013-05-20 21:23:43.000000000 -0700
+@@ -39,7 +39,7 @@
+     my $call = "otool -D $file";
+     open(IN, "-|", $call) or die "cannot $call";
+     my $line = <IN>;
+-    $line =~ /^$file:\n$/ or
++    $line =~ m%^\Q$file\E:\n$% or
+         die "unexpected otool -D output (\"$line\", expecting \"$file:\")";
+     $line = <IN> or die "unexpected otool -D output";
+     <IN> == undef or die "unexpected otool -D output";
 --- inc/unxmacx.mk	2012-07-12 17:34:08.000000000 -0700
 +++ inc/unxmacx.mk	2012-09-24 11:26:52.000000000 -0700
 @@ -70,7 +70,7 @@
