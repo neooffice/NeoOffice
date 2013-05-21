@@ -232,6 +232,7 @@ build.oo_patches: \
 	build.oo_qadevOOo_patch \
 	build.oo_reportbuilder_patch \
 	build.oo_reportdesign_patch \
+	build.oo_sal_patch \
 	build.oo_sc_patch \
 	build.oo_scp2_patch \
 	build.oo_solenv_patch \
