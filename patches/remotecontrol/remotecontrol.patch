@@ -25,9 +25,15 @@
 -@end
 \ No newline at end of file
 +@end
---- RemoteControlFramework.xcodeproj/project.pbxproj	2010-01-11 07:16:49.000000000 -0800
-+++ RemoteControlFramework.xcodeproj/project.pbxproj	2012-07-13 11:19:53.000000000 -0700
-@@ -243,7 +243,6 @@
+--- RemoteControlFramework.xcodeproj/project.pbxproj	2012-10-08 17:32:17.000000000 -0700
++++ RemoteControlFramework.xcodeproj/project.pbxproj	2013-05-21 20:42:34.000000000 -0700
+@@ -238,12 +238,11 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
  				);
  				COPY_PHASE_STRIP = NO;
  				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -35,7 +41,13 @@
  			};
  			name = Debug;
  		};
-@@ -256,7 +255,6 @@
+@@ -251,12 +250,11 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
  				);
  				COPY_PHASE_STRIP = YES;
  				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -43,3 +55,23 @@
  			};
  			name = Release;
  		};
+@@ -264,8 +262,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
+ 				);
+ 				COPY_PHASE_STRIP = NO;
+ 				DYLIB_COMPATIBILITY_VERSION = 1;
+@@ -294,8 +292,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
+ 				);
+ 				COPY_PHASE_STRIP = YES;
+ 				DYLIB_COMPATIBILITY_VERSION = 1;
