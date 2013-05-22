@@ -828,185 +828,7 @@ Index: iMBSafariBookmarkParser.m
  	if (self = [super initWithContentsOfFile:[NSString stringWithFormat:@"%@/Library/Safari/Bookmarks.plist", NSHomeDirectory()]])
  	{
  		mySafariFaviconCache = [[NSMutableDictionary dictionary] retain];
-Index: iMediaBrowser.h
---- iMediaBrowser.h	2012-10-03 17:14:25.000000000 -0700
-+++ iMediaBrowser.h	2013-01-12 15:16:51.000000000 -0800
-@@ -48,7 +48,7 @@
- @protocol iMediaBrowser;
- @class iMBLibraryNode, RBSplitView, iMBBackgroundImageView;
- 
--@interface iMediaBrowser : NSWindowController
-+@interface iMediaBrowser : NSWindowController <NSWindowDelegate, NSToolbarDelegate>
- {
- 	IBOutlet id						myDelegate;
- 	IBOutlet NSTabView				*browserTabView;
-Index: iMediaBrowser.m
---- iMediaBrowser.m	2012-10-03 17:14:25.000000000 -0700
-+++ iMediaBrowser.m	2013-01-12 15:16:51.000000000 -0800
-@@ -57,6 +57,12 @@
- static iMediaBrowser *_sharedMediaBrowser = nil;
- static NSMutableArray *_browserClasses = nil;
- 
-+static NSString *kMediaBrowserXPosPref = @"iMBXPos";
-+static NSString *kMediaBrowserYPosPref = @"iMBYPos";
-+static NSString *kMediaBrowserWidthPref = @"iMBWidth";
-+static NSString *kMediaBrowserHeightPref = @"iMBHeight";
-+static NSString *kMediaBrowserVisiblePref = @"iMBVisible";
-+
- @interface iMediaBrowser (PrivateAPI)
- - (void)setupInfoWindow;
- + (NSArray *)findModulesInDirectory:(NSString*)scanDir withExtension:(NSString *)ext;
-@@ -435,7 +441,7 @@
- 	[container addSubview:iButton];
- 	
- 	// get flipping window ready
--	[NSWindow flippingWindow];
-+	[NSWindow flippingWindow_iMediaBrowse];
- 	[oInfoTextView setDrawsBackground:NO];
- 	//[oInfoTextView setTextContainerInset:NSMakeSize(2,2)];
- 	NSScrollView *scrollView = [oInfoTextView enclosingScrollView];
-@@ -609,7 +615,7 @@
-     return [[iMediaConfiguration sharedConfiguration] prefersFilenamesInPhotoBasedBrowsers];
- }
- 
--- (IBAction)showWindow:(id)sender;
-+- (IBAction)showWindow:(id)sender
- {
- 	// If we are actually showing the back of the window, flip to the front.
- 	if ([oInfoWindow isVisible])
-@@ -618,10 +624,61 @@
- 	}
- 	else
- 	{
-+		NSWindow *window = [self window];
-+		if(window && ![window isVisible])
-+		{
-+			// Check for retained user position. If not available, make relative
-+			// to the key frame.
-+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+			NSPoint windowPos={0, 0};
-+			NSString *xPosStr=[defaults stringForKey:kMediaBrowserXPosPref];
-+			NSString *yPosStr=[defaults stringForKey:kMediaBrowserYPosPref];
-+			if(xPosStr && yPosStr)
-+			{
-+				windowPos.x=[xPosStr intValue];
-+				windowPos.y=[yPosStr intValue];
-+			}
-+			else
-+			{
-+				NSWindow *keyWindow=[NSApp mainWindow];
-+				if(keyWindow)
-+				{
-+					windowPos=[keyWindow frame].origin;
-+					windowPos.x+=75;
-+					windowPos.y+=75;
-+				}
-+			}
-+			[window setFrameOrigin:windowPos];
-+
-+			NSString *widthStr=[defaults stringForKey:kMediaBrowserWidthPref];
-+			NSString *heightStr=[defaults stringForKey:kMediaBrowserHeightPref];
-+			if(widthStr && heightStr)
-+			{
-+				NSSize contentSize={0, 0};
-+				contentSize.width=[widthStr intValue];
-+				contentSize.height=[heightStr intValue];
-+				[window setContentSize:contentSize];
-+			}
-+		}
-+
- 		[super showWindow:sender];
-+
-+		if(window && [window isVisible])
-+		{
-+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+			[defaults setBool:YES forKey:kMediaBrowserVisiblePref];
-+			[defaults synchronize];
-+		}
- 	}
- }
- 
-+- (IBAction)showWindowOnlyIfVisible:(id)sender
-+{
-+	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+	if([defaults boolForKey:kMediaBrowserVisiblePref])
-+		[self showWindow:sender];
-+}
-+
- - (BOOL)infoWindowIsVisible
- {
- 	return [oInfoWindow isVisible];
-@@ -635,13 +692,13 @@
- - (IBAction) info:(id)sender
- {
- 	[oInfoWindow setFrame:[[self window] frame] display:NO];
--	[[self window] flipToShowWindow:oInfoWindow forward:YES reflectInto:oBackgroundImageView];
-+	[[self window] flipToShowWindow_iMediaBrowse:oInfoWindow forward:YES reflectInto:oBackgroundImageView];
- }
- 
- - (IBAction) flipBack:(id)sender
- {
- 	[[self window] setFrame:[oInfoWindow frame] display:NO];	// not really needed unless window is resized
--	[oInfoWindow flipToShowWindow:[self window] forward:NO reflectInto:nil];
-+	[oInfoWindow flipToShowWindow_iMediaBrowse:[self window] forward:NO reflectInto:nil];
- }
- 
- - (NSArray *)excludedFolders {
-@@ -708,9 +765,47 @@
- 
- #pragma mark -
- #pragma mark Window Delegate Methods
-+- (void)windowDidMove:(NSNotification *)aNotification
-+{
-+	NSWindow *window=[aNotification object];
-+	if(window && (window==[self window]))
-+	{
-+		NSPoint windowPos=[window frame].origin;
-+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kMediaBrowserXPosPref]; 
-+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kMediaBrowserYPosPref];
-+		[defaults synchronize];
-+	}
-+}
-+
-+- (void)windowDidResize:(NSNotification *)aNotification
-+{
-+	NSWindow *window=[aNotification object];
-+	if(window && (window==[self window]))
-+	{
-+		NSView *pContentView=[window contentView];
-+		if(pContentView)
-+		{
-+			NSSize contentSize=[pContentView frame].size;
-+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kMediaBrowserWidthPref]; 
-+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kMediaBrowserHeightPref];
-+			[defaults synchronize];
-+		}
-+	}
-+}
-+
- - (void)windowWillClose:(NSNotification *)aNotification
- {
- 	[mySelectedBrowser didDeactivate];
-+
-+	NSWindow *window=[aNotification object];
-+	if(window && (window==[self window]))
-+	{
-+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+		[defaults setBool:NO forKey:kMediaBrowserVisiblePref];
-+		[defaults synchronize];
-+	}
- }
- 
- - (void)windowDidBecomeKey:(NSNotification *)aNotification
-@@ -1005,4 +1100,4 @@
- 	return bundles;
- }
- 
--@end
-\ No newline at end of file
-+@end
+Index: iMediaBrowse.xcodeproj/project.pbxproj
 --- iMediaBrowse.xcodeproj/project.pbxproj	2012-10-03 17:14:21.000000000 -0700
 +++ iMediaBrowse.xcodeproj/project.pbxproj	2013-05-21 21:18:02.000000000 -0700
 @@ -108,6 +108,11 @@
@@ -1296,3 +1118,182 @@ Index: iMediaBrowser.m
  			};
  			name = Plugin;
  		};
+Index: iMediaBrowser.h
+--- iMediaBrowser.h	2012-10-03 17:14:25.000000000 -0700
++++ iMediaBrowser.h	2013-01-12 15:16:51.000000000 -0800
+@@ -48,7 +48,7 @@
+ @protocol iMediaBrowser;
+ @class iMBLibraryNode, RBSplitView, iMBBackgroundImageView;
+ 
+-@interface iMediaBrowser : NSWindowController
++@interface iMediaBrowser : NSWindowController <NSWindowDelegate, NSToolbarDelegate>
+ {
+ 	IBOutlet id						myDelegate;
+ 	IBOutlet NSTabView				*browserTabView;
+Index: iMediaBrowser.m
+--- iMediaBrowser.m	2012-10-03 17:14:25.000000000 -0700
++++ iMediaBrowser.m	2013-01-12 15:16:51.000000000 -0800
+@@ -57,6 +57,12 @@
+ static iMediaBrowser *_sharedMediaBrowser = nil;
+ static NSMutableArray *_browserClasses = nil;
+ 
++static NSString *kMediaBrowserXPosPref = @"iMBXPos";
++static NSString *kMediaBrowserYPosPref = @"iMBYPos";
++static NSString *kMediaBrowserWidthPref = @"iMBWidth";
++static NSString *kMediaBrowserHeightPref = @"iMBHeight";
++static NSString *kMediaBrowserVisiblePref = @"iMBVisible";
++
+ @interface iMediaBrowser (PrivateAPI)
+ - (void)setupInfoWindow;
+ + (NSArray *)findModulesInDirectory:(NSString*)scanDir withExtension:(NSString *)ext;
+@@ -435,7 +441,7 @@
+ 	[container addSubview:iButton];
+ 	
+ 	// get flipping window ready
+-	[NSWindow flippingWindow];
++	[NSWindow flippingWindow_iMediaBrowse];
+ 	[oInfoTextView setDrawsBackground:NO];
+ 	//[oInfoTextView setTextContainerInset:NSMakeSize(2,2)];
+ 	NSScrollView *scrollView = [oInfoTextView enclosingScrollView];
+@@ -609,7 +615,7 @@
+     return [[iMediaConfiguration sharedConfiguration] prefersFilenamesInPhotoBasedBrowsers];
+ }
+ 
+-- (IBAction)showWindow:(id)sender;
++- (IBAction)showWindow:(id)sender
+ {
+ 	// If we are actually showing the back of the window, flip to the front.
+ 	if ([oInfoWindow isVisible])
+@@ -618,10 +624,61 @@
+ 	}
+ 	else
+ 	{
++		NSWindow *window = [self window];
++		if(window && ![window isVisible])
++		{
++			// Check for retained user position. If not available, make relative
++			// to the key frame.
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			NSPoint windowPos={0, 0};
++			NSString *xPosStr=[defaults stringForKey:kMediaBrowserXPosPref];
++			NSString *yPosStr=[defaults stringForKey:kMediaBrowserYPosPref];
++			if(xPosStr && yPosStr)
++			{
++				windowPos.x=[xPosStr intValue];
++				windowPos.y=[yPosStr intValue];
++			}
++			else
++			{
++				NSWindow *keyWindow=[NSApp mainWindow];
++				if(keyWindow)
++				{
++					windowPos=[keyWindow frame].origin;
++					windowPos.x+=75;
++					windowPos.y+=75;
++				}
++			}
++			[window setFrameOrigin:windowPos];
++
++			NSString *widthStr=[defaults stringForKey:kMediaBrowserWidthPref];
++			NSString *heightStr=[defaults stringForKey:kMediaBrowserHeightPref];
++			if(widthStr && heightStr)
++			{
++				NSSize contentSize={0, 0};
++				contentSize.width=[widthStr intValue];
++				contentSize.height=[heightStr intValue];
++				[window setContentSize:contentSize];
++			}
++		}
++
+ 		[super showWindow:sender];
++
++		if(window && [window isVisible])
++		{
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			[defaults setBool:YES forKey:kMediaBrowserVisiblePref];
++			[defaults synchronize];
++		}
+ 	}
+ }
+ 
++- (IBAction)showWindowOnlyIfVisible:(id)sender
++{
++	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++	if([defaults boolForKey:kMediaBrowserVisiblePref])
++		[self showWindow:sender];
++}
++
+ - (BOOL)infoWindowIsVisible
+ {
+ 	return [oInfoWindow isVisible];
+@@ -635,13 +692,13 @@
+ - (IBAction) info:(id)sender
+ {
+ 	[oInfoWindow setFrame:[[self window] frame] display:NO];
+-	[[self window] flipToShowWindow:oInfoWindow forward:YES reflectInto:oBackgroundImageView];
++	[[self window] flipToShowWindow_iMediaBrowse:oInfoWindow forward:YES reflectInto:oBackgroundImageView];
+ }
+ 
+ - (IBAction) flipBack:(id)sender
+ {
+ 	[[self window] setFrame:[oInfoWindow frame] display:NO];	// not really needed unless window is resized
+-	[oInfoWindow flipToShowWindow:[self window] forward:NO reflectInto:nil];
++	[oInfoWindow flipToShowWindow_iMediaBrowse:[self window] forward:NO reflectInto:nil];
+ }
+ 
+ - (NSArray *)excludedFolders {
+@@ -708,9 +765,47 @@
+ 
+ #pragma mark -
+ #pragma mark Window Delegate Methods
++- (void)windowDidMove:(NSNotification *)aNotification
++{
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSPoint windowPos=[window frame].origin;
++		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kMediaBrowserXPosPref]; 
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kMediaBrowserYPosPref];
++		[defaults synchronize];
++	}
++}
++
++- (void)windowDidResize:(NSNotification *)aNotification
++{
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSView *pContentView=[window contentView];
++		if(pContentView)
++		{
++			NSSize contentSize=[pContentView frame].size;
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kMediaBrowserWidthPref]; 
++			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kMediaBrowserHeightPref];
++			[defaults synchronize];
++		}
++	}
++}
++
+ - (void)windowWillClose:(NSNotification *)aNotification
+ {
+ 	[mySelectedBrowser didDeactivate];
++
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++		[defaults setBool:NO forKey:kMediaBrowserVisiblePref];
++		[defaults synchronize];
++	}
+ }
+ 
+ - (void)windowDidBecomeKey:(NSNotification *)aNotification
+@@ -1005,4 +1100,4 @@
+ 	return bundles;
+ }
+ 
+-@end
+\ No newline at end of file
++@end
