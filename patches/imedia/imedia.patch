@@ -525,7 +525,7 @@ Index: iMBSafariBookmarkParser.m
  		mySafariFaviconCache = [[NSMutableDictionary dictionary] retain];
 Index: iMediaBrowse.xcodeproj/project.pbxproj
 --- iMediaBrowse.xcodeproj/project.pbxproj	2012-10-03 17:14:21.000000000 -0700
-+++ iMediaBrowse.xcodeproj/project.pbxproj	2013-01-12 15:16:51.000000000 -0800
++++ iMediaBrowse.xcodeproj/project.pbxproj	2013-05-21 21:18:02.000000000 -0700
 @@ -108,6 +108,11 @@
  		A93A6A770AE77F2B00C77AA4 /* UKFileWatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */; };
  		A9FECB070ADA696A00AB3426 /* iMBLibraryOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */; };
@@ -686,7 +686,19 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -1830,8 +1865,6 @@
+@@ -1772,7 +1807,10 @@
+ 		969656A208C6A24500F2F85C /* Debug */ = {
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+-				ARCHS = "$(NATIVE_ARCH)";
++				ARCHS = (
++					i386,
++					x86_64,
++				);
+ 				COPY_PHASE_STRIP = NO;
+ 				GCC_DYNAMIC_NO_PIC = NO;
+ 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+@@ -1830,8 +1868,6 @@
  			buildSettings = {
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -695,7 +707,12 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -1844,8 +1877,6 @@
+@@ -1840,12 +1876,10 @@
+ 			buildSettings = {
+ 				ARCHS = (
+ 					i386,
+-					ppc,
++					x86_64,
  				);
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -704,7 +721,17 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Release;
  		};
-@@ -1910,8 +1941,6 @@
+@@ -1878,8 +1912,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
+ 				);
+ 				COPY_PHASE_STRIP = YES;
+ 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+@@ -1910,15 +1944,16 @@
  			buildSettings = {
  				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
  				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
@@ -713,7 +740,18 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Plugin;
  		};
-@@ -1944,7 +1973,6 @@
+ 		E5DF5D130D68C03000E2FF8A /* Debug */ = {
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+-				ARCHS = "$(NATIVE_ARCH)";
++				ARCHS = (
++					i386,
++					x86_64,
++				);
+ 				COPY_PHASE_STRIP = NO;
+ 				FRAMEWORK_SEARCH_PATHS = (
+ 					"$(inherited)",
+@@ -1944,7 +1979,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -721,7 +759,17 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -1979,7 +2007,6 @@
+@@ -1954,8 +1988,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
+ 				);
+ 				COPY_PHASE_STRIP = YES;
+ 				FRAMEWORK_SEARCH_PATHS = (
+@@ -1979,7 +2013,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -729,7 +777,17 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -2014,7 +2041,6 @@
+@@ -1989,8 +2022,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = (
+-					ppc,
+ 					i386,
++					x86_64,
+ 				);
+ 				COPY_PHASE_STRIP = YES;
+ 				FRAMEWORK_SEARCH_PATHS = (
+@@ -2014,7 +2047,6 @@
  				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/sqlite\"";
  				PREBINDING = NO;
  				PRODUCT_NAME = iMediaTesterSingle;
@@ -737,7 +795,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				WRAPPER_EXTENSION = app;
  				ZERO_LINK = NO;
  			};
-@@ -2040,7 +2066,7 @@
+@@ -2040,7 +2072,7 @@
  				);
  				PREBINDING = NO;
  				PRODUCT_NAME = MetadataTool;
@@ -746,7 +804,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Debug;
  		};
-@@ -2083,7 +2109,7 @@
+@@ -2083,7 +2115,7 @@
  				);
  				PREBINDING = NO;
  				PRODUCT_NAME = MetadataTool;
