@@ -986,6 +986,14 @@ sal_Bool ZipPackage::writeFileIsTemp()
 	uno::Reference < XOutputStream > xTempOut;
 	uno::Reference< XActiveDataStreamer > xSink;
 
+#ifdef USE_JAVA
+	// Attempt to fix slow performance reported in the following NeoOffice
+	// forum topic when saving to local files that are on volumes backed
+	// by slow remote storage like iDisk, Amazon S3, etc. by always writing to
+	// a temporary file and then sending the temporary file's bytes to the zip
+	// stream:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8561
+#else	// USE_JAVA
 	if ( eMode == e_IMode_URL && !pZipFile && isLocalFile_Impl( sURL ) )
 	{
 		xSink = openOriginalForOutput();
@@ -1007,6 +1015,7 @@ sal_Bool ZipPackage::writeFileIsTemp()
 		if( xTempOut.is() )
 			bUseTemp = sal_False;
 	}
+#endif	// USE_JAVA
 	
 	if( bUseTemp )
 	{
