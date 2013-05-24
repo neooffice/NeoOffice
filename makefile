@@ -146,7 +146,7 @@ PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Acti
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_BUNDLED_LANG_PACKS=en-US de fr he it ja ar ru es nl en-GB sv pl # fi nb pt-BR zh-TW da cs th hu zh-CN el ko sk
 ifeq ("$(OS_TYPE)","MacOSX")
-PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
+PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture neomobile remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=
 PREFLIGHT_REQUIRED_COMMANDS=defaults find id open touch
 INSTALLATION_CHECK_REQUIRED_COMMANDS=$(PREFLIGHT_REQUIRED_COMMANDS) awk basename chmod dirname file grep mv pax rm ps pwd sed sort unzip
