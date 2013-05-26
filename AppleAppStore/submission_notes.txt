@@ -25,29 +25,16 @@ Business
 Metadata and Uploads
 --------------------
 
-Localizations:
-NeoOffice Secure Edition bundles many languages so add a localization for each of the following languages in iTunes Connect. Note that since we only have English descriptive text, use the English text below for all localizations:
-  German
-  French
-  Hebrew
-  Italian
-  Japanese
-  Arabic
-  Russian
-  Spanish
-  Dutch
-  British English
-  Swedish
-  Polish
+Only English localizations is available for the following descriptive text so do not add any localizations in the Apple Mac App Store. Only fill in the default English fields.
 
-App Name:
-NeoOffice Secure Edition
+App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
+NeoOffice
 
 Description:
 NeoOffice Secure Edition is a full-featured set of office applications
 
 Keywords:
-neo office, open office, openoffice, office, word processing, spreadsheet, presentation
+neo office,secure edition,open office,openoffice,office,word processing,spreadsheet,presentation
 
 Support URL:
 http://www.neooffice.org/neojava/secure.php
