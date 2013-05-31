@@ -2076,8 +2076,15 @@ static oslFileError osl_psz_createDirectory( const sal_Char* pszPath )
 #ifdef USE_JAVA
     if ( !macxp_checkCreateDirectory( pszPath ) )
     {
-        errno = EACCES;
-        return oslTranslateFileError(OSL_FET_ERROR, nRet);
+        // Fix bug reported in the following NeoOffice forum topic by returning
+        // EEXIST when saving to the topmost folder on a remote volume:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8563
+        struct stat aFileStat;
+        if ( 0 == stat( pszPath, &aFileStat ) && S_ISDIR( aFileStat.st_mode ) )
+            errno = EEXIST;
+        else
+            errno = EACCES;
+        return oslTranslateFileError(OSL_FET_ERROR, errno);
     }
 #endif	// USE_JAVA
 
