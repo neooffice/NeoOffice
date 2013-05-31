@@ -839,8 +839,3 @@ build.cd_package_shared:
 
 build.all: build.package
 	touch "$@"
-
-BLAH=NeoOffice
-
-pat:
-	echo $(shell echo $(PRODUCT_NAME) | sed 's# Secure Edition# -&#')
