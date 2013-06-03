@@ -959,6 +959,11 @@ sal_Bool SfxMedium::SupportsActiveStreaming( const rtl::OUString &rName ) const
     if ( ::utl::LocalFileHelper::IsLocalFile( rName ) )
         return sal_True;
 
+#ifdef USE_JAVA
+    // Fix crash when copying all of the http://www.wsj.com/ webpage in Firefox
+    // and pasting into a Calc document by doing the same as the OOo 3.4.1 code
+    // and not invoking an HTTP HEAD request on non-local file URLs
+#else	// USE_JAVA
     ::ucbhelper::Content aTmpContent;
     Reference< ::com::sun::star::ucb::XCommandEnvironment > xDummyEnv;
     if ( ::ucbhelper::Content::create( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ), xDummyEnv, aTmpContent ) )
@@ -969,6 +974,7 @@ sal_Bool SfxMedium::SupportsActiveStreaming( const rtl::OUString &rName ) const
         sal_Bool bSupportsStreaming = sal_False;
         return ( ( aAny >>= bSupportsStreaming ) && bSupportsStreaming );
     }
+#endif	// USE_JAVA
 
     return sal_False;
 }
