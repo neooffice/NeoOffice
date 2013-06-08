@@ -185,6 +185,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	MacOSBOOL				mbDrawn;
 }
 + (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState context:(CGContextRef)aContext destRect:(CGRect)aDestRect;
+- (NSButton *)button;
 - (void)dealloc;
 - (void)draw:(id)pObject;
 - (MacOSBOOL)drawn;
@@ -200,6 +201,50 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	return pRet;
 }
 
+- (NSButton *)button
+{
+	NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+	if ( !pButton )
+		return nil;
+
+	[pButton autorelease];
+
+	NSCell *pCell = [pButton cell];
+	if ( !pCell )
+		return nil;
+
+	[pButton setButtonType:mnButtonType];
+	[pButton setBezelStyle:NSRoundedBezelStyle];
+	[pButton setState:mnButtonState];
+	[pButton setTitle:@""];
+	[pCell setControlSize:mnControlSize];
+
+	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
+	{
+		[pButton setEnabled:YES];
+		[pCell setHighlighted:YES];
+	}
+	else if ( mnControlState & CTRL_STATE_ENABLED )
+	{
+		[pButton setEnabled:YES];
+		[pCell setHighlighted:NO];
+	}
+	else
+	{
+		[pButton setEnabled:NO];
+		[pCell setHighlighted:NO];
+	}
+
+	if ( mnControlState & CTRL_STATE_FOCUSED )
+		[pCell setShowsFirstResponder:YES];
+	else
+		[pCell setShowsFirstResponder:NO];
+
+	[pButton sizeToFit];
+
+	return pButton;
+}
+
 - (void)dealloc
 {
 	if ( maContext )
@@ -212,47 +257,16 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 {
 	if ( !mbDrawn && maContext && !CGRectIsEmpty( maDestRect ) )
 	{
-		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+		NSButton *pButton = [self button];
 		if ( pButton )
 		{
-			[pButton autorelease];
-
-			NSButtonCell *pCell = [pButton cell];
-			if ( pCell && [pCell isKindOfClass:[NSButtonCell class]] )
+			NSCell *pCell = [pButton cell];
+			if ( pCell )
 			{
-				[pButton setButtonType:mnButtonType];
-				[pButton setBezelStyle:NSRoundedBezelStyle];
-				[pButton setState:mnButtonState];
-				[pButton setTitle:@""];
-				[pCell setControlSize:mnControlSize];
-
-				if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
-				{
-					[pButton setEnabled:YES];
-					[pCell setHighlighted:YES];
-				}
-				else if ( mnControlState & CTRL_STATE_ENABLED )
-				{
-					[pButton setEnabled:YES];
-					[pCell setHighlighted:NO];
-				}
-				else
-				{
-					[pButton setEnabled:NO];
-					[pCell setHighlighted:NO];
-				}
-
-				if ( mnControlState & CTRL_STATE_FOCUSED )
-					[pCell setShowsFirstResponder:YES];
-				else
-					[pCell setShowsFirstResponder:NO];
-
-				[pButton sizeToFit];
-
 				CGContextSaveGState( maContext );
 				CGContextTranslateCTM( maContext, 0, ( maDestRect.origin.y * 2 ) + maDestRect.size.height );
 				CGContextScaleCTM( maContext, 1.0f, -1.0f );
-	
+
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:maContext flipped:YES];
 				if ( pContext )
 				{
