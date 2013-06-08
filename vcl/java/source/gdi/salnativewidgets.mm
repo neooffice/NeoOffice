@@ -1898,30 +1898,29 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics, false );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
-		HIThemeButtonDrawInfo aButtonDrawInfo;
-		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		if ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) )
-			aButtonDrawInfo.kind = kThemeRadioButtonSmall;
-		else
-			aButtonDrawInfo.kind = kThemeRadioButton;
+		NSControlSize nControlSize = ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSSmallControlSize : NSRegularControlSize );
+		NSInteger nButtonState;
 		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-			aButtonDrawInfo.value = kThemeButtonOn;
+			nButtonState = NSOnState;
 		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-			aButtonDrawInfo.value = kThemeButtonMixed;
+			nButtonState = NSMixedState;
+		else
+			nButtonState = NSOffState;
 
-		HIRect destRect;
-		destRect.origin.x = FOCUSRING_WIDTH;
-		destRect.origin.y = FOCUSRING_WIDTH;
-		destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
-		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
+		VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState context:pBuffer->maContext destRect:CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+		bRet = [pVCLNativeButton drawn];
+
+		[pPool release];
 	}
 
 	pBuffer->ReleaseContext();
