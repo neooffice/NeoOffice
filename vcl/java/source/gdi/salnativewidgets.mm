@@ -180,23 +180,23 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	NSControlSize			mnControlSize;
 	NSInteger				mnButtonState;
 	ControlState			mnControlState;
-	CGContextRef			maContext;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
 	MacOSBOOL				mbDrawn;
 }
-+ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState context:(CGContextRef)aContext destRect:(CGRect)aDestRect;
++ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSButton *)button;
-- (void)dealloc;
 - (void)draw:(id)pObject;
 - (MacOSBOOL)drawn;
-- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState context:(CGContextRef)aContext destRect:(CGRect)aDestRect;
+- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
 @implementation VCLNativeButton
 
-+ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState context:(CGContextRef)aContext destRect:(CGRect)aDestRect;
++ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
-	VCLNativeButton *pRet = [[VCLNativeButton alloc] initWithButtonType:nButtonType controlSize:nControlSize buttonState:nButtonState controlState:nControlState context:aContext destRect:aDestRect];
+	VCLNativeButton *pRet = [[VCLNativeButton alloc] initWithButtonType:nButtonType controlSize:nControlSize buttonState:nButtonState controlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
 	[pRet autorelease];
 	return pRet;
 }
@@ -245,42 +245,45 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	return pButton;
 }
 
-- (void)dealloc
-{
-	if ( maContext )
-		CGContextRelease( maContext );
-
-	[super dealloc];
-}
-
 - (void)draw:(id)pObject
 {
-	if ( !mbDrawn && maContext && !CGRectIsEmpty( maDestRect ) )
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
-		NSButton *pButton = [self button];
-		if ( pButton )
+		CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, maDestRect.size.height );
+		if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height, mpGraphics ) )
 		{
-			NSCell *pCell = [pButton cell];
-			if ( pCell )
+			NSButton *pButton = [self button];
+			if ( pButton )
 			{
-				CGContextSaveGState( maContext );
-				CGContextTranslateCTM( maContext, 0, ( maDestRect.origin.y * 2 ) + maDestRect.size.height );
-				CGContextScaleCTM( maContext, 1.0f, -1.0f );
-
-				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:maContext flipped:YES];
-				if ( pContext )
+				NSCell *pCell = [pButton cell];
+				if ( pCell )
 				{
-					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
-					[NSGraphicsContext setCurrentContext:pContext];
-					[pCell drawWithFrame:NSRectFromCGRect( maDestRect ) inView:pButton];
-					[NSGraphicsContext setCurrentContext:pOldContext];
+					CGContextSaveGState( mpBuffer->maContext );
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
-					mbDrawn = YES;
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						[pCell drawWithFrame:NSRectFromCGRect( aAdjustedDestRect ) inView:pButton];
+						[NSGraphicsContext setCurrentContext:pOldContext];
+
+						mbDrawn = YES;
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
 				}
-
-				CGContextRestoreGState( maContext );
 			}
 		}
+
+		mpBuffer->ReleaseContext();
+
+		if ( mbDrawn )
+			mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
 	}
 }
 
@@ -289,7 +292,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	return mbDrawn;
 }
 
-- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState context:(CGContextRef)aContext destRect:(CGRect)aDestRect
+- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -297,9 +300,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	mnControlSize = nControlSize;
 	mnButtonState = nButtonState;
 	mnControlState = nControlState;
-	maContext = aContext;
-	if ( maContext )
-		CGContextRetain( maContext );
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
 	mbDrawn = NO;
 
@@ -1850,36 +1852,28 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics, false );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+	BOOL bRet = FALSE;
 
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSControlSize nControlSize = ( rDestBounds.GetWidth() < CHECKBOX_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < CHECKBOX_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSSmallControlSize : NSRegularControlSize );
-		NSInteger nButtonState;
-		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-			nButtonState = NSOnState;
-		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-			nButtonState = NSMixedState;
-		else
-			nButtonState = NSOffState;
+	NSControlSize nControlSize = ( rDestBounds.GetWidth() < CHECKBOX_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < CHECKBOX_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSSmallControlSize : NSRegularControlSize );
+	NSInteger nButtonState;
+	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+		nButtonState = NSOnState;
+	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+		nButtonState = NSMixedState;
+	else
+		nButtonState = NSOffState;
 
-		VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSSwitchButton controlSize:nControlSize buttonState:nButtonState controlState:nState context:pBuffer->maContext destRect:CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
-		bRet = [pVCLNativeButton drawn];
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState = 0;
 
-		[pPool release];
-	}
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSSwitchButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeButton drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -1897,36 +1891,29 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  */
 static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics, false );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+	BOOL bRet = FALSE;
 
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSControlSize nControlSize = ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSSmallControlSize : NSRegularControlSize );
-		NSInteger nButtonState;
-		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-			nButtonState = NSOnState;
-		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-			nButtonState = NSMixedState;
-		else
-			nButtonState = NSOffState;
+	NSControlSize nControlSize = ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) ? NSSmallControlSize : NSRegularControlSize );
+	NSInteger nButtonState;
+	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+		nButtonState = NSOnState;
+	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+		nButtonState = NSMixedState;
+	else
+		nButtonState = NSOffState;
 
-		VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState context:pBuffer->maContext destRect:CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
-		bRet = [pVCLNativeButton drawn];
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState = 0;
 
-		[pPool release];
-	}
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeButton drawn];
 
-	pBuffer->ReleaseContext();
+	[pPool release];
 
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 
 	return bRet;
 }
