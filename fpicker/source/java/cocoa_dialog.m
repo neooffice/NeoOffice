@@ -134,6 +134,7 @@ static NSString *pBlankItem = @" ";
 - (void)cancel:(id)pObject;
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
+- (void)destroy:(id)pObject;
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
@@ -259,23 +260,7 @@ static NSString *pBlankItem = @" ";
 
 - (void)dealloc
 {
-	if ( mpControls )
-		[mpControls release];
-
-	if ( mpDefaultName )
-		[mpDefaultName release];
-
-	if ( mpFilePanel )
-	{
-		[mpFilePanel setDelegate:nil];
-		[mpFilePanel release];
-	}
-
-	if ( mpFilters )
-		[mpFilters release];
-
-	if ( mpTextFields )
-		[mpTextFields release];
+	[self destroy:self];
 
 	[super dealloc];
 }
@@ -308,6 +293,40 @@ static NSString *pBlankItem = @" ";
 			if ( ![pPopup numberOfItems] )
 				[pPopup addItemWithTitle:pBlankItem];
 		}
+	}
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( mpControls )
+	{
+		[mpControls release];
+		mpControls = nil;
+	}
+
+	if ( mpDefaultName )
+	{
+		[mpDefaultName release];
+		mpDefaultName = nil;
+	}
+
+	if ( mpFilePanel )
+	{
+		[mpFilePanel setDelegate:nil];
+		[mpFilePanel release];
+		mpFilePanel = nil;
+	}
+
+	if ( mpFilters )
+	{
+		[mpFilters release];
+		mpFilters = nil;
+	}
+
+	if ( mpTextFields )
+	{
+		[mpTextFields release];
+		mpTextFields = nil;
 	}
 }
 
@@ -1828,6 +1847,7 @@ int NSFileDialog_showFileDialog( id pDialog )
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
 			nRet = [pRet intValue];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(destroy:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
