@@ -357,7 +357,7 @@ int java_main( int argc, char **argv )
 
 	void *pAppMainLib = NULL;
 	if ( pAppMainLibPath )
-		pAppMainLib = dlopen( [pAppMainLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
+		pAppMainLib = dlopen( [pAppMainLibPath UTF8String], RTLD_LAZY | RTLD_GLOBAL );
 
 	int nRet = 0;
 	if ( pAppMainLib )
