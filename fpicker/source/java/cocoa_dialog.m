@@ -1602,7 +1602,8 @@ void NSFileDialog_release( id pDialog )
 	if ( pDialog )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(release:) withObject:pDialog waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(destroy:) withObject:pDialog waitUntilDone:YES modes:pModes];
+		[(ShowFileDialog *)pDialog release];
 	}
 
 	[pPool release];
@@ -1847,7 +1848,6 @@ int NSFileDialog_showFileDialog( id pDialog )
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
 			nRet = [pRet intValue];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(destroy:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
