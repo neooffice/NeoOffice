@@ -1967,9 +1967,22 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 				if ( nState & CTRL_STATE_DEFAULT || aButtonDrawInfo.adornment == kThemeAdornmentFocus )
 				{
 					if ( aButtonDrawInfo.state == kThemeStatePressed )
+					{
 						aButtonDrawInfo.adornment = kThemeAdornmentNone;
+					}
 					else
+					{
 						aButtonDrawInfo.adornment = kThemeAdornmentDefault;
+
+						// Animate default buttons drawn to windows
+						if ( pGraphics->mpFrame )
+						{
+							aButtonDrawInfo.animation.time.current = CFAbsoluteTimeGetCurrent();
+							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, pGraphics->mpFrame, new SalPaintEvent( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+							JavaSalEventQueue::postCachedEvent( pPaintEvent );
+							pPaintEvent->release();
+						}
+					}
 				}
 			}
 
