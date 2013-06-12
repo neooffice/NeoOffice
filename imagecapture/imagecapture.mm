@@ -98,6 +98,10 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
+#define MIN_MACOSX_MAJOR_VERSION 6
+#define MAX_MACOSX_MAJOR_VERSION 8
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -346,14 +350,45 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	ImageCaptureImpl *imp=[ImageCaptureImpl create];
+	bool bUseImageKit = false;
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				bUseImageKit = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
+			}
+		}
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
-	Application::AcquireSolarMutex( nCount );
+		dlclose( pLib );
+	}
+
+	bool toReturn = false;
+
+	if ( bUseImageKit )
+	{
+		ImageCaptureImpl *imp=[ImageCaptureImpl create];
+
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		unsigned long nCount = Application::ReleaseSolarMutex();
+		[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
+		Application::AcquireSolarMutex( nCount );
 	
-	bool toReturn=[imp capturedImage];
+		toReturn=[imp capturedImage];
+	}
+	else
+	{
+		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+		if ( pWorkspace )
+			[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
+	}
 	
 	[pool release];
 	
