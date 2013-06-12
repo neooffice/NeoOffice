@@ -350,45 +350,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	bool bUseImageKit = false;
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
-			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				bUseImageKit = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
-			}
-		}
+	ImageCaptureImpl *imp=[ImageCaptureImpl create];
 
-		dlclose( pLib );
-	}
-
-	bool toReturn = false;
-
-	if ( bUseImageKit )
-	{
-		ImageCaptureImpl *imp=[ImageCaptureImpl create];
-
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		unsigned long nCount = Application::ReleaseSolarMutex();
-		[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
-		Application::AcquireSolarMutex( nCount );
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
+	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
 	
-		toReturn=[imp capturedImage];
-	}
-	else
-	{
-		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-		if ( pWorkspace )
-			[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
-	}
+	bool toReturn=[imp capturedImage];
 	
 	[pool release];
 	
@@ -781,6 +750,34 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 	// Do nothing if we are recursing
 	if ( gotImage || maModalSession || ( mpWindow && [mpWindow isVisible] ) )
 		return;
+
+	MacOSBOOL bUseImageKit = false;
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				bUseImageKit = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
+			}
+		}
+
+		dlclose( pLib );
+	}
+
+	if ( !bUseImageKit )
+	{
+		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+		if ( pWorkspace )
+			[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
+		return;
+	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
