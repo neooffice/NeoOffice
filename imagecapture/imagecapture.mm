@@ -98,6 +98,10 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
+#define MIN_MACOSX_MAJOR_VERSION 6
+#define MAX_MACOSX_MAJOR_VERSION 8
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -746,6 +750,34 @@ static ::std::map< ICScannerDevice*, ImageCaptureImplIKScannerDeviceView* > aSca
 	// Do nothing if we are recursing
 	if ( gotImage || maModalSession || ( mpWindow && [mpWindow isVisible] ) )
 		return;
+
+	MacOSBOOL bUseImageKit = false;
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				bUseImageKit = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
+			}
+		}
+
+		dlclose( pLib );
+	}
+
+	if ( !bUseImageKit )
+	{
+		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+		if ( pWorkspace )
+			[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
+		return;
+	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
