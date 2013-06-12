@@ -369,7 +369,8 @@ static NSWindow* flippingWindow = nil;
 // We resize the final window to exactly the same frame.
 	[window setFrame:[self frame] display:NO];
 #ifdef USE_JAVA
-	NSWindow* flipr = [NSWindow neoMobileFlippingWindow];
+	// Disable flipping as it is too slow on some versions of Mac OS X
+	NSWindow* flipr = nil;
 #else	// USE_JAVA
 	NSWindow* flipr = [NSWindow flippingWindow];
 #endif	// USE_JAVA
