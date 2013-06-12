@@ -1,3 +1,3 @@
-CERTAPPIDENTITY=3rd Party Mac Developer Application: Planamesa Inc (8V953UDD5Q)
-CERTPKGIDENTITY=3rd Party Mac Developer Installer: Planamesa Inc (8V953UDD5Q)
+CERTAPPIDENTITY=Developer ID Application: Planamesa Inc
+CERTPKGIDENTITY=Developer ID Installer: Planamesa Inc
 CERTSANDBOXTEAMIDENTIFIER=8V953UDD5Q
