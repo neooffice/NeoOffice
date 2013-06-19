@@ -286,7 +286,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						{
 							[pButton setKeyEquivalent:@"\r"];
 							double fTime = CFAbsoluteTimeGetCurrent();
-							fAlpha = 0.85f + ( 0.15f * sin( ( fTime - (long)fTime ) * 2 * M_PI ) );
+							fAlpha = 0.8f + ( 0.15f * sin( ( fTime - (long)fTime ) * 2 * M_PI ) );
 
 							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
 							JavaSalEventQueue::postCachedEvent( pPaintEvent );
