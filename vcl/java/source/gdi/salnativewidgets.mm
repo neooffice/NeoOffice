@@ -51,8 +51,9 @@
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 // Need to include for HITheme constants but we don't link to it
-#include <Carbon/Carbon.h>
-#include <Cocoa/Cocoa.h>
+#import <Carbon/Carbon.h>
+#import <Cocoa/Cocoa.h>
+#import <objc/objc-class.h>
 #include <postmac.h>
 
 // Comment out the following line to disable native controls
@@ -92,7 +93,7 @@
 #define CHECKBOX_HEIGHT					20
 #define RADIOBUTTON_WIDTH				16
 #define RADIOBUTTON_HEIGHT				16
-#define PUSHBUTTON_HEIGHT_SLOP			4
+#define PUSHBUTTON_HEIGHT_SLOP			1
 
 using namespace osl;
 using namespace rtl;
@@ -184,12 +185,15 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
 	MacOSBOOL				mbDrawn;
+	NSSize					maSize;
 }
 + (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSButton *)button;
 - (void)draw:(id)pObject;
 - (MacOSBOOL)drawn;
+- (void)getSize:(id)pObject;
 - (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSSize)size;
 @end
 
 @implementation VCLNativeButton
@@ -222,17 +226,17 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
 	{
 		[pButton setEnabled:YES];
-		[pCell setHighlighted:YES];
+		[pButton highlight:YES];
 	}
 	else if ( mnControlState & CTRL_STATE_ENABLED )
 	{
 		[pButton setEnabled:YES];
-		[pCell setHighlighted:NO];
+		[pButton highlight:NO];
 	}
 	else
 	{
 		[pButton setEnabled:NO];
-		[pCell setHighlighted:NO];
+		[pButton highlight:NO];
 	}
 
 	if ( mnControlState & CTRL_STATE_FOCUSED )
@@ -249,26 +253,67 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 {
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
-		CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, maDestRect.size.height );
-		if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height, mpGraphics ) )
+		NSButton *pButton = [self button];
+		if ( pButton )
 		{
-			NSButton *pButton = [self button];
-			if ( pButton )
+			NSCell *pCell = [pButton cell];
+			if ( pCell )
 			{
-				NSCell *pCell = [pButton cell];
-				if ( pCell )
+				float fCellHeight = [pCell cellSize].height;
+				float fOffscreenHeight = maDestRect.size.height;
+				MacOSBOOL bPlacard = NO;
+				CGFloat fAlpha = 1.0f;
+				if ( mnButtonType == NSMomentaryLightButton )
+				{
+					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
+					if ( fCellHeight <= 0 )
+						fCellHeight = maDestRect.size.height;
+					fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
+					bPlacard = ( fOffscreenHeight >= maDestRect.size.width );
+					if ( bPlacard )
+					{
+						fOffscreenHeight = maDestRect.size.height;
+						[pButton setBezelStyle:NSShadowlessSquareBezelStyle];
+					}
+					else
+					{
+						// The default adornment hides the pressed state so set
+						// the adornment to none if the button is pressed. Also,
+						// push buttons should never have a focus ring so treat
+						// them as default buttons.
+						[pCell setShowsFirstResponder:NO];
+
+						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
+						{
+							[pButton setKeyEquivalent:@"\r"];
+							fAlpha = 0.8f;
+						}
+					}
+				}
+
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					CGContextSetAlpha( mpBuffer->maContext, fAlpha );
 					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
+						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+						if ( mnButtonType == NSMomentaryLightButton && !bPlacard )
+						{
+							// Fix bug 1633 by vertically centering button
+							aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + PUSHBUTTON_HEIGHT_SLOP;
+							aDrawRect.size.height = fCellHeight;
+						}
+
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
-						[pCell drawWithFrame:NSRectFromCGRect( aAdjustedDestRect ) inView:pButton];
+						[pCell drawWithFrame:aDrawRect inView:pButton];
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
@@ -276,20 +321,34 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
 				}
 			}
 		}
-
-		mpBuffer->ReleaseContext();
-
-		if ( mbDrawn )
-			mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
 	}
 }
 
 - (MacOSBOOL)drawn
 {
 	return mbDrawn;
+}
+
+- (void)getSize:(id)pObject
+{
+	if ( NSEqualSizes( maSize, NSZeroSize ) )
+	{
+		NSButton *pButton = [self button];
+		if ( pButton )
+		{
+			NSCell *pCell = [pButton cell];
+			if ( pCell )
+				maSize = [pCell cellSize];
+		}
+	}
 }
 
 - (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
@@ -304,8 +363,14 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
 	mbDrawn = NO;
+	maSize = NSZeroSize;
 
 	return self;
+}
+
+- (NSSize)size
+{
+	return maSize;
 }
 
 @end
@@ -1931,78 +1996,27 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-    SInt32 pushButtonThemeHeight;
-    BOOL bRet = ( pGetThemeMetric( kThemeMetricPushButtonHeight, &pushButtonThemeHeight) == noErr );
-	if ( bRet )
-	{
-		pushButtonThemeHeight += FOCUSRING_WIDTH * 2;
-		long offscreenHeight = ( rDestBounds.GetHeight() > pushButtonThemeHeight ? rDestBounds.GetHeight() : pushButtonThemeHeight );
-		bool bPlacard = ( offscreenHeight >= rDestBounds.GetWidth() - 1 );
-		if ( bPlacard )
-			offscreenHeight = rDestBounds.GetHeight();
+	BOOL bRet = FALSE;
 
-		VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-		BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
-		if ( bRet )
-		{
-			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState = 0;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			HIThemeButtonDrawInfo aButtonDrawInfo;
-			InitButtonDrawInfo( &aButtonDrawInfo, nState );
+	NSInteger nButtonState;
+	if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+		nButtonState = NSOnState;
+	else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+		nButtonState = NSMixedState;
+	else
+		nButtonState = NSOffState;
 
-			// Detect placard buttons
-			if ( bPlacard )
-			{
-				aButtonDrawInfo.kind = kThemeBevelButton;
-			}
-			else
-			{
-				aButtonDrawInfo.kind = kThemePushButton;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState = 0;
 
-				// The default adornment hides the pressed state so set the
-				// adornment to none if the button is pressed. Also, push
-				// buttons should never have a focus ring so treat them as
-				// default buttons.
-				if ( nState & CTRL_STATE_DEFAULT || aButtonDrawInfo.adornment == kThemeAdornmentFocus )
-				{
-					if ( aButtonDrawInfo.state == kThemeStatePressed )
-						aButtonDrawInfo.adornment = kThemeAdornmentNone;
-					else
-						aButtonDrawInfo.adornment = kThemeAdornmentDefault;
-				}
-			}
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeButton drawn];
 
-			if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-				aButtonDrawInfo.value = kThemeButtonOn;
-			else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-				aButtonDrawInfo.value = kThemeButtonMixed;
-
-			HIRect destRect;
-			if ( bPlacard )
-			{
-				destRect.origin.x = 0;
-				destRect.origin.y = 0;
-				destRect.size.width = rDestBounds.GetWidth() - 1;
-				destRect.size.height = offscreenHeight - 1;
-			}
-			else
-			{
-				// Fix bug 1633 by vertically centering button
-				destRect.origin.x = FOCUSRING_WIDTH;
-				destRect.origin.y = ( ( offscreenHeight - pushButtonThemeHeight ) / 2 ) + PUSHBUTTON_HEIGHT_SLOP;
-				destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
-				destRect.size.height = pushButtonThemeHeight - ( FOCUSRING_WIDTH * 2 );
-			}
-
-			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-		}
-
-		pBuffer->ReleaseContext();
-
-		if ( bRet )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-	}
+	[pPool release];
 
 	return bRet;
 }
@@ -2569,28 +2583,30 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// button. This makes buttons used as parts of subcontrols
 				// (combo boxes, small toolbar buttons) draw with the
 				// appropriate style.
-    			SInt32 pushButtonThemeHeight;
-    			bReturn = ( pGetThemeMetric( kThemeMetricPushButtonHeight, &pushButtonThemeHeight) == noErr );
-				if ( ! bReturn )
-					return bReturn;
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				long buttonWidth = buttonRect.GetWidth();
-				long buttonHeight = pushButtonThemeHeight;
-				if ( buttonHeight >= buttonWidth )
+				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:NSOffState controlState:0 bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeButton performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+				NSSize aSize = [pVCLNativeButton size];
+				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					buttonWidth++;
-					buttonHeight = buttonRect.GetHeight() + 1;
+					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					long buttonWidth = buttonRect.GetWidth();
+					long buttonHeight = (long)aSize.height;
+					if ( buttonHeight >= buttonWidth )
+						buttonHeight = buttonRect.GetHeight();
+					else if ( buttonHeight != buttonRect.GetHeight() && buttonRect.GetHeight() > 0 )
+						buttonHeight = buttonRect.GetHeight();
+
+					Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ((buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH) );
+					Size boundsSize( (long)buttonWidth + ( FOCUSRING_WIDTH * 2 ), (long)buttonHeight + ( FOCUSRING_WIDTH * 2 ) );
+					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
+					bReturn = TRUE;
 				}
-				else if ( buttonHeight != buttonRect.GetHeight() && buttonRect.GetHeight() > 0 )
-				{
-					buttonHeight = buttonRect.GetHeight();
-				}
-				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ((buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH) );
-				Size boundsSize( (long)buttonWidth + ( FOCUSRING_WIDTH * 2 ), (long)buttonHeight + ( FOCUSRING_WIDTH * 2 ) );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-				bReturn = TRUE;
+
+				[pPool release];
 			}
 			break;
 
