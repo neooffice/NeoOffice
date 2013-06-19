@@ -53,7 +53,6 @@
 // Need to include for HITheme constants but we don't link to it
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
-#import <objc/objc-class.h>
 #include <postmac.h>
 
 // Comment out the following line to disable native controls
@@ -286,7 +285,12 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
 							[pButton setKeyEquivalent:@"\r"];
-							fAlpha = 0.8f;
+							double fTime = CFAbsoluteTimeGetCurrent();
+							fAlpha = 0.85f + ( 0.15f * sin( ( fTime - (long)fTime ) * 2 * M_PI ) );
+
+							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
+							JavaSalEventQueue::postCachedEvent( pPaintEvent );
+							pPaintEvent->release();
 						}
 					}
 				}
