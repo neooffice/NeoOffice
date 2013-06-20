@@ -788,10 +788,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// Check timer
 		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 		{
-			// Reduce flicker in native controls by only flushing if timer has
-			// not yet expired
+			// Reduce flicker in native controls by only flushing if timer is
+			// more than 100 milliseconds away from expiring
 			timeval aCurrentTime;
 			gettimeofday( &aCurrentTime, NULL );
+			aCurrentTime += 100;
 			if ( pSalData->maTimeout > aCurrentTime )
 				JavaSalFrame::FlushAllFrames();
 		}
