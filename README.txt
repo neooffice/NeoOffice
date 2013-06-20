@@ -2,8 +2,8 @@ Intructions for Building NeoOffice
 ----------------------------------
 
 
-Steps for building on 10.6 Leopard for Intel
-----------------------------------------------
+Steps for building on 10.6 Snow Leopard for Intel
+-------------------------------------------------
 
 At this time, the NeoOffice build only supports building on Mac OS X 10.6 Snow Leopard for Intel only. Building on Mac OS X 10.7 and higher will not work, and as a result isn't supported.
 
