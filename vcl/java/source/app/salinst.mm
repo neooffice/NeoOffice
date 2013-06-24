@@ -728,6 +728,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	// the bHandleAllCurrentEvents parameter is true
 	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
+	bool bFlushAllFrames = false;
 	while ( bContinue && !Application::IsShutDown() && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
 		nTimeout = 0;
@@ -772,7 +773,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		}
 		pEvent->release();
 
-		JavaSalFrame::FlushAllFrames();
+		bFlushAllFrames = true;
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
@@ -781,6 +782,25 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 
 	nCurrentTimeout = 0;
+
+	if ( bFlushAllFrames )
+	{
+		// Check timer
+		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
+		{
+			// Reduce flicker in native controls by only flushing if timer is
+			// more than 100 milliseconds away from expiring
+			timeval aCurrentTime;
+			gettimeofday( &aCurrentTime, NULL );
+			aCurrentTime += 100;
+			if ( pSalData->maTimeout > aCurrentTime )
+				JavaSalFrame::FlushAllFrames();
+		}
+		else
+		{
+			JavaSalFrame::FlushAllFrames();
+		}
+	}
 
 	AcquireYieldMutex( nCount );
 
