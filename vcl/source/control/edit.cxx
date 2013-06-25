@@ -482,12 +482,18 @@ XubString Edit::ImplGetText() const
 
 void Edit::ImplInvalidateOrRepaint( xub_StrLen nStart, xub_StrLen nEnd )
 {
+#ifdef USE_JAVA
+   if( ImplGetSVData()->maNWFData.mbNoFocusRects )
+#else	// USE_JAVA
     if( IsPaintTransparent() )
+#endif	// USE_JAVA
     {
         Invalidate();
+#ifndef USE_JAVA
         // FIXME: this is currently only on aqua
         if( ImplGetSVData()->maNWFData.mbNoFocusRects )
             Update();
+#endif	// !USE_JAVA
     }
     else
         ImplRepaint( nStart, nEnd );

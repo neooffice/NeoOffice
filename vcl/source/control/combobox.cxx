@@ -330,7 +330,7 @@ IMPL_LINK( ComboBox, ImplClickBtnHdl, void*, EMPTYARG )
     Region aBoundingRgn, aContentRgn;
     Rectangle aRect( GetPosPixel(), GetSizePixel() );
     Region aArea( aRect );
-    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
         if ( GetParent()->IsInPaint() )
@@ -369,7 +369,7 @@ IMPL_LINK( ComboBox, ImplPopupModeEndHdl, void*, EMPTYARG )
     Region aBoundingRgn, aContentRgn;
     Rectangle aRect( GetPosPixel(), GetSizePixel() );
     Region aArea( aRect );
-    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
         if ( GetParent()->IsInPaint() )
@@ -856,19 +856,6 @@ long ComboBox::PreNotify( NotifyEvent& rNEvt )
 	{
 		mpSubEdit->GrabFocus();
 	}
-
-#ifdef USE_JAVA
-    ImplControlValue aControlValue;
-    Region aBoundingRgn, aContentRgn;
-    Rectangle aRect( GetPosPixel(), GetSizePixel() );
-    Region aArea( aRect );
-    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
-    {
-	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-        if ( GetParent()->IsInPaint() )
-	        GetParent()->Update();
-    }
-#endif	// USE_JAVA
 
 	return nDone ? nDone : Edit::PreNotify( rNEvt );
 }
