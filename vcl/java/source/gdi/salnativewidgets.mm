@@ -67,6 +67,7 @@
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
+#define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define LISTBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 21 : 19 )
 #define LISTVIEWFRAME_TRIMWIDTH			1
@@ -90,7 +91,6 @@
 #define RADIOBUTTON_WIDTH				16
 #define RADIOBUTTON_HEIGHT				16
 #define PUSHBUTTON_HEIGHT_SLOP			1
-#define EDITFRAMEPADDING_WIDTH			1
 
 using namespace osl;
 using namespace rtl;
@@ -2830,14 +2830,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSSize aSize = [pVCLNativeComboBox size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					NSRect preferredRect = NSMakeRect( comboBoxRect.Left(), comboBoxRect.Top(), aSize.width > comboBoxRect.GetWidth() ? aSize.width : comboBoxRect.GetWidth(), aSize.height );
-
 					// Vertically center the preferred bounds
-					float fHeightAdjust = ( preferredRect.size.height - comboBoxRect.GetHeight() ) / 2;
-					if ( fHeightAdjust < 0 )
-						preferredRect.origin.y -= fHeightAdjust;
-					else
-						preferredRect.size.height = comboBoxRect.GetHeight();
+					float fYAdjust = ( (float)comboBoxRect.GetHeight() - aSize.height ) / 2;
+					NSRect preferredRect = NSMakeRect( comboBoxRect.Left(), comboBoxRect.Top() + fYAdjust, aSize.width > comboBoxRect.GetWidth() ? aSize.width : comboBoxRect.GetWidth(), aSize.height );
 
 					switch( nPart )
 					{
