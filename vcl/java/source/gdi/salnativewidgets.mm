@@ -63,7 +63,7 @@
 
 #define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 17 : 19 )
 #define COMBOBOX_HEIGHT					28
-#define COMBOBOX_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
+#define COMBOBOX_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : -0.5f )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
