@@ -482,12 +482,18 @@ XubString Edit::ImplGetText() const
 
 void Edit::ImplInvalidateOrRepaint( xub_StrLen nStart, xub_StrLen nEnd )
 {
+#ifdef USE_JAVA
+   if( ImplGetSVData()->maNWFData.mbNoFocusRects )
+#else	// USE_JAVA
     if( IsPaintTransparent() )
+#endif	// USE_JAVA
     {
         Invalidate();
+#ifndef USE_JAVA
         // FIXME: this is currently only on aqua
         if( ImplGetSVData()->maNWFData.mbNoFocusRects )
             Update();
+#endif	// !USE_JAVA
     }
     else
         ImplRepaint( nStart, nEnd );
@@ -522,7 +528,12 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
 	// center vertically
 	long	nH = GetOutputSize().Height();
 	long	nTH = GetTextHeight();
+#ifdef USE_JAVA
+	// Round up for y coordinate so that text trends toward the bottom
+	Point	aPos( mnXOffset, (nH-nTH+1)/2 );
+#else	// USE_JAVA
 	Point	aPos( mnXOffset, (nH-nTH)/2 );
+#endif	// USE_JAVA
 
     if( bLayout )
     {
