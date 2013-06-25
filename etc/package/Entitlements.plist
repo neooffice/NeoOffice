@@ -14,9 +14,6 @@
 	<true/>
 	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
-	<!-- Allow the user to download and open their files that they have previously uploaded from the Mobile :: Open NeoOffice Mobile menu's window -->
-	<key>com.apple.security.files.downloads.read-write</key>
-	<true/>
 	<!-- Allow the user to use their Mac's remote control infrared receiver to control slide shows for their presentation documents -->
 	<key>com.apple.security.device.usb</key>
 	<true/>
