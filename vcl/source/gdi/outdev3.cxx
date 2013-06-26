@@ -4526,11 +4526,17 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
 
     // calculate approximation of strikeout atom size
     long nStrikeoutWidth = nWidth;
+#ifdef USE_JAVA
+    long nUnitsPerPixel = 1;
+#endif	// USE_JAVA
     String aStrikeoutTest( pChars, 4 );
     SalLayout* pLayout = ImplLayout( aStrikeoutTest, 0, 4 );
     if ( pLayout )
     {
         nStrikeoutWidth = (pLayout->GetTextWidth() + 2) / 4;
+#ifdef USE_JAVA
+        nUnitsPerPixel = pLayout->GetUnitsPerPixel();
+#endif	// USE_JAVA
         pLayout->Release();
         if ( nStrikeoutWidth <= 0 ) // sanity check
             nStrikeoutWidth = 1;
@@ -4541,7 +4547,14 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
     long nMaxWidth = nStrikeoutWidth/2;
     if ( nMaxWidth < 2 )
         nMaxWidth = 2;
+#ifdef USE_JAVA
+    // Fix bug reported in the following NeoOffice forum by including the text
+    // layout's units per pixel in text width calculations:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8570
+    nMaxWidth += ( nWidth * nUnitsPerPixel ) + 1;
+#else	// USE_JAVA
     nMaxWidth += nWidth + 1;
+#endif	// USE_JAVA
 
     // build strikeout string
     long nFullStrikeoutWidth = 0;
