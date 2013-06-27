@@ -19,8 +19,6 @@
 					<menu:menuitem menu:id=".uno:SendMail"/>
 				</menu:menupopup>
 			</menu:menu>
-			<menu:menuseparator/>
-			<menu:menuitem menu:id=".uno:Quit"/>
 		</menu:menupopup>
 	</menu:menu>
 	<menu:menu menu:id=".uno:EditMenu">

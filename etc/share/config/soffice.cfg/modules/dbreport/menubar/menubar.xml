@@ -12,8 +12,6 @@
       <menu:menuitem menu:id=".uno:Save"/>
       <menu:menuitem menu:id=".uno:SaveAs"/>
       <menu:menuitem menu:id=".uno:SaveAll"/>
-      <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:Quit"/>
     </menu:menupopup>
   </menu:menu>
   <menu:menu menu:id=".uno:EditMenu" >
