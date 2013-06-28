@@ -807,7 +807,6 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 			pURL = [pURL URLByResolvingSymlinksInPath];
 			if ( pURL && !IsInIgnoreURLs( [pURL absoluteString] ) )
 			{
-CFShow( pURL );
 				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
