@@ -142,54 +142,22 @@ static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExis
 	return bRet;
 }
 
-static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
+// Improve performance by checking if the URL is within the home, main bundle,
+// temporary, or one of the safe system folders. These folders do not need a
+// security scoped URL and the majority of calls to this function are for paths
+// in these folders.
+static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 {
-	NSURL *pRet = nil;
+	MacOSBOOL bRet = NO;
 
-	if ( pURL )
+	if ( !pURLString )
+		return NO;
+
+	static NSArray *pIgnoreURLStrings = nil;
+
+	if ( !pIgnoreURLStrings )
 	{
-		if ( pSecurityScopedURLs )
-			AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle, pSecurityScopedURLs );
-
-		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
-		if ( pData )
-		{
-			MacOSBOOL bStale = NO;
-			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-			if ( !bStale && pURL )
-			{
-				pURL = [pURL URLByStandardizingPath];
-				if ( pURL )
-				{
-					pURL = [pURL URLByResolvingSymlinksInPath];
-					if ( pURL )
-					{
-						// Recurse to check if the URL is also an alias
-						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
-						if ( pRecursedURL )
-							pRet = pRecursedURL;
-						else
-							pRet = pURL;
-					}
-				}
-			}
-		}
-	}
-
-	return pRet;
-}
-
-static NSMutableArray *pIgnoreURLStrings = nil;
-
-static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
-{
-	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
-	{
-		NSString *pURLString = [pURL absoluteString];
-		if ( !pURLString || ![pURLString length] )
-			return;
-
-		ClearableGuard< Mutex > aGuard( aCurrentInstanceSecurityURLCacheMutex );
+		MutexGuard aGuard( aCurrentInstanceSecurityURLCacheMutex );
 
 		if ( !pIgnoreURLStrings )
 		{
@@ -217,7 +185,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				@"/var",
 				nil];
 
-			// Appplications folder
+			// Applications folder
 			NSArray *pApplicationFolders = NSSearchPathForDirectoriesInDomains( NSApplicationDirectory, NSLocalDomainMask, NO );
 
 			// Libary folder
@@ -280,11 +248,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 					// Convert URLs to absolute strings
 					nCount = [pTmpURLs count];
-					pIgnoreURLStrings = [NSMutableArray arrayWithCapacity:nCount];
-					if ( pIgnoreURLStrings )
+					pTmpPaths = [NSMutableArray arrayWithCapacity:nCount];
+					if ( pTmpPaths )
 					{
-						[pIgnoreURLStrings retain];
-		
 						for ( i = 0; i < nCount; i++ )
 						{
 							NSURL *pTmpURL = [pTmpURLs objectAtIndex:i];
@@ -298,40 +264,90 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 									{
 										NSString *pTmpURLString = [pTmpURL absoluteString];
 										if ( pTmpURLString && [pTmpURLString length] )
-										{
-											[pIgnoreURLStrings addObject:pTmpURLString];
-											Application_cacheSecurityScopedURL( pTmpURL );
-										}
+											[pTmpPaths addObject:pTmpURLString];
 									}
 								}
 							}
 						}
+
+						pIgnoreURLStrings = [NSArray arrayWithArray:pTmpPaths];
+						if ( pIgnoreURLStrings )
+							[pIgnoreURLStrings retain];
 					}
 				}
 			}
 		}
+	}
 
-		// Improve performance by checking if the URL is within the home, main
-		// bundle, temporary, or one of the safe system folders. These folders
-		// do not need a security scoped URL and the majority of calls to this
-		// function are for paths in these folders.
-		if ( pIgnoreURLStrings )
+	if ( pIgnoreURLStrings )
+	{
+		NSUInteger nCount = [pIgnoreURLStrings count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
 		{
-			NSUInteger nCount = [pIgnoreURLStrings count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+			NSString *pTmpURLString = [pIgnoreURLStrings objectAtIndex:i];
+			if ( pTmpURLString )
 			{
-				NSString *pTmpURLString = [pIgnoreURLStrings objectAtIndex:i];
-				if ( pTmpURLString )
+				NSRange aTmpRange = [pURLString rangeOfString:pTmpURLString];
+				if ( !aTmpRange.location && aTmpRange.length )
 				{
-					NSRange aTmpRange = [pURLString rangeOfString:pTmpURLString];
-					if ( !aTmpRange.location && aTmpRange.length )
-						return;
+					bRet = YES;
+					break;
 				}
 			}
 		}
+	}
 
-		aGuard.clear();
+	return bRet;
+}
+
+static NSURL *ResolveAliasURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
+{
+	NSURL *pRet = nil;
+
+	if ( pURL )
+	{
+		if ( pSecurityScopedURLs )
+			AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle, pSecurityScopedURLs );
+
+		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
+		if ( pData )
+		{
+			MacOSBOOL bStale = NO;
+			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+			if ( !bStale && pURL )
+			{
+				pURL = [pURL URLByStandardizingPath];
+				if ( pURL )
+				{
+					pURL = [pURL URLByResolvingSymlinksInPath];
+					if ( pURL )
+					{
+						// Recurse to check if the URL is also an alias
+						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
+						if ( pRecursedURL )
+							pRet = pRecursedURL;
+						else
+							pRet = pURL;
+					}
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
+static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs )
+{
+	if ( pURL && [pURL isFileURL] && pSecurityScopedURLs )
+	{
+		NSString *pURLString = [pURL absoluteString];
+		if ( !pURLString || ![pURLString length] )
+			return;
+
+		if ( IsInIgnoreURLs( pURLString ) )
+			return;
 
 		// Iterate through path and resolve any aliases
 		NSArray *pPathComponents = [pURL pathComponents];
@@ -789,8 +805,9 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 		if ( pURL )
 		{
 			pURL = [pURL URLByResolvingSymlinksInPath];
-			if ( pURL )
+			if ( pURL && !IsInIgnoreURLs( [pURL absoluteString] ) )
 			{
+CFShow( pURL );
 				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
