@@ -9663,3 +9663,32 @@
  	"/usr/tmp",
  	0
      };
+*** misc/build/mozilla/xpcom/reflect/xptinfo/src/xptiManifest.cpp	2003-03-11 13:36:58.000000000 -0800
+--- misc/build/mozilla/xpcom/reflect/xptinfo/src/xptiManifest.cpp	2013-06-29 09:48:23.000000000 -0700
+@@ -141,6 +141,26 @@
+ 
+     tempFile->SetNativeLeafName(leafName);
+ 
++#ifdef XP_UNIX
++    // Eliminate sandbox file-deny-write errors by checking the following
++    // before trying to open the file:
++    // - If the file exists, the file must be writable
++    // - If the file does not exist, the parent directory must be writable
++    PRBool tempExists;
++    PRBool tempWritable;
++    if(NS_FAILED(tempFile->Exists(&tempExists)) || !tempExists)
++    {
++        nsCOMPtr<nsIFile> tempFileParent;
++        tempFile->GetParent(getter_AddRefs(tempFileParent));
++        if(!tempFileParent || NS_FAILED(tempFileParent->Exists(&tempExists)) || !tempExists || NS_FAILED(tempFileParent->IsWritable(&tempWritable)) || !tempWritable)
++            goto out;
++    }
++    else if(NS_FAILED(tempFile->IsWritable(&tempWritable)) || !tempWritable)
++    {
++        goto out;
++    }
++#endif
++
+     // All exits via "goto out;" from here on...
+     if(NS_FAILED(tempFile->
+                  OpenNSPRFileDesc(PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
