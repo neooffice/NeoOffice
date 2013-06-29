@@ -1,4 +1,4 @@
-This file contains notes for submitting a new version of NeoOffice Secure Edition to the Apple Mac App Store in iTunes Connect.
+This file contains notes for submitting a new version of NeoOffice to the Apple Mac App Store in iTunes Connect.
 
 Warning: since NeoOffice is a registered trademark of Planamesa Inc. and Planamesa Inc. owns the copyright to all NeoOffice source code, these notes are only applicable to submissions made by Planamesa Inc.
 
@@ -35,9 +35,9 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-This app - NeoOffice Secure Edition - is a version of the widely used NeoOffice office productivity software and is a complete set of office applications that users can use to create and edit spreadsheets, text documents, and presentations.
+This app is a version of the widely used NeoOffice office productivity software and is a complete set of office applications that users can use to create and edit spreadsheets, text documents, and presentations.
 
-The NeoOffice engineers created NeoOffice Secure Edition for NeoOffice users that also want the security and convenience that Apple's App Sandbox and Mac App Store provide. A list of the changes NeoOffice users will see in NeoOffice Secure Edition is available on the "NeoOffice Support" site.
+The NeoOffice engineers created this version of NeoOffice for NeoOffice users that also want the security and convenience that Apple's App Sandbox and Mac App Store provide. A list of the changes NeoOffice users will see in NeoOffice Secure Edition is available on the "NeoOffice Support" site.
 
 Like NeoOffice, NeoOffice Secure Edition is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers have been continually adding improvements to NeoOffice that Mac users will not find in OpenOffice or LibreOffice such as:
 
