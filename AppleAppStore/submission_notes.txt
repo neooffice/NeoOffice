@@ -52,7 +52,7 @@ Keywords:
 neo office,open office,openoffice,libreoffice,office,word processing,spreadsheet,presentation
 
 Support URL:
-http://www.neooffice.org/neojava/secure.php
+http://www.neooffice.org/neojava/macappstore.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
