@@ -35,11 +35,9 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-This app is a version of the widely used NeoOffice office productivity software and is a complete set of office applications that users can use to create and edit spreadsheets, text documents, and presentations.
+NeoOffice is a complete set of office applications. With NeoOffice, users can create and edit spreadsheets, text documents, and presentations.
 
-The NeoOffice engineers created this version of NeoOffice for NeoOffice users that also want the security and convenience that Apple's App Sandbox and Mac App Store provide. A list of the changes NeoOffice users will see in NeoOffice Secure Edition is available on the "NeoOffice Support" site.
-
-Like NeoOffice, NeoOffice Secure Edition is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers have been continually adding improvements to NeoOffice that Mac users will not find in OpenOffice or LibreOffice such as:
+NeoOffice is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers have been continually adding improvements to NeoOffice that Mac users will not find in OpenOffice or LibreOffice such as:
 
 - OS X Versions
 - OS X Full-Screen mode
