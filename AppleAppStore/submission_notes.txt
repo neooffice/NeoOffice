@@ -49,7 +49,7 @@ NeoOffice is based on the OpenOffice office productivity software. Since 2003, t
 
 
 Keywords:
-neo office,secure edition,open office,openoffice,office,word processing,spreadsheet,presentation
+neo office,open office,openoffice,libreoffice,office,word processing,spreadsheet,presentation
 
 Support URL:
 http://www.neooffice.org/neojava/secure.php
