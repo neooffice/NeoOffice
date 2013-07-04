@@ -172,6 +172,38 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
+@interface VCLNativeButtonCell : NSButtonCell
+{
+	MacOSBOOL				mbAnimated;
+}
+- (MacOSBOOL)_isAnimatingDefaultCell;
+- (id)initTextCell:(NSString *)pString;
+- (void)setAnimated:(MacOSBOOL)bAnimated;
+@end
+
+@implementation VCLNativeButtonCell
+
+- (MacOSBOOL)_isAnimatingDefaultCell
+{
+	return mbAnimated;
+}
+
+- (id)initTextCell:(NSString *)pString
+{
+	[super initTextCell:pString];
+
+	mbAnimated = NO;
+
+	return self;
+}
+
+- (void)setAnimated:(MacOSBOOL)bAnimated
+{
+	mbAnimated = bAnimated;
+}
+
+@end
+
 @interface VCLNativeButton : NSObject
 {
 	NSButtonType			mnButtonType;
@@ -209,6 +241,16 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 		return nil;
 
 	[pButton autorelease];
+
+	if ( mnButtonType == NSMomentaryLightButton )
+	{
+		VCLNativeButtonCell *pCell = [[VCLNativeButtonCell alloc] initTextCell:@""];
+		if ( !pCell )
+			return nil;
+
+		[pCell autorelease];
+		[pButton setCell:pCell];
+	}
 
 	NSCell *pCell = [pButton cell];
 	if ( !pCell )
@@ -259,7 +301,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 				float fCellHeight = [pCell cellSize].height;
 				float fOffscreenHeight = maDestRect.size.height;
 				MacOSBOOL bPlacard = NO;
-				CGFloat fAlpha = 1.0f;
 				if ( mnButtonType == NSMomentaryLightButton )
 				{
 					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
@@ -283,12 +324,18 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
 							[pButton setKeyEquivalent:@"\r"];
-							double fTime = CFAbsoluteTimeGetCurrent();
-							fAlpha = 0.8f + ( 0.15f * sin( ( fTime - (long)fTime ) * 2 * M_PI ) );
 
-							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
-							JavaSalEventQueue::postCachedEvent( pPaintEvent );
-							pPaintEvent->release();
+							if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
+								[(VCLNativeButtonCell *)pCell setAnimated:YES];
+
+							if ( IsRunningSnowLeopard() )
+							{
+								// Force repainting since default pushbuttons
+								// will pulse on Snow Leopard
+								JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
+								JavaSalEventQueue::postCachedEvent( pPaintEvent );
+								pPaintEvent->release();
+							}
 						}
 					}
 				}
@@ -299,7 +346,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 					CGContextSaveGState( mpBuffer->maContext );
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
-					CGContextSetAlpha( mpBuffer->maContext, fAlpha );
 					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
