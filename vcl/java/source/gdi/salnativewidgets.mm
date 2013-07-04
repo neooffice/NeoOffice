@@ -307,7 +307,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 					if ( fCellHeight <= 0 )
 						fCellHeight = maDestRect.size.height;
 					fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
-					bPlacard = ( fOffscreenHeight >= maDestRect.size.width );
+					bPlacard = ( fOffscreenHeight * 1.5 >= maDestRect.size.width );
 					if ( bPlacard )
 					{
 						fOffscreenHeight = maDestRect.size.height;
