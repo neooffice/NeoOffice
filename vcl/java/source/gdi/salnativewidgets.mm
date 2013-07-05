@@ -45,8 +45,9 @@
 #include <svsys.h>
 #include <rtl/ustring.h>
 #include <osl/module.h>
-#include <vcl/svapp.hxx>
 #include <vcl/decoview.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -218,6 +219,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
 	MacOSBOOL				mbDrawn;
+	MacOSBOOL				mbRedraw;
 	NSSize					maSize;
 }
 + (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
@@ -226,6 +228,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 - (MacOSBOOL)drawn;
 - (void)getSize:(id)pObject;
 - (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (MacOSBOOL)redraw;
 - (NSSize)size;
 @end
 
@@ -328,16 +331,14 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
-							if ( !IsRunningSnowLeopard() )
-								bPulse = YES;
-
 							[pButton setKeyEquivalent:@"\r"];
 							if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
+							{
 								[(VCLNativeButtonCell *)pCell setAnimated:YES];
-
-							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
-							JavaSalEventQueue::postCachedEvent( pPaintEvent );
-							pPaintEvent->release();
+								if ( !IsRunningSnowLeopard() )
+									bPulse = YES;
+								mbRedraw = YES;
+							}
 						}
 					}
 				}
@@ -369,19 +370,16 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						{
 							// Emulate pulse by painting pressed button on top
 							// of the default button with varying alpha
-							float fAlpha = 0.4f;
+							float fAlpha = 0.5f;
 							double fTime = CFAbsoluteTimeGetCurrent();
 							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
-							if ( fAlpha > 1.0f )
-								fAlpha = 1.0f;
-
-							// Round down and subtract a bit so that the button
-							// appears to stay in the no alpha state longer
-							fAlpha = (float)( (long)( fAlpha * 10 ) - 1 ) / 10;
+							// Subtract a bit so that the button appears to
+							// stay in the no alpha state longer
+							fAlpha -= 0.2f;
 							if ( fAlpha > 0 )
 							{
 								CGContextEndTransparencyLayer( mpBuffer->maContext );
-								CGContextSetAlpha( mpBuffer->maContext, fAlpha );
+								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
 								CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 								pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
@@ -443,9 +441,15 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
 	mbDrawn = NO;
+	mbRedraw = NO;
 	maSize = NSZeroSize;
 
 	return self;
+}
+
+- (MacOSBOOL)redraw
+{
+	return mbRedraw;
 }
 
 - (NSSize)size
@@ -2268,6 +2272,16 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
+
+	if ( bRet && pGraphics->mpFrame && [pVCLNativeButton redraw] )
+	{
+		// Invalidate bounds to force redraw
+		Window *pWindow = Application::GetFirstTopLevelWindow();
+		while ( pWindow && pWindow->ImplGetFrame() != pGraphics->mpFrame )
+			pWindow = Application::GetNextTopLevelWindow( pWindow );
+		if ( pWindow && pWindow->IsReallyVisible() )
+			pWindow->Invalidate( rDestBounds );
+	}
 
 	[pPool release];
 
