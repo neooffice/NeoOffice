@@ -301,6 +301,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 				float fCellHeight = [pCell cellSize].height;
 				float fOffscreenHeight = maDestRect.size.height;
 				MacOSBOOL bPlacard = NO;
+				MacOSBOOL bPulse = NO;
 				if ( mnButtonType == NSMomentaryLightButton )
 				{
 					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
@@ -323,19 +324,16 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
-							[pButton setKeyEquivalent:@"\r"];
+							if ( !IsRunningSnowLeopard() )
+								bPulse = YES;
 
+							[pButton setKeyEquivalent:@"\r"];
 							if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
 								[(VCLNativeButtonCell *)pCell setAnimated:YES];
 
-							if ( IsRunningSnowLeopard() )
-							{
-								// Force repainting since default pushbuttons
-								// will pulse on Snow Leopard
-								JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
-								JavaSalEventQueue::postCachedEvent( pPaintEvent );
-								pPaintEvent->release();
-							}
+							JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpGraphics->mpFrame, new SalPaintEvent( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)maDestRect.size.height ) );
+							JavaSalEventQueue::postCachedEvent( pPaintEvent );
+							pPaintEvent->release();
 						}
 					}
 				}
@@ -362,6 +360,32 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pCell drawWithFrame:aDrawRect inView:pButton];
+
+						if ( bPulse )
+						{
+							// Emulate pulse by painting pressed button on top
+							// of the default button with varying alpha
+							float fAlpha = 0.4f;
+							double fTime = CFAbsoluteTimeGetCurrent();
+							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
+							// Round down so no alpha state is slightly longer
+							fAlpha = (float)( (long)( fAlpha * 20 ) ) / 20;
+							if ( fAlpha > 0 )
+							{
+								CGContextEndTransparencyLayer( mpBuffer->maContext );
+								CGContextSetAlpha( mpBuffer->maContext, fAlpha );
+								CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+								pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+								if ( pContext )
+								{
+									[NSGraphicsContext setCurrentContext:pContext];
+									[pButton highlight:YES];
+									[pCell drawWithFrame:aDrawRect inView:pButton];
+								}
+							}
+						}
+
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
