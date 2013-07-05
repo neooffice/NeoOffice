@@ -12622,8 +12622,11 @@ void PDFWriterImpl::encodeGlyphs()
                 OString aPageObjTag( "<< /Type /Page " );
                 OString aPageContentTag( " /Contents " );
                 OString aProcSetObjTag( "<< /ProcSet " );
+                OString aFontDescriptorObjTag( "<< /Type /FontDescriptor " );
+                OString aFontFile2Tag( " /FontFile2 " );
                 sal_Int32 nPageContentObjID = 0;
                 sal_Int32 nProcSetObjID = 0;
+                sal_Int32 nFontFile2ObjID = 0;
                 sal_Int32 nObjID = 0;
                 while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
                 {
@@ -12637,7 +12640,7 @@ void PDFWriterImpl::encodeGlyphs()
                             {
                                 // Find object reference
                                 OStringBuffer aIDBuf;
-                                nContentPos += aPageContentTag .getLength();
+                                nContentPos += aPageContentTag.getLength();
                                 const sal_Char *pBuf = rObj.m_aContent.getStr();
                                 for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
                                     aIDBuf.append( *pBuf );
@@ -12652,6 +12655,23 @@ void PDFWriterImpl::encodeGlyphs()
                     else if ( !nProcSetObjID && rObj.m_aContent.match( aProcSetObjTag ) )
                     {
                         nProcSetObjID = nObjID;
+                    }
+                    else if ( !nFontFile2ObjID && rObj.m_aContent.match( aFontDescriptorObjTag ) )
+                    {
+                        if ( !rObj.m_bStream )
+                        {
+                            sal_Int32 nContentPos = rObj.m_aContent.indexOf( aFontFile2Tag );
+                            if ( nContentPos >= 0 )
+                            {
+                                // Find object reference
+                                OStringBuffer aIDBuf;
+                                nContentPos += aFontFile2Tag.getLength();
+                                const sal_Char *pBuf = rObj.m_aContent.getStr();
+                                for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                    aIDBuf.append( *pBuf );
+                                nFontFile2ObjID = aIDBuf.makeStringAndClear().toInt32();
+                            }
+                        }
                     }
                 }
 
@@ -12771,8 +12791,12 @@ void PDFWriterImpl::encodeGlyphs()
                     }
                 }
 
-                // Inflate page content stream and get encoding
-                if ( nPageContentObjID )
+                // Inflate page content stream and get encoding. Fix bug
+                // reported in the following NeoOffice forum topic by skipping
+                // this step if the font descriptor references a non-existent
+                // font stream object:
+                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8572
+                if ( nPageContentObjID && ( !nFontFile2ObjID || rEmit.m_aObjectMapping.find( nFontFile2ObjID ) != rEmit.m_aObjectMapping.end() ) )
                 {
                     PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nPageContentObjID ];
                     if ( rObj.m_bStream && rObj.m_nStreamLen && osl_setFilePos( aFile, osl_Pos_Absolut, rObj.m_nStreamPos ) == osl_File_E_None )
