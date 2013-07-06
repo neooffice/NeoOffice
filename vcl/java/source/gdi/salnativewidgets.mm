@@ -378,17 +378,13 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 							fAlpha -= 0.2f;
 							if ( fAlpha > 0 )
 							{
-								CGContextEndTransparencyLayer( mpBuffer->maContext );
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
 								CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
-								pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
-								if ( pContext )
-								{
-									[NSGraphicsContext setCurrentContext:pContext];
-									[pButton highlight:YES];
-									[pCell drawWithFrame:aDrawRect inView:pButton];
-								}
+								[pButton highlight:YES];
+								[pCell drawWithFrame:aDrawRect inView:pButton];
+
+								CGContextEndTransparencyLayer( mpBuffer->maContext );
 							}
 						}
 
