@@ -109,8 +109,14 @@ void NSApplication_dispatchPendingEvents()
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
+		// Fix excessive CPU usage when this is called from by adding a slight
+		// wait if there are no pending events
+		NSDate *pDate = [NSDate date];
+		if ( pDate )
+			pDate = [NSDate dateWithTimeInterval:0.05f sinceDate:pDate];
+
 		NSEvent *pEvent;
-		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:pDate inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
 			[pApp sendEvent:pEvent];
 	}
 
