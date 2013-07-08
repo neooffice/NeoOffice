@@ -12624,8 +12624,12 @@ void PDFWriterImpl::encodeGlyphs()
                 OString aProcSetObjTag( "<< /ProcSet " );
                 OString aFontDescriptorObjTag( "<< /Type /FontDescriptor " );
                 OString aFontFile2Tag( " /FontFile2 " );
+    			OString aRefTag( " 0 R" );
                 sal_Int32 nPageContentObjID = 0;
                 sal_Int32 nProcSetObjID = 0;
+                sal_Int32 nFontDescriptorObjID = 0;
+                sal_Int32 nFontFile2ObjStart = 0;
+                sal_Int32 nFontFile2ObjLen = 0;
                 sal_Int32 nFontFile2ObjID = 0;
                 sal_Int32 nObjID = 0;
                 while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
@@ -12656,23 +12660,40 @@ void PDFWriterImpl::encodeGlyphs()
                     {
                         nProcSetObjID = nObjID;
                     }
-                    else if ( !nFontFile2ObjID && rObj.m_aContent.match( aFontDescriptorObjTag ) )
+                    else if ( !nFontDescriptorObjID && rObj.m_aContent.match( aFontDescriptorObjTag ) )
                     {
                         if ( !rObj.m_bStream )
                         {
                             sal_Int32 nContentPos = rObj.m_aContent.indexOf( aFontFile2Tag );
                             if ( nContentPos >= 0 )
                             {
+                                nFontDescriptorObjID = nObjID;
+                                nFontFile2ObjStart = nContentPos;
+
                                 // Find object reference
                                 OStringBuffer aIDBuf;
                                 nContentPos += aFontFile2Tag.getLength();
                                 const sal_Char *pBuf = rObj.m_aContent.getStr();
-                                for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++, nContentPos++ )
                                     aIDBuf.append( *pBuf );
                                 nFontFile2ObjID = aIDBuf.makeStringAndClear().toInt32();
+
+                                nFontFile2ObjLen = nContentPos - nFontFile2ObjStart;
+                                if ( rObj.m_aContent.indexOf( aRefTag, nContentPos ) == nContentPos )
+                                    nFontFile2ObjLen += aRefTag.getLength();
                             }
                         }
                     }
+                }
+
+                // Fix bug reported in the following NeoOffice forum topic by
+                // removing the FontFile2 attribute if it references an object
+                // that does not exist:
+                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8572
+                if ( nFontDescriptorObjID && nFontFile2ObjLen && ( !nFontFile2ObjID || rEmit.m_aObjectMapping.find( nFontFile2ObjID ) == rEmit.m_aObjectMapping.end() ) )
+                {
+                    PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nFontDescriptorObjID ];
+                    rObj.m_aContent = rObj.m_aContent.replaceAt( nFontFile2ObjStart, nFontFile2ObjLen, OString() );
                 }
 
                 // Update stream lengths
@@ -12791,12 +12812,8 @@ void PDFWriterImpl::encodeGlyphs()
                     }
                 }
 
-                // Inflate page content stream and get encoding. Fix bug
-                // reported in the following NeoOffice forum topic by skipping
-                // this step if the font descriptor references a non-existent
-                // font stream object:
-                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8572
-                if ( nPageContentObjID && ( !nFontFile2ObjID || rEmit.m_aObjectMapping.find( nFontFile2ObjID ) != rEmit.m_aObjectMapping.end() ) )
+                // Inflate page content stream and get encoding
+                if ( nPageContentObjID )
                 {
                     PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nPageContentObjID ];
                     if ( rObj.m_bStream && rObj.m_nStreamLen && osl_setFilePos( aFile, osl_Pos_Absolut, rObj.m_nStreamPos ) == osl_File_E_None )
