@@ -249,7 +249,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 	[pButton autorelease];
 
-	if ( mnButtonType == NSMomentaryLightButton )
+	if ( mnButtonType == NSMomentaryLightButton && IsRunningSnowLeopard() )
 	{
 		VCLNativeButtonCell *pCell = [[VCLNativeButtonCell alloc] initTextCell:@""];
 		if ( !pCell )
@@ -299,6 +299,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 {
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
+		mbRedraw = NO;
+
 		NSButton *pButton = [self button];
 		if ( pButton )
 		{
@@ -331,12 +333,21 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
-							[pButton setKeyEquivalent:@"\r"];
-							if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
+							if ( IsRunningSnowLeopard() )
 							{
-								[(VCLNativeButtonCell *)pCell setAnimated:YES];
-								if ( !IsRunningSnowLeopard() )
-									bPulse = YES;
+								[pButton setKeyEquivalent:@"\r"];
+								if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
+								{
+									[(VCLNativeButtonCell *)pCell setAnimated:YES];
+									mbRedraw = YES;
+								}
+							}
+							else
+							{
+								// Do not use VCLNativeButtonCell animation as
+								// it sometimes draws darker than expected
+								[pButton highlight:NO];
+								bPulse = YES;
 								mbRedraw = YES;
 							}
 						}
@@ -370,12 +381,10 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						{
 							// Emulate pulse by painting pressed button on top
 							// of the default button with varying alpha
-							float fAlpha = 0.5f;
+							float fAlpha = 0.15f;
 							double fTime = CFAbsoluteTimeGetCurrent();
 							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
-							// Subtract a bit so that the button appears to
-							// stay in the no alpha state longer
-							fAlpha -= 0.2f;
+							fAlpha += 0.5f;
 							if ( fAlpha > 0 )
 							{
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
