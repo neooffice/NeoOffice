@@ -381,7 +381,7 @@ static NSString *pBlankItem = @" ";
 
 	int nID = [pID intValue];
 
-	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_CHECKBOX )
+	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pPopup )
