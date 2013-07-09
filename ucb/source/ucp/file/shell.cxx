@@ -2099,7 +2099,7 @@ sal_Bool SAL_CALL shell::ensuredir( sal_Int32 CommandId,
 #if defined USE_JAVA && defined MACOSX
 	// Eliminate sandbox deny file-read-data messages by checking if the
 	// directory exists using the stat() function. Only do this if the
-	// stat() function indicates that the path exists. Otherwise, use the
+	// stat() function indicates that the directory exists. Otherwise, use the
 	// original OOo code so that any folder aliases in the path can be
 	// resolved.
 	::rtl::OUString aSystemPath;
