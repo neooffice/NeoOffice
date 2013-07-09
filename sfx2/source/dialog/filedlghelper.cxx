@@ -2101,13 +2101,16 @@ namespace
 				// Fix unexpected display of native open dialog before expected
 				// native open or save dialog reported in the following
 				// NeoOffice forum post by using the stat() function to
-				// determine if the path is a folder:
+				// determine if the path is a folder. Only do this if the
+				// stat() function indicates that the path exists. Otherwise,
+				// use the original OOo code so that any folder aliases in the
+				// path can be resolved:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64138#64138
 				::rtl::OUString aSystemPath;
-				if ( ::osl::FileBase::getSystemPathFromFileURL( sPathCheck, aSystemPath ) == ::osl::FileBase::E_None )
+				struct stat aSystemPathStat;
+				if ( ::osl::FileBase::getSystemPathFromFileURL( sPathCheck, aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) )
 				{
-					struct stat aSystemPathStat;
-					if ( !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+					if ( S_ISDIR( aSystemPathStat.st_mode ) )
 						bValid = sal_True;
 				}
 				else
@@ -2636,13 +2639,16 @@ static int impl_isFolder( const OUString& rPath )
 		// Fix unexpected display of native open dialog before expected
 		// native open or save dialog reported in the following
 		// NeoOffice forum post by using the stat() function to
-		// determine if the path is a folder:
+		// determine if the path is a folder. Only do this if the
+		// stat() function indicates that the path exists. Otherwise,
+		// use the original OOo code so that any folder aliases in the
+		// path can be resolved:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64138#64138
 		::rtl::OUString aSystemPath;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( rPath, aSystemPath ) == ::osl::FileBase::E_None )
+		struct stat aSystemPathStat;
+		if ( ::osl::FileBase::getSystemPathFromFileURL( rPath, aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) )
 		{
-			struct stat aSystemPathStat;
-			if ( !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
+			if ( S_ISDIR( aSystemPathStat.st_mode ) )
 				return 1;
 		}
 		else
