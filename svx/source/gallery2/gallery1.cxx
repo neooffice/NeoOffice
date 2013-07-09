@@ -300,16 +300,19 @@ void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, sal_Bool& rbDirIsR
 #if defined USE_JAVA && defined MACOSX
 		// Eliminate sandbox deny-file-create messages by checking if the
 		// directory is writable before trying to create a file in that
-		// directory
-		rbDirIsReadOnly = sal_True;
+		// directory. Only do this if the stat() function indicates that the
+		// path exists. Otherwise, use the original OOo code so that any folder
+		// aliases in the path can be resolved.
 		::rtl::OUString aSystemPath;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None )
+		struct stat aSystemPathStat;
+		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) )
 		{
-			struct stat aSystemPathStat;
-			if ( !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) && !access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), W_OK ) )
-				rbDirIsReadOnly = sal_False;
+			if ( !S_ISDIR( aSystemPathStat.st_mode ) || access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), W_OK ) )
+				rbDirIsReadOnly = sal_True;
 		}
-#else	// USE_JAVA && MACOSX
+		else
+		{
+#endif	// USE_JAVA && MACOSX
 		try
 		{
 		    // check readonlyness the very hard way
@@ -341,6 +344,8 @@ void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, sal_Bool& rbDirIsR
 	    catch( const uno::Exception& )
 	    {
 	    }
+#if defined USE_JAVA && defined MACOSX
+		}
 #endif	// USE_JAVA && MACOSX
 
 		if( xResultSet.is() )
