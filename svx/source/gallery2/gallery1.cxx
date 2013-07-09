@@ -298,16 +298,16 @@ void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, sal_Bool& rbDirIsR
 		uno::Reference< sdbc::XResultSet > xResultSet( aCnt.createCursor( aProps, ::ucbhelper::INCLUDE_DOCUMENTS_ONLY ) );
 		
 #if defined USE_JAVA && defined MACOSX
-		// Eliminate sandbox deny-file-create messages by checking if the
+		// Eliminate sandbox deny file-write-create messages by checking if the
 		// directory is writable before trying to create a file in that
 		// directory. Only do this if the stat() function indicates that the
-		// path exists. Otherwise, use the original OOo code so that any folder
-		// aliases in the path can be resolved.
+		// directory exists. Otherwise, use the original OOo code so that any
+		// folder aliases in the path can be resolved.
 		::rtl::OUString aSystemPath;
 		struct stat aSystemPathStat;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) )
+		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
 		{
-			if ( !S_ISDIR( aSystemPathStat.st_mode ) || access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), W_OK ) )
+			if ( access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), W_OK ) )
 				rbDirIsReadOnly = sal_True;
 		}
 		else
