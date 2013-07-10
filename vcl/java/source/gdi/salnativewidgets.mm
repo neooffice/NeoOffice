@@ -177,38 +177,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
-@interface VCLNativeButtonCell : NSButtonCell
-{
-	MacOSBOOL				mbAnimated;
-}
-- (MacOSBOOL)_isAnimatingDefaultCell;
-- (id)initTextCell:(NSString *)pString;
-- (void)setAnimated:(MacOSBOOL)bAnimated;
-@end
-
-@implementation VCLNativeButtonCell
-
-- (MacOSBOOL)_isAnimatingDefaultCell
-{
-	return mbAnimated;
-}
-
-- (id)initTextCell:(NSString *)pString
-{
-	[super initTextCell:pString];
-
-	mbAnimated = NO;
-
-	return self;
-}
-
-- (void)setAnimated:(MacOSBOOL)bAnimated
-{
-	mbAnimated = bAnimated;
-}
-
-@end
-
 @interface VCLNativeButton : NSObject
 {
 	NSButtonType			mnButtonType;
@@ -248,16 +216,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 		return nil;
 
 	[pButton autorelease];
-
-	if ( mnButtonType == NSMomentaryLightButton && IsRunningSnowLeopard() )
-	{
-		VCLNativeButtonCell *pCell = [[VCLNativeButtonCell alloc] initTextCell:@""];
-		if ( !pCell )
-			return nil;
-
-		[pCell autorelease];
-		[pButton setCell:pCell];
-	}
 
 	NSCell *pCell = [pButton cell];
 	if ( !pCell )
@@ -310,7 +268,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 				float fCellHeight = [pCell cellSize].height;
 				float fOffscreenHeight = maDestRect.size.height;
 				MacOSBOOL bPlacard = NO;
-				MacOSBOOL bPulse = NO;
 				if ( mnButtonType == NSMomentaryLightButton )
 				{
 					fCellHeight -= ( FOCUSRING_WIDTH * 2 );
@@ -333,23 +290,10 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 						if ( mnControlState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED ) && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
 						{
-							if ( IsRunningSnowLeopard() )
-							{
-								[pButton setKeyEquivalent:@"\r"];
-								if ( [pCell isKindOfClass:[VCLNativeButtonCell class]] )
-								{
-									[(VCLNativeButtonCell *)pCell setAnimated:YES];
-									mbRedraw = YES;
-								}
-							}
-							else
-							{
-								// Do not use VCLNativeButtonCell animation as
-								// it sometimes draws darker than expected
-								[pButton highlight:NO];
-								bPulse = YES;
-								mbRedraw = YES;
-							}
+							// Do not use VCLNativeButtonCell animation as
+							// it sometimes draws darker than expected
+							[pButton highlight:NO];
+							mbRedraw = YES;
 						}
 					}
 				}
@@ -377,14 +321,17 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pCell drawWithFrame:aDrawRect inView:pButton];
 
-						if ( bPulse )
+						if ( mbRedraw )
 						{
 							// Emulate pulse by painting pressed button on top
 							// of the default button with varying alpha
 							float fAlpha = 0.15f;
 							double fTime = CFAbsoluteTimeGetCurrent();
 							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
-							fAlpha += 0.5f;
+							if ( IsRunningSnowLeopard() )
+								fAlpha += 0.4f;
+							else
+								fAlpha += 0.5f;
 							if ( fAlpha > 0 )
 							{
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
