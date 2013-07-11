@@ -88,10 +88,14 @@
 #define PROGRESS_WIDTH_SLOP				( IsRunningSnowLeopard() ? 1 : 0 )
 #define PROGRESS_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 0 : 1 )
 #define TABITEM_HEIGHT_SLOP				4
+// Fix most cases of checkbox and radio button clipping reported in the
+// following NeoOffice forum post by setting their width and height to the
+// minimum amount that will not result in a clipped focus ring when drawn:
+// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64288#64288
 #define CHECKBOX_WIDTH					16
-#define CHECKBOX_HEIGHT					20
+#define CHECKBOX_HEIGHT					14
 #define RADIOBUTTON_WIDTH				16
-#define RADIOBUTTON_HEIGHT				16
+#define RADIOBUTTON_HEIGHT				14
 #define PUSHBUTTON_HEIGHT_SLOP			4
 
 using namespace osl;
