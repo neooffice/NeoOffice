@@ -431,7 +431,9 @@ static NSString *pBlankItem = @" ";
 	mbShowReadOnly = bShowReadOnly;
 	mbShowSelection = bShowSelection;
 	mbShowTemplate = bShowTemplate;
-	mbShowVersion = bShowVersion;
+	// Always set to false as OOo's versions feature is rarely used and is
+	// incompatible with Mac OS X's Versions feature
+	mbShowVersion = false;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	mpControls = [NSMutableDictionary dictionary];
@@ -1201,7 +1203,7 @@ static NSString *pBlankItem = @" ";
 				[pControl setFrameOrigin:NSMakePoint( nTextWidth, nCurrentY )];
 				[pControl sizeToFit];
 				if ( nControlType == COCOA_CONTROL_TYPE_POPUP )
-					[pControl setFrameSize:NSMakeSize( 200, [pControl frame].size.height )];
+					[pControl setFrameSize:NSMakeSize( 400, [pControl frame].size.height )];
 					
 				float nWidth = nTextWidth + [pControl bounds].size.width;
 				if ( nCurrentWidth < nWidth )
