@@ -122,6 +122,7 @@ static NSString *pBlankItem = @" ";
 	NSString*				mpDefaultName;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
+	BOOL					mbInShowFileDialog;
 	void*					mpPicker;
 	BOOL					mbShowAutoExtension;
 	BOOL					mbShowFilterOptions;
@@ -147,6 +148,7 @@ static NSString *pBlankItem = @" ";
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (void)initialize:(id)pObject;
 - (BOOL)isChecked:(ShowFileDialogArgs *)pArgs;
+- (BOOL)isInShowFileDialog;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (NSSavePanel *)panel;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
@@ -387,7 +389,7 @@ static NSString *pBlankItem = @" ";
 
 	int nID = [pID intValue];
 
-	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_CHECKBOX )
+	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pPopup )
@@ -419,6 +421,7 @@ static NSString *pBlankItem = @" ";
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
+	mbInShowFileDialog = NO;
 	mpPicker = pPicker;
 	mbShowAutoExtension = bShowAutoExtension;
 	mbShowFilterOptions = bShowFilterOptions;
@@ -706,6 +709,11 @@ static NSString *pBlankItem = @" ";
 	[pArgs setResult:[NSNumber numberWithBool:bRet]];
 
 	return bRet;
+}
+
+- (BOOL)isInShowFileDialog
+{
+	return mbInShowFileDialog;
 }
 
 - (NSString *)label:(ShowFileDialogArgs *)pArgs
@@ -1148,26 +1156,13 @@ static NSString *pBlankItem = @" ";
 - (int)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
 	int nRet = NSCancelButton;
-    static bool recursing=false;
 
-    // When sandboxed the NSSavePanel does not derive direclty from a widget
-    // but is routed through powerbox objects. It may not respond to isVisible.
-    if ( [mpFilePanel respondsToSelector:@selector(isVisible)] )
-    {
-        if ( [mpFilePanel isVisible] )
-            return nRet;
-    }
-    else
-    {
-        // if we get into here twice that means there's some weird recursion going on.
-        // at some point +++FIXME+++ this should be a proper recursion guard
-        if(recursing)
-        {
-            return NSCancelButton;
-        }
-    }
-    
-    recursing = true;
+	if ( mbInShowFileDialog )
+		return nRet;
+
+	// When sandboxed the NSSavePanel does not have the isVisible selector so
+    // use our internal object variable instead
+	mbInShowFileDialog = YES;
     
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
@@ -1320,7 +1315,7 @@ static NSString *pBlankItem = @" ";
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
-    recursing = false;
+	mbInShowFileDialog = NO;
     
 	return nRet;
 }
@@ -1333,7 +1328,7 @@ static NSString *pBlankItem = @" ";
 {
 	[super dismissPopUp];
 
-	if ( mpDialog )
+	if ( mpDialog && [mpDialog isInShowFileDialog] )
 	{
 		void *pPicker = [mpDialog picker];
 		if ( pPicker )
@@ -1398,7 +1393,7 @@ void NSFileDialog_addFilter( id pDialog, CFStringRef aItem, CFStringRef aFilter 
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:(NSString *)aItem, (NSString *)aFilter, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addFilter:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addFilter:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1412,7 +1407,7 @@ void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aItem, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addItem:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1460,7 +1455,7 @@ void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aItem, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(deleteItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(deleteItem:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1750,7 +1745,7 @@ void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithBool:bChecked], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setChecked:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setChecked:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1764,7 +1759,7 @@ void NSFileDialog_setDefaultName( id pDialog, CFStringRef aName )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:(NSString *)aName]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setDefaultName:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setDefaultName:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1778,7 +1773,7 @@ void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:(NSString *)aDirectory]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setDirectory:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setDirectory:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1792,7 +1787,7 @@ void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithBool:bEnabled], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setEnabled:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setEnabled:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1806,7 +1801,7 @@ void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aLabel, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setLabel:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setLabel:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1820,7 +1815,7 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bMultiSelectionMode]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setMultiSelectionMode:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setMultiSelectionMode:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1834,7 +1829,7 @@ void NSFileDialog_setSelectedFilter( id pDialog, CFStringRef aItem )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:(NSString *)aItem]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setSelectedFilter:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setSelectedFilter:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1848,7 +1843,7 @@ void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithInt:nItem], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setSelectedItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setSelectedItem:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -1862,7 +1857,7 @@ void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:(NSString *)aTitle]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setTitle:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setTitle:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
