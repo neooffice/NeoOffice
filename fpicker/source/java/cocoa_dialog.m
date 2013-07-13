@@ -41,6 +41,21 @@
 
 static NSString *pBlankItem = @" ";
 
+static void RemoveAllSubviews( NSView *pView )
+{
+	if ( pView )
+	{
+		NSArray *pSubviews = [pView subviews];
+		while ( pSubviews && [pSubviews count] )
+		{
+			NSView *pSubview = [pSubviews objectAtIndex:0];
+			if ( pSubview )
+				[pSubview removeFromSuperview];
+			pSubviews = [pView subviews];
+		}
+	}
+}
+
 @interface ShowFileDialogArgs : NSObject
 {
 	NSArray*				mpArgs;
@@ -172,6 +187,9 @@ static NSString *pBlankItem = @" ";
 - (void)dismissPopUp;
 - (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID;
 @end
+
+static NSMutableArray *pOpenPanelPool = nil;
+static NSMutableArray *pSavePanelPool = nil;
 
 @implementation ShowFileDialog
 
@@ -314,8 +332,45 @@ static NSString *pBlankItem = @" ";
 
 	if ( mpFilePanel )
 	{
+		RemoveAllSubviews( [mpFilePanel accessoryView] );
+
 		[mpFilePanel setDelegate:nil];
-		[mpFilePanel release];
+
+		// When sandboxed, releasing an NSOpenPanel or NSSavePanel will cause
+		// random crashing in Apple's XPC connection code so avoid such
+		// crashing by caching and reusing NSOpenPanel and NSSavePanel
+		// instances
+		if ( mbUseFileOpenDialog )
+		{
+			if ( !pOpenPanelPool )
+			{
+				pOpenPanelPool = [NSMutableArray arrayWithCapacity:2];
+				if ( pOpenPanelPool )
+					[pOpenPanelPool retain];
+			}
+
+			if ( pOpenPanelPool )
+			{
+				[pOpenPanelPool addObject:mpFilePanel];
+				[mpFilePanel release];
+			}
+		}
+		else
+		{
+			if ( !pSavePanelPool )
+			{
+				pSavePanelPool = [NSMutableArray arrayWithCapacity:2];
+				if ( pSavePanelPool )
+					[pSavePanelPool retain];
+			}
+
+			if ( pSavePanelPool )
+			{
+				[pSavePanelPool addObject:mpFilePanel];
+				[mpFilePanel release];
+			}
+		}
+
 		mpFilePanel = nil;
 	}
 
@@ -415,6 +470,7 @@ static NSString *pBlankItem = @" ";
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
+	mpFilePanel = nil;
 	mbInShowFileDialog = NO;
 	mpPicker = pPicker;
 	mbShowAutoExtension = bShowAutoExtension;
@@ -447,15 +503,54 @@ static NSString *pBlankItem = @" ";
 
 - (void)initialize:(id)pObject
 {
-	if ( mbUseFileOpenDialog )
-		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
-	else
-		mpFilePanel = [NSSavePanel savePanel];
+	if ( !mpFilePanel )
+	{
+		// When sandboxed, releasing an NSOpenPanel or NSSavePanel will cause
+		// random crashing in Apple's XPC connection code so avoid such
+		// crashing by caching and reusing NSOpenPanel and NSSavePanel
+		// instances
+		if ( mbUseFileOpenDialog )
+		{
+			if ( pOpenPanelPool && [pOpenPanelPool count] )
+			{
+				mpFilePanel = (NSSavePanel *)[pOpenPanelPool objectAtIndex:0];
+				if ( mpFilePanel )
+				{
+					[mpFilePanel retain];
+					[pOpenPanelPool removeObjectAtIndex:0];
+				}
+			}
+
+			if ( !mpFilePanel )
+			{
+				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+				if ( mpFilePanel )
+					[mpFilePanel retain];
+			}
+		}
+		else
+		{
+			if ( pSavePanelPool && [pSavePanelPool count] )
+			{
+				mpFilePanel = (NSSavePanel *)[pSavePanelPool objectAtIndex:0];
+				if ( mpFilePanel )
+				{
+					[mpFilePanel retain];
+					[pSavePanelPool removeObjectAtIndex:0];
+				}
+			}
+
+			if ( !mpFilePanel )
+			{
+				mpFilePanel = [NSSavePanel savePanel];
+				if ( mpFilePanel )
+					[mpFilePanel retain];
+			}
+		}
+	}
 
 	if ( !mpFilePanel )
 		return;
-
-	[mpFilePanel retain];
 
 	[mpFilePanel setDelegate:self];
 	[mpFilePanel setCanCreateDirectories:YES];
@@ -1157,17 +1252,17 @@ static NSString *pBlankItem = @" ";
 		return nRet;
 
 	// When sandboxed the NSSavePanel does not have the isVisible selector so
-    // use our internal object variable instead
+	// use our internal object variable instead
 	mbInShowFileDialog = YES;
-    
+
+	RemoveAllSubviews( [mpFilePanel accessoryView] );
+
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
 	if ( pAccessoryView )
 	{
 		// Add to autorelease pool as invoking alloc disables autorelease
 		[pAccessoryView autorelease];
-
-		NSView *pOldAccessoryView = [mpFilePanel accessoryView];
 
 		float nCurrentY = 0;
 		float nCurrentWidth = 0;
@@ -1270,21 +1365,18 @@ static NSString *pBlankItem = @" ";
 			[mpFilePanel setNameFieldStringValue:mpDefaultName];
 		nRet = [mpFilePanel runModal];
 
-		[mpFilePanel setAccessoryView:pOldAccessoryView];
-
-		for ( i = 0; i < MAX_COCOA_CONTROL_ID; i++ )
-		{
-			NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
-			if ( pControl )
-				[pControl removeFromSuperview];
-		}
+		// Note: instance variables may, in rare cases, be nil from this point
+		// on if the destroy: selector is called during runModal
 	}
+
+	if ( mpFilePanel )
+		RemoveAllSubviews( [mpFilePanel accessoryView] );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
 	mbInShowFileDialog = NO;
-    
+
 	return nRet;
 }
 
