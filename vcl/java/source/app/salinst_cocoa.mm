@@ -665,9 +665,11 @@ static NSMutableArray *pOpenPanelPool = nil;
 			}
 
 			if ( pOpenPanelPool )
+			{
 				[pOpenPanelPool addObject:mpOpenPanel];
+				[mpOpenPanel release];
+			}
 
-			[mpOpenPanel release];
 			mpOpenPanel = nil;
 		}
 
