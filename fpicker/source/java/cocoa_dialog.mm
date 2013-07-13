@@ -35,7 +35,9 @@
 
 #import <dlfcn.h>
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <postmac.h>
 
 #ifndef _COCOA_FILEDIALOG_H_
 #import "cocoa_dialog.h"
@@ -132,24 +134,24 @@ static void RemoveAllSubviews( NSView *pView )
 
 @interface ShowFileDialog : NSObject
 {
-	BOOL					mbChooseFiles;
+	MacOSBOOL				mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSString*				mpDefaultName;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
-	BOOL					mbInShowFileDialog;
+	MacOSBOOL				mbInShowFileDialog;
 	void*					mpPicker;
-	BOOL					mbShowAutoExtension;
-	BOOL					mbShowFilterOptions;
-	BOOL					mbShowImageTemplate;
-	BOOL					mbShowLink;
-	BOOL					mbShowPassword;
-	BOOL					mbShowReadOnly;
-	BOOL					mbShowSelection;
-	BOOL					mbShowTemplate;
-	BOOL					mbShowVersion;
+	MacOSBOOL				mbShowAutoExtension;
+	MacOSBOOL				mbShowFilterOptions;
+	MacOSBOOL				mbShowImageTemplate;
+	MacOSBOOL				mbShowLink;
+	MacOSBOOL				mbShowPassword;
+	MacOSBOOL				mbShowReadOnly;
+	MacOSBOOL				mbShowSelection;
+	MacOSBOOL				mbShowTemplate;
+	MacOSBOOL				mbShowVersion;
 	NSMutableDictionary*	mpTextFields;
-	BOOL					mbUseFileOpenDialog;
+	MacOSBOOL				mbUseFileOpenDialog;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
 - (void)addItem:(ShowFileDialogArgs *)pArgs;
@@ -160,14 +162,14 @@ static void RemoveAllSubviews( NSView *pView )
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
-- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(MacOSBOOL)bUseFileOpenDialog chooseFiles:(MacOSBOOL)bChooseFiles showAutoExtension:(MacOSBOOL)bShowAutoExtension showFilterOptions:(MacOSBOOL)bShowFilterOptions showImageTemplate:(MacOSBOOL)bShowImageTemplate showLink:(MacOSBOOL)bShowLink showPassword:(MacOSBOOL)bShowPassword showReadOnly:(MacOSBOOL)bShowReadOnly showSelection:(MacOSBOOL)bShowSelection showTemplate:(MacOSBOOL)bShowTemplate showVersion:(MacOSBOOL)bShowVersion;
 - (void)initialize:(id)pObject;
-- (BOOL)isChecked:(ShowFileDialogArgs *)pArgs;
-- (BOOL)isInShowFileDialog;
+- (MacOSBOOL)isChecked:(ShowFileDialogArgs *)pArgs;
+- (MacOSBOOL)isInShowFileDialog;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (NSSavePanel *)panel;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
-- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
+- (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 - (void *)picker;
 - (void)release:(id)pObject;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
@@ -220,7 +222,7 @@ static NSMutableArray *pSavePanelPool = nil;
 		if ( pArray )
 		{
 			int nCount = [pArray count];
-			BOOL bAllowAll = NO;
+			MacOSBOOL bAllowAll = NO;
 			int i = 0;
 			for ( ; i < nCount; i++ )
 			{
@@ -470,7 +472,7 @@ static NSMutableArray *pSavePanelPool = nil;
 	return pRet;
 }
 
-- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(MacOSBOOL)bUseFileOpenDialog chooseFiles:(MacOSBOOL)bChooseFiles showAutoExtension:(MacOSBOOL)bShowAutoExtension showFilterOptions:(MacOSBOOL)bShowFilterOptions showImageTemplate:(MacOSBOOL)bShowImageTemplate showLink:(MacOSBOOL)bShowLink showPassword:(MacOSBOOL)bShowPassword showReadOnly:(MacOSBOOL)bShowReadOnly showSelection:(MacOSBOOL)bShowSelection showTemplate:(MacOSBOOL)bShowTemplate showVersion:(MacOSBOOL)bShowVersion
 {
 	[super init];
 
@@ -777,9 +779,9 @@ static NSMutableArray *pSavePanelPool = nil;
 	}
 }
 
-- (BOOL)isChecked:(ShowFileDialogArgs *)pArgs
+- (MacOSBOOL)isChecked:(ShowFileDialogArgs *)pArgs
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 1 )
@@ -808,7 +810,7 @@ static NSMutableArray *pSavePanelPool = nil;
 	return bRet;
 }
 
-- (BOOL)isInShowFileDialog
+- (MacOSBOOL)isInShowFileDialog
 {
 	return mbInShowFileDialog;
 }
@@ -865,9 +867,9 @@ static NSMutableArray *pSavePanelPool = nil;
 	}
 }
 
-- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
+- (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	// Fix bug 1622 by checking for nil argument
 	if ( !pURL )
@@ -883,7 +885,7 @@ static NSMutableArray *pSavePanelPool = nil;
 			pURL = nil;
 			if ( pData )
 			{
-				BOOL bStale = NO;
+				MacOSBOOL bStale = NO;
 				NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 				if ( !bStale && pResolvedURL )
 					pURL = pResolvedURL;
@@ -1519,7 +1521,7 @@ void NSFileDialog_cancel( id pDialog )
 	[pPool release];
 }
 
-id NSFileDialog_create( void *pPicker, BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
+id NSFileDialog_create( void *pPicker, sal_Bool bUseFileOpenDialog, sal_Bool bChooseFiles, sal_Bool bShowAutoExtension, sal_Bool bShowFilterOptions, sal_Bool bShowImageTemplate, sal_Bool bShowLink, sal_Bool bShowPassword, sal_Bool bShowReadOnly, sal_Bool bShowSelection, sal_Bool bShowTemplate, sal_Bool bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
 
@@ -1672,9 +1674,9 @@ CFStringRef *NSFileDialog_items( id pDialog, int nID )
 	return pRet;
 }
 
-BOOL NSFileDialog_isChecked( id pDialog, int nID )
+sal_Bool NSFileDialog_isChecked( id pDialog, int nID )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1685,7 +1687,7 @@ BOOL NSFileDialog_isChecked( id pDialog, int nID )
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(isChecked:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
-			bRet = [pRet boolValue];
+			bRet = (sal_Bool)[pRet boolValue];
 	}
 
 	[pPool release];
@@ -1830,7 +1832,7 @@ int NSFileDialog_selectedItemIndex( id pDialog, int nID )
 	return nRet;
 }
 
-void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked )
+void NSFileDialog_setChecked( id pDialog, int nID, sal_Bool bChecked )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1872,7 +1874,7 @@ void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory )
 	[pPool release];
 }
 
-void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled )
+void NSFileDialog_setEnabled( id pDialog, int nID, sal_Bool bEnabled )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1900,7 +1902,7 @@ void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel )
 	[pPool release];
 }
 
-void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
+void NSFileDialog_setMultiSelectionMode( id pDialog, sal_Bool bMultiSelectionMode )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
