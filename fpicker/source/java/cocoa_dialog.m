@@ -356,7 +356,10 @@ static NSMutableArray *pSavePanelPool = nil;
 			}
 
 			if ( pOpenPanelPool )
+			{
 				[pOpenPanelPool addObject:mpFilePanel];
+				[mpFilePanel release];
+			}
 		}
 		else
 		{
@@ -368,10 +371,12 @@ static NSMutableArray *pSavePanelPool = nil;
 			}
 
 			if ( pSavePanelPool )
+			{
 				[pSavePanelPool addObject:mpFilePanel];
+				[mpFilePanel release];
+			}
 		}
 
-		[mpFilePanel release];
 		mpFilePanel = nil;
 	}
 
