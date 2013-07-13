@@ -466,6 +466,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	}
 }
 
+static NSMutableArray *pOpenPanelPool = nil;
+
 @implementation VCLRequestSecurityScopedURL
 
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle
@@ -575,7 +577,26 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		mpOpenPanel = [NSOpenPanel openPanel];
+		// When sandboxed, releasing an NSOpenPanel will cause random
+		// crashing in Apple's XPC connection code so avoid such crashing
+		// by caching and reusing NSOpenPanel instances
+		if ( pOpenPanelPool && [pOpenPanelPool count] )
+		{
+			mpOpenPanel = (NSSavePanel *)[pOpenPanelPool objectAtIndex:0];
+			if ( mpOpenPanel )
+			{
+				[mpOpenPanel retain];
+				[pOpenPanelPool removeObjectAtIndex:0];
+			}
+		}
+
+		if ( !mpOpenPanel )
+		{
+			mpOpenPanel = [NSOpenPanel openPanel];
+			if ( mpOpenPanel )
+				[mpOpenPanel retain];
+		}
+
 		if ( mpOpenPanel )
 		{
 			[mpOpenPanel setAllowsMultipleSelection:NO];
@@ -632,6 +653,21 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			}
 
 			[mpOpenPanel setDelegate:nil];
+
+			// When sandboxed, releasing an NSOpenPanel will cause random
+			// crashing in Apple's XPC connection code so avoid such crashing
+			// by caching and reusing NSOpenPanel instances
+			if ( !pOpenPanelPool )
+			{
+				pOpenPanelPool = [NSMutableArray arrayWithCapacity:2];
+				if ( pOpenPanelPool )
+					[pOpenPanelPool retain];
+			}
+
+			if ( pOpenPanelPool )
+				[pOpenPanelPool addObject:mpOpenPanel];
+
+			[mpOpenPanel release];
 			mpOpenPanel = nil;
 		}
 
