@@ -601,6 +601,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			mpOpenPanel = [NSOpenPanel openPanel];
 			if ( mpOpenPanel )
 			{
+				[mpOpenPanel retain];
 				[mpOpenPanel setAllowsMultipleSelection:NO];
 				[mpOpenPanel setDirectoryURL:mpURL];
 				[mpOpenPanel setCanChooseDirectories:YES];
