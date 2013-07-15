@@ -453,6 +453,7 @@ static NSString *pBlankItem = @" ";
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
+	mbDestroyAfterShowFileDialog = NO;
 	mpFilePanel = nil;
 	mbInShowFileDialog = NO;
 	mpPicker = pPicker;
