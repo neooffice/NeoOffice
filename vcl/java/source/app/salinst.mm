@@ -92,6 +92,7 @@ typedef void NativePreferencesMenuHandler_Type();
 static bool isSnowLeopard = false;
 static bool isLion = false;
 static bool isMountainLion = false;
+static bool isMavericks = false;
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
@@ -206,6 +207,9 @@ static void InitializeMacOSXVersion()
 						break;
 					case 8:
 						isMountainLion = true;
+						break;
+					case 9:
+						isMavericks = true;
 						break;
 					default:
 						break;
@@ -411,6 +415,14 @@ bool IsRunningMountainLion( )
 {
 	InitializeMacOSXVersion();
 	return isMountainLion;
+}
+
+// ----------------------------------------------------------------------------
+
+bool IsRunningMavericks( )
+{
+	InitializeMacOSXVersion();
+	return isMavericks;
 }
 
 // ----------------------------------------------------------------------------

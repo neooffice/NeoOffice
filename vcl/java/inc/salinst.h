@@ -230,6 +230,7 @@ public:
 SAL_DLLPRIVATE bool IsRunningSnowLeopard();
 SAL_DLLPRIVATE bool IsRunningLion();
 SAL_DLLPRIVATE bool IsRunningMountainLion();
+SAL_DLLPRIVATE bool IsRunningMavericks();
 SAL_DLLPRIVATE bool IsFullKeyboardAccessEnabled();
 
 #endif // _SV_SALINST_H
