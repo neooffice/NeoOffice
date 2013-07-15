@@ -41,8 +41,6 @@
 #import "cocoa_dialog.h"
 #endif
 
-#define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
-
 static NSString *pBlankItem = @" ";
 
 @interface ShowFileDialogArgs : NSObject
@@ -1457,7 +1455,7 @@ static NSString *pBlankItem = @" ";
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
 		if ( mpFilePanel )
 		{
-			[mpFilePanel performSelector:@selector(release) withObject:nil afterDelay:FILE_DIALOG_RELEASE_DELAY_INTERVAL];
+			[mpFilePanel release];
 			mpFilePanel = nil;
 		}
 	}
