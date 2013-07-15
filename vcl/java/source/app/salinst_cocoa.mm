@@ -53,6 +53,8 @@
 #define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
 #endif	// !NSURLBookmarkResolutionWithSecurityScope
 
+#define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
+
 typedef NSString* const NSURLIsReadableKey_Type;
 typedef NSString* const NSURLIsWritableKey_Type;
 
@@ -81,6 +83,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
 - (NSURL *)securityScopedURL;
 @end
@@ -466,8 +469,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	}
 }
 
-static NSMutableArray *pOpenPanelPool = nil;
-
 @implementation VCLRequestSecurityScopedURL
 
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle
@@ -535,7 +536,25 @@ static NSMutableArray *pOpenPanelPool = nil;
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
 {
 	if ( mpURL && mpOpenPanel && ( !pURL || ![pURL isEqual:mpURL] ) )
-		[mpOpenPanel setDirectoryURL:mpURL];
+	{
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[mpOpenPanel setDirectoryURL:mpURL];
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+}
+
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
+{
+	// Stop exceptions from being logged on Mac OS X 10.9
 }
 
 - (void)requestSecurityScopedURL:(id)pObject
@@ -575,73 +594,57 @@ static NSMutableArray *pOpenPanelPool = nil;
 
 	if ( mpURL )
 	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		// When sandboxed, releasing an NSOpenPanel will cause random
-		// crashing in Apple's XPC connection code so avoid such crashing
-		// by caching and reusing NSOpenPanel instances
-		if ( pOpenPanelPool && [pOpenPanelPool count] )
+		@try
 		{
-			mpOpenPanel = (NSSavePanel *)[pOpenPanelPool objectAtIndex:0];
-			if ( mpOpenPanel )
-			{
-				[mpOpenPanel retain];
-				[pOpenPanelPool removeObjectAtIndex:0];
-			}
-		}
-
-		if ( !mpOpenPanel )
-		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
 			mpOpenPanel = [NSOpenPanel openPanel];
 			if ( mpOpenPanel )
-				[mpOpenPanel retain];
-		}
-
-		if ( mpOpenPanel )
-		{
-			[mpOpenPanel setAllowsMultipleSelection:NO];
-			[mpOpenPanel setDirectoryURL:mpURL];
-			[mpOpenPanel setCanChooseDirectories:YES];
-			[mpOpenPanel setCanChooseFiles:NO];
-			[mpOpenPanel setDelegate:self];
-			if ( mpTitle && [mpTitle length] )
 			{
-				[mpOpenPanel setPrompt:mpTitle];
-				[mpOpenPanel setTitle:mpTitle];
-			}
+				[mpOpenPanel setAllowsMultipleSelection:NO];
+				[mpOpenPanel setDirectoryURL:mpURL];
+				[mpOpenPanel setCanChooseDirectories:YES];
+				[mpOpenPanel setCanChooseFiles:NO];
+				if ( mpTitle && [mpTitle length] )
+					[mpOpenPanel setTitle:mpTitle];
 
-			if ( [mpOpenPanel runModal] == NSFileHandlingPanelOKButton )
-			{
-				NSArray *pURLs = [mpOpenPanel URLs];
-				if ( pURLs && [pURLs count] )
+				[mpOpenPanel setDelegate:self];
+				NSInteger nRet = [mpOpenPanel runModal];
+				[mpOpenPanel setDelegate:nil];
+
+				if ( nRet == NSFileHandlingPanelOKButton )
 				{
-					// There should only be one selected URL
-					NSURL *pDirURL = [pURLs objectAtIndex:0];
-					if ( pDirURL && [pDirURL isFileURL] )
+					NSArray *pURLs = [mpOpenPanel URLs];
+					if ( pURLs && [pURLs count] )
 					{
-						Application_cacheSecurityScopedURL( pDirURL );
-
-						pDirURL = [pDirURL URLByStandardizingPath];
-						if ( pDirURL )
+						// There should only be one selected URL
+						NSURL *pDirURL = [pURLs objectAtIndex:0];
+						if ( pDirURL && [pDirURL isFileURL] )
 						{
-							pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+							Application_cacheSecurityScopedURL( pDirURL );
+
+							pDirURL = [pDirURL URLByStandardizingPath];
 							if ( pDirURL )
 							{
-								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-								if ( pData )
+								pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+								if ( pDirURL )
 								{
-									MacOSBOOL bStale = NO;
-									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+									NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+									if ( pData )
 									{
-										pResolvedURL = [pResolvedURL URLByStandardizingPath];
-										if ( pResolvedURL )
+										MacOSBOOL bStale = NO;
+										NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+										if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
 										{
-											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+											pResolvedURL = [pResolvedURL URLByStandardizingPath];
 											if ( pResolvedURL )
 											{
-												mpSecurityScopedURL = pResolvedURL;
-												[mpSecurityScopedURL retain];
+												pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+												if ( pResolvedURL )
+												{
+													mpSecurityScopedURL = pResolvedURL;
+													[mpSecurityScopedURL retain];
+												}
 											}
 										}
 									}
@@ -651,29 +654,26 @@ static NSMutableArray *pOpenPanelPool = nil;
 					}
 				}
 			}
-
-			[mpOpenPanel setDelegate:nil];
-
-			// When sandboxed, releasing an NSOpenPanel will cause random
-			// crashing in Apple's XPC connection code so avoid such crashing
-			// by caching and reusing NSOpenPanel instances
-			if ( !pOpenPanelPool )
-			{
-				pOpenPanelPool = [NSMutableArray arrayWithCapacity:2];
-				if ( pOpenPanelPool )
-					[pOpenPanelPool retain];
-			}
-
-			if ( pOpenPanelPool )
-			{
-				[pOpenPanelPool addObject:mpOpenPanel];
-				[mpOpenPanel release];
-			}
-
-			mpOpenPanel = nil;
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
-		[pPool release];
+		// Fix crash when running in the sandbox reported in the following
+		// NeoOffice forum post by releasing the file dialog only after a 
+		// significant delay. This hacky fix appears to work because Apple's
+		// underlying PowerBox-based NSOpenPanel and NSSavePanel code runs
+		// many operations asynchronously and releasing such panels
+		// immediately causes Apple's code to crash:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
+		if ( mpOpenPanel )
+		{
+			[mpOpenPanel performSelector:@selector(release) withObject:nil afterDelay:FILE_DIALOG_RELEASE_DELAY_INTERVAL];
+			mpOpenPanel = nil;
+		}
 	}
 }
 
