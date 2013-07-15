@@ -1466,30 +1466,6 @@ static NSString *pBlankItem = @" ";
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
-		NSArray *pSubviews = [pAccessoryView subviews];
-		if ( pSubviews )
-		{
-			NSUInteger nCount = [pSubviews count];
-			NSUInteger i = 0;
-			for ( ; i < nCount ; i++ )
-			{
-				NSView *pSubview = [pSubviews objectAtIndex:i];
-				if ( pSubview )
-				{
-					[pSubview removeFromSuperview];
-					nCount = [pSubviews count];
-					i = 0;
-				}
-			}
-		}
-
-        for ( i = 0; i < MAX_COCOA_CONTROL_ID; i++ )
-        {
-            NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
-            if ( pControl )
-                [pControl removeFromSuperview];
-        }
-
 		// Fix crash when running in the sandbox reported in the following
 		// NeoOffice forum post by releasing the file dialog only after a 
 		// significant delay. This hacky fix appears to work because Apple's
@@ -1522,6 +1498,10 @@ static NSString *pBlankItem = @" ";
 - (void)dismissPopUp
 {
 	[super dismissPopUp];
+
+	NSView *pView = [self controlView];
+	if ( !pView || ![pView window] )
+		return;
 
 	if ( mpDialog && [mpDialog isInShowFileDialog] )
 	{
