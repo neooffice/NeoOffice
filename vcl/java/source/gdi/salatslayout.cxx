@@ -2307,16 +2307,6 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 			CGSize aTranslation = CGSizeMake( 0, 0 );
 			CTFontGetVerticalTranslationsForGlyphs( pRet->maFont, &aGlyph, &aTranslation, 1 );
 
-			// Fix bug 3665 by scaling translation values on Mac OS X 10.6 Snow	
-			// Leopard only. On that version of Mac OS X, we need to scale the
-			// translation by font size divided by the font's unitsPerEm size.
-			if ( IsRunningSnowLeopard() )
-			{
-				CGFloat fScale = CTFontGetSize( pRet->maFont ) / CTFontGetUnitsPerEm( pRet->maFont );
-				aTranslation.width *= fScale;
-				aTranslation.height *= fScale;
-			}
-
 			nX = Float32ToLong( aTranslation.width * UNITS_PER_PIXEL );
 			if ( nGlyphOrientation == GF_ROTL )
 				nX += pRet->mnBaselineDelta;

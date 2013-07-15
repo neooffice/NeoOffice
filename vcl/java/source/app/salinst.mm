@@ -89,9 +89,8 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
-static bool isSnowLeopard = false;
-static bool isLion = false;
 static bool isMountainLion = false;
+static bool isMavericks = false;
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
@@ -198,14 +197,11 @@ static void InitializeMacOSXVersion()
 				pGestalt( gestaltSystemVersionMinor, &res );
 				switch ( res )
 				{
-					case 6:
-						isSnowLeopard = true;
-						break;
-					case 7:
-						isLion = true;
-						break;
 					case 8:
 						isMountainLion = true;
+						break;
+					case 9:
+						isMavericks = true;
 						break;
 					default:
 						break;
@@ -391,26 +387,18 @@ BOOL VCLInstance_updateNativeMenus()
 
 // ----------------------------------------------------------------------------
 
-bool IsRunningSnowLeopard( )
-{
-	InitializeMacOSXVersion();
-	return isSnowLeopard;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningLion( )
-{
-	InitializeMacOSXVersion();
-	return isLion;
-}
-
-// ----------------------------------------------------------------------------
-
 bool IsRunningMountainLion( )
 {
 	InitializeMacOSXVersion();
 	return isMountainLion;
+}
+
+// ----------------------------------------------------------------------------
+
+bool IsRunningMavericks( )
+{
+	InitializeMacOSXVersion();
+	return isMavericks;
 }
 
 // ----------------------------------------------------------------------------
