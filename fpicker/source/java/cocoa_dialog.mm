@@ -162,7 +162,7 @@ static NSString *pBlankItem = @" ";
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
-- (void)panel:(id)pObject willExpand:(BOOL)bExpanding;
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
 - (void)release:(id)pObject;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
@@ -880,7 +880,7 @@ static NSString *pBlankItem = @" ";
 	return bRet;
 }
 
-- (void)panel:(id)pObject willExpand:(BOOL)bExpanding
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
 {
 	// Stop exceptions from being logged on Mac OS X 10.9
 }
