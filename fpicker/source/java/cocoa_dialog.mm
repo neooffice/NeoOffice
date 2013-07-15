@@ -1353,6 +1353,17 @@ static NSString *pBlankItem = @" ";
 			if ( mpFilePanel )
 			{
 				[mpFilePanel retain];
+
+				// Add the accessory view before configuring the file panel
+				// otherwise the open panel will hang on Mac OS X when running
+				// in the sandbox
+				NSArray *pSubviews = [pAccessoryView subviews];
+				if ( pSubviews && [pSubviews count] )
+				{
+					[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
+					[mpFilePanel setAccessoryView:pAccessoryView];
+				}
+
 				[mpFilePanel setCanCreateDirectories:YES];
 				[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
 
@@ -1382,13 +1393,6 @@ static NSString *pBlankItem = @" ";
 				[mpFilePanel setExtensionHidden:mbExtensionHidden];
 				if ( !mbUseFileOpenDialog && mpSelectedFilter )
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
-
-				NSArray *pSubviews = [pAccessoryView subviews];
-				if ( pSubviews && [pSubviews count] )
-				{
-					[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
-					[mpFilePanel setAccessoryView:pAccessoryView];
-				}
 
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
 
@@ -1446,13 +1450,6 @@ static NSString *pBlankItem = @" ";
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
-		// Fix crash when running in the sandbox reported in the following
-		// NeoOffice forum post by releasing the file dialog only after a 
-		// significant delay. This hacky fix appears to work because Apple's
-		// underlying PowerBox-based NSOpenPanel and NSSavePanel code runs
-		// many operations asynchronously and releasing such panels
-		// immediately causes Apple's code to crash:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
 		if ( mpFilePanel )
 		{
 			[mpFilePanel release];
