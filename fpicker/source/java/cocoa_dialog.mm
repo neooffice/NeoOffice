@@ -41,22 +41,9 @@
 #import "cocoa_dialog.h"
 #endif
 
-static NSString *pBlankItem = @" ";
+#define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
 
-static void RemoveAllSubviews( NSView *pView )
-{
-	if ( pView )
-	{
-		NSArray *pSubviews = [pView subviews];
-		while ( pSubviews && [pSubviews count] )
-		{
-			NSView *pSubview = [pSubviews objectAtIndex:0];
-			if ( pSubview )
-				[pSubview removeFromSuperview];
-			pSubviews = [pView subviews];
-		}
-	}
-}
+static NSString *pBlankItem = @" ";
 
 @interface ShowFileDialogArgs : NSObject
 {
@@ -131,10 +118,15 @@ static void RemoveAllSubviews( NSView *pView )
 	MacOSBOOL				mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSString*				mpDefaultName;
+	MacOSBOOL				mbDestroyAfterShowFileDialog;
+	NSURL*					mpDirectoryURL;
+	MacOSBOOL				mbExtensionHidden;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	MacOSBOOL				mbInShowFileDialog;
+	MacOSBOOL				mbMultiSelectionMode;
 	void*					mpPicker;
+	NSString*				mpSelectedFilter;
 	MacOSBOOL				mbShowAutoExtension;
 	MacOSBOOL				mbShowFilterOptions;
 	MacOSBOOL				mbShowImageTemplate;
@@ -145,6 +137,7 @@ static void RemoveAllSubviews( NSView *pView )
 	MacOSBOOL				mbShowTemplate;
 	MacOSBOOL				mbShowVersion;
 	NSMutableDictionary*	mpTextFields;
+	NSArray*				mpURLs;
 	MacOSBOOL				mbUseFileOpenDialog;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
@@ -161,13 +154,13 @@ static void RemoveAllSubviews( NSView *pView )
 - (MacOSBOOL)isChecked:(ShowFileDialogArgs *)pArgs;
 - (MacOSBOOL)isInShowFileDialog;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
-- (NSSavePanel *)panel;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
 - (void)release:(id)pObject;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
-- (int)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
+- (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
 - (NSString *)selectedFilter:(ShowFileDialogArgs *)pArgs;
 - (void)setChecked:(ShowFileDialogArgs *)pArgs;
 - (void)setDefaultName:(ShowFileDialogArgs *)pArgs;
@@ -189,9 +182,6 @@ static void RemoveAllSubviews( NSView *pView )
 - (void)dismissPopUp;
 - (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID;
 @end
-
-static NSMutableArray *pOpenPanelPool = nil;
-static NSMutableArray *pSavePanelPool = nil;
 
 @implementation ShowFileDialog
 
@@ -215,9 +205,9 @@ static NSMutableArray *pSavePanelPool = nil;
 		NSMutableArray *pArray = [NSMutableArray arrayWithArray:pFilters];
 		if ( pArray )
 		{
-			int nCount = [pArray count];
+			NSUInteger nCount = [pArray count];
 			MacOSBOOL bAllowAll = NO;
-			int i = 0;
+			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
 				NSString *pCurrentFilter = [(NSString *)[pArray objectAtIndex:i] pathExtension];
@@ -277,7 +267,21 @@ static NSMutableArray *pSavePanelPool = nil;
 
 - (void)cancel:(id)pObject;
 {
-	[mpFilePanel cancel:pObject];
+	if ( mpFilePanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[mpFilePanel cancel:pObject];
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
 }
 
 - (void)dealloc
@@ -320,6 +324,12 @@ static NSMutableArray *pSavePanelPool = nil;
 
 - (void)destroy:(id)pObject
 {
+	if ( mbInShowFileDialog )
+	{
+		mbDestroyAfterShowFileDialog = YES;
+		return;
+	}
+
 	if ( mpControls )
 	{
 		[mpControls release];
@@ -332,48 +342,10 @@ static NSMutableArray *pSavePanelPool = nil;
 		mpDefaultName = nil;
 	}
 
-	if ( mpFilePanel )
+	if ( mpDirectoryURL )
 	{
-		RemoveAllSubviews( [mpFilePanel accessoryView] );
-
-		[mpFilePanel setDelegate:nil];
-
-		// When sandboxed, releasing an NSOpenPanel or NSSavePanel will cause
-		// random crashing in Apple's XPC connection code so avoid such
-		// crashing by caching and reusing NSOpenPanel and NSSavePanel
-		// instances
-		if ( mbUseFileOpenDialog )
-		{
-			if ( !pOpenPanelPool )
-			{
-				pOpenPanelPool = [NSMutableArray arrayWithCapacity:2];
-				if ( pOpenPanelPool )
-					[pOpenPanelPool retain];
-			}
-
-			if ( pOpenPanelPool )
-			{
-				[pOpenPanelPool addObject:mpFilePanel];
-				[mpFilePanel release];
-			}
-		}
-		else
-		{
-			if ( !pSavePanelPool )
-			{
-				pSavePanelPool = [NSMutableArray arrayWithCapacity:2];
-				if ( pSavePanelPool )
-					[pSavePanelPool retain];
-			}
-
-			if ( pSavePanelPool )
-			{
-				[pSavePanelPool addObject:mpFilePanel];
-				[mpFilePanel release];
-			}
-		}
-
-		mpFilePanel = nil;
+		[mpDirectoryURL release];
+		mpDirectoryURL = nil;
 	}
 
 	if ( mpFilters )
@@ -382,48 +354,39 @@ static NSMutableArray *pSavePanelPool = nil;
 		mpFilters = nil;
 	}
 
+	if ( mpSelectedFilter )
+	{
+		[mpSelectedFilter release];
+		mpSelectedFilter = nil;
+	}
+
 	if ( mpTextFields )
 	{
 		[mpTextFields release];
 		mpTextFields = nil;
 	}
+
+	if ( mpURLs )
+	{
+		[mpURLs release];
+		mpURLs = nil;
+	}
 }
 
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs
 {
-	NSURL *pRet = [mpFilePanel directoryURL];
-
 	if ( pArgs )
-		[pArgs setResult:pRet];
+		[pArgs setResult:mpDirectoryURL];
 
-	return pRet;
+	return mpDirectoryURL;
 }
 
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs
 {
-	NSArray *pRet = nil;
-
-	if ( mbUseFileOpenDialog )
-	{
-		NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
-		if ( pArray )
-			pRet = [NSArray arrayWithArray:pArray];
-	}
-	else
-	{
-		NSURL *pURL = [mpFilePanel URL];
-		// Fix bug 3662 by ensuring that the save panel does not append a
-		// trailing "/" character
-		if ( pURL && [pURL isFileURL] )
-			pURL = [pURL URLByStandardizingPath];
-		if ( pURL )
-			pRet = [NSArray arrayWithObject:pURL];
-	}
-
 	if ( pArgs )
-		[pArgs setResult:pRet];
+		[pArgs setResult:mpURLs];
 
-	return pRet;
+	return mpURLs;
 }
 
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs
@@ -445,13 +408,13 @@ static NSMutableArray *pSavePanelPool = nil;
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pPopup )
 		{
-			int nCount = [pPopup numberOfItems];
+			NSInteger nCount = [pPopup numberOfItems];
 			if ( nCount )
 			{
 				pRet = [NSMutableArray arrayWithCapacity:nCount];
 				if ( pRet )
 				{
-					int i = 0;
+					NSInteger i = 0;
 					for ( ; i < nCount; i++ )
 					{
 						NSString *pTitle = (NSString *)[pPopup itemTitleAtIndex:i];
@@ -472,9 +435,14 @@ static NSMutableArray *pSavePanelPool = nil;
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
+	mbDestroyAfterShowFileDialog = NO;
+	mpDirectoryURL = nil;
+	mbExtensionHidden = NO;
 	mpFilePanel = nil;
 	mbInShowFileDialog = NO;
+	mbMultiSelectionMode = NO;
 	mpPicker = pPicker;
+	mpSelectedFilter = nil;
 	mbShowAutoExtension = bShowAutoExtension;
 	mbShowFilterOptions = bShowFilterOptions;
 	mbShowImageTemplate = bShowImageTemplate;
@@ -486,6 +454,7 @@ static NSMutableArray *pSavePanelPool = nil;
 	// Always set to false as OOo's versions feature is rarely used and is
 	// incompatible with Mac OS X's Versions feature
 	mbShowVersion = false;
+	mpURLs = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	mpControls = [NSMutableDictionary dictionary];
@@ -505,76 +474,6 @@ static NSMutableArray *pSavePanelPool = nil;
 
 - (void)initialize:(id)pObject
 {
-	if ( !mpFilePanel )
-	{
-		// When sandboxed, releasing an NSOpenPanel or NSSavePanel will cause
-		// random crashing in Apple's XPC connection code so avoid such
-		// crashing by caching and reusing NSOpenPanel and NSSavePanel
-		// instances
-		if ( mbUseFileOpenDialog )
-		{
-			if ( pOpenPanelPool && [pOpenPanelPool count] )
-			{
-				mpFilePanel = (NSSavePanel *)[pOpenPanelPool objectAtIndex:0];
-				if ( mpFilePanel )
-				{
-					[mpFilePanel retain];
-					[pOpenPanelPool removeObjectAtIndex:0];
-				}
-			}
-
-			if ( !mpFilePanel )
-			{
-				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
-				if ( mpFilePanel )
-					[mpFilePanel retain];
-			}
-		}
-		else
-		{
-			if ( pSavePanelPool && [pSavePanelPool count] )
-			{
-				mpFilePanel = (NSSavePanel *)[pSavePanelPool objectAtIndex:0];
-				if ( mpFilePanel )
-				{
-					[mpFilePanel retain];
-					[pSavePanelPool removeObjectAtIndex:0];
-				}
-			}
-
-			if ( !mpFilePanel )
-			{
-				mpFilePanel = [NSSavePanel savePanel];
-				if ( mpFilePanel )
-					[mpFilePanel retain];
-			}
-		}
-	}
-
-	if ( !mpFilePanel )
-		return;
-
-	[mpFilePanel setDelegate:self];
-	[mpFilePanel setCanCreateDirectories:YES];
-	[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
-
-	if ( mbUseFileOpenDialog )
-	{
-		NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-
-		[pOpenPanel setCanChooseFiles:mbChooseFiles];
-		[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
-
-		if ( mbChooseFiles )
-			[pOpenPanel setCanChooseDirectories:NO];
-		else
-			[pOpenPanel setCanChooseDirectories:YES];
-	}
-	else
-	{
-		[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
-	}
-
 	// Create file type popup
 	if ( mbChooseFiles )
 	{
@@ -790,7 +689,23 @@ static NSMutableArray *pSavePanelPool = nil;
 	int nCocoaControlType = NSFileDialog_controlType( nID );
 	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
-		bRet = [mpFilePanel isExtensionHidden];
+		if ( mpFilePanel )
+		{
+			@try
+			{
+				// When running in the sandbox, native file dalog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+				mbExtensionHidden = [mpFilePanel isExtensionHidden];
+			}
+			@catch ( NSException *pExc )
+			{
+				[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
+		}
+
+		bRet = mbExtensionHidden;
 	}
 	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
@@ -842,11 +757,6 @@ static NSMutableArray *pSavePanelPool = nil;
 	return pRet;
 }
 
-- (NSSavePanel *)panel
-{
-	return mpFilePanel;
-}
-
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
 {
 	// Fix bug 3568 by forcefully setting the directory when it has been
@@ -855,9 +765,32 @@ static NSMutableArray *pSavePanelPool = nil;
 	// file list will go into a infinite repainting loop.
 	if ( pURL && [pURL isFileURL] )
 	{
-		NSURL *pCurrentURL = [mpFilePanel directoryURL];
-		if ( !pCurrentURL || ![pURL isEqual:pCurrentURL] )
-			[mpFilePanel setDirectoryURL:pURL];
+		if ( mpDirectoryURL )
+			[mpDirectoryURL release];
+		mpDirectoryURL = nil;
+
+		if ( mpFilePanel )
+		{
+			@try
+			{
+				// When running in the sandbox, native file dalog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+				NSURL *pCurrentURL = [mpFilePanel directoryURL];
+				if ( !pCurrentURL || ![pURL isEqual:pCurrentURL] )
+					[mpFilePanel setDirectoryURL:pURL];
+				mpDirectoryURL = [mpFilePanel directoryURL];
+			}
+			@catch ( NSException *pExc )
+			{
+				[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
+		}
+
+		if ( !mpDirectoryURL )
+			mpDirectoryURL = pURL;
+		[mpDirectoryURL retain];
 	}
 }
 
@@ -907,8 +840,8 @@ static NSMutableArray *pSavePanelPool = nil;
 							NSString *pExt = [pResolvedPath pathExtension];
 							if ( pExt )
 							{
-								int nCount = [pArray count];
-								int i = 0;
+								NSUInteger nCount = [pArray count];
+								NSUInteger i = 0;
 								for ( ; i < nCount; i++ )
 								{
 									NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
@@ -939,6 +872,11 @@ static NSMutableArray *pSavePanelPool = nil;
 	}
 
 	return bRet;
+}
+
+- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
+{
+	// Stop exceptions from being logged on Mac OS X 10.9
 }
 
 - (void *)picker
@@ -977,9 +915,9 @@ static NSMutableArray *pSavePanelPool = nil;
 	return pRet;
 }
 
-- (int)selectedItemIndex:(ShowFileDialogArgs *)pArgs
+- (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs
 {
-	int nRet = 0;
+	NSInteger nRet = 0;
 
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 1 )
@@ -1037,7 +975,23 @@ static NSMutableArray *pSavePanelPool = nil;
 	int nCocoaControlType = NSFileDialog_controlType( nID );
 	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
-		[mpFilePanel setExtensionHidden:bChecked];
+		mbExtensionHidden = bChecked;
+
+		if ( mpFilePanel )
+		{
+			@try
+			{
+				// When running in the sandbox, native file dalog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+				[mpFilePanel setExtensionHidden:mbExtensionHidden];
+			}
+			@catch ( NSException *pExc )
+			{
+				[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
+		}
 	}
 	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
@@ -1099,8 +1053,7 @@ static NSMutableArray *pSavePanelPool = nil;
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user
-	if ( pURL && [pURL isFileURL] )
-		[mpFilePanel setDirectoryURL:pURL];
+	[self panel:mpFilePanel didChangeToDirectoryURL:pURL];
 }
 
 - (void)setEnabled:(ShowFileDialogArgs *)pArgs
@@ -1168,8 +1121,24 @@ static NSMutableArray *pSavePanelPool = nil;
 	NSNumber *pMode = (NSNumber *)[pArgArray objectAtIndex:0];
 	if ( !pMode )
 		return;
-	
-	[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:[pMode boolValue]];
+
+	mbMultiSelectionMode = [pMode boolValue];
+
+	if ( mpFilePanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:mbMultiSelectionMode];
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
 }
 
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs
@@ -1182,18 +1151,37 @@ static NSMutableArray *pSavePanelPool = nil;
 	if ( !pItem )
 		return;
 
-	if ( !mbUseFileOpenDialog )
-		[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:pItem]];
+	if ( mpSelectedFilter )
+		[mpSelectedFilter release];
+	mpSelectedFilter = pItem;
+	[mpSelectedFilter retain];
 
-	[mpFilePanel validateVisibleColumns];
+	if ( mpFilePanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			if ( !mbUseFileOpenDialog )
+				[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
+
+			[mpFilePanel validateVisibleColumns];
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
 
 	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 	if ( pPopup )
 	{
-		[pPopup selectItemWithTitle:pItem];
+		[pPopup selectItemWithTitle:mpSelectedFilter];
 
 		// OOo sometimes passes substrings of the full title
-		if ( pItem && ![pPopup titleOfSelectedItem] )
+		if ( mpSelectedFilter && ![pPopup titleOfSelectedItem] )
 		{
 			int nCount = [pPopup numberOfItems];
 			int i = 0;
@@ -1202,7 +1190,7 @@ static NSMutableArray *pSavePanelPool = nil;
 				NSString *pTitle = [pPopup itemTitleAtIndex:i];
 				if ( pTitle )
 				{
-					NSRange aRange = [pTitle rangeOfString:pItem];
+					NSRange aRange = [pTitle rangeOfString:mpSelectedFilter];
 					if ( aRange.location == 0 )
 					{
 						[pPopup selectItemAtIndex:i];
@@ -1248,16 +1236,15 @@ static NSMutableArray *pSavePanelPool = nil;
 
 - (int)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
-	int nRet = NSCancelButton;
+	int nRet = 0;
 
-	if ( mbInShowFileDialog )
+	// Do not allow recursion or reuse
+	if ( mbInShowFileDialog || mpFilePanel || mpURLs )
 		return nRet;
 
 	// When sandboxed the NSSavePanel does not have the isVisible selector so
 	// use our internal object variable instead
 	mbInShowFileDialog = YES;
-
-	RemoveAllSubviews( [mpFilePanel accessoryView] );
 
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
@@ -1348,13 +1335,6 @@ static NSMutableArray *pSavePanelPool = nil;
 			}
 		}
 
-		NSArray *pSubviews = [pAccessoryView subviews];
-		if ( pSubviews && [pSubviews count] )
-		{
-			[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
-			[mpFilePanel setAccessoryView:pAccessoryView];
-		}
-
 		// Fix bug 2302 by updating filtering
 		NSString *pFilter = [self selectedFilter:nil];
 		if ( pFilter )
@@ -1363,21 +1343,132 @@ static NSMutableArray *pSavePanelPool = nil;
 			[self setSelectedFilter:pSelectedFilterArgs];
 		}
 
-		if ( mpDefaultName )
-			[mpFilePanel setNameFieldStringValue:mpDefaultName];
-		nRet = [mpFilePanel runModal];
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			if ( mbUseFileOpenDialog )
+				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+			else
+				mpFilePanel = [NSSavePanel savePanel];
 
-		// Note: instance variables may, in rare cases, be nil from this point
-		// on if the destroy: selector is called during runModal
+			if ( mpFilePanel )
+			{
+				[mpFilePanel retain];
+				[mpFilePanel setCanCreateDirectories:YES];
+				[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+
+				if ( mbUseFileOpenDialog )
+				{
+					NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
+
+					[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
+					[pOpenPanel setCanChooseFiles:mbChooseFiles];
+					[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
+
+					if ( mbChooseFiles )
+						[pOpenPanel setCanChooseDirectories:NO];
+					else
+						[pOpenPanel setCanChooseDirectories:YES];
+				}
+				else
+				{
+					[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
+				}
+
+				[mpFilePanel setDelegate:self];
+				if ( mpDefaultName )
+					[mpFilePanel setNameFieldStringValue:mpDefaultName];
+				if ( mpDirectoryURL )
+					[mpFilePanel setDirectoryURL:mpDirectoryURL];
+				[mpFilePanel setExtensionHidden:mbExtensionHidden];
+				if ( !mbUseFileOpenDialog && mpSelectedFilter )
+					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
+
+				NSArray *pSubviews = [pAccessoryView subviews];
+				if ( pSubviews && [pSubviews count] )
+				{
+					[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
+					[mpFilePanel setAccessoryView:pAccessoryView];
+				}
+
+				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
+
+				[mpFilePanel setDelegate:nil];
+				[mpFilePanel setAccessoryView:nil];
+
+				mbExtensionHidden = [mpFilePanel isExtensionHidden];
+				if ( nRet )
+				{
+					NSArray *pURLs = nil;
+					if ( mbUseFileOpenDialog )
+					{
+						pURLs = [(NSOpenPanel *)mpFilePanel URLs];
+					}
+					else
+					{
+						NSURL *pSaveURL = [mpFilePanel URL];
+						if ( pSaveURL )
+							pURLs = [NSArray arrayWithObject:pSaveURL];
+					}
+
+					if ( mbUseFileOpenDialog )
+					{
+						NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
+						if ( pArray )
+							mpURLs = [NSArray arrayWithArray:pArray];
+					}
+					else
+					{
+						NSURL *pURL = [mpFilePanel URL];
+						// Fix bug 3662 by ensuring that the save panel does not
+						// append a trailing "/" character
+						if ( pURL && [pURL isFileURL] )
+							pURL = [pURL URLByStandardizingPath];
+						if ( pURL )
+							mpURLs = [NSArray arrayWithObject:pURL];
+					}
+
+					if ( mpURLs )
+						[mpURLs retain];
+				}
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			nRet = 0;
+			if ( mpURLs )
+			{
+				[mpURLs release];
+				mpURLs = nil;
+			}
+
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+
+		// Fix crash when running in the sandbox reported in the following
+		// NeoOffice forum post by releasing the file dialog only after a 
+		// significant delay. This hacky fix appears to work because Apple's
+		// underlying PowerBox-based NSOpenPanel and NSSavePanel code runs
+		// many operations asynchronously and releasing such panels
+		// immediately causes Apple's code to crash:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
+		if ( mpFilePanel )
+		{
+			[mpFilePanel performSelector:@selector(release) withObject:nil afterDelay:FILE_DIALOG_RELEASE_DELAY_INTERVAL];
+			mpFilePanel = nil;
+		}
 	}
-
-	if ( mpFilePanel )
-		RemoveAllSubviews( [mpFilePanel accessoryView] );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
 	mbInShowFileDialog = NO;
+
+	if ( mbDestroyAfterShowFileDialog )
+		[self destroy:self];
 
 	return nRet;
 }
@@ -1389,6 +1480,10 @@ static NSMutableArray *pSavePanelPool = nil;
 - (void)dismissPopUp
 {
 	[super dismissPopUp];
+
+	NSView *pView = [self controlView];
+	if ( !pView || ![pView window] )
+		return;
 
 	if ( mpDialog && [mpDialog isInShowFileDialog] )
 	{
@@ -1927,7 +2022,7 @@ void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle )
 
 int NSFileDialog_showFileDialog( id pDialog )
 {
-	int nRet = NSCancelButton;
+	int nRet = 0;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
