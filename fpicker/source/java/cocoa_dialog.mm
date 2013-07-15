@@ -1361,6 +1361,17 @@ static NSString *pBlankItem = @" ";
 			if ( mpFilePanel )
 			{
 				[mpFilePanel retain];
+
+				// Add the accessory view before configuring the file panel
+				// otherwise the open panel will hang on Mac OS X when running
+				// in the sandbox
+				NSArray *pSubviews = [pAccessoryView subviews];
+				if ( pSubviews && [pSubviews count] )
+				{
+					[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
+					[mpFilePanel setAccessoryView:pAccessoryView];
+				}
+
 				[mpFilePanel setCanCreateDirectories:YES];
 				[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
 
@@ -1390,13 +1401,6 @@ static NSString *pBlankItem = @" ";
 				[mpFilePanel setExtensionHidden:mbExtensionHidden];
 				if ( !mbUseFileOpenDialog && mpSelectedFilter )
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
-
-				NSArray *pSubviews = [pAccessoryView subviews];
-				if ( pSubviews && [pSubviews count] )
-				{
-					[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
-					[mpFilePanel setAccessoryView:pAccessoryView];
-				}
 
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
 
