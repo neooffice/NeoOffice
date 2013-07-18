@@ -1410,22 +1410,10 @@ static NSString *pBlankItem = @" ";
 				mbExtensionHidden = [mpFilePanel isExtensionHidden];
 				if ( nRet )
 				{
-					NSArray *pURLs = nil;
-					if ( mbUseFileOpenDialog )
-					{
-						pURLs = [(NSOpenPanel *)mpFilePanel URLs];
-					}
-					else
-					{
-						NSURL *pSaveURL = [mpFilePanel URL];
-						if ( pSaveURL )
-							pURLs = [NSArray arrayWithObject:pSaveURL];
-					}
-
 					if ( mbUseFileOpenDialog )
 					{
 						NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
-						if ( pArray )
+						if ( pArray && [pArray count] )
 							mpURLs = [NSArray arrayWithArray:pArray];
 					}
 					else
@@ -1453,18 +1441,15 @@ static NSString *pBlankItem = @" ";
 								pApplication_cacheSecurityScopedURL( [mpURLs objectAtIndex:i] );
 						}
 					}
+					else
+					{
+						nRet = 0;
+					}
 				}
 			}
 		}
 		@catch ( NSException *pExc )
 		{
-			nRet = 0;
-			if ( mpURLs )
-			{
-				[mpURLs release];
-				mpURLs = nil;
-			}
-
 			[NSObject cancelPreviousPerformRequestsWithTarget:mpFilePanel];
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
