@@ -58,8 +58,6 @@
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
 // #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
-#define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
-
 typedef NSString* const NSURLIsReadableKey_Type;
 typedef NSString* const NSURLIsWritableKey_Type;
 
@@ -79,12 +77,17 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @interface VCLRequestSecurityScopedURL : NSObject
 {
+	MacOSBOOL				mbDestroyAfterShowFileDialog;
+	MacOSBOOL				mbInShowFileDialog;
+	NSObject*				mpLocalProxyWindow;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
 	NSURL*					mpURL;
 }
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle;
+- (void)dealloc;
+- (void)destroy:(id)pObject;
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
@@ -94,6 +97,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
+- (void)retainLocalProxyWindow;
 - (NSURL *)securityScopedURL;
 @end
 
@@ -471,6 +475,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							bSecurityScopedURLFound = YES;
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
+
+						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 					}
 				}
 			}
@@ -489,22 +495,57 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)dealloc
 {
-	if ( mpSecurityScopedURL )
-		[mpSecurityScopedURL release];
-
-	if ( mpTitle )
-		[mpTitle release];
-
-	if ( mpURL )
-		[mpURL release];
+	[self destroy:self];
 
 	[super dealloc];
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( mbInShowFileDialog )
+	{
+		mbDestroyAfterShowFileDialog = YES;
+		return;
+	}
+
+	if ( mpOpenPanel )
+	{
+		[mpOpenPanel release];
+		mpOpenPanel = nil;
+	}
+
+	if ( mpLocalProxyWindow )
+	{
+		[mpLocalProxyWindow release];
+		mpLocalProxyWindow = nil;
+	}
+
+	if ( mpSecurityScopedURL )
+	{
+		[mpSecurityScopedURL release];
+		mpSecurityScopedURL = nil;
+	}
+
+	if ( mpTitle )
+	{
+		[mpTitle release];
+		mpTitle = nil;
+	}
+
+	if ( mpURL )
+	{
+		[mpURL release];
+		mpURL = nil;
+	}
 }
 
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle
 {
 	[super init];
 
+	mbDestroyAfterShowFileDialog = NO;
+	mbInShowFileDialog = nil;
+	mpLocalProxyWindow = nil;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
 
@@ -550,7 +591,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			[mpOpenPanel cancel:self];
 		}
@@ -572,7 +613,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			[mpOpenPanel setDirectoryURL:mpURL];
@@ -596,8 +637,13 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)requestSecurityScopedURL:(id)pObject
 {
-	if ( mpOpenPanel || mpSecurityScopedURL || !mpURL )
+	// Do not allow recursion or reuse
+	if ( mbInShowFileDialog || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
+
+	// When sandboxed the NSSavePanel does not have the isVisible selector so
+	// use our internal object variable instead
+	mbInShowFileDialog = YES;
 
 	// Check if URL is a directory otherwise use parent directory
 	NSURL *pURL = mpURL;
@@ -633,7 +679,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			mpOpenPanel = [NSOpenPanel openPanel];
 			if ( mpOpenPanel )
@@ -647,6 +693,14 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					[mpOpenPanel setTitle:mpTitle];
 
 				[mpOpenPanel setDelegate:self];
+
+				// Fix crash when running in the sandbox reported in the
+				// following NeoOffice forum post by retaining the
+				// NSLocalWindowWrappingRemoteWindow instance that appears to
+				// get released too soon during [NSRemoteSavePanel runModal]:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
+				[self performSelector:@selector(retainLocalProxyWindow) withObject:nil afterDelay:0 inModes:[NSArray arrayWithObject:NSModalPanelRunLoopMode]];
+
 				NSInteger nRet = [mpOpenPanel runModal];
 				[mpOpenPanel setDelegate:nil];
 
@@ -700,17 +754,44 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
-		// Fix crash when running in the sandbox reported in the following
-		// NeoOffice forum post by releasing the file dialog only after a 
-		// significant delay. This hacky fix appears to work because Apple's
-		// underlying PowerBox-based NSOpenPanel and NSSavePanel code runs
-		// many operations asynchronously and releasing such panels
-		// immediately causes Apple's code to crash:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
 		if ( mpOpenPanel )
 		{
-			[mpOpenPanel performSelector:@selector(release) withObject:nil afterDelay:FILE_DIALOG_RELEASE_DELAY_INTERVAL];
+			[mpOpenPanel release];
 			mpOpenPanel = nil;
+		}
+
+		if ( mpLocalProxyWindow )
+		{
+			[mpLocalProxyWindow release];
+			mpLocalProxyWindow = nil;
+		}
+	}
+
+	mbInShowFileDialog = NO;
+
+	if ( mbDestroyAfterShowFileDialog )
+		[self destroy:self];
+}
+
+- (void)retainLocalProxyWindow
+{
+	if ( mpOpenPanel && !mpLocalProxyWindow )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			NSObject *pWindowController = [mpOpenPanel valueForKey:@"_windowController"];
+			if ( pWindowController )
+			{
+				mpLocalProxyWindow = [pWindowController valueForKey:@"_localProxyWindow"];
+				if ( mpLocalProxyWindow )
+					[mpLocalProxyWindow retain];
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			// Silently ignore undefined key
 		}
 	}
 }

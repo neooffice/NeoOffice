@@ -48,8 +48,6 @@
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
 // #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
-#define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
-
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
@@ -135,6 +133,7 @@ static NSString *pBlankItem = @" ";
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	MacOSBOOL				mbInShowFileDialog;
+	NSObject*				mpLocalProxyWindow;
 	MacOSBOOL				mbMultiSelectionMode;
 	void*					mpPicker;
 	NSString*				mpSelectedFilter;
@@ -171,7 +170,7 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
-- (void)release:(id)pObject;
+- (void)retainLocalProxyWindow;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
 - (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
 - (NSString *)selectedFilter:(ShowFileDialogArgs *)pArgs;
@@ -284,7 +283,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			[mpFilePanel cancel:pObject];
 		}
@@ -365,6 +364,18 @@ static NSString *pBlankItem = @" ";
 	{
 		[mpFilters release];
 		mpFilters = nil;
+	}
+
+	if ( mpFilePanel )
+	{
+		[mpFilePanel release];
+		mpFilePanel = nil;
+	}
+
+	if ( mpLocalProxyWindow )
+	{
+		[mpLocalProxyWindow release];
+		mpLocalProxyWindow = nil;
 	}
 
 	if ( mpSelectedFilter )
@@ -453,6 +464,7 @@ static NSString *pBlankItem = @" ";
 	mbExtensionHidden = NO;
 	mpFilePanel = nil;
 	mbInShowFileDialog = NO;
+	mpLocalProxyWindow = nil;
 	mbMultiSelectionMode = NO;
 	mpPicker = pPicker;
 	mpSelectedFilter = nil;
@@ -706,7 +718,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				mbExtensionHidden = [mpFilePanel isExtensionHidden];
 			}
@@ -786,7 +798,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				NSURL *pCurrentURL = [mpFilePanel directoryURL];
 				if ( !pCurrentURL || ![pURL isEqual:pCurrentURL] )
@@ -901,9 +913,27 @@ static NSString *pBlankItem = @" ";
 	return mpPicker;
 }
 
-- (void)release:(id)pObject
+- (void)retainLocalProxyWindow
 {
-	[self release];
+	if ( mpFilePanel && !mpLocalProxyWindow )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			NSObject *pWindowController = [mpFilePanel valueForKey:@"_windowController"];
+			if ( pWindowController )
+			{
+				mpLocalProxyWindow = [pWindowController valueForKey:@"_localProxyWindow"];
+				if ( mpLocalProxyWindow )
+					[mpLocalProxyWindow retain];
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			// Silently ignore undefined key
+		}
+	}
 }
 
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs
@@ -998,7 +1028,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				[mpFilePanel setExtensionHidden:mbExtensionHidden];
 			}
@@ -1145,7 +1175,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:mbMultiSelectionMode];
 		}
@@ -1177,7 +1207,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			if ( !mbUseFileOpenDialog )
@@ -1363,7 +1393,7 @@ static NSString *pBlankItem = @" ";
 
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			if ( mbUseFileOpenDialog )
 				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
@@ -1418,6 +1448,13 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 
+				// Fix crash when running in the sandbox reported in the
+				// following NeoOffice forum post by retaining the
+				// NSLocalWindowWrappingRemoteWindow instance that appears to
+				// get released too soon during [NSRemoteSavePanel runModal]:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
+				[self performSelector:@selector(retainLocalProxyWindow) withObject:nil afterDelay:0 inModes:[NSArray arrayWithObject:NSModalPanelRunLoopMode]];
+
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
 
 				[mpFilePanel setDelegate:nil];
@@ -1471,17 +1508,16 @@ static NSString *pBlankItem = @" ";
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 
-		// Fix crash when running in the sandbox reported in the following
-		// NeoOffice forum post by releasing the file dialog only after a 
-		// significant delay. This hacky fix appears to work because Apple's
-		// underlying PowerBox-based NSOpenPanel and NSSavePanel code runs
-		// many operations asynchronously and releasing such panels
-		// immediately causes Apple's code to crash:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
 		if ( mpFilePanel )
 		{
-			[mpFilePanel performSelector:@selector(release) withObject:nil afterDelay:FILE_DIALOG_RELEASE_DELAY_INTERVAL];
+			[mpFilePanel release];
 			mpFilePanel = nil;
+		}
+
+		if ( mpLocalProxyWindow )
+		{
+			[mpLocalProxyWindow release];
+			mpLocalProxyWindow = nil;
 		}
 	}
 
