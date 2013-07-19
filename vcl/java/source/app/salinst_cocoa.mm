@@ -53,6 +53,11 @@
 #define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
 #endif	// !NSURLBookmarkResolutionWithSecurityScope
 
+// Uncomment the following line to implement the panel:shouldEnableURL:
+// delegate selector. Note: implementing that selector will cause hanging in
+// Open dialogs after a Save panel has been displayed on Mac OS X 10.9
+// #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
 #define FILE_DIALOG_RELEASE_DELAY_INTERVAL 60.0f
 
 typedef NSString* const NSURLIsReadableKey_Type;
@@ -81,7 +86,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 }
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 - (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
+#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError;
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
@@ -521,7 +530,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	return self;
 }
 
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL
+#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError *)ppError
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 {
 	if ( pURL )
 	{
