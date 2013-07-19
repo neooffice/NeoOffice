@@ -41,6 +41,11 @@
 #import "cocoa_dialog.h"
 #endif
 
+// Uncomment the following line to implement the panel:shouldEnableURL:
+// delegate selector. Note: implementing that selector will cause hanging in
+// Open dialogs after a Save panel has been displayed on Mac OS X 10.9
+// #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
 static NSString *pBlankItem = @" ";
 
 @interface ShowFileDialogArgs : NSObject
@@ -153,7 +158,9 @@ static NSString *pBlankItem = @" ";
 - (MacOSBOOL)isInShowFileDialog;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
 - (void)release:(id)pObject;
@@ -792,6 +799,8 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
 {
 	MacOSBOOL bRet = NO;
@@ -871,6 +880,8 @@ static NSString *pBlankItem = @" ";
 
 	return bRet;
 }
+
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
 {
@@ -1160,9 +1171,10 @@ static NSString *pBlankItem = @" ";
 		{
 			// When running in the sandbox, native file dalog calls may
 			// throw exceptions if the PowerBox daemon process is killed
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			if ( !mbUseFileOpenDialog )
-				[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
-
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+			[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 			[mpFilePanel validateVisibleColumns];
 		}
 		@catch ( NSException *pExc )
@@ -1391,7 +1403,11 @@ static NSString *pBlankItem = @" ";
 				if ( mpDirectoryURL )
 					[mpFilePanel setDirectoryURL:mpDirectoryURL];
 				[mpFilePanel setExtensionHidden:mbExtensionHidden];
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 				if ( !mbUseFileOpenDialog && mpSelectedFilter )
+#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+				if ( mpSelectedFilter )
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
