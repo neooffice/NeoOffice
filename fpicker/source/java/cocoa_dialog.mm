@@ -163,7 +163,6 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
-- (void)release:(id)pObject;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
 - (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
 - (NSString *)selectedFilter:(ShowFileDialogArgs *)pArgs;
@@ -276,7 +275,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			[mpFilePanel cancel:pObject];
 		}
@@ -698,7 +697,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				mbExtensionHidden = [mpFilePanel isExtensionHidden];
 			}
@@ -778,7 +777,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				NSURL *pCurrentURL = [mpFilePanel directoryURL];
 				if ( !pCurrentURL || ![pURL isEqual:pCurrentURL] )
@@ -893,11 +892,6 @@ static NSString *pBlankItem = @" ";
 	return mpPicker;
 }
 
-- (void)release:(id)pObject
-{
-	[self release];
-}
-
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs
 {
 	NSString *pRet = nil;
@@ -990,7 +984,7 @@ static NSString *pBlankItem = @" ";
 		{
 			@try
 			{
-				// When running in the sandbox, native file dalog calls may
+				// When running in the sandbox, native file dialog calls may
 				// throw exceptions if the PowerBox daemon process is killed
 				[mpFilePanel setExtensionHidden:mbExtensionHidden];
 			}
@@ -1137,7 +1131,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:mbMultiSelectionMode];
 		}
@@ -1169,7 +1163,7 @@ static NSString *pBlankItem = @" ";
 	{
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			if ( !mbUseFileOpenDialog )
@@ -1355,7 +1349,7 @@ static NSString *pBlankItem = @" ";
 
 		@try
 		{
-			// When running in the sandbox, native file dalog calls may
+			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			if ( mbUseFileOpenDialog )
 				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
