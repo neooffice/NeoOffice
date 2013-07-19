@@ -543,7 +543,27 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			pURL = [pURL URLByResolvingSymlinksInPath];
 	}
 
-	return ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
+	MacOSBOOL bRet = ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
+
+#ifndef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+	if ( !bRet && mpOpenPanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dalog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[mpOpenPanel cancel:self];
+		}
+		@catch ( NSException *pExc )
+		{
+			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+#endif	// !USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
+	return bRet;
 }
 
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
@@ -554,7 +574,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		{
 			// When running in the sandbox, native file dalog calls may
 			// throw exceptions if the PowerBox daemon process is killed
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			[mpOpenPanel setDirectoryURL:mpURL];
+#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+			[mpOpenPanel cancel:self];
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 		}
 		@catch ( NSException *pExc )
 		{
