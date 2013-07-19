@@ -450,7 +450,15 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	if ( !pCell )
 		return nil;
 
-	NSButtonCell *pButtonCell = [pCell valueForKey:@"_buttonCell"];
+	NSButtonCell *pButtonCell = nil;
+	@try
+	{
+		pButtonCell = [pCell valueForKey:@"_buttonCell"];
+	}
+	@catch ( NSException *pExc )
+	{
+	}
+
 	if ( !pButtonCell || ![pButtonCell isKindOfClass:[NSButtonCell class]] )
 		return nil;
 
