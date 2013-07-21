@@ -1374,7 +1374,8 @@ static NSString *pBlankItem = @" ";
 
 				// Add the accessory view before configuring the file panel
 				// otherwise the open panel will hang on Mac OS X when running
-				// in the sandbox
+				// in the sandbox. Also, eliminate Console messages on Mac OS X
+				// 10.9 by not unsetting the accessory view.
 				NSArray *pSubviews = [pAccessoryView subviews];
 				if ( pSubviews && [pSubviews count] )
 				{
@@ -1403,7 +1404,6 @@ static NSString *pBlankItem = @" ";
 					[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
 				}
 
-				[mpFilePanel setDelegate:self];
 				if ( mpDefaultName )
 					[mpFilePanel setNameFieldStringValue:mpDefaultName];
 				if ( mpDirectoryURL )
@@ -1416,10 +1416,9 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 
+				[mpFilePanel setDelegate:self];
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
-
 				[mpFilePanel setDelegate:nil];
-				[mpFilePanel setAccessoryView:nil];
 
 				mbExtensionHidden = [mpFilePanel isExtensionHidden];
 				if ( nRet )
