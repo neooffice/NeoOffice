@@ -133,7 +133,6 @@ static NSString *pBlankItem = @" ";
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	MacOSBOOL				mbInShowFileDialog;
-	NSObject*				mpLocalProxyWindow;
 	MacOSBOOL				mbMultiSelectionMode;
 	void*					mpPicker;
 	NSString*				mpSelectedFilter;
@@ -170,7 +169,6 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void *)picker;
-- (void)retainLocalProxyWindow;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
 - (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
 - (NSString *)selectedFilter:(ShowFileDialogArgs *)pArgs;
@@ -360,22 +358,16 @@ static NSString *pBlankItem = @" ";
 		mpDirectoryURL = nil;
 	}
 
-	if ( mpFilters )
-	{
-		[mpFilters release];
-		mpFilters = nil;
-	}
-
 	if ( mpFilePanel )
 	{
 		[mpFilePanel release];
 		mpFilePanel = nil;
 	}
 
-	if ( mpLocalProxyWindow )
+	if ( mpFilters )
 	{
-		[mpLocalProxyWindow release];
-		mpLocalProxyWindow = nil;
+		[mpFilters release];
+		mpFilters = nil;
 	}
 
 	if ( mpSelectedFilter )
@@ -464,7 +456,6 @@ static NSString *pBlankItem = @" ";
 	mbExtensionHidden = NO;
 	mpFilePanel = nil;
 	mbInShowFileDialog = NO;
-	mpLocalProxyWindow = nil;
 	mbMultiSelectionMode = NO;
 	mpPicker = pPicker;
 	mpSelectedFilter = nil;
@@ -911,29 +902,6 @@ static NSString *pBlankItem = @" ";
 - (void *)picker
 {
 	return mpPicker;
-}
-
-- (void)retainLocalProxyWindow
-{
-	if ( mpFilePanel && !mpLocalProxyWindow )
-	{
-		@try
-		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-			NSObject *pWindowController = [mpFilePanel valueForKey:@"_windowController"];
-			if ( pWindowController )
-			{
-				mpLocalProxyWindow = [pWindowController valueForKey:@"_localProxyWindow"];
-				if ( mpLocalProxyWindow )
-					[mpLocalProxyWindow retain];
-			}
-		}
-		@catch ( NSException *pExc )
-		{
-			// Silently ignore undefined key
-		}
-	}
 }
 
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs
@@ -1448,13 +1416,6 @@ static NSString *pBlankItem = @" ";
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 
-				// Fix crash when running in the sandbox reported in the
-				// following NeoOffice forum post by retaining the
-				// NSLocalWindowWrappingRemoteWindow instance that appears to
-				// get released too soon during [NSRemoteSavePanel runModal]:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
-				[self performSelector:@selector(retainLocalProxyWindow) withObject:nil afterDelay:0 inModes:[NSArray arrayWithObject:NSModalPanelRunLoopMode]];
-
 				nRet = ( [mpFilePanel runModal] == NSFileHandlingPanelOKButton ? 1 : 0 );
 
 				[mpFilePanel setDelegate:nil];
@@ -1512,12 +1473,6 @@ static NSString *pBlankItem = @" ";
 		{
 			[mpFilePanel release];
 			mpFilePanel = nil;
-		}
-
-		if ( mpLocalProxyWindow )
-		{
-			[mpLocalProxyWindow release];
-			mpLocalProxyWindow = nil;
 		}
 	}
 

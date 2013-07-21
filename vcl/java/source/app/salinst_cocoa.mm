@@ -79,7 +79,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 {
 	MacOSBOOL				mbDestroyAfterShowFileDialog;
 	MacOSBOOL				mbInShowFileDialog;
-	NSObject*				mpLocalProxyWindow;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
@@ -97,7 +96,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
-- (void)retainLocalProxyWindow;
 - (NSURL *)securityScopedURL;
 @end
 
@@ -514,12 +512,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		mpOpenPanel = nil;
 	}
 
-	if ( mpLocalProxyWindow )
-	{
-		[mpLocalProxyWindow release];
-		mpLocalProxyWindow = nil;
-	}
-
 	if ( mpSecurityScopedURL )
 	{
 		[mpSecurityScopedURL release];
@@ -545,7 +537,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 	mbDestroyAfterShowFileDialog = NO;
 	mbInShowFileDialog = nil;
-	mpLocalProxyWindow = nil;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
 
@@ -693,14 +684,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					[mpOpenPanel setTitle:mpTitle];
 
 				[mpOpenPanel setDelegate:self];
-
-				// Fix crash when running in the sandbox reported in the
-				// following NeoOffice forum post by retaining the
-				// NSLocalWindowWrappingRemoteWindow instance that appears to
-				// get released too soon during [NSRemoteSavePanel runModal]:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
-				[self performSelector:@selector(retainLocalProxyWindow) withObject:nil afterDelay:0 inModes:[NSArray arrayWithObject:NSModalPanelRunLoopMode]];
-
 				NSInteger nRet = [mpOpenPanel runModal];
 				[mpOpenPanel setDelegate:nil];
 
@@ -759,41 +742,12 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			[mpOpenPanel release];
 			mpOpenPanel = nil;
 		}
-
-		if ( mpLocalProxyWindow )
-		{
-			[mpLocalProxyWindow release];
-			mpLocalProxyWindow = nil;
-		}
 	}
 
 	mbInShowFileDialog = NO;
 
 	if ( mbDestroyAfterShowFileDialog )
 		[self destroy:self];
-}
-
-- (void)retainLocalProxyWindow
-{
-	if ( mpOpenPanel && !mpLocalProxyWindow )
-	{
-		@try
-		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-			NSObject *pWindowController = [mpOpenPanel valueForKey:@"_windowController"];
-			if ( pWindowController )
-			{
-				mpLocalProxyWindow = [pWindowController valueForKey:@"_localProxyWindow"];
-				if ( mpLocalProxyWindow )
-					[mpLocalProxyWindow retain];
-			}
-		}
-		@catch ( NSException *pExc )
-		{
-			// Silently ignore undefined key
-		}
-	}
 }
 
 - (NSURL *)securityScopedURL
