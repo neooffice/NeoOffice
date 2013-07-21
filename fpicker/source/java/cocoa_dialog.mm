@@ -352,6 +352,12 @@ static NSString *pBlankItem = @" ";
 		mpDirectoryURL = nil;
 	}
 
+	if ( mpFilePanel )
+	{
+		[mpFilePanel release];
+		mpFilePanel = nil;
+	}
+
 	if ( mpFilters )
 	{
 		[mpFilters release];
