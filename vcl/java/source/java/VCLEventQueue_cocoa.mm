@@ -48,13 +48,11 @@
 #include "VCLResponder_cocoa.h"
 #include "../app/salinst_cocoa.h"
 
-#define MODAL_WINDOW_RELEASE_DELAY_INTERVAL 30.0f
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
 static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
-static NSString *pVCLApplicationRunModalForWindowCache = @"VCLApplicationRunModalForWindowCache";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
@@ -2589,110 +2587,6 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
-@interface NSObject (VCLObjectPoseAs)
-- (id)poseAsAutorelease;
-@end
-
-@interface VCLObject : NSObject
-- (id)autorelease;
-@end
-
-@implementation VCLObject
-
-- (id)autorelease
-{
-	NSMutableDictionary *pDict = [[NSThread currentThread] threadDictionary];
-	if ( pDict )
-	{
-		NSMutableArray *pCache = [pDict objectForKey:pVCLApplicationRunModalForWindowCache];
-		if ( pCache && [pCache isKindOfClass:[NSMutableArray class]] && [pCache count] )
-		{
-			NSMutableArray *pObjectsToRelease = [pCache lastObject];
-			if ( pObjectsToRelease && [pObjectsToRelease isKindOfClass:[NSMutableArray class]] )
-				[pObjectsToRelease addObject:self];
-		}
-	}
-
-	if ( [super respondsToSelector:@selector(poseAsAutorelease)] )
-		[super poseAsAutorelease];
-
-	return self;
-}
-
-@end
-
-@interface NSSavePanel (VCLSavePanelPoseAs)
-- (NSInteger)poseAsRunModal;
-@end
-
-@interface VCLSavePanel : NSSavePanel
-- (NSInteger)runModal;
-@end
-
-@implementation VCLSavePanel
-
-- (NSInteger)runModal
-{
-	NSInteger nRet = NSFileHandlingPanelCancelButton;
-
-	// Fix crash when running in the sandbox reported in the following
-	// NeoOffice forum post by not allowing any autoreleased objects created
-	// by a modal window to be released until a significant delay after the
-	// modal run loop is finished. This hacky fix works most of the time
-	// because Apple's underlying PowerBox-based NSOpenPanel and NSSavePanel
-	// code appears to have many of objects get released by an autorelease pool
-	// and then the PowerBox daemon asynchronously invokes a callback on an
-	// autoreleased object which causes a crash:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64317#64317
-	NSMutableArray *pCache = nil;
-	NSMutableDictionary *pDict = [[NSThread currentThread] threadDictionary];
-	if ( pDict )
-	{
-		pCache = [pDict objectForKey:pVCLApplicationRunModalForWindowCache];
-		if ( !pCache || ![pCache isKindOfClass:[NSMutableArray class]] )
-		{
-			pCache = [NSMutableArray arrayWithCapacity:3];
-			if ( pCache )
-				[pDict setObject:pCache forKey:pVCLApplicationRunModalForWindowCache];
-		}
-	}
-
-	NSMutableArray *pObjectsToRelease = nil;
-	if ( pCache )
-	{
-		pObjectsToRelease = [NSMutableArray arrayWithCapacity:100];
-		if ( pObjectsToRelease )
-		{
-			[pObjectsToRelease retain];
-			[pObjectsToRelease addObject:self];
-			[pCache addObject:pObjectsToRelease];
-		}
-	}
-
-	@try
-	{
-		// Invoke self not super because self is not a subclass of NSSavePanel
-		if ( [self respondsToSelector:@selector(poseAsRunModal)] )
-			nRet = [self poseAsRunModal];
-	}
-	@catch ( NSException *pExc )
-	{
-		if ( pExc )
-			NSLog( @"%@", [pExc callStackSymbols] );
-	}
-
-	if ( pObjectsToRelease )
-	{
-		[pObjectsToRelease performSelector:@selector(release) withObject:nil afterDelay:MODAL_WINDOW_RELEASE_DELAY_INTERVAL];
-		if ( pCache )
-			[pCache removeObject:pObjectsToRelease];
-	}
-
-	return nRet;
-}
-
-@end
-
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -2947,41 +2841,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aNewIMP )
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
-	}
-
-	// VCLObject selectors
-
-	aSelector = @selector(autorelease);
-	aPoseAsSelector = @selector(poseAsAutorelease);
-	aOldMethod = class_getInstanceMethod( [NSObject class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLObject class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSObject class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-
-	// VCLSavePanel selectors
-
-	NSSavePanel *pSavePanel = [NSSavePanel savePanel];
-	if ( pSavePanel )
-	{
-		// Leak this to prevent logging unnecessary Console messages
-		[pSavePanel retain];
-
-		aSelector = @selector(runModal);
-		aPoseAsSelector = @selector(poseAsRunModal);
-		aOldMethod = class_getInstanceMethod( [pSavePanel class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLSavePanel class], aSelector );
-		if ( aOldMethod && aNewMethod )
-		{
-			IMP aOldIMP = method_getImplementation( aOldMethod );
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aOldIMP && aNewIMP && class_addMethod( [pSavePanel class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
