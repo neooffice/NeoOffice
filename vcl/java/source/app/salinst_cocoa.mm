@@ -86,6 +86,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	NSString*				mpTitle;
 	NSURL*					mpURL;
 	NSWindow*				mpWindow;
+	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
 - (void)dealloc;
@@ -590,6 +591,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 	if ( mpWindow )
 	{
+		if ( mbWindowOwner )
+			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -627,45 +630,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		}
 	}
 
-	if ( pWindow && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
-	{
-		mpWindow = pWindow;
+	mpWindow = pWindow;
+	if ( mpWindow )
 		[mpWindow retain];
-	}
-	else
-	{
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 1 );
-		NSScreen *pScreen = [NSScreen mainScreen];
-		if ( pScreen )
-		{
-			NSRect aFrame = [pScreen visibleFrame];
-			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
-			if ( aContentRect.origin.x < aFrame.origin.x )
-				aContentRect.origin.x = aFrame.origin.x;
-			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
-			if ( aContentRect.origin.y < aFrame.origin.y )
-				aContentRect.origin.y = aFrame.origin.y;
-		}
 
-		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpWindow )
-		{
-			NSBundle *pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-			{
-				NSDictionary *pDict = [pBundle infoDictionary];
-				if ( pDict )
-				{
-					NSString *pName = [pDict valueForKey:@"CFBundleName"];
-					if ( pName && [pName isKindOfClass:[NSString class]] )
-						[mpWindow setTitle:pName];
-				}
-			}
-
-			[mpWindow setReleasedWhenClosed:NO];
-			[mpWindow makeKeyAndOrderFront:self];
-		}
-	}
+	mbWindowOwner = NO;
 
 	return self;
 }
@@ -735,8 +704,48 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject
 {
 	// Do not allow recursion or reuse
-	if ( mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL || !mpWindow )
+	if ( mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
+
+	if ( !mpWindow || ! ( [mpWindow styleMask] & NSTitledWindowMask ) || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	{
+		if ( mpWindow )
+			[mpWindow release];
+
+		NSRect aContentRect = NSMakeRect( 0, 0, 400, 1 );
+		NSScreen *pScreen = [NSScreen mainScreen];
+		if ( pScreen )
+		{
+			NSRect aFrame = [pScreen visibleFrame];
+			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
+			if ( aContentRect.origin.x < aFrame.origin.x )
+				aContentRect.origin.x = aFrame.origin.x;
+			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
+			if ( aContentRect.origin.y < aFrame.origin.y )
+				aContentRect.origin.y = aFrame.origin.y;
+		}
+
+		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpWindow )
+		{
+			mbWindowOwner = YES;
+
+			NSBundle *pBundle = [NSBundle mainBundle];
+			if ( pBundle )
+			{
+				NSDictionary *pDict = [pBundle infoDictionary];
+				if ( pDict )
+				{
+					NSString *pName = [pDict valueForKey:@"CFBundleName"];
+					if ( pName && [pName isKindOfClass:[NSString class]] )
+						[mpWindow setTitle:pName];
+				}
+			}
+
+			[mpWindow setReleasedWhenClosed:NO];
+			[mpWindow makeKeyAndOrderFront:self];
+		}
+	}
 
 	// Check if URL is a directory otherwise use parent directory
 	NSURL *pURL = mpURL;
@@ -759,6 +768,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			}
 		}
 	}
+
+	if ( !mpWindow )
+		return;
 
 	if ( mpURL != pURL )
 	{
