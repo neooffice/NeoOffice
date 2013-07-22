@@ -676,6 +676,13 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
 {
+	if ( pURL )
+	{
+		pURL = [pURL URLByStandardizingPath];
+		if ( pURL )
+			pURL = [pURL URLByResolvingSymlinksInPath];
+	}
+
 	if ( mpURL && mpOpenPanel && ( !pURL || ![pURL isEqual:mpURL] ) )
 	{
 		@try
