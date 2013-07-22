@@ -40,8 +40,10 @@
 #include <postmac.h>
 #undef check
 
-#include <vcl/svdata.hxx>
-#include <osl/mutex.hxx>
+#include <saldata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <vos/mutex.hxx>
 
 #include "salinst_cocoa.h"
 
@@ -67,6 +69,7 @@ static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
 static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
 
 using namespace osl;
+using namespace vos;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
@@ -77,17 +80,18 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @interface VCLRequestSecurityScopedURL : NSObject
 {
-	MacOSBOOL				mbDestroyAfterShowFileDialog;
-	MacOSBOOL				mbInShowFileDialog;
+	MacOSBOOL				mbFinished;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
 	NSURL*					mpURL;
+	NSWindow*				mpWindow;
 }
-+ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle;
++ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
-- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
+- (MacOSBOOL)finished;
+- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -459,22 +463,71 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					if ( bShowOpenPanel && !bMustShowDialogIfNoBookmark && IsURLReadableOrWritable( pURL ) )
 						bShowOpenPanel = NO;
 
-					if ( bShowOpenPanel && !bSecurityScopedURLFound )
+					if ( bShowOpenPanel && !bSecurityScopedURLFound && !Application::IsShutDown() )
 					{
-						ULONG nCount = Application::ReleaseSolarMutex();
-						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-						Application::AcquireSolarMutex( nCount );
-
-						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+						IMutex &rSolarMutex = Application::GetSolarMutex();
+						rSolarMutex.acquire();
+						if ( !Application::IsShutDown() )
 						{
-							bSecurityScopedURLFound = YES;
-							[pSecurityScopedURLs addObject:pSecurityScopedURL];
+							SalData *pSalData = GetSalData();
+							JavaSalFrame *pFocusFrame = NULL;
+
+							// Get the active document window
+							Window *pWindow = Application::GetActiveTopWindow();
+							if ( pWindow )
+								pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+							if ( !pFocusFrame )
+								pFocusFrame = pSalData->mpFocusFrame;
+
+							// Fix bug 3294 by not attaching to utility windows
+							while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() ) )
+								pFocusFrame = pFocusFrame->mpParent;
+
+							// Fix bug 1106 If the focus frame is not set or is
+							// not visible, find the first visible non-floating,
+							// non-utility frame
+							if ( !pFocusFrame || !pFocusFrame->mbVisible )
+							{
+								pFocusFrame = NULL;
+								for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+								{
+									if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() )
+									{
+										pFocusFrame = *it;
+										break;
+									}
+								}
+							}
+
+							JavaSalFrame *pOldNativeModalSheetFrame = pSalData->mpNativeModalSheetFrame;
+							bool mbOldInNativeModalSheet = pSalData->mbInNativeModalSheet;
+							pSalData->mpNativeModalSheetFrame = pFocusFrame;
+							pSalData->mbInNativeModalSheet = true;
+
+							NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
+
+							// Ignore any AWT events while the open dialog is
+							// showing to emulate a modal dialog
+							VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle window:pNSWindow];
+							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+							[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+							while ( ![pVCLRequestSecurityScopedURL finished] )
+								Application::Yield();
+
+							NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+							if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+							{
+								bSecurityScopedURLFound = YES;
+								[pSecurityScopedURLs addObject:pSecurityScopedURL];
+							}
+
+							[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+							pSalData->mbInNativeModalSheet = mbOldInNativeModalSheet;
+							pSalData->mpNativeModalSheetFrame = pOldNativeModalSheetFrame;
 						}
 
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						rSolarMutex.release();
 					}
 				}
 			}
@@ -484,9 +537,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @implementation VCLRequestSecurityScopedURL
 
-+ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle
++ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow
 {
-	VCLRequestSecurityScopedURL *pRet = [[VCLRequestSecurityScopedURL alloc] initWithURL:pURL title:pTitle];
+	VCLRequestSecurityScopedURL *pRet = [[VCLRequestSecurityScopedURL alloc] initWithURL:pURL title:pTitle window:pWindow];
 	[pRet autorelease];
 	return pRet;
 }
@@ -500,14 +553,19 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)destroy:(id)pObject
 {
-	if ( mbInShowFileDialog )
-	{
-		mbDestroyAfterShowFileDialog = YES;
-		return;
-	}
-
 	if ( mpOpenPanel )
 	{
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[mpOpenPanel cancel:self];
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
 		[mpOpenPanel release];
 		mpOpenPanel = nil;
 	}
@@ -529,14 +587,24 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		[mpURL release];
 		mpURL = nil;
 	}
+
+	if ( mpWindow )
+	{
+		[mpWindow release];
+		mpWindow = nil;
+	}
 }
 
-- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle
+- (MacOSBOOL)finished
+{
+	return mbFinished;
+}
+
+- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow
 {
 	[super init];
 
-	mbDestroyAfterShowFileDialog = NO;
-	mbInShowFileDialog = nil;
+	mbFinished = NO;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
 
@@ -556,6 +624,46 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				mpURL = pURL;
 				[mpURL retain];
 			}
+		}
+	}
+
+	if ( pWindow && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+	{
+		mpWindow = pWindow;
+		[mpWindow retain];
+	}
+	else
+	{
+		NSRect aContentRect = NSMakeRect( 0, 0, 400, 1 );
+		NSScreen *pScreen = [NSScreen mainScreen];
+		if ( pScreen )
+		{
+			NSRect aFrame = [pScreen visibleFrame];
+			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
+			if ( aContentRect.origin.x < aFrame.origin.x )
+				aContentRect.origin.x = aFrame.origin.x;
+			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
+			if ( aContentRect.origin.y < aFrame.origin.y )
+				aContentRect.origin.y = aFrame.origin.y;
+		}
+
+		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpWindow )
+		{
+			NSBundle *pBundle = [NSBundle mainBundle];
+			if ( pBundle )
+			{
+				NSDictionary *pDict = [pBundle infoDictionary];
+				if ( pDict )
+				{
+					NSString *pName = [pDict valueForKey:@"CFBundleName"];
+					if ( pName && [pName isKindOfClass:[NSString class]] )
+						[mpWindow setTitle:pName];
+				}
+			}
+
+			[mpWindow setReleasedWhenClosed:NO];
+			[mpWindow makeKeyAndOrderFront:self];
 		}
 	}
 
@@ -588,7 +696,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		}
 		@catch ( NSException *pExc )
 		{
-			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
@@ -614,7 +721,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		}
 		@catch ( NSException *pExc )
 		{
-			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
@@ -629,12 +735,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject
 {
 	// Do not allow recursion or reuse
-	if ( mbInShowFileDialog || mpOpenPanel || mpSecurityScopedURL || !mpURL )
+	if ( mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL || !mpWindow )
 		return;
-
-	// When sandboxed the NSSavePanel does not have the isVisible selector so
-	// use our internal object variable instead
-	mbInShowFileDialog = YES;
 
 	// Check if URL is a directory otherwise use parent directory
 	NSURL *pURL = mpURL;
@@ -684,41 +786,51 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					[mpOpenPanel setTitle:mpTitle];
 
 				[mpOpenPanel setDelegate:self];
-				NSInteger nRet = [mpOpenPanel runModal];
-				[mpOpenPanel setDelegate:nil];
-
-				if ( nRet == NSFileHandlingPanelOKButton )
-				{
-					NSArray *pURLs = [mpOpenPanel URLs];
-					if ( pURLs && [pURLs count] )
+				[mpOpenPanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
+					if ( mpOpenPanel )
 					{
-						// There should only be one selected URL
-						NSURL *pDirURL = [pURLs objectAtIndex:0];
-						if ( pDirURL && [pDirURL isFileURL] )
+						@try
 						{
-							Application_cacheSecurityScopedURL( pDirURL );
+							// When running in the sandbox, native file dialog
+							// calls may throw exceptions if the PowerBox
+							// daemon process is killed
+							[mpOpenPanel setDelegate:nil];
 
-							pDirURL = [pDirURL URLByStandardizingPath];
-							if ( pDirURL )
+							if ( nRet == NSFileHandlingPanelOKButton )
 							{
-								pDirURL = [pDirURL URLByResolvingSymlinksInPath];
-								if ( pDirURL )
+								NSArray *pURLs = [mpOpenPanel URLs];
+								if ( pURLs && [pURLs count] )
 								{
-									NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-									if ( pData )
+									// There should only be one selected URL
+									NSURL *pDirURL = [pURLs objectAtIndex:0];
+									if ( pDirURL && [pDirURL isFileURL] )
 									{
-										MacOSBOOL bStale = NO;
-										NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-										if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+										Application_cacheSecurityScopedURL( pDirURL );
+
+										pDirURL = [pDirURL URLByStandardizingPath];
+										if ( pDirURL )
 										{
-											pResolvedURL = [pResolvedURL URLByStandardizingPath];
-											if ( pResolvedURL )
+											pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+											if ( pDirURL )
 											{
-												pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-												if ( pResolvedURL )
+												NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+												if ( pData )
 												{
-													mpSecurityScopedURL = pResolvedURL;
-													[mpSecurityScopedURL retain];
+													MacOSBOOL bStale = NO;
+													NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+													if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+													{
+														pResolvedURL = [pResolvedURL URLByStandardizingPath];
+														if ( pResolvedURL )
+														{
+															pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+															if ( pResolvedURL )
+															{
+																mpSecurityScopedURL = pResolvedURL;
+																[mpSecurityScopedURL retain];
+															}
+														}
+													}
 												}
 											}
 										}
@@ -726,28 +838,37 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 								}
 							}
 						}
+						@catch ( NSException *pExc )
+						{
+							if ( pExc )
+								NSLog( @"%@", [pExc callStackSymbols] );
+						}
 					}
-				}
+
+					mbFinished = YES;
+
+					// Post an event to wakeup the VCL event thread if the VCL
+					// event dispatch thread is in a potentially long wait
+					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+					JavaSalEventQueue::postCachedEvent( pUserEvent );
+					pUserEvent->release();
+				}];
 			}
 		}
 		@catch ( NSException *pExc )
 		{
-			[NSObject cancelPreviousPerformRequestsWithTarget:mpOpenPanel];
+			mbFinished = YES;
+
+			// Post an event to wakeup the VCL event thread if the VCL
+			// event dispatch thread is in a potentially long wait
+			JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+			JavaSalEventQueue::postCachedEvent( pUserEvent );
+			pUserEvent->release();
+
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
-
-		if ( mpOpenPanel )
-		{
-			[mpOpenPanel release];
-			mpOpenPanel = nil;
-		}
 	}
-
-	mbInShowFileDialog = NO;
-
-	if ( mbDestroyAfterShowFileDialog )
-		[self destroy:self];
 }
 
 - (NSURL *)securityScopedURL
