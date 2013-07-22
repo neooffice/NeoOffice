@@ -714,12 +714,12 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	if ( mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
 
-	if ( !mpWindow || ! ( [mpWindow styleMask] & NSTitledWindowMask ) || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
 
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 1 );
+		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
 		NSScreen *pScreen = [NSScreen mainScreen];
 		if ( pScreen )
 		{
