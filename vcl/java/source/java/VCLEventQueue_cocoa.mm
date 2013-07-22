@@ -2622,7 +2622,6 @@ static CFDataRef aRTFSelection = nil;
 @end
 
 @interface NSSavePanel (VCLSavePanelPoseAs)
-- (void)cleanup;
 - (NSInteger)poseAsRunModal;
 @end
 
@@ -2670,11 +2669,6 @@ static CFDataRef aRTFSelection = nil;
 		}
 	}
 
-	// Invoke self not super because self is not a subclass of NSSavePanel
-	if ( [self respondsToSelector:@selector(cleanup)] )
-		[self cleanup];
-
-
 	@try
 	{
 		// Invoke self not super because self is not a subclass of NSSavePanel
@@ -2686,10 +2680,6 @@ static CFDataRef aRTFSelection = nil;
 		if ( pExc )
 			NSLog( @"%@", [pExc callStackSymbols] );
 	}
-
-	// Invoke self not super because self is not a subclass of NSSavePanel
-	if ( [self respondsToSelector:@selector(cleanup)] )
-		[self cleanup];
 
 	if ( pObjectsToRelease )
 	{
