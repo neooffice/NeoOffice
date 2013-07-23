@@ -882,13 +882,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		@catch ( NSException *pExc )
 		{
 			mbFinished = YES;
-
-			// Post an event to wakeup the VCL event thread if the VCL
-			// event dispatch thread is in a potentially long wait
-			JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-			JavaSalEventQueue::postCachedEvent( pUserEvent );
-			pUserEvent->release();
-
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
