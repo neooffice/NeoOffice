@@ -45,11 +45,6 @@ LIBTARGET=NO
 
 ENVCDEFS += -Iinc
 
-.IF "$(GUIBASE)"=="java"
-# Link to modified $(VCLLIB)
-SOLARLIB:=-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib $(SOLARLIB)
-.ENDIF
-
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
