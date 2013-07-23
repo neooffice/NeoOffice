@@ -102,7 +102,7 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, sal_Bool bMultiSelectionMod
 void NSFileDialog_setSelectedFilter( id pDialog, CFStringRef aItem );
 void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem );
 void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle );
-int NSFileDialog_showFileDialog( id pDialog );
+short NSFileDialog_showFileDialog( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif

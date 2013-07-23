@@ -46,6 +46,13 @@ ENABLE_EXCEPTIONS=TRUE
 
 DLLPRE=
 
+.IF "$(GUIBASE)"=="java"
+# Include and link to modified $(VCLLIB)
+SOLARINC:=-I$(PRJ)$/..$/vcl$/inc -I$(PRJ)$/..$/vcl$/java/inc $(SOLARINC)
+SOLARLIB:=-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib $(SOLARLIB)
+EXTRALIBPATHS:=$(PRJ)$/..$/vcl$/$(INPATH)$/lib/libvcl$(DLLPOSTFIX)$(DLLPOST)
+.ENDIF
+
 # ------------------------------------------------------------------
 
 .IF "$(GUIBASE)" != "java"
