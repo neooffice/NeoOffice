@@ -471,36 +471,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						if ( !Application::IsShutDown() )
 						{
 							SalData *pSalData = GetSalData();
-							JavaSalFrame *pFocusFrame = NULL;
 
-							// Get the active document window
-							Window *pWindow = Application::GetActiveTopWindow();
-							if ( pWindow )
-								pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-
-							if ( !pFocusFrame )
-								pFocusFrame = pSalData->mpFocusFrame;
-
-							// Fix bug 3294 by not attaching to utility windows
-							while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() ) )
-								pFocusFrame = pFocusFrame->mpParent;
-
-							// Fix bug 1106 If the focus frame is not set or is
-							// not visible, find the first visible non-floating,
-							// non-utility frame
-							if ( !pFocusFrame || !pFocusFrame->mbVisible )
-							{
-								pFocusFrame = NULL;
-								for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-								{
-									if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() )
-									{
-										pFocusFrame = *it;
-										break;
-									}
-								}
-							}
-
+							JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
 							JavaSalFrame *pOldNativeModalSheetFrame = pSalData->mpNativeModalSheetFrame;
 							bool mbOldInNativeModalSheet = pSalData->mbInNativeModalSheet;
 							pSalData->mpNativeModalSheetFrame = pFocusFrame;
