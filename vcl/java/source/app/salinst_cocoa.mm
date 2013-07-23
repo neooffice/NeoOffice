@@ -804,6 +804,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				if ( mpTitle && [mpTitle length] )
 					[mpOpenPanel setTitle:mpTitle];
 
+				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpOpenPanel setDelegate:self];
 				[mpOpenPanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
 					if ( mpOpenPanel )
@@ -872,6 +873,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					JavaSalEventQueue::postCachedEvent( pUserEvent );
 					pUserEvent->release();
 				}];
+
+				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+				if ( !pAttachedSheet || pAttachedSheet == pOldAttachedSheet )
+					mbFinished = YES;
 			}
 		}
 		@catch ( NSException *pExc )
