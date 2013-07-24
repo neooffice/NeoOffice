@@ -135,6 +135,7 @@ using namespace vos;
 @interface ShowFileDialog : NSObject
 {
 	NSWindow*				mpAttachedSheet;
+	MacOSBOOL				mbCancelled;
 	MacOSBOOL				mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSString*				mpDefaultName;
@@ -165,12 +166,13 @@ using namespace vos;
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
 - (void)addItem:(ShowFileDialogArgs *)pArgs;
 - (void)cancel:(id)pObject;
+- (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)dismissFileTypePopUp:(id)pObject;
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
-- (MacOSBOOL)finished:(ShowFileDialogArgs *)pArgs;
+- (MacOSBOOL)finished;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(MacOSBOOL)bUseFileOpenDialog chooseFiles:(MacOSBOOL)bChooseFiles showAutoExtension:(MacOSBOOL)bShowAutoExtension showFilterOptions:(MacOSBOOL)bShowFilterOptions showImageTemplate:(MacOSBOOL)bShowImageTemplate showLink:(MacOSBOOL)bShowLink showPassword:(MacOSBOOL)bShowPassword showReadOnly:(MacOSBOOL)bShowReadOnly showSelection:(MacOSBOOL)bShowSelection showTemplate:(MacOSBOOL)bShowTemplate showVersion:(MacOSBOOL)bShowVersion;
@@ -282,8 +284,11 @@ using namespace vos;
 
 - (void)cancel:(id)pObject;
 {
-	if ( mpAttachedSheet && mpFilePanel )
+	if ( !mbCancelled && mpFilePanel )
 	{
+		// Prevent crashing by only allowing cancellation to be requested once
+		mbCancelled = YES;
+
 		@try
 		{
 			// When running in the sandbox, native file dialog calls may
@@ -295,11 +300,15 @@ using namespace vos;
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
-
-		// Prevent crashing by only allowing cancellation to be requested once
-		[mpAttachedSheet release];
-		mpAttachedSheet = nil;
 	}
+}
+
+- (void)checkForErrors:(id)pObject;
+{
+	// Detect if the sheet window has been closed without any call to the
+	// completion handler
+	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+		[self cancel:self];
 }
 
 - (void)dealloc
@@ -445,7 +454,7 @@ using namespace vos;
 
 - (void)dismissFileTypePopUp:(id)pObject
 {
-	if ( mpAttachedSheet && !mbFinished && mpPicker )
+	if ( !mbCancelled && mpFilePanel && !mbFinished && mpPicker )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 		if ( pPopup )
@@ -471,19 +480,9 @@ using namespace vos;
 	return mpDirectoryURL;
 }
 
-- (MacOSBOOL)finished:(ShowFileDialogArgs *)pArgs
+- (MacOSBOOL)finished
 {
-	MacOSBOOL bRet = mbFinished;
-
-	// Detect if the sheet window has been closed without any call to the
-	// completion handler
-	if ( !bRet && mpAttachedSheet && ( !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
-		[self cancel:self];
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithBool:bRet]];
-
-	return bRet;
+	return mbFinished;
 }
 
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs
@@ -1336,7 +1335,7 @@ using namespace vos;
 - (void)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
 	// Do not allow recursion or reuse
-	if ( mpAttachedSheet || mbFinished || mpFilePanel || mpURLs )
+	if ( mpAttachedSheet || mbCancelled || mbFinished || mpFilePanel || mpURLs )
 		return;
 
 	mnResult = 0;
@@ -1551,6 +1550,10 @@ using namespace vos;
 
 				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpFilePanel setDelegate:self];
+
+				// Retain self to ensure that we don't release it before the
+				// completion handler executes
+				[self retain];
 				[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
 					if ( mpFilePanel )
 					{
@@ -1633,7 +1636,6 @@ using namespace vos;
 					mpAttachedSheet = pAttachedSheet;
 					if ( mpAttachedSheet )
 						[mpAttachedSheet retain];
-					[self retain];
 				}
 				else
 				{
@@ -2186,15 +2188,10 @@ short NSFileDialog_showFileDialog( id pDialog )
 			ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
-			for ( ; ; )
+			while ( ![(ShowFileDialog *)pDialog finished] )
 			{
-				pArgs = [ShowFileDialogArgs argsWithArgs:nil];
-				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(finished:) withObject:pArgs waitUntilDone:YES modes:pModes];
-				NSNumber *pRet = (NSNumber *)[pArgs result];
-				if ( !pRet || [pRet boolValue] )
-					break;
-				else
-					Application::Yield();
+				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pDialog waitUntilDone:YES modes:pModes];
+				Application::Yield();
 			}
 
 			nRet = [(ShowFileDialog *)pDialog result];
