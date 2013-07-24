@@ -44,12 +44,12 @@
 #import "cocoa_dialog.h"
 #endif
 
-#include <saldata.hxx>
-#include <salinst.h>
-#include <vcl/svapp.hxx>
-#include <vcl/window.hxx>
-#include <vcl/msgbox.hxx>
-#include <vos/mutex.hxx>
+#import <saldata.hxx>
+#import <salinst.h>
+#import <vcl/svapp.hxx>
+#import <vcl/window.hxx>
+#import <vcl/msgbox.hxx>
+#import <vos/mutex.hxx>
 
 // Uncomment the following line to implement the panel:shouldEnableURL:
 // delegate selector. Note: implementing that selector will cause hanging in
@@ -158,6 +158,7 @@ using namespace vos;
 	NSMutableDictionary*	mpTextFields;
 	NSArray*				mpURLs;
 	MacOSBOOL				mbUseFileOpenDialog;
+	MacOSBOOL				mbWaitForCompletion;
 	NSWindow*				mpWindow;
 	MacOSBOOL				mbWindowOwner;
 }
@@ -167,6 +168,7 @@ using namespace vos;
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
 - (void)destroy:(id)pObject;
+- (void)dismissFileTypePopUp:(id)pObject;
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
 - (MacOSBOOL)finished;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
@@ -180,7 +182,6 @@ using namespace vos;
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
-- (void *)picker;
 - (short)result;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
 - (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
@@ -195,15 +196,6 @@ using namespace vos;
 - (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
 - (void)showFileDialog:(ShowFileDialogArgs *)pArgs;
-@end
-
-@interface ShowDialogPopUpButtonCell : NSPopUpButtonCell
-{
-	int						mnID;
-	ShowFileDialog*			mpDialog;
-}
-- (void)dismissPopUp;
-- (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID;
 @end
 
 @implementation ShowFileDialog
@@ -346,25 +338,17 @@ using namespace vos;
 
 - (void)destroy:(id)pObject
 {
-    if ( mpFilePanel )
-    {
-		@try
-		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-			[mpFilePanel cancel:self];
-		}
-		@catch ( NSException *pExc )
-		{
-			if ( pExc )
-				NSLog( @"%@", [pExc callStackSymbols] );
-		}
-		[mpFilePanel release];
-		mpFilePanel = nil;
-	}
+	mpPicker = NULL;
 
 	if ( mpControls )
 	{
+		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+		if ( pPopup )
+		{
+			[pPopup setTarget:nil];
+			[pPopup setAction:nil];
+		}
+
 		[mpControls release];
 		mpControls = nil;
 	}
@@ -381,10 +365,53 @@ using namespace vos;
 		mpDirectoryURL = nil;
 	}
 
-	if ( mpFilePanel )
-	{
-		[mpFilePanel release];
-		mpFilePanel = nil;
+    if ( mpFilePanel )
+    {
+		if ( mbWaitForCompletion )
+		{
+			@try
+			{
+				// When running in the sandbox, native file dialog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+				[mpFilePanel cancel:self];
+			}
+			@catch ( NSException *pExc )
+			{
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
+		}
+		else
+		{
+			@try
+			{
+				// When running in the sandbox, native file dialog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+				[mpFilePanel setDelegate:nil];
+
+				NSView *pAccessoryView = [mpFilePanel accessoryView];
+				if ( pAccessoryView )
+				{
+					NSArray *pSubviews = [pAccessoryView subviews];
+					while ( pSubviews && [pSubviews count] )
+					{
+						NSView *pSubview = [pSubviews objectAtIndex:0];
+						if ( pSubview )
+							[pSubview removeFromSuperviewWithoutNeedingDisplay];
+					}
+
+					[mpFilePanel setAccessoryView:nil];
+				}
+			}
+			@catch ( NSException *pExc )
+			{
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
+
+			[mpFilePanel release];
+			mpFilePanel = nil;
+		}
 	}
 
 	if ( mpFilters )
@@ -417,6 +444,26 @@ using namespace vos;
 			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
+	}
+}
+
+- (void)dismissFileTypePopUp:(id)pObject
+{
+	if ( mpPicker && !mbFinished && mbWaitForCompletion )
+	{
+		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+		if ( pPopup )
+		{
+			JavaFilePicker_controlStateChanged( COCOA_CONTROL_ID_FILETYPE, mpPicker );
+
+			// Update filtering
+			NSString *pFilter = [self selectedFilter:nil];
+			if ( pFilter )
+			{
+				ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
+				[self setSelectedFilter:pSelectedFilterArgs];
+			}
+		}
 	}
 }
 
@@ -508,6 +555,7 @@ using namespace vos;
 	mbShowVersion = false;
 	mpURLs = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
+	mbWaitForCompletion = NO;
 	mpWindow = nil;
 	mbWindowOwner = NO;
 
@@ -537,17 +585,16 @@ using namespace vos;
 			// Add to autorelease pool as invoking alloc disables autorelease
 			[pPopup autorelease];
 
-			// Swap in our own custom cell instance to handle selection changes
-			ShowDialogPopUpButtonCell *pCell = [[ShowDialogPopUpButtonCell alloc] initWithShowFileDialog:self control:COCOA_CONTROL_ID_FILETYPE];
-			if ( pCell )
-			{
-				// Add to autorelease pool as invoking alloc disables autorelease
-				[pCell autorelease];
-				[pPopup setCell:pCell];
-			}
-
 			[pPopup addItemWithTitle:pBlankItem];
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+
+			// Fix crashing bug when running in the sandbox reported in the
+			// following NeoOffice forum post by not setting a custom cell
+			// subclass and, instead, using an action and target to get
+			// notified when the popup's selected item has changed:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64318#64318
+			[pPopup setTarget:self];
+			[pPopup setAction:@selector(dismissFileTypePopUp:)];
 		}
 
 		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
@@ -930,11 +977,6 @@ using namespace vos;
 	// Stop exceptions from being logged on Mac OS X 10.9
 }
 
-- (void *)picker
-{
-	return mpPicker;
-}
-
 - (short)result
 {
 	return mnResult;
@@ -1215,7 +1257,9 @@ using namespace vos;
 			if ( !mbUseFileOpenDialog )
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 			[mpFilePanel validateVisibleColumns];
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 		}
 		@catch ( NSException *pExc )
 		{
@@ -1286,7 +1330,7 @@ using namespace vos;
 - (void)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
 	// Do not allow recursion or reuse
-	if ( mbFinished || mpFilePanel || mpURLs )
+	if ( mbFinished || mpFilePanel || mpURLs || mbWaitForCompletion )
 		return;
 
 	mnResult = 0;
@@ -1509,8 +1553,6 @@ using namespace vos;
 							// When running in the sandbox, native file dialog
 							// calls may throw exceptions if the PowerBox
 							// daemon process is killed
-							[mpFilePanel setDelegate:nil];
-
 							mbExtensionHidden = [mpFilePanel isExtensionHidden];
 							if ( nRet == NSFileHandlingPanelOKButton )
 							{
@@ -1563,11 +1605,21 @@ using namespace vos;
 					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
 					JavaSalEventQueue::postCachedEvent( pUserEvent );
 					pUserEvent->release();
+
+					mbWaitForCompletion = NO;
+					[self release];
 				}];
 
 				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-				if ( !pAttachedSheet || pAttachedSheet == pOldAttachedSheet )
+				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+				{
+					mbWaitForCompletion = YES;
+					[self retain];
+				}
+				else
+				{
 					mbFinished = YES;
+				}
 			}
 		}
 		@catch ( NSException *pExc )
@@ -1577,44 +1629,6 @@ using namespace vos;
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
 	}
-}
-
-@end
-
-@implementation ShowDialogPopUpButtonCell
-
-- (void)dismissPopUp
-{
-	[super dismissPopUp];
-
-	NSView *pView = [self controlView];
-	if ( !pView || ![pView window] )
-		return;
-
-	if ( mpDialog )
-	{
-		void *pPicker = [mpDialog picker];
-		if ( pPicker )
-			JavaFilePicker_controlStateChanged( mnID, pPicker );
-
-		// Update filtering
-		NSString *pFilter = [mpDialog selectedFilter:nil];
-		if ( pFilter )
-		{
-			ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
-			[mpDialog setSelectedFilter:pSelectedFilterArgs];
-		}
-	}
-}
-
-- (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID
-{
-	[super initTextCell:pBlankItem pullsDown:NO];
-
-	mnID = nID;
-	mpDialog = pDialog;
-
-	return self;
 }
 
 @end
