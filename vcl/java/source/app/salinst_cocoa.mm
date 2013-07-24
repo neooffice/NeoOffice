@@ -80,6 +80,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @interface VCLRequestSecurityScopedURL : NSObject
 {
+    NSWindow*				mpAttachedSheet;
+	MacOSBOOL				mbCancelled;
 	MacOSBOOL				mbFinished;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
@@ -89,6 +91,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
+- (void)cancel:(id)pObject;
+- (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (MacOSBOOL)finished;
@@ -486,7 +490,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 							[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 							while ( ![pVCLRequestSecurityScopedURL finished] )
+							{
+								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 								Application::Yield();
+							}
 
 							NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
 							if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
@@ -517,6 +524,35 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	return pRet;
 }
 
+- (void)cancel:(id)pObject;
+{
+	if ( !mbCancelled && mpOpenPanel )
+	{
+		// Prevent crashing by only allowing cancellation to be requested once
+		mbCancelled = YES;
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			[mpOpenPanel cancel:pObject];
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+}
+
+- (void)checkForErrors:(id)pObject
+{
+	// Detect if the sheet window has been closed without any call to the
+	// completion handler
+	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+		[self cancel:self];
+}
+
 - (void)dealloc
 {
 	[self destroy:self];
@@ -526,19 +562,29 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)destroy:(id)pObject
 {
-	if ( mpOpenPanel )
+	if ( !mbFinished )
+		[self cancel:self];
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( mpOpenPanel && mbFinished )
 	{
 		@try
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
-			[mpOpenPanel cancel:self];
+			[mpOpenPanel setDelegate:nil];
 		}
 		@catch ( NSException *pExc )
 		{
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
+
 		[mpOpenPanel release];
 		mpOpenPanel = nil;
 	}
@@ -579,6 +625,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 {
 	[super init];
 
+	mpAttachedSheet = nil;
+	mbCancelled = NO;
 	mbFinished = NO;
 	mpOpenPanel = nil;
 	mpSecurityScopedURL = nil;
@@ -627,20 +675,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	MacOSBOOL bRet = ( pURL && mpURL && [pURL isFileURL] && [pURL isEqual:mpURL] );
 
 #ifndef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-	if ( !bRet && mpOpenPanel )
-	{
-		@try
-		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-			[mpOpenPanel cancel:self];
-		}
-		@catch ( NSException *pExc )
-		{
-			if ( pExc )
-				NSLog( @"%@", [pExc callStackSymbols] );
-		}
-	}
+	if ( !bRet )
+		[self cancel:self];
 #endif	// !USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
 	return bRet;
@@ -683,7 +719,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject
 {
 	// Do not allow recursion or reuse
-	if ( mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
+	if ( mpAttachedSheet || mbCancelled || mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
 
 	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
@@ -778,6 +814,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpOpenPanel setDelegate:self];
+
+				// Retain self to ensure that we don't release it before the
+				// completion handler executes
+				[self retain];
 				[mpOpenPanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
 					if ( mpOpenPanel )
 					{
@@ -786,8 +826,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							// When running in the sandbox, native file dialog
 							// calls may throw exceptions if the PowerBox
 							// daemon process is killed
-							[mpOpenPanel setDelegate:nil];
-
 							if ( nRet == NSFileHandlingPanelOKButton )
 							{
 								NSArray *pURLs = [mpOpenPanel URLs];
@@ -839,16 +877,38 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 					mbFinished = YES;
 
+					if ( mpAttachedSheet )
+					{
+						[mpAttachedSheet release];
+						mpAttachedSheet = nil;
+					}
+
+					if ( mpOpenPanel )
+					{
+						[mpOpenPanel release];
+						mpOpenPanel = nil;
+					}
+
 					// Post an event to wakeup the VCL event thread if the VCL
 					// event dispatch thread is in a potentially long wait
 					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
 					JavaSalEventQueue::postCachedEvent( pUserEvent );
 					pUserEvent->release();
+
+					[self release];
 				}];
 
 				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-				if ( !pAttachedSheet || pAttachedSheet == pOldAttachedSheet )
+				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+				{
+					mpAttachedSheet = pAttachedSheet;
+					if ( mpAttachedSheet )
+						[mpAttachedSheet retain];
+				}
+				else
+				{
 					mbFinished = YES;
+				}
 			}
 		}
 		@catch ( NSException *pExc )
