@@ -792,9 +792,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		}
 	}
 
-	if ( !mpWindow )
-		return;
-
 	if ( mpURL != pURL )
 	{
 		[mpURL release];
