@@ -232,7 +232,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		NSPrintInfo *pInfo = mpSourceInfo;
 		if ( !pInfo )
 			pInfo = [NSPrintInfo sharedPrintInfo];
-		if ( pInfo )
+		if ( pInfo && [pInfo dictionary] )
 		{
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
@@ -245,7 +245,11 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				// force the scaling factor here
 				NSNumber *pValue = [NSNumber numberWithFloat:1.0f];
 				if ( pValue )
-					[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
+				{
+					NSMutableDictionary *pDict = [mpInfo dictionary];
+					if ( pDict )
+						[pDict setObject:pValue forKey:NSPrintScalingFactor];
+				}
 			}
 		}
 	}
@@ -608,9 +612,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 						NSPrintInfo *pInfo = [pPrintOperation printInfo];
 						if ( pInfo )
 						{
-							NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
-							if ( pValue )
-								fScaleFactor = [pValue floatValue];
+							NSDictionary *pDict = [pInfo dictionary];
+							if ( pDict )
+							{
+								NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
+								if ( pValue )
+									fScaleFactor = [pValue floatValue];
+							}
 						}
 					}
 
@@ -1036,9 +1044,13 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 		// Fix bug 2777 by caching the scaling factor
 		float fScaleFactor = 1.0f;
-		NSNumber *pValue = [[mpInfo dictionary] objectForKey:NSPrintScalingFactor];
-		if ( pValue )
-			fScaleFactor = [pValue floatValue];
+		NSDictionary *pDict = [mpInfo dictionary];
+		if ( pDict )
+		{
+			NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
+			if ( pValue )
+				fScaleFactor = [pValue floatValue];
+		}
 		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( fScaleFactor );
 	}
 
@@ -1425,7 +1437,11 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 			// Set scaling factor
 			NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
 			if ( pValue )
-				[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
+			{
+				NSMutableDictionary *pDict = [mpInfo dictionary];
+				if ( pDict )
+					[pDict setObject:pValue forKey:NSPrintScalingFactor];
+			}
 
 			NSSize aPaperSize = [mpInfo paperSize];
 
