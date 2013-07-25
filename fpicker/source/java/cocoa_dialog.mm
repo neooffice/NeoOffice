@@ -1394,6 +1394,11 @@ using namespace vos;
 		}
 	}
 
+	// We cannot display the panel if there is no window or the window already
+	// has an attached sheet
+	if ( !mpWindow || [mpWindow attachedSheet] )
+		return;
+
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
 	if ( pAccessoryView )
@@ -2175,28 +2180,30 @@ short NSFileDialog_showFileDialog( id pDialog )
 		{
 			SalData *pSalData = GetSalData();
 
-			JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-			JavaSalFrame *pOldNativeModalSheetFrame = pSalData->mpNativeModalSheetFrame;
-			bool mbOldInNativeModalSheet = pSalData->mbInNativeModalSheet;
-			pSalData->mpNativeModalSheetFrame = pFocusFrame;
-			pSalData->mbInNativeModalSheet = true;
-
-			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
-			// Ignore any AWT events while the open dialog is
-			// showing to emulate a modal dialog
-			ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
-			while ( ![(ShowFileDialog *)pDialog finished] )
+			// Do not allow more than one window to display a modal sheet
+			if ( !pSalData->mbInNativeModalSheet )
 			{
-				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pDialog waitUntilDone:YES modes:pModes];
-				Application::Yield();
-			}
+				JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
+				pSalData->mpNativeModalSheetFrame = pFocusFrame;
+				pSalData->mbInNativeModalSheet = true;
 
-			nRet = [(ShowFileDialog *)pDialog result];
-			pSalData->mbInNativeModalSheet = mbOldInNativeModalSheet;
-			pSalData->mpNativeModalSheetFrame = pOldNativeModalSheetFrame;
+				NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
+
+				// Ignore any AWT events while the open dialog is
+				// showing to emulate a modal dialog
+				ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
+				while ( ![(ShowFileDialog *)pDialog finished] )
+				{
+					[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pDialog waitUntilDone:YES modes:pModes];
+					Application::Yield();
+				}
+
+				nRet = [(ShowFileDialog *)pDialog result];
+				pSalData->mbInNativeModalSheet = false;
+				pSalData->mpNativeModalSheetFrame = NULL;
+			}
 		}
 
 		rSolarMutex.release();
