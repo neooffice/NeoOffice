@@ -476,35 +476,38 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						{
 							SalData *pSalData = GetSalData();
 
-							JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-							JavaSalFrame *pOldNativeModalSheetFrame = pSalData->mpNativeModalSheetFrame;
-							bool mbOldInNativeModalSheet = pSalData->mbInNativeModalSheet;
-							pSalData->mpNativeModalSheetFrame = pFocusFrame;
-							pSalData->mbInNativeModalSheet = true;
-
-							NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
-							// Ignore any AWT events while the open dialog is
-							// showing to emulate a modal dialog
-							VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle window:pNSWindow];
-							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-							[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-							while ( ![pVCLRequestSecurityScopedURL finished] )
+							// Do not allow more than one window to display a
+							// modal sheet
+							if ( !pSalData->mbInNativeModalSheet )
 							{
-								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-								Application::Yield();
-							}
+								JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
+								pSalData->mpNativeModalSheetFrame = pFocusFrame;
+								pSalData->mbInNativeModalSheet = true;
 
-							NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-							if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
-							{
-								bSecurityScopedURLFound = YES;
-								[pSecurityScopedURLs addObject:pSecurityScopedURL];
-							}
+								NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
 
-							[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-							pSalData->mbInNativeModalSheet = mbOldInNativeModalSheet;
-							pSalData->mpNativeModalSheetFrame = pOldNativeModalSheetFrame;
+								// Ignore any AWT events while the open dialog
+								// is showing to emulate a modal dialog
+								VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle window:pNSWindow];
+								NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+								while ( ![pVCLRequestSecurityScopedURL finished] )
+								{
+									[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+									Application::Yield();
+								}
+
+								NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+								if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+								{
+									bSecurityScopedURLFound = YES;
+									[pSecurityScopedURLs addObject:pSecurityScopedURL];
+								}
+
+								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+								pSalData->mbInNativeModalSheet = false;
+								pSalData->mpNativeModalSheetFrame = NULL;
+							}
 						}
 
 						rSolarMutex.release();
@@ -761,6 +764,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			[mpWindow makeKeyAndOrderFront:self];
 		}
 	}
+
+	// We cannot display the panel if there is no window or the window already
+	// has an attached sheet
+	if ( !mpWindow || [mpWindow attachedSheet] )
+		return;
 
 	// Check if URL is a directory otherwise use parent directory
 	NSURL *pURL = mpURL;
