@@ -4706,7 +4706,18 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout,
 void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
 {
 #if defined USE_JAVA && defined MACOSX
-	if( ! IsFullKeyboardAccessEnabled() )
+	bool isFullAccessEnabled = false;
+
+	CFPropertyListRef keyboardNavigationPref = CFPreferencesCopyAppValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesCurrentApplication );
+	if ( keyboardNavigationPref )
+	{
+		int prefVal;
+		if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
+			isFullAccessEnabled = ( prefVal % 2 ? true : false );
+		CFRelease( keyboardNavigationPref );
+	}
+
+	if ( !isFullAccessEnabled )
 		return;
 #endif	// USE_JAVA && MACOSX
 

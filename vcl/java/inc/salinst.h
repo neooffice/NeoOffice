@@ -227,10 +227,6 @@ public:
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
-SAL_DLLPRIVATE bool IsRunningMountainLion();
-SAL_DLLPRIVATE bool IsRunningMavericks();
-SAL_DLLPRIVATE bool IsFullKeyboardAccessEnabled();
-
 JavaSalFrame *SalGetJavaSalFrameForModalSheet();
 
 #endif // _SV_SALINST_H
