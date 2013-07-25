@@ -54,6 +54,9 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "../app/salinst_cocoa.h"
+#include "../../../../sfx2/source/doc/doc.hrc"
+
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
@@ -229,7 +232,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		NSPrintInfo *pInfo = mpSourceInfo;
 		if ( !pInfo )
 			pInfo = [NSPrintInfo sharedPrintInfo];
-		if ( pInfo )
+		if ( pInfo && [pInfo dictionary] )
 		{
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
@@ -242,7 +245,11 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				// force the scaling factor here
 				NSNumber *pValue = [NSNumber numberWithFloat:1.0f];
 				if ( pValue )
-					[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
+				{
+					NSMutableDictionary *pDict = [mpInfo dictionary];
+					if ( pDict )
+						[pDict setObject:pValue forKey:NSPrintScalingFactor];
+				}
 			}
 		}
 	}
@@ -275,16 +282,23 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 @interface JavaSalInfoPrinterShowPageLayoutDialog : NSObject
 {
+	NSWindow*				mpAttachedSheet;
+	MacOSBOOL				mbCancelled;
 	MacOSBOOL				mbFinished;
 	NSPrintInfo*			mpInfo;
 	MacOSBOOL				mbResult;
 	NSWindow*				mpWindow;
+	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
+- (void)cancel:(id)pObject;
+- (void)checkForErrors:(id)pObject;
+- (void)dealloc;
+- (void)destroy:(id)pObject;
 - (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
+- (NSPrintInfo *)printInfo;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
-- (MacOSBOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
 @end
 
@@ -297,6 +311,61 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	return pRet;
 }
 
+- (void)cancel:(id)pObject
+{
+	// Force the panel to end its modal session
+	if ( !mbCancelled && mpAttachedSheet )
+	{
+		// Prevent crashing by only allowing cancellation to be requested once
+		mbCancelled = YES;
+
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp endSheet:mpAttachedSheet returnCode:NSCancelButton];
+	}
+}
+
+- (void)checkForErrors:(id)pObject
+{
+	// Detect if the sheet window has been closed without any call to the
+	// completion handler
+	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+		[self cancel:self];
+}
+
+- (void)dealloc
+{
+	[self destroy:self];
+
+	[super dealloc];
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( !mbFinished )
+		[self cancel:self];
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( mpInfo )
+	{
+		[mpInfo release];
+		mpInfo = nil;
+	}
+
+	if ( mpWindow )
+	{
+		if ( mbWindowOwner )
+			[mpWindow close];
+		[mpWindow release];
+		mpWindow = nil;
+	}
+}
+
 - (MacOSBOOL)finished
 {
 	return mbFinished;
@@ -306,46 +375,175 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	[super init];
 
+	mpAttachedSheet = nil;
+	mbCancelled = NO;
 	mbFinished = NO;
 	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
 	mbResult = NO;
 	mpWindow = pWindow;
+	if ( mpWindow )
+		[mpWindow retain];
+
+	mbWindowOwner = NO;
 
 	return self;
 }
 
+- (NSPrintInfo *)printInfo
+{
+	if ( mbResult )
+		return mpInfo;
+	else
+		return nil;
+}
+
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
-	mbFinished = YES;
-
 	if ( nCode == NSOKButton )
 		mbResult = YES;
 	else
 		mbResult = NO;
-}
 
-- (MacOSBOOL)result
-{
-	return mbResult;
+	mbFinished = YES;
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( pLayout && mbResult )
+	{
+		NSPrintInfo *pInfo = nil;
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			pInfo = [pLayout printInfo];
+		}
+		@catch ( NSException *pExc )
+		{
+			mbFinished = YES;
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+		
+		if ( pInfo && pInfo != mpInfo )
+		{
+			if ( mpInfo )
+				[mpInfo release];
+			mpInfo = pInfo;
+			[mpInfo retain];
+		}
+	}
+
+	// Post an event to wakeup the VCL event thread if the VCL
+	// event dispatch thread is in a potentially long wait
+	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+	JavaSalEventQueue::postCachedEvent( pUserEvent );
+	pUserEvent->release();
+
+	[self release];
 }
 
 - (void)showPageLayoutDialog:(id)pObject
 {
-	if ( mbFinished )
+	// Do not allow recursion or reuse
+	if ( mpAttachedSheet || mbCancelled || mbFinished || !mpInfo || mbResult )
 		return;
 
-	mbResult = NO;
-
-	NSPageLayout *pLayout = [NSPageLayout pageLayout];
-	if ( pLayout && mpInfo && mpWindow && ![mpWindow attachedSheet] )
-	{
-		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
-		if ( ![mpWindow attachedSheet] )
-			mbFinished = YES;
-	}
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// using a separate NSPrintInfo instance for the modal sheet:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8568
+	NSPrintInfo *pInfo = [[NSPrintInfo alloc] initWithDictionary:[mpInfo dictionary]];
+	if ( mpInfo )
+		[mpInfo release];
+	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
 	else
+		return;
+
+	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	{
+		if ( mpWindow )
+			[mpWindow release];
+
+		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
+		NSScreen *pScreen = [NSScreen mainScreen];
+		if ( pScreen )
+		{
+			NSRect aFrame = [pScreen visibleFrame];
+			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
+			if ( aContentRect.origin.x < aFrame.origin.x )
+				aContentRect.origin.x = aFrame.origin.x;
+			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
+			if ( aContentRect.origin.y < aFrame.origin.y )
+				aContentRect.origin.y = aFrame.origin.y;
+		}
+
+		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpWindow )
+		{
+			mbWindowOwner = YES;
+
+			NSBundle *pBundle = [NSBundle mainBundle];
+			if ( pBundle )
+			{
+				NSDictionary *pDict = [pBundle infoDictionary];
+				if ( pDict )
+				{
+					NSString *pName = [pDict valueForKey:@"CFBundleName"];
+					if ( pName && [pName isKindOfClass:[NSString class]] )
+						[mpWindow setTitle:pName];
+				}
+			}
+
+			[mpWindow setReleasedWhenClosed:NO];
+			[mpWindow makeKeyAndOrderFront:self];
+		}
+	}
+
+	// We cannot display the panel if there is no window or the window already
+	// has an attached sheet
+	if ( !mpWindow || [mpWindow attachedSheet] )
+		return;
+
+	@try
+	{
+		// When running in the sandbox, native file dialog calls may
+		// throw exceptions if the PowerBox daemon process is killed
+		NSPageLayout *pLayout = [NSPageLayout pageLayout];
+		if ( pLayout )
+		{
+			NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
+
+			// Retain self to ensure that we don't release it before the
+			// completion handler executes
+			[self retain];
+			[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
+
+			NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+			if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+			{
+				mpAttachedSheet = pAttachedSheet;
+				if ( mpAttachedSheet )
+					[mpAttachedSheet retain];
+			}
+			else
+			{
+				mbFinished = YES;
+			}
+		}
+	}
+	@catch ( NSException *pExc )
 	{
 		mbFinished = YES;
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
 	}
 }
 
@@ -457,9 +655,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 						NSPrintInfo *pInfo = [pPrintOperation printInfo];
 						if ( pInfo )
 						{
-							NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
-							if ( pValue )
-								fScaleFactor = [pValue floatValue];
+							NSDictionary *pDict = [pInfo dictionary];
+							if ( pDict )
+							{
+								NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
+								if ( pValue )
+									fScaleFactor = [pValue floatValue];
+							}
 						}
 					}
 
@@ -616,18 +818,24 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
  
 @interface JavaSalPrinterShowPrintDialog : NSObject
 {
+	NSWindow*				mpAttachedSheet;
+	MacOSBOOL				mbCancelled;
 	MacOSBOOL				mbFinished;
 	NSPrintInfo*			mpInfo;
 	NSString*				mpJobName;
 	MacOSBOOL				mbResult;
 	NSWindow*				mpWindow;
+	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
+- (void)cancel:(id)pObject;
+- (void)checkForErrors:(id)pObject;
+- (void)dealloc;
+- (void)destroy:(id)pObject;
 - (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
 - (NSPrintInfo *)printInfo;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
-- (void)setJobTitle;
 - (void)showPrintDialog:(id)pObject;
 @end
 
@@ -640,6 +848,61 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	return pRet;
 }
 
+- (void)cancel:(id)pObject
+{
+	// Force the panel to end its modal session
+	if ( !mbCancelled && mpAttachedSheet )
+	{
+		// Prevent crashing by only allowing cancellation to be requested once
+		mbCancelled = YES;
+
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp endSheet:mpAttachedSheet returnCode:NSCancelButton];
+	}
+}
+
+- (void)checkForErrors:(id)pObject
+{
+	// Detect if the sheet window has been closed without any call to the
+	// completion handler
+	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+		[self cancel:self];
+}
+
+- (void)dealloc
+{
+	[self destroy:self];
+
+	[super dealloc];
+}
+
+- (void)destroy:(id)pObject
+{
+	if ( !mbFinished )
+		[self cancel:self];
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( mpInfo )
+	{
+		[mpInfo release];
+		mpInfo = nil;
+	}
+
+	if ( mpWindow )
+	{
+		if ( mbWindowOwner )
+			[mpWindow close];
+		[mpWindow release];
+		mpWindow = nil;
+	}
+}
+
 - (MacOSBOOL)finished
 {
 	return mbFinished;
@@ -649,11 +912,19 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	[super init];
 
+	mpAttachedSheet = nil;
+	mbCancelled = NO;
 	mbFinished = NO;
 	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
 	mpJobName = pJobName;
 	mbResult = NO;
 	mpWindow = pWindow;
+	if ( mpWindow )
+		[mpWindow retain];
+
+	mbWindowOwner = NO;
 
 	return self;
 }
@@ -668,16 +939,117 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
 {
-	mbFinished = YES;
-
 	if ( nCode == NSOKButton )
 		mbResult = YES;
 	else
 		mbResult = NO;
+
+	mbFinished = YES;
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( pPanel && mbResult )
+	{
+		NSPrintInfo *pInfo = nil;
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			pInfo = [pPanel printInfo];
+		}
+		@catch ( NSException *pExc )
+		{
+			mbFinished = YES;
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+		
+		if ( pInfo && pInfo != mpInfo )
+		{
+			if ( mpInfo )
+				[mpInfo release];
+			mpInfo = pInfo;
+			[mpInfo retain];
+		}
+	}
+
+	// Post an event to wakeup the VCL event thread if the VCL
+	// event dispatch thread is in a potentially long wait
+	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+	JavaSalEventQueue::postCachedEvent( pUserEvent );
+	pUserEvent->release();
+
+	[self release];
 }
 
-- (void)setJobTitle
+- (void)showPrintDialog:(id)pObject
 {
+	// Do not allow recursion or reuse
+	if ( mpAttachedSheet || mbCancelled || mbFinished || !mpInfo || mbResult )
+		return;
+
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// using a separate NSPrintInfo instance for the modal sheet:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8568
+	NSPrintInfo *pInfo = [[NSPrintInfo alloc] initWithDictionary:[mpInfo dictionary]];
+	if ( mpInfo )
+		[mpInfo release];
+	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
+	else
+		return;
+
+	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	{
+		if ( mpWindow )
+			[mpWindow release];
+
+		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
+		NSScreen *pScreen = [NSScreen mainScreen];
+		if ( pScreen )
+		{
+			NSRect aFrame = [pScreen visibleFrame];
+			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
+			if ( aContentRect.origin.x < aFrame.origin.x )
+				aContentRect.origin.x = aFrame.origin.x;
+			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
+			if ( aContentRect.origin.y < aFrame.origin.y )
+				aContentRect.origin.y = aFrame.origin.y;
+		}
+
+		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( mpWindow )
+		{
+			mbWindowOwner = YES;
+
+			NSBundle *pBundle = [NSBundle mainBundle];
+			if ( pBundle )
+			{
+				NSDictionary *pDict = [pBundle infoDictionary];
+				if ( pDict )
+				{
+					NSString *pName = [pDict valueForKey:@"CFBundleName"];
+					if ( pName && [pName isKindOfClass:[NSString class]] )
+						[mpWindow setTitle:pName];
+				}
+			}
+
+			[mpWindow setReleasedWhenClosed:NO];
+			[mpWindow makeKeyAndOrderFront:self];
+		}
+	}
+
+	// We cannot display the panel if there is no window or the window already
+	// has an attached sheet
+	if ( !mpWindow || [mpWindow attachedSheet] )
+		return;
+
 	// Also set the job name via the PMPrintSettings so that the Save As
 	// dialog gets the job name
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
@@ -693,82 +1065,58 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 		dlclose( pLib );
 	}
-}
 
-- (void)showPrintDialog:(id)pObject
-{
-	if ( mbFinished )
-		return;
-
-	mbResult = NO;
-
-	// Set job title
-	[self setJobTitle];
-
-	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
-	if ( pPanel && mpInfo )
+	// Fix bug 1548 by setting to print all pages
+	NSMutableDictionary *pDictionary = [mpInfo dictionary];
+	if ( pDictionary )
 	{
-		// Fix bug 1548 by setting to print all pages
-		NSMutableDictionary *pDictionary = [mpInfo dictionary];
-		if ( pDictionary )
+		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
+		[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
+		[pDictionary removeObjectForKey:NSPrintCopies];
+		[pDictionary removeObjectForKey:NSPrintFirstPage];
+		[pDictionary removeObjectForKey:NSPrintLastPage];
+
+		// Fix bug 2030 by resetting the layout
+		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
+		[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
+	}
+
+	NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
+	if ( pPrinter )
+		[mpInfo setPrinter:pPrinter];
+
+	@try
+	{
+		// When running in the sandbox, native file dialog calls may
+		// throw exceptions if the PowerBox daemon process is killed
+		NSPrintPanel *pPanel = [NSPrintPanel printPanel];
+		if ( pPanel )
 		{
-			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
-			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
-			[pDictionary removeObjectForKey:NSPrintCopies];
-			[pDictionary removeObjectForKey:NSPrintFirstPage];
-			[pDictionary removeObjectForKey:NSPrintLastPage];
+			NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 
-			// Fix bug 2030 by resetting the layout
-			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
-			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
-		}
-
-		NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
-		if ( pPrinter )
-			[mpInfo setPrinter:pPrinter];
-
-		// Fix bug 3614 by displaying a modal print dialog if there is no
-		// window to attach a sheet to
-		if ( !mpWindow )
-		{
-			NSView *pView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
-			if ( pView )
-			{
-				[pView autorelease];
-
-				NSPrintOperation *pOperation = [NSPrintOperation printOperationWithView:pView printInfo:mpInfo];
-				if ( pOperation )
-				{
-					[pOperation setJobTitle:(NSString *)mpJobName];
-					[pOperation setShowsPrintPanel:NO];
-					[pOperation setShowsProgressPanel:NO];
-
-					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
-					[NSPrintOperation setCurrentOperation:pOperation];
-
-					NSInteger nButton = [pPanel runModalWithPrintInfo:mpInfo];
-					[self printPanelDidEnd:pPanel returnCode:nButton contextInfo:nil];
-					[pOperation cleanUpOperation];
-					[NSPrintOperation setCurrentOperation:pOldOperation];
-				}
-			}
-
-			mbFinished = YES;
-		}
-		else if ( ![mpWindow attachedSheet] )
-		{
+			// Retain self to ensure that we don't release it before the
+			// completion handler executes
+			[self retain];
 			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
-			if ( ![mpWindow attachedSheet] )
+
+			NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+			if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+			{
+				mpAttachedSheet = pAttachedSheet;
+				if ( mpAttachedSheet )
+					[mpAttachedSheet retain];
+			}
+			else
+			{
 				mbFinished = YES;
-		}
-		else
-		{
-			mbFinished = YES;
+			}
 		}
 	}
-	else
+	@catch ( NSException *pExc )
 	{
 		mbFinished = YES;
+		if ( pExc )
+			NSLog( @"%@", [pExc callStackSymbols] );
 	}
 }
 
@@ -848,50 +1196,45 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	SalData *pSalData = GetSalData();
-	JavaSalFrame *pFocusFrame = NULL;
 
-	// Get the active document window
-	Window *pWindow = Application::GetActiveTopWindow();
-	if ( pWindow )
-		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-
-	if ( !pFocusFrame )
-		pFocusFrame = pSalData->mpFocusFrame;
-
-	// Fix bug 3294 by not attaching to utility windows
-	while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() ) )
-		pFocusFrame = pFocusFrame->mpParent;
-
-	// Fix bug 1106 If the focus frame is not set or is not visible, find
-	// the first visible non-floating, non-utility frame
-	if ( !pFocusFrame || !pFocusFrame->mbVisible )
+	// Do not allow more than one window to display a modal sheet
+	if ( !pSalData->mbInNativeModalSheet )
 	{
-		pFocusFrame = NULL;
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() )
-			{
-				pFocusFrame = *it;
-				break;
-			}
-		}
-	}
-
-	if ( pFocusFrame )
-	{
+		JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
 		pSalData->mpNativeModalSheetFrame = pFocusFrame;
 		pSalData->mbInNativeModalSheet = true;
 
-		// Ignore any AWT events while the page layout dialog is showing to
-		// emulate a modal dialog
-		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:(NSWindow *)pFocusFrame->GetNativeWindow()];
+		NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
+
+		// Ignore any AWT events while the page layout dialog is showing
+		// to emulate a modal dialog
+		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:pNSWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 		while ( ![pJavaSalInfoPrinterShowPageLayoutDialog finished] )
+		{
+			[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 			Application::Yield();
+		}
+
+		NSPrintInfo *pInfo = [pJavaSalInfoPrinterShowPageLayoutDialog printInfo];
+		if ( pInfo )
+		{
+			if ( pInfo != mpInfo )
+			{
+				if ( mpInfo )
+					[mpInfo release];
+				mpInfo = pInfo;
+				[mpInfo retain];
+			}
+
+			bRet = TRUE;
+		}
+
+		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
+
 		pSalData->mbInNativeModalSheet = false;
 		pSalData->mpNativeModalSheetFrame = NULL;
-		bRet = (BOOL)[pJavaSalInfoPrinterShowPageLayoutDialog result];
 	}
 
 	if ( bRet )
@@ -903,9 +1246,13 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 		// Fix bug 2777 by caching the scaling factor
 		float fScaleFactor = 1.0f;
-		NSNumber *pValue = [[mpInfo dictionary] objectForKey:NSPrintScalingFactor];
-		if ( pValue )
-			fScaleFactor = [pValue floatValue];
+		NSDictionary *pDict = [mpInfo dictionary];
+		if ( pDict )
+		{
+			NSNumber *pValue = [pDict objectForKey:NSPrintScalingFactor];
+			if ( pValue )
+				fScaleFactor = [pValue floatValue];
+		}
 		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( fScaleFactor );
 	}
 
@@ -1213,62 +1560,46 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		if ( bFirstPass )
 		{
 			SalData *pSalData = GetSalData();
-			JavaSalFrame *pFocusFrame = NULL;
 
-			// Get the active document window
-			Window *pWindow = Application::GetActiveTopWindow();
-			if ( pWindow )
-				pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-
-			if ( !pFocusFrame )
-				pFocusFrame = pSalData->mpFocusFrame;
-
-			// Fix bug 3294 by not attaching to utility windows
-			while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
-				pFocusFrame = pFocusFrame->mpParent;
-
-			// Fix bug 1106 If the focus frame is not set or is not visible,
-			// find the first visible non-floating, non-utility frame
-			if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus )
+			// Do not allow more than one window to display a modal sheet
+			if ( !pSalData->mbInNativeModalSheet )
 			{
-				pFocusFrame = NULL;
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
+				pSalData->mpNativeModalSheetFrame = pFocusFrame;
+				pSalData->mbInNativeModalSheet = true;
+
+				NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
+
+				// Ignore any AWT events while the page layout dialog is showing
+				// to emulate a modal dialog
+				JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
+
+				while ( ![pJavaSalPrinterShowPrintDialog finished] )
 				{
-					if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+					[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
+					Application::Yield();
+				}
+
+				NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
+				if ( pInfo )
+				{
+					if ( pInfo != mpInfo )
 					{
-						pFocusFrame = *it;
-						break;
+						if ( mpInfo )
+							[mpInfo release];
+						mpInfo = pInfo;
+						[mpInfo retain];
 					}
-				}
-			}
 
-			// Ignore any AWT events while the print dialog is showing to
-			// emulate a modal dialog
-			pSalData->mpNativeModalSheetFrame = pFocusFrame;
-			pSalData->mbInNativeModalSheet = true;
-
-			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
-			JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-
-			while ( ![pJavaSalPrinterShowPrintDialog finished] )
-				Application::Yield();
-			pSalData->mbInNativeModalSheet = false;
-			pSalData->mpNativeModalSheetFrame = NULL;
-
-			NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
-			if ( pInfo )
-			{
-				if ( pInfo != mpInfo )
-				{
-					[mpInfo release];
-					mpInfo = pInfo;
-					[mpInfo retain];
+					mbStarted = TRUE;
 				}
 
-				mbStarted = TRUE;
+				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
+
+				pSalData->mbInNativeModalSheet = false;
+				pSalData->mpNativeModalSheetFrame = NULL;
 			}
 		}
 		else
@@ -1286,7 +1617,11 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 			// Set scaling factor
 			NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
 			if ( pValue )
-				[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
+			{
+				NSMutableDictionary *pDict = [mpInfo dictionary];
+				if ( pDict )
+					[pDict setObject:pValue forKey:NSPrintScalingFactor];
+			}
 
 			NSSize aPaperSize = [mpInfo paperSize];
 
@@ -1629,7 +1964,19 @@ void JavaSalPrinter::SetJobSavingPath( const XubString *pJobSavingPath, sal_Int3
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pString];
 				if ( pURL )
+				{
+					NSString *pPath = [pURL path];
+					if ( pPath )
+					{
+						NSString *pTitle = nil;
+						XubString aTitle( GetSfxResString( STR_SAVEDOC ) );
+						aTitle.EraseAllChars( '~' );
+						if ( aTitle.Len() )
+							pTitle = [NSString stringWithCharacters:aTitle.GetBuffer() length:aTitle.Len()];
+					}
+
 					[pDictionary setObject:pURL forKey:NSPrintJobSavingURL];
+				}
 			}
 		}
 	}
