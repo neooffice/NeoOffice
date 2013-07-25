@@ -1593,13 +1593,13 @@ using namespace vos;
 									[mpURLs retain];
 									mnResult = RET_OK;
 
-									NSUInteger nCount = [mpURLs count];
-									NSUInteger i = 0;
-									for ( ; i < nCount; i++ )
+									if ( !pApplication_cacheSecurityScopedURL )
+										pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+									if ( pApplication_cacheSecurityScopedURL )
 									{
-										if ( !pApplication_cacheSecurityScopedURL )
-											pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
-										if ( pApplication_cacheSecurityScopedURL )
+										NSUInteger nCount = [mpURLs count];
+										NSUInteger i = 0;
+										for ( ; i < nCount; i++ )
 											pApplication_cacheSecurityScopedURL( [mpURLs objectAtIndex:i] );
 									}
 								}
