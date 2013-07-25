@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
 #include <unistd.h>
 #include <sys/syslimits.h>
 
@@ -89,10 +88,6 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
-static bool isSnowLeopard = false;
-static bool isLion = false;
-static bool isMountainLion = false;
-static bool isMavericks = false;
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
@@ -174,53 +169,6 @@ static void AcquireEventQueueMutex( ULONG nCount )
 		aEventQueueMutex.acquire();
 		nCount--;
 	}
-}
-
-// ----------------------------------------------------------------------------
-
-static void InitializeMacOSXVersion()
-{
-	static bool nInitialized = false;
-
-	if ( nInitialized )
-		return;
-	
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-		if ( pGestalt )
-		{
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
-			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				switch ( res )
-				{
-					case 6:
-						isSnowLeopard = true;
-						break;
-					case 7:
-						isLion = true;
-						break;
-					case 8:
-						isMountainLion = true;
-						break;
-					case 9:
-						isMavericks = true;
-						break;
-					default:
-						break;
-				}
-			}
-		}
-
-		dlclose( pLib );
-	}
-
-	nInitialized = true;
 }
 
 // ----------------------------------------------------------------------------
@@ -391,56 +339,6 @@ BOOL VCLInstance_updateNativeMenus()
 	aEventQueueMutex.release();
 
 	return bRet;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningSnowLeopard( )
-{
-	InitializeMacOSXVersion();
-	return isSnowLeopard;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningLion( )
-{
-	InitializeMacOSXVersion();
-	return isLion;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningMountainLion( )
-{
-	InitializeMacOSXVersion();
-	return isMountainLion;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsRunningMavericks( )
-{
-	InitializeMacOSXVersion();
-	return isMavericks;
-}
-
-// ----------------------------------------------------------------------------
-
-bool IsFullKeyboardAccessEnabled( )
-{
-	bool isFullAccessEnabled = false;
-
-	CFPropertyListRef keyboardNavigationPref = CFPreferencesCopyAppValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesCurrentApplication );
-	if ( keyboardNavigationPref )
-	{
-		int prefVal;
-		if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
-			isFullAccessEnabled = ( prefVal % 2 ? true : false );
-		CFRelease( keyboardNavigationPref );
-	}
-
-	return isFullAccessEnabled;
 }
 
 // -----------------------------------------------------------------------

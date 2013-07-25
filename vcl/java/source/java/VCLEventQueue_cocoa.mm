@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include <saldata.hxx>
 #include <vos/mutex.hxx>
 
@@ -51,6 +53,10 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
+static bool bIsRunningSnowLeopardInitizalized  = false;
+static bool bIsRunningSnowLeopard = false;
 static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
@@ -152,6 +158,35 @@ static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	}
 
 	return bRet;
+}
+
+static bool IsRunningSnowLeopard()
+{
+	if ( !bIsRunningSnowLeopardInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					if ( pGestalt( gestaltSystemVersionMinor, &res ) == 6 )
+						bIsRunningSnowLeopard = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningSnowLeopardInitizalized = true;
+	}
+
+	return bIsRunningSnowLeopard;
 }
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )

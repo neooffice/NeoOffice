@@ -118,6 +118,7 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus GetThemeMetric_Type( ThemeMetric nMetric, SInt32 *pMetric);
 typedef OSStatus GetThemeTextColor_Type( ThemeTextColor nColor, SInt16 nDepth, MacOSBoolean nColorDev, RGBColor *pColor );
 typedef OSStatus HIThemeDrawButton_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
@@ -135,6 +136,8 @@ typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabD
 typedef OSStatus HIThemeGetTrackBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, HIRect *pBounds);
 typedef OSStatus HIThemeGetTrackPartBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, ControlPartCode nPartCode, HIRect *pPartBounds);
 
+static bool bIsRunningSnowLeopardInitizalized  = false;
+static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
 static GetThemeMetric_Type *pGetThemeMetric = NULL;
 static GetThemeTextColor_Type *pGetThemeTextColor = NULL;
@@ -174,6 +177,37 @@ static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+
+// =======================================================================
+
+static bool IsRunningSnowLeopard()
+{
+	if ( !bIsRunningSnowLeopardInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					if ( pGestalt( gestaltSystemVersionMinor, &res ) == 6 )
+						bIsRunningSnowLeopard = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningSnowLeopardInitizalized = true;
+	}
+
+	return bIsRunningSnowLeopard;
+}
 
 // =======================================================================
 

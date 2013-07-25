@@ -43,6 +43,8 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include <sys/sysctl.h>
 #include <unicode/ubidi.h>
 
@@ -61,6 +63,10 @@
 #define UNITS_PER_PIXEL 1
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
+static bool bIsRunningSnowLeopardInitizalized  = false;
+static bool bIsRunningSnowLeopard = false;
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
@@ -902,6 +908,37 @@ void ImplATSLayoutData::Release() const
 }
 
 // ============================================================================
+
+static bool IsRunningSnowLeopard()
+{
+	if ( !bIsRunningSnowLeopardInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					if ( pGestalt( gestaltSystemVersionMinor, &res ) == 6 )
+						bIsRunningSnowLeopard = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningSnowLeopardInitizalized = true;
+	}
+
+	return bIsRunningSnowLeopard;
+}
+
+// ----------------------------------------------------------------------------
 
 static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 {
