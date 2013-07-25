@@ -297,8 +297,8 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (void)destroy:(id)pObject;
 - (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
+- (NSPrintInfo *)printInfo;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
-- (MacOSBOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
 @end
 
@@ -359,6 +359,8 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	if ( mpWindow )
 	{
+		if ( mbWindowOwner )
+			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -389,6 +391,14 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	return self;
 }
 
+- (NSPrintInfo *)printInfo
+{
+	if ( mbResult )
+		return mpInfo;
+	else
+		return nil;
+}
+
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
 	if ( nCode == NSOKButton )
@@ -404,6 +414,32 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		mpAttachedSheet = nil;
 	}
 
+	if ( pLayout && mbResult )
+	{
+		NSPrintInfo *pInfo = nil;
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			pInfo = [pLayout printInfo];
+		}
+		@catch ( NSException *pExc )
+		{
+			mbFinished = YES;
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+		
+		if ( pInfo && pInfo != mpInfo )
+		{
+			if ( mpInfo )
+				[mpInfo release];
+			mpInfo = pInfo;
+			[mpInfo retain];
+		}
+	}
+
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
 	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
@@ -413,15 +449,22 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	[self release];
 }
 
-- (MacOSBOOL)result
-{
-	return mbResult;
-}
-
 - (void)showPageLayoutDialog:(id)pObject
 {
 	// Do not allow recursion or reuse
 	if ( mpAttachedSheet || mbCancelled || mbFinished || !mpInfo || mbResult )
+		return;
+
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// using a separate NSPrintInfo instance for the modal sheet:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8568
+	NSPrintInfo *pInfo = [[NSPrintInfo alloc] initWithDictionary:[mpInfo dictionary]];
+	if ( mpInfo )
+		[mpInfo release];
+	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
+	else
 		return;
 
 	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
@@ -853,6 +896,8 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	if ( mpWindow )
 	{
+		if ( mbWindowOwner )
+			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -907,6 +952,32 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		mpAttachedSheet = nil;
 	}
 
+	if ( pPanel && mbResult )
+	{
+		NSPrintInfo *pInfo = nil;
+
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			pInfo = [pPanel printInfo];
+		}
+		@catch ( NSException *pExc )
+		{
+			mbFinished = YES;
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+		
+		if ( pInfo && pInfo != mpInfo )
+		{
+			if ( mpInfo )
+				[mpInfo release];
+			mpInfo = pInfo;
+			[mpInfo retain];
+		}
+	}
+
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
 	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
@@ -920,6 +991,18 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	// Do not allow recursion or reuse
 	if ( mpAttachedSheet || mbCancelled || mbFinished || !mpInfo || mbResult )
+		return;
+
+	// Fix crashing bug reported in the following NeoOffice forum topic by
+	// using a separate NSPrintInfo instance for the modal sheet:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8568
+	NSPrintInfo *pInfo = [[NSPrintInfo alloc] initWithDictionary:[mpInfo dictionary]];
+	if ( mpInfo )
+		[mpInfo release];
+	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
+	else
 		return;
 
 	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
@@ -1134,7 +1217,20 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 			Application::Yield();
 		}
 
-		bRet = (BOOL)[pJavaSalInfoPrinterShowPageLayoutDialog result];
+		NSPrintInfo *pInfo = [pJavaSalInfoPrinterShowPageLayoutDialog printInfo];
+		if ( pInfo )
+		{
+			if ( pInfo != mpInfo )
+			{
+				if ( mpInfo )
+					[mpInfo release];
+				mpInfo = pInfo;
+				[mpInfo retain];
+			}
+
+			bRet = TRUE;
+		}
+
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 
 		pSalData->mbInNativeModalSheet = false;
@@ -1497,13 +1593,16 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 				{
 					if ( pInfo != mpInfo )
 					{
-						[mpInfo release];
+						if ( mpInfo )
+							[mpInfo release];
 						mpInfo = pInfo;
 						[mpInfo retain];
 					}
 
 					mbStarted = TRUE;
 				}
+
+				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
 
 				pSalData->mbInNativeModalSheet = false;
 				pSalData->mpNativeModalSheetFrame = NULL;
