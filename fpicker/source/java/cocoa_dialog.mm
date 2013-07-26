@@ -164,7 +164,6 @@ using namespace vos;
 	NSArray*				mpURLs;
 	MacOSBOOL				mbUseFileOpenDialog;
 	NSWindow*				mpWindow;
-	MacOSBOOL				mbWindowOwner;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
 - (void)addItem:(ShowFileDialogArgs *)pArgs;
@@ -449,8 +448,6 @@ using namespace vos;
 
 	if ( mpWindow )
 	{
-		if ( mbWindowOwner )
-			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -566,7 +563,6 @@ using namespace vos;
 	mpURLs = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 	mpWindow = nil;
-	mbWindowOwner = NO;
 
 	mpControls = [NSMutableDictionary dictionary];
 	if ( mpControls )
