@@ -309,9 +309,11 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_dbaccess_patch \
 	build.neo_desktop_patch \
 	build.neo_drawinglayer_patch \
+	build.neo_dtrans_patch \
 	build.neo_extensions_patch \
 	build.neo_filter_patch \
 	build.neo_formula_patch \
+	build.neo_fpicker_patch \
 	build.neo_framework_patch \
 	build.neo_goodies_patch \
 	build.neo_hsqldb_patch \
@@ -335,7 +337,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_tools_patch \
-	build.neo_vcl_patch build.neo_dtrans_patch build.neo_fpicker_patch \
+	build.neo_vcl_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unoxml_patch \
