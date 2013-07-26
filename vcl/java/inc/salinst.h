@@ -227,6 +227,4 @@ public:
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
 
-JavaSalFrame *SalGetJavaSalFrameForModalSheet();
-
 #endif // _SV_SALINST_H

@@ -38,6 +38,11 @@
 #include <postmac.h>
 #undef check
 
+#include <saldata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <vos/mutex.hxx>
+
 #include "salinst_cocoa.h"
 
 @interface GetModalWindow : NSObject
@@ -137,4 +142,71 @@ id NSApplication_getModalWindow()
 	[pPool release];
 
 	return pModalWindow;
+}
+
+sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
+{
+	SalData *pSalData = GetSalData();
+
+	// Do not allow more than one window to display a modal sheet
+	if ( pSalData->mbInNativeModalSheet || !pNSWindowForSheet )
+		return false;
+
+	JavaSalFrame *pFocusFrame = NULL;
+
+	// Get the active document window
+	Window *pWindow = Application::GetActiveTopWindow();
+	if ( pWindow )
+		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+	if ( !pFocusFrame )
+		pFocusFrame = pSalData->mpFocusFrame;
+
+	// Fix bug 3294 by not attaching to utility windows
+	while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
+		pFocusFrame = pFocusFrame->mpParent;
+
+	// Fix bug 1106. If the focus frame is not set or is not visible, find the
+	// first visible non-floating, non-utility frame.
+	if ( !pFocusFrame || !pFocusFrame->mbVisible )
+	{
+		pFocusFrame = NULL;
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+			{
+				pFocusFrame = *it;
+				break;
+			}
+		}
+	}
+
+	pSalData->mbInNativeModalSheet = true;
+	pSalData->mpNativeModalSheetFrame = pFocusFrame;
+
+	if ( pFocusFrame )
+	{
+		pSalData->mpNativeModalSheetFrame = pFocusFrame;
+		*pNSWindowForSheet = pFocusFrame->GetNativeWindow();
+	}
+	else
+	{
+		*pNSWindowForSheet = nil;
+	}
+
+	return sal_True;
+}
+
+void Application_endModalSheet()
+{
+	SalData *pSalData = GetSalData();
+	pSalData->mbInNativeModalSheet = false;
+	pSalData->mpNativeModalSheetFrame = NULL;
+}
+
+void Application_postWakeUpEvent()
+{
+	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+	JavaSalEventQueue::postCachedEvent( pUserEvent );
+	pUserEvent->release();
 }
