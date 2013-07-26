@@ -197,6 +197,7 @@ using namespace vos;
 - (void)setEnabled:(ShowFileDialogArgs *)pArgs;
 - (void)setLabel:(ShowFileDialogArgs *)pArgs;
 - (void)setMultiSelectionMode:(ShowFileDialogArgs *)pArgs;
+- (void)setResult:(NSInteger)nResult;
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs;
 - (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
@@ -1240,6 +1241,80 @@ using namespace vos;
 	}
 }
 
+- (void)setResult:(NSInteger)nResult
+{
+	if ( mpFilePanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			mbExtensionHidden = [mpFilePanel isExtensionHidden];
+			if ( nResult == NSFileHandlingPanelOKButton )
+			{
+				if ( mbUseFileOpenDialog )
+				{
+					NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
+					if ( pArray && [pArray count] )
+						mpURLs = [NSArray arrayWithArray:pArray];
+				}
+				else
+				{
+					NSURL *pURL = [mpFilePanel URL];
+					// Fix bug 3662 by ensuring that the save panel does not
+					// append a trailing "/" character
+					if ( pURL && [pURL isFileURL] )
+						pURL = [pURL URLByStandardizingPath];
+					if ( pURL )
+						mpURLs = [NSArray arrayWithObject:pURL];
+				}
+
+				if ( mpURLs && [mpURLs count] )
+				{
+					[mpURLs retain];
+					mnResult = RET_OK;
+
+					if ( !pApplication_cacheSecurityScopedURL )
+						pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+					if ( pApplication_cacheSecurityScopedURL )
+					{
+						NSUInteger nCount = [mpURLs count];
+						NSUInteger i = 0;
+						for ( ; i < nCount; i++ )
+							pApplication_cacheSecurityScopedURL( [mpURLs objectAtIndex:i] );
+					}
+				}
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+
+	mbFinished = YES;
+
+	if ( mpAttachedSheet )
+	{
+		[mpAttachedSheet release];
+		mpAttachedSheet = nil;
+	}
+
+	if ( mpFilePanel )
+	{
+		[mpFilePanel release];
+		mpFilePanel = nil;
+	}
+
+	// Post an event to wakeup the VCL event thread if the VCL
+	// event dispatch thread is in a potentially long wait
+	if ( !pApplication_postWakeUpEvent )
+		pApplication_postWakeUpEvent = (Application_postWakeUpEvent_Type *)dlsym( RTLD_DEFAULT, "Application_postWakeUpEvent" );
+	if ( pApplication_postWakeUpEvent )
+		pApplication_postWakeUpEvent();
+}
+
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -1357,50 +1432,14 @@ using namespace vos;
 			[mpWindow retain];
 	}
 
-	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	// Don't use sheet if it is an open dialog or there is no window to attach
+	// a sheet to
+	if ( mbUseFileOpenDialog || !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
-
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
-		NSScreen *pScreen = [NSScreen mainScreen];
-		if ( pScreen )
-		{
-			NSRect aFrame = [pScreen visibleFrame];
-			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
-			if ( aContentRect.origin.x < aFrame.origin.x )
-				aContentRect.origin.x = aFrame.origin.x;
-			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
-			if ( aContentRect.origin.y < aFrame.origin.y )
-				aContentRect.origin.y = aFrame.origin.y;
-		}
-
-		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpWindow )
-		{
-			mbWindowOwner = YES;
-
-			NSBundle *pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-			{
-				NSDictionary *pDict = [pBundle infoDictionary];
-				if ( pDict )
-				{
-					NSString *pName = [pDict valueForKey:@"CFBundleName"];
-					if ( pName && [pName isKindOfClass:[NSString class]] )
-						[mpWindow setTitle:pName];
-				}
-			}
-
-			[mpWindow setReleasedWhenClosed:NO];
-			[mpWindow makeKeyAndOrderFront:self];
-		}
+		mpWindow = nil;
 	}
-
-	// We cannot display the panel if there is no window or the window already
-	// has an attached sheet
-	if ( !mpWindow || [mpWindow attachedSheet] )
-		return;
 
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
@@ -1559,96 +1598,31 @@ using namespace vos;
 				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpFilePanel setDelegate:self];
 
-				// Retain self to ensure that we don't release it before the
-				// completion handler executes
-				[self retain];
-				[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
-					if ( mpFilePanel )
-					{
-						@try
-						{
-							// When running in the sandbox, native file dialog
-							// calls may throw exceptions if the PowerBox
-							// daemon process is killed
-							mbExtensionHidden = [mpFilePanel isExtensionHidden];
-							if ( nRet == NSFileHandlingPanelOKButton )
-							{
-								if ( mbUseFileOpenDialog )
-								{
-									NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
-									if ( pArray && [pArray count] )
-										mpURLs = [NSArray arrayWithArray:pArray];
-								}
-								else
-								{
-									NSURL *pURL = [mpFilePanel URL];
-									// Fix bug 3662 by ensuring that the save
-									// panel does not append a trailing "/"
-									// character
-									if ( pURL && [pURL isFileURL] )
-										pURL = [pURL URLByStandardizingPath];
-									if ( pURL )
-										mpURLs = [NSArray arrayWithObject:pURL];
-								}
-
-								if ( mpURLs && [mpURLs count] )
-								{
-									[mpURLs retain];
-									mnResult = RET_OK;
-
-									if ( !pApplication_cacheSecurityScopedURL )
-										pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
-									if ( pApplication_cacheSecurityScopedURL )
-									{
-										NSUInteger nCount = [mpURLs count];
-										NSUInteger i = 0;
-										for ( ; i < nCount; i++ )
-											pApplication_cacheSecurityScopedURL( [mpURLs objectAtIndex:i] );
-									}
-								}
-							}
-						}
-						@catch ( NSException *pExc )
-						{
-							if ( pExc )
-								NSLog( @"%@", [pExc callStackSymbols] );
-						}
-					}
-
-					mbFinished = YES;
-
-					if ( mpAttachedSheet )
-					{
-						[mpAttachedSheet release];
-						mpAttachedSheet = nil;
-					}
-
-					if ( mpFilePanel )
-					{
-						[mpFilePanel release];
-						mpFilePanel = nil;
-					}
-
-					// Post an event to wakeup the VCL event thread if the VCL
-					// event dispatch thread is in a potentially long wait
-					if ( !pApplication_postWakeUpEvent )
-						pApplication_postWakeUpEvent = (Application_postWakeUpEvent_Type *)dlsym( RTLD_DEFAULT, "Application_postWakeUpEvent" );
-					if ( pApplication_postWakeUpEvent )
-						pApplication_postWakeUpEvent();
-
-					[self release];
-				}];
-
-				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+				if ( mpWindow )
 				{
-					mpAttachedSheet = pAttachedSheet;
-					if ( mpAttachedSheet )
-						[mpAttachedSheet retain];
+					// Retain self to ensure that we don't release it before
+					// the completion handler executes
+					[self retain];
+					[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
+						[self setResult:nRet];
+						[self release];
+					}];
+
+					NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+					if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+					{
+						mpAttachedSheet = pAttachedSheet;
+						if ( mpAttachedSheet )
+							[mpAttachedSheet retain];
+					}
+					else
+					{
+						mbFinished = YES;
+					}
 				}
 				else
 				{
-					mbFinished = YES;
+					[self setResult:[mpFilePanel runModal]];
 				}
 			}
 		}
@@ -2182,31 +2156,36 @@ short NSFileDialog_showFileDialog( id pDialog )
 		pApplication_endModalSheet = (Application_endModalSheet_Type *)dlsym( RTLD_DEFAULT, "Application_endModalSheet" );
 	if ( pDialog && pApplication_beginModalSheet && pApplication_endModalSheet )
 	{
-		IMutex &rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
+		NSWindow *pNSWindow = nil;
+		if ( pApplication_beginModalSheet( &pNSWindow ) )
 		{
-			NSWindow *pNSWindow = nil;
-			if ( pApplication_beginModalSheet( &pNSWindow ) )
+			// Don't lock mutex as we expect callbacks to this object from
+			// a different thread while the dialog is showing
+			ULONG nCount = Application::ReleaseSolarMutex();
+
+			// Ignore any AWT events while the open dialog is
+			// showing to emulate a modal dialog
+			ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
+			while ( ![(ShowFileDialog *)pDialog finished] && !Application::IsShutDown() )
 			{
-				// Ignore any AWT events while the open dialog is
-				// showing to emulate a modal dialog
-				ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
-				while ( ![(ShowFileDialog *)pDialog finished] )
-				{
-					[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pDialog waitUntilDone:YES modes:pModes];
+				[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pDialog waitUntilDone:YES modes:pModes];
+				if ( Application::IsShutDown() )
+					break;
+
+				IMutex &rSolarMutex = Application::GetSolarMutex();
+				rSolarMutex.acquire();
+				if ( !Application::IsShutDown() )
 					Application::Yield();
-				}
-
-				nRet = [(ShowFileDialog *)pDialog result];
-
-				pApplication_endModalSheet();
+				rSolarMutex.release();
 			}
-		}
 
-		rSolarMutex.release();
+			nRet = [(ShowFileDialog *)pDialog result];
+
+			Application::AcquireSolarMutex( nCount );
+			pApplication_endModalSheet();
+		}
 	}
 
 	[pPool release];

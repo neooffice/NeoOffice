@@ -146,6 +146,8 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		if ( !Application::IsShutDown() )
 		{
+			rSolarMutex.acquire();
+
 			JavaFilePicker *pJavaFilePicker = NULL;
 			for ( ::std::list< JavaFilePicker* >::const_iterator it = aFilePickers.begin(); it != aFilePickers.end(); ++it )
 			{
@@ -253,13 +255,7 @@ sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 		return nRet;
 
 	mbInExecute = true;
-
-	// Don't lock mutex as we expect callbacks to this object from a
-	// a different thread while the dialog is showing
-	ULONG nCount = Application::ReleaseSolarMutex();
 	nRet = NSFileDialog_showFileDialog( mpDialog );
-	Application::AcquireSolarMutex( nCount );
-
 	mbInExecute = false;
 
 	return nRet;
