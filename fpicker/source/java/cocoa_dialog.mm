@@ -44,10 +44,7 @@
 #import "cocoa_dialog.h"
 #endif
 
-#import <saldata.hxx>
-#import <salinst.h>
 #import <vcl/svapp.hxx>
-#import <vcl/window.hxx>
 #import <vcl/msgbox.hxx>
 #import <vos/mutex.hxx>
 
@@ -56,8 +53,14 @@
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
 // #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
+typedef sal_Bool Application_beginModalSheet_Type( id *pNSWindowForSheet );
+typedef void Application_endModalSheet_Type();
+typedef void Application_postWakeUpEvent_Type();
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
+static Application_beginModalSheet_Type *pApplication_beginModalSheet = NULL;
+static Application_endModalSheet_Type *pApplication_endModalSheet = NULL;
+static Application_postWakeUpEvent_Type *pApplication_postWakeUpEvent = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 
 static NSString *pBlankItem = @" ";
@@ -1628,9 +1631,10 @@ using namespace vos;
 
 					// Post an event to wakeup the VCL event thread if the VCL
 					// event dispatch thread is in a potentially long wait
-					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-					JavaSalEventQueue::postCachedEvent( pUserEvent );
-					pUserEvent->release();
+					if ( !pApplication_postWakeUpEvent )
+						pApplication_postWakeUpEvent = (Application_postWakeUpEvent_Type *)dlsym( RTLD_DEFAULT, "Application_postWakeUpEvent" );
+					if ( pApplication_postWakeUpEvent )
+						pApplication_postWakeUpEvent();
 
 					[self release];
 				}];
@@ -2172,23 +2176,19 @@ short NSFileDialog_showFileDialog( id pDialog )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pDialog )
+	if ( !pApplication_beginModalSheet )
+		pApplication_beginModalSheet = (Application_beginModalSheet_Type *)dlsym( RTLD_DEFAULT, "Application_beginModalSheet" );
+	if ( !pApplication_endModalSheet )
+		pApplication_endModalSheet = (Application_endModalSheet_Type *)dlsym( RTLD_DEFAULT, "Application_endModalSheet" );
+	if ( pDialog && pApplication_beginModalSheet && pApplication_endModalSheet )
 	{
 		IMutex &rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			SalData *pSalData = GetSalData();
-
-			// Do not allow more than one window to display a modal sheet
-			if ( !pSalData->mbInNativeModalSheet )
+			NSWindow *pNSWindow = nil;
+			if ( pApplication_beginModalSheet( &pNSWindow ) )
 			{
-				JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-				pSalData->mpNativeModalSheetFrame = pFocusFrame;
-				pSalData->mbInNativeModalSheet = true;
-
-				NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
 				// Ignore any AWT events while the open dialog is
 				// showing to emulate a modal dialog
 				ShowFileDialogArgs *pArgs = ( pNSWindow ? [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pNSWindow]] : [ShowFileDialogArgs argsWithArgs:nil] );
@@ -2201,8 +2201,8 @@ short NSFileDialog_showFileDialog( id pDialog )
 				}
 
 				nRet = [(ShowFileDialog *)pDialog result];
-				pSalData->mbInNativeModalSheet = false;
-				pSalData->mpNativeModalSheetFrame = NULL;
+
+				pApplication_endModalSheet();
 			}
 		}
 
