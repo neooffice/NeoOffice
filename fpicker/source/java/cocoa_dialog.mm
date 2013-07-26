@@ -1583,11 +1583,12 @@ using namespace vos;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 					[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:mpSelectedFilter]];
 
-				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpFilePanel setDelegate:self];
 
 				if ( mpWindow )
 				{
+					NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
+
 					// Retain self to ensure that we don't release it before
 					// the completion handler executes
 					[self retain];
