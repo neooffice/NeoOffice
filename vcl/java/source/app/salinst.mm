@@ -1055,7 +1055,7 @@ void SalYieldMutex::acquire()
 		// we will deadlock. Also, fix bug 1496 by not allowing native timers
 		// to run before trying to acquire the mutex when in the main thread.
 		SalData *pSalData = GetSalData();
-		if ( !pSalData || pSalData->mbInSignalHandler && !tryToAcquire() )
+		if ( !pSalData || ( pSalData->mbInSignalHandler && !tryToAcquire() ) )
 		{
 			return;
 		}
@@ -1074,9 +1074,7 @@ void SalYieldMutex::acquire()
 					aDelay.Seconds = 0;
 					aDelay.Nanosec = 10000;
 					maMainThreadCondition.reset();
-					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-					JavaSalEventQueue::postCachedEvent( pUserEvent );
-					pUserEvent->release();
+					Application_postWakeUpEvent();
 					if ( !maMainThreadCondition.check() )
 						maMainThreadCondition.wait( &aDelay );
 					maMainThreadCondition.set();

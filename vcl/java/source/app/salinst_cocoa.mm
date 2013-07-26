@@ -206,7 +206,10 @@ void Application_endModalSheet()
 
 void Application_postWakeUpEvent()
 {
-	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-	JavaSalEventQueue::postCachedEvent( pUserEvent );
-	pUserEvent->release();
+	if ( !Application::IsShutDown() )
+	{
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+		JavaSalEventQueue::postCachedEvent( pUserEvent );
+		pUserEvent->release();
+	}
 }
