@@ -47,6 +47,7 @@
 #include <vcl/jobset.h>
 #include <vcl/salptype.hxx>
 #include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -63,6 +64,7 @@ static ResMgr *pSfxResMgr = NULL;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+using namespace vos;
 
 static XubString GetSfxResString( int nId )
 {
@@ -286,7 +288,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	NSPrintInfo*			mpInfo;
 	MacOSBOOL				mbResult;
 	NSWindow*				mpWindow;
-	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (void)cancel:(id)pObject;
@@ -297,6 +298,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (NSPrintInfo *)printInfo;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
+- (void)setResult:(int)nResult pageLayout:(NSPageLayout *)pLayout;
 - (void)showPageLayoutDialog:(id)pObject;
 @end
 
@@ -357,8 +359,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	if ( mpWindow )
 	{
-		if ( mbWindowOwner )
-			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -384,8 +384,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mpWindow )
 		[mpWindow retain];
 
-	mbWindowOwner = NO;
-
 	return self;
 }
 
@@ -399,7 +397,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
-	if ( nCode == NSOKButton )
+	[self setResult:nCode pageLayout:pLayout];
+	[self release];
+}
+
+- (void)setResult:(int)nResult pageLayout:(NSPageLayout *)pLayout
+{
+	if ( nResult == NSOKButton )
 		mbResult = YES;
 	else
 		mbResult = NO;
@@ -441,8 +445,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
 	Application_postWakeUpEvent();
-
-	[self release];
 }
 
 - (void)showPageLayoutDialog:(id)pObject
@@ -463,50 +465,14 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	else
 		return;
 
-	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	// Don't use sheet if it is an open dialog or there is no window to attach
+	// a sheet to
+	if ( !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
-
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
-		NSScreen *pScreen = [NSScreen mainScreen];
-		if ( pScreen )
-		{
-			NSRect aFrame = [pScreen visibleFrame];
-			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
-			if ( aContentRect.origin.x < aFrame.origin.x )
-				aContentRect.origin.x = aFrame.origin.x;
-			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
-			if ( aContentRect.origin.y < aFrame.origin.y )
-				aContentRect.origin.y = aFrame.origin.y;
-		}
-
-		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpWindow )
-		{
-			mbWindowOwner = YES;
-
-			NSBundle *pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-			{
-				NSDictionary *pDict = [pBundle infoDictionary];
-				if ( pDict )
-				{
-					NSString *pName = [pDict valueForKey:@"CFBundleName"];
-					if ( pName && [pName isKindOfClass:[NSString class]] )
-						[mpWindow setTitle:pName];
-				}
-			}
-
-			[mpWindow setReleasedWhenClosed:NO];
-			[mpWindow makeKeyAndOrderFront:self];
-		}
+		mpWindow = nil;
 	}
-
-	// We cannot display the panel if there is no window or the window already
-	// has an attached sheet
-	if ( !mpWindow || [mpWindow attachedSheet] )
-		return;
 
 	@try
 	{
@@ -515,23 +481,30 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		NSPageLayout *pLayout = [NSPageLayout pageLayout];
 		if ( pLayout )
 		{
-			NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
-
-			// Retain self to ensure that we don't release it before the
-			// completion handler executes
-			[self retain];
-			[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
-
-			NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-			if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+			if ( mpWindow )
 			{
-				mpAttachedSheet = pAttachedSheet;
-				if ( mpAttachedSheet )
-					[mpAttachedSheet retain];
+				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
+
+				// Retain self to ensure that we don't release it before the
+				// completion handler executes
+				[self retain];
+				[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
+
+				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+				{
+					mpAttachedSheet = pAttachedSheet;
+					if ( mpAttachedSheet )
+						[mpAttachedSheet retain];
+				}
+				else
+				{
+					mbFinished = YES;
+				}
 			}
 			else
 			{
-				mbFinished = YES;
+				[self setResult:[pLayout runModalWithPrintInfo:mpInfo] pageLayout:pLayout];
 			}
 		}
 	}
@@ -821,7 +794,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	NSString*				mpJobName;
 	MacOSBOOL				mbResult;
 	NSWindow*				mpWindow;
-	MacOSBOOL				mbWindowOwner;
 }
 + (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
 - (void)cancel:(id)pObject;
@@ -832,6 +804,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
 - (NSPrintInfo *)printInfo;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
+- (void)setResult:(int)nResult printPanel:(NSPrintPanel *)pPanel;
 - (void)showPrintDialog:(id)pObject;
 @end
 
@@ -892,8 +865,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	if ( mpWindow )
 	{
-		if ( mbWindowOwner )
-			[mpWindow close];
 		[mpWindow release];
 		mpWindow = nil;
 	}
@@ -920,8 +891,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	if ( mpWindow )
 		[mpWindow retain];
 
-	mbWindowOwner = NO;
-
 	return self;
 }
 
@@ -935,7 +904,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
 {
-	if ( nCode == NSOKButton )
+	[self setResult:nCode printPanel:pPanel];
+	[self release];
+}
+
+- (void)setResult:(int)nResult printPanel:(NSPrintPanel *)pPanel
+{
+	if ( nResult == NSOKButton )
 		mbResult = YES;
 	else
 		mbResult = NO;
@@ -977,8 +952,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
 	Application_postWakeUpEvent();
-
-	[self release];
 }
 
 - (void)showPrintDialog:(id)pObject
@@ -999,50 +972,14 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	else
 		return;
 
-	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
+	// Don't use sheet if it is an open dialog or there is no window to attach
+	// a sheet to
+	if ( !mpWindow || [mpWindow attachedSheet] || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
 	{
 		if ( mpWindow )
 			[mpWindow release];
-
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
-		NSScreen *pScreen = [NSScreen mainScreen];
-		if ( pScreen )
-		{
-			NSRect aFrame = [pScreen visibleFrame];
-			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
-			if ( aContentRect.origin.x < aFrame.origin.x )
-				aContentRect.origin.x = aFrame.origin.x;
-			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
-			if ( aContentRect.origin.y < aFrame.origin.y )
-				aContentRect.origin.y = aFrame.origin.y;
-		}
-
-		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpWindow )
-		{
-			mbWindowOwner = YES;
-
-			NSBundle *pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-			{
-				NSDictionary *pDict = [pBundle infoDictionary];
-				if ( pDict )
-				{
-					NSString *pName = [pDict valueForKey:@"CFBundleName"];
-					if ( pName && [pName isKindOfClass:[NSString class]] )
-						[mpWindow setTitle:pName];
-				}
-			}
-
-			[mpWindow setReleasedWhenClosed:NO];
-			[mpWindow makeKeyAndOrderFront:self];
-		}
+		mpWindow = nil;
 	}
-
-	// We cannot display the panel if there is no window or the window already
-	// has an attached sheet
-	if ( !mpWindow || [mpWindow attachedSheet] )
-		return;
 
 	// Also set the job name via the PMPrintSettings so that the Save As
 	// dialog gets the job name
@@ -1086,23 +1023,30 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		NSPrintPanel *pPanel = [NSPrintPanel printPanel];
 		if ( pPanel )
 		{
-			NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
-
-			// Retain self to ensure that we don't release it before the
-			// completion handler executes
-			[self retain];
-			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
-
-			NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-			if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+			if ( mpWindow )
 			{
-				mpAttachedSheet = pAttachedSheet;
-				if ( mpAttachedSheet )
-					[mpAttachedSheet retain];
+				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
+
+				// Retain self to ensure that we don't release it before the
+				// completion handler executes
+				[self retain];
+				[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+
+				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
+				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
+				{
+					mpAttachedSheet = pAttachedSheet;
+					if ( mpAttachedSheet )
+						[mpAttachedSheet retain];
+				}
+				else
+				{
+					mbFinished = YES;
+				}
 			}
 			else
 			{
-				mbFinished = YES;
+				[self setResult:[pPanel runModalWithPrintInfo:mpInfo] printPanel:pPanel];
 			}
 		}
 	}
@@ -1192,15 +1136,26 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	NSWindow *pNSWindow = nil;
 	if ( Application_beginModalSheet( &pNSWindow ) )
 	{
+		// Don't lock mutex as we expect callbacks to this object from
+		// a different thread while the dialog is showing
+		ULONG nCount = Application::ReleaseSolarMutex();
+
 		// Ignore any AWT events while the page layout dialog is showing
 		// to emulate a modal dialog
 		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:pNSWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
-		while ( ![pJavaSalInfoPrinterShowPageLayoutDialog finished] )
+		while ( ![pJavaSalInfoPrinterShowPageLayoutDialog finished] && !Application::IsShutDown() )
 		{
 			[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
-			Application::Yield();
+			if ( Application::IsShutDown() )
+				break;
+
+			IMutex &rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+			if ( !Application::IsShutDown() )
+				Application::Yield();
+			rSolarMutex.release();
 		}
 
 		NSPrintInfo *pInfo = [pJavaSalInfoPrinterShowPageLayoutDialog printInfo];
@@ -1219,6 +1174,7 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 
+		Application::AcquireSolarMutex( nCount );
 		Application_endModalSheet();
 	}
 
@@ -1547,16 +1503,27 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 			NSWindow *pNSWindow = nil;
 			if ( Application_beginModalSheet( &pNSWindow ) )
 			{
+				// Don't lock mutex as we expect callbacks to this object from
+				// a different thread while the dialog is showing
+				ULONG nCount = Application::ReleaseSolarMutex();
+
 				// Ignore any AWT events while the page layout dialog is showing
 				// to emulate a modal dialog
 				JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
 
-				while ( ![pJavaSalPrinterShowPrintDialog finished] )
+				while ( ![pJavaSalPrinterShowPrintDialog finished] && !Application::IsShutDown() )
 				{
 					[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-					Application::Yield();
+					if ( Application::IsShutDown() )
+						break;
+
+					IMutex &rSolarMutex = Application::GetSolarMutex();
+					rSolarMutex.acquire();
+					if ( !Application::IsShutDown() )
+						Application::Yield();
+					rSolarMutex.release();
 				}
 
 				NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
@@ -1575,6 +1542,7 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
 
+				Application::AcquireSolarMutex( nCount );
 				Application_endModalSheet();
 			}
 		}
