@@ -474,18 +474,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						rSolarMutex.acquire();
 						if ( !Application::IsShutDown() )
 						{
-							SalData *pSalData = GetSalData();
-
-							// Do not allow more than one window to display a
-							// modal sheet
-							if ( !pSalData->mbInNativeModalSheet )
+							NSWindow *pNSWindow = nil;
+							if ( Application_beginModalSheet( &pNSWindow ) )
 							{
-								JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-								pSalData->mpNativeModalSheetFrame = pFocusFrame;
-								pSalData->mbInNativeModalSheet = true;
-
-								NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
 								// Ignore any AWT events while the open dialog
 								// is showing to emulate a modal dialog
 								VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle window:pNSWindow];
@@ -505,8 +496,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 								}
 
 								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-								pSalData->mbInNativeModalSheet = false;
-								pSalData->mpNativeModalSheetFrame = NULL;
+
+								Application_endModalSheet();
 							}
 						}
 
@@ -896,9 +887,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 					// Post an event to wakeup the VCL event thread if the VCL
 					// event dispatch thread is in a potentially long wait
-					JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-					JavaSalEventQueue::postCachedEvent( pUserEvent );
-					pUserEvent->release();
+					Application_postWakeUpEvent();
 
 					[self release];
 				}];
@@ -1029,6 +1018,73 @@ id NSApplication_getModalWindow()
 	[pPool release];
 
 	return pModalWindow;
+}
+
+sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
+{
+	SalData *pSalData = GetSalData();
+
+	// Do not allow more than one window to display a modal sheet
+	if ( pSalData->mbInNativeModalSheet || !pNSWindowForSheet )
+		return false;
+
+	JavaSalFrame *pFocusFrame = NULL;
+
+	// Get the active document window
+	Window *pWindow = Application::GetActiveTopWindow();
+	if ( pWindow )
+		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+	if ( !pFocusFrame )
+		pFocusFrame = pSalData->mpFocusFrame;
+
+	// Fix bug 3294 by not attaching to utility windows
+	while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
+		pFocusFrame = pFocusFrame->mpParent;
+
+	// Fix bug 1106. If the focus frame is not set or is not visible, find the
+	// first visible non-floating, non-utility frame.
+	if ( !pFocusFrame || !pFocusFrame->mbVisible )
+	{
+		pFocusFrame = NULL;
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+			{
+				pFocusFrame = *it;
+				break;
+			}
+		}
+	}
+
+	pSalData->mbInNativeModalSheet = true;
+	pSalData->mpNativeModalSheetFrame = pFocusFrame;
+
+	if ( pFocusFrame )
+	{
+		pSalData->mpNativeModalSheetFrame = pFocusFrame;
+		*pNSWindowForSheet = pFocusFrame->GetNativeWindow();
+	}
+	else
+	{
+		*pNSWindowForSheet = nil;
+	}
+
+	return sal_True;
+}
+
+void Application_endModalSheet()
+{
+	SalData *pSalData = GetSalData();
+	pSalData->mbInNativeModalSheet = false;
+	pSalData->mpNativeModalSheetFrame = NULL;
+}
+
+void Application_postWakeUpEvent()
+{
+	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+	JavaSalEventQueue::postCachedEvent( pUserEvent );
+	pUserEvent->release();
 }
 
 id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )

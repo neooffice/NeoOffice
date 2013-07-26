@@ -37,7 +37,6 @@
 #include <list>
 
 #include <salprn.h>
-#include <saldata.hxx>
 #include <salframe.h>
 #include <salgdi.h>
 #include <salinst.h>
@@ -48,7 +47,6 @@
 #include <vcl/jobset.h>
 #include <vcl/salptype.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/window.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -442,9 +440,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
-	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-	JavaSalEventQueue::postCachedEvent( pUserEvent );
-	pUserEvent->release();
+	Application_postWakeUpEvent();
 
 	[self release];
 }
@@ -980,9 +976,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	// Post an event to wakeup the VCL event thread if the VCL
 	// event dispatch thread is in a potentially long wait
-	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-	JavaSalEventQueue::postCachedEvent( pUserEvent );
-	pUserEvent->release();
+	Application_postWakeUpEvent();
 
 	[self release];
 }
@@ -1195,17 +1189,9 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	SalData *pSalData = GetSalData();
-
-	// Do not allow more than one window to display a modal sheet
-	if ( !pSalData->mbInNativeModalSheet )
+	NSWindow *pNSWindow = nil;
+	if ( Application_beginModalSheet( &pNSWindow ) )
 	{
-		JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-		pSalData->mpNativeModalSheetFrame = pFocusFrame;
-		pSalData->mbInNativeModalSheet = true;
-
-		NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
 		// Ignore any AWT events while the page layout dialog is showing
 		// to emulate a modal dialog
 		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:pNSWindow];
@@ -1233,8 +1219,7 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
 
-		pSalData->mbInNativeModalSheet = false;
-		pSalData->mpNativeModalSheetFrame = NULL;
+		Application_endModalSheet();
 	}
 
 	if ( bRet )
@@ -1565,17 +1550,9 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
 		if ( bFirstPass )
 		{
-			SalData *pSalData = GetSalData();
-
-			// Do not allow more than one window to display a modal sheet
-			if ( !pSalData->mbInNativeModalSheet )
+			NSWindow *pNSWindow = nil;
+			if ( Application_beginModalSheet( &pNSWindow ) )
 			{
-				JavaSalFrame *pFocusFrame = SalGetJavaSalFrameForModalSheet();
-				pSalData->mpNativeModalSheetFrame = pFocusFrame;
-				pSalData->mbInNativeModalSheet = true;
-
-				NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->GetNativeWindow() : NULL );
-
 				// Ignore any AWT events while the page layout dialog is showing
 				// to emulate a modal dialog
 				JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
@@ -1604,8 +1581,7 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 				[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
 
-				pSalData->mbInNativeModalSheet = false;
-				pSalData->mpNativeModalSheetFrame = NULL;
+				Application_endModalSheet();
 			}
 		}
 		else

@@ -49,6 +49,9 @@ SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
 #ifdef __cplusplus
 BEGIN_C
 #endif	// __cplusplus
+SAL_DLLPUBLIC_EXPORT sal_Bool Application_beginModalSheet( id *pNSWindowForSheet );
+SAL_DLLPUBLIC_EXPORT void Application_endModalSheet();
+SAL_DLLPUBLIC_EXPORT void Application_postWakeUpEvent();
 SAL_DLLPUBLIC_EXPORT id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
 SAL_DLLPUBLIC_EXPORT id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL );
