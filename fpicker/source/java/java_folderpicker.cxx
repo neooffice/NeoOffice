@@ -44,9 +44,6 @@
 #ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
 #endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
 
 #include "cocoa_dialog.h"
 
@@ -112,13 +109,7 @@ void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( Runtim
 
 sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 {
-	// Don't lock mutex as we expect callbacks to this object from a
-	// a different thread while the dialog is showing
-	ULONG nCount = Application::ReleaseSolarMutex();
-	sal_Int16 nRet = NSFileDialog_showFileDialog( mpDialog );
-	Application::AcquireSolarMutex( nCount );
-
-	return nRet;
+	return NSFileDialog_showFileDialog( mpDialog );
 }
 
 // ------------------------------------------------------------------------
