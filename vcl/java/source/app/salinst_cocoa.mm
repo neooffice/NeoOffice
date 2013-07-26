@@ -80,23 +80,19 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @interface VCLRequestSecurityScopedURL : NSObject
 {
-    NSWindow*				mpAttachedSheet;
 	MacOSBOOL				mbCancelled;
 	MacOSBOOL				mbFinished;
 	NSOpenPanel*			mpOpenPanel;
 	NSURL*					mpSecurityScopedURL;
 	NSString*				mpTitle;
 	NSURL*					mpURL;
-	NSWindow*				mpWindow;
-	MacOSBOOL				mbWindowOwner;
 }
-+ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
++ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 - (void)cancel:(id)pObject;
-- (void)checkForErrors:(id)pObject;
 - (void)dealloc;
 - (void)destroy:(id)pObject;
 - (MacOSBOOL)finished;
-- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow;
+- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pSender shouldEnableURL:(NSURL *)pURL;
 #else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
@@ -106,6 +102,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (void)requestSecurityScopedURL:(id)pObject;
 - (NSURL *)securityScopedURL;
+- (void)setResult:(NSInteger)nResult;
 @end
 
 static MacOSBOOL IsURLReadableOrWritable( NSURL *pURL )
@@ -470,38 +467,27 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 					if ( bShowOpenPanel && !bSecurityScopedURLFound && !Application::IsShutDown() )
 					{
-						IMutex &rSolarMutex = Application::GetSolarMutex();
-						rSolarMutex.acquire();
-						if ( !Application::IsShutDown() )
+						// Don't lock mutex as we expect callbacks to this
+						// object from a different thread while the dialog is
+						// showing
+						ULONG nCount = Application::ReleaseSolarMutex();
+
+						// Ignore any AWT events while the open dialog is
+						// showing to emulate a modal dialog
+						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+
+						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
+						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
 						{
-							NSWindow *pNSWindow = nil;
-							if ( Application_beginModalSheet( &pNSWindow ) )
-							{
-								// Ignore any AWT events while the open dialog
-								// is showing to emulate a modal dialog
-								VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle window:pNSWindow];
-								NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-								while ( ![pVCLRequestSecurityScopedURL finished] )
-								{
-									[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-									Application::Yield();
-								}
-
-								NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-								if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
-								{
-									bSecurityScopedURLFound = YES;
-									[pSecurityScopedURLs addObject:pSecurityScopedURL];
-								}
-
-								[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
-
-								Application_endModalSheet();
-							}
+							bSecurityScopedURLFound = YES;
+							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
 
-						rSolarMutex.release();
+						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+
+						Application::AcquireSolarMutex( nCount );
 					}
 				}
 			}
@@ -511,9 +497,9 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @implementation VCLRequestSecurityScopedURL
 
-+ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow
++ (id)createWithURL:(NSURL *)pURL title:(NSString *)pTitle
 {
-	VCLRequestSecurityScopedURL *pRet = [[VCLRequestSecurityScopedURL alloc] initWithURL:pURL title:pTitle window:pWindow];
+	VCLRequestSecurityScopedURL *pRet = [[VCLRequestSecurityScopedURL alloc] initWithURL:pURL title:pTitle];
 	[pRet autorelease];
 	return pRet;
 }
@@ -539,14 +525,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	}
 }
 
-- (void)checkForErrors:(id)pObject
-{
-	// Detect if the sheet window has been closed without any call to the
-	// completion handler
-	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
-		[self cancel:self];
-}
-
 - (void)dealloc
 {
 	[self destroy:self];
@@ -558,12 +536,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 {
 	if ( !mbFinished )
 		[self cancel:self];
-
-	if ( mpAttachedSheet )
-	{
-		[mpAttachedSheet release];
-		mpAttachedSheet = nil;
-	}
 
 	if ( mpOpenPanel && mbFinished )
 	{
@@ -600,14 +572,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 		[mpURL release];
 		mpURL = nil;
 	}
-
-	if ( mpWindow )
-	{
-		if ( mbWindowOwner )
-			[mpWindow close];
-		[mpWindow release];
-		mpWindow = nil;
-	}
 }
 
 - (MacOSBOOL)finished
@@ -615,11 +579,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 	return mbFinished;
 }
 
-- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle window:(NSWindow *)pWindow
+- (id)initWithURL:(NSURL *)pURL title:(NSString *)pTitle
 {
 	[super init];
 
-	mpAttachedSheet = nil;
 	mbCancelled = NO;
 	mbFinished = NO;
 	mpOpenPanel = nil;
@@ -643,12 +606,6 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			}
 		}
 	}
-
-	mpWindow = pWindow;
-	if ( mpWindow )
-		[mpWindow retain];
-
-	mbWindowOwner = NO;
 
 	return self;
 }
@@ -713,52 +670,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (void)requestSecurityScopedURL:(id)pObject
 {
 	// Do not allow recursion or reuse
-	if ( mpAttachedSheet || mbCancelled || mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
-		return;
-
-	if ( !mpWindow || ![mpWindow canBecomeKeyWindow] || ( ![mpWindow isVisible] && ![mpWindow isMiniaturized] ) )
-	{
-		if ( mpWindow )
-			[mpWindow release];
-
-		NSRect aContentRect = NSMakeRect( 0, 0, 400, 25 );
-		NSScreen *pScreen = [NSScreen mainScreen];
-		if ( pScreen )
-		{
-			NSRect aFrame = [pScreen visibleFrame];
-			aContentRect.origin.x = aFrame.origin.x + ( ( aFrame.size.width - aContentRect.size.width ) / 2 );
-			if ( aContentRect.origin.x < aFrame.origin.x )
-				aContentRect.origin.x = aFrame.origin.x;
-			aContentRect.origin.y = aFrame.origin.y + ( aFrame.size.height * 0.75f );
-			if ( aContentRect.origin.y < aFrame.origin.y )
-				aContentRect.origin.y = aFrame.origin.y;
-		}
-
-		mpWindow = [[NSWindow alloc] initWithContentRect:aContentRect styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
-		if ( mpWindow )
-		{
-			mbWindowOwner = YES;
-
-			NSBundle *pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-			{
-				NSDictionary *pDict = [pBundle infoDictionary];
-				if ( pDict )
-				{
-					NSString *pName = [pDict valueForKey:@"CFBundleName"];
-					if ( pName && [pName isKindOfClass:[NSString class]] )
-						[mpWindow setTitle:pName];
-				}
-			}
-
-			[mpWindow setReleasedWhenClosed:NO];
-			[mpWindow makeKeyAndOrderFront:self];
-		}
-	}
-
-	// We cannot display the panel if there is no window or the window already
-	// has an attached sheet
-	if ( !mpWindow || [mpWindow attachedSheet] )
+	if ( mbCancelled || mbFinished || mpOpenPanel || mpSecurityScopedURL || !mpURL )
 		return;
 
 	// Check if URL is a directory otherwise use parent directory
@@ -808,101 +720,8 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				if ( mpTitle && [mpTitle length] )
 					[mpOpenPanel setTitle:mpTitle];
 
-				NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 				[mpOpenPanel setDelegate:self];
-
-				// Retain self to ensure that we don't release it before the
-				// completion handler executes
-				[self retain];
-				[mpOpenPanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
-					if ( mpOpenPanel )
-					{
-						@try
-						{
-							// When running in the sandbox, native file dialog
-							// calls may throw exceptions if the PowerBox
-							// daemon process is killed
-							if ( nRet == NSFileHandlingPanelOKButton )
-							{
-								NSArray *pURLs = [mpOpenPanel URLs];
-								if ( pURLs && [pURLs count] )
-								{
-									// There should only be one selected URL
-									NSURL *pDirURL = [pURLs objectAtIndex:0];
-									if ( pDirURL && [pDirURL isFileURL] )
-									{
-										Application_cacheSecurityScopedURL( pDirURL );
-
-										pDirURL = [pDirURL URLByStandardizingPath];
-										if ( pDirURL )
-										{
-											pDirURL = [pDirURL URLByResolvingSymlinksInPath];
-											if ( pDirURL )
-											{
-												NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
-												if ( pData )
-												{
-													MacOSBOOL bStale = NO;
-													NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-													if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
-													{
-														pResolvedURL = [pResolvedURL URLByStandardizingPath];
-														if ( pResolvedURL )
-														{
-															pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
-															if ( pResolvedURL )
-															{
-																mpSecurityScopedURL = pResolvedURL;
-																[mpSecurityScopedURL retain];
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-						@catch ( NSException *pExc )
-						{
-							if ( pExc )
-								NSLog( @"%@", [pExc callStackSymbols] );
-						}
-					}
-
-					mbFinished = YES;
-
-					if ( mpAttachedSheet )
-					{
-						[mpAttachedSheet release];
-						mpAttachedSheet = nil;
-					}
-
-					if ( mpOpenPanel )
-					{
-						[mpOpenPanel release];
-						mpOpenPanel = nil;
-					}
-
-					// Post an event to wakeup the VCL event thread if the VCL
-					// event dispatch thread is in a potentially long wait
-					Application_postWakeUpEvent();
-
-					[self release];
-				}];
-
-				NSWindow *pAttachedSheet = [mpWindow attachedSheet];
-				if ( pAttachedSheet && pAttachedSheet != pOldAttachedSheet )
-				{
-					mpAttachedSheet = pAttachedSheet;
-					if ( mpAttachedSheet )
-						[mpAttachedSheet retain];
-				}
-				else
-				{
-					mbFinished = YES;
-				}
+				[self setResult:[mpOpenPanel runModal]];
 			}
 		}
 		@catch ( NSException *pExc )
@@ -917,6 +736,76 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 - (NSURL *)securityScopedURL
 {
 	return mpSecurityScopedURL;
+}
+
+- (void)setResult:(NSInteger)nResult
+{
+	if ( mpOpenPanel )
+	{
+		@try
+		{
+			// When running in the sandbox, native file dialog calls may
+			// throw exceptions if the PowerBox daemon process is killed
+			if ( nResult == NSFileHandlingPanelOKButton )
+			{
+				NSArray *pURLs = [mpOpenPanel URLs];
+				if ( pURLs && [pURLs count] )
+				{
+					// There should only be one selected URL
+					NSURL *pDirURL = [pURLs objectAtIndex:0];
+					if ( pDirURL && [pDirURL isFileURL] )
+					{
+						Application_cacheSecurityScopedURL( pDirURL );
+
+						pDirURL = [pDirURL URLByStandardizingPath];
+						if ( pDirURL )
+						{
+							pDirURL = [pDirURL URLByResolvingSymlinksInPath];
+							if ( pDirURL )
+							{
+								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+								if ( pData )
+								{
+									MacOSBOOL bStale = NO;
+									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
+									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+									{
+										pResolvedURL = [pResolvedURL URLByStandardizingPath];
+										if ( pResolvedURL )
+										{
+											pResolvedURL = [pResolvedURL URLByResolvingSymlinksInPath];
+											if ( pResolvedURL )
+											{
+												mpSecurityScopedURL = pResolvedURL;
+												[mpSecurityScopedURL retain];
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+	}
+
+	mbFinished = YES;
+
+	if ( mpOpenPanel )
+	{
+		[mpOpenPanel release];
+		mpOpenPanel = nil;
+	}
+
+	// Post an event to wakeup the VCL event thread if the VCL
+	// event dispatch thread is in a potentially long wait
+	Application_postWakeUpEvent();
 }
 
 @end
@@ -1082,9 +971,12 @@ void Application_endModalSheet()
 
 void Application_postWakeUpEvent()
 {
-	JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
-	JavaSalEventQueue::postCachedEvent( pUserEvent );
-	pUserEvent->release();
+	if ( !Application::IsShutDown() )
+	{
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_USEREVENT, NULL, NULL );
+		JavaSalEventQueue::postCachedEvent( pUserEvent );
+		pUserEvent->release();
+	}
 }
 
 id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle )
