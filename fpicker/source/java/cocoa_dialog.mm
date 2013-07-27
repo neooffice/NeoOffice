@@ -287,7 +287,7 @@ using namespace vos;
 
 - (void)cancel:(id)pObject;
 {
-	if ( !mbCancelled && mpFilePanel )
+	if ( mpFilePanel && !mbCancelled && !mbFinished )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
@@ -455,7 +455,7 @@ using namespace vos;
 
 - (void)dismissFileTypePopUp:(id)pObject
 {
-	if ( !mbCancelled && mpFilePanel && !mbFinished && mpPicker )
+	if ( mpFilePanel && mpPicker && !mbCancelled && !mbFinished )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 		if ( pPopup )
@@ -795,7 +795,7 @@ using namespace vos;
 	int nCocoaControlType = NSFileDialog_controlType( nID );
 	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
-		if ( mpFilePanel )
+		if ( mpFilePanel && !mbCancelled && !mbFinished )
 		{
 			@try
 			{
@@ -869,7 +869,7 @@ using namespace vos;
 			[mpDirectoryURL release];
 		mpDirectoryURL = nil;
 
-		if ( mpFilePanel )
+		if ( mpFilePanel && !mbCancelled && !mbFinished )
 		{
 			@try
 			{
@@ -1075,7 +1075,7 @@ using namespace vos;
 	{
 		mbExtensionHidden = bChecked;
 
-		if ( mpFilePanel )
+		if ( mpFilePanel && !mbCancelled && !mbFinished )
 		{
 			@try
 			{
@@ -1221,7 +1221,7 @@ using namespace vos;
 
 	mbMultiSelectionMode = [pMode boolValue];
 
-	if ( mpFilePanel )
+	if ( mpFilePanel && !mbCancelled && !mbFinished )
 	{
 		@try
 		{
@@ -1239,7 +1239,7 @@ using namespace vos;
 
 - (void)setResult:(NSInteger)nResult
 {
-	if ( mpFilePanel )
+	if ( mpFilePanel && !mbFinished )
 	{
 		@try
 		{
@@ -1326,7 +1326,7 @@ using namespace vos;
 	mpSelectedFilter = pItem;
 	[mpSelectedFilter retain];
 
-	if ( mpFilePanel )
+	if ( mpFilePanel && !mbCancelled && !mbFinished )
 	{
 		@try
 		{
