@@ -388,10 +388,11 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( !pURL || ![pURL checkResourceIsReachableAndReturnError:nil] )
 					{
-						// Abort if the parent folder is "/" or if only last
+						// Abort if the parent folder is "/", if more than the
+						// last component is missing, or if only the last
 						// component is missing and the URL is in the current
 						// instance cache
-						if ( i == 1 || ( i == nCount - 1 && IsCurrentInstanceCacheSecurityURL( pURL, NO ) ) )
+						if ( i == 1 || i < nCount - 1 || ( i == nCount - 1 && IsCurrentInstanceCacheSecurityURL( pURL, NO ) ) )
 							pURL = nil;
 
 						break;
