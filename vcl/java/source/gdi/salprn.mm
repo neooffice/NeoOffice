@@ -314,7 +314,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (void)cancel:(id)pObject
 {
 	// Force the panel to end its modal session
-	if ( !mbCancelled && mpAttachedSheet )
+	if ( !mbCancelled && !mbFinished && mpAttachedSheet )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
@@ -395,6 +395,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		return nil;
 }
 
+// Never call this selector directly since it releases self
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
 	[self setResult:nCode pageLayout:pLayout];
@@ -403,6 +404,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)setResult:(int)nResult pageLayout:(NSPageLayout *)pLayout
 {
+	if ( mbFinished )
+		return;
+
 	if ( nResult == NSOKButton )
 		mbResult = YES;
 	else
@@ -820,7 +824,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (void)cancel:(id)pObject
 {
 	// Force the panel to end its modal session
-	if ( !mbCancelled && mpAttachedSheet )
+	if ( !mbCancelled && !mbFinished && mpAttachedSheet )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
@@ -902,6 +906,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 		return nil;
 }
 
+// Never call this selector directly since it releases self
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
 {
 	[self setResult:nCode printPanel:pPanel];
@@ -910,6 +915,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 - (void)setResult:(int)nResult printPanel:(NSPrintPanel *)pPanel
 {
+	if ( mbFinished )
+		return;
+
 	if ( nResult == NSOKButton )
 		mbResult = YES;
 	else
