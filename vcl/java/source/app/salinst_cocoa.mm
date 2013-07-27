@@ -506,7 +506,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)cancel:(id)pObject;
 {
-	if ( !mbCancelled && mpOpenPanel )
+	if ( mpOpenPanel && !mbCancelled && !mbFinished )
 	{
 		// Prevent crashing by only allowing cancellation to be requested once
 		mbCancelled = YES;
@@ -635,29 +635,32 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)panel:(id)pSender didChangeToDirectoryURL:(NSURL *)pURL
 {
-	if ( pURL )
+	if ( mpOpenPanel && !mbCancelled && !mbFinished && mpURL )
 	{
-		pURL = [pURL URLByStandardizingPath];
 		if ( pURL )
-			pURL = [pURL URLByResolvingSymlinksInPath];
-	}
-
-	if ( mpURL && mpOpenPanel && ( !pURL || ![pURL isEqual:mpURL] ) )
-	{
-		@try
 		{
-			// When running in the sandbox, native file dialog calls may
-			// throw exceptions if the PowerBox daemon process is killed
-#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-			[mpOpenPanel setDirectoryURL:mpURL];
-#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-			[mpOpenPanel cancel:self];
-#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+			pURL = [pURL URLByStandardizingPath];
+			if ( pURL )
+				pURL = [pURL URLByResolvingSymlinksInPath];
 		}
-		@catch ( NSException *pExc )
+
+		if ( !pURL || ![pURL isEqual:mpURL] )
 		{
-			if ( pExc )
-				NSLog( @"%@", [pExc callStackSymbols] );
+			@try
+			{
+				// When running in the sandbox, native file dialog calls may
+				// throw exceptions if the PowerBox daemon process is killed
+#ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+				[mpOpenPanel setDirectoryURL:mpURL];
+#else	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+				[mpOpenPanel cancel:self];
+#endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+			}
+			@catch ( NSException *pExc )
+			{
+				if ( pExc )
+					NSLog( @"%@", [pExc callStackSymbols] );
+			}
 		}
 	}
 }
@@ -740,7 +743,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 - (void)setResult:(NSInteger)nResult
 {
-	if ( mpOpenPanel )
+	if ( mpOpenPanel && !mbFinished )
 	{
 		@try
 		{
