@@ -197,6 +197,7 @@ static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 
 			// Unreadable system folders
 			NSArray *pUnreadableSystemFolders = [NSArray arrayWithObjects:
+				@"/.DocumentRevisions-V100",
 				@"/.vol",
 				@"/dev",
 				@"/etc",
