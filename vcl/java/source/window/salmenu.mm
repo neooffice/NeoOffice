@@ -435,7 +435,9 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 		}
 	}
 
-	if ( pPendingSetMenuAsMainMenu == self )
+	// Fix empty menu bug that occurs when opening a document using the
+	// File :: Recent Documents menu by clearing the pending main menu
+	if ( pPendingSetMenuAsMainMenu )
 	{
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
@@ -552,7 +554,9 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 		}
 	}
 
-	if ( pPendingSetMenuAsMainMenu == self )
+	// Fix empty menu bug that occurs when opening a document using the
+	// File :: Recent Documents menu by clearing the pending main menu
+	if ( pPendingSetMenuAsMainMenu )
 	{
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
