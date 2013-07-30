@@ -9,9 +9,6 @@
     </upgrade-bundle>
     <update-bundle/>
     <atomic-update-bundle/>
-    <strict-identifier>
-        <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
-    </strict-identifier>
     <relocate>
         <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </relocate>
