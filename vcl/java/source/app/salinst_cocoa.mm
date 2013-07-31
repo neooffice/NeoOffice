@@ -768,7 +768,12 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							pDirURL = [pDirURL URLByResolvingSymlinksInPath];
 							if ( pDirURL )
 							{
-								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+								// Fix bug reported in the following NeoOffice
+								// forum topic by not using the
+								// NSURLBookmarkResolutionWithoutUI or
+								// NSURLBookmarkResolutionWithoutMounting flags:
+								// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
+								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 								if ( pData )
 								{
 									MacOSBOOL bStale = NO;
@@ -1052,7 +1057,11 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 			pURL = [pURL URLByResolvingSymlinksInPath];
 			if ( pURL && !IsInIgnoreURLs( [pURL absoluteString] ) )
 			{
-				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+				// Fix bug reported in the following NeoOffice forum topic by
+				// not using the NSURLBookmarkResolutionWithoutUI or
+				// NSURLBookmarkResolutionWithoutMounting flags:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
+				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
 					MacOSBOOL bStale = NO;
