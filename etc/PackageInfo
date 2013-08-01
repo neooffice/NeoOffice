@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" overwrite-permissions="true" relocatable="false" identifier="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)" install-location="/Applications" auth="root">
+<pkg-info format-version="2" overwrite-permissions="true" relocatable="true" identifier="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)" install-location="/Applications" auth="root">
     <bundle path="./$(PRODUCT_INSTALL_DIR_NAME).app" id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_VERSION)"/>
     <bundle-version>
         <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
@@ -9,6 +9,9 @@
     </upgrade-bundle>
     <update-bundle/>
     <atomic-update-bundle/>
+    <strict-identifier>
+        <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+    </strict-identifier>
     <relocate>
         <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
     </relocate>
