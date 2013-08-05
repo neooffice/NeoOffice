@@ -195,7 +195,8 @@ static bool IsRunningSnowLeopard()
 				if ( res == 10 )
 				{
 					res = 0;
-					if ( pGestalt( gestaltSystemVersionMinor, &res ) == 6 )
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res == 6 )
 						bIsRunningSnowLeopard = true;
 				}
 			}
