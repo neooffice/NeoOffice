@@ -38,6 +38,7 @@
 
 #include <list>
 
+#include <tools/link.hxx>
 #include <vcl/sv.h>
 #include <vcl/sysdata.hxx>
 #include <vcl/salframe.hxx>
@@ -101,6 +102,7 @@ public:
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
 	static unsigned int		GetScreenCount();
+	DECL_STATIC_LINK( JavaSalFrame, RunUpdateSettings, void* );
 
 							JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();

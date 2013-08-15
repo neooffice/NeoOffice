@@ -1000,41 +1000,13 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 	// Don't allow callback during adding of the observer otherwise deadlock
 	// will occur
-	if ( !mbInStartHandler && !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	// Queue window settings update
+	if ( !mbInStartHandler && !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
-
 		if ( !Application::IsShutDown() )
-		{
-			ImplSVData *pSVData = ImplGetSVData();
-
-			// Reset the radio button and checkbox images
-			if ( pSVData->maCtrlData.mpRadioImgList )
-			{
-				delete pSVData->maCtrlData.mpRadioImgList;
-				pSVData->maCtrlData.mpRadioImgList = NULL;
-			}
-			if ( pSVData->maCtrlData.mpCheckImgList )
-			{
-				delete pSVData->maCtrlData.mpCheckImgList;
-				pSVData->maCtrlData.mpCheckImgList = NULL;
-			}
-
-			// Force update of window settings
-			pSVData->maAppData.mbSettingsInit = FALSE;
-			if ( pSVData->maAppData.mpSettings )
-			{
-				Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
-				Window *pWindow = Application::GetFirstTopLevelWindow();
-				while ( pWindow )
-				{
-					pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
-					pWindow = Application::GetNextTopLevelWindow( pWindow );
-				}
-			}
-		}
-
+			Application::PostUserEvent( STATIC_LINK( NULL, JavaSalFrame, RunUpdateSettings ) );
 		rSolarMutex.release();
 	}
 }
@@ -2639,6 +2611,51 @@ unsigned int JavaSalFrame::GetScreenCount()
 	}
 
 	return ( aVCLScreensFullBoundsList.size() ? aVCLScreensFullBoundsList.size() : 1 );
+}
+
+// -----------------------------------------------------------------------
+
+IMPL_STATIC_LINK_NOINSTANCE( JavaSalFrame, RunUpdateSettings, void*, pCallData )
+{
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			ImplSVData *pSVData = ImplGetSVData();
+
+			// Reset the radio button and checkbox images
+			if ( pSVData->maCtrlData.mpRadioImgList )
+			{
+				delete pSVData->maCtrlData.mpRadioImgList;
+				pSVData->maCtrlData.mpRadioImgList = NULL;
+			}
+			if ( pSVData->maCtrlData.mpCheckImgList )
+			{
+				delete pSVData->maCtrlData.mpCheckImgList;
+				pSVData->maCtrlData.mpCheckImgList = NULL;
+			}
+
+			// Force update of window settings
+			pSVData->maAppData.mbSettingsInit = FALSE;
+			if ( pSVData->maAppData.mpSettings )
+			{
+				Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow )
+				{
+					pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	return 0;
 }
 
 // -----------------------------------------------------------------------
