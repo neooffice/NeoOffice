@@ -44,6 +44,7 @@
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -72,6 +73,7 @@ static ::osl::Mutex aSystemColorsMutex;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+using namespace vos;
 
 NSRect GetTotalScreenBounds()
 {
@@ -964,6 +966,7 @@ static VCLUpdateScreens *pVCLUpdateScreens = nil;
 
 @interface VCLUpdateSystemColors : NSObject
 {
+	MacOSBOOL				mbInStartHandler;
 }
 + (id)create;
 - (id)init;
@@ -986,12 +989,54 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 {
 	[super init];
  
+	mbInStartHandler = NO;
+
 	return self;
 }
 
 - (void)systemColorsChanged:(NSNotification *)pNotification
 {
 	HandleSystemColorsChangedRequest();
+
+	// Don't allow callback during adding of the observer otherwise deadlock
+	// will occur
+	if ( !mbInStartHandler && !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			ImplSVData *pSVData = ImplGetSVData();
+
+			// Reset the radio button and checkbox images
+			if ( pSVData->maCtrlData.mpRadioImgList )
+			{
+				delete pSVData->maCtrlData.mpRadioImgList;
+				pSVData->maCtrlData.mpRadioImgList = NULL;
+			}
+			if ( pSVData->maCtrlData.mpCheckImgList )
+			{
+				delete pSVData->maCtrlData.mpCheckImgList;
+				pSVData->maCtrlData.mpCheckImgList = NULL;
+			}
+
+			// Force update of window settings
+			pSVData->maAppData.mbSettingsInit = FALSE;
+			if ( pSVData->maAppData.mpSettings )
+			{
+				Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow )
+				{
+					pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
 }
 
 - (void)updateSystemColors:(id)pObject
@@ -1001,9 +1046,11 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
+			mbInStartHandler = YES;
 			pVCLUpdateSystemColors = self;
 			[pVCLUpdateSystemColors retain];
 			[pNotificationCenter addObserver:pVCLUpdateSystemColors selector:@selector(systemColorsChanged:) name:NSSystemColorsDidChangeNotification object:nil];
+			mbInStartHandler = NO;
 		}
 	}
 
