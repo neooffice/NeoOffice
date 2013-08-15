@@ -1900,6 +1900,11 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
                 Rectangle* pLastRect = ImplFindPartRect( GetLastPointerPosPixel() );
                 if( pRect != pLastRect || pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
+#if defined USE_JAVA && defined MACOSX
+    				// Redraw the entire scrollbar as mouse over events change
+    				// the thumb color on Mac OS X 10.7 and higher
+    				ImplDraw( SCRBAR_DRAW_ALL, this );
+#else	// USE_JAVA && MACOSX
                     Region aRgn( GetActiveClipRegion() );
                     Region aClipRegion;
 
@@ -1915,10 +1920,14 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
                         aClipRegion.Union( maBtn2Rect );
                     }
 
+                    aClipRegion.Union( maBtn1Rect );
+                    aClipRegion.Union( maBtn2Rect );
+
                     SetClipRegion( aClipRegion );
                     Paint( aClipRegion.GetBoundRect() );
 
                     SetClipRegion( aRgn );
+#endif	// USE_JAVA && MACOSX
                 }
             }
         }
