@@ -50,7 +50,7 @@
 
 #include "salgdi3_cocoa.h"
 
-static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo );
+static void ImplFontListChanged();
 
 static bool bFontListChangedObserverAdded = false;
 static bool bNativeFontsLoaded = false;
@@ -75,7 +75,7 @@ using namespace vos;
 
 - (void)loadNativeFonts:(id)pObject
 {
-	ImplFontListChangedCallback( NULL, NULL, kCTFontManagerRegisteredFontsChangedNotification, NULL, NULL );
+	ImplFontListChanged();
 }
 
 @end
@@ -83,6 +83,21 @@ using namespace vos;
 // ============================================================================
 
 static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo )
+{
+	// Queue font list update
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+			Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
+		rSolarMutex.release();
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+static void ImplFontListChanged()
 {
 	static bool bInLoad = false;
 
