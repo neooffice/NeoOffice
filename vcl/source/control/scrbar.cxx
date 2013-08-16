@@ -1846,9 +1846,6 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
                         aClipRegion.Union( maBtn2Rect );
                     }
 
-                    aClipRegion.Union( maBtn1Rect );
-                    aClipRegion.Union( maBtn2Rect );
-
                     SetClipRegion( aClipRegion );
                     Paint( aClipRegion.GetBoundRect() );
 
