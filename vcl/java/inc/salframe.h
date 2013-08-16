@@ -124,6 +124,8 @@ public:
 	void					SetVisible( sal_Bool bVisible, sal_Bool bNoActivate );
 	bool					ToFront();
 	void					UpdateLayer();
+	void					AddTrackingRect( Window *pWindow );
+	void					RemoveTrackingRect( Window *pWindow );
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );

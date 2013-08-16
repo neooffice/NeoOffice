@@ -43,10 +43,10 @@
 #if defined USE_JAVA && defined MACOSX
 
 #include <list>
+#include <map>
 
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
+#include <salframe.h>
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -55,6 +55,7 @@
 static const CFStringRef kAppleScrollBarVariantPref = CFSTR( "AppleScrollBarVariant" );
 static CFStringRef aLastAppleScrollBarVariantValue = NULL;
 static ::std::list< ScrollBar* > gScrollBars;
+static ::std::map< ScrollBar*, Rectangle > gScrollBarTrackingRects;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -253,6 +254,16 @@ ScrollBar::~ScrollBar()
         delete mpData;
 
 #if defined USE_JAVA && defined MACOSX
+	::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+	if ( it != gScrollBarTrackingRects.end() )
+	{
+		JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+		if ( pFrame )
+			pFrame->RemoveTrackingRect( this );
+
+		gScrollBarTrackingRects.erase( it );
+	}
+
 	gScrollBars.remove( this );
 #endif	// USE_JAVA && MACOSX
 }
@@ -820,6 +831,24 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #endif
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
+
+#if defined USE_JAVA && defined MACOSX
+            // Add or update scrollbar tracking area
+            if ( bNativeOK && IsReallyVisible() )
+            {
+                Rectangle aTrackingRect( Point( GetOutOffXPixel(), GetOutOffYPixel() ), Size( GetOutputWidthPixel(), GetOutputHeightPixel() ) );
+
+                ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+                if ( it == gScrollBarTrackingRects.end() || it->second != aTrackingRect )
+                {
+                    JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+                    if ( pFrame )
+                        pFrame->AddTrackingRect( this );
+
+                    gScrollBarTrackingRects[ this ] = aTrackingRect;
+                }
+            }
+#endif	// USE_JAVA && MACOSX
         }
         else
       {
@@ -1695,6 +1724,21 @@ void ScrollBar::StateChanged( StateChangedType nType )
             }
         }
     }
+#if defined USE_JAVA && defined MACOSX
+    // Remove tracking area when hiding the scrollbar
+    else if ( nType == STATE_CHANGE_VISIBLE && !IsVisible() )
+    {
+        ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+        if ( it != gScrollBarTrackingRects.end() )
+        {
+            JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+            if ( pFrame )
+                pFrame->RemoveTrackingRect( this );
+
+            gScrollBarTrackingRects.erase( it );
+        }
+    }
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
