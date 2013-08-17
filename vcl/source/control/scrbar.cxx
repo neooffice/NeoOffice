@@ -43,33 +43,19 @@
 #if defined USE_JAVA && defined MACOSX
 
 #include <list>
+#include <map>
 
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_IMAGE_HXX
-#include <vcl/image.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
-#include <vos/mutex.hxx>
-#endif
+#include <salframe.h>
 
 #include <premac.h>
-#import <AppKit/AppKit.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 static const CFStringRef kAppleScrollBarVariantPref = CFSTR( "AppleScrollBarVariant" );
 static CFStringRef aLastAppleScrollBarVariantValue = NULL;
-static ::osl::Mutex aLastAppleScrollBarVariantMutex;
 static ::std::list< ScrollBar* > gScrollBars;
-
-static void RelayoutScrollBars();
-
-using namespace osl;
-using namespace vos;
+static ::std::map< ScrollBar*, Rectangle > gScrollBarTrackingRects;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -95,62 +81,6 @@ using namespace rtl;
 
 #if defined USE_JAVA && defined MACOSX
 
-@interface VCLRelayoutScrollBarsHandler : NSObject
-{
-	BOOL					mbInStartHandler;
-}
-+ (id)create;
-- (id)init;
-- (void)relayoutScrollBars:(NSNotification *)pNotification;
-- (void)startHandler:(id)pObject;
-@end
-
-static VCLRelayoutScrollBarsHandler *pRelayoutScrollBarsHandler = nil;
-
-@implementation VCLRelayoutScrollBarsHandler
-
-+ (id)create
-{
-	VCLRelayoutScrollBarsHandler *pRet = [[VCLRelayoutScrollBarsHandler alloc] init];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (id)init
-{
-	[super init];
-
-	mbInStartHandler = NO;
-
-	return self;
-}
-
-- (void)relayoutScrollBars:(NSNotification *)pNotification
-{
-	// Don't allow callback during adding of the observer otherwise deadlock
-	// will occur
-	if ( !mbInStartHandler )
-		RelayoutScrollBars();
-}
-
-- (void)startHandler:(id)pObject
-{
-	if ( !pRelayoutScrollBarsHandler )
-	{
-		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-		if ( pNotificationCenter )
-		{
-			mbInStartHandler = YES;
-			[self retain];
-			pRelayoutScrollBarsHandler = self;
-			[pNotificationCenter addObserver:self selector:@selector(relayoutScrollBars:) name:NSUserDefaultsDidChangeNotification object:nil];
-			mbInStartHandler = NO;
-		}
-	}
-}
-
-@end
-
 // =======================================================================
 
 static void RelayoutScrollBars()
@@ -159,19 +89,22 @@ static void RelayoutScrollBars()
 	// mutex as this function will be called every time there is any change in
 	// the user's preferences
 	bool bChanged = false;
+	bool bDoubleScrollbarArrows = false;
 	CFPropertyListRef aPref = CFPreferencesCopyAppValue( kAppleScrollBarVariantPref, kCFPreferencesCurrentApplication );
 	if ( aPref )
 	{
 		if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
 		{
-			MutexGuard aGuard( aLastAppleScrollBarVariantMutex );
-
 			CFStringRef aOldPref = aLastAppleScrollBarVariantValue;
 			aLastAppleScrollBarVariantValue = (CFStringRef)aPref;
 			if ( !aOldPref || CFStringCompare( aLastAppleScrollBarVariantValue, aOldPref, 0 ) != kCFCompareEqualTo )
 				bChanged = true;
 			if ( aOldPref )
 				CFRelease( aOldPref );
+
+			// Check if double scrollbar arrows are enabled
+			if ( CFStringCompare( (CFStringRef)aPref, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
+				bDoubleScrollbarArrows = true;
 		}
 		else
 		{
@@ -179,74 +112,13 @@ static void RelayoutScrollBars()
 		}
 	}
 
-	if ( !bChanged )
-		return;
+	GetSalData()->mbDoubleScrollbarArrows = bDoubleScrollbarArrows;
 
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	rSolarMutex.acquire();
-	if ( !Application::IsShutDown() )
+	if ( bChanged )
 	{
-		// Check if double scrollbar arrows are enabled
-		bool bDoubleScrollbarArrows = false;
-		aPref = CFPreferencesCopyAppValue( kAppleScrollBarVariantPref, kCFPreferencesCurrentApplication );
-		if ( aPref )
-		{
-			if ( CFGetTypeID( aPref ) == CFStringGetTypeID() && CFStringCompare( (CFStringRef)aPref, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
-				bDoubleScrollbarArrows = true;
-			CFRelease( aPref );
-		}
-		GetSalData()->mbDoubleScrollbarArrows = bDoubleScrollbarArrows;
-
 		for ( ::std::list< ScrollBar* >::const_iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
-		{
 			(*iter)->Resize();
-			(*iter)->Invalidate();
-		}
-
-		// Reset the radio button and checkbox images
-		ImplSVData *pSVData = ImplGetSVData();
-		if ( pSVData->maCtrlData.mpRadioImgList )
-		{
-			delete pSVData->maCtrlData.mpRadioImgList;
-			pSVData->maCtrlData.mpRadioImgList = NULL;
-		}
-		if ( pSVData->maCtrlData.mpCheckImgList )
-		{
-			delete pSVData->maCtrlData.mpCheckImgList;
-			pSVData->maCtrlData.mpCheckImgList = NULL;
-		}
-
-		rSolarMutex.release();
 	}
-}
-
-// =======================================================================
-
-static void BeginTrackingScrollBar( ScrollBar *toTrack )
-{
-	if ( !toTrack || !toTrack->IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
-		return;
-
-	if ( !pRelayoutScrollBarsHandler )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		VCLRelayoutScrollBarsHandler *pVCLRelayoutScrollBarsHandler = [VCLRelayoutScrollBarsHandler create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLRelayoutScrollBarsHandler performSelectorOnMainThread:@selector(startHandler:) withObject:pVCLRelayoutScrollBarsHandler waitUntilDone:YES modes:pModes];
-
-		[pPool release];
-	}
-
-	RelayoutScrollBars();
-	gScrollBars.push_back( toTrack );
-}
-
-// =======================================================================
-
-static void EndTrackingScrollBar( ScrollBar *toTrack )
-{
-	gScrollBars.remove( toTrack );
 }
 
 #endif	// USE_JAVA && MACOSX
@@ -332,8 +204,13 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
     long nScrollSize = GetSettings().GetStyleSettings().GetScrollBarSize();
     SetSizePixel( Size( nScrollSize, nScrollSize ) );
     SetBackground();
+
 #if defined USE_JAVA && defined MACOSX
-	BeginTrackingScrollBar( this );
+	if ( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
+	{
+		RelayoutScrollBars();
+		gScrollBars.push_back( this );
+	}
 #endif	// USE_JAVA && MACOSX
 }
 
@@ -375,8 +252,19 @@ ScrollBar::~ScrollBar()
 {
     if( mpData )
         delete mpData;
+
 #if defined USE_JAVA && defined MACOSX
-	EndTrackingScrollBar( this );
+	::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+	if ( it != gScrollBarTrackingRects.end() )
+	{
+		JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+		if ( pFrame )
+			pFrame->RemoveTrackingRect( this );
+
+		gScrollBarTrackingRects.erase( it );
+	}
+
+	gScrollBars.remove( this );
 #endif	// USE_JAVA && MACOSX
 }
 
@@ -907,6 +795,11 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #if 1
             Region aCtrlRegion;
 #if defined USE_JAVA && defined MACOSX
+			// Explicitly check if the native scrollbar style changed since
+			// changes in the System Preferences application does not generate
+			// any NSUserDefaultsDidChangeNotification notifications
+			RelayoutScrollBars();
+
 			// Update the native rectangle to fix a scrollbar positioning bug
 			// that happens with the following steps:
 			// 1. Open a presentation document and expand the Slide Transition
@@ -938,6 +831,24 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #endif
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
+
+#if defined USE_JAVA && defined MACOSX
+            // Add or update scrollbar tracking area
+            if ( bNativeOK && IsReallyVisible() )
+            {
+                Rectangle aTrackingRect( Point( GetOutOffXPixel(), GetOutOffYPixel() ), Size( GetOutputWidthPixel(), GetOutputHeightPixel() ) );
+
+                ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+                if ( it == gScrollBarTrackingRects.end() || it->second != aTrackingRect )
+                {
+                    JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+                    if ( pFrame )
+                        pFrame->AddTrackingRect( this );
+
+                    gScrollBarTrackingRects[ this ] = aTrackingRect;
+                }
+            }
+#endif	// USE_JAVA && MACOSX
         }
         else
       {
@@ -1813,6 +1724,21 @@ void ScrollBar::StateChanged( StateChangedType nType )
             }
         }
     }
+#if defined USE_JAVA && defined MACOSX
+    // Remove tracking area when hiding the scrollbar
+    else if ( nType == STATE_CHANGE_VISIBLE && !IsVisible() )
+    {
+        ::std::map< ScrollBar*, Rectangle >::iterator it = gScrollBarTrackingRects.find( this );
+        if ( it != gScrollBarTrackingRects.end() )
+        {
+            JavaSalFrame *pFrame = (JavaSalFrame *)ImplGetFrame();
+            if ( pFrame )
+                pFrame->RemoveTrackingRect( this );
+
+            gScrollBarTrackingRects.erase( it );
+        }
+    }
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -1900,6 +1826,11 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
                 Rectangle* pLastRect = ImplFindPartRect( GetLastPointerPosPixel() );
                 if( pRect != pLastRect || pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
+#if defined USE_JAVA && defined MACOSX
+    				// Redraw the entire scrollbar as mouse over events change
+    				// the thumb color on Mac OS X 10.7 and higher
+    				ImplDraw( SCRBAR_DRAW_ALL, this );
+#else	// USE_JAVA && MACOSX
                     Region aRgn( GetActiveClipRegion() );
                     Region aClipRegion;
 
@@ -1919,6 +1850,7 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
                     Paint( aClipRegion.GetBoundRect() );
 
                     SetClipRegion( aRgn );
+#endif	// USE_JAVA && MACOSX
                 }
             }
         }

@@ -44,6 +44,7 @@
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -68,10 +69,12 @@ static NSColor *pVCLHighlightTextColor = nil;
 static NSColor *pVCLDisabledControlTextColor = nil;
 static NSColor *pVCLBackColor = nil;
 static ::osl::Mutex aSystemColorsMutex;
+static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+using namespace vos;
 
 NSRect GetTotalScreenBounds()
 {
@@ -481,6 +484,9 @@ static NSTimer *pUpdateTimer = nil;
 	JavaSalFrame*			mpFrame;
 	MacOSBOOL				mbFullScreen;
 	NSRect					maInsets;
+	MacOSBOOL				mbInMouseEntered;
+	MacOSBOOL				mbInMouseExited;
+	MacOSBOOL				mbInMouseMoved;
 	NSWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
 	NSRect					maShowOnlyMenusFrame;
@@ -492,6 +498,7 @@ static NSTimer *pUpdateTimer = nil;
 	NSUInteger				mnWindowStyleMask;
 }
 + (void)updateShowOnlyMenusWindows;
+- (void)addTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)adjustColorLevelAndShadow;
 - (void)animateWaitingView:(MacOSBOOL)bAnimate;
 - (id)initWithStyle:(ULONG)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(MacOSBOOL)bShowOnlyMenus utility:(MacOSBOOL)bUtility;
@@ -505,6 +512,10 @@ static NSTimer *pUpdateTimer = nil;
 - (const NSRect)insets;
 - (MacOSBOOL)isFloatingWindow;
 - (void)makeModal:(id)pObject;
+- (void)mouseEntered:(NSEvent *)pEvent;
+- (void)mouseExited:(NSEvent *)pEvent;
+- (void)mouseMoved:(NSEvent *)pEvent;
+- (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
 - (void)setContentMinSize:(NSSize)aContentMinSize;
 - (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
@@ -964,6 +975,7 @@ static VCLUpdateScreens *pVCLUpdateScreens = nil;
 
 @interface VCLUpdateSystemColors : NSObject
 {
+	MacOSBOOL				mbInStartHandler;
 }
 + (id)create;
 - (id)init;
@@ -986,12 +998,26 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 {
 	[super init];
  
+	mbInStartHandler = NO;
+
 	return self;
 }
 
 - (void)systemColorsChanged:(NSNotification *)pNotification
 {
 	HandleSystemColorsChangedRequest();
+
+	// Don't allow callback during adding of the observer otherwise deadlock
+	// will occur
+	// Queue window settings update
+	if ( !mbInStartHandler && !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+			Application::PostUserEvent( STATIC_LINK( NULL, JavaSalFrame, RunUpdateSettings ) );
+		rSolarMutex.release();
+	}
 }
 
 - (void)updateSystemColors:(id)pObject
@@ -1001,9 +1027,11 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
+			mbInStartHandler = YES;
 			pVCLUpdateSystemColors = self;
 			[pVCLUpdateSystemColors retain];
 			[pNotificationCenter addObserver:pVCLUpdateSystemColors selector:@selector(systemColorsChanged:) name:NSSystemColorsDidChangeNotification object:nil];
+			mbInStartHandler = NO;
 		}
 	}
 
@@ -1173,6 +1201,42 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
+- (void)addTrackingArea:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSValue *pWindow = (NSValue *)[pArgArray objectAtIndex:0];
+	if ( !pWindow || ![pWindow pointerValue] )
+		return;
+
+	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
+	if ( !pRect || NSIsEmptyRect( [pRect rectValue] ) )
+		return;
+
+	// If any tracking area is already set for this pointer, remove it
+	[self removeTrackingArea:pArgs];
+
+	if ( mpWindow )
+	{
+		NSView *pContentView = [mpWindow contentView];
+		if ( pContentView )
+		{
+			NSDictionary *pDict = [NSDictionary dictionaryWithObject:pWindow forKey:pVCLTrackingAreaWindowKey];
+			if ( pDict )
+			{
+				NSTrackingArea *pTrackingArea = [[NSTrackingArea alloc] initWithRect:[pRect rectValue] options:NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways owner:self userInfo:pDict];
+				if ( pTrackingArea )
+				{
+					[pTrackingArea autorelease];
+					[pContentView addTrackingArea:pTrackingArea];
+				}
+			}
+		}
+	}
+}
+
 - (void)animateWaitingView:(MacOSBOOL)bAnimate
 {
 	if ( mpWaitingView && mpWindow )
@@ -1244,6 +1308,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mpFrame = pFrame;
 	mbFullScreen = NO;
 	maInsets = NSMakeRect( 0, 0, 0, 0 );
+	mbInMouseEntered = NO;
+	mbInMouseExited = NO;
+	mbInMouseMoved = NO;
 	mpParent = pParent;
 	if ( mpParent )
 		[mpParent retain];
@@ -1494,6 +1561,92 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// Run VCLWindow selector to ensure that the window level is set
 		// correctly if the application is not active
 		[VCLWindow clearModalWindowLevel];
+	}
+}
+
+- (void)mouseEntered:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseEntered )
+		return;
+
+	mbInMouseEntered = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseEntered = NO;
+}
+
+- (void)mouseExited:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseExited )
+		return;
+
+	mbInMouseExited = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseExited = NO;
+}
+
+- (void)mouseMoved:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseMoved )
+		return;
+
+	mbInMouseMoved = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseMoved = NO;
+}
+
+- (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+	NSValue *pWindow = (NSValue *)[pArgArray objectAtIndex:0];
+	if ( !pWindow || ![pWindow pointerValue] )
+		return;
+
+	if ( mpWindow )
+	{
+		NSView *pContentView = [mpWindow contentView];
+		if ( pContentView )
+		{
+			NSArray *pTrackingAreas = [pContentView trackingAreas];
+			if ( pTrackingAreas )
+			{
+				// Make a copy since we may remove some elements
+				pTrackingAreas = [NSArray arrayWithArray:pTrackingAreas];
+				if ( pTrackingAreas )
+				{
+					NSUInteger i = 0;
+					NSUInteger nCount = [pTrackingAreas count];
+					for ( ; i < nCount; i++ )
+					{
+						NSTrackingArea *pTrackingArea = [pTrackingAreas objectAtIndex:i];
+						if ( pTrackingArea )
+						{
+							NSDictionary *pDict = [pTrackingArea userInfo];
+							if ( pDict )
+							{
+								NSValue *pValue = [pDict objectForKey:pVCLTrackingAreaWindowKey];
+								if ( pValue && [pValue pointerValue] == [pWindow pointerValue] )
+									[pContentView removeTrackingArea:pTrackingArea];
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -2596,6 +2749,51 @@ unsigned int JavaSalFrame::GetScreenCount()
 
 // -----------------------------------------------------------------------
 
+IMPL_STATIC_LINK_NOINSTANCE( JavaSalFrame, RunUpdateSettings, void*, pCallData )
+{
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			ImplSVData *pSVData = ImplGetSVData();
+
+			// Reset the radio button and checkbox images
+			if ( pSVData->maCtrlData.mpRadioImgList )
+			{
+				delete pSVData->maCtrlData.mpRadioImgList;
+				pSVData->maCtrlData.mpRadioImgList = NULL;
+			}
+			if ( pSVData->maCtrlData.mpCheckImgList )
+			{
+				delete pSVData->maCtrlData.mpCheckImgList;
+				pSVData->maCtrlData.mpCheckImgList = NULL;
+			}
+
+			// Force update of window settings
+			pSVData->maAppData.mbSettingsInit = FALSE;
+			if ( pSVData->maAppData.mpSettings )
+			{
+				Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow )
+				{
+					pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	return 0;
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 {
 	if ( pObject )
@@ -2931,6 +3129,44 @@ void JavaSalFrame::UpdateLayer()
 	{
 		mpGraphics->maNativeBounds = CGRectNull;
 		mpGraphics->setLayer( NULL );
+	}
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::AddTrackingRect( Window *pWindow )
+{
+	// If the frame is not visible, do nothing as it will result in flipped
+	// tracking area bounds
+	if ( pWindow && mpWindow && mbVisible )
+	{
+		CGRect aRect = UnflipFlippedRect( CGRectMake( pWindow->GetOutOffXPixel(), pWindow->GetOutOffYPixel(), pWindow->GetOutputWidthPixel(), pWindow->GetOutputHeightPixel() ), mpGraphics->maNativeBounds );
+		if ( !CGRectIsEmpty( aRect ) )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			VCLWindowWrapperArgs *pAddTrackingAreaArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pWindow], [NSValue valueWithRect:NSRectFromCGRect( aRect )], nil]];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[mpWindow performSelectorOnMainThread:@selector(addTrackingArea:) withObject:pAddTrackingAreaArgs waitUntilDone:YES modes:pModes];
+
+			[pPool release];
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::RemoveTrackingRect( Window *pWindow )
+{
+	if ( pWindow && mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLWindowWrapperArgs *pRemoveTrackingAreaArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithPointer:pWindow]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpWindow performSelectorOnMainThread:@selector(removeTrackingArea:) withObject:pRemoveTrackingAreaArgs waitUntilDone:YES modes:pModes];
+
+		[pPool release];
 	}
 }
 

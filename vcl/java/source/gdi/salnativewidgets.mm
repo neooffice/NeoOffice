@@ -72,16 +72,7 @@
 #define FOCUSRING_WIDTH					3
 #define LISTBOX_BUTTON_WIDTH			19
 #define LISTVIEWFRAME_TRIMWIDTH			1
-#define SCROLLBAR_ARROW_TRIMX			13
-#define SCROLLBAR_ARROW_TRIMY			14
-#define SCROLLBAR_ARROW_TRIMWIDTH		11
-#define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
-#define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
-#define SCROLLBAR_THUMB_MIN_WIDTH		20
-#define SCROLLBAR_THUMB_TRIMWIDTH		1
 #define SCROLLBAR_SUPPRESS_ARROWS		true
-#define SCROLLBAR_WIDTH_SLOP			0
-#define SCROLLBAR_HEIGHT_SLOP			1
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define PROGRESS_WIDTH_SLOP				0
@@ -129,11 +120,8 @@ typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawI
 typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawTrack_Type( const HIThemeTrackDrawInfo *pDrawInfo, const HIRect *pGhostRect, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeGetButtonBackgroundBounds_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, HIRect *pBounds);
-typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIThemeGrowBoxDrawInfo *pDrawInfo, HIRect *pBounds);
-typedef OSStatus HIThemeGetScrollBarTrackRect_Type( const HIRect *pBounds, const HIScrollBarTrackInfo *pTrackInfo, MacOSBoolean bIsHoriz, HIRect *pTrackBounds);
 typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, HIShapeRef *pShape);
 typedef OSStatus HIThemeGetTrackBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, HIRect *pBounds);
-typedef OSStatus HIThemeGetTrackPartBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, ControlPartCode nPartCode, HIRect *pPartBounds);
 
 static bool bHIThemeInitialized = false;
 static GetThemeMetric_Type *pGetThemeMetric = NULL;
@@ -147,10 +135,8 @@ static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
 static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
 static HIThemeDrawTrack_Type *pHIThemeDrawTrack = NULL;
 static HIThemeGetButtonBackgroundBounds_Type *pHIThemeGetButtonBackgroundBounds = NULL;
-static HIThemeGetScrollBarTrackRect_Type *pHIThemeGetScrollBarTrackRect = NULL;
 static HIThemeGetTabShape_Type *pHIThemeGetTabShape = NULL;
 static HIThemeGetTrackBounds_Type *pHIThemeGetTrackBounds = NULL;
-static HIThemeGetTrackPartBounds_Type *pHIThemeGetTrackPartBounds = NULL;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -173,6 +159,33 @@ static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+
+// =======================================================================
+
+@interface VCLNativeControlWindow : NSWindow
+- (MacOSBOOL)_hasActiveControls;
+- (void)orderFrontRegardless;
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
+@end
+
+@implementation VCLNativeControlWindow
+
+- (MacOSBOOL)_hasActiveControls
+{
+	return YES;
+}
+
+- (void)orderFrontRegardless
+{
+	[self orderWindow:NSWindowOut relativeTo:0];
+}
+
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
+{
+	[super orderWindow:NSWindowOut relativeTo:0];
+}
+
+@end
 
 // =======================================================================
 
@@ -629,6 +642,371 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
+@interface NSScroller (VCLNativeScrollbar)
+- (void)drawArrow:(NSUInteger)nArrow highlightPart:(NSUInteger)nPart;
+- (id)scrollerImp;
+- (void)scrollerImp:(id)pObject animateUIStateTransitionWithDuration:(double)fDuration;
+@end
+
+@interface VCLNativeScrollbar : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	ScrollbarValue*			mpScrollbarValue;
+	MacOSBOOL				mbDoubleScrollbarArrows;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	MacOSBOOL				mbHorizontal;
+	MacOSBOOL				mbDrawOnlyTrack;
+	NSRect					maDecrementArrowBounds;
+	NSRect					maIncrementArrowBounds;
+	NSRect					maDecrementPageBounds;
+	NSRect					maIncrementPageBounds;
+	NSRect					maThumbBounds;
+	NSRect					maTrackBounds;
+	NSRect					maTotalBounds;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
+- (NSScroller *)scroller;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (void)getBounds:(id)pObject;
+- (MacOSBOOL)horizontal;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect;
+- (NSRect)decrementArrowBounds;
+- (NSRect)incrementArrowBounds;
+- (NSRect)decrementPageBounds;
+- (NSRect)incrementPageBounds;
+- (NSRect)thumbBounds;
+- (NSRect)trackBounds;
+- (NSRect)totalBounds;
+@end
+
+@implementation VCLNativeScrollbar
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
+{
+	VCLNativeScrollbar *pRet = [[VCLNativeScrollbar alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics scrollbarValue:pScrollbarValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSScroller *)scroller
+{
+	NSScroller *pScroller = [[NSScroller alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pScroller )
+		return nil;
+
+	[pScroller autorelease];
+
+	if ( mnControlState & CTRL_STATE_ENABLED )
+		[pScroller setEnabled:YES];
+	else
+		[pScroller setEnabled:NO];
+
+	if ( mpScrollbarValue )
+	{
+		float fTrackRange = (float)( mpScrollbarValue->mnMax - mpScrollbarValue->mnVisibleSize - mpScrollbarValue->mnMin );
+		float fTrackPosition = (float)( mpScrollbarValue->mnCur - mpScrollbarValue->mnMin );
+		if ( mpScrollbarValue->mnVisibleSize > 0 && fTrackRange > 0 )
+		{
+			mbDrawOnlyTrack = NO;
+			[pScroller setDoubleValue:fTrackPosition / fTrackRange];
+			[pScroller setKnobProportion:(float)mpScrollbarValue->mnVisibleSize / ( fTrackRange + mpScrollbarValue->mnVisibleSize )];
+		}
+		else
+		{
+			// Set the value and knob proportion with "reasonable" values.
+			// Fix bug 3359 by drawing on the scrollbar track.
+			mbDrawOnlyTrack = YES;
+			[pScroller setDoubleValue:0];
+			[pScroller setKnobProportion:1.0];
+		}
+
+		if ( ( mpScrollbarValue->mnButton1State | mpScrollbarValue->mnButton2State | mpScrollbarValue->mnPage1State | mpScrollbarValue->mnPage2State | mpScrollbarValue->mnThumbState ) & ( CTRL_STATE_PRESSED | CTRL_STATE_ROLLOVER | CTRL_STATE_SELECTED ) )
+		{
+			// Darken thumb when mouse is within scroller on Mac OS X 10.7 and
+			// higher
+			if ( [pScroller respondsToSelector:@selector(scrollerImp)] && [pScroller respondsToSelector:@selector(scrollerImp:animateUIStateTransitionWithDuration:)] )
+			{
+				NSObject *pImp = [pScroller scrollerImp];
+				if ( pImp )
+					[pScroller scrollerImp:pImp animateUIStateTransitionWithDuration:1.0f];
+			}
+		}
+	}
+
+	if ( !SCROLLBAR_SUPPRESS_ARROWS )
+	{
+		// On Mac OS X 10.6, the enabled state is controlled by the
+		// [NSWindow _hasActiveControls] selector so we need to attach a
+		// custom hidden window to draw enabled
+		if ( [pScroller isEnabled] )
+		{
+			VCLNativeControlWindow *pWindow = [[VCLNativeControlWindow alloc] initWithContentRect:[pScroller frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
+			if ( pWindow )
+			{
+				[pWindow autorelease];
+				[pWindow setReleasedWhenClosed:NO];
+				[pWindow setContentView:pScroller];
+			}
+		}
+		else
+		{
+			[pScroller setEnabled:YES];
+		}
+	}
+
+	[pScroller sizeToFit];
+
+	// Force view size to match width of track otherwise the track will float
+	// outward and downward
+	NSRect aFrame = [pScroller frame];
+	NSRect aTrackBounds = [pScroller rectForPart:NSScrollerKnobSlot];
+	if ( aFrame.size.width > aFrame.size.height )
+	{
+		mbHorizontal = YES;
+		aFrame.size.height = aTrackBounds.size.height;
+	}
+	else
+	{
+		mbHorizontal = NO;
+		aFrame.size.width = aTrackBounds.size.width;
+	}
+	[pScroller setFrame:aFrame];
+
+	return pScroller;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSScroller *pScroller = [self scroller];
+		if ( pScroller )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+				CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+
+				// Fix bug 2031 by always filling the background with white
+				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
+				CGContextSetFillColor( mpBuffer->maContext, whiteColor );
+				CGContextFillRect( mpBuffer->maContext, aAdjustedDestRect );
+
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+
+					// Draw arrows on Mac OS X 10.6
+					if ( !SCROLLBAR_SUPPRESS_ARROWS )
+					{
+						// Disabling on Mac OS X 10.6 draws the scroller with
+						// no arrows
+						if ( mbDrawOnlyTrack )
+						{
+							[pScroller setEnabled:NO];
+						}
+						else
+						{
+							MacOSBOOL bHighlight = NO;
+							NSUInteger nHighlightArrow = 0;
+							NSUInteger nHighlightPart = 0;
+							if ( mpScrollbarValue )
+							{
+								// Note that if a pressed button is selected,
+								// we have highlight the inner arrow of the
+								// the arrow pair
+								if ( mpScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
+								{
+									bHighlight = YES;
+									nHighlightArrow = NSScrollerDecrementArrow;
+									if ( mpScrollbarValue->mnButton1State & CTRL_STATE_SELECTED )
+										nHighlightPart = NSScrollerIncrementArrow;
+									else
+										nHighlightPart = NSScrollerDecrementArrow;
+								}
+								else if ( mpScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
+								{
+									bHighlight = YES;
+									nHighlightArrow = NSScrollerIncrementArrow;
+									if ( mpScrollbarValue->mnButton2State & CTRL_STATE_SELECTED )
+										nHighlightPart = NSScrollerDecrementArrow;
+									else
+										nHighlightPart = NSScrollerIncrementArrow;
+								}
+							}
+
+							if ( bHighlight && [pScroller respondsToSelector:@selector(drawArrow:highlightPart:)] )
+							{
+								if ( mbDoubleScrollbarArrows )
+								{
+									if ( nHighlightArrow == NSScrollerDecrementArrow )
+									{
+										[pScroller drawArrow:NSScrollerDecrementArrow highlightPart:nHighlightPart];
+										[pScroller drawArrow:NSScrollerIncrementArrow highlight:NO];
+									}
+									else
+									{
+										[pScroller drawArrow:NSScrollerDecrementArrow highlight:NO];
+										[pScroller drawArrow:NSScrollerIncrementArrow highlightPart:nHighlightPart];
+									}
+								}
+								else
+								{
+									[pScroller drawArrow:NSScrollerDecrementArrow highlightPart:nHighlightPart];
+									[pScroller drawArrow:NSScrollerIncrementArrow highlightPart:nHighlightPart];
+								}
+							}
+							else
+							{
+								[pScroller drawArrow:NSScrollerDecrementArrow highlight:NO];
+								[pScroller drawArrow:NSScrollerIncrementArrow highlight:NO];
+							}
+						}
+					}
+
+					[pScroller drawKnobSlotInRect:[pScroller rectForPart:NSScrollerKnobSlot] highlight:NO];
+					if ( !mbDrawOnlyTrack )
+						[pScroller drawKnob];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (void)getBounds:(id)pObject
+{
+	if ( NSEqualRects( maTotalBounds, NSZeroRect ) )
+	{
+		NSScroller *pScroller = [self scroller];
+		if ( pScroller )
+		{
+			MacOSBOOL bFlipped = [pScroller isFlipped];
+
+			maDecrementArrowBounds = [pScroller rectForPart:NSScrollerDecrementLine];
+			if ( !bFlipped )
+				maDecrementArrowBounds.origin.y = maDestRect.size.height - maDecrementArrowBounds.origin.y - maDecrementArrowBounds.size.height;
+
+			maIncrementArrowBounds = [pScroller rectForPart:NSScrollerIncrementLine];
+			if ( !bFlipped )
+				maIncrementArrowBounds.origin.y = maDestRect.size.height - maIncrementArrowBounds.origin.y - maIncrementArrowBounds.size.height;
+
+			maDecrementPageBounds = [pScroller rectForPart:NSScrollerDecrementPage];
+			if ( !bFlipped )
+				maDecrementPageBounds.origin.y = maDestRect.size.height - maDecrementPageBounds.origin.y - maDecrementPageBounds.size.height;
+
+			maIncrementPageBounds = [pScroller rectForPart:NSScrollerIncrementPage];
+			if ( !bFlipped )
+				maIncrementPageBounds.origin.y = maDestRect.size.height - maIncrementPageBounds.origin.y - maIncrementPageBounds.size.height;
+
+			maThumbBounds = [pScroller rectForPart:NSScrollerKnob];
+			if ( !bFlipped )
+				maThumbBounds.origin.y = maDestRect.size.height - maThumbBounds.origin.y - maThumbBounds.size.height;
+
+			maTrackBounds = [pScroller rectForPart:NSScrollerKnobSlot];
+			if ( !bFlipped )
+				maTrackBounds.origin.y = maDestRect.size.height - maTrackBounds.origin.y - maTrackBounds.size.height;
+
+			maTotalBounds = [pScroller rectForPart:NSScrollerNoPart];
+			if ( !bFlipped )
+				maTotalBounds.origin.y = maDestRect.size.height - maTotalBounds.origin.y - maTotalBounds.size.height;
+		}
+	}
+}
+
+- (MacOSBOOL)horizontal
+{
+	return mbHorizontal;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics scrollbarValue:(ScrollbarValue *)pScrollbarValue doubleScrollbarArrows:(MacOSBOOL)bDoubleScrollbarArrows destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	mpScrollbarValue = pScrollbarValue;
+	mbDoubleScrollbarArrows = bDoubleScrollbarArrows;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	mbHorizontal = NO;
+	maDecrementArrowBounds = NSZeroRect;
+	maIncrementArrowBounds = NSZeroRect;
+	maDecrementPageBounds = NSZeroRect;
+	maIncrementPageBounds = NSZeroRect;
+	maThumbBounds = NSZeroRect;
+	maTrackBounds = NSZeroRect;
+	maTotalBounds = NSZeroRect;
+
+	return self;
+}
+
+- (NSRect)decrementArrowBounds
+{
+	return maDecrementArrowBounds;
+}
+
+- (NSRect)incrementArrowBounds
+{
+	return maIncrementArrowBounds;
+}
+
+- (NSRect)decrementPageBounds
+{
+	return maDecrementPageBounds;
+}
+
+- (NSRect)incrementPageBounds
+{
+	return maIncrementPageBounds;
+}
+
+- (NSRect)thumbBounds
+{
+	return maThumbBounds;
+}
+
+- (NSRect)trackBounds
+{
+	return maTrackBounds;
+}
+
+- (NSRect)totalBounds
+{
+	return maTotalBounds;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -852,10 +1230,8 @@ static bool HIThemeInitialize()
 			pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
 			pHIThemeDrawTrack = (HIThemeDrawTrack_Type *)dlsym( pLib, "HIThemeDrawTrack" );
 			pHIThemeGetButtonBackgroundBounds = (HIThemeGetButtonBackgroundBounds_Type *)dlsym( pLib, "HIThemeGetButtonBackgroundBounds" );
-			pHIThemeGetScrollBarTrackRect = (HIThemeGetScrollBarTrackRect_Type *)dlsym( pLib, "HIThemeGetScrollBarTrackRect" );
 			pHIThemeGetTabShape = (HIThemeGetTabShape_Type *)dlsym( pLib, "HIThemeGetTabShape" );
 			pHIThemeGetTrackBounds = (HIThemeGetTrackBounds_Type *)dlsym( pLib, "HIThemeGetTrackBounds" );
-			pHIThemeGetTrackPartBounds = (HIThemeGetTrackPartBounds_Type *)dlsym( pLib, "HIThemeGetTrackPartBounds" );
 
 			dlclose( pLib );
 		}
@@ -872,16 +1248,14 @@ static bool HIThemeInitialize()
 		fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
 		fprintf( stderr, "pHIThemeDrawTrack: %p\n", pHIThemeDrawTrack );
 		fprintf( stderr, "pHIThemeGetButtonBackgroundBounds: %p\n", pHIThemeGetButtonBackgroundBounds );
-		fprintf( stderr, "pHIThemeGetScrollBarTrackRect: %p\n", pHIThemeGetScrollBarTrackRect );
 		fprintf( stderr, "pHIThemeGetTabShape: %p\n", pHIThemeGetTabShape );
 		fprintf( stderr, "pHIThemeGetTrackBounds: %p\n", pHIThemeGetTrackBounds );
-		fprintf( stderr, "pHIThemeGetTrackPartBounds: %p\n", pHIThemeGetTrackPartBounds );
 #endif	// DEBUG
 
 		bHIThemeInitialized = true;
 	}
 
-	return ( pGetThemeMetric && pGetThemeTextColor && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeDrawTrack && pHIThemeGetButtonBackgroundBounds && pHIThemeGetScrollBarTrackRect && pHIThemeGetTabShape && pHIThemeGetTrackBounds && pHIThemeGetTrackPartBounds );
+	return ( pGetThemeMetric && pGetThemeTextColor && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeDrawTrack && pHIThemeGetButtonBackgroundBounds && pHIThemeGetTabShape && pHIThemeGetTrackBounds );
 }
 
 // =======================================================================
@@ -951,96 +1325,6 @@ static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, Cont
 			pButtonDrawInfo->state = kThemeStateInactive;
 		else
 			pButtonDrawInfo->state = kThemeStateActive;
-	}
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Convert a VCL scrollbar value structure into HITheme structures.
- *
- * @param pScrollBarTrackInfo		HITheme scrollbar structure
- * @param pHITrackInfo				alternative HITheme scrollbar structure used
- *									by some calls
- * @param nState					overall control state of the scrollbar.
- *									states of subparts are contained in the
- *									scrollbar value structure.
- * @param bounds					drawing bounds of the scrollbar
- * @param pScrollbarValue			VCL implcontrolvalue containing scrollbar
- *									value
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScrollBarTrackInfo *pHITrackInfo, ControlState nState, Rectangle bounds, ScrollbarValue *pScrollbarValue )
-{
-	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
-	if( pHITrackInfo )
-		memset( pHITrackInfo, 0, sizeof( HIScrollBarTrackInfo ) );
-	pTrackDrawInfo->version = 0;
-	pTrackDrawInfo->kind = kThemeScrollBarMedium;
-	pTrackDrawInfo->bounds.origin.x = 0;
-	pTrackDrawInfo->bounds.origin.y = 0;
-	pTrackDrawInfo->bounds.size.width = bounds.GetWidth();
-	pTrackDrawInfo->bounds.size.height = bounds.GetHeight();
-	if( bounds.GetWidth() > bounds.GetHeight() )
-		pTrackDrawInfo->attributes |= kThemeTrackHorizontal;
-	pTrackDrawInfo->attributes |= kThemeTrackShowThumb;
-	if( nState & CTRL_STATE_ENABLED )
-		pTrackDrawInfo->enableState = kThemeTrackActive;
-	else
-		pTrackDrawInfo->enableState = kThemeTrackInactive;
-	if( pScrollbarValue )
-	{
-		pTrackDrawInfo->min = pScrollbarValue->mnMin;
-		pTrackDrawInfo->max = pScrollbarValue->mnMax-pScrollbarValue->mnVisibleSize;
-		pTrackDrawInfo->value = pScrollbarValue->mnCur;
-		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
-		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
-		{
-			// We need to draw both inside and outside buttons if single arrow
-			// sets are used as there are drawing problems on Panther
-			if( pScrollbarValue->mnButton1State & CTRL_STATE_SELECTED )
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
-			else
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed | kThemeLeftOutsideArrowPressed );
-		}
-		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
-		{
-			if( pScrollbarValue->mnButton2State & CTRL_STATE_SELECTED )
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
-			else
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightOutsideArrowPressed;
-		}
-		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftTrackPressed;
-		if( pScrollbarValue->mnPage2State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightTrackPressed;
-		if( pScrollbarValue->mnThumbState & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeThumbPressed;
-	}
-
-	if( pTrackDrawInfo->min == pTrackDrawInfo->max )
-	{
-		// we need to seed the min, max, and value with "reasonable" values
-		// in order for scrollbar metrics to be computed properly by HITheme.
-		// If the values are all equal, HITheme will return a NULL rectangle
-		// for all potential scrollbar parts.
-
-		pTrackDrawInfo->min = 0;
-		pTrackDrawInfo->max = 1;
-		pTrackDrawInfo->value = 0;
-		// Fix bug 3359 by disabling the scrollbar. Note that we set it to
-		// disabled because the "nothing to scroll" setting will make the
-		// arrow buttons have NULL bounds.
-		pTrackDrawInfo->enableState = kThemeTrackDisabled;
-		pTrackDrawInfo->trackInfo.scrollbar.viewsize = 0;
-		pTrackDrawInfo->trackInfo.scrollbar.pressState = 0;
-	}
-	if( pHITrackInfo )
-	{
-		pHITrackInfo->enableState = pTrackDrawInfo->enableState;
-		pHITrackInfo->pressState = pTrackDrawInfo->trackInfo.scrollbar.pressState;
-		pHITrackInfo->viewsize = pTrackDrawInfo->trackInfo.scrollbar.viewsize;
 	}
 	return TRUE;
 }
@@ -1448,52 +1732,25 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
 {
-	BOOL bHorizontal = FALSE;
+	BOOL bRet = FALSE;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	VCLBitmapBuffer *pBuffer;
 	if ( rDestBounds.GetWidth() > rDestBounds.GetHeight() )
-	{
 		pBuffer = &aSharedHorizontalScrollBarBuffer;
-		bHorizontal = TRUE;
-	}
 	else
-	{
 		pBuffer = &aSharedVerticalScrollBarBuffer;
-	}
 
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState = 0;
 
-		// Fix bug 2031 by always filling the background with white
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
-		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-		CGContextSetFillColor( pBuffer->maContext, whiteColor );
-		CGContextFillRect( pBuffer->maContext, destRect );
+	VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:pBuffer graphics:pGraphics scrollbarValue:pScrollbarValue doubleScrollbarArrows:GetSalData()->mbDoubleScrollbarArrows destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeScrollbar performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeScrollbar drawn];
 
-		HIThemeTrackDrawInfo pTrackDrawInfo;
-		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
-		if ( bHorizontal )
-			pTrackDrawInfo.bounds.origin.y += SCROLLBAR_HEIGHT_SLOP;
-		else
-			pTrackDrawInfo.bounds.origin.x += SCROLLBAR_WIDTH_SLOP;
-
-		// Fix bug 3359 by drawing disabled scrollbar as nothing to scroll
-		if ( pTrackDrawInfo.enableState == kThemeTrackDisabled )
-			pTrackDrawInfo.enableState = kThemeTrackNothingToScroll;
-
-		bRet = ( pHIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
-
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2893,344 +3150,113 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_SCROLLBAR:
 			{
 				// Fix bug 1600 by detecting if double arrows are at both ends
-				Rectangle comboBoxRect = rRealControlRegion.GetBoundRect();
+				Rectangle scrollbarRect = rRealControlRegion.GetBoundRect();
 
 				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
+				bool bDoubleScrollbarArrows = GetSalData()->mbDoubleScrollbarArrows;
 
-				HIThemeTrackDrawInfo pTrackDrawInfo;
-				HIScrollBarTrackInfo pScrollBarTrackInfo;
-				InitScrollBarTrackInfo( &pTrackDrawInfo, &pScrollBarTrackInfo, nState, comboBoxRect, pValue );
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				HIRect bounds;
+				VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:NULL graphics:NULL scrollbarValue:pValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:CGRectMake( scrollbarRect.Left(), scrollbarRect.Top(), scrollbarRect.GetWidth(), scrollbarRect.GetHeight() )];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeScrollbar performSelectorOnMainThread:@selector(getBounds:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
 
-				bool bHorizontal = ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false );
-				long nStart = 0;
-				long nVisibleSize = 0;
-				if ( SCROLLBAR_SUPPRESS_ARROWS )
-				{
-					pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, bHorizontal, &bounds );
-					if ( pValue )
-					{
-						if ( bHorizontal )
-						{
-							nStart = Float32ToLong( bounds.origin.x + ( ( bounds.size.width * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin ) ) );
-							nVisibleSize = Float32ToLong( ( bounds.size.width * pValue->mnVisibleSize ) / ( pValue->mnMax - pValue->mnMin ) ) + SCROLLBAR_THUMB_TRIMWIDTH;
+				MacOSBOOL bHorizontal = [pVCLNativeScrollbar horizontal];
+				NSRect aDecrementArrowBounds = [pVCLNativeScrollbar decrementArrowBounds];
+				NSRect aIncrementArrowBounds = [pVCLNativeScrollbar incrementArrowBounds];
+				NSRect aDecrementPageBounds = [pVCLNativeScrollbar decrementPageBounds];
+				NSRect aIncrementPageBounds = [pVCLNativeScrollbar incrementPageBounds];
+				NSRect aThumbBounds = [pVCLNativeScrollbar thumbBounds];
+				NSRect aTrackBounds = [pVCLNativeScrollbar trackBounds];
+				NSRect aTotalBounds = [pVCLNativeScrollbar totalBounds];
+				aTotalBounds = NSUnionRect( aTotalBounds, aDecrementArrowBounds );
+				aTotalBounds = NSUnionRect( aTotalBounds, aIncrementArrowBounds );
+				aTotalBounds = NSUnionRect( aTotalBounds, aDecrementPageBounds );
+				aTotalBounds = NSUnionRect( aTotalBounds, aIncrementPageBounds );
+				aTotalBounds = NSUnionRect( aTotalBounds, aThumbBounds );
+				aTotalBounds = NSUnionRect( aTotalBounds, aTrackBounds );
 
-							if ( nVisibleSize > bounds.size.width )
-							{
-								nVisibleSize = bounds.size.width;
-							}
-							else if ( nVisibleSize < SCROLLBAR_THUMB_MIN_WIDTH )
-							{
-								nStart -= Float32ToLong( (float)( ( SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize - SCROLLBAR_THUMB_TRIMWIDTH ) * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin - pValue->mnVisibleSize ) );
-								nVisibleSize = SCROLLBAR_THUMB_MIN_WIDTH;
-							}
-
-							if ( nStart < bounds.origin.x )
-								nStart = bounds.origin.x;
-							else if ( nStart > bounds.origin.x + bounds.size.width )
-								nStart = bounds.origin.x + bounds.size.width;
-							if ( nStart + nVisibleSize > bounds.origin.x + bounds.size.width )
-								nStart = bounds.origin.x + bounds.size.width - nVisibleSize;
-						}
-						else
-						{
-							nStart = Float32ToLong( bounds.origin.y + ( ( bounds.size.height * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin ) ) );
-							nVisibleSize = Float32ToLong( ( bounds.size.height * pValue->mnVisibleSize ) / ( pValue->mnMax - pValue->mnMin ) ) + SCROLLBAR_THUMB_TRIMWIDTH;
-
-							if ( nVisibleSize > bounds.size.height )
-							{
-								nVisibleSize = bounds.size.height;
-							}
-							else if ( nVisibleSize < SCROLLBAR_THUMB_MIN_WIDTH )
-							{
-								nStart -= Float32ToLong( (float)( ( SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize - SCROLLBAR_THUMB_TRIMWIDTH ) * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin - pValue->mnVisibleSize ) );
-								nVisibleSize = SCROLLBAR_THUMB_MIN_WIDTH;
-							}
-
-							if ( nStart < bounds.origin.y )
-								nStart = bounds.origin.y;
-							else if ( nStart > bounds.origin.y + bounds.size.height )
-								nStart = bounds.origin.y + bounds.size.height;
-
-							if ( nStart + nVisibleSize > bounds.origin.y + bounds.size.height )
-								nStart = bounds.origin.y + bounds.size.height - nVisibleSize;
-						}
-					}
-					else
-					{
-						if ( bHorizontal )
-							nStart = bounds.origin.x;
-						else
-							nStart = bounds.origin.y;
-					}
-				}
-
+				NSRect bounds = NSZeroRect;
 				switch ( nPart )
 				{
 					case PART_ENTIRE_CONTROL:
-						pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+						bounds = aTotalBounds;
 						break;
 
 					case PART_BUTTON_LEFT:
-						{
-							HIRect trackBounds;
-							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
-							if ( SCROLLBAR_SUPPRESS_ARROWS )
-							{
-								bounds.origin.x = trackBounds.origin.x;
-								bounds.size.width = 0;
-							}
-							else if ( GetSalData()->mbDoubleScrollbarArrows )
-							{
-								bounds.origin.x = trackBounds.origin.x;
-								bounds.size.width *= 2;
-							}
-							else
-							{
-								if ( bounds.origin.x > trackBounds.origin.x )
-									bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-								bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
-							}
-						}
-						break;
-
 					case PART_BUTTON_UP:
+						bounds = aDecrementArrowBounds;
+						if ( bDoubleScrollbarArrows )
 						{
-							HIRect trackBounds;
-							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							if ( SCROLLBAR_SUPPRESS_ARROWS )
-							{
-								bounds.origin.y = trackBounds.origin.y;
-								bounds.size.height = 0;
-							}
+							if ( bHorizontal )
+								bounds.size.width *= 2;
 							else
-							{
-								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
-								if ( GetSalData()->mbDoubleScrollbarArrows )
-								{
-									bounds.origin.y = trackBounds.origin.y;
-									bounds.size.height *= 2;
-								}
-								else
-								{
-									if ( bounds.origin.y > trackBounds.origin.y )
-									{
-										bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-										bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
-									}
-									else
-									{
-										bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
-									}
-								}
-							}
+								bounds.size.height *= 2;
 						}
 						break;
 
 					case PART_BUTTON_RIGHT:
-						{
-							HIRect trackBounds;
-							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							if ( SCROLLBAR_SUPPRESS_ARROWS )
-							{
-								bounds.origin.x = trackBounds.origin.x + trackBounds.size.width;
-								bounds.size.width = 0;
-							}
-							else
-							{
-								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
-								if ( GetSalData()->mbDoubleScrollbarArrows )
-								{
-									bounds.size.width *= 2;
-									bounds.origin.x = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
-								}
-								else
-								{
-									HIRect otherBounds;
-									pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
-									if ( otherBounds.origin.x <= trackBounds.origin.x )
-									{
-										bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-										bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
-									}
-								}
-							}
-						}
-						break;
-
 					case PART_BUTTON_DOWN:
+						bounds = aIncrementArrowBounds;
+						if ( bDoubleScrollbarArrows )
 						{
-							HIRect trackBounds;
-							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							if ( SCROLLBAR_SUPPRESS_ARROWS )
+							if ( bHorizontal )
 							{
-								bounds.origin.y = trackBounds.origin.y + trackBounds.size.height;
-								bounds.size.height = 0;
+								bounds.origin.x -= bounds.size.width;
+								bounds.size.width *= 2;
 							}
 							else
 							{
-								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-								if ( GetSalData()->mbDoubleScrollbarArrows )
-								{
-									bounds.size.height *= 2;
-									bounds.origin.y = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
-								}
-								else
-								{
-									HIRect otherBounds;
-									pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
-									if ( otherBounds.origin.y <= trackBounds.origin.y )
-									{
-										bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-										bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
-									}
-								}
+								bounds.origin.y -= bounds.size.height;
+								bounds.size.height *= 2;
 							}
 						}
 						break;
 
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
-						if ( SCROLLBAR_SUPPRESS_ARROWS )
-						{
-							if ( bHorizontal )
-								bounds.size.width = nStart;
-							else
-								bounds.size.height = nStart;
-						}
-						else
-						{
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
-							if( ! bounds.size.width && ! bounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-							}
-						}
+						// If bounds are empty, set to the entire track
+						bounds = aDecrementPageBounds;
+						if ( NSEqualRects( bounds, NSZeroRect ) )
+							bounds = aTrackBounds;
 						break;
 
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
-						if ( SCROLLBAR_SUPPRESS_ARROWS )
-						{
-							if ( bHorizontal )
-							{
-								bounds.size.width -= nStart + nVisibleSize - bounds.origin.x;
-								bounds.origin.x = nStart + nVisibleSize;
-							}
-							else
-							{
-								bounds.size.height -= nStart + nVisibleSize - bounds.origin.y;
-								bounds.origin.y = nStart + nVisibleSize;
-							}
-						}
-						else
-						{
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
-							if( ! bounds.size.width && ! bounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-							}
-						}
+						// If bounds are empty, set to the entire track
+						bounds = aIncrementPageBounds;
+						if ( NSEqualRects( bounds, NSZeroRect ) )
+							bounds = aTrackBounds;
 						break;
 
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
-						if ( SCROLLBAR_SUPPRESS_ARROWS )
-						{
-							if ( bHorizontal )
-							{
-								bounds.origin.x = nStart;
-								bounds.size.width = nVisibleSize;
-							}
-							else
-							{
-								bounds.origin.y = nStart;
-								bounds.size.height = nVisibleSize;
-							}
-						}
-						else
-						{
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
-							if( ! bounds.size.width && ! bounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-							}
-						}
+						bounds = aThumbBounds;
 						break;
 					
 					case PART_TRACK_HORZ_AREA:
 					case PART_TRACK_VERT_AREA:
-						// [ed] 11/9/08 3.0 has new controls to obtain the
-						// entire track area.  This includes page up area,
-						// page down area, and thumb area.
-						
-						if ( SCROLLBAR_SUPPRESS_ARROWS )
-						{
-							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, bHorizontal, &bounds );
-						}
-						else
-						{
-							HIRect upBounds;
-							HIRect downBounds;
-							HIRect thumbBounds;
-							
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &thumbBounds );
-							if( ! thumbBounds.size.width && ! thumbBounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-								break;
-							}
-							
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &downBounds );
-							if( ! downBounds.size.width && ! downBounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-								break;
-							}
-							
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &upBounds );
-							if( ! upBounds.size.width && ! upBounds.size.height )
-							{
-								// disabled control or other invalid settings.  Set to the entire
-								// track.
-
-								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-							}
-							
-							bounds=CGRectUnion(upBounds, thumbBounds);
-							bounds=CGRectUnion(bounds, downBounds);
-						}
+						bounds = aTrackBounds;
 						break;
 				}
 
 				// Fix bug 2031 by incrementing the scrollbar width slightly
-				if ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() )
-					bounds.size.height++;
-				else
-					bounds.size.width++;
-				Point topLeft( (long)(comboBoxRect.Left()+bounds.origin.x), (long)(comboBoxRect.Top()+bounds.origin.y) );
+				if ( !NSEqualRects( bounds, NSZeroRect ) )
+				{
+					if ( bHorizontal )
+						bounds.size.height++;
+					else
+						bounds.size.width++;
+				}
+
+				Point topLeft( (long)( scrollbarRect.Left() + bounds.origin.x ), (long)( scrollbarRect.Top() + bounds.origin.y ) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 
 				bReturn = TRUE;
+
+				[pPool release];
 			}
 			break;
 
