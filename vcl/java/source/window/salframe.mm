@@ -484,6 +484,9 @@ static NSTimer *pUpdateTimer = nil;
 	JavaSalFrame*			mpFrame;
 	MacOSBOOL				mbFullScreen;
 	NSRect					maInsets;
+	MacOSBOOL				mbInMouseEntered;
+	MacOSBOOL				mbInMouseExited;
+	MacOSBOOL				mbInMouseMoved;
 	NSWindow*				mpParent;
 	MacOSBOOL				mbShowOnlyMenus;
 	NSRect					maShowOnlyMenusFrame;
@@ -509,6 +512,9 @@ static NSTimer *pUpdateTimer = nil;
 - (const NSRect)insets;
 - (MacOSBOOL)isFloatingWindow;
 - (void)makeModal:(id)pObject;
+- (void)mouseEntered:(NSEvent *)pEvent;
+- (void)mouseExited:(NSEvent *)pEvent;
+- (void)mouseMoved:(NSEvent *)pEvent;
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
 - (void)setContentMinSize:(NSSize)aContentMinSize;
@@ -1220,7 +1226,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			NSDictionary *pDict = [NSDictionary dictionaryWithObject:pWindow forKey:pVCLTrackingAreaWindowKey];
 			if ( pDict )
 			{
-				NSTrackingArea *pTrackingArea = [[NSTrackingArea alloc] initWithRect:[pRect rectValue] options:NSTrackingMouseMoved | NSTrackingActiveAlways owner:pContentView userInfo:pDict];
+				NSTrackingArea *pTrackingArea = [[NSTrackingArea alloc] initWithRect:[pRect rectValue] options:NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways owner:self userInfo:pDict];
 				if ( pTrackingArea )
 				{
 					[pTrackingArea autorelease];
@@ -1302,6 +1308,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	mpFrame = pFrame;
 	mbFullScreen = NO;
 	maInsets = NSMakeRect( 0, 0, 0, 0 );
+	mbInMouseEntered = NO;
+	mbInMouseExited = NO;
+	mbInMouseMoved = NO;
 	mpParent = pParent;
 	if ( mpParent )
 		[mpParent retain];
@@ -1553,6 +1562,48 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// correctly if the application is not active
 		[VCLWindow clearModalWindowLevel];
 	}
+}
+
+- (void)mouseEntered:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseEntered )
+		return;
+
+	mbInMouseEntered = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseEntered = NO;
+}
+
+- (void)mouseExited:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseExited )
+		return;
+
+	mbInMouseExited = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseExited = NO;
+}
+
+- (void)mouseMoved:(NSEvent *)pEvent
+{
+	// Do not allow any recursion
+	if ( mbInMouseMoved )
+		return;
+
+	mbInMouseMoved = YES;
+
+	if ( pEvent && mpWindow && [mpWindow isVisible] && ![mpWindow isKeyWindow] )
+		[mpWindow sendEvent:pEvent];
+
+	mbInMouseMoved = NO;
 }
 
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs
