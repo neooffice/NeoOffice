@@ -57,11 +57,13 @@
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
+static bool bScreensInitialized = false;
 static unsigned int nMainScreen = 0;
 static NSRect aTotalScreenBounds = NSZeroRect;
 static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
+static bool bSystemColorsInitialized = false;
 static NSColor *pVCLControlTextColor = nil;
 static NSColor *pVCLTextColor = nil;
 static NSColor *pVCLHighlightColor = nil;
@@ -76,7 +78,7 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-NSRect GetTotalScreenBounds()
+static NSRect GetTotalScreenBounds()
 {
 	if ( NSIsEmptyRect( aTotalScreenBounds ) )
 	{
@@ -107,6 +109,7 @@ static void HandleScreensChangedRequest()
 {
 	MutexGuard aGuard( aScreensMutex );
 
+	bScreensInitialized = true;
 	nMainScreen = 0;
 	aTotalScreenBounds = NSZeroRect;
 	aVCLScreensFullBoundsList.clear();
@@ -154,6 +157,8 @@ static void HandleScreensChangedRequest()
 static void HandleSystemColorsChangedRequest()
 {
 	MutexGuard aGuard( aSystemColorsMutex );
+
+	bSystemColorsInitialized = true;
 
 	if ( pVCLControlTextColor )
 		[pVCLControlTextColor release];
@@ -1976,6 +1981,52 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 // =======================================================================
 
+static void InitializeScreens()
+{
+	if ( !bScreensInitialized )
+	{
+		ClearableGuard< Mutex > aGuard( aSystemColorsMutex );
+
+		// Set system screens and add observer for system screen changes
+		if ( !bScreensInitialized )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			aGuard.clear();
+			[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+
+			[pPool release];
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
+static void InitializeSystemColors()
+{
+	if ( !bSystemColorsInitialized )
+	{
+		ClearableGuard< Mutex > aGuard( aSystemColorsMutex );
+
+		// Set system colors and add observer for system color changes
+		if ( !bSystemColorsInitialized )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			aGuard.clear();
+			[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
+
+			[pPool release];
+		}
+	}
+}
+
+// =======================================================================
+
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
@@ -2612,20 +2663,9 @@ void JavaSalFrame::FlushAllFrames()
 unsigned int JavaSalFrame::GetDefaultScreenNumber()
 {
 	// Update if screens have not yet been set
-	ResettableGuard< Mutex > aGuard( aScreensMutex );
-	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	InitializeScreens();
 
-		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-
-		[pPool release];
-	}
-
+	MutexGuard aGuard( aScreensMutex );
 	return nMainScreen;
 }
 
@@ -2634,19 +2674,9 @@ unsigned int JavaSalFrame::GetDefaultScreenNumber()
 const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode )
 {
 	// Update if screens have not yet been set
-	ResettableGuard< Mutex > aGuard( aScreensMutex );
-	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	InitializeScreens();
 
-		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-
-		[pPool release];
-	}
+	MutexGuard aGuard( aScreensMutex );
 
 	// Fix bug 2671 by setting width and height greater than 0
 	if ( nWidth <= 0 )
@@ -2702,19 +2732,9 @@ const Rectangle JavaSalFrame::GetScreenBounds( long nX, long nY, long nWidth, lo
 const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode )
 {
 	// Update if screens have not yet been set
-	ResettableGuard< Mutex > aGuard( aScreensMutex );
-	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	InitializeScreens();
 
-		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-
-		[pPool release];
-	}
+	MutexGuard aGuard( aScreensMutex );
 
 	if ( bFullScreenMode && nScreen < aVCLScreensFullBoundsList.size() )
 		return aVCLScreensFullBoundsList[ nScreen ];
@@ -2730,20 +2750,9 @@ const Rectangle JavaSalFrame::GetScreenBounds( unsigned int nScreen, sal_Bool bF
 unsigned int JavaSalFrame::GetScreenCount()
 {
 	// Update if screens have not yet been set
-	ResettableGuard< Mutex > aGuard( aScreensMutex );
-	if ( !aVCLScreensFullBoundsList.size() || !aVCLScreensVisibleBoundsList.size() )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	InitializeScreens();
 
-		VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-
-		[pPool release];
-	}
-
+	MutexGuard aGuard( aScreensMutex );
 	return ( aVCLScreensFullBoundsList.size() ? aVCLScreensFullBoundsList.size() : 1 );
 }
 
@@ -3972,16 +3981,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	aStyleSettings.SetCursorBlinkTime( nBlinkRate );
 
 	// Update colors if any system colors have not yet been set
-	ResettableGuard< Mutex > aGuard( aSystemColorsMutex );
-	if ( !pVCLControlTextColor || !pVCLTextColor || !pVCLHighlightColor || !pVCLHighlightTextColor || !pVCLDisabledControlTextColor || !pVCLBackColor )
-	{
-		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		aGuard.clear();
-		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
-		aGuard.reset();
-	}
+	InitializeSystemColors();
 
+	MutexGuard aGuard( aSystemColorsMutex );
 	BOOL useThemeDialogColor = FALSE;
 	Color themeDialogColor;
 	if ( pVCLControlTextColor )
