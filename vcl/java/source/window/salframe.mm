@@ -64,12 +64,17 @@ static ::std::vector< Rectangle > aVCLScreensFullBoundsList;
 static ::std::vector< Rectangle > aVCLScreensVisibleBoundsList;
 static ::osl::Mutex aScreensMutex;
 static bool bSystemColorsInitialized = false;
-static NSColor *pVCLControlTextColor = nil;
-static NSColor *pVCLTextColor = nil;
-static NSColor *pVCLHighlightColor = nil;
-static NSColor *pVCLHighlightTextColor = nil;
-static NSColor *pVCLDisabledControlTextColor = nil;
-static NSColor *pVCLBackColor = nil;
+static SalColor *pVCLControlTextColor = NULL;
+static SalColor *pVCLTextColor = NULL;
+static SalColor *pVCLHighlightColor = NULL;
+static SalColor *pVCLHighlightTextColor = NULL;
+static SalColor *pVCLDisabledControlTextColor = NULL;
+static SalColor *pVCLBackColor = NULL;
+static SalColor *pVCLAlternateSelectedControlTextColor = NULL;
+static SalColor *pVCLSelectedControlTextColor = NULL;
+static SalColor *pVCLSelectedMenuItemColor = NULL;
+static SalColor *pVCLSelectedMenuItemTextColor = NULL;
+
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
 
@@ -154,71 +159,50 @@ static void HandleScreensChangedRequest()
 	}
 }
 
+static BOOL SetSalColorFromNSColor( NSColor *pNSColor, SalColor **ppSalColor )
+{
+	BOOL bRet = FALSE;
+
+	if ( ppSalColor )
+	{
+		if ( *ppSalColor )
+		{
+			delete *ppSalColor;
+			*ppSalColor = NULL;
+		}
+
+		if ( pNSColor )
+		{
+			pNSColor = [pNSColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+			if ( pNSColor )
+			{
+				*ppSalColor = new SalColor;
+				**ppSalColor = MAKE_SALCOLOR( (unsigned char)( [pNSColor redComponent] * 0xff ), (unsigned char)( [pNSColor greenComponent] * 0xff ), (unsigned char)( [pNSColor blueComponent] * 0xff ) );
+				bRet = TRUE;
+			}
+		}
+	}
+
+	return bRet;
+}
+
 static void HandleSystemColorsChangedRequest()
 {
 	MutexGuard aGuard( aSystemColorsMutex );
 
 	bSystemColorsInitialized = true;
 
-	if ( pVCLControlTextColor )
-		[pVCLControlTextColor release];
-	pVCLControlTextColor = [NSColor controlTextColor];
-	if ( pVCLControlTextColor )
-	{
-		pVCLControlTextColor = [pVCLControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLControlTextColor )
-			[pVCLControlTextColor retain];
-	}
-
-	if ( pVCLTextColor )
-		[pVCLTextColor release];
-	pVCLTextColor = [NSColor textColor];
-	if ( pVCLTextColor )
-	{
-		pVCLTextColor = [pVCLTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLTextColor )
-			[pVCLTextColor retain];
-	}
-
-	if ( pVCLHighlightColor )
-		[pVCLHighlightColor release];
-	pVCLHighlightColor = [NSColor selectedTextBackgroundColor];
-	if ( pVCLHighlightColor )
-	{
-		pVCLHighlightColor = [pVCLHighlightColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLHighlightColor )
-			[pVCLHighlightColor retain];
-	}
-
-	if ( pVCLHighlightTextColor )
-		[pVCLHighlightTextColor release];
-	pVCLHighlightTextColor = [NSColor selectedTextColor];
-	if ( pVCLHighlightTextColor )
-	{
-		pVCLHighlightTextColor = [pVCLHighlightTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLHighlightTextColor )
-			[pVCLHighlightTextColor retain];
-	}
-
-	if ( pVCLDisabledControlTextColor )
-		[pVCLDisabledControlTextColor release];
-	pVCLDisabledControlTextColor = [NSColor disabledControlTextColor];
-	if ( pVCLDisabledControlTextColor )
-	{
-		pVCLDisabledControlTextColor = [pVCLDisabledControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLDisabledControlTextColor )
-			[pVCLDisabledControlTextColor retain];
-	}
-
-	if ( pVCLBackColor )
-		[pVCLBackColor release];
-	pVCLBackColor = [NSColor controlHighlightColor];
-	if ( pVCLBackColor )
-	{
-		pVCLBackColor = [pVCLBackColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-		if ( pVCLBackColor )
-			[pVCLBackColor retain];
-	}
+	SetSalColorFromNSColor( [NSColor controlTextColor], &pVCLControlTextColor );
+	SetSalColorFromNSColor( [NSColor textColor], &pVCLTextColor );
+	SetSalColorFromNSColor( [NSColor textColor], &pVCLTextColor );
+	SetSalColorFromNSColor( [NSColor selectedTextBackgroundColor], &pVCLHighlightColor );
+	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
+	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
+	SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
+	SetSalColorFromNSColor( [NSColor alternateSelectedControlTextColor], &pVCLAlternateSelectedControlTextColor );
+	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
+	SetSalColorFromNSColor( [NSColor selectedMenuItemColor], &pVCLSelectedMenuItemColor );
+	SetSalColorFromNSColor( [NSColor selectedMenuItemTextColor], &pVCLSelectedMenuItemTextColor );
 }
 
 @interface VCLSetSystemUIMode : NSObject
@@ -2758,6 +2742,96 @@ unsigned int JavaSalFrame::GetScreenCount()
 
 // -----------------------------------------------------------------------
 
+BOOL JavaSalFrame::GetAlternateSelectedControlTextColor( SalColor& rSalColor )
+{
+	BOOL bRet = FALSE;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	if ( pVCLAlternateSelectedControlTextColor )
+	{
+		rSalColor = *pVCLAlternateSelectedControlTextColor;
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalFrame::GetControlTextColor( SalColor& rSalColor )
+{
+	BOOL bRet = FALSE;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	if ( pVCLControlTextColor )
+	{
+		rSalColor = *pVCLControlTextColor;
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalFrame::GetDisabledControlTextColor( SalColor& rSalColor )
+{
+	BOOL bRet = FALSE;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	if ( pVCLDisabledControlTextColor )
+	{
+		rSalColor = *pVCLDisabledControlTextColor;
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalFrame::GetSelectedControlTextColor( SalColor& rSalColor )
+{
+	BOOL bRet = FALSE;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	if ( pVCLSelectedControlTextColor )
+	{
+		rSalColor = *pVCLSelectedControlTextColor;
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
+{
+	BOOL bRet = FALSE;
+
+	// Update colors if any system colors have not yet been set
+	InitializeSystemColors();
+
+	if ( pVCLSelectedMenuItemTextColor )
+	{
+		rSalColor = *pVCLSelectedMenuItemTextColor;
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
 IMPL_STATIC_LINK_NOINSTANCE( JavaSalFrame, RunUpdateSettings, void*, pCallData )
 {
 	if ( !Application::IsShutDown() )
@@ -3988,13 +4062,13 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color themeDialogColor;
 	if ( pVCLControlTextColor )
 	{
-		themeDialogColor = Color( (unsigned char)( [pVCLControlTextColor redComponent] * 0xff ), (unsigned char)( [pVCLControlTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLControlTextColor blueComponent] * 0xff ) );
+		themeDialogColor = Color( *pVCLControlTextColor );
 		useThemeDialogColor = TRUE;
 	}
 
 	Color aTextColor;
 	if ( pVCLTextColor )
-		aTextColor = Color( (unsigned char)( [pVCLTextColor redComponent] * 0xff ), (unsigned char)( [pVCLTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLTextColor blueComponent] * 0xff ) );
+		aTextColor = Color( *pVCLTextColor );
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
 	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
@@ -4005,31 +4079,38 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	aStyleSettings.SetWindowTextColor( aTextColor );
 	aStyleSettings.SetFieldTextColor( aTextColor );
 
+	useThemeDialogColor = FALSE;
+	if ( pVCLSelectedMenuItemColor )
+	{
+		themeDialogColor = Color( *pVCLSelectedMenuItemColor );
+		useThemeDialogColor = TRUE;
+	}
+
 	Color aHighlightColor;
 	if ( pVCLHighlightColor )
-		aHighlightColor = Color( (unsigned char)( [pVCLHighlightColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightColor blueComponent] * 0xff ) );
+		aHighlightColor = Color( *pVCLHighlightColor );
 	aStyleSettings.SetActiveBorderColor( aHighlightColor );
 	aStyleSettings.SetActiveColor( aHighlightColor );
 	aStyleSettings.SetActiveTextColor( aHighlightColor );
 	aStyleSettings.SetHighlightColor( aHighlightColor );
-	aStyleSettings.SetMenuHighlightColor( aHighlightColor );
+	aStyleSettings.SetMenuHighlightColor( ( useThemeDialogColor ) ? themeDialogColor : aHighlightColor );
 
 	Color aHighlightTextColor;
 	if ( pVCLHighlightTextColor )
-		aHighlightTextColor = Color( (unsigned char)( [pVCLHighlightTextColor redComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLHighlightTextColor blueComponent] * 0xff ) );
+		aHighlightTextColor = Color( *pVCLHighlightTextColor );
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
 
 	useThemeDialogColor = FALSE;
 	if ( pVCLDisabledControlTextColor )
 	{
-		themeDialogColor = Color( (unsigned char)( [pVCLDisabledControlTextColor redComponent] * 0xff ), (unsigned char)( [pVCLDisabledControlTextColor greenComponent] * 0xff ), (unsigned char)( [pVCLDisabledControlTextColor blueComponent] * 0xff ) );
+		themeDialogColor = Color( *pVCLDisabledControlTextColor );
 		useThemeDialogColor = TRUE;
 	}
 
 	Color aBackColor;
 	if ( pVCLBackColor )
-		aBackColor = Color( (unsigned char)( [pVCLBackColor redComponent] * 0xff ), (unsigned char)( [pVCLBackColor greenComponent] * 0xff ), (unsigned char)( [pVCLBackColor blueComponent] * 0xff ) );
+		aBackColor = Color( *pVCLBackColor );
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
 	aStyleSettings.SetDeactiveColor( aBackColor );

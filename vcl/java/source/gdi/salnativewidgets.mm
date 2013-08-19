@@ -111,7 +111,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus GetThemeMetric_Type( ThemeMetric nMetric, SInt32 *pMetric);
-typedef OSStatus GetThemeTextColor_Type( ThemeTextColor nColor, SInt16 nDepth, MacOSBoolean nColorDev, RGBColor *pColor );
 typedef OSStatus HIThemeDrawButton_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
 typedef OSStatus HIThemeDrawFrame_Type( const HIRect *pRect, const HIThemeFrameDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawGroupBox_Type( const HIRect *pRect, const HIThemeGroupBoxDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation );
@@ -129,7 +128,6 @@ static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
 static GetThemeMetric_Type *pGetThemeMetric = NULL;
-static GetThemeTextColor_Type *pGetThemeTextColor = NULL;
 static HIThemeDrawGroupBox_Type *pHIThemeDrawGroupBox = NULL;
 static HIThemeDrawButton_Type *pHIThemeDrawButton = NULL;
 static HIThemeDrawFrame_Type *pHIThemeDrawFrame = NULL;
@@ -1260,7 +1258,6 @@ static bool HIThemeInitialize()
 		if ( pLib )
 		{
 			pGetThemeMetric = (GetThemeMetric_Type *)dlsym( pLib, "GetThemeMetric" );
-			pGetThemeTextColor = (GetThemeTextColor_Type *)dlsym( pLib, "GetThemeTextColor" );
 			pHIThemeDrawButton = (HIThemeDrawButton_Type *)dlsym( pLib, "HIThemeDrawButton" );
 			pHIThemeDrawFrame = (HIThemeDrawFrame_Type *)dlsym( pLib, "HIThemeDrawFrame" );
 			pHIThemeDrawGroupBox = (HIThemeDrawGroupBox_Type *)dlsym( pLib, "HIThemeDrawGroupBox" );
@@ -1279,7 +1276,6 @@ static bool HIThemeInitialize()
 
 #ifdef DEBUG
 		fprintf( stderr, "pGetThemeMetric: %p\n", pGetThemeMetric );
-		fprintf( stderr, "pGetThemeTextColor: %p\n", pGetThemeTextColor );
 		fprintf( stderr, "pHIThemeDrawGroupBox: %p\n", pHIThemeDrawGroupBox );
 		fprintf( stderr, "pHIThemeDrawButton: %p\n", pHIThemeDrawButton );
 		fprintf( stderr, "pHIThemeDrawFrame: %p\n", pHIThemeDrawFrame );
@@ -1297,7 +1293,7 @@ static bool HIThemeInitialize()
 		bHIThemeInitialized = true;
 	}
 
-	return ( pGetThemeMetric && pGetThemeTextColor && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeDrawTrack && pHIThemeGetButtonBackgroundBounds && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape && pHIThemeGetTrackBounds );
+	return ( pGetThemeMetric && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeDrawTrack && pHIThemeGetButtonBackgroundBounds && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape && pHIThemeGetTrackBounds );
 }
 
 // =======================================================================
@@ -3653,17 +3649,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 }
 
 /**
- * (static) Convert a Mac RGBColor value into a SalColor.
- *
- * @param macColor 	Macintosh RGBColor struct
- * @return appropriate SalColor struct
- */
-static SalColor ConvertRGBColorToSalColor( const RGBColor& theColor )
-{
-	return( MAKE_SALCOLOR( ((double)theColor.red/(double)USHRT_MAX)*0xFF, ((double)theColor.green/(double)USHRT_MAX)*0xFF, ((double)theColor.blue/(double)USHRT_MAX)*0xFF ) );
-}
-
-/**
  * Get the color that should be used to draw the textual element of a control.
  * This allows VCL controls that use widget renderig to get control backgrounds
  * and parts to use the correct color for the VCL rendered control text.
@@ -3685,91 +3670,47 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
 
-	if ( !HIThemeInitialize() )
-		return bReturn;
-
-	RGBColor nativeColor;
-
 	switch( nType )
 	{
 
 		case CTRL_PUSHBUTTON:
 		case CTRL_RADIOBUTTON:
 		case CTRL_CHECKBOX:
+		case CTRL_LISTBOX:
 			{				
 				if( nState & CTRL_STATE_PRESSED )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonPressed, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonInactive, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
 				else
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonActive, 32, true, &nativeColor) == noErr);
-				}
-			}
-			break;
-
-		case CTRL_LISTBOX:
-			{
-				if( nState & CTRL_STATE_PRESSED )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonPressed, 32, true, &nativeColor) == noErr);
-				}
-				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonInactive, 32, true, &nativeColor) == noErr);
-				}
-				else
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonActive, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetControlTextColor( textColor );
 			}
 			break;
 
 		case CTRL_TAB_ITEM:
 			{
-				if( nState & CTRL_STATE_SELECTED )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorTabFrontActive, 32, true, &nativeColor) == noErr);
-				}
-				else if( nState & CTRL_STATE_PRESSED )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontPressed, 32, true, &nativeColor) == noErr);
-				}
+				if ( nState & CTRL_STATE_SELECTED )
+					bReturn = IsRunningSnowLeopard() ? JavaSalFrame::GetSelectedControlTextColor( textColor ) : JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+				else if ( nState & CTRL_STATE_PRESSED )
+					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontInactive, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
 				else
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontActive, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetControlTextColor( textColor );
 			}
 			break;
 
 		case CTRL_MENU_POPUP:
 			{
-				if( nState & CTRL_STATE_SELECTED )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemSelected , 32, true, &nativeColor) == noErr);
-				}
+				if ( nState & CTRL_STATE_SELECTED )
+					bReturn = JavaSalFrame::GetSelectedMenuItemTextColor( textColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemDisabled, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
 				else
-				{
-					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemActive, 32, true, &nativeColor) == noErr);
-				}
+					bReturn = JavaSalFrame::GetControlTextColor( textColor );
 			}
 			break;
 	}
-
-	if( bReturn )
-		textColor = ConvertRGBColorToSalColor( nativeColor );
 
 	return bReturn;
 }

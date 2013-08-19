@@ -102,6 +102,11 @@ public:
 	static const Rectangle	GetScreenBounds( long nX, long nY, long nWidth, long nHeight, sal_Bool bFullScreenMode );
 	static const Rectangle	GetScreenBounds( unsigned int nScreen, sal_Bool bFullScreenMode );
 	static unsigned int		GetScreenCount();
+	static BOOL				GetAlternateSelectedControlTextColor( SalColor& rSalColor );
+	static BOOL				GetControlTextColor( SalColor& rSalColor );
+	static BOOL				GetDisabledControlTextColor( SalColor& rSalColor );
+	static BOOL				GetSelectedControlTextColor( SalColor& rSalColor );
+	static BOOL				GetSelectedMenuItemTextColor( SalColor& rSalColor );
 	DECL_STATIC_LINK( JavaSalFrame, RunUpdateSettings, void* );
 
 							JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent );
