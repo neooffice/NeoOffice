@@ -39,7 +39,7 @@
 #import <Cocoa/Cocoa.h>
 
 #define MIN_MACOSX_MAJOR_VERSION 6
-#define MAX_MACOSX_MAJOR_VERSION 8
+#define MAX_MACOSX_MAJOR_VERSION 9
 #define TMPDIR "/var/tmp"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
