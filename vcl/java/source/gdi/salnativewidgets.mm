@@ -198,16 +198,69 @@ static bool IsRunningSnowLeopard()
 // =======================================================================
 
 @interface VCLNativeControlWindow : NSWindow
+{
+	MacOSBOOL				mbInactive;
+}
++ (id)createAndAttachToView:(NSControl *)pControl controlState:(ControlState)nControlState;
 - (MacOSBOOL)_hasActiveControls;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
 - (void)orderFrontRegardless;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
+- (void)setInactive:(MacOSBOOL)bInactive;
 @end
 
 @implementation VCLNativeControlWindow
 
++ (id)createAndAttachToView:(NSControl *)pControl controlState:(ControlState)nControlState
+{
+	VCLNativeControlWindow *pRet = nil;
+
+	if ( pControl && [pControl isEnabled] )
+	{
+		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pControl frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
+		if ( pRet )
+		{
+			[pRet autorelease];
+			[pRet setReleasedWhenClosed:NO];
+			[pRet setContentView:pControl];
+			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE )];
+		}
+	}
+
+	return pRet;
+}
+
 - (MacOSBOOL)_hasActiveControls
 {
-	return YES;
+	MacOSBOOL bActive = !mbInactive;
+	if ( bActive )
+	{
+		// If the application is not active, then force inactive state
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp && ![pApp isActive] )
+			bActive = NO;
+	}
+
+	return bActive;
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
+{
+	[super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+
+	mbInactive = NO;
+
+	return self;
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
+{
+	[super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+
+	mbInactive = NO;
+
+	return self;
 }
 
 - (void)orderFrontRegardless
@@ -218,6 +271,11 @@ static bool IsRunningSnowLeopard()
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber
 {
 	[super orderWindow:NSWindowOut relativeTo:0];
+}
+
+- (void)setInactive:(MacOSBOOL)bInactive
+{
+	mbInactive = bInactive;
 }
 
 @end
@@ -294,6 +352,10 @@ static bool IsRunningSnowLeopard()
 		[pCell setShowsFirstResponder:YES];
 	else
 		[pCell setShowsFirstResponder:NO];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
 
 	[pButton sizeToFit];
 
@@ -534,6 +596,10 @@ static bool IsRunningSnowLeopard()
 	else
 		[pCell setShowsFirstResponder:NO];
 
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pComboBox controlState:mnControlState];
+
 	[pComboBox sizeToFit];
 
 	return pComboBox;
@@ -573,6 +639,10 @@ static bool IsRunningSnowLeopard()
 		[pCell setShowsFirstResponder:YES];
 	else
 		[pCell setShowsFirstResponder:NO];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pPopUpButton controlState:mnControlState];
 
 	[pPopUpButton sizeToFit];
 
@@ -738,7 +808,8 @@ static bool IsRunningSnowLeopard()
 
 	[pScroller autorelease];
 
-	if ( mnControlState & CTRL_STATE_ENABLED )
+	// For scrollers, the inactive state is the same as the disabled state
+	if ( mnControlState & CTRL_STATE_ENABLED && ! ( mnControlState & CTRL_STATE_INACTIVE ) )
 		[pScroller setEnabled:YES];
 	else
 		[pScroller setEnabled:NO];
@@ -775,26 +846,14 @@ static bool IsRunningSnowLeopard()
 		}
 	}
 
-	if ( !SCROLLBAR_SUPPRESS_ARROWS )
-	{
-		// On Mac OS X 10.6, the enabled state is controlled by the
-		// [NSWindow _hasActiveControls] selector so we need to attach a
-		// custom hidden window to draw enabled
-		if ( [pScroller isEnabled] )
-		{
-			VCLNativeControlWindow *pWindow = [[VCLNativeControlWindow alloc] initWithContentRect:[pScroller frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
-			if ( pWindow )
-			{
-				[pWindow autorelease];
-				[pWindow setReleasedWhenClosed:NO];
-				[pWindow setContentView:pScroller];
-			}
-		}
-		else
-		{
-			[pScroller setEnabled:YES];
-		}
-	}
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pScroller controlState:mnControlState];
+
+	// On Mac OS X 10.6, disabling the scroller causes it to be drawn without
+	// any knob or arrows so we enabled it and draw with no attached window
+	if ( IsRunningSnowLeopard() && ![pScroller window] )
+		[pScroller setEnabled:YES];
 
 	[pScroller sizeToFit];
 
@@ -1699,7 +1758,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:YES bitmapBuffer:&aSharedComboBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1742,7 +1801,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:NO bitmapBuffer:&aSharedListBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1781,7 +1840,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		pBuffer = &aSharedVerticalScrollBarBuffer;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:pBuffer graphics:pGraphics scrollbarValue:pScrollbarValue doubleScrollbarArrows:GetSalData()->mbDoubleScrollbarArrows destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1823,7 +1882,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState = 0;
+				nState &= ~CTRL_STATE_ENABLED;
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
@@ -1909,7 +1968,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState = 0;
+				nState &= ~CTRL_STATE_ENABLED;
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
@@ -1956,7 +2015,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeTrackDrawInfo aTrackDrawInfo;
 		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue, bSmall );
@@ -2010,7 +2069,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeTabDrawInfo pTabDrawInfo;
 		InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
@@ -2052,7 +2111,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
 		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
@@ -2092,7 +2151,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
 		InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
@@ -2167,7 +2226,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeFrameDrawInfo pFrameInfo;
 		InitEditFieldDrawInfo( &pFrameInfo, nState );
@@ -2210,7 +2269,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeFrameDrawInfo pFrameInfo;
 		InitListBoxDrawInfo( &pFrameInfo, nState );
@@ -2254,7 +2313,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeButtonDrawInfo pButtonInfo;
 		InitDisclosureButtonDrawInfo( &pButtonInfo, nState, pValue );
@@ -2295,7 +2354,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeSeparatorDrawInfo pSepInfo;
 		InitSeparatorDrawInfo( &pSepInfo, nState );
@@ -2343,7 +2402,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState = 0;
+				nState &= ~CTRL_STATE_ENABLED;
 
 			HIThemeButtonDrawInfo pButtonInfo;
 			InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
@@ -2385,7 +2444,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
+			nState &= ~CTRL_STATE_ENABLED;
 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
@@ -2437,7 +2496,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		nButtonState = NSOffState;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSSwitchButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -2476,7 +2535,7 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		nButtonState = NSOffState;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -2515,7 +2574,7 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 		nButtonState = NSOffState;
 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-		nState = 0;
+		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -2817,9 +2876,6 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
-					nState = 0;
-
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				bOK = DrawNativePushButton( this, buttonRect, nState, aValue );
 			}
@@ -2828,9 +2884,6 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
-					nState = 0;
-
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				bOK = DrawNativeRadioButton( this, buttonRect, nState, aValue );
 			}
@@ -2839,9 +2892,6 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
-					nState = 0;
-
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				bOK = DrawNativeCheckbox( this, buttonRect, nState, aValue );
 			}
