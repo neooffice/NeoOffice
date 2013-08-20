@@ -201,7 +201,7 @@ static bool IsRunningSnowLeopard()
 {
 	MacOSBOOL				mbInactive;
 }
-+ (id)createAndAttachToView:(NSControl *)pControl controlState:(ControlState)nControlState;
++ (id)createAndAttachToView:(NSView *)pView controlState:(ControlState)nControlState;
 - (MacOSBOOL)_hasActiveControls;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
@@ -212,18 +212,18 @@ static bool IsRunningSnowLeopard()
 
 @implementation VCLNativeControlWindow
 
-+ (id)createAndAttachToView:(NSControl *)pControl controlState:(ControlState)nControlState
++ (id)createAndAttachToView:(NSView *)pView controlState:(ControlState)nControlState
 {
 	VCLNativeControlWindow *pRet = nil;
 
-	if ( pControl && [pControl isEnabled] )
+	if ( pView && ( ![pView isKindOfClass:[NSControl class]] || [(NSControl *)pView isEnabled] ) )
 	{
-		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pControl frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
+		pRet = [[VCLNativeControlWindow alloc] initWithContentRect:[pView frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
 		if ( pRet )
 		{
 			[pRet autorelease];
 			[pRet setReleasedWhenClosed:NO];
-			[pRet setContentView:pControl];
+			[pRet setContentView:pView];
 			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE )];
 		}
 	}
