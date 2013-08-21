@@ -218,7 +218,7 @@ static bool IsRunningSnowLeopard()
 			[pRet autorelease];
 			[pRet setReleasedWhenClosed:NO];
 			[pRet setContentView:pView];
-			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE )];
+			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE ? YES : NO )];
 		}
 	}
 
