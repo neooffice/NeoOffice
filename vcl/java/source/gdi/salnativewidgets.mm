@@ -75,6 +75,7 @@
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
+#define PROGRESSBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
 #define TABITEM_HEIGHT_SLOP				4
 // Fix most cases of checkbox and radio button clipping reported in the
 // following NeoOffice forum post by setting their width and height to the
@@ -116,11 +117,8 @@ typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const 
 typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
 typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeDrawTrack_Type( const HIThemeTrackDrawInfo *pDrawInfo, const HIRect *pGhostRect, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeGetButtonBackgroundBounds_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, HIRect *pBounds);
 typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIThemeGrowBoxDrawInfo *pDrawInfo, HIRect *pBounds);
 typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, HIShapeRef *pShape);
-typedef OSStatus HIThemeGetTrackBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, HIRect *pBounds);
 
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
@@ -133,11 +131,8 @@ static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
 static HIThemeDrawSeparator_Type *pHIThemeDrawSeparator = NULL;
 static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
 static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
-static HIThemeDrawTrack_Type *pHIThemeDrawTrack = NULL;
-static HIThemeGetButtonBackgroundBounds_Type *pHIThemeGetButtonBackgroundBounds = NULL;
 static HIThemeGetGrowBoxBounds_Type *pHIThemeGetGrowBoxBounds = NULL;
 static HIThemeGetTabShape_Type *pHIThemeGetTabShape = NULL;
-static HIThemeGetTrackBounds_Type *pHIThemeGetTrackBounds = NULL;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -1200,6 +1195,11 @@ static bool IsRunningSnowLeopard()
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
+					// Vertically center control
+					NSRect aFrame = [pProgressIndicator frame];
+					aFrame.origin.y += ( ( fOffscreenHeight - aFrame.size.height) / 2 ) + PROGRESSBAR_HEIGHT_SLOP;
+					[pProgressIndicator setFrame:aFrame];
+
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
@@ -1480,11 +1480,8 @@ static bool HIThemeInitialize()
 			pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
 			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
 			pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
-			pHIThemeDrawTrack = (HIThemeDrawTrack_Type *)dlsym( pLib, "HIThemeDrawTrack" );
-			pHIThemeGetButtonBackgroundBounds = (HIThemeGetButtonBackgroundBounds_Type *)dlsym( pLib, "HIThemeGetButtonBackgroundBounds" );
 			pHIThemeGetGrowBoxBounds = (HIThemeGetGrowBoxBounds_Type *)dlsym( pLib, "HIThemeGetGrowBoxBounds" );
 			pHIThemeGetTabShape = (HIThemeGetTabShape_Type *)dlsym( pLib, "HIThemeGetTabShape" );
-			pHIThemeGetTrackBounds = (HIThemeGetTrackBounds_Type *)dlsym( pLib, "HIThemeGetTrackBounds" );
 
 			dlclose( pLib );
 		}
@@ -1498,17 +1495,14 @@ static bool HIThemeInitialize()
 		fprintf( stderr, "pHIThemeDrawSeparator: %p\n", pHIThemeDrawSeparator );
 		fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
 		fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
-		fprintf( stderr, "pHIThemeDrawTrack: %p\n", pHIThemeDrawTrack );
-		fprintf( stderr, "pHIThemeGetButtonBackgroundBounds: %p\n", pHIThemeGetButtonBackgroundBounds );
 		fprintf( stderr, "pHIThemeGetGrowBoxBounds: %p\n", pHIThemeGetGrowBoxBounds );
 		fprintf( stderr, "pHIThemeGetTabShape: %p\n", pHIThemeGetTabShape );
-		fprintf( stderr, "pHIThemeGetTrackBounds: %p\n", pHIThemeGetTrackBounds );
 #endif	// DEBUG
 
 		bHIThemeInitialized = true;
 	}
 
-	return ( pGetThemeMetric && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeDrawTrack && pHIThemeGetButtonBackgroundBounds && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape && pHIThemeGetTrackBounds );
+	return ( pGetThemeMetric && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
 }
 
 // =======================================================================
