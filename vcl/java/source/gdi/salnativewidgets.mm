@@ -76,6 +76,7 @@
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define PROGRESSBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
+#define PROGRESSBARPADDING_HEIGHT		1
 #define TABITEM_HEIGHT_SLOP				4
 // Fix most cases of checkbox and radio button clipping reported in the
 // following NeoOffice forum post by setting their width and height to the
@@ -1190,16 +1191,16 @@ static bool IsRunningSnowLeopard()
 					CGColorRelease( aFillColor );
 				}
 
+				// Vertically center control. Note that we translate the
+				// context because we must use the [NSView drawRect:] selector
+				// to draw the control.
+				CGContextTranslateCTM( mpBuffer->maContext, 0, ( ( fOffscreenHeight - [pProgressIndicator frame].size.height ) / 2 ) + PROGRESSBAR_HEIGHT_SLOP );
+
 				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 				if ( pContext )
 				{
-					// Vertically center control
-					NSRect aFrame = [pProgressIndicator frame];
-					aFrame.origin.y += ( ( fOffscreenHeight - aFrame.size.height) / 2 ) + PROGRESSBAR_HEIGHT_SLOP;
-					[pProgressIndicator setFrame:aFrame];
-
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					[pProgressIndicator drawRect:[pProgressIndicator frame]];
@@ -3618,8 +3619,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					float fYAdjust = ( (float)controlRect.GetHeight() - aSize.height ) / 2;
 					NSRect preferredRect = NSMakeRect( controlRect.Left(), controlRect.Top() + fYAdjust, aSize.width > controlRect.GetWidth() ? aSize.width : controlRect.GetWidth(), aSize.height );
 
-					Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-					Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+					// Fix clipping of small progress bar by adding padding
+					Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y - PROGRESSBARPADDING_HEIGHT );
+					Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height + ( PROGRESSBARPADDING_HEIGHT * 2 ) );
 					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 					rNativeContentRegion = Region( rNativeBoundingRegion );
 
