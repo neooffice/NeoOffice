@@ -181,7 +181,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 			[pRet autorelease];
 			[pRet setReleasedWhenClosed:NO];
 			[pRet setContentView:pView];
-			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE )];
+			[pRet setInactive:( nControlState & CTRL_STATE_INACTIVE ? YES : NO )];
 		}
 	}
 
