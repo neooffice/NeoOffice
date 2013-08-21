@@ -75,8 +75,6 @@
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
-#define PROGRESS_WIDTH_SLOP				( IsRunningSnowLeopard() ? 1 : 0 )
-#define PROGRESS_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 0 : 1 )
 #define TABITEM_HEIGHT_SLOP				4
 // Fix most cases of checkbox and radio button clipping reported in the
 // following NeoOffice forum post by setting their width and height to the
@@ -1104,6 +1102,164 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface NSProgressIndicator (VCLNativeProgressbar)
+@end
+
+@interface VCLNativeProgressbar : NSObject
+{
+	ControlState			mnControlState;
+	NSControlSize			mnControlSize;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	ProgressbarValue*		mpProgressbarValue;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	NSSize					maSize;
+}
++ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect;
+- (NSProgressIndicator *)progressIndicator;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (void)getSize:(id)pObject;
+- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect;
+- (NSSize)size;
+@end
+
+@implementation VCLNativeProgressbar
+
++ (id)createWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect
+{
+	VCLNativeProgressbar *pRet = [[VCLNativeProgressbar alloc] initWithControlState:nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:pBuffer graphics:pGraphics progressbarValue:pProgressbarValue destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSProgressIndicator *)progressIndicator
+{
+	NSProgressIndicator *pProgressIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height / 2 )];
+	if ( !pProgressIndicator )
+		return nil;
+
+	[pProgressIndicator autorelease];
+
+	[pProgressIndicator setControlSize:mnControlSize];
+	[pProgressIndicator setStyle:NSProgressIndicatorBarStyle];
+	[pProgressIndicator setIndeterminate:NO];
+
+	double fRange = [pProgressIndicator maxValue] - [pProgressIndicator minValue];
+	if ( fRange < 1.0f )
+		fRange = 1.0f;
+
+	[pProgressIndicator setMinValue:0];
+	[pProgressIndicator setMaxValue:fRange];
+	[pProgressIndicator setDoubleValue:0];
+
+	if ( mpProgressbarValue )
+	{
+		if ( mpProgressbarValue->mbIndeterminate )
+			[pProgressIndicator setIndeterminate:YES];
+		else
+			[pProgressIndicator setDoubleValue:(double)mpProgressbarValue->mdPercentComplete * fRange / 100.0f];
+	}
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pProgressIndicator controlState:mnControlState];
+
+	[pProgressIndicator sizeToFit];
+
+	return pProgressIndicator;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSProgressIndicator *pProgressIndicator = [self progressIndicator];
+		if ( pProgressIndicator )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+				CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+
+				// Clear the background of the control with the fill color
+				CGColorRef aFillColor = CreateCGColorFromSalColor( mpGraphics->mnFillColor );
+				if ( aFillColor )
+				{
+					CGContextSetFillColorWithColor( mpBuffer->maContext, aFillColor );
+					CGContextFillRect( mpBuffer->maContext, aAdjustedDestRect );
+					CGColorRelease( aFillColor );
+				}
+
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+					[pProgressIndicator drawRect:[pProgressIndicator frame]];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (void)getSize:(id)pObject
+{
+	if ( NSEqualSizes( maSize, NSZeroSize ) )
+	{
+		NSProgressIndicator *pProgressIndicator = [self progressIndicator];
+		if ( pProgressIndicator )
+			maSize = [pProgressIndicator frame].size;
+	}
+}
+
+- (id)initWithControlState:(ControlState)nControlState controlSize:(NSControlSize)nControlSize bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics progressbarValue:(ProgressbarValue *)pProgressbarValue destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mnControlSize = nControlSize;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	mpProgressbarValue = pProgressbarValue;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	maSize = NSZeroSize;
+
+	return self;
+}
+
+- (NSSize)size
+{
+	return maSize;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -1422,50 +1578,6 @@ static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, Cont
 			pButtonDrawInfo->state = kThemeStateInactive;
 		else
 			pButtonDrawInfo->state = kThemeStateActive;
-	}
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Convert VCL progress bar codes into an HITheme progress bar
- * structure
- *
- * @param pTrackDrawInfo	HITheme progress bar structure
- * @param nState			control state of the progress bar (enabled vs. disabled)
- * @param bounds			drawing bounds of the progress bar
- * @param pProgressbarValue	optional value providing progress bar specific
- *							info
- * @param bSmall			TRUE to use small progress bar otherwise use large
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ProgressbarValue *pProgressbarValue, BOOL bSmall )
-{
-	static UInt8 phase = 0x1;
-
-	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
-	pTrackDrawInfo->version = 0;
-	if ( bSmall )
-		pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarMedium : kThemeProgressBarMedium );
-	else
-		pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarLarge : kThemeProgressBarLarge );
-	pTrackDrawInfo->bounds.origin.x = 0;
-	pTrackDrawInfo->bounds.origin.y = 0;
-	pTrackDrawInfo->bounds.size.width = bounds.GetWidth();
-	pTrackDrawInfo->bounds.size.height = bounds.GetHeight();
-	if( bounds.GetWidth() > bounds.GetHeight() )
-		pTrackDrawInfo->attributes |= kThemeTrackHorizontal;
-	pTrackDrawInfo->enableState = kThemeTrackActive;
-	pTrackDrawInfo->min = 0;
-	pTrackDrawInfo->max = 100;
-	if( pProgressbarValue )
-	{
-		pTrackDrawInfo->value = (int)pProgressbarValue->mdPercentComplete;
-		if( pProgressbarValue->mbIndeterminate )
-		{
-			pTrackDrawInfo->trackInfo.progress.phase = phase++;
-		}
 	}
 	return TRUE;
 }
@@ -2010,38 +2122,19 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
  */
 static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue, BOOL bSmall )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedProgressbarBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeTrackDrawInfo aTrackDrawInfo;
-		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue, bSmall );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = PROGRESS_WIDTH_SLOP * -1;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth() + ( PROGRESS_WIDTH_SLOP * 2 );
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		// clear the background of the control with the fill color
-		CGColorRef aFillColor = CreateCGColorFromSalColor( pGraphics->mnFillColor );
-		if ( aFillColor )
-		{
-			CGContextSetFillColorWithColor( pBuffer->maContext, aFillColor );
-			CGContextFillRect( pBuffer->maContext, destRect );
-			CGColorRelease( aFillColor );
-		}
+	VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( bSmall ? NSSmallControlSize : NSRegularControlSize ) bitmapBuffer:&aSharedProgressbarBuffer graphics:pGraphics progressbarValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeProgressbar performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeProgressbar drawn];
 
-		bRet = ( pHIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
-
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -3519,21 +3612,27 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					aProgressbarValue.mdPercentComplete = (double)( aValue.getNumericVal() * 100 / controlRect.GetWidth() );
 				}
 
-				HIThemeTrackDrawInfo pTrackDrawInfo;
-				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, &aProgressbarValue, nType == CTRL_INTROPROGRESS ? TRUE : FALSE );
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				HIRect bounds;
-				pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == CTRL_INTROPROGRESS ? NSSmallControlSize : NSRegularControlSize ) bitmapBuffer:NULL graphics:NULL progressbarValue:&aProgressbarValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeProgressbar performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
+				NSSize aSize = [pVCLNativeProgressbar size];
+				if ( !NSEqualSizes( aSize, NSZeroSize ) )
+				{
+					// Vertically center the preferred bounds
+					float fYAdjust = ( (float)controlRect.GetHeight() - aSize.height ) / 2;
+					NSRect preferredRect = NSMakeRect( controlRect.Left(), controlRect.Top() + fYAdjust, aSize.width > controlRect.GetWidth() ? aSize.width : controlRect.GetWidth(), aSize.height );
 
-				bounds.origin.y += PROGRESS_HEIGHT_SLOP;
-				bounds.size.height -= PROGRESS_HEIGHT_SLOP;
+					Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+					Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
 
-				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
-				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
+					bReturn = TRUE;
+				}
 
-				bReturn = TRUE;
+				[pPool release];
 			}
 			break;
 
