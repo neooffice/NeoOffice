@@ -115,6 +115,9 @@ update_installation() {
 		done
 	fi
 
+    # Make sure that all directories and files are readable by all
+    chmod -Rf a+r "$2" || return 1
+
 	# Touch shared libraries to fix bug 280
 	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
 		touch -f "$2/Contents/$i"   
