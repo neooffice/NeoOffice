@@ -1199,6 +1199,10 @@ static NSUInteger nMouseMask = 0;
 			return;
 	}
 
+	// Fix crashing when rapidly closing several windows by retaining this
+	// window as this window may get released by the parent class
+	[self retain];
+
 	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
 		[super poseAsSendEvent:pEvent];
 
@@ -1207,7 +1211,12 @@ static NSUInteger nMouseMask = 0;
 	// custom windows as some of the native modal panels will dealloc windows
 	// during [NSWindow sendEvent:]:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62851#62851
-	if ( bIsVCLWindow && [self isVisible] && mpFrame )
+	MacOSBOOL bVisible = [self isVisible];
+	[self release];
+	if ( !bVisible )
+		return;
+
+	if ( bIsVCLWindow && mpFrame )
 	{
 		// Handle all mouse events
 		if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
