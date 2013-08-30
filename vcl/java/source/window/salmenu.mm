@@ -1168,7 +1168,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 	// in the application menu. Also, fix bug 2886 by not allowing any
 	// shortcuts with a space as Java will disable a tab and the shortcut
 	// be unusable.
-	if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
+	if ( mpMenu && rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
 	{
 		// assume pSalMenuItem is a pointer to the item to be associated with
 		// the new shortcut
@@ -1247,6 +1247,13 @@ SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenuWrapper )
 	{
 		[pMenu retain];
 		pSalMenu->mpMenu = pMenu;
+	}
+	else
+	{
+		// If no native menu is created, revert to non-native menus or else
+		// the OOo code will eventually crash
+		delete pSalMenu;
+		return NULL;
 	}
 
 	[pPool release];
