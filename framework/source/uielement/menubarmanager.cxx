@@ -2389,7 +2389,13 @@ void MenuBarManager::SetItemContainer( const Reference< XIndexAccess >& rItemCon
 
         // Refill menu manager again
         Reference< XDispatchProvider > xDispatchProvider;
+#ifdef USE_JAVA
+        // Fix memory leak when editing an embedded OLE object in a document by
+        // preserving the current menubar's deletion flags
+        FillMenuManager( m_pVCLMenu, xFrame, xDispatchProvider, m_aModuleIdentifier, m_bDeleteMenu, m_bDeleteChildren );
+#else	// USE_JAVA
         FillMenuManager( m_pVCLMenu, xFrame, xDispatchProvider, m_aModuleIdentifier, sal_False, sal_True );
+#endif	 // USE_JAVA
 
         // add itself as frame action listener
         m_xFrame->addFrameActionListener( Reference< XFrameActionListener >( static_cast< OWeakObject* >( this ), UNO_QUERY ));
