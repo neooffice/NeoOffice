@@ -555,7 +555,7 @@ endif
 # Install OOo .oxt files. Note that we exclude the wiki-publisher.oxt file as
 # has been found to have buggy network connectivity. Fix bug 3501 by using our
 # patched build of sun-presentation-minimizer.oxt.
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OOO-BUILD_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" | grep -v "wiki-publisher.oxt" | grep -v "sun-presentation-minimizer.oxt"` "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sdext/$(UOUTPUTDIR)/bin/sun-presentation-minimizer.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OOO-BUILD_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" | grep -v "wiki-publisher.oxt" | grep -v "sun-presentation-minimizer.oxt"` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/sun-presentation-minimizer.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 # Reinstall dictionary .oxt files removed by patches/openoffice/scp2.patch
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find -E "$(PWD)/$(OOO-BUILD_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/pck" -type f -name "*.oxt" -regex ".*\/dict-(en|es|fr)\.oxt"` ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 # Install shared .oxt files
@@ -694,6 +694,7 @@ endif
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
 	cd "$(PATCH_INSTALL_HOME)/tmp" ; sh -e -c 'for i in `echo "$(PRODUCT_COMPONENT_PATCH_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then mkdir "$$i" ; ( cd "$$i" ; unzip "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ; for j in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$j" ; done ; zip -r "$(PWD)/$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts/$$i.oxt" . ) ; rm -Rf "$$i" ; fi ; done'
+	cd "$(PATCH_INSTALL_HOME)/tmp" ; sh -e -c 'for i in pdfimport sun-presentation-minimizer ; do if [ -f "$(PWD)/sdext/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then mkdir "$$i" ; ( cd "$$i" ; unzip "$(PWD)/sdext/$(UOUTPUTDIR)/bin/$$i.oxt" ; for j in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$j" ; done ; zip -r "$(PWD)/$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts/$$i.oxt" . ) ; rm -Rf "$$i" ; fi ; done'
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(PATCH_INSTALL_HOME)/emptydir"
