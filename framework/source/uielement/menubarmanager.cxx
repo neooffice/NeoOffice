@@ -585,6 +585,23 @@ void SAL_CALL MenuBarManager::dispose() throw( RuntimeException )
         }
         m_xDocImageManager.clear();
         m_xModuleImageManager.clear();
+#ifdef USE_JAVA
+        // Fix memory leak reported in the following NeOffice forum post by
+        // disposing global and module accelerator managers:
+        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64433#64433
+        if ( m_xGlobalAcceleratorManager.is() )
+        {
+            Reference< XReference > xReference( m_xGlobalAcceleratorManager, UNO_QUERY );
+            if ( xReference.is() )
+                xReference->dispose();
+        }
+        if ( m_xModuleAcceleratorManager.is() )
+        {
+            Reference< XReference > xReference( m_xModuleAcceleratorManager, UNO_QUERY );
+            if ( xReference.is() )
+                xReference->dispose();
+        }
+#endif	// USE_JAVA
         m_xGlobalAcceleratorManager.clear();
         m_xModuleAcceleratorManager.clear();
         m_xDocAcceleratorManager.clear();
