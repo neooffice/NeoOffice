@@ -282,6 +282,7 @@ static bool IsRunningSnowLeopard()
 	NSControlSize			mnControlSize;
 	NSInteger				mnButtonState;
 	ControlState			mnControlState;
+	MacOSBOOL				mbDrawRTL;
 	VCLBitmapBuffer*		mpBuffer;
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
@@ -289,21 +290,22 @@ static bool IsRunningSnowLeopard()
 	MacOSBOOL				mbRedraw;
 	NSSize					maSize;
 }
-+ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
++ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 - (NSButton *)button;
 - (void)draw:(id)pObject;
 - (MacOSBOOL)drawn;
 - (void)getSize:(id)pObject;
-- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSButton *)button;
 - (MacOSBOOL)redraw;
 - (NSSize)size;
 @end
 
 @implementation VCLNativeButton
 
-+ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
++ (id)createWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
-	VCLNativeButton *pRet = [[VCLNativeButton alloc] initWithButtonType:nButtonType controlSize:nControlSize buttonState:nButtonState controlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	VCLNativeButton *pRet = [[VCLNativeButton alloc] initWithButtonType:nButtonType controlSize:nControlSize buttonState:nButtonState controlState:nControlState drawRTL:bDrawRTL bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
 	[pRet autorelease];
 	return pRet;
 }
@@ -321,7 +323,10 @@ static bool IsRunningSnowLeopard()
 		return nil;
 
 	[pButton setButtonType:mnButtonType];
-	[pButton setBezelStyle:NSRoundedBezelStyle];
+	if ( mnButtonType == NSOnOffButton )
+		[pButton setBezelStyle:NSDisclosureBezelStyle];
+	else
+		[pButton setBezelStyle:NSRoundedBezelStyle];
 	[pButton setState:mnButtonState];
 	[pButton setTitle:@""];
 	[pCell setControlSize:mnControlSize];
@@ -342,7 +347,7 @@ static bool IsRunningSnowLeopard()
 		[pButton highlight:NO];
 	}
 
-	if ( mnControlState & CTRL_STATE_FOCUSED )
+	if ( mnButtonType != NSOnOffButton && mnControlState & CTRL_STATE_FOCUSED )
 		[pCell setShowsFirstResponder:YES];
 	else
 		[pCell setShowsFirstResponder:NO];
@@ -407,6 +412,13 @@ static bool IsRunningSnowLeopard()
 					CGContextSaveGState( mpBuffer->maContext );
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+
+					if ( mbDrawRTL )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, aAdjustedDestRect.size.width, 0 );
+						CGContextScaleCTM( mpBuffer->maContext, -1.0f, 1.0f );
+					}
+
 					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
@@ -484,7 +496,7 @@ static bool IsRunningSnowLeopard()
 	}
 }
 
-- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+- (id)initWithButtonType:(NSButtonType)nButtonType controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
 	[super init];
 
@@ -492,6 +504,7 @@ static bool IsRunningSnowLeopard()
 	mnControlSize = nControlSize;
 	mnButtonState = nButtonState;
 	mnControlState = nControlState;
+	mbDrawRTL = bDrawRTL;
 	mpBuffer = pBuffer;
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
@@ -1734,40 +1747,6 @@ static BOOL InitListBoxDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlState 
 
 // =======================================================================
 
-/**
- * (static) Initialize HITheme structures used to draw a disclosure arrow
- *
- * @param pButtonInfo	pointer to HITheme button info structure to be
- *						initialized
- * @param nState		control state of the disclosure button
- * @param pValue		pointer to VCL disclosure button value structure
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitDisclosureButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo, ControlState nState, DisclosureBtnValue *pValue )
-{
-	memset( pButtonInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
-	pButtonInfo->version = 0;
-	pButtonInfo->kind = kThemeDisclosureTriangle;
-	if ( pValue->mnOpenCloseState == DISCLOSUREBTN_OPEN )
-	{
-		pButtonInfo->value = kThemeDisclosureDown;
-	}
-	else
-	{
-		if ( pValue->mnAlignment == DISCLOSUREBTN_ALIGN_LEFT )
-			pButtonInfo->value = kThemeDisclosureRight; // if left of container, point to the right
-		else
-			pButtonInfo->value = kThemeDisclosureLeft;
-	}
-	if ( nState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
-		pButtonInfo->state = kThemeStatePressed;
-	else if ( nState & CTRL_STATE_ENABLED )
-		pButtonInfo->state = kThemeStateActive;
-	else
-		pButtonInfo->state = kThemeStateInactive;
-	return TRUE;
-}
-
 // =======================================================================
 
 /**
@@ -2396,29 +2375,25 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
  */
 static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, DisclosureBtnValue *pValue )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedDisclosureBtnBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeButtonDrawInfo pButtonInfo;
-		InitDisclosureButtonDrawInfo( &pButtonInfo, nState, pValue );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	NSInteger nButtonState;
+	if ( pValue && pValue->mnOpenCloseState == DISCLOSUREBTN_OPEN )
+		nButtonState = NSOnState;
+	else
+		nButtonState = NSOffState;
 
-		bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-	}
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-	pBuffer->ReleaseContext();
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:( pValue && pValue->mnAlignment == DISCLOSUREBTN_ALIGN_RIGHT ? YES : NO ) bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeButton drawn];
 
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2586,7 +2561,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSSwitchButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSSwitchButton controlSize:nControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -2625,7 +2600,7 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSRadioButton controlSize:nControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -2664,7 +2639,7 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -3239,7 +3214,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// appropriate style.
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:NSOffState controlState:0 bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
+				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSMomentaryLightButton controlSize:NSRegularControlSize buttonState:NSOffState controlState:0 drawRTL:NO bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				[pVCLNativeButton performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 				NSSize aSize = [pVCLNativeButton size];
