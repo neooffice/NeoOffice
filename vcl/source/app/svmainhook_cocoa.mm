@@ -91,7 +91,10 @@ void NSApplication_run()
 		}
 
 		if ( !bBundleOK )
+		{
+			NSLog( @"Application's main bundle info dictionary is damaged" );
 			_exit( 1 );
+		}
 
 		if ( pBundle && [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
  			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
