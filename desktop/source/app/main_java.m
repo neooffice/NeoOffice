@@ -93,21 +93,22 @@ int java_main( int argc, char **argv )
 	// Determine if we are running in unopkg mode
 	BOOL bUnoPkg = ( argc >= 2 && !strcmp( "-unopkg", argv[ 1 ] ) ? YES : NO );
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	// Don't allow running as root as we really cannot trust that we won't
 	// do any accidental damage
 	if ( !bUnoPkg && getuid() == 0 )
 	{
-		fprintf( stderr, "%s: running as root user is not allowed\n", argv[ 0 ] );
+		NSLog( @"Running as root user is not allowed" );
+		[pPool release];
 		_exit( 1 );
 	}
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	// Use CFBundle as [NSBundle mainBundle] will cause Java menu load failures
 	CFBundleRef aMainBundle = CFBundleGetMainBundle();
 	if ( !aMainBundle )
 	{
-		fprintf( stderr, "%s: application's main bundle is nil\n", argv[ 0 ] );
+		NSLog( @"Application's main bundle is nil" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -123,7 +124,7 @@ int java_main( int argc, char **argv )
 	}
 	if ( !pBundlePath )
 	{
-		fprintf( stderr, "%s: application's main bundle path is nil\n", argv[ 0 ] );
+		NSLog( @"Application's main bundle path is nil" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -137,7 +138,7 @@ int java_main( int argc, char **argv )
 		pProgramPath = [pProgramPath stringByAppendingPathComponent:@"program"];
 	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
 	{
-		fprintf( stderr, "%s: application's main bundle path missing program softlink\n", argv[ 0 ] );
+		NSLog( @"Application's main bundle path missing program softlink" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -153,7 +154,7 @@ int java_main( int argc, char **argv )
 	}
 	if ( !pCmdPath )
 	{
-		fprintf( stderr, "%s: application's executable path is nil\n", argv[ 0 ] );
+		NSLog( @"Application's executable path is nil" );
 		[pPool release];
 		_exit( 1 );
 	}
