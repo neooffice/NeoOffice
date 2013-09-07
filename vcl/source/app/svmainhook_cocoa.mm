@@ -93,6 +93,7 @@ void NSApplication_run()
 		if ( !bBundleOK )
 		{
 			NSLog( @"Application's main bundle info dictionary is damaged" );
+			[pPool release];
 			_exit( 1 );
 		}
 
