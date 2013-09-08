@@ -401,10 +401,7 @@ static NSTimer *pUpdateTimer = nil;
 		{
 			::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
 			if ( it != aNativeWindowMap.end() )
-			{
-				[it->first release];
 				aNativeWindowMap.erase( it );
-			}
 		}
 	}
 
@@ -414,7 +411,6 @@ static NSTimer *pUpdateTimer = nil;
 	{
 		if ( it->second == mpGraphics )
 		{
-			[it->first release];
 			aNativeWindowMap.erase( it );
 			it = aNativeWindowMap.begin();
 			continue;
@@ -439,10 +435,7 @@ static NSTimer *pUpdateTimer = nil;
 			{
 				maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( aContentRect.size.width, aContentRect.size.height ), NULL );
 				if ( maLayer )
-				{
-					[pWindow retain];
 					aNativeWindowMap[ pWindow ] = mpGraphics;
-				}
 			}
 		}
 	}
@@ -602,22 +595,6 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	NSView *pContentView = [pWindow contentView];
 	if ( !pContentView )
 		return;
-
-	// Remove any hidden windows from cursor map
-	::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.begin();
-	while ( cit != aNativeCursorMap.end() )
-	{
-		if ( ![cit->first isVisible] )
-		{
-			[cit->first release];
-			[cit->second release];
-			aNativeCursorMap.erase( cit );
-			cit = aNativeCursorMap.begin();
-			continue;
-		}
-
-		++cit;
-	}
 
 	// Populate cached cursors
 	if ( !aVCLCustomCursors.size() )
@@ -867,9 +844,12 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 
 	if ( pCursor )
 	{
-		aNativeCursorMap[ pWindow ] = pCursor;
-		[pWindow retain];
+		::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( pWindow );
+		if ( cit != aNativeCursorMap.end() )
+			[cit->second release];
+
 		[pCursor retain];
+		aNativeCursorMap[ pWindow ] = pCursor;
 		[pWindow invalidateCursorRectsForView:pContentView];
 	}
 }
@@ -1422,9 +1402,20 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// mode state
 		[mpWindow close];
 
-		::std::map< VCLWindow*, VCLWindow* >::iterator it = aShowOnlyMenusWindowMap.find ( mpWindow );
-		if ( it != aShowOnlyMenusWindowMap.end() )
-			aShowOnlyMenusWindowMap.erase( it );
+		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
+		if ( nwit != aNativeWindowMap.end() )
+			aNativeWindowMap.erase( nwit );
+
+		::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
+		if ( cit != aNativeCursorMap.end() )
+		{
+			[cit->second release];
+			aNativeCursorMap.erase( cit );
+		}
+
+		::std::map< VCLWindow*, VCLWindow* >::iterator somwit = aShowOnlyMenusWindowMap.find ( mpWindow );
+		if ( somwit != aShowOnlyMenusWindowMap.end() )
+			aShowOnlyMenusWindowMap.erase( somwit );
 
 		[mpWindow release];
 		mpWindow = nil;
@@ -1861,6 +1852,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// screen mode, order out will leave the application in an empty full
 			// mode state
 			[mpWindow close];
+
+			// Release cached cursor
+			::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
+			if ( cit != aNativeCursorMap.end() )
+			{
+				[cit->second release];
+				aNativeCursorMap.erase( cit );
+			}
 		}
 	}
 
