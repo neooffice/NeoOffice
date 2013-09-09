@@ -153,6 +153,19 @@
 
 #include "langselect.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <rtl/digest.h>
+
+#include <premac.h>
+#import <objc/objc-runtime.h>
+#import <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+extern "C" void NSLog( id, ... );
+
+#endif	// USE_JAVA && MACOSX
+
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 #define U2S(STRING)                                ::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
 
@@ -186,6 +199,7 @@ static SalMainPipeExchangeSignalHandler* pSignalHandler = 0;
 static sal_Bool _bCrashReporterEnabled = sal_True;
 #if defined USE_JAVA && defined MACOSX
 static bool _bSuppressOpenDefault = false;
+static bool _bProductNameOK = false;
 #endif	// USE_JAVA && MACOSX
 
 static const ::rtl::OUString CFG_PACKAGE_COMMON_HELP   ( RTL_CONSTASCII_USTRINGPARAM( "org.openoffice.Office.Common/Help"));
@@ -425,6 +439,30 @@ void ReplaceStringHookProc( UniString& rStr )
         rStr.SearchAndReplaceAllAscii( "%PRODUCTEXTENSION", rExtension );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATNAME", rXMLFileFormatName );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATVERSION", rXMLFileFormatVersion );
+
+#if defined USE_JAVA && defined MACOSX
+        if ( !_bProductNameOK )
+        {
+            const sal_Char *pKeyString = rtl::OUStringToOString( rBrandName, RTL_TEXTENCODING_UTF8 ).getStr();
+            if ( pKeyString )
+            {
+                sal_uInt8 aBuf[ RTL_DIGEST_LENGTH_MD5 ];
+
+                if ( rtl_digest_MD5( pKeyString, strlen( pKeyString ), aBuf, sizeof( aBuf ) ) == rtl_Digest_E_None )
+                {
+                    sal_Char aKeyMD5[ ( RTL_DIGEST_LENGTH_MD5 * 2 ) + 1 ];
+                    if ( snprintf( aKeyMD5, sizeof( aKeyMD5 ), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", aBuf[0], aBuf[1], aBuf[2], aBuf[3], aBuf[4], aBuf[5], aBuf[6], aBuf[7], aBuf[8], aBuf[9], aBuf[10], aBuf[11], aBuf[12], aBuf[13], aBuf[14], aBuf[15] ) == sizeof( aKeyMD5 ) - 1 && !strcmp( aKeyMD5, PRODUCT_MD5 ) )
+                        _bProductNameOK = true;
+                }
+            }
+        }
+
+        if ( !_bProductNameOK )
+        {
+            NSLog( (id)CFSTR( "Application's internal registry is damaged" ) );
+            _exit( 1 );
+        }
+#endif	// USE_JAVA && MACOSX
     }
 
 	if ( rStr.SearchAscii( "%WRITERCOMPATIBILITYVERSIONOOO11" ) != STRING_NOTFOUND )
