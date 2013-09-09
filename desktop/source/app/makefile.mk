@@ -43,6 +43,10 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
+.IF "$(GUIBASE)" == "java"
+CDEFS+=-DPRODUCT_MD5=\"$(shell md5 -q -s "$(PRODUCT_NAME)")\"
+.ENDIF		# "$(GUIBASE)" == "java"
+
 .IF "$(GUIBASE)"=="aqua"
 CFLAGS+=-x objective-c++
 .ENDIF
@@ -104,6 +108,8 @@ OBJFILES += \
 .IF "$(GUIBASE)" == "java"
 OBJFILES += \
     $(OBJ)$/main_java.obj
+SHL1STDLIBS += \
+    -framework Foundation
 .ENDIF		# "$(GUIBASE)" == "java"
 
 SLOFILES = $(SHL1OBJS)
