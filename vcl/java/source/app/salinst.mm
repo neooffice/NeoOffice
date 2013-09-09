@@ -527,8 +527,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	if ( bMainEventLoop )
 	{
 		// Fix bug 2731 by not doing this when we are in the begin menubar
-		// tracking handler.
-		if ( pSalData->maNativeEventCondition.check() )
+		// tracking handler. Do not dispatch native events when in a drag
+		// session as it will consume mouse released events and that will
+		// cause [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
+		// to never return.
+		if ( !bInNativeDrag && pSalData->maNativeEventCondition.check() )
 			NSApplication_dispatchPendingEvents();
 	}
 	else
