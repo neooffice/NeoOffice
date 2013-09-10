@@ -70,8 +70,8 @@
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
+#define FRAME_TRIMWIDTH					1
 #define LISTBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 21 : 19 )
-#define LISTVIEWFRAME_TRIMWIDTH			1
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
@@ -3226,12 +3226,12 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
 				{
 					Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
-					ctrlRect.Left() -= LISTVIEWFRAME_TRIMWIDTH;
-					ctrlRect.Top() -= LISTVIEWFRAME_TRIMWIDTH;
+					ctrlRect.Left() -= FRAME_TRIMWIDTH;
+					ctrlRect.Top() -= FRAME_TRIMWIDTH;
 					if ( nValue & FRAME_DRAW_DOUBLEIN )
 					{
-						ctrlRect.Right() += LISTVIEWFRAME_TRIMWIDTH;
-						ctrlRect.Bottom() += LISTVIEWFRAME_TRIMWIDTH;
+						ctrlRect.Right() += FRAME_TRIMWIDTH;
+						ctrlRect.Bottom() += FRAME_TRIMWIDTH;
 					}
 					bOK = DrawNativeListBoxFrame( this, ctrlRect, CTRL_STATE_ENABLED );
 				}
@@ -3856,12 +3856,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
 				{
 					Rectangle controlRect = rRealControlRegion.GetBoundRect();
-					controlRect.Left() += LISTVIEWFRAME_TRIMWIDTH;
-					controlRect.Top() += LISTVIEWFRAME_TRIMWIDTH;
+					controlRect.Left() += FRAME_TRIMWIDTH;
+					controlRect.Top() += FRAME_TRIMWIDTH;
 					if ( nValue & FRAME_DRAW_DOUBLEIN )
 					{
-						controlRect.Right() -= LISTVIEWFRAME_TRIMWIDTH;
-						controlRect.Bottom() -= LISTVIEWFRAME_TRIMWIDTH;
+						controlRect.Right() -= FRAME_TRIMWIDTH;
+						controlRect.Bottom() -= FRAME_TRIMWIDTH;
 					}
 					rNativeBoundingRegion = Region( controlRect );
 					rNativeContentRegion = Region( rNativeBoundingRegion );
