@@ -113,7 +113,6 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus GetThemeMetric_Type( ThemeMetric nMetric, SInt32 *pMetric);
 typedef OSStatus HIThemeDrawButton_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
 typedef OSStatus HIThemeDrawFrame_Type( const HIRect *pRect, const HIThemeFrameDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeDrawGroupBox_Type( const HIRect *pRect, const HIThemeGroupBoxDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation );
 typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const HIThemeMenuDrawInfo *pMenuDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
@@ -125,7 +124,6 @@ static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
 static GetThemeMetric_Type *pGetThemeMetric = NULL;
-static HIThemeDrawGroupBox_Type *pHIThemeDrawGroupBox = NULL;
 static HIThemeDrawButton_Type *pHIThemeDrawButton = NULL;
 static HIThemeDrawFrame_Type *pHIThemeDrawFrame = NULL;
 static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
@@ -408,8 +406,11 @@ static bool IsRunningSnowLeopard()
 				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
-					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
-					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					if ( [pButton isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
 
 					if ( mbDrawRTL )
 					{
@@ -673,8 +674,11 @@ static bool IsRunningSnowLeopard()
 				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
-					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
-					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					if ( [pControl isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
 					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
@@ -894,8 +898,11 @@ static bool IsRunningSnowLeopard()
 			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
-				CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
-				CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				if ( [pScroller isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
 
 				// Fix bug 2031 by always filling the background with white
 				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -1110,9 +1117,6 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
-@interface NSProgressIndicator (VCLNativeProgressbar)
-@end
-
 @interface VCLNativeProgressbar : NSObject
 {
 	ControlState			mnControlState;
@@ -1191,8 +1195,11 @@ static bool IsRunningSnowLeopard()
 			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
-				CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
-				CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				if ( [pProgressIndicator isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
 
 				// Clear the background of the control with the fill color
 				CGColorRef aFillColor = CreateCGColorFromSalColor( mpGraphics->mnFillColor );
@@ -1267,6 +1274,112 @@ static bool IsRunningSnowLeopard()
 - (NSSize)size
 {
 	return maSize;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeBox : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSBox *)box;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeBox
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	VCLNativeBox *pRet = [[VCLNativeBox alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSBox *)box
+{
+	NSBox *pBox = [[NSBox alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pBox )
+		return nil;
+
+	[pBox autorelease];
+
+	[pBox setTitle:@""];
+	[pBox setTitlePosition:NSNoTitle];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pBox controlState:mnControlState];
+
+	return pBox;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSBox *pBox = [self box];
+		if ( pBox )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				if ( [pBox isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+					[pBox drawRect:[pBox frame]];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
 }
 
 @end
@@ -1488,7 +1601,6 @@ static bool HIThemeInitialize()
 			pGetThemeMetric = (GetThemeMetric_Type *)dlsym( pLib, "GetThemeMetric" );
 			pHIThemeDrawButton = (HIThemeDrawButton_Type *)dlsym( pLib, "HIThemeDrawButton" );
 			pHIThemeDrawFrame = (HIThemeDrawFrame_Type *)dlsym( pLib, "HIThemeDrawFrame" );
-			pHIThemeDrawGroupBox = (HIThemeDrawGroupBox_Type *)dlsym( pLib, "HIThemeDrawGroupBox" );
 			pHIThemeDrawMenuBackground = (HIThemeDrawMenuBackground_Type *)dlsym( pLib, "HIThemeDrawMenuBackground" );
 			pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
 			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
@@ -1501,7 +1613,6 @@ static bool HIThemeInitialize()
 
 #ifdef DEBUG
 		fprintf( stderr, "pGetThemeMetric: %p\n", pGetThemeMetric );
-		fprintf( stderr, "pHIThemeDrawGroupBox: %p\n", pHIThemeDrawGroupBox );
 		fprintf( stderr, "pHIThemeDrawButton: %p\n", pHIThemeDrawButton );
 		fprintf( stderr, "pHIThemeDrawFrame: %p\n", pHIThemeDrawFrame );
 		fprintf( stderr, "pHIThemeDrawMenuBackground: %p\n", pHIThemeDrawMenuBackground );
@@ -1515,7 +1626,7 @@ static bool HIThemeInitialize()
 		bHIThemeInitialized = true;
 	}
 
-	return ( pGetThemeMetric && pHIThemeDrawGroupBox && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
+	return ( pGetThemeMetric && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
 }
 
 // =======================================================================
@@ -1640,29 +1751,6 @@ static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, Contr
 		pTabPaneDrawInfo->state = kThemeStateInactive;
 	else
 		pTabPaneDrawInfo->state = kThemeStateActive;
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize an HITheme groupbox draw structure to draw a primary
- * group box.
- *
- * @param pDrawInfo		pointer to the HITheme group box draw structure to
- *						initialize
- * @param nState		overall control state of the group box
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitPrimaryGroupBoxDrawInfo( HIThemeGroupBoxDrawInfo *pDrawInfo, ControlState nState )
-{
-	memset( pDrawInfo, 0, sizeof( HIThemeGroupBoxDrawInfo ) );
-	pDrawInfo->version = 0;
-	if( ! ( nState & CTRL_STATE_ENABLED ) )
-		pDrawInfo->state = kThemeStateInactive;
-	else
-		pDrawInfo->state = kThemeStateActive;
-	pDrawInfo->kind = kHIThemeGroupBoxKindPrimary;
 	return TRUE;
 }
 
@@ -2190,29 +2278,19 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedPrimaryGroupBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
-		InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeBox *pVCLNativeBox = [VCLNativeBox createWithControlState:nState bitmapBuffer:&aSharedPrimaryGroupBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeBox performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeBox waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeBox drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
