@@ -295,7 +295,6 @@ static bool IsRunningSnowLeopard()
 - (MacOSBOOL)drawn;
 - (void)getSize:(id)pObject;
 - (id)initWithButtonType:(NSButtonType)nButtonType bezelStyle:(NSBezelStyle)nBezelStyle controlSize:(NSControlSize)nControlSize buttonState:(NSInteger)nButtonState controlState:(ControlState)nControlState drawRTL:(MacOSBOOL)bDrawRTL bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
-- (NSButton *)button;
 - (MacOSBOOL)redraw;
 - (NSSize)size;
 @end
@@ -1484,6 +1483,172 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface VCLNativeTableHeaderColumn : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	ListViewHeaderValue*	mpListViewHeaderValue;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
+- (NSTableColumn *)tableColumn;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeTableHeaderColumn
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
+{
+	VCLNativeTableHeaderColumn *pRet = [[VCLNativeTableHeaderColumn alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics listViewHeaderValue:pListViewHeaderValue destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSTableColumn *)tableColumn
+{
+	NSScrollView *pScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pScrollView )
+		return nil;
+
+	[pScrollView autorelease];
+
+	NSTableView *pTableView = [[NSTableView alloc] initWithFrame:[pScrollView frame]];
+	if ( !pTableView )
+		return nil;
+
+	[pTableView autorelease];
+	[pScrollView setDocumentView:pTableView];
+
+	NSTableColumn *pTableColumn = [[NSTableColumn alloc] initWithIdentifier:@""];
+	if ( !pTableColumn )
+		return nil;
+
+	[pTableColumn autorelease];
+	[pTableColumn setWidth:[pTableView frame].size.width];
+	[pTableView addTableColumn:pTableColumn];
+
+	NSTableHeaderCell *pTableHeaderCell = [pTableColumn headerCell];
+	if ( !pTableHeaderCell || ![pTableHeaderCell isKindOfClass:[NSTableHeaderCell class]] )
+		return nil;
+
+	[pTableHeaderCell setStringValue:@""];
+
+	if ( mnControlState & CTRL_STATE_PRESSED )
+		[pTableHeaderCell setState:NSOnState];
+	else
+		[pTableHeaderCell setState:NSOffState];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pScrollView controlState:mnControlState];
+
+	return pTableColumn;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSTableColumn *pTableColumn = [self tableColumn];
+		if ( pTableColumn )
+		{
+			NSTableView *pTableView = [pTableColumn tableView];
+			if ( pTableView )
+			{
+				NSTableHeaderView *pTableHeaderView = [pTableView headerView];
+				NSTableHeaderCell *pTableHeaderCell = [pTableColumn headerCell];
+				if ( pTableHeaderView && pTableHeaderCell && [pTableHeaderCell isKindOfClass:[NSTableHeaderCell class]] )
+				{
+					float fCellHeight = [pTableHeaderCell cellSize].height;
+					float fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
+					CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+					if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+					{
+						CGContextSaveGState( mpBuffer->maContext );
+						if ( [pTableHeaderView isFlipped] )
+						{
+							CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+							CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+						}
+						CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+						if ( pContext )
+						{
+							NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+							[NSGraphicsContext setCurrentContext:pContext];
+							if ( ( mnControlState & CTRL_STATE_SELECTED ) | ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) )
+								[pTableHeaderCell highlight:NO withFrame:aDrawRect inView:pTableHeaderView];
+							else
+								[pTableHeaderCell drawWithFrame:aDrawRect inView:pTableHeaderView];
+
+							// Draw sort indicator
+							if ( mpListViewHeaderValue )
+							{
+								BOOL bDrawSortIndicator = NO;
+								BOOL bSortAscending = YES;
+								if ( mpListViewHeaderValue->mnSortDirection == LISTVIEWHEADER_SORT_ASCENDING )
+								{
+									bDrawSortIndicator = YES;
+									bSortAscending = YES;
+								}
+								else if ( mpListViewHeaderValue->mnSortDirection == LISTVIEWHEADER_SORT_DESCENDING )
+								{
+									bDrawSortIndicator = YES;
+									bSortAscending = NO;
+								}
+
+								if ( bDrawSortIndicator )
+									[pTableHeaderCell drawSortIndicatorWithFrame:aDrawRect inView:pTableHeaderView ascending:bSortAscending priority:0];
+							}
+
+							[NSGraphicsContext setCurrentContext:pOldContext];
+
+							mbDrawn = YES;
+						}
+
+						CGContextEndTransparencyLayer( mpBuffer->maContext );
+						CGContextRestoreGState( mpBuffer->maContext );
+
+						mpBuffer->ReleaseContext();
+
+						if ( mbDrawn )
+							mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+					}
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics listViewHeaderValue:(ListViewHeaderValue *)pListViewHeaderValue destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	mpListViewHeaderValue = pListViewHeaderValue;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -1876,50 +2041,6 @@ static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlStat
 	{
 		pFrameInfo->isFocused = true;
 		pFrameInfo->state |= kThemeStateActive;	// logically we can't have a focused edit field that's inactive
-	}
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize HITheme structures used to draw a list view header
- *
- * @param pButtonInfo	pointer to HITheme button info structure to be
- *						initialized
- * @param nState		control state of the disclosure button
- * @param pValue		pointer to VCL list header button value structure
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitListViewHeaderButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo, ControlState nState, ListViewHeaderValue *pValue )
-{
-	memset( pButtonInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
-	pButtonInfo->version = 0;
-	pButtonInfo->kind = kThemeListHeaderButton;
-	if ( pValue->mbPrimarySortColumn )
-		pButtonInfo->value = kThemeButtonOn;
-	else
-		pButtonInfo->value = kThemeButtonOff;
-	if ( nState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
-		pButtonInfo->state = kThemeStatePressed;
-	else if ( nState & CTRL_STATE_ENABLED )
-		pButtonInfo->state = kThemeStateActive;
-	else
-		pButtonInfo->state = kThemeStateInactive;
-	switch ( pValue->mnSortDirection )
-	{
-		case LISTVIEWHEADER_SORT_ASCENDING:
-			pButtonInfo->adornment = kThemeAdornmentHeaderButtonSortUp;
-			break;
-
-		case LISTVIEWHEADER_SORT_DESCENDING:
-			// default is to have downward pointing arrow
-			break;
-
-		default:
-			// for unknown sort orders
-			pButtonInfo->adornment = kThemeAdornmentHeaderButtonNoSortArrow;
-			break;
 	}
 	return TRUE;
 }
@@ -2568,35 +2689,19 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ListViewHeaderValue *pValue )
 {
-	SInt32 themeListViewHeaderHeight;
-	BOOL bRet = ( pGetThemeMetric( kThemeMetricListHeaderHeight, &themeListViewHeaderHeight ) == noErr );
+	BOOL bRet = FALSE;
 
-	if ( bRet )
-	{
-		VCLBitmapBuffer *pBuffer = &aSharedListViewHeaderBuffer;
-		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), themeListViewHeaderHeight, pGraphics );
-		if ( bRet )
-		{
-			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState &= ~CTRL_STATE_ENABLED;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			HIThemeButtonDrawInfo pButtonInfo;
-			InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-			HIRect destRect;
-			destRect.origin.x = 0;
-			destRect.origin.y = 0;
-			destRect.size.width = rDestBounds.GetWidth();
-			destRect.size.height = themeListViewHeaderHeight;
+	VCLNativeTableHeaderColumn *pVCLNativeTableHeaderColumn = [VCLNativeTableHeaderColumn createWithControlState:nState bitmapBuffer:&aSharedListViewHeaderBuffer graphics:pGraphics listViewHeaderValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeTableHeaderColumn performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTableHeaderColumn waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeTableHeaderColumn drawn];
 
-			bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-		}
-
-		pBuffer->ReleaseContext();
-
-		if ( bRet )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-	}
+	[pPool release];
 
 	return bRet;
 }
