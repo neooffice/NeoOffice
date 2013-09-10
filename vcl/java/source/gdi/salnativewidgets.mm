@@ -59,8 +59,8 @@
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
-// Uncomment the following line to enable native frame
-// #define USE_NATIVE_CTRL_FRAME
+// Comment oiut the following line to disable native frame
+#define USE_NATIVE_CTRL_FRAME
 
 #define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 17 : 19 )
 #define COMBOBOX_HEIGHT					28
@@ -1315,10 +1315,6 @@ static bool IsRunningSnowLeopard()
 	[pBox setTitle:@""];
 	[pBox setTitlePosition:NSNoTitle];
 
-	// The enabled state is controlled by the [NSWindow _hasActiveControls]
-	// selector so we need to attach a custom hidden window to draw enabled
-	[VCLNativeControlWindow createAndAttachToView:pBox controlState:mnControlState];
-
 	return pBox;
 }
 
@@ -1347,6 +1343,108 @@ static bool IsRunningSnowLeopard()
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
 					[pBox drawRect:[pBox frame]];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeScrollView : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSScrollView *)scrollView;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeScrollView
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	VCLNativeScrollView *pRet = [[VCLNativeScrollView alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSScrollView *)scrollView
+{
+	NSScrollView *pScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pScrollView )
+		return nil;
+
+	[pScrollView autorelease];
+
+	[pScrollView setBorderType:NSBezelBorder];
+	[pScrollView setDrawsBackground:NO];
+
+	return pScrollView;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSScrollView *pScrollView = [self scrollView];
+		if ( pScrollView )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				if ( [pScrollView isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+					[pScrollView drawRect:[pScrollView frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = YES;
@@ -1781,36 +1879,6 @@ static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlStat
 	}
 	return TRUE;
 }
-
-// =======================================================================
-
-/**
- * (static) Initialize HITheme structures used to draw the frame of an
- * list box.
- *
- * @param pFrameInfo		pointer to the HITheme frame info structure
- *							to be initialized
- * @param nState			control state of the list box
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitListBoxDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlState nState )
-{
-	memset( pFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-	pFrameInfo->version = 0;
-	pFrameInfo->kind = kHIThemeFrameListBox;
-	if( ! ( nState & CTRL_STATE_ENABLED ) )
-		pFrameInfo->state = kThemeStateInactive;
-	else
-		pFrameInfo->state = kThemeStateActive;
-	if( nState & CTRL_STATE_FOCUSED )
-	{
-		pFrameInfo->isFocused = true;
-		pFrameInfo->state |= kThemeStateActive;
-	}
-	return TRUE;
-}
-
-// =======================================================================
 
 // =======================================================================
 
@@ -2386,29 +2454,19 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedListViewFrameBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeFrameDrawInfo pFrameInfo;
-		InitListBoxDrawInfo( &pFrameInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = LISTVIEWFRAME_TRIMWIDTH;
-		destRect.origin.y = LISTVIEWFRAME_TRIMWIDTH;
-		destRect.size.width = rDestBounds.GetWidth() - 2*LISTVIEWFRAME_TRIMWIDTH;
-		destRect.size.height = rDestBounds.GetHeight() - 2*LISTVIEWFRAME_TRIMWIDTH;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeScrollView *pVCLNativeScrollView = [VCLNativeScrollView createWithControlState:nState bitmapBuffer:&aSharedListViewFrameBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeScrollView performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeScrollView waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeScrollView drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
