@@ -87,6 +87,7 @@
 #define RADIOBUTTON_WIDTH				14
 #define RADIOBUTTON_HEIGHT				14
 #define PUSHBUTTON_HEIGHT_SLOP			1
+#define DISCLOSUREBTN_WIDTH_SLOP		-2
 
 using namespace osl;
 using namespace rtl;
@@ -428,6 +429,12 @@ static bool IsRunningSnowLeopard()
 							// Fix bug 1633 by vertically centering button
 							aDrawRect.origin.y += ( ( fOffscreenHeight - fCellHeight ) / 2 ) + PUSHBUTTON_HEIGHT_SLOP;
 							aDrawRect.size.height = fCellHeight;
+						}
+						else if ( mnBezelStyle == NSDisclosureBezelStyle )
+						{
+							// Horizontally align disclosure button outward
+							aDrawRect.origin.x += DISCLOSUREBTN_WIDTH_SLOP;
+							aDrawRect.size.width = [pCell cellSize].width;
 						}
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
