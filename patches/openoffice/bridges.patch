@@ -1,0 +1,25 @@
+--- source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-10 22:51:41.000000000 -0700
++++ source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-10 22:55:11.000000000 -0700
+@@ -42,6 +42,12 @@
+ 
+ # --- Files --------------------------------------------------------
+ 
++.IF "$(OS)"=="MACOSX"
++# NOTE: In clang ABI rtti classes are private;  gcc bridge while perhaps
++# ABI compliant cannot compile or link against vtables private to the runtime
++
++.IF "$(BUILD_OS_MINOR)"=="4" || "$(BUILD_OS_MINOR)"=="5" || "$(BUILD_OS_MINOR)"=="6"
++
+ .IF "$(COM)$(OS)$(CPU)$(COMNAME)" == "GCCMACOSXIgcc3"
+ 
+ .IF "$(cppu_no_leak)" == ""
+@@ -71,6 +77,9 @@
+ 	$(SALLIB)
+ .ENDIF
+ 
++.ENDIF
++.ENDIF
++
+ # --- Targets ------------------------------------------------------
+ 
+ .INCLUDE :  target.mk

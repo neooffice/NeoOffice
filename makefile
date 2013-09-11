@@ -211,6 +211,7 @@ build.oo_patches: \
 	build.oo_basic_patch \
 	build.oo_bean_patch \
 	build.oo_binfilter_patch \
+	build.oo_bridges_patch \
 	build.oo_connectivity_patch \
 	build.oo_cppu_patch \
 	build.oo_cppuhelper_patch \
