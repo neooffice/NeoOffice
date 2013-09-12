@@ -2440,15 +2440,47 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEnded:)])
 		[pDelegate draggingEnded:pSender];
+
+	// Redispatch current mouse event as native dragging will not forward such
+	// events to the application windows
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSWindow *pWindow = [self window];
+	if ( pApp && pWindow )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent )
+		{
+			NSEventType nType = [pEvent type];
+			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+				[pWindow sendEvent:pEvent];
+		}
+	}
 }
 
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender
 {
+	NSDragOperation nRet = NSDragOperationNone;
+
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEntered:)])
-		return [pDelegate draggingEntered:pSender];
-	else
-		return NSDragOperationNone;
+		nRet = [pDelegate draggingEntered:pSender];
+
+	// Redispatch current mouse event as native dragging will not forward such
+	// events to the application windows
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSWindow *pWindow = [self window];
+	if ( pApp && pWindow )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent )
+		{
+			NSEventType nType = [pEvent type];
+			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+				[pWindow sendEvent:pEvent];
+		}
+	}
+
+	return nRet;
 }
 
 - (void)draggingExited:(id < NSDraggingInfo >)pSender
@@ -2456,6 +2488,21 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingExited:)])
 		[pDelegate draggingExited:pSender];
+
+	// Redispatch current mouse event as native dragging will not forward such
+	// events to the application windows
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSWindow *pWindow = [self window];
+	if ( pApp && pWindow )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent )
+		{
+			NSEventType nType = [pEvent type];
+			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+				[pWindow sendEvent:pEvent];
+		}
+	}
 }
 
 - (id)draggingSourceDelegate
@@ -2484,11 +2531,28 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender
 {
+	NSDragOperation nRet = NSDragOperationNone;
+
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingUpdated:)])
-		return [pDelegate draggingUpdated:pSender];
-	else
-		return NSDragOperationNone;
+		nRet = [pDelegate draggingUpdated:pSender];
+
+	// Redispatch current mouse event as native dragging will not forward such
+	// events to the application windows
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSWindow *pWindow = [self window];
+	if ( pApp && pWindow )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent )
+		{
+			NSEventType nType = [pEvent type];
+			if ( ( nType >= NSLeftMouseDown && nType <= NSMouseExited ) || ( nType >= NSOtherMouseDown && nType <= NSOtherMouseDragged ) )
+				[pWindow sendEvent:pEvent];
+		}
+	}
+
+	return nRet;
 }
 
 - (void)drawRect:(NSRect)aDirtyRect

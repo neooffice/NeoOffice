@@ -109,7 +109,10 @@
 
 void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag )
 {
-	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+	// Do not dispatch any native events in a native drag session as it causes
+	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
+	// selector to never return
+	if ( bInNativeDrag || CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 		return;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -125,19 +128,7 @@ void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag )
 
 		NSEvent *pEvent;
 		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:pDate inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
-		{
-			// Do not dispatch native left mouse up events when in a native
-			// drag session as it will cause the 
-			// [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
-			// selector to never return
-			if ( bInNativeDrag && [pEvent type] == NSLeftMouseUp )
-			{
-				[pApp postEvent:pEvent atStart:YES];
-				break;
-			}
-
 			[pApp sendEvent:pEvent];
-		}
 	}
 
 	[pPool release];
