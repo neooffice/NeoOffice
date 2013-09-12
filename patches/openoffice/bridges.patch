@@ -1,22 +1,34 @@
---- source/cpp_uno/gcc3_macosx_intel/except.cxx.orig	2008-04-11 03:43:43.000000000 -0700
-+++ source/cpp_uno/gcc3_macosx_intel/except.cxx	2013-09-11 21:53:00.000000000 -0700
-@@ -33,7 +33,11 @@
+--- source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-11 23:56:39.000000000 -0700
++++ source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-11 23:58:09.000000000 -0700
+@@ -48,6 +48,8 @@
+ CFLAGS += -DLEAK_STATIC_DATA
+ .ENDIF
+ 
++CFLAGS += "-DBUILD_OS_MINOR=$(BUILD_OS_MINOR)"
++
+ CFLAGSNOOPT=-O0
+ 
+ SLOFILES= \
+--- source/cpp_uno/gcc3_macosx_intel/except.cxx	2008-04-11 03:43:43.000000000 -0700
++++ source/cpp_uno/gcc3_macosx_intel/except.cxx	2013-09-11 23:44:29.000000000 -0700
+@@ -33,7 +33,12 @@
  
  #include <stdio.h>
  #include <dlfcn.h>
 +
-+#if !( defined( __clang__ ) || defined( __llvm__ ) )
++#if defined( BUILD_OS_MINOR ) && (BUILD_OS_MINOR >= 8)
++#else
  #include <cxxabi.h>
 +#endif
 +
  #include <hash_map>
  
  #include <rtl/strbuf.hxx>
-@@ -59,6 +63,52 @@
+@@ -59,6 +64,52 @@
  namespace CPPU_CURRENT_NAMESPACE
  {
  
-+#if defined( __clang__ ) || defined( __llvm__ )
++#if defined( BUILD_OS_MINOR ) && (BUILD_OS_MINOR >= 8) && ( defined( __clang__ ) || defined( __llvm__ ) )
 +namespace {
 +
 +struct Fake_type_info {
@@ -65,11 +77,11 @@
  void dummy_can_throw_anything( char const * )
  {
  }
-@@ -181,13 +231,21 @@
+@@ -181,13 +232,21 @@
                      // ensure availability of base
                      type_info * base_rtti = getRTTI(
                          (typelib_CompoundTypeDescription *)pTypeDescr->pBaseTypeDescription );
-+#if defined( __clang__ ) || defined( __llvm__ )
++#if defined( BUILD_OS_MINOR ) && (BUILD_OS_MINOR >= 8) && ( defined( __clang__ ) || defined( __llvm__ ) )
 +                    rtti = createFake_si_class_type_info(rttiName, base_rtti);
 +#else
                      rtti = new __si_class_type_info(
@@ -79,7 +91,7 @@
                  else
                  {
                      // this class has no base class
-+#if defined( __clang__ ) || defined( __llvm__ )
++#if defined( BUILD_OS_MINOR ) && (BUILD_OS_MINOR >= 8) && ( defined( __clang__ ) || defined( __llvm__ ) )
 +                    rtti = createFake_class_type_info(rttiName);
 +#else
                      rtti = new __class_type_info( strdup( rttiName ) );
