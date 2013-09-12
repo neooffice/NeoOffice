@@ -2703,10 +2703,30 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
+	// If the mouse is pressed and in the list view header, set the pressed flag
+	BOOL bRedraw = FALSE;
+	if ( pGraphics->mpFrame && GetSalData()->maLastPointerState.mnState & MOUSE_LEFT )
+	{
+		Point aScreenPoint( GetSalData()->maLastPointerState.maPos );
+		if ( rDestBounds.IsInside( Point( aScreenPoint.X() - pGraphics->mpFrame->maGeometry.nX, aScreenPoint.Y() - pGraphics->mpFrame->maGeometry.nY ) ) )
+			nState |= CTRL_STATE_PRESSED;
+		bRedraw = TRUE;
+	}
+
 	VCLNativeTableHeaderColumn *pVCLNativeTableHeaderColumn = [VCLNativeTableHeaderColumn createWithControlState:nState bitmapBuffer:&aSharedListViewHeaderBuffer graphics:pGraphics listViewHeaderValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeTableHeaderColumn performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTableHeaderColumn waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeTableHeaderColumn drawn];
+
+	if ( bRet && bRedraw && pGraphics->mpFrame )
+	{
+		// Invalidate bounds to force redraw
+		Window *pWindow = Application::GetFirstTopLevelWindow();
+		while ( pWindow && pWindow->ImplGetFrame() != pGraphics->mpFrame )
+			pWindow = Application::GetNextTopLevelWindow( pWindow );
+		if ( pWindow && pWindow->IsReallyVisible() )
+			pWindow->Invalidate( rDestBounds );
+	}
 
 	[pPool release];
 
