@@ -1,5 +1,5 @@
 --- source/cpp_uno/gcc3_macosx_intel/except.cxx	2008-04-11 03:43:43.000000000 -0700
-+++ source/cpp_uno/gcc3_macosx_intel/except.cxx	2013-09-12 21:53:28.000000000 -0700
++++ source/cpp_uno/gcc3_macosx_intel/except.cxx	2013-09-12 22:21:02.000000000 -0700
 @@ -1,40 +1,35 @@
 -/*************************************************************************
 +/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
@@ -385,8 +385,8 @@
  }
  
 +/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
---- source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-12 20:24:33.000000000 -0700
-+++ source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-12 21:43:24.000000000 -0700
+--- source/cpp_uno/gcc3_macosx_intel/makefile.mk	2008-04-11 03:44:01.000000000 -0700
++++ source/cpp_uno/gcc3_macosx_intel/makefile.mk	2013-09-12 22:20:56.000000000 -0700
 @@ -48,6 +48,12 @@
  CFLAGS += -DLEAK_STATIC_DATA
  .ENDIF
