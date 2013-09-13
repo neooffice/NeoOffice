@@ -882,8 +882,14 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 @end
 
-void NSApplication_dispatchPendingEvents()
+void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag )
 {
+	// Do not dispatch any native events in a native drag session as it causes
+	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
+	// selector to never return
+	if ( bInNativeDrag || CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSApplication *pApp = [NSApplication sharedApplication];
