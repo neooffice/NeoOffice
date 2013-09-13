@@ -9645,6 +9645,101 @@
   // "This code is for IA64 only"
   
 --- 25,30 ----
+*** misc/build/mozilla/xpcom/ds/nsInterfaceHashtable.h	2003-12-29 05:22:49.000000000 -0800
+--- misc/build/mozilla/xpcom/ds/nsInterfaceHashtable.h	2013-09-10 01:02:45.000000000 -0700
+@@ -111,7 +111,7 @@
+   (KeyType aKey, UserDataType* pInterface) const
+ {
+   typename nsBaseHashtable<KeyClass, nsCOMPtr<Interface>, Interface*>::EntryType* ent =
+-    GetEntry(aKey);
++    nsInterfaceHashtable<KeyClass,Interface>::GetEntry(aKey);
+ 
+   if (ent)
+   {
+@@ -139,7 +139,7 @@
+   (KeyType aKey, PRBool* aFound) const
+ {
+   typename nsBaseHashtable<KeyClass, nsCOMPtr<Interface>, Interface*>::EntryType* ent =
+-    GetEntry(aKey);
++    nsInterfaceHashtable<KeyClass,Interface>::GetEntry(aKey);
+ 
+   if (ent)
+   {
+*** misc/build/mozilla/xpcom/ds/nsBaseHashtable.h	2003-08-09 12:24:24.000000000 -0700
+--- misc/build/mozilla/xpcom/ds/nsBaseHashtable.h	2013-09-10 01:02:53.000000000 -0700
+@@ -124,7 +124,7 @@
+    */
+   PRBool Get(KeyType aKey, UserDataType* pData) const
+   {
+-    EntryType* ent = GetEntry(aKey);
++    EntryType* ent = nsTHashtable< nsBaseHashtableET<KeyClass,DataType> >::GetEntry(aKey);
+ 
+     if (!ent)
+       return PR_FALSE;
+@@ -143,7 +143,7 @@
+    */
+   PRBool Put(KeyType aKey, UserDataType aData)
+   {
+-    EntryType* ent = PutEntry(aKey);
++    EntryType* ent = nsTHashtable< nsBaseHashtableET<KeyClass,DataType> >::PutEntry(aKey);
+ 
+     if (!ent)
+       return PR_FALSE;
+@@ -157,7 +157,7 @@
+    * remove the data for the associated key
+    * @param aKey the key to remove from the hashtable
+    */
+-  void Remove(KeyType aKey) { RemoveEntry(aKey); }
++  void Remove(KeyType aKey) { nsTHashtable< nsBaseHashtableET<KeyClass,DataType> >::RemoveEntry(aKey); }
+ 
+   /**
+    * function type provided by the application for enumeration.
+*** misc/build/mozilla/xpcom/ds/nsClassHashtable.h	2003-06-19 11:42:23.000000000 -0700
+--- misc/build/mozilla/xpcom/ds/nsClassHashtable.h	2013-09-10 01:02:49.000000000 -0700
+@@ -98,7 +98,7 @@
+ nsClassHashtable<KeyClass,T>::Get(KeyType aKey, T** retVal) const
+ {
+   typename nsBaseHashtable<KeyClass,nsAutoPtr<T>,T*>::EntryType* ent =
+-    GetEntry(aKey);
++    nsClassHashtable<KeyClass,T>::GetEntry(aKey);
+ 
+   if (ent)
+   {
+*** misc/build/mozilla/configure	2013-07-08 20:42:54.000000000 -0700
+--- misc/build/mozilla/configure	2013-07-08 20:44:18.000000000 -0700
+@@ -3080,8 +3080,8 @@
+ 
+ if test "$MACOS_SDK_DIR"; then
+   export NEXT_ROOT=$MACOS_SDK_DIR
+-  CFLAGS="-I${MACOS_SDK_DIR}/usr/include $CFLAGS"
+-  CXXFLAGS="-I${MACOS_SDK_DIR}/usr/include $CXXFLAGS"
++  CFLAGS="-isysroot ${MACOS_SDK_DIR} $CFLAGS"
++  CXXFLAGS="-isysroot ${MACOS_SDK_DIR} $CXXFLAGS"
+   
+   GCC_VERSION=`echo $CXX_VERSION | perl -pe "s/gcc version ([^ ]*).*/\1/"`
+   
+@@ -11041,7 +11041,7 @@
+     ;;
+ mac|cocoa)
+     TK_LIBS='-framework Carbon'
+-    TK_CFLAGS="-I${MACOS_SDK_DIR}/Developer/Headers/FlatCarbon"
++    TK_CFLAGS="-I/Developer/Headers/FlatCarbon"
+     CFLAGS="$CFLAGS $TK_CFLAGS"
+     CXXFLAGS="$CXXFLAGS $TK_CFLAGS"
+     MOZ_USER_DIR="Mozilla"
+*** misc/build/mozilla/nsprpub/configure	2013-07-08 20:54:50.000000000 -0700
+--- misc/build/mozilla/nsprpub/configure	2013-07-08 20:57:01.000000000 -0700
+@@ -3346,8 +3346,8 @@
+ 
+     # do the right thing for panther SDK support
+     if test "$NEXT_ROOT"; then
+-        CFLAGS="-I${NEXT_ROOT}/usr/include $CFLAGS"
+-        CXXFLAGS="-I${NEXT_ROOT}/usr/include $CXXFLAGS"
++        CFLAGS="-isysroot ${NEXT_ROOT} $CFLAGS"
++        CXXFLAGS="-isysroot ${NEXT_ROOT} $CXXFLAGS"
+     fi
+     ;;
+ 
 *** misc/build/mozilla/security/nss/lib/freebl/unix_rand.c	2003-05-30 16:31:19.000000000 -0700
 --- misc/build/mozilla/security/nss/lib/freebl/unix_rand.c	2013-06-28 10:31:14.000000000 -0700
 @@ -794,8 +794,15 @@
