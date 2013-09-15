@@ -1763,6 +1763,10 @@ static bool IsRunningSnowLeopard()
 		[pCell setShowsFirstResponder:NO];
 	}
 
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pStepper controlState:mnControlState];
+
 	[pStepper sizeToFit];
 
 	return pStepper;
@@ -1831,18 +1835,13 @@ static bool IsRunningSnowLeopard()
 							}
 						}
 
-						// The enabled state is controlled by the
-						// [NSWindow _hasActiveControls] selector so we need to
-						// attach a custom hidden window to draw enabled
-						if ( !bAddedToKeyWindow )
-							[VCLNativeControlWindow createAndAttachToView:pStepper controlState:mnControlState];
-
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pStepper drawRect:[pStepper frame]];
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						[pStepper removeFromSuperviewWithoutNeedingDisplay];
+						if ( bAddedToKeyWindow )
+							[pStepper removeFromSuperviewWithoutNeedingDisplay];
 
 						mbDrawn = YES;
 					}
