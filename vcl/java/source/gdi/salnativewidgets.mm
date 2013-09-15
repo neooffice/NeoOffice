@@ -59,7 +59,7 @@
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
-// Comment oiut the following line to disable native frame
+// Comment out the following line to disable native frame
 #define USE_NATIVE_CTRL_FRAME
 
 #define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 17 : 19 )
@@ -75,6 +75,7 @@
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
+#define SPINNER_WIDTH_SLOP				1
 #define PROGRESSBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
 #define PROGRESSBARPADDING_HEIGHT		1
 #define TABITEM_HEIGHT_SLOP				4
@@ -1656,6 +1657,248 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface VCLNativeStepper : NSStepper
+{
+	MacOSBOOL				mbShowsFirstResponder;
+}
+- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell;
+- (id)initWithFrame:(NSRect)aRect;
+- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder;
+@end
+
+@implementation VCLNativeStepper
+
+- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell
+{
+	return mbShowsFirstResponder;
+}
+
+- (id)initWithFrame:(NSRect)aRect
+{
+	[super initWithFrame:aRect];
+
+	mbShowsFirstResponder = NO;
+
+	return self;
+}
+
+- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder
+{
+	mbShowsFirstResponder = bShowsFirstResponder;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeSpinbuttons : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	SpinbuttonValue*		mpSpinbuttonValue;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	NSSize					maSize;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
+- (NSStepper *)stepper;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (void)getSize:(id)pObject;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect;
+- (NSSize)size;
+@end
+
+@implementation VCLNativeSpinbuttons
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
+{
+	VCLNativeSpinbuttons *pRet = [[VCLNativeSpinbuttons alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics spinbuttonValue:pSpinbuttonValue destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSStepper *)stepper
+{
+	VCLNativeStepper *pStepper = [[VCLNativeStepper alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pStepper )
+		return nil;
+
+	[pStepper autorelease];
+
+	NSCell *pCell = [pStepper cell];
+	if ( !pCell )
+		return nil;
+
+	[pStepper setAutorepeat:NO];
+
+	if ( mpSpinbuttonValue )
+	{
+		if ( mpSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
+		{
+			[pStepper moveUp:self];
+			[pCell setHighlighted:YES];
+		}
+		else if ( mpSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
+		{
+			[pStepper moveDown:self];
+			[pCell setHighlighted:YES];
+		}
+	}
+
+	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
+		[pStepper setEnabled:YES];
+	else
+		[pStepper setEnabled:NO];
+
+	if ( mnControlState & CTRL_STATE_FOCUSED )
+	{
+		[pCell setShowsFirstResponder:YES];
+		[pStepper setShowsFirstResponder:YES];
+	}
+	else
+	{
+		[pCell setShowsFirstResponder:NO];
+		[pStepper setShowsFirstResponder:NO];
+	}
+
+	[pStepper sizeToFit];
+
+	return pStepper;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSStepper *pStepper = [self stepper];
+		if ( pStepper )
+		{
+			NSCell *pCell = [pStepper cell];
+			if ( pCell )
+			{
+				float fCellWidth = [pCell cellSize].width;
+				if ( fCellWidth <= 0 )
+					fCellWidth = maDestRect.size.width;
+				float fCellHeight = [pCell cellSize].height;
+				if ( fCellHeight <= 0 )
+					fCellHeight = maDestRect.size.height;
+				float fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				{
+					CGContextSaveGState( mpBuffer->maContext );
+					if ( [pStepper isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
+
+					CGContextClipToRect( mpBuffer->maContext, aAdjustedDestRect );
+
+					// Horizontally right align and vertically center control
+					float fXAdjust = aAdjustedDestRect.size.width - fCellWidth + SPINNER_WIDTH_SLOP;
+					if ( fXAdjust < 0 )
+						fXAdjust = 0;
+					float fYAdjust = ( fOffscreenHeight - fCellHeight ) / 2;
+					CGContextTranslateCTM( mpBuffer->maContext, fXAdjust, fYAdjust );
+
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						// Draw view instead of cell otherwise the focus ring
+						// will not be drawn
+						MacOSBOOL bAddedToKeyWindow = NO;
+						if ( [pCell showsFirstResponder] )
+						{
+							NSApplication *pApp = [NSApplication sharedApplication];
+							if ( pApp )
+							{
+								NSWindow *pKeyWindow = [pApp keyWindow];
+								if ( pKeyWindow )
+								{
+									NSView *pContentView = [pKeyWindow contentView];
+									if ( pContentView )
+									{
+										[pStepper removeFromSuperviewWithoutNeedingDisplay];
+										[pContentView addSubview:pStepper positioned:NSWindowBelow relativeTo:nil];
+										bAddedToKeyWindow = YES;
+									}
+								}
+							}
+						}
+
+						// The enabled state is controlled by the
+						// [NSWindow _hasActiveControls] selector so we need to
+						// attach a custom hidden window to draw enabled
+						if ( !bAddedToKeyWindow )
+							[VCLNativeControlWindow createAndAttachToView:pStepper controlState:mnControlState];
+
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						[pStepper drawRect:[pStepper frame]];
+						[NSGraphicsContext setCurrentContext:pOldContext];
+
+						[pStepper removeFromSuperviewWithoutNeedingDisplay];
+
+						mbDrawn = YES;
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (void)getSize:(id)pObject
+{
+	if ( NSEqualSizes( maSize, NSZeroSize ) )
+	{
+		NSStepper *pStepper = [self stepper];
+		if ( pStepper )
+			maSize = [pStepper frame].size;
+	}
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics spinbuttonValue:(SpinbuttonValue *)pSpinbuttonValue destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	mpSpinbuttonValue = pSpinbuttonValue;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	maSize = NSZeroSize;
+
+	return self;
+}
+
+- (NSSize)size
+{
+	return maSize;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -2302,40 +2545,19 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	SInt32 spinnerThemeWidth;
-	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
-	if ( bRet )
-	{
-		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
-		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
+	BOOL bRet = FALSE;
 
-		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
-		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
-		if ( bRet )
-		{
-			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState &= ~CTRL_STATE_ENABLED;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			HIThemeButtonDrawInfo aButtonDrawInfo;
-			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-			HIRect arrowRect;
-			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
-			if( arrowRect.origin.x < 0 )
-				arrowRect.origin.x = 0;
-			arrowRect.origin.y = ( ( offscreenHeight - spinnerThemeHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
-			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
-			arrowRect.size.height = spinnerThemeHeight;
+	VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:&aSharedSpinbuttonBuffer graphics:pGraphics spinbuttonValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeSpinbuttons drawn];
 
-			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-		}
-
-		pBuffer->ReleaseContext();
-
-		if ( bRet )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-	}
+	[pPool release];
 
 	return bRet;
 }
@@ -2760,7 +2982,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSShadowlessSquareBezelStyle controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSOnOffButton bezelStyle:NSShadowlessSquareBezelStyle controlSize:NSRegularControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedBevelButtonBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
 	bRet = [pVCLNativeButton drawn];
@@ -3757,48 +3979,51 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
 
-				// leave room for left edge adornments
+				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 
-				SInt32 spinnerThemeWidth;
-				SInt32 spinnerThemeHeight;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
-				if ( ! bReturn )
-					return bReturn;
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
-
-				switch( nPart )
+				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+				NSSize aSize = [pVCLNativeSpinbuttons size];
+				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					case PART_ENTIRE_CONTROL:
-						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)( spinnerThemeHeight * 2 ) );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+					switch( nPart )
+					{
+						case PART_ENTIRE_CONTROL:
+							{
+								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( aSize.height + ( FOCUSRING_WIDTH * 2 ) ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
 
-					case PART_BUTTON_UP:
-						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+						case PART_BUTTON_UP:
+							{
+								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
 
-					case PART_BUTTON_DOWN:
-						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+						case PART_BUTTON_DOWN:
+							{
+								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+					}
 				}
+
+				[pPool release];
 			}
 			break;
 
