@@ -1755,12 +1755,12 @@ static bool IsRunningSnowLeopard()
 	if ( mnControlState & CTRL_STATE_FOCUSED )
 	{
 		[pCell setShowsFirstResponder:YES];
-		[pStepper setShowsFirstResponder:YES];
+		if ( [pStepper isEnabled] )
+			[pStepper setShowsFirstResponder:YES];
 	}
 	else
 	{
 		[pCell setShowsFirstResponder:NO];
-		[pStepper setShowsFirstResponder:NO];
 	}
 
 	[pStepper sizeToFit];
@@ -1812,7 +1812,7 @@ static bool IsRunningSnowLeopard()
 						// Draw view instead of cell otherwise the focus ring
 						// will not be drawn
 						MacOSBOOL bAddedToKeyWindow = NO;
-						if ( [pCell showsFirstResponder] )
+						if ( [pStepper isEnabled] && [pCell showsFirstResponder] )
 						{
 							NSApplication *pApp = [NSApplication sharedApplication];
 							if ( pApp )
