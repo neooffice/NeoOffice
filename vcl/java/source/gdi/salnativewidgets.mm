@@ -1571,12 +1571,23 @@ static bool IsRunningSnowLeopard()
 				NSTableHeaderCell *pTableHeaderCell = [pTableColumn headerCell];
 				if ( pTableHeaderView && pTableHeaderCell && [pTableHeaderCell isKindOfClass:[NSTableHeaderCell class]] )
 				{
+					MacOSBOOL bHighlighted = ( ( mnControlState & CTRL_STATE_SELECTED ) | ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) );
+
+					// Prevent clipping of left separator when by extending
+					// width to the left when drawing highlighted or pressed
+					// cells
+					float fWidthAdjust = ( bHighlighted || mnControlState & CTRL_STATE_PRESSED ? 1.0f : 0 );
+					CGRect aRealDrawRect = maDestRect;
+					aRealDrawRect.origin.x -= fWidthAdjust;
+					aRealDrawRect.size.width += fWidthAdjust;
+
 					float fCellHeight = [pTableHeaderCell cellSize].height;
-					float fOffscreenHeight = ( maDestRect.size.height > fCellHeight ? maDestRect.size.height : fCellHeight );
-					CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
-					if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+					float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
+					CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+					if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 					{
 						CGContextSaveGState( mpBuffer->maContext );
+						CGContextTranslateCTM( mpBuffer->maContext, fWidthAdjust, 0 );
 						if ( [pTableHeaderView isFlipped] )
 						{
 							CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
@@ -1588,10 +1599,13 @@ static bool IsRunningSnowLeopard()
 						if ( pContext )
 						{
 							NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+							aDrawRect.origin.x += fWidthAdjust;
+							aDrawRect.size.width -= fWidthAdjust;
+
 							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 							[NSGraphicsContext setCurrentContext:pContext];
-							if ( ( mnControlState & CTRL_STATE_SELECTED ) | ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) )
-								[pTableHeaderCell highlight:NO withFrame:aDrawRect inView:pTableHeaderView];
+							if ( bHighlighted )
+								[pTableHeaderCell highlight:YES withFrame:aDrawRect inView:pTableHeaderView];
 							else
 								[pTableHeaderCell drawWithFrame:aDrawRect inView:pTableHeaderView];
 
@@ -2945,8 +2959,11 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		Window *pWindow = Application::GetFirstTopLevelWindow();
 		while ( pWindow && pWindow->ImplGetFrame() != pGraphics->mpFrame )
 			pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+		// Include a few pixels of the adjacent header columns to ensure that
+		// they get redrawn as well
 		if ( pWindow && pWindow->IsReallyVisible() )
-			pWindow->Invalidate( rDestBounds );
+			pWindow->Invalidate( Rectangle( Point( rDestBounds.Left() - 2, rDestBounds.Top() ), Size( rDestBounds.GetWidth() + 4, rDestBounds.GetHeight() ) ) );
 	}
 
 	[pPool release];
