@@ -2631,7 +2631,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedTabBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -2673,7 +2673,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedTabBoundingBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -2741,7 +2741,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedMenuBackgroundBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
 	if ( bRet )
 	{
 		HIThemeMenuDrawInfo pMenuDrawInfo;
@@ -2877,7 +2877,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedSeparatorLineBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -3139,7 +3139,7 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 	Region aRegion( rControlRegion );
 
 	// Only adjust for grow box on pre-Mac OS X 10.7 releases
-	if ( IsRunningSnowLeopard() && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+	if ( IsRunningSnowLeopard() && HIThemeInitialize() && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 	{
 		HIPoint origin;
 		origin.x = 0;
@@ -3197,9 +3197,6 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 #ifndef USE_NATIVE_CONTROLS
 	return isSupported;
 #endif	// !USE_NATIVE_CONTROLS
-
-	if ( !HIThemeInitialize() )
-		return isSupported;
 
 	switch( nType )
 	{
@@ -3342,9 +3339,6 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 		return rIsInside;
 #endif	// !USE_NATIVE_CONTROLS
 
-	if ( !HIThemeInitialize() )
-		return rIsInside;
-
 	// [ed] Scrollbars are a special case:  in order to get proper regions,
 	// a full description of the scrollbar is required including its values
 	// and visible width.  We'll rely on the VCL scrollbar, which queried
@@ -3390,9 +3384,6 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bOK;
 #endif	// !USE_NATIVE_CONTROLS
-
-	if ( !HIThemeInitialize() )
-		return bOK;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -3658,9 +3649,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
-
-	if ( !HIThemeInitialize() )
-		return bReturn;
 
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
@@ -4075,7 +4063,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_TAB_ITEM:
-			if ( nPart == PART_ENTIRE_CONTROL )
+			if ( nPart == PART_ENTIRE_CONTROL && HIThemeInitialize() )
 			{
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();
 
