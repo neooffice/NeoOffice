@@ -67,7 +67,7 @@
 #define COMBOBOX_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : -0.5f )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
-#define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
+#define EDITBOX_HEIGHT					( 25 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
@@ -1912,6 +1912,139 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface VCLNativeTextField : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSTextField *)textField;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeTextField
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	VCLNativeTextField *pRet = [[VCLNativeTextField alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSTextField *)textField
+{
+	NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pTextField )
+		return nil;
+
+	[pTextField autorelease];
+
+	NSCell *pCell = [pTextField cell];
+	if ( !pCell )
+		return nil;
+
+	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
+		[pTextField setEnabled:YES];
+	else
+		[pTextField setEnabled:NO];
+
+	// Always suppress focus ring since it does not paint on some Mac OS X
+	// versions
+	[pCell setShowsFirstResponder:NO];
+
+	return pTextField;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSTextField *pTextField = [self textField];
+		if ( pTextField )
+		{
+			NSCell *pCell = [pTextField cell];
+			if ( pCell )
+			{
+				float fOffscreenHeight = maDestRect.size.height;
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				{
+					CGContextSaveGState( mpBuffer->maContext );
+					if ( [pTextField isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+						aDrawRect.origin.x += FOCUSRING_WIDTH;
+						aDrawRect.origin.y += FOCUSRING_WIDTH;
+						aDrawRect.size.width -= FOCUSRING_WIDTH * 2;
+						aDrawRect.size.height -= FOCUSRING_WIDTH * 2;
+						if ( !NSIsEmptyRect( aDrawRect ) )
+						{
+							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+							[NSGraphicsContext setCurrentContext:pContext];
+							[pCell drawWithFrame:aDrawRect inView:pTextField];
+
+							// Draw focus ring
+							if ( mnControlState & CTRL_STATE_FOCUSED && [pTextField isEnabled] )
+							{
+								NSSetFocusRingStyle( NSFocusRingAbove );
+								[[NSColor clearColor] set];
+								[NSBezierPath fillRect:aDrawRect];
+							}
+
+							[NSGraphicsContext setCurrentContext:pOldContext];
+
+							mbDrawn = YES;
+						}
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -2277,34 +2410,6 @@ static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, Contr
 		pTabPaneDrawInfo->state = kThemeStateInactive;
 	else
 		pTabPaneDrawInfo->state = kThemeStateActive;
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize HITheme structures used to draw the frame of an
- * edit field.
- *
- * @param pFrameInfo		pointer to the HITheme frame info structure
- *							to be initialized
- * @param nState			control state of the edit field
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlState nState )
-{
-	memset( pFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-	pFrameInfo->version = 0;
-	pFrameInfo->kind = kHIThemeFrameTextFieldSquare;
-	if( ! ( nState & CTRL_STATE_ENABLED ) )
-		pFrameInfo->state = kThemeStateInactive;
-	else
-		pFrameInfo->state = kThemeStateActive;
-	if( nState & CTRL_STATE_FOCUSED )
-	{
-		pFrameInfo->isFocused = true;
-		pFrameInfo->state |= kThemeStateActive;	// logically we can't have a focused edit field that's inactive
-	}
 	return TRUE;
 }
 
@@ -2774,34 +2879,19 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedEditBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeFrameDrawInfo pFrameInfo;
-		InitEditFieldDrawInfo( &pFrameInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = FOCUSRING_WIDTH;
-		destRect.origin.y = FOCUSRING_WIDTH;
-		destRect.size.width = rDestBounds.GetWidth() - 2*FOCUSRING_WIDTH;
-		destRect.size.height = rDestBounds.GetHeight() - 2*FOCUSRING_WIDTH;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		// clear the active editing portion of the control
-		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-		CGContextSetFillColor( pBuffer->maContext, whiteColor );
-		CGContextFillRect( pBuffer->maContext, destRect );
-		// draw frame around the background
-		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeTextField performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTextField waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeTextField drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
