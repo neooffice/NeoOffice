@@ -73,8 +73,6 @@
 #define FRAME_TRIMWIDTH					1
 #define LISTBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 21 : 19 )
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
-#define SPINNER_TRIMWIDTH				3
-#define SPINNER_TRIMHEIGHT				1
 #define SPINNER_WIDTH_SLOP				1
 #define PROGRESSBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
 #define PROGRESSBARPADDING_HEIGHT		1
@@ -112,9 +110,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 };
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
-typedef OSStatus GetThemeMetric_Type( ThemeMetric nMetric, SInt32 *pMetric);
-typedef OSStatus HIThemeDrawButton_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
-typedef OSStatus HIThemeDrawFrame_Type( const HIRect *pRect, const HIThemeFrameDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const HIThemeMenuDrawInfo *pMenuDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
@@ -125,9 +120,6 @@ typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabD
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
-static GetThemeMetric_Type *pGetThemeMetric = NULL;
-static HIThemeDrawButton_Type *pHIThemeDrawButton = NULL;
-static HIThemeDrawFrame_Type *pHIThemeDrawFrame = NULL;
 static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
 static HIThemeDrawSeparator_Type *pHIThemeDrawSeparator = NULL;
 static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
@@ -140,7 +132,6 @@ static VCLBitmapBuffer aSharedListBoxBuffer;
 static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
 static VCLBitmapBuffer aSharedVerticalScrollBarBuffer;
 static VCLBitmapBuffer aSharedScrollBarBuffer;
-static VCLBitmapBuffer aSharedSpinboxBuffer;
 static VCLBitmapBuffer aSharedSpinbuttonBuffer;
 static VCLBitmapBuffer aSharedProgressbarBuffer;
 static VCLBitmapBuffer aSharedTabBuffer;
@@ -1986,29 +1977,33 @@ static bool IsRunningSnowLeopard()
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
-						aDrawRect.origin.x += FOCUSRING_WIDTH;
-						aDrawRect.origin.y += FOCUSRING_WIDTH;
-						aDrawRect.size.width -= FOCUSRING_WIDTH * 2;
-						aDrawRect.size.height -= FOCUSRING_WIDTH * 2;
-						if ( !NSIsEmptyRect( aDrawRect ) )
+						if ( aDrawRect.size.width > FOCUSRING_WIDTH * 2 )
 						{
-							NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
-							[NSGraphicsContext setCurrentContext:pContext];
-							[pCell drawWithFrame:aDrawRect inView:pTextField];
-
-							// Draw focus ring
-							if ( mnControlState & CTRL_STATE_FOCUSED && [pTextField isEnabled] )
-							{
-								NSSetFocusRingStyle( NSFocusRingAbove );
-								[[NSColor clearColor] set];
-								[NSBezierPath fillRect:aDrawRect];
-							}
-
-							[NSGraphicsContext setCurrentContext:pOldContext];
-
-							mbDrawn = YES;
+							aDrawRect.origin.x += FOCUSRING_WIDTH;
+							aDrawRect.size.width -= FOCUSRING_WIDTH * 2;
 						}
+						if ( aDrawRect.size.height > FOCUSRING_WIDTH * 2 )
+						{
+							aDrawRect.origin.y += FOCUSRING_WIDTH;
+							aDrawRect.size.height -= FOCUSRING_WIDTH * 2;
+						}
+
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						[pCell drawWithFrame:aDrawRect inView:pTextField];
+
+						// Draw focus ring
+						if ( mnControlState & CTRL_STATE_FOCUSED && [pTextField isEnabled] )
+						{
+							NSSetFocusRingStyle( NSFocusRingAbove );
+							[[NSColor clearColor] set];
+							[NSBezierPath fillRect:aDrawRect];
+						}
+
+						[NSGraphicsContext setCurrentContext:pOldContext];
 					}
+
+					mbDrawn = YES;
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
@@ -2257,9 +2252,6 @@ static bool HIThemeInitialize()
 		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
 		if ( pLib )
 		{
-			pGetThemeMetric = (GetThemeMetric_Type *)dlsym( pLib, "GetThemeMetric" );
-			pHIThemeDrawButton = (HIThemeDrawButton_Type *)dlsym( pLib, "HIThemeDrawButton" );
-			pHIThemeDrawFrame = (HIThemeDrawFrame_Type *)dlsym( pLib, "HIThemeDrawFrame" );
 			pHIThemeDrawMenuBackground = (HIThemeDrawMenuBackground_Type *)dlsym( pLib, "HIThemeDrawMenuBackground" );
 			pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
 			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
@@ -2271,9 +2263,6 @@ static bool HIThemeInitialize()
 		}
 
 #ifdef DEBUG
-		fprintf( stderr, "pGetThemeMetric: %p\n", pGetThemeMetric );
-		fprintf( stderr, "pHIThemeDrawButton: %p\n", pHIThemeDrawButton );
-		fprintf( stderr, "pHIThemeDrawFrame: %p\n", pHIThemeDrawFrame );
 		fprintf( stderr, "pHIThemeDrawMenuBackground: %p\n", pHIThemeDrawMenuBackground );
 		fprintf( stderr, "pHIThemeDrawSeparator: %p\n", pHIThemeDrawSeparator );
 		fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
@@ -2285,56 +2274,7 @@ static bool HIThemeInitialize()
 		bHIThemeInitialized = true;
 	}
 
-	return ( pGetThemeMetric && pHIThemeDrawButton && pHIThemeDrawFrame && pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize an HITheme button structure to draw spinner arrows for a
- * spinbox, an editable control with arrow controls for incrementing and
- * decrementing a value.
- *
- * @param pButtonDrawInfo		HITheme button structure for drawing spinner
- * @param nState				overall conrol state of the control; overall
- *								disabled control state will override individual
- *								button state
- * @param pSpinbuttonValue		VCL structure holding enable state of the
- * @return TRUE if successful, FALSE on failure
- */
-static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState, SpinbuttonValue *pSpinbuttonValue )
-{
-	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
-	pButtonDrawInfo->version = 0;
-	pButtonDrawInfo->kind = kThemeIncDecButton;
-	if( pSpinbuttonValue )
-	{
-		if( ! ( nState & ( CTRL_STATE_ENABLED | CTRL_STATE_PRESSED ) ) )
-		{
-			// entire control is disabled, trumps sub-part state
-			pButtonDrawInfo->state = kThemeStateInactive;
-		}
-		else
-		{
-			// use individual arrow state
-			if( pSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
-				pButtonDrawInfo->state = kThemeStatePressedUp;
-			else if( pSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
-				pButtonDrawInfo->state = kThemeStatePressedDown;
-			else if( ( ! ( pSpinbuttonValue->mnUpperState & CTRL_STATE_ENABLED ) ) && ( ! ( pSpinbuttonValue->mnLowerState & CTRL_STATE_ENABLED ) ) )
-				pButtonDrawInfo->state = kThemeStateInactive;
-			else
-				pButtonDrawInfo->state = kThemeStateActive;
-		}
-	}
-	else
-	{
-		if( ! ( nState & CTRL_STATE_ENABLED ) )
-			pButtonDrawInfo->state = kThemeStateInactive;
-		else
-			pButtonDrawInfo->state = kThemeStateActive;
-	}
-	return TRUE;
+	return ( pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
 }
 
 // =======================================================================
@@ -2577,72 +2517,30 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  */
 static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	SInt32 spinnerThemeWidth;
-	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
-	if ( bRet )
+	BOOL bRet = FALSE;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
+
+	// Always disable focus in the spinbutton and let the edit box have focus
+	VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState & ~CTRL_STATE_FOCUSED bitmapBuffer:&aSharedSpinbuttonBuffer graphics:pGraphics spinbuttonValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+	NSSize aSize = [pVCLNativeSpinbuttons size];
+	if ( !NSEqualSizes( aSize, NSZeroSize ) )
 	{
-		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
-		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
-
-		VCLBitmapBuffer *pBuffer = &aSharedSpinboxBuffer;
-		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
-		if ( bRet )
+		[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+		if ( [pVCLNativeSpinbuttons drawn] )
 		{
-			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-				nState &= ~CTRL_STATE_ENABLED;
-
-			HIThemeButtonDrawInfo aButtonDrawInfo;
-			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
-
-			HIRect arrowRect;
-			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
-			if( arrowRect.origin.x < 0 )
-				arrowRect.origin.x = 0;
-			arrowRect.origin.y = ( ( offscreenHeight - spinnerThemeHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
-			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
-			arrowRect.size.height = spinnerThemeHeight;
-
-			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-
-			if( bRet )
-			{
-				HIRect editRect;
-				editRect.origin.x = FOCUSRING_WIDTH;
-				editRect.origin.y = FOCUSRING_WIDTH;
-				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - ( FOCUSRING_WIDTH * 2 );
-				editRect.size.height = offscreenHeight - ( FOCUSRING_WIDTH * 2 );
-
-				// erase out our background first
-
-				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-				CGContextSetFillColor( pBuffer->maContext, whiteColor );
-				CGContextFillRect( pBuffer->maContext, editRect );
-
-				// draw our edit frame
-
-				HIThemeFrameDrawInfo aFrameInfo;
-				memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-
-				aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
-				if( ! nState )
-					aFrameInfo.state = kThemeStateInactive;
-				else
-					aFrameInfo.state = kThemeStateActive;
-				if( nState & CTRL_STATE_FOCUSED )
-					aFrameInfo.isFocused = TRUE;
-				else
-					aFrameInfo.isFocused = FALSE;
-
-				bRet = ( pHIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-			}
+			VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth() - aSize.width, rDestBounds.GetHeight() > aSize.height ? rDestBounds.GetHeight() : aSize.height )];
+			[pVCLNativeTextField performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTextField waitUntilDone:YES modes:pModes];
+			bRet = [pVCLNativeTextField drawn];
 		}
-
-		pBuffer->ReleaseContext();
-
-		if ( bRet )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 	}
+
+	[pPool release];
 
 	return bRet;
 }
@@ -4025,59 +3923,59 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					spinboxRect.Bottom() += nHeightAdjust;
 				}
 
-				// leave room for left edge adornments
+				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 
-				SInt32 spinnerThemeWidth;
-				SInt32 spinnerThemeHeight;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
-				if ( ! bReturn )
-					return bReturn;
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
-
-				switch( nPart )
+				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+				NSSize aSize = [pVCLNativeSpinbuttons size];
+				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					case PART_ENTIRE_CONTROL:
-						{
-							rNativeBoundingRegion = Region( spinboxRect );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+					switch( nPart )
+					{
+						case PART_ENTIRE_CONTROL:
+							{
+								rNativeBoundingRegion = Region( spinboxRect );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
 
-					case PART_BUTTON_UP:
-						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+						case PART_BUTTON_UP:
+							{
+								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( ( spinboxRect.GetHeight() - aSize.height ) / 2 ) - FOCUSRING_WIDTH ) );
+								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
 
-					case PART_BUTTON_DOWN:
-						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+						case PART_BUTTON_DOWN:
+							{
+								Point topLeft( (long)( spinboxRect.Right() - aSize.width - FOCUSRING_WIDTH ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+								Size boundsSize( (long)( aSize.width + ( FOCUSRING_WIDTH * 2 ) ), (long)( ( aSize.height / 2 ) + FOCUSRING_WIDTH ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
 
-					case PART_SUB_EDIT:
-						{
-							SInt32 editFramePadding;
-							bReturn = ( pGetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
-							if ( ! bReturn )
-								return bReturn;
-
-							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + editFramePadding, spinboxRect.Top() + editFramePadding ), Size( (long)( spinboxRect.GetWidth() - spinnerThemeWidth - 4 - ( editFramePadding * 2 ) ), spinboxRect.GetHeight() - ( editFramePadding * 2 ) ) ) );
-							rNativeContentRegion = Region( rNativeBoundingRegion );
-							bReturn = TRUE;
-						}
-						break;
+						case PART_SUB_EDIT:
+							{
+								Point topLeft( spinboxRect.Left() + EDITFRAMEPADDING_WIDTH, spinboxRect.Top() + EDITFRAMEPADDING_WIDTH );
+								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( EDITFRAMEPADDING_WIDTH * 2 ), spinboxRect.GetHeight() - ( EDITFRAMEPADDING_WIDTH * 2 ) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+					}
 				}
+
+				[pPool release];
 			}
 			break;
 
