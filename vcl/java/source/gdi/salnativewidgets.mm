@@ -86,6 +86,7 @@
 #define RADIOBUTTON_WIDTH				14
 #define RADIOBUTTON_HEIGHT				14
 #define PUSHBUTTON_HEIGHT_SLOP			1
+#define PUSHBUTTON_DEFAULT_ALPHA		( IsRunningSnowLeopard() ? 0.4f : 0.5f )
 #define DISCLOSUREBTN_WIDTH_SLOP		-2
 
 using namespace osl;
@@ -440,10 +441,7 @@ static bool IsRunningSnowLeopard()
 							float fAlpha = 0.15f;
 							double fTime = CFAbsoluteTimeGetCurrent();
 							fAlpha += fAlpha * sin( ( fTime - (long)fTime ) * 2 * M_PI );
-							if ( IsRunningSnowLeopard() )
-								fAlpha += 0.4f;
-							else
-								fAlpha += 0.5f;
+							fAlpha += PUSHBUTTON_DEFAULT_ALPHA;
 							if ( fAlpha > 0 )
 							{
 								CGContextSetAlpha( mpBuffer->maContext, fAlpha > 1.0f ? 1.0f : fAlpha );
@@ -901,12 +899,6 @@ static bool IsRunningSnowLeopard()
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
 				}
-
-				// Fix bug 2031 by always filling the background with white
-				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-				CGContextSetFillColor( mpBuffer->maContext, whiteColor );
-				CGContextFillRect( mpBuffer->maContext, aAdjustedDestRect );
-
 				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
 
 				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
@@ -914,6 +906,11 @@ static bool IsRunningSnowLeopard()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
+
+
+					// Fix bug 2031 by always filling the background with white
+					[[NSColor whiteColor] set];
+					[NSBezierPath fillRect:NSRectFromCGRect( aAdjustedDestRect )];
 
 					// Draw arrows on Mac OS X 10.6
 					if ( !SCROLLBAR_SUPPRESS_ARROWS )
@@ -2001,9 +1998,9 @@ static bool IsRunningSnowLeopard()
 						}
 
 						[NSGraphicsContext setCurrentContext:pOldContext];
-					}
 
-					mbDrawn = YES;
+						mbDrawn = YES;
+					}
 
 					CGContextEndTransparencyLayer( mpBuffer->maContext );
 					CGContextRestoreGState( mpBuffer->maContext );
