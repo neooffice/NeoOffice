@@ -3950,8 +3950,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case PART_SUB_EDIT:
 							{
-								Point topLeft( spinboxRect.Left() + EDITFRAMEPADDING_WIDTH, spinboxRect.Top() + EDITFRAMEPADDING_WIDTH );
-								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( EDITFRAMEPADDING_WIDTH * 2 ), spinboxRect.GetHeight() - ( EDITFRAMEPADDING_WIDTH * 2 ) );
+								Point topLeft( spinboxRect.Left() + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, spinboxRect.Top() + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
+								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), spinboxRect.GetHeight() - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
@@ -4133,7 +4133,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_EDITBOX:
-			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// fill entire control area with edit box
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();
@@ -4144,8 +4143,26 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					controlRect.Bottom() += nHeightAdjust;
 				}
 
-				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
+				switch( nPart )
+				{
+					case PART_ENTIRE_CONTROL:
+						{
+							rNativeBoundingRegion = Region( controlRect );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+
+					case PART_SUB_EDIT:
+						{
+							Point topLeft( controlRect.Left() + FOCUSRING_WIDTH, controlRect.Top() + FOCUSRING_WIDTH );
+							Size boundsSize( controlRect.GetWidth() - ( FOCUSRING_WIDTH * 2 ), controlRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+				}
 
 				bReturn = TRUE;
 			}

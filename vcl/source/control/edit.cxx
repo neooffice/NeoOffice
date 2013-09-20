@@ -1147,7 +1147,8 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
             // set proper clipping region to not overdraw the whole control
             Region aClipRgn = GetPaintRegion();
 #ifdef USE_JAVA
-			if ( ( ImplGetNativeControlType() == CTRL_SPINBOX ) && ( aClipRgn.IsNull() ) )
+			ControlType nControlType = ImplGetNativeControlType();
+			if ( ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX ) && aClipRgn.IsNull() )
 			{
 				ImplControlValue aControlValue;
 				Point aPoint;
@@ -1157,8 +1158,8 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 				Region aArea( Rectangle(aPoint, pBorder->GetOutputSizePixel()) );
 	
 				// adjust position and size of the edit field
-				if ( GetNativeControlRegion(CTRL_SPINBOX, PART_SUB_EDIT,
-							aArea, 0, aControlValue, rtl::OUString(), aBound, aContent) )
+				if ( GetNativeControlRegion( nControlType, PART_SUB_EDIT,
+							aArea, 0, aControlValue, rtl::OUString(), aBound, aContent ) )
 				{
 					aClipRgn.Union( aBound.GetBoundRect() );
 				}
@@ -1168,7 +1169,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
             if( !aClipRgn.IsNull() )
             {
 #ifdef USE_JAVA
-				if( ImplGetNativeControlType() == CTRL_SPINBOX )
+				if ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX )
 				{
 					ImplControlValue aControlValue;
 					Point aPoint;
@@ -1178,8 +1179,8 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 					Region aArea( Rectangle(aPoint, pBorder->GetOutputSizePixel()) );
 		
 					// adjust position and size of the edit field
-					if ( GetNativeControlRegion(CTRL_SPINBOX, PART_SUB_EDIT,
-								aArea, 0, aControlValue, rtl::OUString(), aBound, aContent) )
+					if ( GetNativeControlRegion( nControlType, PART_SUB_EDIT,
+								aArea, 0, aControlValue, rtl::OUString(), aBound, aContent ) )
 					{
 						aClipRgn.Intersect( aBound.GetBoundRect() );
 					}
