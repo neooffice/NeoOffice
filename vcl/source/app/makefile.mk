@@ -44,7 +44,7 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
 .IF "$(GUIBASE)" == "java"
-CDEFS+=-DPRODUCT_MD5='"$(shell md5 -q -s "org.neooffice.$(PRODUCT_DIR_NAME)/$(PRODUCT_NAME)")"'
+CDEFS+=-DPRODUCT_MD5="$(shell md5 -q -s 'org.neooffice.$(PRODUCT_DIR_NAME)_$(PRODUCT_NAME)')"
 .ENDIF		# "$(GUIBASE)" == "java"
 
 # --- Files --------------------------------------------------------
