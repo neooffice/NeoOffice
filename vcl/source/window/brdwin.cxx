@@ -1411,7 +1411,12 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
         // if the native theme draws the spinbuttons in one call, make sure the proper settings
         // are passed, this might force a redraw though.... (TODO: improve)
+#ifdef USE_JAVA
+        // Fix bug that caused duplicate drawing of spinboxes
+        if ( (aCtrlType == CTRL_SPINBOX) && !pCtrl->IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+#else	// USE_JAVA
         if ( (aCtrlType == CTRL_SPINBOX) && !pCtrl->IsNativeControlSupported( CTRL_SPINBOX, PART_BUTTON_UP ) )
+#endif	// USE_JAVA
         {
             Edit *pEdit = ((Edit*) pCtrl)->GetSubEdit();
             if ( pEdit )
