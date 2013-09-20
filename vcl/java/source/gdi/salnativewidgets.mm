@@ -3950,8 +3950,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case PART_SUB_EDIT:
 							{
-								Point topLeft( spinboxRect.Left() + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, spinboxRect.Top() + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
-								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), spinboxRect.GetHeight() - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
+								Point topLeft( spinboxRect.Left() + FOCUSRING_WIDTH, spinboxRect.Top() + FOCUSRING_WIDTH );
+								Size boundsSize( spinboxRect.GetWidth() - (long)aSize.width - ( FOCUSRING_WIDTH * 2 ), spinboxRect.GetHeight() - ( FOCUSRING_WIDTH * 2 ) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
