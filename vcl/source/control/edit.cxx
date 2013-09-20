@@ -1148,7 +1148,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
             Region aClipRgn = GetPaintRegion();
 #ifdef USE_JAVA
 			ControlType nControlType = ImplGetNativeControlType();
-			if ( ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX ) && aClipRgn.IsNull() )
+			if ( ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX ) )
 			{
 				ImplControlValue aControlValue;
 				Point aPoint;
@@ -1161,32 +1161,16 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 				if ( GetNativeControlRegion( nControlType, PART_SUB_EDIT,
 							aArea, 0, aControlValue, rtl::OUString(), aBound, aContent ) )
 				{
-					aClipRgn.Union( aBound.GetBoundRect() );
+            		if( aClipRgn.IsNull() )
+						aClipRgn = aBound;
+					else
+						aClipRgn.Intersect( aBound.GetBoundRect() );
 				}
 			}
 #endif	// USE_JAVA
 
             if( !aClipRgn.IsNull() )
             {
-#ifdef USE_JAVA
-				if ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX )
-				{
-					ImplControlValue aControlValue;
-					Point aPoint;
-					Region aContent, aBound;
-			
-					// use the full extent of the control
-					Region aArea( Rectangle(aPoint, pBorder->GetOutputSizePixel()) );
-		
-					// adjust position and size of the edit field
-					if ( GetNativeControlRegion( nControlType, PART_SUB_EDIT,
-								aArea, 0, aControlValue, rtl::OUString(), aBound, aContent ) )
-					{
-						aClipRgn.Intersect( aBound.GetBoundRect() );
-					}
-				}
-#endif	// USE_JAVA
-
                 // transform clipping region to border window's coordinate system
                 if( IsRTLEnabled() != pBorder->IsRTLEnabled() && Application::GetSettings().GetLayoutRTL() )
                 {
