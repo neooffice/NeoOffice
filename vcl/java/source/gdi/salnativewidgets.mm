@@ -1974,16 +1974,10 @@ static bool IsRunningSnowLeopard()
 					if ( pContext )
 					{
 						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
-						if ( aDrawRect.size.width > FOCUSRING_WIDTH * 2 )
-						{
-							aDrawRect.origin.x += FOCUSRING_WIDTH;
-							aDrawRect.size.width -= FOCUSRING_WIDTH * 2;
-						}
-						if ( aDrawRect.size.height > FOCUSRING_WIDTH * 2 )
-						{
-							aDrawRect.origin.y += FOCUSRING_WIDTH;
-							aDrawRect.size.height -= FOCUSRING_WIDTH * 2;
-						}
+						aDrawRect.origin.x += FOCUSRING_WIDTH;
+						aDrawRect.origin.y += FOCUSRING_WIDTH;
+						aDrawRect.size.width -= FOCUSRING_WIDTH * 2;
+						aDrawRect.size.height -= FOCUSRING_WIDTH * 2;
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
