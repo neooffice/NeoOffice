@@ -61,6 +61,11 @@ using namespace rtl;
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
 
+extern "C" FUNCTION( PRODUCT_MD5 )
+{
+	return YES;
+}
+
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -69,81 +74,69 @@ void NSApplication_run()
 	if ( pApp )
 	{
 		NSBundle *pBundle = [NSBundle mainBundle];
-
-		MacOSBOOL bBundleOK = NO;
-		OUString aLibName = ::vcl::unohelper::CreateLibraryName( "vcl", TRUE );
-		if ( aLibName.getLength() )
-		{
-			void *pLib = dlopen( OUStringToOString( aLibName, osl_getThreadTextEncoding() ).getStr(), RTLD_LAZY | RTLD_LOCAL );
-			if ( pLib )
-			{
-				BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( pLib, "_" STRING( PRODUCT_MD5 ) );
-				if ( pBundleCheck )
-					bBundleOK = pBundleCheck();
-
-				dlclose( pLib );
-			}
-		}
-
-		if ( !bBundleOK )
-		{
-			NSLog( @"Application's main bundle info dictionary is damaged" );
-			[pPool release];
-			_exit( 1 );
-		}
-
-		if ( pBundle && [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
- 			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
-		else if ( class_getClassMethod( [NSBundle class], @selector(loadNibNamed:owner:) ) )
-			[NSBundle loadNibNamed:@"MainMenu" owner:pApp];
-		VCLEventQueue_installVCLEventQueueClasses();
 		if ( pBundle )
 		{
+			MacOSBOOL bBundleOK = NO;
+			NSDictionary *pInfoDict = [pBundle infoDictionary];
+			if ( pInfoDict )
+			{
+				NSString *pBundleName = [pInfoDict objectForKey:@"CFBundleName"];
+				NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
+				if ( pBundleName && pBundleIdentifier && pBundleName )
+				{
+					NSString *pKey = [pBundleName stringByAppendingFormat:@"_%@", pBundleIdentifier];
+					const char *pKeyString = [pKey UTF8String];
+					if ( pKeyString )
+					{
+						sal_uInt8 aBuf[ RTL_DIGEST_LENGTH_MD5 ];
+						NSMutableString *pKeyMD5 = [NSMutableString stringWithCapacity:sizeof( aBuf )];
+						if ( pKeyMD5 && rtl_digest_MD5( pKeyString, strlen( pKeyString ), aBuf, sizeof( aBuf ) ) == rtl_Digest_E_None )
+						{
+							[pKeyMD5 appendString:@"_"];
+							for ( size_t i = 0; i < sizeof( aBuf ); i++ )
+								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
+
+							const char *pKeyMD5String = [pKeyMD5 UTF8String];
+							OUString aLibName = ::vcl::unohelper::CreateLibraryName( "vcl", TRUE );
+							if ( pKeyMD5String && aLibName.getLength() )
+							{
+								void *pLib = dlopen( OUStringToOString( aLibName, osl_getThreadTextEncoding() ).getStr(), RTLD_LAZY | RTLD_LOCAL );
+								if ( pLib )
+								{
+									BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( pLib, pKeyMD5String );
+									if ( pBundleCheck )
+										bBundleOK = pBundleCheck();
+
+									dlclose( pLib );
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if ( !bBundleOK )
+			{
+				NSLog( @"Application's main bundle info dictionary is damaged" );
+				[pPool release];
+				_exit( 1 );
+			}
+
+			if ( [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
+ 				[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
+			else if ( class_getClassMethod( [NSBundle class], @selector(loadNibNamed:owner:) ) )
+				[NSBundle loadNibNamed:@"MainMenu" owner:pApp];
+
+			VCLEventQueue_installVCLEventQueueClasses();
+
 			// Make sure our application is registered with launch services
 			NSURL *pBundleURL = [pBundle bundleURL];
 			if ( pBundleURL )
 				LSRegisterURL( (CFURLRef)pBundleURL, false );
+
+			[pApp run];
 		}
-		[pApp run];
 	}
 
 	[pPool release];
-}
-
-extern "C" FUNCTION( PRODUCT_MD5 )
-{
-	MacOSBOOL bRet = NO;
-
-	// Check if the info dictionary has been changed
-	NSBundle *pBundle = [NSBundle mainBundle];
-	if ( pBundle )
-	{
-		NSDictionary *pInfoDict = [pBundle infoDictionary];
-		if ( pInfoDict )
-		{
-			NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
-			NSString *pBundleName = [pInfoDict objectForKey:@"CFBundleName"];
-			if ( pBundleIdentifier && pBundleName )
-			{
-				NSString *pKey = [pBundleIdentifier stringByAppendingFormat:@"_%@", pBundleName];
-				const char *pKeyString = [pKey UTF8String];
-				if ( pKeyString )
-				{
-					sal_uInt8 aBuf[ RTL_DIGEST_LENGTH_MD5 ];
-					NSMutableString *pKeyMD5 = [NSMutableString stringWithCapacity:sizeof( aBuf )];
-					if ( pKeyMD5 && rtl_digest_MD5( pKeyString, strlen( pKeyString ), aBuf, sizeof( aBuf ) ) == rtl_Digest_E_None )
-					{
-						for ( size_t i = 0; i < sizeof( aBuf ); i++ )
-							[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
-
-						NSString *pProductMD5 = [NSString stringWithUTF8String:STRING( PRODUCT_MD5 )];
-						if ( pProductMD5 && [pProductMD5 length] && [pProductMD5 caseInsensitiveCompare:pKeyMD5] == NSOrderedSame )
-							bRet = YES;
-					}
-				}
-			}
-		}
-	}
-
-	return bRet;
 }
