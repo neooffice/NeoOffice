@@ -305,6 +305,10 @@ OfaMiscTabPage::OfaMiscTabPage(Window* pParent, const SfxItemSet& rSet ) :
     // at least the button is as wide as its text
 	long nTxtWidth = aHelpAgentResetBtn.GetTextWidth( aHelpAgentResetBtn.GetText() );
 	Size aBtnSz = aHelpAgentResetBtn.GetSizePixel();
+#ifdef USE_JAVA
+	// Make sure that there is a little padding for the text
+	nTxtWidth += aBtnSz.Height();
+#endif	// USE_JAVA
 	if ( aBtnSz.Width() < nTxtWidth )
 	{
 		aBtnSz.Width() = nTxtWidth;
