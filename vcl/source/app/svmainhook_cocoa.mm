@@ -33,8 +33,10 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
 
 #include <rtl/digest.h>
+#include <vcl/unohelp.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -44,9 +46,24 @@
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
+#define DOSTRING( x ) #x
+#define STRING( x ) DOSTRING( x )
+
+#define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
+#define FUNCTION( x ) DOFUNCTION( x )
+
+typedef MacOSBOOL BundleCheck_Type();
+
+using namespace rtl;
+
 @interface NSBundle (VCLBundle)
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
+
+extern "C" FUNCTION( PRODUCT_MD5 )
+{
+	return YES;
+}
 
 void NSApplication_run()
 {
@@ -56,57 +73,66 @@ void NSApplication_run()
 	if ( pApp )
 	{
 		NSBundle *pBundle = [NSBundle mainBundle];
-
-		// Check if the info dictionary has been changed
-		MacOSBOOL bBundleOK = NO;
 		if ( pBundle )
 		{
+			MacOSBOOL bBundleOK = NO;
 			NSDictionary *pInfoDict = [pBundle infoDictionary];
 			if ( pInfoDict )
 			{
-				NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
 				NSString *pBundleName = [pInfoDict objectForKey:@"CFBundleName"];
-				if ( pBundleIdentifier && pBundleName )
+				NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
+				if ( pBundleName && pBundleIdentifier && pBundleName )
 				{
-					NSString *pKey = [pBundleIdentifier stringByAppendingFormat:@"/%@", pBundleName];
+					NSString *pKey = [pBundleName stringByAppendingFormat:@"_%@", pBundleIdentifier];
 					const char *pKeyString = [pKey UTF8String];
 					if ( pKeyString )
 					{
-						NSString *pKeyMD5 = nil;
 						sal_uInt8 aBuf[ RTL_DIGEST_LENGTH_MD5 ];
-
-						if ( rtl_digest_MD5( pKeyString, strlen( pKeyString ), aBuf, sizeof( aBuf ) ) == rtl_Digest_E_None )
-							pKeyMD5 = [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", aBuf[0], aBuf[1], aBuf[2], aBuf[3], aBuf[4], aBuf[5], aBuf[6], aBuf[7], aBuf[8], aBuf[9], aBuf[10], aBuf[11], aBuf[12], aBuf[13], aBuf[14], aBuf[15]];
-
-						if ( pKeyMD5 )
+						NSMutableString *pKeyMD5 = [NSMutableString stringWithCapacity:sizeof( aBuf )];
+						if ( pKeyMD5 && rtl_digest_MD5( pKeyString, strlen( pKeyString ), aBuf, sizeof( aBuf ) ) == rtl_Digest_E_None )
 						{
-							NSString *pProductMD5 = [NSString stringWithUTF8String:PRODUCT_MD5];
-							if ( pProductMD5 && [pProductMD5 length] && [pProductMD5 caseInsensitiveCompare:pKeyMD5] == NSOrderedSame )
-								bBundleOK = YES;
+							[pKeyMD5 appendString:@"_"];
+							for ( size_t i = 0; i < sizeof( aBuf ); i++ )
+								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
+
+							const char *pKeyMD5String = [pKeyMD5 UTF8String];
+							OUString aLibName = ::vcl::unohelper::CreateLibraryName( "vcl", TRUE );
+							if ( pKeyMD5String && aLibName.getLength() )
+							{
+								void *pLib = dlopen( OUStringToOString( aLibName, osl_getThreadTextEncoding() ).getStr(), RTLD_LAZY | RTLD_LOCAL );
+								if ( pLib )
+								{
+									BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( pLib, pKeyMD5String );
+									if ( pBundleCheck )
+										bBundleOK = pBundleCheck();
+
+									dlclose( pLib );
+								}
+							}
 						}
 					}
 				}
 			}
-		}
 
-		if ( !bBundleOK )
-		{
-			NSLog( @"Application's main bundle info dictionary is damaged" );
-			[pPool release];
-			_exit( 1 );
-		}
+			if ( !bBundleOK )
+			{
+				NSLog( @"Application's main bundle info dictionary is damaged" );
+				[pPool release];
+				_exit( 1 );
+			}
 
-		if ( pBundle && [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
- 			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
-		VCLEventQueue_installVCLEventQueueClasses();
-		if ( pBundle )
-		{
+			if ( [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
+ 				[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
+
+			VCLEventQueue_installVCLEventQueueClasses();
+
 			// Make sure our application is registered with launch services
 			NSURL *pBundleURL = [pBundle bundleURL];
 			if ( pBundleURL )
 				LSRegisterURL( (CFURLRef)pBundleURL, false );
+
+			[pApp run];
 		}
-		[pApp run];
 	}
 
 	[pPool release];
