@@ -49,7 +49,7 @@ NeoOffice is based on the OpenOffice office productivity software. Since 2003, t
 
 
 Keywords:
-neo office,open office,openoffice,libreoffice,office,word processing,spreadsheet,presentation
+neo office,office,word processing,spreadsheet,presentation,open office,openoffice,libreoffice
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
