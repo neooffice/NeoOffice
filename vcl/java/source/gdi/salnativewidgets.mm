@@ -111,8 +111,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 };
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
-typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const HIThemeMenuDrawInfo *pMenuDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
 typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIThemeGrowBoxDrawInfo *pDrawInfo, HIRect *pBounds);
@@ -121,8 +119,6 @@ typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabD
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
-static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
-static HIThemeDrawSeparator_Type *pHIThemeDrawSeparator = NULL;
 static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
 static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
 static HIThemeGetGrowBoxBounds_Type *pHIThemeGetGrowBoxBounds = NULL;
@@ -2031,6 +2027,135 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface VCLNativeMenuItemCell : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	MacOSBOOL				mbDrawSeparator;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
+- (NSControl *)menuItemCellControl;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
+@end
+
+@implementation VCLNativeMenuItemCell
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
+{
+	VCLNativeMenuItemCell *pRet = [[VCLNativeMenuItemCell alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect drawSeparator:bDrawSeparator];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSControl *)menuItemCellControl
+{
+	NSControl *pControl = [[NSControl alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pControl )
+		return nil;
+
+	[pControl autorelease];
+
+	NSMenuItemCell *pCell = [[NSMenuItemCell alloc] initTextCell:@""];
+	if ( !pCell )
+		return nil;
+
+	[pControl setCell:pCell];
+
+	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
+		[pControl setEnabled:YES];
+	else
+		[pControl setEnabled:NO];
+
+	// Always suppress focus ring in menu items
+	[pCell setShowsFirstResponder:NO];
+
+	return pControl;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSControl *pControl = [self menuItemCellControl];
+		if ( pControl )
+		{
+			NSMenuItemCell *pMenuItemCell = [pControl cell];
+			if ( pMenuItemCell && [pMenuItemCell isKindOfClass:[NSMenuItemCell class]] )
+			{
+				float fOffscreenHeight = maDestRect.size.height;
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				{
+					CGContextSaveGState( mpBuffer->maContext );
+					if ( [pControl isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						if ( mbDrawSeparator )
+						{
+							[pMenuItemCell drawSeparatorItemWithFrame:aDrawRect inView:pControl];
+						}
+						else
+						{
+							[[NSColor controlBackgroundColor] set];
+							[NSBezierPath fillRect:aDrawRect];
+						}
+						[NSGraphicsContext setCurrentContext:pOldContext];
+
+						mbDrawn = YES;
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	mbDrawSeparator = bDrawSeparator;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -2243,8 +2368,6 @@ static bool HIThemeInitialize()
 		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
 		if ( pLib )
 		{
-			pHIThemeDrawMenuBackground = (HIThemeDrawMenuBackground_Type *)dlsym( pLib, "HIThemeDrawMenuBackground" );
-			pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
 			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
 			pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
 			pHIThemeGetGrowBoxBounds = (HIThemeGetGrowBoxBounds_Type *)dlsym( pLib, "HIThemeGetGrowBoxBounds" );
@@ -2254,8 +2377,6 @@ static bool HIThemeInitialize()
 		}
 
 #ifdef DEBUG
-		fprintf( stderr, "pHIThemeDrawMenuBackground: %p\n", pHIThemeDrawMenuBackground );
-		fprintf( stderr, "pHIThemeDrawSeparator: %p\n", pHIThemeDrawSeparator );
 		fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
 		fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
 		fprintf( stderr, "pHIThemeGetGrowBoxBounds: %p\n", pHIThemeGetGrowBoxBounds );
@@ -2265,7 +2386,7 @@ static bool HIThemeInitialize()
 		bHIThemeInitialized = true;
 	}
 
-	return ( pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
+	return ( pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
 }
 
 // =======================================================================
@@ -2341,27 +2462,6 @@ static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, Contr
 		pTabPaneDrawInfo->state = kThemeStateInactive;
 	else
 		pTabPaneDrawInfo->state = kThemeStateActive;
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize HITheme structures used to draw a separator line
- *
- * @param pSepInfo	pointer to HITheme separator info structure to be
- *						initialized
- * @param nState		control state of the separator
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlState nState )
-{
-	memset( pSepInfo, 0, sizeof( HIThemeSeparatorDrawInfo ) );
-	pSepInfo->version = 0;
-	if ( nState & CTRL_STATE_ENABLED )
-		pSepInfo->state = kThemeStateActive;
-	else
-		pSepInfo->state = kThemeStateInactive;
 	return TRUE;
 }
 
@@ -2731,28 +2831,20 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
  */
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedMenuBackgroundBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		HIThemeMenuDrawInfo pMenuDrawInfo;
-		memset( &pMenuDrawInfo, 0, sizeof( pMenuDrawInfo ) );
-		pMenuDrawInfo.version = 0;
-		pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
+	BOOL bRet = FALSE;
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		bRet = ( pHIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	ControlState nState = CTRL_STATE_ENABLED;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-	pBuffer->ReleaseContext();
+	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedMenuBackgroundBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:NO];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeMenuItemCell drawn];
 
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2867,29 +2959,19 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedSeparatorLineBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeSeparatorDrawInfo pSepInfo;
-		InitSeparatorDrawInfo( &pSepInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedSeparatorLineBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:YES];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeMenuItemCell drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
