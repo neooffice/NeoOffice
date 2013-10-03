@@ -65,7 +65,10 @@
 #define COMBOBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 17 : 19 )
 #define COMBOBOX_HEIGHT					28
 #define COMBOBOX_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : -0.5f )
-#define CONTROL_TAB_PANE_TOP_OFFSET		12
+#define CONTROL_TAB_PANE_LEFT_OFFSET	6
+#define CONTROL_TAB_PANE_TOP_OFFSET		28
+#define CONTROL_TAB_PANE_RIGHT_OFFSET	6
+#define CONTROL_TAB_PANE_BOTTOM_OFFSET	9
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 25 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
 #define EDITFRAMEPADDING_WIDTH			1
@@ -112,7 +115,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
-typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
 typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIThemeGrowBoxDrawInfo *pDrawInfo, HIRect *pBounds);
 typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, HIShapeRef *pShape);
 
@@ -120,7 +122,6 @@ static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static bool bHIThemeInitialized = false;
 static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
-static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
 static HIThemeGetGrowBoxBounds_Type *pHIThemeGetGrowBoxBounds = NULL;
 static HIThemeGetTabShape_Type *pHIThemeGetTabShape = NULL;
 
@@ -2156,6 +2157,111 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface VCLNativeTabBorder : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSTabView *)tabView;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeTabBorder
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	VCLNativeTabBorder *pRet = [[VCLNativeTabBorder alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSTabView *)tabView
+{
+	NSTabView *pTabView = [[NSTabView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pTabView )
+		return nil;
+
+	[pTabView autorelease];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pTabView controlState:mnControlState];
+
+	return pTabView;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSTabView *pTabView = [self tabView];
+		if ( pTabView )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				if ( [pTabView isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+					[pTabView drawRect:[pTabView frame]];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
@@ -2369,7 +2475,6 @@ static bool HIThemeInitialize()
 		if ( pLib )
 		{
 			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
-			pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
 			pHIThemeGetGrowBoxBounds = (HIThemeGetGrowBoxBounds_Type *)dlsym( pLib, "HIThemeGetGrowBoxBounds" );
 			pHIThemeGetTabShape = (HIThemeGetTabShape_Type *)dlsym( pLib, "HIThemeGetTabShape" );
 
@@ -2378,7 +2483,6 @@ static bool HIThemeInitialize()
 
 #ifdef DEBUG
 		fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
-		fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
 		fprintf( stderr, "pHIThemeGetGrowBoxBounds: %p\n", pHIThemeGetGrowBoxBounds );
 		fprintf( stderr, "pHIThemeGetTabShape: %p\n", pHIThemeGetTabShape );
 #endif	// DEBUG
@@ -2386,7 +2490,7 @@ static bool HIThemeInitialize()
 		bHIThemeInitialized = true;
 	}
 
-	return ( pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
+	return ( pHIThemeDrawTab && pHIThemeGetGrowBoxBounds && pHIThemeGetTabShape );
 }
 
 // =======================================================================
@@ -2438,30 +2542,6 @@ static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nSta
 			pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
 			break;
 	}
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize the HITheme strucutre used to draw the bounding box
- * for a tab control background bounding box
- *
- * @param pTabPaneDrawInfo	pointer to HITheme tab drawing structure
- * @param nState			overall control state of the tab item.
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, ControlState nState )
-{
-	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabPaneDrawInfo ) );
-	pTabPaneDrawInfo->version = 1;
-	pTabPaneDrawInfo->direction = kThemeTabNorth;
-	pTabPaneDrawInfo->size = kHIThemeTabSizeNormal;
-	pTabPaneDrawInfo->adornment = kHIThemeTabAdornmentNone;
-	if( ! ( nState & CTRL_STATE_ENABLED ) )
-		pTabPaneDrawInfo->state = kThemeStateInactive;
-	else
-		pTabPaneDrawInfo->state = kThemeStateActive;
 	return TRUE;
 }
 
@@ -2763,29 +2843,19 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
  */
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedTabBoundingBoxBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
-		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeTabBorder *pVCLNativeTabBorder = [VCLNativeTabBorder createWithControlState:nState bitmapBuffer:&aSharedTabBoundingBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeTabBorder performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTabBorder waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeTabBorder drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -3568,8 +3638,10 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				// hack - on 10.3+ tab panes visually need to intersect the
 				// middle of the associated segmented control.  Subtract
 				// 15 off the height to shoehorn the drawing in.
-				ctrlRect.setY( ctrlRect.getY() - CONTROL_TAB_PANE_TOP_OFFSET );
-				ctrlRect.setHeight( ctrlRect.getHeight() + CONTROL_TAB_PANE_TOP_OFFSET );
+				ctrlRect.Left() -= CONTROL_TAB_PANE_LEFT_OFFSET;
+				ctrlRect.Top() -= CONTROL_TAB_PANE_TOP_OFFSET;
+				ctrlRect.Right() += CONTROL_TAB_PANE_RIGHT_OFFSET;
+				ctrlRect.Bottom() += CONTROL_TAB_PANE_BOTTOM_OFFSET;
 				bOK = DrawNativeTabBoundingBox( this, ctrlRect, nState );
 			}
 			break;
