@@ -89,6 +89,11 @@
 #define PUSHBUTTON_HEIGHT_SLOP			1
 #define PUSHBUTTON_DEFAULT_ALPHA		( IsRunningSnowLeopard() ? 0.4f : 0.5f )
 #define DISCLOSUREBTN_WIDTH_SLOP		-2
+#define TABITEM_FOCUSRING_LEFT_OFFSET	2
+#define TABITEM_FOCUSRING_TOP_OFFSET	1
+#define TABITEM_FOCUSRING_RIGHT_OFFSET	2
+#define TABITEM_FOCUSRING_BOTTOM_OFFSET	2
+#define TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS	5
 
 using namespace osl;
 using namespace rtl;
@@ -2409,8 +2414,8 @@ static bool IsRunningSnowLeopard()
 				// the left
 				float fWidthAdjust = 1.0f;
 				CGRect aRealDrawRect = maDestRect;
-				aRealDrawRect.origin.x -= fWidthAdjust;
-				aRealDrawRect.size.width += fWidthAdjust;
+				aRealDrawRect.origin.x -= fWidthAdjust + FOCUSRING_WIDTH;
+				aRealDrawRect.size.width += fWidthAdjust + ( FOCUSRING_WIDTH * 2 );
 
 				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
 				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
@@ -2431,12 +2436,48 @@ static bool IsRunningSnowLeopard()
 						// Shift control to right by same amount so that the
 						// clipped bits will be drawn
 						NSRect aFrame = [pTabView frame];
-						aFrame.origin.x += fWidthAdjust;
+						aFrame.origin.x += fWidthAdjust + FOCUSRING_WIDTH;
+						aFrame.origin.y += FOCUSRING_WIDTH;
 						[pTabView setFrame:aFrame];
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
+
+						// Draw focus ring
+						if ( mnControlState & CTRL_STATE_FOCUSED && ! ( mnControlState & CTRL_STATE_INACTIVE ) )
+						{
+							NSRect aFocusRingRect = [pTabView _tabRectForTabViewItem:pItem];
+							if ( mpTabitemValue && mpTabitemValue->isFirst() )
+								aFocusRingRect.origin.x += TABITEM_FOCUSRING_LEFT_OFFSET;
+							aFocusRingRect.origin.y += TABITEM_FOCUSRING_TOP_OFFSET;
+							if ( mpTabitemValue && mpTabitemValue->isFirst() )
+								aFocusRingRect.size.width -= TABITEM_FOCUSRING_LEFT_OFFSET;
+							if ( mpTabitemValue && mpTabitemValue->isLast() )
+								aFocusRingRect.size.width -= TABITEM_FOCUSRING_RIGHT_OFFSET;
+							aFocusRingRect.size.height -= TABITEM_FOCUSRING_TOP_OFFSET + TABITEM_FOCUSRING_BOTTOM_OFFSET;
+
+							NSSetFocusRingStyle( NSFocusRingBelow );
+							[[NSColor clearColor] set];
+							if ( mpTabitemValue && ( mpTabitemValue->isFirst() || mpTabitemValue->isLast() ) )
+							{
+								NSBezierPath *pPath = [NSBezierPath bezierPathWithRoundedRect:aFocusRingRect xRadius:TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS yRadius:TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS];
+								if ( pPath )
+								{
+									if ( !mpTabitemValue->isFirst() )
+										[pPath appendBezierPathWithRect:NSMakeRect( aFocusRingRect.origin.x, aFocusRingRect.origin.y, aFocusRingRect.size.width / 2, aFocusRingRect.size.height )];
+									if ( !mpTabitemValue->isLast() )
+										[pPath appendBezierPathWithRect:NSMakeRect( aFocusRingRect.origin.x + ( aFocusRingRect.size.width / 2 ), aFocusRingRect.origin.y, aFocusRingRect.size.width / 2, aFocusRingRect.size.height )];
+
+									[pPath fill];
+								}
+							}
+							else
+							{
+								[NSBezierPath fillRect:aFocusRingRect];
+							}
+						}
+
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
@@ -4388,8 +4429,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSSize aSize = [pVCLNativeTabCell size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					Point topLeft( controlRect.Left(), controlRect.Top() );
-					Size boundsSize( (long)aSize.width, (long)aSize.height );
+					Point topLeft( controlRect.Left(), controlRect.Top() - FOCUSRING_WIDTH );
+					Size boundsSize( (long)aSize.width, (long)aSize.height + ( FOCUSRING_WIDTH * 2 ) );
 					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 					rNativeContentRegion = Region( rNativeBoundingRegion );
 
