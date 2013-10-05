@@ -1106,9 +1106,12 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     long nTextHeight = GetTextHeight();
     long nTextWidth = GetCtrlTextWidth( pItem->maFormatText );
 #ifdef USE_JAVA
-    // Prevent first tab item's text from being shifted too far left
+    // Prevent first tab item's text from being shifted too far left and last
+    // tab item's text from being shifted too far right
     if ( bFirstInGroup )
         nTextWidth -= 4;
+    if ( bLastInGroup )
+        nTextWidth += 4;
 #endif	// USE_JAVA
     if( !! pItem->maTabImage )
     {

@@ -50,9 +50,6 @@
 #include <vcl/window.hxx>
 
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
-// Need to include for HITheme constants but we don't link to it
-#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
@@ -65,7 +62,10 @@
 #define COMBOBOX_BUTTON_WIDTH			19
 #define COMBOBOX_HEIGHT					28
 #define COMBOBOX_HEIGHT_SLOP			-0.5f
-#define CONTROL_TAB_PANE_TOP_OFFSET		12
+#define CONTROL_TAB_PANE_LEFT_OFFSET	6
+#define CONTROL_TAB_PANE_TOP_OFFSET		28
+#define CONTROL_TAB_PANE_RIGHT_OFFSET	6
+#define CONTROL_TAB_PANE_BOTTOM_OFFSET	9
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 25 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
 #define EDITFRAMEPADDING_WIDTH			1
@@ -76,7 +76,6 @@
 #define SPINNER_WIDTH_SLOP				1
 #define PROGRESSBAR_HEIGHT_SLOP			0
 #define PROGRESSBARPADDING_HEIGHT		1
-#define TABITEM_HEIGHT_SLOP				4
 // Fix most cases of checkbox and radio button clipping reported in the
 // following NeoOffice forum post by setting their width and height to the
 // minimum amount that will not result in a clipped focus ring when drawn:
@@ -97,7 +96,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
 	CGContextRef			maContext;
 	MutexGuard*				mpGraphicsMutexGuard;
-	HIThemeOrientation		mnHIThemeOrientationFlags;
 	bool					mbLastDrawToPrintGraphics;
 	bool					mbUseLayer;
 
@@ -109,19 +107,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect );
 	void					ReleaseContext();
 };
-
-typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const HIThemeMenuDrawInfo *pMenuDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
-typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
-typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, HIShapeRef *pShape);
-
-static bool bHIThemeInitialized = false;
-static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
-static HIThemeDrawSeparator_Type *pHIThemeDrawSeparator = NULL;
-static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
-static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
-static HIThemeGetTabShape_Type *pHIThemeGetTabShape = NULL;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -1517,11 +1502,10 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 				NSTableHeaderCell *pTableHeaderCell = [pTableColumn headerCell];
 				if ( pTableHeaderView && pTableHeaderCell && [pTableHeaderCell isKindOfClass:[NSTableHeaderCell class]] )
 				{
-					MacOSBOOL bHighlighted = ( ( mnControlState & CTRL_STATE_SELECTED ) | ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) );
+					MacOSBOOL bHighlighted = ( ( mnControlState & CTRL_STATE_SELECTED ) || ( mpListViewHeaderValue && mpListViewHeaderValue->mbPrimarySortColumn ) );
 
-					// Prevent clipping of left separator when by extending
-					// width to the left when drawing highlighted or pressed
-					// cells
+					// Prevent clipping of left separator by extending width
+					// to the left when drawing highlighted or pressed cells
 					float fWidthAdjust = ( bHighlighted || mnControlState & CTRL_STATE_PRESSED ? 1.0f : 0 );
 					CGRect aRealDrawRect = maDestRect;
 					aRealDrawRect.origin.x -= fWidthAdjust;
@@ -1989,11 +1973,482 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
+@interface VCLNativeMenuItemCell : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	MacOSBOOL				mbDrawSeparator;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
+- (NSControl *)menuItemCellControl;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator;
+@end
+
+@implementation VCLNativeMenuItemCell
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
+{
+	VCLNativeMenuItemCell *pRet = [[VCLNativeMenuItemCell alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect drawSeparator:bDrawSeparator];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSControl *)menuItemCellControl
+{
+	NSControl *pControl = [[NSControl alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pControl )
+		return nil;
+
+	[pControl autorelease];
+
+	NSMenuItemCell *pCell = [[NSMenuItemCell alloc] initTextCell:@""];
+	if ( !pCell )
+		return nil;
+
+	[pControl setCell:pCell];
+
+	if ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
+		[pControl setEnabled:YES];
+	else
+		[pControl setEnabled:NO];
+
+	// Always suppress focus ring in menu items
+	[pCell setShowsFirstResponder:NO];
+
+	return pControl;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSControl *pControl = [self menuItemCellControl];
+		if ( pControl )
+		{
+			NSMenuItemCell *pMenuItemCell = [pControl cell];
+			if ( pMenuItemCell && [pMenuItemCell isKindOfClass:[NSMenuItemCell class]] )
+			{
+				float fOffscreenHeight = maDestRect.size.height;
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+				{
+					CGContextSaveGState( mpBuffer->maContext );
+					if ( [pControl isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						if ( mbDrawSeparator )
+						{
+							[pMenuItemCell drawSeparatorItemWithFrame:aDrawRect inView:pControl];
+						}
+						else
+						{
+							[[NSColor controlBackgroundColor] set];
+							[NSBezierPath fillRect:aDrawRect];
+						}
+						[NSGraphicsContext setCurrentContext:pOldContext];
+
+						mbDrawn = YES;
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect drawSeparator:(MacOSBOOL)bDrawSeparator
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	mbDrawSeparator = bDrawSeparator;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
+@interface NSTabView (VCLNativeTabView)
+- (void)_drawTabViewItem:(NSTabViewItem *)pItem inRect:(NSRect)aRect;
+- (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem;
+@end
+
+@interface VCLNativeTabBorder : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (NSTabView *)tabView;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+@end
+
+@implementation VCLNativeTabBorder
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	VCLNativeTabBorder *pRet = [[VCLNativeTabBorder alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSTabView *)tabView
+{
+	NSTabView *pTabView = [[NSTabView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pTabView )
+		return nil;
+
+	[pTabView autorelease];
+	[pTabView setTabViewType:NSTopTabsBezelBorder];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pTabView controlState:mnControlState];
+
+	return pTabView;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		NSTabView *pTabView = [self tabView];
+		if ( pTabView && [pTabView respondsToSelector:@selector(_drawTabViewItem:inRect:)] && [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
+		{
+			float fOffscreenHeight = maDestRect.size.height;
+			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
+			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
+			{
+				CGContextSaveGState( mpBuffer->maContext );
+				if ( [pTabView isFlipped] )
+				{
+					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+				}
+				CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+				NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+				if ( pContext )
+				{
+					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+					[NSGraphicsContext setCurrentContext:pContext];
+					[pTabView drawRect:[pTabView frame]];
+					[NSGraphicsContext setCurrentContext:pOldContext];
+
+					mbDrawn = YES;
+				}
+
+				CGContextEndTransparencyLayer( mpBuffer->maContext );
+				CGContextRestoreGState( mpBuffer->maContext );
+
+				mpBuffer->ReleaseContext();
+
+				if ( mbDrawn )
+					mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+
+	return self;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeTabView : NSTabView
+- (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem;
+@end
+
+@implementation VCLNativeTabView
+
+- (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem
+{
+	// Force the item to fill the entire tab view
+	NSRect aRet = [self frame];
+
+	// Set height to item's height
+	if ( [super respondsToSelector:@selector(_tabRectForTabViewItem:)] )
+	{
+		NSRect aTabRect = [super _tabRectForTabViewItem:pItem];
+		aRet.size.height = aTabRect.size.height;
+	}
+
+	return aRet;
+}
+
+@end
+
+@interface VCLNativeTabViewItem : NSTabViewItem
+{
+    NSTabState				mnTabState;
+}
+- (id)initWithIdentifier:(id)pIdentifier;
+- (void)setTabState:(NSTabState)nState;
+- (NSTabState)tabState;
+@end
+
+@implementation VCLNativeTabViewItem
+
+- (id)initWithIdentifier:(id)pIdentifier
+{
+	[super initWithIdentifier:pIdentifier];
+
+	mnTabState = NSBackgroundTab;
+
+	return self;
+}
+
+- (void)setTabState:(NSTabState)nTabState
+{
+	mnTabState = nTabState;
+}
+
+- (NSTabState)tabState
+{
+	return mnTabState;
+}
+
+@end
+
+// =======================================================================
+
+@interface VCLNativeTabCell : NSObject
+{
+	ControlState			mnControlState;
+	VCLBitmapBuffer*		mpBuffer;
+	JavaSalGraphics*		mpGraphics;
+	TabitemValue*			mpTabitemValue;
+	CGRect					maDestRect;
+	MacOSBOOL				mbDrawn;
+	NSSize					maSize;
+}
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+- (VCLNativeTabViewItem *)tabViewItem;
+- (void)draw:(id)pObject;
+- (MacOSBOOL)drawn;
+- (void)getSize:(id)pObject;
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+- (NSSize)size;
+@end
+
+@implementation VCLNativeTabCell
+
++ (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect
+{
+	VCLNativeTabCell *pRet = [[VCLNativeTabCell alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics tabitemValue:pTabitemValue destRect:aDestRect];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (VCLNativeTabViewItem *)tabViewItem
+{
+	VCLNativeTabView *pTabView = [[VCLNativeTabView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	if ( !pTabView )
+		return nil;
+
+	[pTabView autorelease];
+	[pTabView setTabViewType:NSTopTabsBezelBorder];
+
+	if ( mpTabitemValue && !mpTabitemValue->isFirst() )
+	{
+		VCLNativeTabViewItem *pPreItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
+		if ( !pPreItem )
+			return nil;
+
+		[pPreItem autorelease];
+		[pTabView addTabViewItem:pPreItem];
+	}
+
+	VCLNativeTabViewItem *pItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
+	if ( !pItem )
+		return nil;
+
+	[pItem autorelease];
+	[pTabView addTabViewItem:pItem];
+
+	if ( mpTabitemValue && !mpTabitemValue->isLast() )
+	{
+		VCLNativeTabViewItem *pPostItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
+		if ( !pPostItem )
+			return nil;
+
+		[pPostItem autorelease];
+		[pTabView addTabViewItem:pPostItem];
+	}
+
+	if ( mnControlState & CTRL_STATE_PRESSED )
+		[pItem setTabState:NSPressedTab];
+	else if ( mnControlState & CTRL_STATE_SELECTED )
+		[pItem setTabState:NSSelectedTab];
+	else
+		[pItem setTabState:NSBackgroundTab];
+
+	// The enabled state is controlled by the [NSWindow _hasActiveControls]
+	// selector so we need to attach a custom hidden window to draw enabled
+	[VCLNativeControlWindow createAndAttachToView:pTabView controlState:mnControlState];
+
+	return pItem;
+}
+
+- (void)draw:(id)pObject
+{
+	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
+	{
+		VCLNativeTabViewItem *pItem = [self tabViewItem];
+		if ( pItem )
+		{
+			NSTabView *pTabView = [pItem tabView];
+			if ( pTabView && [pTabView respondsToSelector:@selector(_drawTabViewItem:inRect:)] && [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
+			{
+				// Prevent clipping of left separator by extending width to
+				// the left
+				float fWidthAdjust = 1.0f;
+				CGRect aRealDrawRect = maDestRect;
+				aRealDrawRect.origin.x -= fWidthAdjust;
+				aRealDrawRect.size.width += fWidthAdjust;
+
+				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
+				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
+				CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+				if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
+				{
+					CGContextSaveGState( mpBuffer->maContext );
+					if ( [pTabView isFlipped] )
+					{
+						CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
+						CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
+					}
+					CGContextBeginTransparencyLayerWithRect( mpBuffer->maContext, aAdjustedDestRect, NULL );
+
+					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
+					if ( pContext )
+					{
+						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+
+						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+						[NSGraphicsContext setCurrentContext:pContext];
+						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
+						[NSGraphicsContext setCurrentContext:pOldContext];
+
+						mbDrawn = YES;
+					}
+
+					CGContextEndTransparencyLayer( mpBuffer->maContext );
+					CGContextRestoreGState( mpBuffer->maContext );
+
+					mpBuffer->ReleaseContext();
+
+					if ( mbDrawn )
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+				}
+			}
+		}
+	}
+}
+
+- (MacOSBOOL)drawn
+{
+	return mbDrawn;
+}
+
+- (void)getSize:(id)pObject
+{
+	if ( NSEqualSizes( maSize, NSZeroSize ) )
+	{
+		VCLNativeTabViewItem *pItem = [self tabViewItem];
+		if ( pItem )
+		{
+			NSTabView *pTabView = [pItem tabView];
+			if ( pTabView && [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
+				maSize = [pTabView _tabRectForTabViewItem:pItem].size;
+		}
+	}
+}
+
+- (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics tabitemValue:(TabitemValue *)pTabitemValue destRect:(CGRect)aDestRect;
+{
+	[super init];
+
+	mnControlState = nControlState;
+	mpBuffer = pBuffer;
+	mpGraphics = pGraphics;
+	mpTabitemValue = pTabitemValue;
+	maDestRect = aDestRect;
+	mbDrawn = NO;
+	maSize = NSZeroSize;
+
+	return self;
+}
+
+- (NSSize)size
+{
+	return maSize;
+}
+
+@end
+
+// =======================================================================
+
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
 	maContext( NULL ),
 	mpGraphicsMutexGuard( NULL ),
-	mnHIThemeOrientationFlags( kHIThemeOrientationInverted ),
 	mbLastDrawToPrintGraphics( false ),
 	mbUseLayer( false )
 {
@@ -2116,7 +2571,6 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 void VCLBitmapBuffer::Destroy()
 {
-	mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
 	mnFormat = 0;
 	mnWidth = 0;
 	mnHeight = 0;
@@ -2190,135 +2644,6 @@ void VCLBitmapBuffer::ReleaseContext()
 		delete mpGraphicsMutexGuard;
 		mpGraphicsMutexGuard = NULL;
 	}
-}
-
-// =======================================================================
-
-static bool HIThemeInitialize()
-{
-	if ( !bHIThemeInitialized )
-	{
-		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-		if ( pLib )
-		{
-			pHIThemeDrawMenuBackground = (HIThemeDrawMenuBackground_Type *)dlsym( pLib, "HIThemeDrawMenuBackground" );
-			pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
-			pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
-			pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
-			pHIThemeGetTabShape = (HIThemeGetTabShape_Type *)dlsym( pLib, "HIThemeGetTabShape" );
-
-			dlclose( pLib );
-		}
-
-#ifdef DEBUG
-		fprintf( stderr, "pHIThemeDrawMenuBackground: %p\n", pHIThemeDrawMenuBackground );
-		fprintf( stderr, "pHIThemeDrawSeparator: %p\n", pHIThemeDrawSeparator );
-		fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
-		fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
-		fprintf( stderr, "pHIThemeGetTabShape: %p\n", pHIThemeGetTabShape );
-#endif	// DEBUG
-
-		bHIThemeInitialized = true;
-	}
-
-	return ( pHIThemeDrawMenuBackground && pHIThemeDrawSeparator && pHIThemeDrawTab && pHIThemeDrawTabPane && pHIThemeGetTabShape );
-}
-
-// =======================================================================
-
-/**
- * (static) Convert VCL tab information structure into an HITheme tab
- * description structure.  This structure can be used to draw an
- * individual tab/segmented control into a window.
- *
- * @param pTabDrawInfo		pointer to HITheme tab drawing structure
- * @param nState			overall control state of the tab item.
- * @param pTabValue			VCL structure containing information about
- * 							the tab's position
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
-{
-	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
-	pTabDrawInfo->version = 1;
-	if( nState & CTRL_STATE_SELECTED )
-		pTabDrawInfo->style = kThemeTabFront;
-	else if( nState & CTRL_STATE_PRESSED )
-		pTabDrawInfo->style = kThemeTabNonFrontPressed;
-	else if( nState & CTRL_STATE_ENABLED )
-		pTabDrawInfo->style = kThemeTabNonFront;
-	else
-		pTabDrawInfo->style = kThemeTabNonFrontInactive;
-	pTabDrawInfo->direction = kThemeTabNorth;	// always assume tabs are at top of tab controls in standard position
-	pTabDrawInfo->size = kHIThemeTabSizeNormal;
-	if( nState & CTRL_STATE_FOCUSED )
-		pTabDrawInfo->adornment = kHIThemeTabAdornmentFocus;
-	else
-		pTabDrawInfo->adornment = kHIThemeTabAdornmentNone;
-	pTabDrawInfo->kind = kHIThemeTabKindNormal;
-	pTabDrawInfo->position = kHIThemeTabPositionMiddle;
-	if( pTabValue )
-	{
-		if ( pTabValue->isFirst() && pTabValue->isLast() )
-			pTabDrawInfo->position = kHIThemeTabPositionOnly;
-		else if( pTabValue->isFirst() )
-			pTabDrawInfo->position = kHIThemeTabPositionFirst;
-		else if( pTabValue->isLast() )
-			pTabDrawInfo->position = kHIThemeTabPositionLast;
-	}
-	switch( pTabDrawInfo->position )
-	{
-		case kHIThemeTabPositionMiddle:
-		case kHIThemeTabPositionFirst:
-			pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
-			break;
-	}
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize the HITheme strucutre used to draw the bounding box
- * for a tab control background bounding box
- *
- * @param pTabPaneDrawInfo	pointer to HITheme tab drawing structure
- * @param nState			overall control state of the tab item.
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, ControlState nState )
-{
-	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabPaneDrawInfo ) );
-	pTabPaneDrawInfo->version = 1;
-	pTabPaneDrawInfo->direction = kThemeTabNorth;
-	pTabPaneDrawInfo->size = kHIThemeTabSizeNormal;
-	pTabPaneDrawInfo->adornment = kHIThemeTabAdornmentNone;
-	if( ! ( nState & CTRL_STATE_ENABLED ) )
-		pTabPaneDrawInfo->state = kThemeStateInactive;
-	else
-		pTabPaneDrawInfo->state = kThemeStateActive;
-	return TRUE;
-}
-
-// =======================================================================
-
-/**
- * (static) Initialize HITheme structures used to draw a separator line
- *
- * @param pSepInfo	pointer to HITheme separator info structure to be
- *						initialized
- * @param nState		control state of the separator
- * @return TRUE on success, FALSE on failure
- */
-static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlState nState )
-{
-	memset( pSepInfo, 0, sizeof( HIThemeSeparatorDrawInfo ) );
-	pSepInfo->version = 0;
-	if ( nState & CTRL_STATE_ENABLED )
-		pSepInfo->state = kThemeStateActive;
-	else
-		pSepInfo->state = kThemeStateInactive;
-	return TRUE;
 }
 
 // =======================================================================
@@ -2577,31 +2902,19 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedTabBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeTabDrawInfo pTabDrawInfo;
-		InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		HIRect labelRect; // ignored
+	VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:&aSharedTabBuffer graphics:pGraphics tabitemValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeTabCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTabCell waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeTabCell drawn];
 
-		bRet = ( pHIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, &labelRect ) == noErr );
-	}
-
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2619,29 +2932,19 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
  */
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedTabBoundingBoxBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
-		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeTabBorder *pVCLNativeTabBorder = [VCLNativeTabBorder createWithControlState:nState bitmapBuffer:&aSharedTabBoundingBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeTabBorder performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTabBorder waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeTabBorder drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2687,28 +2990,20 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
  */
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedMenuBackgroundBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		HIThemeMenuDrawInfo pMenuDrawInfo;
-		memset( &pMenuDrawInfo, 0, sizeof( pMenuDrawInfo ) );
-		pMenuDrawInfo.version = 0;
-		pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
+	BOOL bRet = FALSE;
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		bRet = ( pHIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	ControlState nState = CTRL_STATE_ENABLED;
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-	pBuffer->ReleaseContext();
+	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedMenuBackgroundBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:NO];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeMenuItemCell drawn];
 
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -2823,29 +3118,19 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	VCLBitmapBuffer *pBuffer = &aSharedSeparatorLineBuffer;
-	BOOL bRet = ( HIThemeInitialize() && pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics ) );
-	if ( bRet )
-	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState &= ~CTRL_STATE_ENABLED;
+	BOOL bRet = FALSE;
 
-		HIThemeSeparatorDrawInfo pSepInfo;
-		InitSeparatorDrawInfo( &pSepInfo, nState );
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
 
-		bRet = ( pHIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
-	}
+	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedSeparatorLineBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:YES];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeMenuItemCell drawn];
 
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-		pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+	[pPool release];
 
 	return bRet;
 }
@@ -3404,8 +3689,10 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				// hack - on 10.3+ tab panes visually need to intersect the
 				// middle of the associated segmented control.  Subtract
 				// 15 off the height to shoehorn the drawing in.
-				ctrlRect.setY( ctrlRect.getY() - CONTROL_TAB_PANE_TOP_OFFSET );
-				ctrlRect.setHeight( ctrlRect.getHeight() + CONTROL_TAB_PANE_TOP_OFFSET );
+				ctrlRect.Left() -= CONTROL_TAB_PANE_LEFT_OFFSET;
+				ctrlRect.Top() -= CONTROL_TAB_PANE_TOP_OFFSET;
+				ctrlRect.Right() += CONTROL_TAB_PANE_RIGHT_OFFSET;
+				ctrlRect.Bottom() += CONTROL_TAB_PANE_BOTTOM_OFFSET;
 				bOK = DrawNativeTabBoundingBox( this, ctrlRect, nState );
 			}
 			break;
@@ -3972,36 +4259,29 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_TAB_ITEM:
-			if ( nPart == PART_ENTIRE_CONTROL && HIThemeInitialize() )
+			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();
 
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
 
-				HIThemeTabDrawInfo pTabDrawInfo;
-				InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-				HIRect proposedBounds;
-				proposedBounds.origin.x = 0;
-				proposedBounds.origin.y = 0;
-				proposedBounds.size.width = controlRect.Right() - controlRect.Left();
-				proposedBounds.size.height = controlRect.Bottom() - controlRect.Top();
+				VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:NULL graphics:NULL tabitemValue:pValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLNativeTabCell performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeTabCell waitUntilDone:YES modes:pModes];
+				NSSize aSize = [pVCLNativeTabCell size];
+				if ( !NSEqualSizes( aSize, NSZeroSize ) )
+				{
+					Point topLeft( controlRect.Left(), controlRect.Top() );
+					Size boundsSize( (long)aSize.width, (long)aSize.height );
+					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
 
-				HIShapeRef tabShape;
-				pHIThemeGetTabShape( &proposedBounds, (HIThemeTabDrawInfo *)&pTabDrawInfo, &tabShape );
+					bReturn = TRUE;
+				}
 
-				HIRect preferredRect;
-				HIShapeGetBounds( tabShape, &preferredRect );
-				CFRelease( tabShape );
-
-				preferredRect.size.height += TABITEM_HEIGHT_SLOP;
-
-				Point topLeft( controlRect.Left(), controlRect.Top() );
-				Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
-				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
-
-				bReturn = TRUE;
+				[pPool release];
 			}
 			break;
 
