@@ -2150,6 +2150,11 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
+@interface NSTabView (VCLNativeTabView)
+- (void)_drawTabViewItem:(NSTabViewItem *)pItem inRect:(NSRect)aRect;
+- (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem;
+@end
+
 @interface VCLNativeTabBorder : NSObject
 {
 	ControlState			mnControlState;
@@ -2195,7 +2200,7 @@ static bool IsRunningSnowLeopard()
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
 		NSTabView *pTabView = [self tabView];
-		if ( pTabView )
+		if ( pTabView && [pTabView respondsToSelector:@selector(_drawTabViewItem:inRect:)] && [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
@@ -2253,11 +2258,6 @@ static bool IsRunningSnowLeopard()
 @end
 
 // =======================================================================
-
-@interface NSTabView (VCLNativeTabView)
-- (void)_drawTabViewItem:(NSTabViewItem *)pItem inRect:(NSRect)aRect;
-- (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem;
-@end
 
 @interface VCLNativeTabView : NSTabView
 - (NSRect)_tabRectForTabViewItem:(NSTabViewItem *)pItem;
@@ -2402,7 +2402,7 @@ static bool IsRunningSnowLeopard()
 		if ( pItem )
 		{
 			NSTabView *pTabView = [pItem tabView];
-			if ( pTabView && [pTabView respondsToSelector:@selector(_drawTabViewItem:inRect:)] )
+			if ( pTabView && [pTabView respondsToSelector:@selector(_drawTabViewItem:inRect:)] && [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
 			{
 				// Prevent clipping of left separator by extending width to
 				// the left
@@ -2411,9 +2411,7 @@ static bool IsRunningSnowLeopard()
 				aRealDrawRect.origin.x -= fWidthAdjust;
 				aRealDrawRect.size.width += fWidthAdjust;
 
-				float fCellHeight = maDestRect.size.height;
-				if ( [pTabView respondsToSelector:@selector(_tabRectForTabViewItem:)] )
-					fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
+				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
 				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
 				CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
 				if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
