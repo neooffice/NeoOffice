@@ -1111,7 +1111,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     if ( bFirstInGroup )
         nTextWidth -= 4;
     if ( bLastInGroup )
-        nTextWidth += 4;
+        nTextWidth += 2;
 #endif	// USE_JAVA
     if( !! pItem->maTabImage )
     {
