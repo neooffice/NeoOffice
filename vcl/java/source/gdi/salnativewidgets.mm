@@ -1560,11 +1560,11 @@ static bool IsRunningSnowLeopard()
 
 					float fCellHeight = [pTableHeaderCell cellSize].height;
 					float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
-					CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+					CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
 					if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 					{
 						CGContextSaveGState( mpBuffer->maContext );
-						CGContextTranslateCTM( mpBuffer->maContext, fWidthAdjust, 0 );
+						CGContextTranslateCTM( mpBuffer->maContext, 0, 0 );
 						if ( [pTableHeaderView isFlipped] )
 						{
 							CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
@@ -1575,6 +1575,8 @@ static bool IsRunningSnowLeopard()
 						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 						if ( pContext )
 						{
+							// Shift control to right by same amount so that
+							// the clipped bits will be drawn
 							NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
 							aDrawRect.origin.x += fWidthAdjust;
 							aDrawRect.size.width -= fWidthAdjust;
@@ -1617,7 +1619,7 @@ static bool IsRunningSnowLeopard()
 						mpBuffer->ReleaseContext();
 
 						if ( mbDrawn )
-							mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+							mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, aRealDrawRect );
 					}
 				}
 			}
@@ -2412,7 +2414,7 @@ static bool IsRunningSnowLeopard()
 
 				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
 				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
-				CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
 				if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
@@ -2426,7 +2428,11 @@ static bool IsRunningSnowLeopard()
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
-						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+						// Shift control to right by same amount so that the
+						// clipped bits will be drawn
+						NSRect aFrame = [pTabView frame];
+						aFrame.origin.x += fWidthAdjust;
+						[pTabView setFrame:aFrame];
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
@@ -2442,7 +2448,7 @@ static bool IsRunningSnowLeopard()
 					mpBuffer->ReleaseContext();
 
 					if ( mbDrawn )
-						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, aRealDrawRect );
 				}
 			}
 		}
