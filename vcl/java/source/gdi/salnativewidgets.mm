@@ -50,7 +50,6 @@
 #include <vcl/window.hxx>
 
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
 // Need to include for HITheme constants but we don't link to it
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
