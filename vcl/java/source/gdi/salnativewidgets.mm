@@ -76,6 +76,11 @@
 #define LISTBOX_BUTTON_WIDTH			( IsRunningSnowLeopard() ? 21 : 19 )
 #define SCROLLBAR_SUPPRESS_ARROWS		( IsRunningSnowLeopard() ? false : true )
 #define SPINNER_WIDTH_SLOP				1
+#define SPINNER_FOCUSRING_LEFT_OFFSET	0
+#define SPINNER_FOCUSRING_TOP_OFFSET	1
+#define SPINNER_FOCUSRING_RIGHT_OFFSET	0
+#define SPINNER_FOCUSRING_BOTTOM_OFFSET	-1
+#define SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS	4
 #define PROGRESSBAR_HEIGHT_SLOP			( IsRunningSnowLeopard() ? 1 : 0 )
 #define PROGRESSBARPADDING_HEIGHT		1
 // Fix most cases of checkbox and radio button clipping reported in the
@@ -1655,40 +1660,6 @@ static bool IsRunningSnowLeopard()
 
 // =======================================================================
 
-@interface VCLNativeStepper : NSStepper
-{
-	MacOSBOOL				mbShowsFirstResponder;
-}
-- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell;
-- (id)initWithFrame:(NSRect)aRect;
-- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder;
-@end
-
-@implementation VCLNativeStepper
-
-- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell
-{
-	return mbShowsFirstResponder;
-}
-
-- (id)initWithFrame:(NSRect)aRect
-{
-	[super initWithFrame:aRect];
-
-	mbShowsFirstResponder = NO;
-
-	return self;
-}
-
-- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder
-{
-	mbShowsFirstResponder = bShowsFirstResponder;
-}
-
-@end
-
-// =======================================================================
-
 @interface VCLNativeSpinbuttons : NSObject
 {
 	ControlState			mnControlState;
@@ -1719,7 +1690,7 @@ static bool IsRunningSnowLeopard()
 
 - (NSStepper *)stepper
 {
-	VCLNativeStepper *pStepper = [[VCLNativeStepper alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	NSStepper *pStepper = [[NSStepper alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
 	if ( !pStepper )
 		return nil;
 
@@ -1750,16 +1721,9 @@ static bool IsRunningSnowLeopard()
 	else
 		[pStepper setEnabled:NO];
 
-	if ( mnControlState & CTRL_STATE_FOCUSED )
-	{
-		[pCell setShowsFirstResponder:YES];
-		if ( [pStepper isEnabled] )
-			[pStepper setShowsFirstResponder:YES];
-	}
-	else
-	{
-		[pCell setShowsFirstResponder:NO];
-	}
+	// Always suppress focus ring since it does not paint on some Mac OS X
+	// versions
+	[pCell setShowsFirstResponder:NO];
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled
@@ -1811,35 +1775,22 @@ static bool IsRunningSnowLeopard()
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
-						// Draw view instead of cell otherwise the focus ring
-						// will not be drawn
-						MacOSBOOL bAddedToKeyWindow = NO;
-						if ( [pStepper isEnabled] && [pCell showsFirstResponder] )
-						{
-							NSApplication *pApp = [NSApplication sharedApplication];
-							if ( pApp )
-							{
-								NSWindow *pKeyWindow = [pApp keyWindow];
-								if ( pKeyWindow )
-								{
-									NSView *pContentView = [pKeyWindow contentView];
-									if ( pContentView )
-									{
-										[pStepper removeFromSuperviewWithoutNeedingDisplay];
-										[pContentView addSubview:pStepper positioned:NSWindowBelow relativeTo:nil];
-										bAddedToKeyWindow = YES;
-									}
-								}
-							}
-						}
-
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pStepper drawRect:[pStepper frame]];
-						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						if ( bAddedToKeyWindow )
-							[pStepper removeFromSuperviewWithoutNeedingDisplay];
+						// Draw focus ring
+						if ( mnControlState & CTRL_STATE_FOCUSED && [pStepper isEnabled] )
+						{
+							NSRect aFocusRingRect = NSMakeRect( FOCUSRING_WIDTH + SPINNER_FOCUSRING_LEFT_OFFSET, FOCUSRING_WIDTH + SPINNER_FOCUSRING_TOP_OFFSET, [pCell cellSize].width - ( FOCUSRING_WIDTH * 2 ) - SPINNER_FOCUSRING_LEFT_OFFSET - SPINNER_FOCUSRING_RIGHT_OFFSET, [pCell cellSize].height - ( FOCUSRING_WIDTH * 2 ) - SPINNER_FOCUSRING_TOP_OFFSET - SPINNER_FOCUSRING_BOTTOM_OFFSET );
+							NSSetFocusRingStyle( NSFocusRingBelow );
+							[[NSColor clearColor] set];
+							NSBezierPath *pPath = [NSBezierPath bezierPathWithRoundedRect:aFocusRingRect xRadius:SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS yRadius:SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS];
+							if ( pPath )
+								[pPath fill];
+						}
+
+						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
 					}
@@ -2288,6 +2239,8 @@ static bool IsRunningSnowLeopard()
 
 @end
 
+// =======================================================================
+
 @interface VCLNativeTabViewItem : NSTabViewItem
 {
     NSTabState				mnTabState;
@@ -2445,7 +2398,7 @@ static bool IsRunningSnowLeopard()
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
 
 						// Draw focus ring
-						if ( mnControlState & CTRL_STATE_FOCUSED && ! ( mnControlState & CTRL_STATE_INACTIVE ) )
+						if ( mnControlState & CTRL_STATE_FOCUSED && mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
 						{
 							NSRect aFocusRingRect = [pTabView _tabRectForTabViewItem:pItem];
 							if ( mpTabitemValue && mpTabitemValue->isFirst() )
