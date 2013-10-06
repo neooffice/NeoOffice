@@ -74,6 +74,11 @@
 #define LISTBOX_BUTTON_WIDTH			19
 #define SCROLLBAR_SUPPRESS_ARROWS		true
 #define SPINNER_WIDTH_SLOP				1
+#define SPINNER_FOCUSRING_LEFT_OFFSET	0
+#define SPINNER_FOCUSRING_TOP_OFFSET	1
+#define SPINNER_FOCUSRING_RIGHT_OFFSET	0
+#define SPINNER_FOCUSRING_BOTTOM_OFFSET	-1
+#define SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS	4
 #define PROGRESSBAR_HEIGHT_SLOP			0
 #define PROGRESSBARPADDING_HEIGHT		1
 // Fix most cases of checkbox and radio button clipping reported in the
@@ -87,6 +92,11 @@
 #define PUSHBUTTON_HEIGHT_SLOP			1
 #define PUSHBUTTON_DEFAULT_ALPHA		0.5f
 #define DISCLOSUREBTN_WIDTH_SLOP		-2
+#define TABITEM_FOCUSRING_LEFT_OFFSET	2
+#define TABITEM_FOCUSRING_TOP_OFFSET	1
+#define TABITEM_FOCUSRING_RIGHT_OFFSET	2
+#define TABITEM_FOCUSRING_BOTTOM_OFFSET	2
+#define TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS	5
 
 using namespace osl;
 using namespace rtl;
@@ -1513,11 +1523,11 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 					float fCellHeight = [pTableHeaderCell cellSize].height;
 					float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
-					CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+					CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
 					if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 					{
 						CGContextSaveGState( mpBuffer->maContext );
-						CGContextTranslateCTM( mpBuffer->maContext, fWidthAdjust, 0 );
+						CGContextTranslateCTM( mpBuffer->maContext, 0, 0 );
 						if ( [pTableHeaderView isFlipped] )
 						{
 							CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
@@ -1528,6 +1538,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 						if ( pContext )
 						{
+							// Shift control to right by same amount so that
+							// the clipped bits will be drawn
 							NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
 							aDrawRect.origin.x += fWidthAdjust;
 							aDrawRect.size.width -= fWidthAdjust;
@@ -1570,7 +1582,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 						mpBuffer->ReleaseContext();
 
 						if ( mbDrawn )
-							mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+							mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, aRealDrawRect );
 					}
 				}
 			}
@@ -1595,40 +1607,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	mbDrawn = NO;
 
 	return self;
-}
-
-@end
-
-// =======================================================================
-
-@interface VCLNativeStepper : NSStepper
-{
-	MacOSBOOL				mbShowsFirstResponder;
-}
-- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell;
-- (id)initWithFrame:(NSRect)aRect;
-- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder;
-@end
-
-@implementation VCLNativeStepper
-
-- (MacOSBOOL)_shouldShowFirstResponderForCell:(NSCell *)pCell
-{
-	return mbShowsFirstResponder;
-}
-
-- (id)initWithFrame:(NSRect)aRect
-{
-	[super initWithFrame:aRect];
-
-	mbShowsFirstResponder = NO;
-
-	return self;
-}
-
-- (void)setShowsFirstResponder:(MacOSBOOL)bShowsFirstResponder
-{
-	mbShowsFirstResponder = bShowsFirstResponder;
 }
 
 @end
@@ -1665,7 +1643,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 - (NSStepper *)stepper
 {
-	VCLNativeStepper *pStepper = [[VCLNativeStepper alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+	NSStepper *pStepper = [[NSStepper alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
 	if ( !pStepper )
 		return nil;
 
@@ -1696,16 +1674,9 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 	else
 		[pStepper setEnabled:NO];
 
-	if ( mnControlState & CTRL_STATE_FOCUSED )
-	{
-		[pCell setShowsFirstResponder:YES];
-		if ( [pStepper isEnabled] )
-			[pStepper setShowsFirstResponder:YES];
-	}
-	else
-	{
-		[pCell setShowsFirstResponder:NO];
-	}
+	// Always suppress focus ring since it does not paint on some Mac OS X
+	// versions
+	[pCell setShowsFirstResponder:NO];
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled
@@ -1757,35 +1728,22 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
-						// Draw view instead of cell otherwise the focus ring
-						// will not be drawn
-						MacOSBOOL bAddedToKeyWindow = NO;
-						if ( [pStepper isEnabled] && [pCell showsFirstResponder] )
-						{
-							NSApplication *pApp = [NSApplication sharedApplication];
-							if ( pApp )
-							{
-								NSWindow *pKeyWindow = [pApp keyWindow];
-								if ( pKeyWindow )
-								{
-									NSView *pContentView = [pKeyWindow contentView];
-									if ( pContentView )
-									{
-										[pStepper removeFromSuperviewWithoutNeedingDisplay];
-										[pContentView addSubview:pStepper positioned:NSWindowBelow relativeTo:nil];
-										bAddedToKeyWindow = YES;
-									}
-								}
-							}
-						}
-
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pStepper drawRect:[pStepper frame]];
-						[NSGraphicsContext setCurrentContext:pOldContext];
 
-						if ( bAddedToKeyWindow )
-							[pStepper removeFromSuperviewWithoutNeedingDisplay];
+						// Draw focus ring
+						if ( mnControlState & CTRL_STATE_FOCUSED && [pStepper isEnabled] )
+						{
+							NSRect aFocusRingRect = NSMakeRect( FOCUSRING_WIDTH + SPINNER_FOCUSRING_LEFT_OFFSET, FOCUSRING_WIDTH + SPINNER_FOCUSRING_TOP_OFFSET, [pCell cellSize].width - ( FOCUSRING_WIDTH * 2 ) - SPINNER_FOCUSRING_LEFT_OFFSET - SPINNER_FOCUSRING_RIGHT_OFFSET, [pCell cellSize].height - ( FOCUSRING_WIDTH * 2 ) - SPINNER_FOCUSRING_TOP_OFFSET - SPINNER_FOCUSRING_BOTTOM_OFFSET );
+							NSSetFocusRingStyle( NSFocusRingBelow );
+							[[NSColor clearColor] set];
+							NSBezierPath *pPath = [NSBezierPath bezierPathWithRoundedRect:aFocusRingRect xRadius:SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS yRadius:SPINNER_FOCUSRING_ROUNDED_RECT_RADIUS];
+							if ( pPath )
+								[pPath fill];
+						}
+
+						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
 					}
@@ -2234,6 +2192,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 @end
 
+// =======================================================================
+
 @interface VCLNativeTabViewItem : NSTabViewItem
 {
     NSTabState				mnTabState;
@@ -2360,12 +2320,12 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 				// the left
 				float fWidthAdjust = 1.0f;
 				CGRect aRealDrawRect = maDestRect;
-				aRealDrawRect.origin.x -= fWidthAdjust;
-				aRealDrawRect.size.width += fWidthAdjust;
+				aRealDrawRect.origin.x -= fWidthAdjust + FOCUSRING_WIDTH;
+				aRealDrawRect.size.width += fWidthAdjust + ( FOCUSRING_WIDTH * 2 );
 
 				float fCellHeight = [pTabView _tabRectForTabViewItem:pItem].size.height;
 				float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
-				CGRect aAdjustedDestRect = CGRectMake( fWidthAdjust * -1, 0, aRealDrawRect.size.width, fOffscreenHeight );
+				CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
 				if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 				{
 					CGContextSaveGState( mpBuffer->maContext );
@@ -2379,11 +2339,51 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 					NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:mpBuffer->maContext flipped:YES];
 					if ( pContext )
 					{
-						NSRect aDrawRect = NSRectFromCGRect( aAdjustedDestRect );
+						// Shift control to right by same amount so that the
+						// clipped bits will be drawn
+						NSRect aFrame = [pTabView frame];
+						aFrame.origin.x += fWidthAdjust + FOCUSRING_WIDTH;
+						aFrame.origin.y += FOCUSRING_WIDTH;
+						[pTabView setFrame:aFrame];
 
 						NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 						[NSGraphicsContext setCurrentContext:pContext];
 						[pTabView _drawTabViewItem:pItem inRect:[pTabView frame]];
+
+						// Draw focus ring
+						if ( mnControlState & CTRL_STATE_FOCUSED && mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED | CTRL_STATE_ENABLED ) )
+						{
+							NSRect aFocusRingRect = [pTabView _tabRectForTabViewItem:pItem];
+							if ( mpTabitemValue && mpTabitemValue->isFirst() )
+								aFocusRingRect.origin.x += TABITEM_FOCUSRING_LEFT_OFFSET;
+							aFocusRingRect.origin.y += TABITEM_FOCUSRING_TOP_OFFSET;
+							if ( mpTabitemValue && mpTabitemValue->isFirst() )
+								aFocusRingRect.size.width -= TABITEM_FOCUSRING_LEFT_OFFSET;
+							if ( mpTabitemValue && mpTabitemValue->isLast() )
+								aFocusRingRect.size.width -= TABITEM_FOCUSRING_RIGHT_OFFSET;
+							aFocusRingRect.size.height -= TABITEM_FOCUSRING_TOP_OFFSET + TABITEM_FOCUSRING_BOTTOM_OFFSET;
+
+							NSSetFocusRingStyle( NSFocusRingBelow );
+							[[NSColor clearColor] set];
+							if ( mpTabitemValue && ( mpTabitemValue->isFirst() || mpTabitemValue->isLast() ) )
+							{
+								NSBezierPath *pPath = [NSBezierPath bezierPathWithRoundedRect:aFocusRingRect xRadius:TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS yRadius:TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS];
+								if ( pPath )
+								{
+									if ( !mpTabitemValue->isFirst() )
+										[pPath appendBezierPathWithRect:NSMakeRect( aFocusRingRect.origin.x, aFocusRingRect.origin.y, aFocusRingRect.size.width / 2, aFocusRingRect.size.height )];
+									if ( !mpTabitemValue->isLast() )
+										[pPath appendBezierPathWithRect:NSMakeRect( aFocusRingRect.origin.x + ( aFocusRingRect.size.width / 2 ), aFocusRingRect.origin.y, aFocusRingRect.size.width / 2, aFocusRingRect.size.height )];
+
+									[pPath fill];
+								}
+							}
+							else
+							{
+								[NSBezierPath fillRect:aFocusRingRect];
+							}
+						}
+
 						[NSGraphicsContext setCurrentContext:pOldContext];
 
 						mbDrawn = YES;
@@ -2395,7 +2395,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 					mpBuffer->ReleaseContext();
 
 					if ( mbDrawn )
-						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, maDestRect );
+						mpBuffer->DrawContextAndDestroy( mpGraphics, aAdjustedDestRect, aRealDrawRect );
 				}
 			}
 		}
@@ -4273,8 +4273,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSSize aSize = [pVCLNativeTabCell size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
-					Point topLeft( controlRect.Left(), controlRect.Top() );
-					Size boundsSize( (long)aSize.width, (long)aSize.height );
+					Point topLeft( controlRect.Left(), controlRect.Top() - FOCUSRING_WIDTH );
+					Size boundsSize( (long)aSize.width, (long)aSize.height + ( FOCUSRING_WIDTH * 2 ) );
 					rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 					rNativeContentRegion = Region( rNativeBoundingRegion );
 
