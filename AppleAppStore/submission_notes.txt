@@ -39,8 +39,9 @@ NeoOffice is a complete set of office applications. With NeoOffice, users can cr
 
 NeoOffice is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers have been continually adding improvements to NeoOffice that Mac users will not find in OpenOffice or LibreOffice such as:
 
-- OS X Versions
 - OS X Full-Screen mode
+- Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
+- OS X Versions
 - Significant speed improvements to the OpenOffice and LibreOffice text layout, rendering, and printing code
 - Native OS X text highlighting
 - Native file locking support for local and networked volumes
