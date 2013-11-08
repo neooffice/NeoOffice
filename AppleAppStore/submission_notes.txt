@@ -35,9 +35,9 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete set of office applications. With NeoOffice, users can create and edit spreadsheets, text documents, and presentations.
+NeoOffice is a complete set of office applications. NeoOffice is based on OpenOffice and LibreOffice so it is far from perfect. But NeoOffice can create and edit spreadsheets, text documents, and presentations.
 
-NeoOffice is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers have been continually adding improvements to NeoOffice that Mac users will not find in OpenOffice or LibreOffice such as:
+While there is no free support and NeoOffice has many of the same bugs as OpenOffice, the NeoOffice engineers - Patrick and Ed - work exclusively on improving the stability of the OpenOffice code and adding native features such as:
 
 - OS X Full-Screen mode
 - Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
