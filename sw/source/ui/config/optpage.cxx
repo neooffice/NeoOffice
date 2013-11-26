@@ -518,8 +518,12 @@ void 	SwAddPrinterTabPage::Reset( const SfxItemSet&  )
 #ifdef USE_JAVA
 	// Fix crash when selecting the File :: Printer Settings menu and then
 	// cancelling the OOo dialog by checking if the FN_PARAM_ADDPRINTER was
-	// actually set before retrieving its value
-	if( bAttrModified && SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , FALSE,
+	// actually set before retrieving its value. Fix the inability to save
+	// settings changes from the original crashing fix reported in the
+	// following NeoOffice forum topic by checking if the item set is actually
+	// backed by an item pool:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8598
+	if( rSet.GetPool() && SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , FALSE,
 #else	// USE_JAVA
 	if( SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , FALSE,
 #endif	// USE_JAVA

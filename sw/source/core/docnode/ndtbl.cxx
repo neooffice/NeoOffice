@@ -1273,6 +1273,33 @@ const SwTable* SwDoc::TextToTable( const std::vector< std::vector<SwNodeRange> >
     return pNdTbl;
 }
 
+#ifndef NO_LIBO_BUG_55462_FIX
+
+static void
+lcl_SetTableBoxWidths2(SwTable & rTable, USHORT nMaxBoxes,
+        SwTableBoxFmt & rBoxFmt, SwDoc & rDoc)
+{
+    // rhbz#820283, fdo#55462: set default box widths so table width is covered
+    SwTableLines & rLines = rTable.GetTabLines();
+    for (USHORT nTmpLine = 0; nTmpLine < rLines.Count(); ++nTmpLine)
+    {
+        SwTableBoxes & rBoxes = rLines[nTmpLine]->GetTabBoxes();
+        USHORT const nMissing = nMaxBoxes - rBoxes.Count();
+        if (nMissing)
+        {
+            // default width for box at the end of an incomplete line
+            SwTableBoxFmt *const pNewFmt = rDoc.MakeTableBoxFmt();
+            pNewFmt->SetFmtAttr( SwFmtFrmSize(ATT_VAR_SIZE,
+                        (USHRT_MAX / nMaxBoxes) * (nMissing + 1)) );
+            pNewFmt->Add(rBoxes[rBoxes.Count() - 1]);
+        }
+    }
+    // default width for all boxes not at the end of an incomplete line
+    rBoxFmt.SetFmtAttr(SwFmtFrmSize(ATT_VAR_SIZE, USHRT_MAX / nMaxBoxes));
+}
+
+#endif	// !NO_LIBO_BUG_55462_FIX
+
 /*-- 18.05.2006 08:23:28---------------------------------------------------
 
   -----------------------------------------------------------------------*/
@@ -1414,6 +1441,7 @@ SwTableNode* SwNodes::TextToTable( const std::vector< std::vector<SwNodeRange> >
             nMaxBoxes = nBoxes;
     }
 
+#ifdef NO_LIBO_BUG_55462_FIX
     // die Tabelle ausgleichen, leere Sections einfuegen
     USHORT n;
 
@@ -1441,6 +1469,9 @@ SwTableNode* SwNodes::TextToTable( const std::vector< std::vector<SwNodeRange> >
     }
     else
         pBoxFmt->SetFmtAttr( SwFmtFrmSize( ATT_VAR_SIZE, USHRT_MAX / nMaxBoxes ));
+#else	// NO_LIBO_BUG_55462_FIX
+    lcl_SetTableBoxWidths2(*pTable, nMaxBoxes, *pBoxFmt, *pDoc);
+#endif	// NO_LIBO_BUG_55462_FIX
 
     // das wars doch wohl ??
     return pTblNd;
