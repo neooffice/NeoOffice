@@ -49,6 +49,12 @@ using namespace ::std;
 OOXMLFastDocumentHandler::OOXMLFastDocumentHandler
 (uno::Reference< uno::XComponentContext > const & context)
 : m_xContext(context)
+#ifdef USE_JAVA
+// Fix crashing bug reported in the following Debian bug when opening
+// a .docx that has no <w:document> tag:
+// http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=550359
+, mpDocument(NULL)
+#endif	// USE_JAVA
 {}
 
 // ::com::sun::star::xml::sax::XFastContextHandler:
