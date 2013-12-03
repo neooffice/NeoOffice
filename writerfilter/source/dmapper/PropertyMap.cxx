@@ -899,8 +899,23 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             nHeight - m_nTopMargin - m_nBottomMargin :
             nWidth - m_nLeftMargin - m_nRightMargin;
 
+#ifdef NO_REDHAT_BUG_831755_FIX
         operator[]( PropertyDefinition( PROP_GRID_LINES, false )) =
                 uno::makeAny( static_cast<sal_Int16>(nTextAreaHeight/m_nGridLinePitch));
+#else	// NO_REDHAT_BUG_831755_FIX
+        sal_Int32 nGridLinePitch = m_nGridLinePitch;
+        //sep.dyaLinePitch
+        if (nGridLinePitch < 1 || nGridLinePitch > 31680)
+        {
+#if SUPD != 310
+            SAL_WARN("writerfilter", "sep.dyaLinePitch outside legal range: " << nGridLinePitch);
+#endif	// SUPD != 310
+            nGridLinePitch = 1;
+        }
+
+        operator[]( PropertyDefinition( PROP_GRID_LINES, false )) =
+                uno::makeAny( static_cast<sal_Int16>(nTextAreaHeight/nGridLinePitch));
+#endif	// NO_REDHAT_BUG_831755_FIX
 
         sal_Int32 nCharWidth = 423; //240 twip/ 12 pt
         //todo: is '0' the right index here?
@@ -930,7 +945,11 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             nCharWidth += ConversionHelper::convertTwipToMM100( nFraction );
         }
         operator[]( PropertyDefinition( PROP_GRID_BASE_HEIGHT, false )) = uno::makeAny( nCharWidth );
+#ifdef NO_REDHAT_BUG_831755_FIX
         sal_Int32 nRubyHeight = m_nGridLinePitch - nCharWidth;
+#else	// NO_REDHAT_BUG_831755_FIX
+        sal_Int32 nRubyHeight = nGridLinePitch - nCharWidth;
+#endif	// NO_REDHAT_BUG_831755_FIX
         if(nRubyHeight < 0 )
             nRubyHeight = 0;
         operator[]( PropertyDefinition( PROP_GRID_RUBY_HEIGHT, false )) = uno::makeAny( nRubyHeight );
