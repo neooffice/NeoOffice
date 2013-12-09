@@ -1552,11 +1552,11 @@ void ImpEditView::HideDDCursor()
 
 void ImpEditView::ShowDDCursor( const Rectangle& rRect )
 {
-#ifdef NO_OOO_BUG_68113_FIX
+#ifdef NO_OOO_BUG_109743_FIX
 	if ( !pDragAndDropInfo->bVisCursor )
-#else	// NO_OOO_BUG_68113_FIX
+#else	// NO_OOO_BUG_109743_FIX
 	if ( pDragAndDropInfo && !pDragAndDropInfo->bVisCursor )
-#endif	// NO_OOO_BUG_68113_FIX
+#endif	// NO_OOO_BUG_109743_FIX
 	{
 		if ( pOutWin->GetCursor() )
 			pOutWin->GetCursor()->Hide();
@@ -1617,9 +1617,9 @@ void ImpEditView::dragGestureRecognized( const ::com::sun::star::datatransfer::d
 
     vos::OGuard aVclGuard( Application::GetSolarMutex() );
 
-#ifndef NO_OOO_BUG_68113_FIX
+#ifndef NO_OOO_BUG_109743_FIX
     pDragAndDropInfo = NULL;
-#endif	// !NO_OOO_BUG_68113_FIX
+#endif	// !NO_OOO_BUG_109743_FIX
 
     Point aMousePosPixel( rDGE.DragOriginX, rDGE.DragOriginY );
 
@@ -1794,11 +1794,11 @@ void ImpEditView::drop( const ::com::sun::star::datatransfer::dnd::DropTargetDro
 
     DBG_ASSERT( pDragAndDropInfo, "Drop - No Drag&Drop info?!" );
 
-#ifdef NO_OOO_BUG_68113_FIX
+#ifdef NO_OOO_BUG_109743_FIX
     if ( pDragAndDropInfo->bDragAccepted )
-#else	// NO_OOO_BUG_68113_FIX
+#else	// NO_OOO_BUG_109743_FIX
     if ( pDragAndDropInfo && pDragAndDropInfo->bDragAccepted )
-#endif	// NO_OOO_BUG_68113_FIX
+#endif	// NO_OOO_BUG_109743_FIX
     {
 		pEditEngine->GetBeginDropHdl().Call(GetEditViewPtr());
 	    BOOL bChanges = FALSE;
@@ -1898,11 +1898,11 @@ void ImpEditView::dragExit( const ::com::sun::star::datatransfer::dnd::DropTarge
 
     HideDDCursor();
 
-#ifdef NO_OOO_BUG_68113_FIX
+#ifdef NO_OOO_BUG_109743_FIX
 	if ( !pDragAndDropInfo->bStarterOfDD )
-#else	// NO_OOO_BUG_68113_FIX
+#else	// NO_OOO_BUG_109743_FIX
 	if ( pDragAndDropInfo && !pDragAndDropInfo->bStarterOfDD )
-#endif	// NO_OOO_BUG_68113_FIX
+#endif	// NO_OOO_BUG_109743_FIX
 	{
 		delete pDragAndDropInfo;
 		pDragAndDropInfo = NULL;
@@ -1922,11 +1922,11 @@ void ImpEditView::dragOver( const ::com::sun::star::datatransfer::dnd::DropTarge
     {
 //        sal_Int8 nSupportedActions = bReadOnly ? datatransfer::dnd::DNDConstants::ACTION_COPY : datatransfer::dnd::DNDConstants::ACTION_COPY_OR_MOVE;
 
-#ifdef NO_OOO_BUG_68113_FIX
+#ifdef NO_OOO_BUG_109743_FIX
         if ( pDragAndDropInfo->bHasValidData /* && ( nSupportedActions & rDTDE.DropAction ) MT: Default = 0x80 ?! */ )
-#else	// NO_OOO_BUG_68113_FIX
+#else	// NO_OOO_BUG_109743_FIX
         if ( pDragAndDropInfo && pDragAndDropInfo->bHasValidData /* && ( nSupportedActions & rDTDE.DropAction ) MT: Default = 0x80 ?! */ )
-#endif	// NO_OOO_BUG_68113_FIX
+#endif	// NO_OOO_BUG_109743_FIX
         {
             bAccept = sal_True;
 
@@ -2046,12 +2046,12 @@ void ImpEditView::dragOver( const ::com::sun::star::datatransfer::dnd::DropTarge
     if ( !bAccept )
     {
         HideDDCursor();
-#ifdef NO_OOO_BUG_68113_FIX
+#ifdef NO_OOO_BUG_109743_FIX
         pDragAndDropInfo->bDragAccepted = FALSE;
-#else	// NO_OOO_BUG_68113_FIX
+#else	// NO_OOO_BUG_109743_FIX
         if (pDragAndDropInfo)
             pDragAndDropInfo->bDragAccepted = FALSE;
-#endif	// NO_OOO_BUG_68113_FIX
+#endif	// NO_OOO_BUG_109743_FIX
         rDTDE.Context->rejectDrag();
     }
 }
