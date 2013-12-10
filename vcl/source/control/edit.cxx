@@ -531,6 +531,14 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
 #ifdef USE_JAVA
 	// Round up for y coordinate so that text trends toward the bottom
 	Point	aPos( mnXOffset, (nH-nTH+1)/2 );
+
+	// Fix bug reported in the following NeoOffice forum post by clipping out
+	// the focus ring. Note: we don't attempt to clip out the focus ring when
+	// editing text as it can cause the cursor to be clipped:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
+	Region aEditBoxClipRgn;
+	if ( ImplGetNativeControlType() == CTRL_EDITBOX )
+		aEditBoxClipRgn = Region( Rectangle( Point( ImplGetExtraOffset(), 0 ), Size( GetOutputSize().Width() - ( ImplGetExtraOffset() * 2 ), GetOutputSize().Height() ) ) );
 #else	// USE_JAVA
 	Point	aPos( mnXOffset, (nH-nTH)/2 );
 #endif	// USE_JAVA
@@ -543,7 +551,15 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
         MetricVector* pVector = &mpLayoutData->m_aUnicodeBoundRects;
         String* pDisplayText = &mpLayoutData->m_aDisplayText;
 
+#ifdef USE_JAVA
+        Push( PUSH_CLIPREGION );
+        if ( !aEditBoxClipRgn.IsEmpty() )
+            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
 		DrawText( aPos, aText, nStart, nEnd - nStart, pVector, pDisplayText );
+#ifdef USE_JAVA
+        Pop();
+#endif	// USE_JAVA
 
         if( pDXBuffer )
             delete [] pDXBuffer;
@@ -586,7 +602,15 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
     aPos.X() = nPos + mnXOffset + ImplGetExtraOffset();
 	if ( !bDrawSelection && !mpIMEInfos )
 	{
+#ifdef USE_JAVA
+        Push( PUSH_CLIPREGION );
+        if ( !aEditBoxClipRgn.IsEmpty() )
+            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
 		DrawText( aPos, aText, nStart, nEnd - nStart );
+#ifdef USE_JAVA
+        Pop();
+#endif	// USE_JAVA
 	}
 	else
 	{
@@ -1249,7 +1273,15 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 
 	// Cursor muss im sichtbaren Bereich landen:
 	Size aOutSize = GetOutputSizePixel();
+#ifdef USE_JAVA
+	// Fix bug reported in the following NeoOffice forum post by shifting the
+	// cursor to the right when it would be displayed in the focus ring's right
+	// edge:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
+	if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) || (ImplGetNativeControlType() == CTRL_EDITBOX && nCursorPosX >= aOutSize.Width()-ImplGetExtraOffset()) )
+#else	// USE_JAVA
 	if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) )
+#endif	// USE_JAVA
 	{
 		long nOldXOffset = mnXOffset;
 
@@ -1261,6 +1293,20 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 			if ( mnXOffset > nMaxX )
 				mnXOffset = nMaxX;
 		}
+#ifdef USE_JAVA
+		else if ( ImplGetNativeControlType() == CTRL_EDITBOX )
+		{
+			mnXOffset = (aOutSize.Width()-(ImplGetExtraOffset()*2)) - nTextPos;
+			// Etwas mehr?
+			if ( (aOutSize.Width()-(ImplGetExtraOffset()*2)) < nTextPos )
+			{
+				long nMaxNegX = (aOutSize.Width()-(ImplGetExtraOffset()*2)) - GetTextWidth( aText );
+				mnXOffset -= aOutSize.Width() / 5;
+				if ( mnXOffset < nMaxNegX )  // beides negativ...
+					mnXOffset = nMaxNegX;
+			}
+		}
+#endif	// USE_JAVA
 		else
 		{
 			mnXOffset = (aOutSize.Width()-ImplGetExtraOffset()) - nTextPos;
