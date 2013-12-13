@@ -433,14 +433,12 @@ SwPrintOptions* 	SwModule::GetPrtOptions(sal_Bool bWeb)
 #ifdef USE_JAVA
 		if (pWebPrtOpt && pReset && !pReset->IsWebPrintOptionsReset())
 		{
-			if (!pWebPrtOpt->IsPrintGraphic() && !pWebPrtOpt->IsPrintTable() && !pWebPrtOpt->IsPrintControl() && !pWebPrtOpt->IsPrintPageBackground())
-			{
-				pWebPrtOpt->SetPrintGraphic(sal_True);
-				pWebPrtOpt->SetPrintTable(sal_True);
-				pWebPrtOpt->SetPrintControl(sal_True);
-				pWebPrtOpt->SetPrintPageBackground(sal_True);
-				pWebPrtOpt->Commit();
-			}
+			pWebPrtOpt->SetPrintGraphic(sal_True);
+			pWebPrtOpt->SetPrintTable(sal_True);
+			pWebPrtOpt->SetPrintControl(sal_True);
+			pWebPrtOpt->SetPrintPageBackground(sal_True);
+			pWebPrtOpt->SetPrintEmptyPages(sal_True);
+			pWebPrtOpt->Commit();
 
 			pReset->SetWebPrintOptionsReset(sal_True);
 			pReset->Commit();
@@ -454,18 +452,15 @@ SwPrintOptions* 	SwModule::GetPrtOptions(sal_Bool bWeb)
 #ifdef USE_JAVA
 		if (pPrtOpt && pReset && !pReset->IsPrintOptionsReset())
 		{
-			if (!pPrtOpt->IsPrintGraphic() && !pPrtOpt->IsPrintTable() && !pPrtOpt->IsPrintControl() && !pPrtOpt->IsPrintPageBackground() && !pPrtOpt->IsPrintDraw() && !pPrtOpt->IsPrintLeftPage() && !pPrtOpt->IsPrintRightPage() && !pPrtOpt->IsPrintEmptyPages())
-			{
-				pPrtOpt->SetPrintGraphic(sal_True);
-				pPrtOpt->SetPrintTable(sal_True);
-				pPrtOpt->SetPrintControl(sal_True);
-				pPrtOpt->SetPrintPageBackground(sal_True);
-				pPrtOpt->SetPrintDraw(sal_True);
-				pPrtOpt->SetPrintLeftPage(sal_True);
-				pPrtOpt->SetPrintRightPage(sal_True);
-				pPrtOpt->SetPrintEmptyPages(sal_True);
-				pPrtOpt->Commit();
-			}
+			pPrtOpt->SetPrintGraphic(sal_True);
+			pPrtOpt->SetPrintTable(sal_True);
+			pPrtOpt->SetPrintControl(sal_True);
+			pPrtOpt->SetPrintPageBackground(sal_True);
+			pPrtOpt->SetPrintDraw(sal_True);
+			pPrtOpt->SetPrintLeftPage(sal_True);
+			pPrtOpt->SetPrintRightPage(sal_True);
+			pPrtOpt->SetPrintEmptyPages(sal_True);
+			pPrtOpt->Commit();
 
 			pReset->SetPrintOptionsReset(sal_True);
 			pReset->Commit();
