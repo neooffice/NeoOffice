@@ -533,8 +533,7 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
 	Point	aPos( mnXOffset, (nH-nTH+1)/2 );
 
 	// Fix bug reported in the following NeoOffice forum post by clipping out
-	// the focus ring. Note: we don't attempt to clip out the focus ring when
-	// editing text as it can cause the cursor to be clipped:
+	// the focus ring:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
 	Region aEditBoxClipRgn;
 	if ( ImplGetNativeControlType() == CTRL_EDITBOX )
@@ -646,6 +645,10 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
         // draw normal text
         Color aNormalTextColor = GetTextColor();
         SetClipRegion( aNormalClipRegion );
+#ifdef USE_JAVA
+        if ( !aEditBoxClipRgn.IsEmpty() )
+            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
 
         if( IsPaintTransparent() )
             SetTextFillColor();
@@ -666,6 +669,10 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
 
         // draw highlighted text
         SetClipRegion( aHiglightClipRegion );
+#ifdef USE_JAVA
+        if ( !aEditBoxClipRgn.IsEmpty() )
+            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
         SetTextColor( rStyleSettings.GetHighlightTextColor() );
         SetTextFillColor( rStyleSettings.GetHighlightColor() );
 		DrawText( aPos, aText, nStart, nEnd - nStart );
@@ -731,6 +738,10 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
                             SetTextColor( Color( COL_LIGHTGRAY ) );
 
                         SetClipRegion( aClip );
+#ifdef USE_JAVA
+                        if ( !aEditBoxClipRgn.IsEmpty() )
+                            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
                         DrawText( aPos, aText, nStart, nEnd - nStart );
                     }
                 }
@@ -1278,14 +1289,19 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 	// cursor to the right when it would be displayed in the focus ring's right
 	// edge:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
-	if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) || (ImplGetNativeControlType() == CTRL_EDITBOX && nCursorPosX >= aOutSize.Width()-ImplGetExtraOffset()) )
+	ControlType nControlType = ImplGetNativeControlType();
+	if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) || (nControlType == CTRL_EDITBOX && (nCursorPosX < ImplGetExtraOffset() || nCursorPosX >= aOutSize.Width()-ImplGetExtraOffset())) )
 #else	// USE_JAVA
 	if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) )
 #endif	// USE_JAVA
 	{
 		long nOldXOffset = mnXOffset;
 
+#ifdef USE_JAVA
+		if ( nCursorPosX < 0 || (nControlType == CTRL_EDITBOX && nCursorPosX < ImplGetExtraOffset()) )
+#else	// USE_JAVA
 		if ( nCursorPosX < 0 )
+#endif	// USE_JAVA
 		{
 			mnXOffset = - nTextPos;
 			long nMaxX = 0;
@@ -1294,7 +1310,7 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 				mnXOffset = nMaxX;
 		}
 #ifdef USE_JAVA
-		else if ( ImplGetNativeControlType() == CTRL_EDITBOX )
+		else if ( nControlType == CTRL_EDITBOX )
 		{
 			mnXOffset = (aOutSize.Width()-(ImplGetExtraOffset()*2)) - nTextPos;
 			// Etwas mehr?
@@ -1321,7 +1337,11 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 		}
 
 		nCursorPosX = nTextPos + mnXOffset + ImplGetExtraOffset();
+#ifdef USE_JAVA
+		if ( nCursorPosX == aOutSize.Width() || (nControlType == CTRL_EDITBOX && nCursorPosX == aOutSize.Width()-ImplGetExtraOffset()) )	// dann nicht sichtbar...
+#else	// USE_JAVA
 		if ( nCursorPosX == aOutSize.Width() )	// dann nicht sichtbar...
+#endif	// USE_JAVA
 			nCursorPosX--;
 
 		if ( mnXOffset != nOldXOffset )
