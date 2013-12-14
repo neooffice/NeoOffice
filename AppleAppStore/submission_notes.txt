@@ -58,6 +58,9 @@ neo office,office,word processing,spreadsheet,presentation,open office,openoffic
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
 
+Marketing URL:
+http://www.neooffice.org/
+
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
 
