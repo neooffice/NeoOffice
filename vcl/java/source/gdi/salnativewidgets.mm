@@ -2877,7 +2877,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
 		if ( [pVCLNativeSpinbuttons drawn] )
 		{
-			VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth() - aSize.width, rDestBounds.GetHeight() > aSize.height ? rDestBounds.GetHeight() : aSize.height )];
+			VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth() - aSize.width, rDestBounds.GetHeight() )];
 			[pVCLNativeTextField performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTextField waitUntilDone:YES modes:pModes];
 			bRet = [pVCLNativeTextField drawn];
 		}
@@ -4209,12 +4209,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_SPINBOX:
 			{
 				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
-				long nHeightAdjust = ( EDITBOX_HEIGHT - spinboxRect.GetHeight() ) / 2;
-				if ( nHeightAdjust > 0 )
-				{
-					spinboxRect.Top() -= nHeightAdjust;
-					spinboxRect.Bottom() += nHeightAdjust;
-				}
 
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 
@@ -4226,6 +4220,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSSize aSize = [pVCLNativeSpinbuttons size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
+					// Fix excessive reduction in spinner height in Impress'
+					// Line and Fill toolbar by setting the height to at least
+					// the full height of the native spinners
+					long nHeightAdjust = ( (long)aSize.height - spinboxRect.GetHeight() ) / 2;
+					if ( nHeightAdjust > 0 )
+					{
+						spinboxRect.Top() -= nHeightAdjust;
+						spinboxRect.Bottom() += nHeightAdjust;
+					}
+
 					switch( nPart )
 					{
 						case PART_ENTIRE_CONTROL:
