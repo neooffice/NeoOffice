@@ -1147,7 +1147,14 @@ void Menu::ImplCallEventListeners( ULONG nEvent, USHORT nPos )
     VclMenuEvent aEvent( this, nEvent, nPos );
 
     // This is needed by atk accessibility bridge
+#ifdef USE_JAVA
+    // Fix OpenOffice.org bug reported in the following forum topic by
+    // stopping quick help when a menu is selected when this window has focus:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8476
+    if ( nEvent == VCLEVENT_MENU_HIGHLIGHT || nEvent == VCLEVENT_MENU_ACTIVATE || nEvent == VCLEVENT_MENU_DEACTIVATE || nEvent == VCLEVENT_MENU_SELECT )
+#else	// USE_JAVA
     if ( nEvent == VCLEVENT_MENU_HIGHLIGHT )
+#endif	// USE_JAVA
     {
         ImplGetSVData()->mpApp->ImplCallEventListeners( &aEvent );
     }

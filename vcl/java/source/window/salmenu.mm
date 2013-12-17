@@ -687,43 +687,17 @@ static MacOSBOOL bRemovePendingSetMenuAsMainMenu = NO;
 	MacOSBOOL bOldInPerformKeyEquivalent = bInPerformKeyEquivalent;
 	bInPerformKeyEquivalent = YES;
 
-	// Fix OpenOffice.org bug reported in the following forum topic by
-	// posting key events when the menu item has a key shortcut assigned to it:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8476
-	USHORT nTag = (USHORT)[self tag] & ( KEY_CODE | KEY_MODTYPE );
-	if ( nTag & KEY_CODE && nTag & KEY_MODTYPE )
-	{
-		SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-		pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
-		pKeyDownEvent->mnCode = nTag;
-		pKeyDownEvent->mnCharCode = 0;
-		pKeyDownEvent->mnRepeat = 0;
+	JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pActivateEvent );
+	pActivateEvent->release();
 
-		SalKeyEvent *pKeyUpEvent = new SalKeyEvent();
-		memcpy( pKeyUpEvent, pKeyDownEvent, sizeof( SalKeyEvent ) );
-	
-		JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, pMenuBarFrame, pKeyDownEvent );
-		JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
-		pSalKeyDownEvent->release();
+	JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pCommandEvent );
+	pCommandEvent->release();
 
-		JavaSalEvent *pSalKeyUpEvent = new JavaSalEvent( SALEVENT_KEYUP, pMenuBarFrame, pKeyUpEvent );
-		JavaSalEventQueue::postCachedEvent( pSalKeyUpEvent );
-		pSalKeyUpEvent->release();
-	}
-	else
-	{
-		JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-		JavaSalEventQueue::postCachedEvent( pActivateEvent );
-		pActivateEvent->release();
-
-		JavaSalEvent *pCommandEvent = new JavaSalEvent( SALEVENT_MENUCOMMAND, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-		JavaSalEventQueue::postCachedEvent( pCommandEvent );
-		pCommandEvent->release();
-
-		JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
-		JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
-		pDeactivateEvent->release();
-	}
+	JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
+	JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
+	pDeactivateEvent->release();
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;
 	bInPerformKeyEquivalent = bOldInPerformKeyEquivalent;

@@ -4614,12 +4614,20 @@ SwEditWin::SwEditWin(Window *pParent, SwView &rMyView):
 		SetInputContext( InputContext( aFont, INPUTCONTEXT_TEXT |
 											INPUTCONTEXT_EXTTEXTINPUT ) );
 	}
+
+#ifdef USE_JAVA
+	Application::AddEventListener( LINK( this, SwEditWin, ApplicationEventListener ) );
+#endif	// USE_JAVA
 }
 
 
 
 SwEditWin::~SwEditWin()
 {
+#ifdef USE_JAVA
+	Application::RemoveEventListener( LINK( this, SwEditWin, ApplicationEventListener ) );
+#endif	// USE_JAVA
+
 	aKeyInputTimer.Stop();
 	delete pShadCrsr;
     delete pRowColumnSelectionStart;
@@ -5817,3 +5825,18 @@ Selection SwEditWin::GetSurroundingTextSelection() const
         return Selection( nPos - nStartPos, nPos - nStartPos );
     }
 }
+
+#ifdef USE_JAVA
+
+IMPL_LINK( SwEditWin, ApplicationEventListener, VclSimpleEvent*, pAppEvent )
+{
+	// Fix OpenOffice.org bug reported in the following forum topic by
+	// stopping quick help when a menu is selected when this window has focus:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8476
+	if ( pAppEvent && pAppEvent->ISA( VclMenuEvent ) && ((VclMenuEvent *)pAppEvent)->GetId() == VCLEVENT_MENU_SELECT )
+		StopQuickHelp();
+
+	return sal_True;
+}
+
+#endif	// USE_JAVA
