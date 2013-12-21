@@ -35,7 +35,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete set of office applications. With NeoOffice, users can create and edit spreadsheets, text documents, and presentations.
+NeoOffice is a complete set of office applications. With NeoOffice, users can create and edit spreadsheets, text documents, and presentations. NeoOffice can also import most Excel, Word, and PowerPoint documents.
 
 Do you already use NeoOffice or OpenOffice? We recommend that you click on the NeoOffice support link and read the list of changes before you upgrade to this version of NeoOffice.
 
