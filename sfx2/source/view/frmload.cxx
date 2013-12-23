@@ -93,6 +93,10 @@ namespace css = ::com::sun::star;
 #include "brokenpackageint.hxx"
 #include "objshimp.hxx"
 
+#ifdef USE_JAVA
+#include "frmload_cocoa.h"
+#endif	// USE_JAVA
+
 SfxFrameLoader_Impl::SfxFrameLoader_Impl( const css::uno::Reference< css::lang::XMultiServiceFactory >& /*xFactory*/ )
 {
 }
@@ -559,7 +563,11 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const css::uno::Sequence< css::bean
 		{
             bDisaster = sal_True;
 		}
+
 #ifdef USE_JAVA
+		if ( bLoadState )
+			SfxFrameLoader_openDocumentOfType( pFilter->GetServiceName() );
+
 		bInLoad = sal_False;
 #endif	// USE_JAVA
 
