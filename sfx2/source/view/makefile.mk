@@ -64,7 +64,9 @@ SLOFILES =	\
 		$(SLO)$/userinputinterception.obj
 
 .IF "$(GUIBASE)" == "java"
-SLOFILES += $(SLO)$/topfrm_cocoa.obj
+SLOFILES += \
+		$(SLO)$/frmload_cocoa.obj \
+		$(SLO)$/topfrm_cocoa.obj
 .ENDIF
 
 # --- Targets -------------------------------------------------------
