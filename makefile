@@ -607,9 +607,9 @@ endif
 	cat "$(INSTALL_HOME)/installutils" "bin/postflight" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(OO_PRODUCT_VERSION_FAMILY)#$(OO_PRODUCT_VERSION_FAMILY)#g' | sed 's#$$(PRODUCT_VERSION_FAMILY)#$(PRODUCT_VERSION_FAMILY)#g' > "$(INSTALL_HOME)/package.pkg/contents.pkg/Scripts/postflight" ; chmod a+x "$(INSTALL_HOME)/package.pkg/contents.pkg/Scripts/postflight"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' | sed 's#$$(PRODUCT_BASE_URL)#'"$(PRODUCT_BASE_URL)"'#g' | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)/ReadMe.rtf"
+ifdef LICENSEANDREADME
 	cp "etc/gpl.html" "$(INSTALL_HOME)/package.pkg/Resources/license.html"
 	echo '<license file="license.html"/>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
-ifdef LICENSEANDREADME
 	cp "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)/ReadMe.rtf" "$(INSTALL_HOME)/package.pkg/Resources/readme.rtf"
 	echo '<readme file="readme.rtf"/>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
 endif
