@@ -76,13 +76,6 @@ check_installation() {
 			return 0;
 		fi
 
-		# Allow a product family match
-		productnameversion="$(PRODUCT_NAME) $(OO_PRODUCT_VERSION_FAMILY)"
-		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
-		if [ ! -z "$productkey" ] ; then
-			return 0;
-		fi
-
 		productkey=`grep '^ProductKey=' "$1/Contents/MacOS/bootstraprc" | awk -F= '{ print $2 }'`
 		if [ ! -z "$productkey" ] ; then
 			last_installed_product_found="$productkey"
