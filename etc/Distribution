@@ -19,6 +19,7 @@
         </bundle-version>
         <must-close>
             <app id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+            <app id="org.neooffice.$(PRODUCT_NAME)"/>
         </must-close>
     </pkg-ref>
     <product id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)"/>
