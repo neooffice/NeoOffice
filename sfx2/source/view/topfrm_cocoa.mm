@@ -117,6 +117,7 @@ static OUString aSaveAVersionLocalizedString;
 @class NSDocumentVersion;
 
 @interface NSDocument (SFXDocument)
+- (void)_browseVersions;
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 - (void)browseDocumentVersions:(id)pSender;
@@ -497,6 +498,12 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	{
 		mbInRevert = YES;
 		[super browseDocumentVersions:pObject];
+		mbInRevert = NO;
+	}
+	else if ( [super respondsToSelector:@selector(_browseVersions)] )
+	{
+		mbInRevert = YES;
+		[super _browseVersions];
 		mbInRevert = NO;
 	}
 }
@@ -949,7 +956,7 @@ BOOL NSDocument_versionsEnabled()
 BOOL NSDocument_versionsSupported()
 {
 #ifdef USE_NATIVE_VERSIONS
-	return ( class_getInstanceMethod( [NSDocument class], @selector(browseDocumentVersions:) ) && class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? YES : NO );
+	return ( ( class_getInstanceMethod( [NSDocument class], @selector(_browseVersions) ) || class_getInstanceMethod( [NSDocument class], @selector(browseDocumentVersions:) ) ) && class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? YES : NO );
 #else	// USE_NATIVE_VERSIONS
 	return NO;
 #endif	// USE_NATIVE_VERSIONS
