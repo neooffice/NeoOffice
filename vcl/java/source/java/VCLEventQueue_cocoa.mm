@@ -1430,8 +1430,24 @@ static NSUInteger nMouseMask = 0;
 			}
 			else
 			{
+				static float fUnpostedVerticalScrollWheel = 0;
+
 				fDeltaX = [pEvent deltaX];
-				fDeltaY = [pEvent deltaY];
+
+				// Fix bug 3284 by not rounding tiny magnification amounts
+				// to a non-zero integer and, instead, set the magnification
+				// amount to zero until enough events' combined magnification
+				// amounts naturally round to a non-zero integer
+				fUnpostedVerticalScrollWheel += [pEvent deltaY] / 20;
+				if ( Float32ToLong( fUnpostedVerticalScrollWheel ) )
+				{
+					fDeltaY = fUnpostedVerticalScrollWheel;
+					fUnpostedVerticalScrollWheel = 0;
+				}
+				else
+				{
+					fDeltaY = 0;
+				}
 			}
 
 			NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
