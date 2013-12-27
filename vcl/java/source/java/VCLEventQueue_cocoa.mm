@@ -60,7 +60,7 @@ static bool bIsRunningSnowLeopard = false;
 static NSString *pCMenuBarString = @"CMenuBar";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
-inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
+inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
 static MacOSBOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 {
@@ -1560,12 +1560,27 @@ static NSUInteger nMouseMask = 0;
 			float fDeltaY;
 			if ( nType == NSEventTypeMagnify )
 			{
+				static float fUnpostedMagnification = 0;
+
 				// Magnify events need to be converted to vertical scrolls with
 				// the Command key pressed to force the OOo code to zoom.
-				// Fix bug 3284 by reducing the amount of magnification.
 				nModifiers |= NSCommandKeyMask;
 				fDeltaX = 0;
-				fDeltaY = [pEvent magnification];
+
+				// Fix bug 3284 by not rounding tiny magnification amounts
+				// to a non-zero integer and, instead, set the magnification
+				// amount to zero until enough events' combined magnification
+				// amounts naturally round to a non-zero integer
+				fUnpostedMagnification += [pEvent magnification] * 2;
+				if ( Float32ToLong( fUnpostedMagnification ) )
+				{
+					fDeltaY = fUnpostedMagnification;
+					fUnpostedMagnification = 0;
+				}
+				else
+				{
+					fDeltaY = 0;
+				}
 			}
 			else
 			{
@@ -1584,15 +1599,15 @@ static NSUInteger nMouseMask = 0;
 			// values:
 			//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
 			//   ScrollUnits == 1
-			if ( fDeltaX )
+			long nDeltaX = Float32ToLong( fDeltaX );
+			if ( nDeltaX )
 			{
-				long nScrollAmount = Float32ToLong( fDeltaX );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
 				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
-				pWheelMouseEvent->mnDelta = nScrollAmount * WHEEL_ROTATION_FACTOR;
-				pWheelMouseEvent->mnNotchDelta = nScrollAmount;
+				pWheelMouseEvent->mnDelta = nDeltaX * WHEEL_ROTATION_FACTOR;
+				pWheelMouseEvent->mnNotchDelta = nDeltaX;
 				pWheelMouseEvent->mnScrollLines = 1;
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = TRUE;
@@ -1601,15 +1616,15 @@ static NSUInteger nMouseMask = 0;
 				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
 				pSalWheelMouseEvent->release();
 			}
-			if ( fDeltaY )
+			long nDeltaY = Float32ToLong( fDeltaY );
+			if ( nDeltaY )
 			{
-				long nScrollAmount = Float32ToLong( fDeltaY );
 				SalWheelMouseEvent *pWheelMouseEvent = new SalWheelMouseEvent();
 				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
-				pWheelMouseEvent->mnDelta = nScrollAmount * ( nType == NSEventTypeMagnify ? 1.0f : WHEEL_ROTATION_FACTOR );
-				pWheelMouseEvent->mnNotchDelta = nScrollAmount;
+				pWheelMouseEvent->mnDelta = nDeltaY * ( nType == NSEventTypeMagnify ? 1.0f : WHEEL_ROTATION_FACTOR );
+				pWheelMouseEvent->mnNotchDelta = nDeltaY;
 				pWheelMouseEvent->mnScrollLines = 1;
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = FALSE;
