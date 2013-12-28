@@ -41,19 +41,19 @@ Do you already use NeoOffice or OpenOffice? We recommend that you click on the N
 
 NeoOffice is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have taken the OpenOffice code and have continually added improvements to NeoOffice that users will not find in OpenOffice or LibreOffice such as:
 
-- OS X Full-Screen mode
-- Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
-- OS X Versions
-- Significant speed improvements to the OpenOffice and LibreOffice text layout, rendering, and printing code
-- Native OS X text highlighting
-- Native file locking support for local and networked volumes
-- OS X Services support
-- Native floating tool windows
-- Extremely stable code that has been in daily use by thousands of users 
+• OS X Full-Screen mode
+• Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
+• OS X Versions
+• Significant speed improvements to the OpenOffice and LibreOffice text layout, rendering, and printing code
+• Native OS X text highlighting
+• Native file locking support for local and networked volumes
+• OS X Services support
+• Native floating tool windows
+• Extremely stable code that has been in daily use by thousands of users
 
 
 Keywords:
-neo office,office,spreadsheet,excel,xlsx,word processing,word,docx,presentation,powerpoint,pptx
+neo,office,spreadsheet,excel,xlsx,xls,write,word,docx,doc,presentation,powerpoint,pptx,ppt
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
