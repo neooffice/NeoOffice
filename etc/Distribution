@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<installer-script minSpecVersion="2">
+<installer-gui-script minSpecVersion="2">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION)</title>
     <options customize="never" require-scripts="false" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
@@ -19,7 +19,6 @@
         </bundle-version>
         <must-close>
             <app id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
-            <app id="org.neooffice.$(PRODUCT_NAME)"/>
         </must-close>
     </pkg-ref>
     <product id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_VERSION)"/>
