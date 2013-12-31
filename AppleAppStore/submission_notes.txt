@@ -15,7 +15,7 @@ Version:
 Use PRODUCT_VERSION macro value in main makefile.
 
 Copyright:
-Use "<current year> Planamesa Inc."
+Use "2003 - <current year> Planamesa Inc."
 
 Primary Category:
 Productivity
