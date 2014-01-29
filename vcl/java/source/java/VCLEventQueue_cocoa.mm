@@ -1591,8 +1591,12 @@ static NSUInteger nMouseMask = 0;
 				// Fix bug 3284 by not rounding tiny magnification amounts
 				// to a non-zero integer and, instead, set the magnification
 				// amount to zero until enough events' combined magnification
-				// amounts naturally round to a non-zero integer
-				fUnpostedVerticalScrollWheel += [pEvent deltaY] / 20;
+				// amounts naturally round to a non-zero integer. Fix the
+				// unresponsive veritical scrollwheel events reported in the
+				// following NeoOffice forum topic by only reducing horizontal
+				// events:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
+				fUnpostedVerticalScrollWheel += [pEvent deltaY] / ( nModifiers & NSCommandKeyMask ? 20 : 1 );
 				if ( Float32ToLong( fUnpostedVerticalScrollWheel ) )
 				{
 					fDeltaY = fUnpostedVerticalScrollWheel;
