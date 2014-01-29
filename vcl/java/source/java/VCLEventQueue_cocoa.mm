@@ -1593,6 +1593,7 @@ static NSUInteger nMouseMask = 0;
 			}
 			else
 			{
+				static float fUnpostedHorizontalScrollWheel = 0;
 				static float fUnpostedVerticalScrollWheel = 0;
 
 				fDeltaX = [pEvent deltaX];
@@ -1608,19 +1609,30 @@ static NSUInteger nMouseMask = 0;
 					// events reported in the following NeoOffice forum topic
 					// by only reducing horizontal events:
 					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
-					float fDeltaYReductionFactor = 5.0f;
+					float fDeltaReductionFactor = 5.0f;
 					if ( nModifiers & NSCommandKeyMask )
 					{
 						// Precise scrolling devices have excessively large
 						// deltas so apply a much larger reduction factor when
 						// zooming
 						if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
-							fDeltaYReductionFactor *= 50;
+							fDeltaReductionFactor = 250.0f;
 						else
-							fDeltaYReductionFactor *= 5;
+							fDeltaReductionFactor = 20.0f;
 					}
 
-					fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaYReductionFactor;
+					fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
+					fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
+				}
+
+				if ( Float32ToLong( fUnpostedHorizontalScrollWheel ) )
+				{
+					fDeltaX = fUnpostedHorizontalScrollWheel;
+					fUnpostedHorizontalScrollWheel = 0;
+				}
+				else
+				{
+					fDeltaX = 0;
 				}
 
 				if ( Float32ToLong( fUnpostedVerticalScrollWheel ) )
