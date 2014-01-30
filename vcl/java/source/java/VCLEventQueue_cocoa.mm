@@ -1444,32 +1444,28 @@ static NSUInteger nMouseMask = 0;
 
 				fDeltaX = [pEvent deltaX];
 
-				// Ignore phase events
-				if ( ![pEvent respondsToSelector:@selector(phase)] || ![pEvent phase] )
+				// Fix bug 3284 by not rounding tiny magnification amounts
+				// to a non-zero integer and, instead, set the magnification
+				// amount to zero until enough events' combined
+				// magnification amounts naturally round to a non-zero
+				// integer. Fix the unresponsive veritical scrollwheel
+				// events reported in the following NeoOffice forum topic
+				// by only reducing horizontal events:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
+				float fDeltaReductionFactor = 5.0f;
+				if ( nModifiers & NSCommandKeyMask )
 				{
-					// Fix bug 3284 by not rounding tiny magnification amounts
-					// to a non-zero integer and, instead, set the magnification
-					// amount to zero until enough events' combined
-					// magnification amounts naturally round to a non-zero
-					// integer. Fix the unresponsive veritical scrollwheel
-					// events reported in the following NeoOffice forum topic
-					// by only reducing horizontal events:
-					// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
-					float fDeltaReductionFactor = 5.0f;
-					if ( nModifiers & NSCommandKeyMask )
-					{
-						// Precise scrolling devices have excessively large
-						// deltas so apply a much larger reduction factor when
-						// zooming
-						if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
-							fDeltaReductionFactor = 250.0f;
-						else
-							fDeltaReductionFactor = 20.0f;
-					}
-
-					fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
-					fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
+					// Precise scrolling devices have excessively large
+					// deltas so apply a much larger reduction factor when
+					// zooming
+					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
+						fDeltaReductionFactor = 250.0f;
+					else
+						fDeltaReductionFactor = 20.0f;
 				}
+
+				fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
+				fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
 
 				if ( Float32ToLong( fUnpostedHorizontalScrollWheel ) )
 				{
