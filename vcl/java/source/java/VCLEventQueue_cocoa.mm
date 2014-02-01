@@ -45,10 +45,6 @@
 #import <objc/objc-class.h>
 #include <postmac.h>
 
-#ifndef NSEventPhase
-typedef NSUInteger NSEventPhase;
-#endif
-
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
 #include "VCLResponder_cocoa.h"
@@ -807,7 +803,6 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 
 @interface NSEvent (VCLWindow)
 - (BOOL)hasPreciseScrollingDeltas;
-- (NSEventPhase)phase;
 @end
 
 @interface NSWindow (VCLWindowPoseAs)
@@ -1596,8 +1591,6 @@ static NSUInteger nMouseMask = 0;
 				static float fUnpostedHorizontalScrollWheel = 0;
 				static float fUnpostedVerticalScrollWheel = 0;
 
-				fDeltaX = [pEvent deltaX];
-
 				// Fix bug 3284 by not rounding tiny magnification amounts
 				// to a non-zero integer and, instead, set the magnification
 				// amount to zero until enough events' combined
@@ -1613,12 +1606,16 @@ static NSUInteger nMouseMask = 0;
 					// deltas so apply a much larger reduction factor when
 					// zooming
 					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
-						fDeltaReductionFactor = 250.0f;
+						fDeltaReductionFactor = 40.0f;
 					else
 						fDeltaReductionFactor = 20.0f;
 				}
-
-				fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
+				else
+				{
+					// Only allow horizontal scroll when the Command key is not
+					// pressed
+					fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
+				}
 				fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
 
 				if ( Float32ToLong( fUnpostedHorizontalScrollWheel ) )
