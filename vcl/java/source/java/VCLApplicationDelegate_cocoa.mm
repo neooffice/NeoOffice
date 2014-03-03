@@ -197,6 +197,10 @@ static void HandleDidChangeScreenParametersRequest()
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
++ (MacOSBOOL)autosavesInPlace;
+- (MacOSBOOL)hasUnautosavedChanges;
+- (MacOSBOOL)isDocumentEdited;
+- (void)makeWindowControllers;
 - (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 @end
@@ -207,10 +211,35 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocumentController : NSDocumentController
 - (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector;
+- (Class)documentClassForType:(NSString *)pDocumentTypeName;
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
 @implementation VCLDocument
+
++ (MacOSBOOL)autosavesInPlace
+{
+	return YES;
+}
+
+- (MacOSBOOL)hasUnautosavedChanges
+{
+	// Don't allow NSDocument to do autosaving
+	return NO;
+}
+
+- (MacOSBOOL)isDocumentEdited
+{
+	return NO;
+}
+
+- (void)makeWindowControllers
+{
+	// Close document so that there are no dangling managed object references.
+	// Note that we have to queue the closing as invoking close now will not
+	// actually close the document.
+	[self performSelector:@selector(close) withObject:nil afterDelay:0];
+}
 
 - (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
@@ -233,6 +262,13 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	if ( pDelegate && [pDelegate respondsToSelector:aShouldTerminateSelector] && sel_isEqual( aShouldTerminateSelector, @selector(_docController:shouldTerminate:) ) )
 		[pDelegate _docController:self shouldTerminate:YES];
+}
+
+- (Class)documentClassForType:(NSString *)pDocumentTypeName
+{
+	// Always return nil otherwise versions browser will create NSDocument
+	// instances
+	return nil;
 }
 
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError

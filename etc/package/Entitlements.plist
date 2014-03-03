@@ -1,12 +1,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Uncomment when iCloud support is implemented
+	$(ENTITLEMENTS_BEGIN_ICLOUD)
+	<key>com.apple.application-identifier</key>
+	<string>$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)</string>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
-		<string>$(CERTSANDBOXTEAMIDENTIFIER).*</string>
+		<string>$(CERTSANDBOXTEAMIDENTIFIER).org.neooffice.$(PRODUCT_DIR_NAME)</string>
 	</array>
-	-->
+	$(ENTITLEMENTS_END_ICLOUD)
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
 	<!-- Allow the user to open and edit any of their files that were created in other applications such as Microsoft Office, iWork, NeoOffice, OpenOffice, and LibreOffice -->
