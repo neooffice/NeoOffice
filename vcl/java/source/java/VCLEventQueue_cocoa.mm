@@ -761,6 +761,8 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
 	mpLastWindowDraggedEvent = nil;
+	mbInVersionBrowser = NO;
+	mbCloseOnExitVersionBrowser = NO;
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -780,9 +782,9 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 	[super dealloc];
 }
 
-- (id)init
+- (MacOSBOOL)isInVersionBrowser
 {
-	return self;
+	return mbInVersionBrowser;
 }
 
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
@@ -799,6 +801,11 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 		[(VCLView *)pContentView setFrame:pFrame];
 }
 
+@end
+
+@interface NSObject (VCLWindow)
++ (id)sharedController;
+- (void)endVisualization;
 @end
 
 @interface NSEvent (VCLWindow)
@@ -966,6 +973,8 @@ static NSUInteger nMouseMask = 0;
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
 	mpLastWindowDraggedEvent = nil;
+	mbInVersionBrowser = NO;
+	mbCloseOnExitVersionBrowser = NO;
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -1074,6 +1083,11 @@ static NSUInteger nMouseMask = 0;
 	return pRet;
 }
 
+- (MacOSBOOL)isInVersionBrowser
+{
+	return mbInVersionBrowser;
+}
+
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	NSResponder *pOldResponder = [self firstResponder];
@@ -1142,6 +1156,24 @@ static NSUInteger nMouseMask = 0;
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
+		if ( mbInVersionBrowser )
+		{
+			mbCloseOnExitVersionBrowser = YES;
+
+			// Force version browser to exit
+			NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
+			if ( pBundle )
+			{
+				Class aClass = [pBundle classNamed:@"NSDocumentRevisionsController"];
+				if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
+				{
+					id pController = [aClass sharedController];
+					if ( pController && [pController respondsToSelector:@selector(endVisualization)] )
+						[pController endVisualization];
+				}
+			}
+		}
+
 		if ( mpLastWindowDraggedEvent )
 		{
 			[mpLastWindowDraggedEvent release];
@@ -1881,6 +1913,25 @@ static NSUInteger nMouseMask = 0;
 	}
 
 	return bRet;
+}
+
+- (void)windowWillEnterVersionBrowser:(NSNotification *)notification
+{
+	mbInVersionBrowser = YES;
+}
+
+- (void)windowDidExitVersionBrowser:(NSNotification *)pNotification
+{
+	mbInVersionBrowser = NO;
+
+	// Stop reappearance of phantom document window when the user has
+	// close the window while in the version browser using the File :: Close
+	// menu or the Command-W key shortcut
+	if ( mbCloseOnExitVersionBrowser )
+	{
+		mbCloseOnExitVersionBrowser = NO;
+		[self close];
+	}
 }
 
 @end
@@ -3114,6 +3165,24 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	aSelector = @selector(windowShouldZoom:toFrame:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowWillEnterVersionBrowser:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowDidExitVersionBrowser:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{

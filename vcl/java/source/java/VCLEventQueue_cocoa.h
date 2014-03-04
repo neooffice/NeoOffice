@@ -122,10 +122,13 @@
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
+	MacOSBOOL				mbInVersionBrowser;
+	MacOSBOOL				mbCloseOnExitVersionBrowser;
 }
 - (void)_init;
 - (MacOSBOOL)canBecomeKeyWindow;
 - (void)dealloc;
+- (MacOSBOOL)isInVersionBrowser;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 @end
@@ -137,6 +140,8 @@
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
+	MacOSBOOL				mbInVersionBrowser;
+	MacOSBOOL				mbCloseOnExitVersionBrowser;
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
@@ -149,6 +154,7 @@
 - (id)draggingSourceDelegate;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)isInVersionBrowser;
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
@@ -166,6 +172,8 @@
 - (void)windowWillMiniaturize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
 - (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
+- (void)windowWillEnterVersionBrowser:(NSNotification *)pNotification;
+- (void)windowDidExitVersionBrowser:(NSNotification *)pNotification;
 @end
 
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
