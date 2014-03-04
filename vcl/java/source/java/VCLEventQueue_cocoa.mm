@@ -805,7 +805,7 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 
 @interface NSObject (VCLWindow)
 + (id)sharedController;
-- (void)endVisualization;
+- (void)endVisualizationThenContinue:(id)pSender;
 @end
 
 @interface NSEvent (VCLWindow)
@@ -1168,8 +1168,8 @@ static NSUInteger nMouseMask = 0;
 				if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
 				{
 					id pController = [aClass sharedController];
-					if ( pController && [pController respondsToSelector:@selector(endVisualization)] )
-						[pController endVisualization];
+					if ( pController && [pController respondsToSelector:@selector(endVisualizationThenContinue:)] )
+						[pController endVisualizationThenContinue:self];
 				}
 			}
 		}
