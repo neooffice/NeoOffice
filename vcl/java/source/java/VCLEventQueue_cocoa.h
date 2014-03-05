@@ -128,7 +128,6 @@
 - (void)_init;
 - (MacOSBOOL)canBecomeKeyWindow;
 - (void)dealloc;
-- (MacOSBOOL)isInVersionBrowser;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
 - (void)setFrame:(JavaSalFrame *)pFrame;
 @end
@@ -154,7 +153,6 @@
 - (id)draggingSourceDelegate;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
-- (MacOSBOOL)isInVersionBrowser;
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;

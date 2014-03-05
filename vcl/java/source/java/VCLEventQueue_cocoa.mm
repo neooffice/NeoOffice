@@ -782,11 +782,6 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 	[super dealloc];
 }
 
-- (MacOSBOOL)isInVersionBrowser
-{
-	return mbInVersionBrowser;
-}
-
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
 {
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
@@ -801,11 +796,6 @@ static USHORT GetKeyCode( USHORT nKey, USHORT nChar )
 		[(VCLView *)pContentView setFrame:pFrame];
 }
 
-@end
-
-@interface NSObject (VCLWindow)
-+ (id)sharedController;
-- (void)endVisualizationThenContinue:(id)pSender;
 @end
 
 @interface NSEvent (VCLWindow)
@@ -1083,11 +1073,6 @@ static NSUInteger nMouseMask = 0;
 	return pRet;
 }
 
-- (MacOSBOOL)isInVersionBrowser
-{
-	return mbInVersionBrowser;
-}
-
 - (MacOSBOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	NSResponder *pOldResponder = [self firstResponder];
@@ -1161,17 +1146,9 @@ static NSUInteger nMouseMask = 0;
 			mbCloseOnExitVersionBrowser = YES;
 
 			// Force version browser to exit
-			NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
-			if ( pBundle )
-			{
-				Class aClass = [pBundle classNamed:@"NSDocumentRevisionsController"];
-				if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
-				{
-					id pController = [aClass sharedController];
-					if ( pController && [pController respondsToSelector:@selector(endVisualizationThenContinue:)] )
-						[pController endVisualizationThenContinue:self];
-				}
-			}
+			NSButton *pCloseButton = [self standardWindowButton:NSWindowCloseButton];
+			if ( pCloseButton )
+				[pCloseButton performClick:self];
 		}
 
 		if ( mpLastWindowDraggedEvent )
@@ -1917,20 +1894,29 @@ static NSUInteger nMouseMask = 0;
 
 - (void)windowWillEnterVersionBrowser:(NSNotification *)notification
 {
-	mbInVersionBrowser = YES;
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+		mbInVersionBrowser = YES;
 }
 
 - (void)windowDidExitVersionBrowser:(NSNotification *)pNotification
 {
-	mbInVersionBrowser = NO;
-
-	// Stop reappearance of phantom document window when the user has
-	// close the window while in the version browser using the File :: Close
-	// menu or the Command-W key shortcut
-	if ( mbCloseOnExitVersionBrowser )
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 	{
-		mbCloseOnExitVersionBrowser = NO;
-		[self close];
+		mbInVersionBrowser = NO;
+
+		// Stop reappearance of phantom document window when the user has
+		// close the window while in the version browser using the File :: Close
+		// menu or the Command-W key shortcut
+		if ( mbCloseOnExitVersionBrowser )
+		{
+			mbCloseOnExitVersionBrowser = NO;
+			[self close];
+		}
+
+		// Force menubar to be visible as it sometimes is disabled or hidden
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp setPresentationOptions:[pApp presentationOptions]];
 	}
 }
 
