@@ -360,7 +360,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (BOOL)isInVersionBrowser
 {
-	// Force version browser to exit
 	NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
 	if ( pBundle )
 	{
