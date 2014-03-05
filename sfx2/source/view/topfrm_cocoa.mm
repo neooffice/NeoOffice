@@ -500,17 +500,24 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)reloadFrame
 {
-	if ( NSDocument_versionsSupported() && ![self isInVersionBrowser] && !Application::IsShutDown() )
+	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
+		if ( [self isInVersionBrowser] )
 		{
-			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-			if ( pDoc == self )
-				SFXDocument_reload( mpFrame );
+			[self performSelector:@selector(reloadFrame) withObject:nil afterDelay:0];
 		}
-		rSolarMutex.release();
+		else
+		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+			if ( !Application::IsShutDown() )
+			{
+				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+				if ( pDoc == self )
+					SFXDocument_reload( mpFrame );
+			}
+			rSolarMutex.release();
+		}
 	}
 }
 
