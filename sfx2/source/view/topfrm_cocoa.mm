@@ -116,6 +116,11 @@ static OUString aSaveAVersionLocalizedString;
 
 @class NSDocumentVersion;
 
+@interface NSObject (NSDocumentRevisionsController)
++ (id)sharedController;
+- (BOOL)isVisualizing;
+@end
+
 @interface NSDocument (SFXDocument)
 - (void)_browseVersions;
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
@@ -127,7 +132,6 @@ static OUString aSaveAVersionLocalizedString;
 @interface SFXDocument : NSDocument
 {
 	SfxTopViewFrame*		mpFrame;
-	BOOL					mbInRevert;
 	BOOL					mbInSetDocumentModified;
 	NSWindowController*		mpWinController;
 	NSWindow*				mpWindow;
@@ -140,6 +144,7 @@ static OUString aSaveAVersionLocalizedString;
 - (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (BOOL)isInVersionBrowser;
 - (void)makeWindowControllers;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)reloadFrame;
@@ -328,7 +333,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[super initWithContentsOfURL:pURL ofType:pTypeName error:ppError];
 
 	mpFrame = pFrame;
-	mbInRevert = NO;
 	mbInSetDocumentModified = NO;
 	mpWinController = nil;
 	mpWindow = pWindow;
@@ -352,6 +356,24 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[self setUndoManager:[SFXUndoManager createWithDocument:self]];
 
 	return self;
+}
+
+- (BOOL)isInVersionBrowser
+{
+	// Force version browser to exit
+	NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
+	if ( pBundle )
+	{
+		Class aClass = [pBundle classNamed:@"NSDocumentRevisionsController"];
+		if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
+		{
+			id pController = [aClass sharedController];
+			if ( pController && [pController respondsToSelector:@selector(isVisualizing)] )
+				return [pController isVisualizing];
+		}
+	}
+
+	return NO;
 }
 
 - (void)makeWindowControllers
@@ -470,7 +492,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)reloadFrame
 {
-	if ( NSDocument_versionsSupported() && !mbInRevert && !Application::IsShutDown() )
+	if ( NSDocument_versionsSupported() && ![self isInVersionBrowser] && !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
@@ -491,21 +513,13 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)revertDocumentToSaved:(id)pObject
 {
-	if ( mbInRevert )
+	if ( [self isInVersionBrowser] )
 		return;
 
 	if ( [super respondsToSelector:@selector(browseDocumentVersions:)] )
-	{
-		mbInRevert = YES;
 		[super browseDocumentVersions:pObject];
-		mbInRevert = NO;
-	}
 	else if ( [super respondsToSelector:@selector(_browseVersions)] )
-	{
-		mbInRevert = YES;
 		[super _browseVersions];
-		mbInRevert = NO;
-	}
 }
 
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
