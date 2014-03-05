@@ -641,6 +641,8 @@ static void RegisterMainBundleWithLaunchServices()
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
 	mpLastWindowDraggedEvent = nil;
+	mbInVersionBrowser = NO;
+	mbCloseOnExitVersionBrowser = NO;
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -658,11 +660,6 @@ static void RegisterMainBundleWithLaunchServices()
 		[mpLastWindowDraggedEvent release];
 
 	[super dealloc];
-}
-
-- (id)init
-{
-	return self;
 }
 
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow
@@ -846,6 +843,8 @@ static NSUInteger nMouseMask = 0;
 	mpFrame = NULL;
 	mnLastMetaModifierReleasedTime = 0;
 	mpLastWindowDraggedEvent = nil;
+	mbInVersionBrowser = NO;
+	mbCloseOnExitVersionBrowser = NO;
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -1012,6 +1011,16 @@ static NSUInteger nMouseMask = 0;
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
+		if ( mbInVersionBrowser )
+		{
+			mbCloseOnExitVersionBrowser = YES;
+
+			// Force version browser to exit
+			NSButton *pCloseButton = [self standardWindowButton:NSWindowCloseButton];
+			if ( pCloseButton )
+				[pCloseButton performClick:self];
+		}
+
 		if ( mpLastWindowDraggedEvent )
 		{
 			[mpLastWindowDraggedEvent release];
@@ -1734,9 +1743,37 @@ static NSUInteger nMouseMask = 0;
 	RegisterMainBundleWithLaunchServices();
 }
 
+- (void)windowWillEnterVersionBrowser:(NSNotification *)notification
+{
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+		mbInVersionBrowser = YES;
+}
+
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification
 {
 	RegisterMainBundleWithLaunchServices();
+}
+
+- (void)windowDidExitVersionBrowser:(NSNotification *)pNotification
+{
+	if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
+	{
+		mbInVersionBrowser = NO;
+
+		// Stop reappearance of phantom document window when the user has
+		// close the window while in the version browser using the File :: Close
+		// menu or the Command-W key shortcut
+		if ( mbCloseOnExitVersionBrowser )
+		{
+			mbCloseOnExitVersionBrowser = NO;
+			[self close];
+		}
+
+		// Force menubar to be visible as it sometimes is disabled or hidden
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+			[pApp setPresentationOptions:[pApp presentationOptions]];
+	}
 }
 
 @end
@@ -2977,6 +3014,24 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 	}
 
 	aSelector = @selector(windowShouldZoom:toFrame:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowWillEnterVersionBrowser:);
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aNewMethod )
+	{
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aNewIMP )
+			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	aSelector = @selector(windowDidExitVersionBrowser:);
 	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 	if ( aNewMethod )
 	{

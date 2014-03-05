@@ -122,6 +122,8 @@
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
+	MacOSBOOL				mbInVersionBrowser;
+	MacOSBOOL				mbCloseOnExitVersionBrowser;
 }
 - (void)_init;
 - (MacOSBOOL)canBecomeKeyWindow;
@@ -137,6 +139,8 @@
 	JavaSalFrame*			mpFrame;
 	ULONG					mnLastMetaModifierReleasedTime;
 	NSEvent*				mpLastWindowDraggedEvent;
+	MacOSBOOL				mbInVersionBrowser;
+	MacOSBOOL				mbCloseOnExitVersionBrowser;
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
@@ -166,6 +170,8 @@
 - (void)windowWillMiniaturize:(NSNotification *)pNotification;
 - (MacOSBOOL)windowShouldClose:(id)pObject;
 - (MacOSBOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aNewFrame;
+- (void)windowWillEnterVersionBrowser:(NSNotification *)pNotification;
+- (void)windowDidExitVersionBrowser:(NSNotification *)pNotification;
 - (void)windowWillClose:(NSNotification *)pNotification;
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification;
 @end
