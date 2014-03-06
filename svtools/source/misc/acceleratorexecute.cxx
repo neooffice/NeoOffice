@@ -268,6 +268,12 @@ sal_Bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
 
     // convert command in URL structure
     css::uno::Reference< css::util::XURLTransformer > xParser = impl_ts_getURLParser();
+#ifdef USE_JAVA
+    // Fix crashing reported in the following LibreOffice bug:
+    // https://bugs.freedesktop.org/show_bug.cgi?id=69162
+    if ( !xParser.is() )
+        return sal_False;
+#endif	// USE_JAVA
     css::util::URL aURL;
     aURL.Complete = sCommand;
     xParser->parseStrict(aURL);
@@ -537,6 +543,12 @@ css::uno::Reference< css::util::XURLTransformer > AcceleratorExecute::impl_ts_ge
 
     if (m_xURLParser.is())
         return m_xURLParser;
+#ifdef USE_JAVA
+    // Fix crashing reported in the following LibreOffice bug:
+    // https://bugs.freedesktop.org/show_bug.cgi?id=69162
+    else if (!m_xSMGR.is())
+        return m_xURLParser;
+#endif	// USE_JAVA
     css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR = m_xSMGR;
 
     aLock.clear();
