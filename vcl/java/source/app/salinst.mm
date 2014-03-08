@@ -2639,20 +2639,19 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 	// Wait if there are no events in either queue and a timeout is requested
 	if ( nTimeout && !maNativeEventQueue.size() && !maNonNativeEventQueue.size() )
 	{
-		// Attempt to fix hanging bug reported in the following NeoOffice forum
-		// topic by catching any timeouts on the main thread and removing the
-		// need for a resettable guard:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8611
-		if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
-			return pRet;
-
-		maCondition.reset();
 		aGuard.clear();
 
+		// Attempt to fix hanging bug reported in the following NeoOffice forum
+		// topic by resetting the condition after the mutex has been released
+		// and setting it after waiting:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8611
+		maCondition.reset();
 		TimeValue aWait;
 		aWait.Seconds = nTimeout / 1000;
 		aWait.Nanosec = ( nTimeout % 1000 ) * 1000000;
-		maCondition.wait( &aWait );
+		if ( !maCondition.check() )
+			maCondition.wait( &aWait );
+		maCondition.set();
 
 		return JavaSalEventQueue::getNextCachedEvent( 0, bNativeEvents );
 	}
