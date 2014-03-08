@@ -2634,11 +2634,18 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 {
 	JavaSalEvent *pRet = NULL;
 
-	ResettableGuard< Mutex > aGuard( maMutex );
+	ClearableGuard< Mutex > aGuard( maMutex );
 
 	// Wait if there are no events in either queue and a timeout is requested
 	if ( nTimeout && !maNativeEventQueue.size() && !maNonNativeEventQueue.size() )
 	{
+		// Attempt to fix hanging bug reported in the following NeoOffice forum
+		// topic by catching any timeouts on the main thread and removing the
+		// need for a resettable guard:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8611
+		if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+			return pRet;
+
 		maCondition.reset();
 		aGuard.clear();
 
@@ -2647,7 +2654,7 @@ JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( ULONG nTimeout, sal_Bool bN
 		aWait.Nanosec = ( nTimeout % 1000 ) * 1000000;
 		maCondition.wait( &aWait );
 
-		aGuard.reset();
+		return JavaSalEventQueue::getNextCachedEvent( 0, bNativeEvents );
 	}
 
 	::std::list< JavaSalEventQueueItem* > *pEventQueue;
