@@ -1816,6 +1816,29 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				aFrame.size.height = aMinSize.height;
 			[mpWindow setFrame:aFrame display:NO];
 
+			if ( mpParent && ![mpWindow parentWindow] )
+			{
+				// Check if the parent window's titlebar window is visible. If
+				// so, do not attach the current window to parent window or
+				// else it will cause the titlebar window to be drawn
+				// incorrectly. To avoid this bug, either hide the titlebar
+				// window before attaching the current window to the parent
+				// window or abort display of the current window.
+				NSResponder *pResponder = [mpParent firstResponder];
+				if ( pResponder && [pResponder isKindOfClass:[NSView class]] )
+				{
+					NSWindow *pResponderWindow = [(NSView *)pResponder window];
+					if ( pResponderWindow && [pResponderWindow parentWindow] == mpParent && ![pResponderWindow isKindOfClass:[VCLWindow class]] && ![pResponderWindow isKindOfClass:[VCLPanel class]] && [pResponderWindow isVisible] )
+					{
+						
+						if ( mbUndecorated )
+							return;
+						else
+							[pResponderWindow orderOut:self];
+					}
+				}
+			}
+
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			MacOSBOOL bCanBecomeKeyWindow;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
