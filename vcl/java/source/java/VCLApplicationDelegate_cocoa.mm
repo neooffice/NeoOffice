@@ -194,6 +194,18 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
+static void HandleNewDocumentRequest()
+{
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+	{
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_NEWDOC, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
+	}
+}
+
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
@@ -203,16 +215,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (void)makeWindowControllers;
 - (MacOSBOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
-@end
-
-@interface NSDocumentController (VCLDocumentController)
-- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(MacOSBOOL)bShouldTerminate;
-@end
-
-@interface VCLDocumentController : NSDocumentController
-- (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector;
-- (Class)documentClassForType:(NSString *)pDocumentTypeName;
-- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
 @implementation VCLDocument
@@ -256,6 +258,24 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @end
 
+@interface NSDocumentController (VCLDocumentController)
+- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(MacOSBOOL)bShouldTerminate;
+- (void)beginOpenPanelWithCompletionHandler:(void (^)(NSArray *))aCompletionHandler;
+@end
+
+@interface VCLDocumentController : NSDocumentController
+{
+	NSOpenPanel*			mpOpenPanel;
+}
+- (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector;
+- (void)beginOpenPanel:(NSOpenPanel *)pOpenPanel forTypes:(NSArray *)pTypes completionHandler:(void (^)(NSInteger result))aCompletionHandler;
+- (Class)documentClassForType:(NSString *)pDocumentTypeName;
+- (id)init;
+- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (void)newDocument:(id)pSender;
+- (NSOpenPanel *)openPanel;
+@end
+
 @implementation VCLDocumentController
 
 - (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector
@@ -264,11 +284,28 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		[pDelegate _docController:self shouldTerminate:YES];
 }
 
+- (void)beginOpenPanel:(NSOpenPanel *)pOpenPanel forTypes:(NSArray *)pTypes completionHandler:(void (^)(NSInteger result))aCompletionHandler
+{
+	mpOpenPanel = pOpenPanel;
+
+	if ( aCompletionHandler )
+		aCompletionHandler( NSCancelButton );
+}
+
 - (Class)documentClassForType:(NSString *)pDocumentTypeName
 {
 	// Always return nil otherwise versions browser will create NSDocument
 	// instances
 	return nil;
+}
+
+- (id)init
+{
+	[super init];
+
+	mpOpenPanel = nil;
+
+	return self;
 }
 
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
@@ -303,6 +340,21 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	VCLDocument *pDoc = [[VCLDocument alloc] init];
 	[pDoc autorelease];
 	return pDoc;
+}
+
+- (void)newDocument:(id)pSender
+{
+	HandleNewDocumentRequest();
+}
+
+- (NSOpenPanel *)openPanel
+{
+	mpOpenPanel = nil;
+
+	if ( [self respondsToSelector:@selector(beginOpenPanelWithCompletionHandler:)] )
+		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {}];
+
+	return mpOpenPanel;
 }
 
 @end
