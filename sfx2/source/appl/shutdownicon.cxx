@@ -119,16 +119,6 @@ extern "C" {
 #define DOSTRING( x )			   			#x
 #define STRING( x )				   			DOSTRING( x )
 
-#if defined USE_JAVA && defined MACOSX
-
-// Note: this must not be static as the symbol will be loaded by the vcl module
-extern "C" void SAL_DLLPUBLIC_EXPORT NativeNewDocumentHandler()
-{
-	ShutdownIcon::FromTemplate();
-}
-
-#endif	// USE_JAVA && MACOSX
-
 bool ShutdownIcon::LoadModule( osl::Module **pModule,
 							   oslGenericFunction *pInit,
 							   oslGenericFunction *pDeInit )

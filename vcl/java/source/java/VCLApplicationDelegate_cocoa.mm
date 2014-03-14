@@ -194,18 +194,6 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
-static void HandleNewDocumentRequest()
-{
-	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
-	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_NEWDOC, NULL, NULL);
-		JavaSalEventQueue::postCachedEvent( pEvent );
-		pEvent->release();
-	}
-}
-
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @interface VCLDocument : NSDocument
@@ -344,7 +332,17 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)newDocument:(id)pSender
 {
-	HandleNewDocumentRequest();
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu )
+		{
+			NSEvent *pEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:0 context:nil characters:@"n" charactersIgnoringModifiers:@"n" isARepeat:NO keyCode:0];
+			if ( pEvent )
+				[pMainMenu performKeyEquivalent:pEvent];
+		}
+	}
 }
 
 - (NSOpenPanel *)openPanel
