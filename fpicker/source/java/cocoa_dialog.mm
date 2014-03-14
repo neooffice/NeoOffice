@@ -1528,6 +1528,7 @@ using namespace vos;
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
+			MacOSBOOL bOpenPanelFromDocController = NO;
 			if ( mbUseFileOpenDialog )
 			{
 				if ( mbChooseFiles )
@@ -1535,6 +1536,8 @@ using namespace vos;
 					NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
 					if ( pDocController && [pDocController respondsToSelector:@selector(openPanel)] )
 						mpFilePanel = [pDocController openPanel];
+						if ( mpFilePanel )
+							bOpenPanelFromDocController = YES;
 				}
 
 				if ( !mpFilePanel )
@@ -1560,7 +1563,11 @@ using namespace vos;
 					[mpFilePanel setAccessoryView:pAccessoryView];
 				}
 
-				[mpFilePanel setCanCreateDirectories:YES];
+				// When running in the sandbox and iCloud is enabled, certain
+				// selectors will leave the panel in a disabled state
+				if ( !bOpenPanelFromDocController )
+					[mpFilePanel setCanCreateDirectories:YES];
+
 				[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
 
 				if ( mbUseFileOpenDialog )
