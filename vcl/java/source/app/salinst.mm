@@ -86,11 +86,14 @@ public:
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void NativeAboutMenuHandler_Type();
+typedef void NativeNewDocumentHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
 static ::vos::OModule aAboutHandlerModule;
+static ::vos::OModule aNewDocumentHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
+static NativeNewDocumentHandler_Type *pNewDocumentHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
 static bool bAllowReleaseYieldMutex = false;
 static bool bInNativeDrag = false;
@@ -1390,6 +1393,21 @@ void JavaSalEvent::dispatch()
 
 			if ( pAboutHandler && !pSalData->mbInNativeModalSheet )
 				pAboutHandler();
+
+			return;
+		}
+		case SALEVENT_NEWDOC:
+		{
+			// Load libofa and invoke the native preferences handler
+			if ( !pNewDocumentHandler )
+			{
+				OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
+				if ( aNewDocumentHandlerModule.load( aLibName ) )
+					pNewDocumentHandler = (NativePreferencesMenuHandler_Type *)aNewDocumentHandlerModule.getSymbol( OUString::createFromAscii( "NativeNewDocumentHandler" ) );
+			}
+
+			if ( pNewDocumentHandler && !pSalData->mbInNativeModalSheet )
+				pNewDocumentHandler();
 
 			return;
 		}

@@ -40,9 +40,7 @@
 #include <postmac.h>
 #undef check
 
-#ifndef _COCOA_FILEDIALOG_H_
 #import "cocoa_dialog.h"
-#endif
 
 #import <vcl/svapp.hxx>
 #import <vcl/msgbox.hxx>
@@ -199,6 +197,10 @@ using namespace vos;
 - (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
 - (void)showFileDialog:(ShowFileDialogArgs *)pArgs;
+@end
+
+@interface NSDocumentController (VCLDocumentController)
+- (NSOpenPanel *)openPanel;
 @end
 
 @implementation ShowFileDialog
@@ -1527,9 +1529,21 @@ using namespace vos;
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			if ( mbUseFileOpenDialog )
-				mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+			{
+				if ( mbChooseFiles )
+				{
+					NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+					if ( pDocController && [pDocController respondsToSelector:@selector(openPanel)] )
+						mpFilePanel = [pDocController openPanel];
+				}
+
+				if ( !mpFilePanel )
+					mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+			}
 			else
+			{
 				mpFilePanel = [NSSavePanel savePanel];
+			}
 
 			if ( mpFilePanel )
 			{
