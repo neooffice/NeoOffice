@@ -49,6 +49,10 @@
 #define NO (MacOSBOOL)0
 #endif
 
+@interface NSFileManager (SalFileManager)
+- (MacOSBOOL)isUbiquitousItemAtURL:(NSURL *)pURL;
+@end
+
 static NSURL *macxp_resolveAliasImpl(const NSURL *url )
 {
 	NSURL *pRet = nil;
@@ -247,4 +251,36 @@ void macxp_setFileType(const sal_Char* path)
 		[pPool release];
 	}
 #endif	// PRODUCT_FILETYPE
+}
+
+sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
+{
+	sal_Bool bRet = sal_False;
+
+	if ( path && len > 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if ( pFileManager && [pFileManager respondsToSelector:@selector(isUbiquitousItemAtURL:)] )
+		{
+			NSString *pPath = [NSString stringWithCharacters:path length:len];
+			if ( pPath && [pPath length] )
+			{
+				NSURL *pURL = [NSURL fileURLWithPath:pPath];
+				if ( pURL && [pFileManager isUbiquitousItemAtURL:pURL] )
+				{
+					// Do not allow folders to be treated as iCloud objects
+					// since iCloud does not allow any folders
+					NSNumber *pDir = nil;
+					if ( [pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] && pDir && ![pDir boolValue] )
+						bRet = sal_True;
+				}
+			}
+		}
+
+		[pPool release];
+	}
+
+	return bRet;
 }
