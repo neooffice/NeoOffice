@@ -73,6 +73,10 @@ using namespace vos;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
 
+@interface NSFileManager (VCLFileManager)
+- (MacOSBOOL)isUbiquitousItemAtURL:(NSURL *)pURL;
+@end
+
 @interface NSURL (VCLURL)
 - (MacOSBOOL)startAccessingSecurityScopedResource;
 - (void)stopAccessingSecurityScopedResource;
@@ -316,6 +320,19 @@ static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 					break;
 				}
 			}
+		}
+	}
+
+	if ( !bRet )
+	{
+		// Existing iCloud URLs owned by this app don't need security scoped
+		// URLs
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if ( pFileManager && [pFileManager respondsToSelector:@selector(isUbiquitousItemAtURL:)] )
+		{
+			NSURL *pURL = [NSURL URLWithString:pURLString];
+			if ( pURL && [pFileManager isUbiquitousItemAtURL:pURL] )
+				bRet = YES;
 		}
 	}
 
