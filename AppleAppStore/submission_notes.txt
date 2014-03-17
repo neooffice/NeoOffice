@@ -35,21 +35,21 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete office suite. With NeoOffice users can create and edit text documents, spreadsheets, and presentations. NeoOffice can open OpenOffice documents and most Microsoft Word, Excel, and PowerPoint documents.
+NeoOffice is a complete office suite for Mac OS X. With NeoOffice, users can create and edit text documents, spreadsheets, and presentations. NeoOffice can open OpenOffice documents. NeoOffice can also open most Microsoft Word, Excel, and PowerPoint documents.
 
 Do you already use NeoOffice or OpenOffice? We recommend that you click on the NeoOffice support link and read the list of changes before you upgrade to this version of NeoOffice.
 
-NeoOffice is based on the OpenOffice office productivity software. Since 2003, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have taken the OpenOffice code and have continually added improvements to NeoOffice that users will not find in OpenOffice such as:
+NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice engineers created NeoOffice in 2003 when they made OpenOffice run natively on Mac OS X for the first time.
 
-• OS X Full-Screen mode
+Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have continually added improvements to NeoOffice that users will not find in OpenOffice such as:
+
 • Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
 • OS X Versions
-• Significant speed improvements to the OpenOffice text layout, rendering, and printing code
 • Native OS X text highlighting
+• Significant speed improvements to the OpenOffice text layout, rendering, and printing code
 • Native file locking support for local and networked volumes
 • OS X Services support
 • Native floating tool windows
-• Extremely stable code that has been in daily use by thousands of users
 
 
 Keywords:
