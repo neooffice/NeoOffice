@@ -41,7 +41,7 @@ String STR_OPENATLAUNCH
 	Text [ en-US ] = "Open at Launch";
 	Text [ es ] = "Abrir al iniciar";
 	Text [ fr ] = "Document par défaut";
-	Text [ it ] = "Aprire al inizio";
+	Text [ it ] = "Apri al inizio";
 	Text [ nl ] = "Toon bij starten";
 };
 
@@ -61,7 +61,7 @@ String STR_IGNORETRACKPADGESTURES
 	Text [ en-US ] = "Ignore Trackpad Gestures";
 	Text [ es ] = "Ignorar los gestos del trackpad";
 	Text [ fr ] = "Ignorer les gestes du trackpad";
-	Text [ it ] = "Ignorare i gesti del trackpad";
+	Text [ it ] = "Ignora i gesti del trackpad";
 	Text [ nl ] = "Negeer trackpad gebaren";
 };
 
@@ -71,7 +71,7 @@ String STR_DISABLEMACOSXSERVICESMENU
 	Text [ en-US ] = "Disable Mac OS X Services Menu";
 	Text [ es ] = "Deshabilitar el menú Servicios del Mac OS X";
 	Text [ fr ] = "Désactiver le menu Services de Mac OS X";
-	Text [ it ] = "Disattivare il menù Servizi di Mac OS X";
+	Text [ it ] = "Disattiva il menù Servizi di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X voorzieningen uit";
 };
 
@@ -81,7 +81,7 @@ String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 	Text [ en-US ] = "Disable Mac OS X Text Highlighting";
 	Text [ es ] = "Deshabilitar el color de resaltado de texto del Mac OS X";
 	Text [ fr ] = "Désactiver le surlignage de texte Mac OS X";
-	Text [ it ] = "Disattivare l'evidenziazione di testo di Mac OS X";
+	Text [ it ] = "Disattiva l'evidenziazione di testo di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X tekst markeren uit";
 };
 
@@ -91,7 +91,7 @@ String STR_DISABLEQUICKLOOKSUPPORT
 	Text [ en-US ] = "Disable Quick Look Support in Documents";
 	Text [ es ] = "Deshabilitar el soporte de Quick Look en documentos";
 	Text [ fr ] = "Désactiver la prise en charge de Quick Look pour les documents";
-	Text [ it ] = "Disattivare il sopporto di Quick Look per i documenti";
+	Text [ it ] = "Disattiva il sopporto di Quick Look per i documenti";
 	Text [ nl ] = "Schakel ondersteuning voor Quick Look in documenten uit";
 };
 
@@ -101,7 +101,7 @@ String STR_DISABLEVERSIONSSUPPORT
 	Text [ en-US ] = "Disable Mac OS X Versions";
 	Text [ es ] = "Deshabilitar Versiones de Mac OS X";
 	Text [ fr ] = "Désactiver Versions de Mac OS X";
-	Text [ it ] = "Disattivare Versioni di Mac OS X";
+	Text [ it ] = "Disattiva Versioni di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Versions uit";
 };
 
@@ -111,7 +111,7 @@ String STR_DISABLERESUMESUPPORT
 	Text [ en-US ] = "Disable Mac OS X Resume";
 	Text [ es ] = "Deshabilitar Resume de Mac OS X";
 	Text [ fr ] = "Désactiver Resume de Mac OS X";
-	Text [ it ] = "Disattivare Resume di Mac OS X";
+	Text [ it ] = "Disattiva Resume di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Resume uit";
 };
 
