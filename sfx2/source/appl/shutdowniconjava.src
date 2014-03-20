@@ -41,6 +41,7 @@ String STR_OPENATLAUNCH
 	Text [ en-US ] = "Open at Launch";
 	Text [ es ] = "Abrir al iniciar";
 	Text [ fr ] = "Document par défaut";
+	Text [ it ] = "Aprire al inizio";
 	Text [ nl ] = "Toon bij starten";
 };
 
@@ -50,6 +51,7 @@ String STR_MACOSXOPTIONS
 	Text [ en-US ] = "Mac OS X Options";
 	Text [ es ] = "Opciones de Mac OS X";
 	Text [ fr ] = "Options liées à Mac OS X";
+	Text [ it ] = "Opzioni di Mac OS X";
 	Text [ nl ] = "Mac OS X opties";
 };
 
@@ -59,6 +61,7 @@ String STR_IGNORETRACKPADGESTURES
 	Text [ en-US ] = "Ignore Trackpad Gestures";
 	Text [ es ] = "Ignorar los gestos del trackpad";
 	Text [ fr ] = "Ignorer les gestes du trackpad";
+	Text [ it ] = "Ignorare i gesti del trackpad";
 	Text [ nl ] = "Negeer trackpad gebaren";
 };
 
@@ -68,6 +71,7 @@ String STR_DISABLEMACOSXSERVICESMENU
 	Text [ en-US ] = "Disable Mac OS X Services Menu";
 	Text [ es ] = "Deshabilitar el menú Servicios del Mac OS X";
 	Text [ fr ] = "Désactiver le menu Services de Mac OS X";
+	Text [ it ] = "Disattivare il menù Servizi di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X voorzieningen uit";
 };
 
@@ -77,6 +81,7 @@ String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 	Text [ en-US ] = "Disable Mac OS X Text Highlighting";
 	Text [ es ] = "Deshabilitar el color de resaltado de texto del Mac OS X";
 	Text [ fr ] = "Désactiver le surlignage de texte Mac OS X";
+	Text [ it ] = "Disattivare l'evidenziazione di testo di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X tekst markeren uit";
 };
 
@@ -86,6 +91,7 @@ String STR_DISABLEQUICKLOOKSUPPORT
 	Text [ en-US ] = "Disable Quick Look Support in Documents";
 	Text [ es ] = "Deshabilitar el soporte de Quick Look en documentos";
 	Text [ fr ] = "Désactiver la prise en charge de Quick Look pour les documents";
+	Text [ it ] = "Disattivare il sopporto di Quick Look per i documenti";
 	Text [ nl ] = "Schakel ondersteuning voor Quick Look in documenten uit";
 };
 
@@ -94,6 +100,8 @@ String STR_DISABLEVERSIONSSUPPORT
 	Text [ de ] = "Deaktiviere Mac OS X Versionen";
 	Text [ en-US ] = "Disable Mac OS X Versions";
 	Text [ es ] = "Deshabilitar Versiones de Mac OS X";
+	Text [ fr ] = "Désactiver Versions de Mac OS X";
+	Text [ it ] = "Disattivare Versioni di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Versions uit";
 };
 
@@ -102,6 +110,8 @@ String STR_DISABLERESUMESUPPORT
 	Text [ de ] = "Deaktiviere Mac OS X Resume";
 	Text [ en-US ] = "Disable Mac OS X Resume";
 	Text [ es ] = "Deshabilitar Resume de Mac OS X";
+	Text [ fr ] = "Désactiver Resume de Mac OS X";
+	Text [ it ] = "Disattivare Resume di Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X Resume uit";
 };
 
@@ -111,6 +121,7 @@ String STR_QUICKLOOKSUPPORT
 	Text [ en-US ] = "Quick Look Support in Documents";
 	Text [ es ] = "El soporte de Quick Look en documentos";
 	Text [ fr ] = "La prise en charge de Quick Look pour les documents";
+	Text [ it ] = "Il sopporto di Quick Look per i documenti";
 	Text [ nl ] = "Ondersteuning voor Quick Look in documenten";
 };
 
@@ -118,6 +129,9 @@ String STR_QUICKLOOKDISABLED
 {
 	Text [ de ] = "Deaktiviert";
 	Text [ en-US ] = "Disabled";
+	Text [ es ] = "Deshabilitado";
+	Text [ fr ] = "Désactivé";
+	Text [ it ] = "Disattivato";
 	Text [ nl ] = "Uitgeschakeld";
 };
 
@@ -125,6 +139,9 @@ String STR_QUICKLOOKFIRSTPAGEONLY
 {
 	Text [ de ] = "Nur die erste Seite";
 	Text [ en-US ] = "Only the First Page";
+	Text [ es ] = "Sólo la primera página";
+	Text [ fr ] = "Seule la première page";
+	Text [ it ] = "Solo la prima pagina";
 	Text [ nl ] = "Alleen de eerste pagina";
 };
 
@@ -132,5 +149,8 @@ String STR_QUICKLOOKALLPAGES
 {
 	Text [ de ] = "Alle Seiten";
 	Text [ en-US ] = "All Pages";
+	Text [ es ] = "Todas las páginas";
+	Text [ fr ] = "Todas las páginas";
+	Text [ it ] = "Toutes les pages";
 	Text [ nl ] = "Alle pagina's";
 };
