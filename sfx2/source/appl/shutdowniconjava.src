@@ -150,7 +150,7 @@ String STR_QUICKLOOKALLPAGES
 	Text [ de ] = "Alle Seiten";
 	Text [ en-US ] = "All Pages";
 	Text [ es ] = "Todas las páginas";
-	Text [ fr ] = "Todas las páginas";
-	Text [ it ] = "Toutes les pages";
+	Text [ fr ] = "Toutes les pages";
+	Text [ it ] = "Tutte le pagine";
 	Text [ nl ] = "Alle pagina's";
 };
