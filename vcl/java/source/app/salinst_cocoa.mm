@@ -330,9 +330,20 @@ static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 		NSFileManager *pFileManager = [NSFileManager defaultManager];
 		if ( pFileManager && [pFileManager respondsToSelector:@selector(isUbiquitousItemAtURL:)] )
 		{
-			NSURL *pURL = [NSURL URLWithString:pURLString];
-			if ( pURL && [pFileManager isUbiquitousItemAtURL:pURL] )
-				bRet = YES;
+			NSURL *pTmpURL = [NSURL URLWithString:pURLString];
+			if ( pTmpURL )
+			{
+				if ( [pFileManager isUbiquitousItemAtURL:pTmpURL] )
+				{
+					bRet = YES;
+				}
+				else
+				{
+					pTmpURL = [pTmpURL URLByDeletingLastPathComponent];
+					if ( pTmpURL && [pFileManager isUbiquitousItemAtURL:pTmpURL] )
+						bRet = YES;
+				}
+			}
 		}
 	}
 
