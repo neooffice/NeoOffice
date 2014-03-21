@@ -2184,18 +2184,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 		}
     }
 
-#if defined USE_JAVA && defined MACOSX
-    if (  bVersionsEnabled )
-    {
-    	SfxViewFrame* pFrame = NULL;
-        pFrame = GetFrame();
-        if ( !pFrame )
-            pFrame = SfxViewFrame::GetFirst( this );
-        if ( pFrame )
-            SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
-    }
-#endif	// USE_JAVA && MACOSX
-
     // unlock user interface
     Lock_Impl( this, sal_False );
     pImp->bForbidReload = bOldStat;
