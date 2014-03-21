@@ -144,6 +144,7 @@
 
 #ifdef MACOSX
 #include <sfx2/topfrm.hxx>
+#include <vcl/sysdata.hxx>
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -1427,17 +1428,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 
 #if defined USE_JAVA && defined MACOSX
     rMedium.CheckForMovedFile( this );
-
-    BOOL bVersionsEnabled = NSDocument_versionsEnabled();
-    if (  bVersionsEnabled )
-    {
-    	SfxViewFrame* pFrame = NULL;
-        pFrame = GetFrame();
-        if ( !pFrame )
-            pFrame = SfxViewFrame::GetFirst( this );
-        if ( pFrame )
-            SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
-    }
 #endif	// USE_JAVA && MACOSX
 
     ModifyBlocker_Impl aMod(this);
@@ -2183,6 +2173,52 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 				ConnectTmpStorage_Impl( pImp->m_xDocStorage, NULL );
 		}
     }
+
+#if defined USE_JAVA && defined MACOSX
+    if ( NSDocument_versionsEnabled() )
+    {
+        SfxViewFrame* pFrame = NULL;
+        pFrame = GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( this );
+        if ( pFrame )
+        {
+            SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+            if ( pTopViewFrame )
+            {
+                Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
+                if ( pWindow )
+                {
+                    NSView *pView = pWindow->GetSystemData()->pView;
+                    if ( pView )
+                    {
+                        ::rtl::OUString aPath;
+                        ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
+                        if ( aBaseURL.getLength() )
+                            ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
+                        CFURLRef aURL = nil;
+                        if ( aPath.getLength() )
+                        {
+                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
+                            if ( aString )
+                            {
+                                aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                                CFRelease( aString );
+                            }
+                        }
+
+                        // Invoke even if URL is NULL
+                        SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
+                        if ( aURL )
+                            CFRelease( aURL );
+                    }
+                }
+
+                SFXDocument_saveVersionOfDocument( pTopViewFrame );
+            }
+        }
+    }
+#endif	// USE_JAVA && MACOSX
 
     // unlock user interface
     Lock_Impl( this, sal_False );
