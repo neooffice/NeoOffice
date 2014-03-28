@@ -48,9 +48,6 @@
 
 #define PDF_BUF_SIZE ( 128 * 1024 )
 
-@class NSIBObjectData;
-@class NSNibConnector;
-
 static NSString *pNoTranslationValue = @" ";
 static NSString *pNSQuickLookWrapperDocument = @"NSQuickLookWrapperDocument";
 
@@ -645,17 +642,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[mpDoc reloadFrame];
 }
 
-@end
-
-@interface NSObject (NSIBObjectData)
-- (NSArray *)allKeys;
-- (NSArray *)connections;
-- (NSMapTable *)objectTable;
-@end
-
-@interface NSObject (NSNibConnector)
-- (void)establishConnection;
-- (NSString *)label;
 @end
 
 @interface NSBundle (RunSFXDocument)
