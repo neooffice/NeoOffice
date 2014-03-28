@@ -51,8 +51,8 @@
 @class NSIBObjectData;
 @class NSNibConnector;
 
+static NSString *pNoTranslationValue = @" ";
 static NSString *pNSQuickLookWrapperDocument = @"NSQuickLookWrapperDocument";
-static NSString *pRevertDocumentToSavedLabel = @"revertDocumentToSaved:";
 
 using namespace com::sun::star;
 using namespace rtl;
@@ -679,7 +679,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)dealloc;
 - (SFXDocument *)document;
 - (void)getDocument:(id)pObject;
-- (void)getRevertToSavedLocalizedString:(id)pObject;
 - (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)revertDocumentToSaved:(id)pObject;
 - (NSString *)revertToSavedLocalizedString;
@@ -776,76 +775,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	}
 }
 
-- (void)getRevertToSavedLocalizedString:(id)pObject
-{
-	if ( !mpRevertToSavedLocalizedString && class_getClassMethod( [NSBundle class], @selector(bundleWithURL:) ) )
-	{
-		CFURLRef aURL = NULL;
-		if ( LSFindApplicationForInfo( kLSUnknownCreator, CFSTR( "com.apple.TextEdit" ), nil, nil, &aURL ) == noErr && aURL )
-		{
-			NSBundle *pBundle = [NSBundle bundleWithURL:(NSURL *)aURL];
-			CFRelease( aURL );
-
-			if ( pBundle )
-			{
-				NSString *pNibPath = [pBundle pathForResource:@"Edit" ofType:@"nib"];
-				if ( pNibPath )
-				{
-					NSData *pNibData = [[NSData alloc] initWithContentsOfFile:pNibPath];
-					if ( pNibData )
-					{
-						NSKeyedUnarchiver *pUnarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:pNibData];
-						[pUnarchiver autorelease];
-						NSIBObjectData *pObjData = [pUnarchiver decodeObjectForKey:@"IB.objectdata"];
-						if ( pObjData && [pObjData respondsToSelector:@selector(objectTable)] )
-						{
-							NSArray *pArray = [pObjData connections];
-							if ( pArray )
-							{
-								NSUInteger i = 0;
-								NSUInteger nCount = [pArray count];
-								for ( ; i < nCount; i++ )
-								{
-									NSObject *pObject = [pArray objectAtIndex:i];
-									if ( pObject && [pObject respondsToSelector:@selector(establishConnection)] && [pRevertDocumentToSavedLabel isEqualToString:[pObject label]] )
-									{
-										[pObject establishConnection];
-										break;
-									}
-								}
-							}
-
-							NSMapTable *pTable = [pObjData objectTable];
-							if ( pTable)
-							{
-								SEL aRevertDocumentToSavedSelector = NSSelectorFromString( pRevertDocumentToSavedLabel );
-								NSArray *pArray = [pTable allKeys];
-								NSUInteger i = 0;
-								NSUInteger nCount = [pArray count];
-								for ( ; i < nCount; i++ )
-								{
-									NSObject *pObject = [pArray objectAtIndex:i];
-									if ( pObject && [pObject isKindOfClass:[NSMenuItem class]] )
-									{
-										NSMenuItem *pItem = (NSMenuItem *)pObject;
-										if ( pItem && [pItem action] == aRevertDocumentToSavedSelector )
-										{
-											mpRevertToSavedLocalizedString = [pItem title];
-											if ( mpRevertToSavedLocalizedString )
-												[mpRevertToSavedLocalizedString retain];
-											break;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 - (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
 {
 	[super init];
@@ -884,7 +813,11 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)saveVersionOfDocument:(id)pObject
 {
 	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-	if ( pDoc && [pDoc respondsToSelector:@selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:)] )
+
+	// Fix crashing bug reported in the following NeoOffice forum post by
+	// checking for nil file URLs:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64664#64664
+	if ( pDoc && [pDoc respondsToSelector:@selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:)] && [pDoc fileURL] )
 	{
 		NSDocumentVersion *pNewVersion = nil;
 		NSError *pError = nil;
@@ -915,13 +848,16 @@ OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXDocument *pRunSFXDocument = [RunSFXDocument create];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(getRevertToSavedLocalizedString:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
-		NSString *pLocalizedString = [pRunSFXDocument revertToSavedLocalizedString];
-		if ( !pLocalizedString || ![pLocalizedString length] )
-			pLocalizedString = @"Revert to Saved";
-		aRevertToSavedLocalizedString = NSStringToOUString( pLocalizedString );
+		NSString *pKey = @"Browse All Versions\\U2026";
+		NSString *pTable = @"Document";
+		NSString *pLocalizedString = nil;
+		NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/AppKit.framework"];
+		if ( pBundle )
+		{
+			pLocalizedString = [pBundle localizedStringForKey:pKey value:pNoTranslationValue table:pTable];
+			if ( pLocalizedString && [pLocalizedString length] && ![pLocalizedString isEqualToString:pNoTranslationValue] )
+				aRevertToSavedLocalizedString = NSStringToOUString( pLocalizedString );
+		}
 
 		[pPool release];
 	}
@@ -939,13 +875,24 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		NSString *pKey = @"Save a Version";
+		NSString *pAltKey = @"Save";
+		NSString *pTable = @"Document";
 		NSString *pLocalizedString = nil;
 		NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/AppKit.framework"];
 		if ( pBundle )
-			pLocalizedString = [pBundle localizedStringForKey:pKey value:pKey table:@"Document"];
-		if ( !pLocalizedString || ![pLocalizedString length] )
-			pLocalizedString = pKey;
-		aSaveAVersionLocalizedString = NSStringToOUString( pLocalizedString );
+		{
+			pLocalizedString = [pBundle localizedStringForKey:pKey value:pNoTranslationValue table:pTable];
+			if ( pLocalizedString && [pLocalizedString length] && ![pLocalizedString isEqualToString:pNoTranslationValue] )
+			{
+				aSaveAVersionLocalizedString = NSStringToOUString( pLocalizedString );
+			}
+			else
+			{
+				pLocalizedString = [pBundle localizedStringForKey:pAltKey value:pNoTranslationValue table:pTable];
+				if ( pLocalizedString && [pLocalizedString length] && ![pLocalizedString isEqualToString:pNoTranslationValue] )
+					aSaveAVersionLocalizedString = NSStringToOUString( pLocalizedString );
+			}
+		}
 
 		[pPool release];
 	}
