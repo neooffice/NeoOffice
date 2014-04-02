@@ -149,6 +149,7 @@
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+
 #endif	// MACOSX
 
 #ifndef _UTL_BOOTSTRAP_HXX
@@ -1427,7 +1428,17 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mv76033) SfxObjectShell::SaveTo_Impl" );
 
 #if defined USE_JAVA && defined MACOSX
+fprintf( stderr, "Before: %s\n", ::rtl::OUStringToOString( rMedium.GetBaseURL( true ), RTL_TEXTENCODING_UTF8 ).getStr() );
     rMedium.CheckForMovedFile( this );
+fprintf( stderr, "After : %s\n", ::rtl::OUStringToOString( rMedium.GetBaseURL( true ), RTL_TEXTENCODING_UTF8 ).getStr() );
+
+    if ( !bInFileCoordinator )
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_saveToImpl( this, rMedium, pSet );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
 #endif	// USE_JAVA && MACOSX
 
     ModifyBlocker_Impl aMod(this);
