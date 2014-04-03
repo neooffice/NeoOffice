@@ -160,6 +160,7 @@
 #endif
 
 #ifdef MACOSX
+#include "objstor_cocoa.h"
 #include "../view/topfrm_cocoa.h"
 #endif	// MACOSX
 #include "../../../build/ooo-build-3.1.1.1/build/ooo310-m19/sw/inc/statstr.hrc"
@@ -1426,20 +1427,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 
 {
 	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mv76033) SfxObjectShell::SaveTo_Impl" );
-
-#if defined USE_JAVA && defined MACOSX
-fprintf( stderr, "Before: %s\n", ::rtl::OUStringToOString( rMedium.GetBaseURL( true ), RTL_TEXTENCODING_UTF8 ).getStr() );
-    rMedium.CheckForMovedFile( this );
-fprintf( stderr, "After : %s\n", ::rtl::OUStringToOString( rMedium.GetBaseURL( true ), RTL_TEXTENCODING_UTF8 ).getStr() );
-
-    if ( !bInFileCoordinator )
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_saveToImpl( this, rMedium, pSet );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
-#endif	// USE_JAVA && MACOSX
 
     ModifyBlocker_Impl aMod(this);
 
@@ -2999,6 +2986,18 @@ sal_Bool SfxObjectShell::ConvertTo
 
 sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 {
+#if defined USE_JAVA && defined MACOSX
+	GetMedium()->CheckForMovedFile( this );
+
+    if ( !bInFileCoordinator )
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellDoSave_Impl( this, pArgs );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
 	SfxMedium* pRetrMedium = GetMedium();
     const SfxFilter* pFilter = pRetrMedium->GetFilter();
 
@@ -3084,6 +3083,18 @@ sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 
 sal_Bool SfxObjectShell::Save_Impl( const SfxItemSet* pSet )
 {
+#if defined USE_JAVA && defined MACOSX
+	GetMedium()->CheckForMovedFile( this );
+
+    if ( !bInFileCoordinator )
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellSave_Impl( this, pSet );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
 	if ( IsReadOnly() )
 	{
 		SetError( ERRCODE_SFX_DOCUMENTREADONLY );
@@ -3281,6 +3292,18 @@ sal_Bool SfxObjectShell::PreDoSaveAs_Impl
 	SfxItemSet*     pParams
 )
 {
+#if defined USE_JAVA && defined MACOSX
+	GetMedium()->CheckForMovedFile( this );
+
+    if ( !bInFileCoordinator )
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellPreDoSaveAs_Impl( this, rFileName, aFilterName, pParams );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
     // copy all items stored in the itemset of the current medium
     SfxAllItemSet* pMergedParams = new SfxAllItemSet( *pMedium->GetItemSet() );
 

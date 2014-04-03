@@ -209,10 +209,6 @@ struct TransferableObjectDescriptor;
 class SFX2_DLLPUBLIC SfxObjectShell: public SfxShell, virtual public SotObject, public ::comphelper::IEmbeddedHelper
 {
 friend struct ModifyBlocker_Impl;
-#if defined USE_JAVA && defined MACOSX
-friend SAL_DLLPRIVATE sal_Bool NSFileCoordinator_saveToImpl( SfxObjectShell *pObjShell, SfxMedium &rMedium, const SfxItemSet *pSet );
-friend SAL_DLLPRIVATE sal_Bool SfxObjectShell_saveToImpl( SfxObjectShell *pObjShell, SfxMedium &rMedium, const SfxItemSet *pSet );
-#endif	// USE_JAVA && MACOSX
 
 public:
 	struct SfxObjectShell_Impl* pImp;				// interne Daten

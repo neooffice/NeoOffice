@@ -40,6 +40,11 @@
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
+#import <osl/file.hxx>
+#import <sfx2/docfile.hxx>
+
+#import "objstor_cocoa.h"
+
 #ifndef NSFileCoordinatorWritingOptions
 enum {
 	NSFileCoordinatorWritingForDeleting = 1 << 0,
@@ -55,7 +60,62 @@ typedef NSUInteger NSFileCoordinatorWritingOptions;
 - (void)coordinateWritingItemAtURL:(NSURL *)pURL options:(NSFileCoordinatorWritingOptions)nOptions error:(NSError **)ppOutError byAccessor:(void (^)(NSURL *pNewURL))writer;
 @end
 
-sal_Bool NSFileCoordinator_saveToImpl( SfxObjectShell *pObjShell, SfxMedium &rMedium, const SfxItemSet *pSet )
+static NSObject *CreateNSFileCoordinator()
+{
+	NSObject *pRet = nil;
+
+	NSBundle *pBundle = [NSBundle bundleForClass:[NSBundle class]];
+	if ( pBundle )
+	{
+		Class aClass = [pBundle classNamed:@"NSFileCoordinator"];
+		if ( aClass )
+		{
+			NSObject *pObject = [aClass alloc];
+			if ( pObject && [pObject respondsToSelector:@selector(initWithFilePresenter:)] )
+			{
+				pRet = [pObject initWithFilePresenter:nil];
+				if ( pRet )
+					[pRet autorelease];
+			}
+		}
+	}
+
+	return pRet;
+}
+
+static NSURL *NSURLFromOUString( ::rtl::OUString aURL )
+{
+	NSURL *pRet = nil;
+
+	if ( aURL.indexOf( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "file://" ) ) ) == 0 )
+	{
+		::rtl::OUString aPath;
+		if ( ::osl::FileBase::getSystemPathFromFileURL( aURL, aPath ) == osl::FileBase::E_None && aPath.getLength() )
+		{
+			NSString *pString = [NSString stringWithCharacters:aPath.getStr() length:aPath.getLength()];
+			if ( pString )
+			{
+				pRet = [NSURL fileURLWithPath:pString];
+				if ( pRet )
+					pRet = [pRet filePathURL];
+			}
+		}
+	}
+
+	return pRet;
+}
+
+static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
+{
+	NSURL *pRet = nil;
+
+	if ( pMedium )
+		pRet = NSURLFromOUString( pMedium->GetBaseURL( true ) );
+
+	return pRet;
+}
+
+sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet* pSet )
 {
 	__block sal_Bool bRet = sal_False;
 
@@ -65,40 +125,82 @@ sal_Bool NSFileCoordinator_saveToImpl( SfxObjectShell *pObjShell, SfxMedium &rMe
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	__block BOOL bBlockExecuted = NO;
-	NSBundle *pBundle = [NSBundle bundleForClass:[NSBundle class]];
-	if ( pBundle )
-	{
-		Class aClass = [pBundle classNamed:@"NSFileCoordinator"];
-		if ( aClass && class_getInstanceMethod( aClass, @selector(initWithFilePresenter:) ) && class_getInstanceMethod( aClass, @selector(coordinateWritingItemAtURL:options:error:byAccessor:) ) )
-		{
-			NSObject *pFileCoordinator = [[aClass alloc] initWithFilePresenter:nil];
-			if ( pFileCoordinator )
-			{
-				[pFileCoordinator autorelease];
 
-				NSError *pError = nil;
-				[pFileCoordinator coordinateWritingItemAtURL:[NSURL fileURLWithPath:@"/Users/pluby/Desktop/Test.odt"] options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-					bBlockExecuted = YES;
-					bRet = SfxObjectShell_saveToImpl( pObjShell, rMedium, pSet );
-				}];
-			}
-		}
+	NSURL *pURL = NSURLFromSfxMedium( pObjShell->GetMedium() );
+	NSObject *pFileCoordinator = CreateNSFileCoordinator();
+	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+	{
+		NSError *pError = nil;
+		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+			bBlockExecuted = YES;
+			bRet = pObjShell->DoSave_Impl( pSet );
+		}];
 	}
 
 	if ( !bBlockExecuted )
-		bRet = SfxObjectShell_saveToImpl( pObjShell, rMedium, pSet );
+		bRet = pObjShell->DoSave_Impl( pSet );
 
 	[pPool release];
 
 	return bRet;
 }
 
-sal_Bool SfxObjectShell_saveToImpl( SfxObjectShell *pObjShell, SfxMedium &rMedium, const SfxItemSet *pSet )
+sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String &rFileName, const String &aFilterName, SfxItemSet *pSet )
 {
-	sal_Bool bRet = sal_False;
+	__block sal_Bool bRet = sal_False;
 
-	if ( pObjShell )
-		bRet = pObjShell->SaveTo_Impl( rMedium, pSet );
+	if ( !pObjShell )
+		return bRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	__block BOOL bBlockExecuted = NO;
+
+	NSURL *pURL = NSURLFromOUString( rFileName );
+	NSObject *pFileCoordinator = CreateNSFileCoordinator();
+	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+	{
+		NSError *pError = nil;
+		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+			bBlockExecuted = YES;
+			bRet = pObjShell->PreDoSaveAs_Impl( rFileName, aFilterName, pSet );
+		}];
+	}
+
+	if ( !bBlockExecuted )
+		bRet = pObjShell->PreDoSaveAs_Impl( rFileName, aFilterName, pSet );
+
+	[pPool release];
+
+	return bRet;
+}
+
+sal_Bool NSFileCoordinator_objectShellSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet *pSet )
+{
+	__block sal_Bool bRet = sal_False;
+
+	if ( !pObjShell )
+		return bRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	__block BOOL bBlockExecuted = NO;
+
+	NSURL *pURL = NSURLFromSfxMedium( pObjShell->GetMedium() );
+	NSObject *pFileCoordinator = CreateNSFileCoordinator();
+	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+	{
+		NSError *pError = nil;
+		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+			bBlockExecuted = YES;
+			bRet = pObjShell->Save_Impl( pSet );
+		}];
+	}
+
+	if ( !bBlockExecuted )
+		bRet = pObjShell->Save_Impl( pSet );
+
+	[pPool release];
 
 	return bRet;
 }
