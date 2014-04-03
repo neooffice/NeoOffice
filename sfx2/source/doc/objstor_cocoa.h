@@ -40,7 +40,7 @@
 extern "C" {
 #endif
 sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet* pSet );
-sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String &rFileName, const String &aFilterName, SfxItemSet *pSet );
+sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String *pFileName, const String *pFilterName, SfxItemSet *pSet );
 sal_Bool NSFileCoordinator_objectShellSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet *pSet );
 #ifdef __cplusplus
 }

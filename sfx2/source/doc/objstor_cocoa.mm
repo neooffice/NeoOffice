@@ -33,15 +33,16 @@
  *
  ************************************************************************/
 
+#include <osl/file.hxx>
+#include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
+#include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
 
 #include <premac.h>
-#import <Foundation/Foundation.h>
+#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
-
-#import <osl/file.hxx>
-#import <sfx2/docfile.hxx>
 
 #import "objstor_cocoa.h"
 
@@ -55,42 +56,17 @@ enum {
 typedef NSUInteger NSFileCoordinatorWritingOptions;
 #endif	// !NSFileCoordinatorWritingOptions
 
-@interface NSObject (NSFileCoordinator)
-- (id)initWithFilePresenter:(id)pFilePresenter;
-- (void)coordinateWritingItemAtURL:(NSURL *)pURL options:(NSFileCoordinatorWritingOptions)nOptions error:(NSError **)ppOutError byAccessor:(void (^)(NSURL *pNewURL))writer;
-@end
+using namespace rtl;
+using namespace vos;
 
-static NSObject *CreateNSFileCoordinator()
-{
-	NSObject *pRet = nil;
-
-	NSBundle *pBundle = [NSBundle bundleForClass:[NSBundle class]];
-	if ( pBundle )
-	{
-		Class aClass = [pBundle classNamed:@"NSFileCoordinator"];
-		if ( aClass )
-		{
-			NSObject *pObject = [aClass alloc];
-			if ( pObject && [pObject respondsToSelector:@selector(initWithFilePresenter:)] )
-			{
-				pRet = [pObject initWithFilePresenter:nil];
-				if ( pRet )
-					[pRet autorelease];
-			}
-		}
-	}
-
-	return pRet;
-}
-
-static NSURL *NSURLFromOUString( ::rtl::OUString aURL )
+static NSURL *NSURLFromOUString( OUString aURL )
 {
 	NSURL *pRet = nil;
 
-	if ( aURL.indexOf( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "file://" ) ) ) == 0 )
+	if ( aURL.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "file://" ) ) ) == 0 )
 	{
-		::rtl::OUString aPath;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( aURL, aPath ) == osl::FileBase::E_None && aPath.getLength() )
+		OUString aPath;
+		if ( ::osl::FileBase::getSystemPathFromFileURL( aURL, aPath ) == ::osl::FileBase::E_None && aPath.getLength() )
 		{
 			NSString *pString = [NSString stringWithCharacters:aPath.getStr() length:aPath.getLength()];
 			if ( pString )
@@ -115,60 +91,223 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	return pRet;
 }
 
+@interface NSObject (NSFileCoordinator)
+- (id)initWithFilePresenter:(id)pFilePresenter;
+- (void)coordinateWritingItemAtURL:(NSURL *)pURL options:(NSFileCoordinatorWritingOptions)nOptions error:(NSError **)ppOutError byAccessor:(void (^)(NSURL *pNewURL))writer;
+@end
+
+@interface RunSFXFileCoordinator : NSObject
+{
+	SfxObjectShell*			mpObjShell;
+	const String*			mpFileName;
+	const String*			mpFilterName;
+	const SfxItemSet*		mpSet;
+	sal_Bool				mbResult;
+}
++ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
+- (NSObject *)fileCoordinator;
+- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
+- (void)objectShellDoSave_Impl:(id)pObject;
+- (void)objectShellPreDoSaveAs_Impl:(id)pObject;
+- (void)objectShellSave_Impl:(id)pObject;
+@end
+
+@implementation RunSFXFileCoordinator
+
++ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet
+{
+	RunSFXFileCoordinator *pRet = [[RunSFXFileCoordinator alloc] initWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSObject *)fileCoordinator
+{
+	NSObject *pRet = nil;
+
+	NSBundle *pBundle = [NSBundle bundleForClass:[NSBundle class]];
+	if ( pBundle )
+	{
+		Class aClass = [pBundle classNamed:@"NSFileCoordinator"];
+		if ( aClass )
+		{
+			NSObject *pObject = [aClass alloc];
+			if ( pObject && [pObject respondsToSelector:@selector(initWithFilePresenter:)] )
+			{
+				pRet = [pObject initWithFilePresenter:nil];
+				if ( pRet )
+					[pRet autorelease];
+			}
+		}
+	}
+
+	return pRet;
+}
+
+- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet
+{
+	[super init];
+
+	mpObjShell = pObjShell;
+	mpFileName = pFileName;
+	mpFilterName = pFilterName;
+	mpSet = pSet;
+	mbResult = sal_False;
+
+	return self;
+}
+
+- (void)objectShellDoSave_Impl:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
+		NSObject *pFileCoordinator = [self fileCoordinator];
+		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		{
+			NSError *pError = nil;
+			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+				bBlockExecuted = YES;
+				bBlockResult = mpObjShell->DoSave_Impl( mpSet );
+			}];
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->DoSave_Impl( mpSet );
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
+}
+
+- (void)objectShellPreDoSaveAs_Impl:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell || !mpFileName || !mpFilterName )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromOUString( OUString( *mpFileName ) );
+		NSObject *pFileCoordinator = [self fileCoordinator];
+		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		{
+			NSError *pError = nil;
+			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+				bBlockExecuted = YES;
+				bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
+			}];
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
+}
+
+- (void)objectShellSave_Impl:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
+		NSObject *pFileCoordinator = [self fileCoordinator];
+		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		{
+			NSError *pError = nil;
+			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+				bBlockExecuted = YES;
+				bBlockResult = mpObjShell->Save_Impl( mpSet );
+			}];
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->Save_Impl( mpSet );
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
+}
+
+- (sal_Bool)result
+{
+	return mbResult;
+}
+
+@end
+
 sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet* pSet )
 {
-	__block sal_Bool bRet = sal_False;
+	sal_Bool bRet = sal_False;
 
 	if ( !pObjShell )
 		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	__block BOOL bBlockExecuted = NO;
-
-	NSURL *pURL = NSURLFromSfxMedium( pObjShell->GetMedium() );
-	NSObject *pFileCoordinator = CreateNSFileCoordinator();
-	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
-	{
-		NSError *pError = nil;
-		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-			bBlockExecuted = YES;
-			bRet = pObjShell->DoSave_Impl( pSet );
-		}];
-	}
-
-	if ( !bBlockExecuted )
-		bRet = pObjShell->DoSave_Impl( pSet );
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet];
+	ULONG nCount = Application::ReleaseSolarMutex();
+	[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellDoSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+	bRet = [pRunSFXFileCoordinator result];
 
 	[pPool release];
 
 	return bRet;
 }
 
-sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String &rFileName, const String &aFilterName, SfxItemSet *pSet )
+sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String *pFileName, const String *pFilterName, SfxItemSet *pSet )
 {
-	__block sal_Bool bRet = sal_False;
+	sal_Bool bRet = sal_False;
 
-	if ( !pObjShell )
+	if ( !pObjShell || !pFileName || !pFilterName )
 		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	__block BOOL bBlockExecuted = NO;
-
-	NSURL *pURL = NSURLFromOUString( rFileName );
-	NSObject *pFileCoordinator = CreateNSFileCoordinator();
-	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
-	{
-		NSError *pError = nil;
-		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-			bBlockExecuted = YES;
-			bRet = pObjShell->PreDoSaveAs_Impl( rFileName, aFilterName, pSet );
-		}];
-	}
-
-	if ( !bBlockExecuted )
-		bRet = pObjShell->PreDoSaveAs_Impl( rFileName, aFilterName, pSet );
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet];
+	ULONG nCount = Application::ReleaseSolarMutex();
+	[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellPreDoSaveAs_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+	bRet = [pRunSFXFileCoordinator result];
 
 	[pPool release];
 
@@ -177,28 +316,19 @@ sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShel
 
 sal_Bool NSFileCoordinator_objectShellSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet *pSet )
 {
-	__block sal_Bool bRet = sal_False;
+	sal_Bool bRet = sal_False;
 
 	if ( !pObjShell )
 		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	__block BOOL bBlockExecuted = NO;
-
-	NSURL *pURL = NSURLFromSfxMedium( pObjShell->GetMedium() );
-	NSObject *pFileCoordinator = CreateNSFileCoordinator();
-	if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
-	{
-		NSError *pError = nil;
-		[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-			bBlockExecuted = YES;
-			bRet = pObjShell->Save_Impl( pSet );
-		}];
-	}
-
-	if ( !bBlockExecuted )
-		bRet = pObjShell->Save_Impl( pSet );
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet];
+	ULONG nCount = Application::ReleaseSolarMutex();
+	[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+	bRet = [pRunSFXFileCoordinator result];
 
 	[pPool release];
 

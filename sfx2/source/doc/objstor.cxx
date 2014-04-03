@@ -2987,9 +2987,11 @@ sal_Bool SfxObjectShell::ConvertTo
 sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 {
 #if defined USE_JAVA && defined MACOSX
-	GetMedium()->CheckForMovedFile( this );
-
-    if ( !bInFileCoordinator )
+    if ( bInFileCoordinator )
+    {
+		GetMedium()->CheckForMovedFile( this );
+    }
+    else
     {
         bInFileCoordinator = sal_True;
         sal_Bool bRet = NSFileCoordinator_objectShellDoSave_Impl( this, pArgs );
@@ -3084,9 +3086,11 @@ sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 sal_Bool SfxObjectShell::Save_Impl( const SfxItemSet* pSet )
 {
 #if defined USE_JAVA && defined MACOSX
-	GetMedium()->CheckForMovedFile( this );
-
-    if ( !bInFileCoordinator )
+    if ( bInFileCoordinator )
+    {
+	    GetMedium()->CheckForMovedFile( this );
+    }
+    else
     {
         bInFileCoordinator = sal_True;
         sal_Bool bRet = NSFileCoordinator_objectShellSave_Impl( this, pSet );
@@ -3293,12 +3297,14 @@ sal_Bool SfxObjectShell::PreDoSaveAs_Impl
 )
 {
 #if defined USE_JAVA && defined MACOSX
-	GetMedium()->CheckForMovedFile( this );
-
-    if ( !bInFileCoordinator )
+    if ( bInFileCoordinator )
+    {
+		GetMedium()->CheckForMovedFile( this );
+    }
+    else
     {
         bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellPreDoSaveAs_Impl( this, rFileName, aFilterName, pParams );
+        sal_Bool bRet = NSFileCoordinator_objectShellPreDoSaveAs_Impl( this, &rFileName, &aFilterName, pParams );
         bInFileCoordinator = sal_False;
         return bRet;
     }
