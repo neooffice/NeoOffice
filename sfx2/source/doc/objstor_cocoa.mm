@@ -36,6 +36,7 @@
 #include <osl/file.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
+#include <unotools/tempfile.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
 
@@ -72,8 +73,9 @@ static NSURL *NSURLFromOUString( OUString aURL )
 
 	if ( aURL.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "file://" ) ) ) == 0 )
 	{
+		// Exclude our own temporary files to avoid degrading performance
 		OUString aPath;
-		if ( ::osl::FileBase::getSystemPathFromFileURL( aURL, aPath ) == ::osl::FileBase::E_None && aPath.getLength() )
+		if ( ::osl::FileBase::getSystemPathFromFileURL( aURL, aPath ) == ::osl::FileBase::E_None && aPath.getLength() && aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
 		{
 			NSString *pString = [NSString stringWithCharacters:aPath.getStr() length:aPath.getLength()];
 			if ( pString )
