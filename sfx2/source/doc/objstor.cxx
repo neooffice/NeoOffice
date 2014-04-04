@@ -1317,6 +1317,20 @@ sal_Bool SfxObjectShell::DoSave()
 // laeuft uber DoSave_Impl, um das Anlegen von Backups zu ermoeglichen.
 // Save in eigenes Format jetzt auch wieder Hierueber
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( bInFileCoordinator )
+    {
+		GetMedium()->CheckForMovedFile( this );
+    }
+    else
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellDoSave( this );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
 	sal_Bool bOk = sal_False ;
 	{
 		ModifyBlocker_Impl aBlock( this );
@@ -2376,6 +2390,20 @@ sal_Bool SfxObjectShell::ConnectTmpStorage_Impl(
 
 sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( bInFileCoordinator )
+    {
+		rMedium.CheckForMovedFile( this );
+    }
+    else
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellDoSaveObjectAs( this, &rMedium, &bCommit );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
     sal_Bool bOk = sal_False;
     {
         ModifyBlocker_Impl aBlock( this );
@@ -2419,6 +2447,20 @@ sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 // TODO/LATER: may be the call must be removed completelly
 sal_Bool SfxObjectShell::DoSaveAs( SfxMedium& rMedium )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( bInFileCoordinator )
+    {
+		rMedium.CheckForMovedFile( this );
+    }
+    else
+    {
+        bInFileCoordinator = sal_True;
+        sal_Bool bRet = NSFileCoordinator_objectShellDoSaveAs( this, &rMedium );
+        bInFileCoordinator = sal_False;
+        return bRet;
+    }
+#endif	// USE_JAVA && MACOSX
+
 	// hier kommen nur Root-Storages rein, die via Temp-File gespeichert werden
     rMedium.CreateTempFileNoCopy();
     SetError(rMedium.GetErrorCode());

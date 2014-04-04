@@ -39,6 +39,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+sal_Bool NSFileCoordinator_objectShellDoSave( SfxObjectShell *pObjShell );
+sal_Bool NSFileCoordinator_objectShellDoSaveAs( SfxObjectShell *pObjShell, SfxMedium *pMedium );
+sal_Bool NSFileCoordinator_objectShellDoSaveObjectAs( SfxObjectShell *pObjShell, SfxMedium *pMedium, BOOL *mpCommit );
 sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet* pSet );
 sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShell, const String *pFileName, const String *pFilterName, SfxItemSet *pSet );
 sal_Bool NSFileCoordinator_objectShellSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet *pSet );

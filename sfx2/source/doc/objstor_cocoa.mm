@@ -127,12 +127,17 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	const String*			mpFileName;
 	const String*			mpFilterName;
 	const SfxItemSet*		mpSet;
+	SfxMedium*				mpMedium;
+	BOOL*					mpCommit;
 	sal_Bool				mbResult;
 }
-+ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
++ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet medium:(SfxMedium *)pMedium commit:(BOOL *)pCommit;
 - (NSDocument *)documentForURL:(NSURL *)pURL;
 - (NSObject *)fileCoordinator;
-- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
+- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet medium:(SfxMedium *)pMedium commit:(BOOL *)pCommit;
+- (void)objectShellDoSave:(id)pObject;
+- (void)objectShellDoSaveAs:(id)pObject;
+- (void)objectShellDoSaveObjectAs:(id)pObject;
 - (void)objectShellDoSave_Impl:(id)pObject;
 - (void)objectShellPreDoSaveAs_Impl:(id)pObject;
 - (void)objectShellSave_Impl:(id)pObject;
@@ -140,9 +145,9 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 
 @implementation RunSFXFileCoordinator
 
-+ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet
++ (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet medium:(SfxMedium *)pMedium commit:(BOOL *)pCommit
 {
-	RunSFXFileCoordinator *pRet = [[RunSFXFileCoordinator alloc] initWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet];
+	RunSFXFileCoordinator *pRet = [[RunSFXFileCoordinator alloc] initWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet medium:pMedium commit:pCommit];
 	[pRet autorelease];
 	return pRet;
 }
@@ -184,7 +189,7 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	return pRet;
 }
 
-- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet
+- (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet medium:(SfxMedium *)pMedium commit:(BOOL *)pCommit
 {
 	[super init];
 
@@ -192,9 +197,164 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	mpFileName = pFileName;
 	mpFilterName = pFilterName;
 	mpSet = pSet;
+	mpMedium = pMedium;
+	mpCommit = pCommit;
 	mbResult = sal_False;
 
 	return self;
+}
+
+- (void)objectShellDoSave:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
+		if ( pURL )
+		{
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->DoSave();
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->DoSave();
+					}];
+				}
+			}
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->DoSave();
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
+}
+
+- (void)objectShellDoSaveAs:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell || !mpMedium )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpMedium->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromSfxMedium( mpMedium );
+		if ( pURL )
+		{
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->DoSaveAs( *mpMedium );
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->DoSaveAs( *mpMedium );
+					}];
+				}
+			}
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->DoSaveAs( *mpMedium );
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
+}
+
+- (void)objectShellDoSaveObjectAs:(id)pObject
+{
+	mbResult = sal_False;
+
+	if ( !mpObjShell || !mpMedium || !mpCommit )
+		return;
+
+	__block sal_Bool bBlockResult = sal_False;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( !Application::IsShutDown() )
+	{
+		__block BOOL bBlockExecuted = NO;
+
+		mpMedium->CheckForMovedFile( mpObjShell );
+
+		NSURL *pURL = NSURLFromSfxMedium( mpMedium );
+		if ( pURL )
+		{
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->DoSaveObjectAs( *mpMedium, *mpCommit );
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->DoSaveObjectAs( *mpMedium, *mpCommit );
+					}];
+				}
+			}
+		}
+
+		if ( !bBlockExecuted )
+			bBlockResult = mpObjShell->DoSaveObjectAs( *mpMedium, *mpCommit );
+	}
+	rSolarMutex.release();
+
+	mbResult = bBlockResult;
 }
 
 - (void)objectShellDoSave_Impl:(id)pObject
@@ -357,6 +517,99 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 
 @end
 
+sal_Bool NSFileCoordinator_objectShellDoSave( SfxObjectShell *pObjShell )
+{
+	sal_Bool bRet = sal_False;
+
+	if ( !pObjShell )
+		return bRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	pObjShell->GetMedium()->CheckForMovedFile( pObjShell );
+
+	NSURL *pURL = NSURLFromSfxMedium( pObjShell->GetMedium() );
+	if ( pURL )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:NULL medium:NULL commit:NO];
+		ULONG nCount = Application::ReleaseSolarMutex();
+		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+		Application::AcquireSolarMutex( nCount );
+		bRet = [pRunSFXFileCoordinator result];
+	}
+	else
+	{
+		bRet = pObjShell->DoSave();
+	}
+
+	[pPool release];
+
+	return bRet;
+}
+
+sal_Bool NSFileCoordinator_objectShellDoSaveAs( SfxObjectShell *pObjShell, SfxMedium *pMedium )
+{
+	sal_Bool bRet = sal_False;
+
+	if ( !pObjShell || !pMedium )
+		return bRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	pMedium->CheckForMovedFile( pObjShell );
+
+	NSURL *pURL = NSURLFromSfxMedium( pMedium );
+	if ( pURL )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:NULL medium:pMedium commit:NO];
+		ULONG nCount = Application::ReleaseSolarMutex();
+		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellDoSaveAs:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+		Application::AcquireSolarMutex( nCount );
+		bRet = [pRunSFXFileCoordinator result];
+	}
+	else
+	{
+		bRet = pObjShell->DoSaveAs( *pMedium );
+	}
+
+	[pPool release];
+
+	return bRet;
+}
+
+sal_Bool NSFileCoordinator_objectShellDoSaveObjectAs( SfxObjectShell *pObjShell, SfxMedium *pMedium, BOOL *pCommit )
+{
+	sal_Bool bRet = sal_False;
+
+	if ( !pObjShell || !pMedium || !pCommit )
+		return bRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	pMedium->CheckForMovedFile( pObjShell );
+
+	NSURL *pURL = NSURLFromSfxMedium( pMedium );
+	if ( pURL )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:NULL medium:pMedium commit:pCommit];
+		ULONG nCount = Application::ReleaseSolarMutex();
+		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellDoSaveObjectAs:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+		Application::AcquireSolarMutex( nCount );
+		bRet = [pRunSFXFileCoordinator result];
+	}
+	else
+	{
+		bRet = pObjShell->DoSaveObjectAs( *pMedium, *pCommit );
+	}
+
+	[pPool release];
+
+	return bRet;
+}
+
 sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, const SfxItemSet* pSet )
 {
 	sal_Bool bRet = sal_False;
@@ -372,7 +625,7 @@ sal_Bool NSFileCoordinator_objectShellDoSave_Impl( SfxObjectShell *pObjShell, co
 	if ( pURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet medium:NULL commit:NO];
 		ULONG nCount = Application::ReleaseSolarMutex();
 		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellDoSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
 		Application::AcquireSolarMutex( nCount );
@@ -403,7 +656,7 @@ sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShel
 	if ( pURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet medium:NULL commit:NO];
 		ULONG nCount = Application::ReleaseSolarMutex();
 		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellPreDoSaveAs_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
 		Application::AcquireSolarMutex( nCount );
@@ -434,7 +687,7 @@ sal_Bool NSFileCoordinator_objectShellSave_Impl( SfxObjectShell *pObjShell, cons
 	if ( pURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet];
+		RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:NULL filterName:NULL itemSet:pSet medium:NULL commit:NO];
 		ULONG nCount = Application::ReleaseSolarMutex();
 		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
 		Application::AcquireSolarMutex( nCount );
