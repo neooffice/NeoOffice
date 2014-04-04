@@ -2208,21 +2208,26 @@ sal_Bool SfxObjectShell::SaveTo_Impl
                         ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
                         if ( aBaseURL.getLength() )
                             ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
-                        CFURLRef aURL = nil;
-                        if ( aPath.getLength() )
-                        {
-                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
-                            if ( aString )
-                            {
-                                aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-                                CFRelease( aString );
-                            }
-                        }
 
-                        // Invoke even if URL is NULL
-                        SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
-                        if ( aURL )
-                            CFRelease( aURL );
+                        // Don't create native documents for temporary files
+                        if ( aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
+                        {
+                            CFURLRef aURL = nil;
+                            if ( aPath.getLength() )
+                            {
+                                CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
+                                if ( aString )
+                                {
+                                    aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                                    CFRelease( aString );
+                                }
+                            }
+
+                            // Invoke even if URL is NULL
+                            SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
+                            if ( aURL )
+                                CFRelease( aURL );
+                        }
                     }
                 }
 
