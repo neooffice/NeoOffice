@@ -96,6 +96,10 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 - (void)coordinateWritingItemAtURL:(NSURL *)pURL options:(NSFileCoordinatorWritingOptions)nOptions error:(NSError **)ppOutError byAccessor:(void (^)(NSURL *pNewURL))writer;
 @end
 
+@interface NSDocument (RunSFXFileCoordinator)
+- (void)performSynchronousFileAccessUsingBlock:(void (^)(void))aBlock;
+@end
+
 @interface RunSFXFileCoordinator : NSObject
 {
 	SfxObjectShell*			mpObjShell;
@@ -105,6 +109,7 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	sal_Bool				mbResult;
 }
 + (id)createWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
+- (NSDocument *)documentForURL:(NSURL *)pURL;
 - (NSObject *)fileCoordinator;
 - (id)initWithObjectShell:(SfxObjectShell *)pObjShell fileName:(const String *)pFileName filterName:(const String *)pFilterName itemSet:(const SfxItemSet *)pSet;
 - (void)objectShellDoSave_Impl:(id)pObject;
@@ -118,6 +123,20 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 {
 	RunSFXFileCoordinator *pRet = [[RunSFXFileCoordinator alloc] initWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet];
 	[pRet autorelease];
+	return pRet;
+}
+
+- (NSDocument *)documentForURL:(NSURL *)pURL
+{
+	NSDocument *pRet = nil;
+
+	if ( pURL )
+	{
+		NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+		if ( pDocController )
+			pRet = [pDocController documentForURL:pURL];
+	}
+
 	return pRet;
 }
 
@@ -175,14 +194,29 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 
 		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
-		NSObject *pFileCoordinator = [self fileCoordinator];
-		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		if ( pURL )
 		{
-			NSError *pError = nil;
-			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-				bBlockExecuted = YES;
-				bBlockResult = mpObjShell->DoSave_Impl( mpSet );
-			}];
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->DoSave_Impl( mpSet );
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->DoSave_Impl( mpSet );
+					}];
+				}
+			}
 		}
 
 		if ( !bBlockExecuted )
@@ -211,14 +245,29 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 
 		NSURL *pURL = NSURLFromOUString( OUString( *mpFileName ) );
-		NSObject *pFileCoordinator = [self fileCoordinator];
-		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		if ( pURL )
 		{
-			NSError *pError = nil;
-			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-				bBlockExecuted = YES;
-				bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
-			}];
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
+					}];
+				}
+			}
 		}
 
 		if ( !bBlockExecuted )
@@ -247,14 +296,29 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 
 		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
-		NSObject *pFileCoordinator = [self fileCoordinator];
-		if ( pURL && pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		if ( pURL )
 		{
-			NSError *pError = nil;
-			[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-				bBlockExecuted = YES;
-				bBlockResult = mpObjShell->Save_Impl( mpSet );
-			}];
+			NSDocument *pDoc = [self documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			{
+				[pDoc performSynchronousFileAccessUsingBlock:^(void) {
+					bBlockExecuted = YES;
+					bBlockResult = mpObjShell->Save_Impl( mpSet );
+				}];
+			}
+
+			if ( !bBlockExecuted )
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						bBlockExecuted = YES;
+						bBlockResult = mpObjShell->Save_Impl( mpSet );
+					}];
+				}
+			}
 		}
 
 		if ( !bBlockExecuted )
