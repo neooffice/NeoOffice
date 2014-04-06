@@ -163,7 +163,11 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	{
 		NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
 		if ( pDocController )
-			pRet = [pDocController documentForURL:pURL];
+		{
+			NSDocument *pDoc = [pDocController documentForURL:pURL];
+			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+				pRet = pDoc;
+		}
 	}
 
 	return pRet;
@@ -180,7 +184,7 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( aClass )
 		{
 			NSObject *pObject = [aClass alloc];
-			if ( pObject && [pObject respondsToSelector:@selector(initWithFilePresenter:)] )
+			if ( pObject && [pObject respondsToSelector:@selector(initWithFilePresenter:)] && [pObject respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] && [pObject respondsToSelector:@selector(coordinateWritingItemAtURL:options:writingItemAtURL:options:error:byAccessor:)] )
 			{
 				pRet = [pObject initWithFilePresenter:nil];
 				if ( pRet )
@@ -231,13 +235,13 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( pURL )
 		{
 			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			if ( pDoc )
 				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
 
 			if ( !bBlockExecuted )
 			{
 				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				if ( pFileCoordinator )
 				{
 					NSError *pError = nil;
 					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
@@ -279,13 +283,13 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( pURL )
 		{
 			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			if ( pDoc )
 				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
 
 			if ( !bBlockExecuted )
 			{
 				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				if ( pFileCoordinator )
 				{
 					NSError *pError = nil;
 					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
@@ -327,13 +331,13 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( pURL )
 		{
 			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			if ( pDoc )
 				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
 
 			if ( !bBlockExecuted )
 			{
 				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				if ( pFileCoordinator )
 				{
 					NSError *pError = nil;
 					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
@@ -375,13 +379,13 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( pURL )
 		{
 			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			if ( pDoc )
 				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
 
 			if ( !bBlockExecuted )
 			{
 				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				if ( pFileCoordinator )
 				{
 					NSError *pError = nil;
 					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
@@ -419,20 +423,63 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
-		NSURL *pURL = NSURLFromOUString( OUString( *mpFileName ) );
-		if ( pURL )
+		NSURL *pURL1 = NSURLFromSfxMedium( mpObjShell->GetMedium() );
+		NSURL *pURL2 = NSURLFromOUString( OUString( *mpFileName ) );
+		NSDocument *pDoc1 = [self documentForURL:pURL1];
+		NSDocument *pDoc2 = [self documentForURL:pURL2];
+		if ( !pDoc1 && pDoc2 )
 		{
-			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
-				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
+			// Swap URLs and documents
+			pDoc1 = pDoc2;
+			pDoc2 = nil;
+			pURL2 = pURL1;
+			pURL1 = nil;
+		}
+		else if ( !pURL1 )
+		{
+			// Shift second URLs and documents to first position
+			pURL1 = pURL2;
+			pURL2 = nil;
+			pDoc1 = pDoc2;
+			pDoc2 = nil;
+		}
 
-			if ( !bBlockExecuted )
-			{
-				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+		if ( pDoc1 )
+		{
+			[pDoc1 performSynchronousFileAccessUsingBlock:^(void) {
+				if ( pDoc2 )
 				{
-					NSError *pError = nil;
-					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+					[pDoc2 performSynchronousFileAccessUsingBlock:aBlock];
+				}
+				else
+				{
+					NSObject *pFileCoordinator = [self fileCoordinator];
+					if ( pFileCoordinator )
+					{
+						NSError *pError = nil;
+						[pFileCoordinator coordinateWritingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+							aBlock();
+						}];
+					}
+				}
+			}];
+		}
+
+		if ( !bBlockExecuted && pURL1 )
+		{
+			NSObject *pFileCoordinator = [self fileCoordinator];
+			if ( pFileCoordinator )
+			{
+				NSError *pError = nil;
+				if ( pURL2 )
+				{
+					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing writingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL1, NSURL *pNewURL2) {
+						aBlock();
+					}];
+				}
+				else
+				{
+					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
 						aBlock();
 					}];
 				}
@@ -471,13 +518,13 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 		if ( pURL )
 		{
 			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc && [pDoc respondsToSelector:@selector(performSynchronousFileAccessUsingBlock:)] )
+			if ( pDoc )
 				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
 
 			if ( !bBlockExecuted )
 			{
 				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator && [pFileCoordinator respondsToSelector:@selector(coordinateWritingItemAtURL:options:error:byAccessor:)] )
+				if ( pFileCoordinator )
 				{
 					NSError *pError = nil;
 					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
@@ -632,9 +679,10 @@ sal_Bool NSFileCoordinator_objectShellPreDoSaveAs_Impl( SfxObjectShell *pObjShel
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	pObjShell->GetMedium()->CheckForMovedFile( pObjShell );
-	NSURL *pURL = NSURLFromOUString( OUString( *pFileName ) );
+	NSURL *pURL1 = NSURLFromSfxMedium( pObjShell->GetMedium() );
+	NSURL *pURL2 = NSURLFromOUString( OUString( *pFileName ) );
 	RunSFXFileCoordinator *pRunSFXFileCoordinator = [RunSFXFileCoordinator createWithObjectShell:pObjShell fileName:pFileName filterName:pFilterName itemSet:pSet medium:NULL commit:NO];
-	if ( pURL )
+	if ( pURL1 || pURL2 )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		ULONG nCount = Application::ReleaseSolarMutex();
