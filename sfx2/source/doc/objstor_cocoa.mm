@@ -452,12 +452,12 @@ sal_Bool NSFileCoordinator_objectShellDoSave( SfxObjectShell *pObjShell )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		ULONG nCount = Application::ReleaseSolarMutex();
-		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellSave_Impl:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
+		[pRunSFXFileCoordinator performSelectorOnMainThread:@selector(objectShellDoSave:) withObject:pRunSFXFileCoordinator waitUntilDone:YES modes:pModes];
 		Application::AcquireSolarMutex( nCount );
 	}
 	else
 	{
-		[pRunSFXFileCoordinator objectShellSave_Impl:pRunSFXFileCoordinator];
+		[pRunSFXFileCoordinator objectShellDoSave:pRunSFXFileCoordinator];
 	}
 	bRet = [pRunSFXFileCoordinator result];
 
