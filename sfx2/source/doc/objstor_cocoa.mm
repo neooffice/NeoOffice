@@ -144,6 +144,7 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 - (void)objectShellDoSave_Impl:(id)pObject;
 - (void)objectShellPreDoSaveAs_Impl:(id)pObject;
 - (void)objectShellSave_Impl:(id)pObject;
+- (sal_Bool)writeToURL1:(NSURL *)pURL1 writeToURL2:(NSURL *)pURL2 writer:(sal_Bool (^)())aWriter;
 @end
 
 @implementation RunSFXFileCoordinator
@@ -218,45 +219,19 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->DoSave();
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->DoSave();
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
-		if ( pURL )
-		{
-			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc )
-				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
-
-			if ( !bBlockExecuted )
-			{
-				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator )
-				{
-					NSError *pError = nil;
-					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL writeToURL2:nil writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (void)objectShellDoSaveAs:(id)pObject
@@ -266,89 +241,21 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell || !mpMedium )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->DoSaveAs( *mpMedium );
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->DoSaveAs( *mpMedium );
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		mpMedium->CheckForMovedFile( mpObjShell );
 		NSURL *pURL1 = NSURLFromSfxMedium( mpObjShell->GetMedium() );
 		NSURL *pURL2 = NSURLFromSfxMedium( mpMedium );
-		NSDocument *pDoc1 = [self documentForURL:pURL1];
-		NSDocument *pDoc2 = [self documentForURL:pURL2];
-		if ( !pDoc1 && pDoc2 )
-		{
-			// Swap URLs and documents
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-			pURL2 = pURL1;
-			pURL1 = nil;
-		}
-		else if ( !pURL1 )
-		{
-			// Shift second URLs and documents to first position
-			pURL1 = pURL2;
-			pURL2 = nil;
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-		}
-
-		if ( pDoc1 )
-		{
-			[pDoc1 performSynchronousFileAccessUsingBlock:^(void) {
-				if ( pDoc2 )
-				{
-					[pDoc2 performSynchronousFileAccessUsingBlock:aBlock];
-				}
-				else
-				{
-					NSObject *pFileCoordinator = [self fileCoordinator];
-					if ( pFileCoordinator )
-					{
-						NSError *pError = nil;
-						[pFileCoordinator coordinateWritingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-							aBlock();
-						}];
-					}
-				}
-			}];
-		}
-
-		if ( !bBlockExecuted && pURL1 )
-		{
-			NSObject *pFileCoordinator = [self fileCoordinator];
-			if ( pFileCoordinator )
-			{
-				NSError *pError = nil;
-				if ( pURL2 )
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing writingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL1, NSURL *pNewURL2) {
-						aBlock();
-					}];
-				}
-				else
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL1 writeToURL2:pURL2 writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (void)objectShellDoSaveObjectAs:(id)pObject
@@ -358,89 +265,21 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell || !mpMedium || !mpCommit )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->DoSaveObjectAs( *mpMedium, *mpCommit );
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->DoSaveObjectAs( *mpMedium, *mpCommit );
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		mpMedium->CheckForMovedFile( mpObjShell );
 		NSURL *pURL1 = NSURLFromSfxMedium( mpObjShell->GetMedium() );
 		NSURL *pURL2 = NSURLFromSfxMedium( mpMedium );
-		NSDocument *pDoc1 = [self documentForURL:pURL1];
-		NSDocument *pDoc2 = [self documentForURL:pURL2];
-		if ( !pDoc1 && pDoc2 )
-		{
-			// Swap URLs and documents
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-			pURL2 = pURL1;
-			pURL1 = nil;
-		}
-		else if ( !pURL1 )
-		{
-			// Shift second URLs and documents to first position
-			pURL1 = pURL2;
-			pURL2 = nil;
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-		}
-
-		if ( pDoc1 )
-		{
-			[pDoc1 performSynchronousFileAccessUsingBlock:^(void) {
-				if ( pDoc2 )
-				{
-					[pDoc2 performSynchronousFileAccessUsingBlock:aBlock];
-				}
-				else
-				{
-					NSObject *pFileCoordinator = [self fileCoordinator];
-					if ( pFileCoordinator )
-					{
-						NSError *pError = nil;
-						[pFileCoordinator coordinateWritingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-							aBlock();
-						}];
-					}
-				}
-			}];
-		}
-
-		if ( !bBlockExecuted && pURL1 )
-		{
-			NSObject *pFileCoordinator = [self fileCoordinator];
-			if ( pFileCoordinator )
-			{
-				NSError *pError = nil;
-				if ( pURL2 )
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing writingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL1, NSURL *pNewURL2) {
-						aBlock();
-					}];
-				}
-				else
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL1 writeToURL2:pURL2 writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (void)objectShellDoSave_Impl:(id)pObject
@@ -450,45 +289,19 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->DoSave_Impl( mpSet );
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->DoSave_Impl( mpSet );
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
-		if ( pURL )
-		{
-			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc )
-				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
-
-			if ( !bBlockExecuted )
-			{
-				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator )
-				{
-					NSError *pError = nil;
-					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL writeToURL2:nil writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (void)objectShellPreDoSaveAs_Impl:(id)pObject
@@ -498,88 +311,20 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell || !mpFileName || !mpFilterName )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->PreDoSaveAs_Impl( *mpFileName, *mpFilterName, (SfxItemSet *)mpSet );
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		NSURL *pURL1 = NSURLFromSfxMedium( mpObjShell->GetMedium() );
 		NSURL *pURL2 = NSURLFromOUString( OUString( *mpFileName ) );
-		NSDocument *pDoc1 = [self documentForURL:pURL1];
-		NSDocument *pDoc2 = [self documentForURL:pURL2];
-		if ( !pDoc1 && pDoc2 )
-		{
-			// Swap URLs and documents
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-			pURL2 = pURL1;
-			pURL1 = nil;
-		}
-		else if ( !pURL1 )
-		{
-			// Shift second URLs and documents to first position
-			pURL1 = pURL2;
-			pURL2 = nil;
-			pDoc1 = pDoc2;
-			pDoc2 = nil;
-		}
-
-		if ( pDoc1 )
-		{
-			[pDoc1 performSynchronousFileAccessUsingBlock:^(void) {
-				if ( pDoc2 )
-				{
-					[pDoc2 performSynchronousFileAccessUsingBlock:aBlock];
-				}
-				else
-				{
-					NSObject *pFileCoordinator = [self fileCoordinator];
-					if ( pFileCoordinator )
-					{
-						NSError *pError = nil;
-						[pFileCoordinator coordinateWritingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-							aBlock();
-						}];
-					}
-				}
-			}];
-		}
-
-		if ( !bBlockExecuted && pURL1 )
-		{
-			NSObject *pFileCoordinator = [self fileCoordinator];
-			if ( pFileCoordinator )
-			{
-				NSError *pError = nil;
-				if ( pURL2 )
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing writingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL1, NSURL *pNewURL2) {
-						aBlock();
-					}];
-				}
-				else
-				{
-					[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL1 writeToURL2:pURL2 writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (void)objectShellSave_Impl:(id)pObject
@@ -589,50 +334,104 @@ static NSURL *NSURLFromSfxMedium( SfxMedium *pMedium )
 	if ( !mpObjShell )
 		return;
 
-	__block sal_Bool bBlockResult = sal_False;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
-		__block BOOL bBlockExecuted = NO;
-		__block void (^aBlock)() = ^(void) {
-			bBlockExecuted = YES;
-			bBlockResult = mpObjShell->Save_Impl( mpSet );
+		sal_Bool (^aBlock)() = ^() {
+			return mpObjShell->Save_Impl( mpSet );
 		};
 
 		mpObjShell->GetMedium()->CheckForMovedFile( mpObjShell );
 		NSURL *pURL = NSURLFromSfxMedium( mpObjShell->GetMedium() );
-		if ( pURL )
-		{
-			NSDocument *pDoc = [self documentForURL:pURL];
-			if ( pDoc )
-				[pDoc performSynchronousFileAccessUsingBlock:aBlock];
-
-			if ( !bBlockExecuted )
-			{
-				NSObject *pFileCoordinator = [self fileCoordinator];
-				if ( pFileCoordinator )
-				{
-					NSError *pError = nil;
-					[pFileCoordinator coordinateWritingItemAtURL:pURL options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
-						aBlock();
-					}];
-				}
-			}
-		}
-
-		if ( !bBlockExecuted )
-			aBlock();
+		mbResult = [self writeToURL1:pURL writeToURL2:nil writer:aBlock];
 	}
 	rSolarMutex.release();
-
-	mbResult = bBlockResult;
 }
 
 - (sal_Bool)result
 {
 	return mbResult;
+}
+
+- (sal_Bool)writeToURL1:(NSURL *)pURL1 writeToURL2:(NSURL *)pURL2 writer:(sal_Bool (^)())aWriter
+{
+	__block sal_Bool bRet = sal_False;
+
+	if ( !aWriter )
+		return bRet;
+
+	__block BOOL bBlockExecuted = NO;
+	__block void (^aBlock)() = ^() {
+		bBlockExecuted = YES;
+		bRet = aWriter();
+	};
+
+	NSDocument *pDoc1 = [self documentForURL:pURL1];
+	NSDocument *pDoc2 = [self documentForURL:pURL2];
+	if ( !pDoc1 && pDoc2 )
+	{
+		// Swap URLs and documents
+		pDoc1 = pDoc2;
+		pDoc2 = nil;
+		pURL2 = pURL1;
+		pURL1 = nil;
+	}
+	else if ( !pURL1 )
+	{
+		// Shift second URLs and documents to first position
+		pURL1 = pURL2;
+		pURL2 = nil;
+		pDoc1 = pDoc2;
+		pDoc2 = nil;
+	}
+
+	if ( pDoc1 )
+	{
+		[pDoc1 performSynchronousFileAccessUsingBlock:^() {
+			if ( pDoc2 )
+			{
+				[pDoc2 performSynchronousFileAccessUsingBlock:aBlock];
+			}
+			else
+			{
+				NSObject *pFileCoordinator = [self fileCoordinator];
+				if ( pFileCoordinator )
+				{
+					NSError *pError = nil;
+					[pFileCoordinator coordinateWritingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+						aBlock();
+					}];
+				}
+			}
+		}];
+	}
+
+	if ( !bBlockExecuted && pURL1 )
+	{
+		NSObject *pFileCoordinator = [self fileCoordinator];
+		if ( pFileCoordinator )
+		{
+			NSError *pError = nil;
+			if ( pURL2 )
+			{
+				[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing writingItemAtURL:pURL2 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL1, NSURL *pNewURL2) {
+					aBlock();
+				}];
+			}
+			else
+			{
+				[pFileCoordinator coordinateWritingItemAtURL:pURL1 options:NSFileCoordinatorWritingForReplacing error:&pError byAccessor:^(NSURL *pNewURL) {
+					aBlock();
+				}];
+			}
+		}
+	}
+
+	if ( !bBlockExecuted )
+		aBlock();
+
+	return bRet;
 }
 
 @end
