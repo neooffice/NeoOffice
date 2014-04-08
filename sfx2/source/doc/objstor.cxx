@@ -149,6 +149,7 @@
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+
 #endif	// MACOSX
 
 #ifndef _UTL_BOOTSTRAP_HXX
@@ -1315,6 +1316,10 @@ sal_Bool SfxObjectShell::DoSave()
 // laeuft uber DoSave_Impl, um das Anlegen von Backups zu ermoeglichen.
 // Save in eigenes Format jetzt auch wieder Hierueber
 {
+#if defined USE_JAVA && defined MACOSX
+    GetMedium()->CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
 	sal_Bool bOk = sal_False ;
 	{
 		ModifyBlocker_Impl aBlock( this );
@@ -1425,10 +1430,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 
 {
 	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mv76033) SfxObjectShell::SaveTo_Impl" );
-
-#if defined USE_JAVA && defined MACOSX
-    rMedium.CheckForMovedFile( this );
-#endif	// USE_JAVA && MACOSX
 
     ModifyBlocker_Impl aMod(this);
 
@@ -2196,21 +2197,26 @@ sal_Bool SfxObjectShell::SaveTo_Impl
                         ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
                         if ( aBaseURL.getLength() )
                             ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
-                        CFURLRef aURL = nil;
-                        if ( aPath.getLength() )
-                        {
-                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
-                            if ( aString )
-                            {
-                                aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-                                CFRelease( aString );
-                            }
-                        }
 
-                        // Invoke even if URL is NULL
-                        SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
-                        if ( aURL )
-                            CFRelease( aURL );
+                        // Don't create native documents for temporary files
+                        if ( aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
+                        {
+                            CFURLRef aURL = nil;
+                            if ( aPath.getLength() )
+                            {
+                                CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
+                                if ( aString )
+                                {
+                                    aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                                    CFRelease( aString );
+                                }
+                            }
+
+                            // Invoke even if URL is NULL
+                            SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
+                            if ( aURL )
+                                CFRelease( aURL );
+                        }
                     }
                 }
 
@@ -2378,6 +2384,10 @@ sal_Bool SfxObjectShell::ConnectTmpStorage_Impl(
 
 sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 {
+#if defined USE_JAVA && defined MACOSX
+    rMedium.CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
     sal_Bool bOk = sal_False;
     {
         ModifyBlocker_Impl aBlock( this );
@@ -2421,6 +2431,10 @@ sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 // TODO/LATER: may be the call must be removed completelly
 sal_Bool SfxObjectShell::DoSaveAs( SfxMedium& rMedium )
 {
+#if defined USE_JAVA && defined MACOSX
+    rMedium.CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
 	// hier kommen nur Root-Storages rein, die via Temp-File gespeichert werden
     rMedium.CreateTempFileNoCopy();
     SetError(rMedium.GetErrorCode());
@@ -2988,6 +3002,10 @@ sal_Bool SfxObjectShell::ConvertTo
 
 sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 {
+#if defined USE_JAVA && defined MACOSX
+    GetMedium()->CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
 	SfxMedium* pRetrMedium = GetMedium();
     const SfxFilter* pFilter = pRetrMedium->GetFilter();
 
@@ -3073,6 +3091,10 @@ sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 
 sal_Bool SfxObjectShell::Save_Impl( const SfxItemSet* pSet )
 {
+#if defined USE_JAVA && defined MACOSX
+	GetMedium()->CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
 	if ( IsReadOnly() )
 	{
 		SetError( ERRCODE_SFX_DOCUMENTREADONLY );
@@ -3270,6 +3292,10 @@ sal_Bool SfxObjectShell::PreDoSaveAs_Impl
 	SfxItemSet*     pParams
 )
 {
+#if defined USE_JAVA && defined MACOSX
+    GetMedium()->CheckForMovedFile( this );
+#endif	// USE_JAVA && MACOSX
+
     // copy all items stored in the itemset of the current medium
     SfxAllItemSet* pMergedParams = new SfxAllItemSet( *pMedium->GetItemSet() );
 

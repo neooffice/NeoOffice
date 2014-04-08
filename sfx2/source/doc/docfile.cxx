@@ -4461,7 +4461,56 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
                 ::rtl::OUString aOpenFileURL;
                 if ( osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
                 {
+                    bool bUseOrigURL = false;
+                    bool bUseLogicNameMainURL = false;
+                    bool bUsePhysicalName = false;
+                    bool bUseName = false;
+                    SFX_ITEMSET_ARG( pSet, pFileNameItem, SfxStringItem, SID_FILE_NAME, FALSE );
+                    if ( pFileNameItem && pFileNameItem->GetValue().Len() )
+                    {
+                        if ( pFileNameItem->GetValue().Equals( GetOrigURL() ) )
+                        {
+                            bUseOrigURL = true;
+                        }
+                        else if ( pFileNameItem->GetValue().Equals( String( INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) ) )
+                        {
+                            bUseLogicNameMainURL = true;
+                        }
+                        else if ( pFileNameItem->GetValue().Equals( GetName() ) )
+                        {
+                            bUseName = true;
+                        }
+                        else if ( aName.Len() )
+                        {
+                           String aFileName;
+                           if ( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) && pFileNameItem->GetValue().Equals( aFileName ) )
+                                bUsePhysicalName = true;
+                        }
+                    }
+
                     SetName( String( aOpenFileURL ), sal_True );
+
+                    if ( bUseOrigURL )
+                    {
+                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetOrigURL() ) );
+                    }
+                    else if ( bUseLogicNameMainURL )
+                    {
+                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) );
+                    }
+                    else if ( bUseName )
+                    {
+                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+                    }
+                    else if ( bUsePhysicalName )
+                    {
+                        String aFileName;
+                        if ( aName.Len() && ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) )
+                            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, aFileName ) );
+                        else
+                            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+                    }
+
                     ReOpen();
                     pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
                 }
