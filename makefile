@@ -647,7 +647,7 @@ build.patch_package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS/resource"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program"
 # Copy all resource files in the main installer and overwrite newer resources
 # so that the codesigning will not remove resource files marked as signed in an
@@ -655,6 +655,7 @@ build.patch_package_shared:
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - );
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjava"*.res "MacOS/resource"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/filter/$(UOUTPUTDIR)/lib/libsvgfilter$(DLLSUFFIX).dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxcore$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
