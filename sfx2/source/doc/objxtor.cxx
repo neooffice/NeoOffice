@@ -380,9 +380,6 @@ SfxObjectShell::SfxObjectShell
 	pMedium(0),
 	pStyleSheetPool(0),
     eCreateMode(eMode)
-#if defined USE_JAVA && defined MACOSX
-    , bInFileCoordinator(sal_False)
-#endif	// USE_JAVA && MACOSX
 {
 	DBG_CTOR(SfxObjectShell, 0);
 

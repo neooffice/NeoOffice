@@ -219,9 +219,6 @@ public:
 	sal_uInt16					nViewNo;			// Numerierung der MDIWins
 	sal_Bool					bHasName :1,		// sal_True := bestehendes Objekt, sal_False := es ist ein neues Objekt
                                 bIsTmp :1;          // temp. Storage
-#if defined USE_JAVA && defined MACOSX
-	sal_Bool					bInFileCoordinator;
-#endif	// USE_JAVA && MACOSX
 
 private:
 //#if 0 // _SOLAR__PRIVATE

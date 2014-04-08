@@ -160,7 +160,6 @@
 #endif
 
 #ifdef MACOSX
-#include "objstor_cocoa.h"
 #include "../view/topfrm_cocoa.h"
 #endif	// MACOSX
 #include "../../../build/ooo-build-3.1.1.1/build/ooo310-m19/sw/inc/statstr.hrc"
@@ -1318,17 +1317,7 @@ sal_Bool SfxObjectShell::DoSave()
 // Save in eigenes Format jetzt auch wieder Hierueber
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-		GetMedium()->CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellDoSave( this );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+    GetMedium()->CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
 	sal_Bool bOk = sal_False ;
@@ -2396,17 +2385,7 @@ sal_Bool SfxObjectShell::ConnectTmpStorage_Impl(
 sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-		rMedium.CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellDoSaveObjectAs( this, &rMedium, &bCommit );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+    rMedium.CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
     sal_Bool bOk = sal_False;
@@ -2453,17 +2432,7 @@ sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 sal_Bool SfxObjectShell::DoSaveAs( SfxMedium& rMedium )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-		rMedium.CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellDoSaveAs( this, &rMedium );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+    rMedium.CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
 	// hier kommen nur Root-Storages rein, die via Temp-File gespeichert werden
@@ -3034,17 +3003,7 @@ sal_Bool SfxObjectShell::ConvertTo
 sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-		GetMedium()->CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellDoSave_Impl( this, pArgs );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+    GetMedium()->CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
 	SfxMedium* pRetrMedium = GetMedium();
@@ -3133,17 +3092,7 @@ sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 sal_Bool SfxObjectShell::Save_Impl( const SfxItemSet* pSet )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-	    GetMedium()->CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellSave_Impl( this, pSet );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+	GetMedium()->CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
 	if ( IsReadOnly() )
@@ -3344,17 +3293,7 @@ sal_Bool SfxObjectShell::PreDoSaveAs_Impl
 )
 {
 #if defined USE_JAVA && defined MACOSX
-    if ( bInFileCoordinator )
-    {
-		GetMedium()->CheckForMovedFile( this );
-    }
-    else
-    {
-        bInFileCoordinator = sal_True;
-        sal_Bool bRet = NSFileCoordinator_objectShellPreDoSaveAs_Impl( this, &rFileName, &aFilterName, pParams );
-        bInFileCoordinator = sal_False;
-        return bRet;
-    }
+    GetMedium()->CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
     // copy all items stored in the itemset of the current medium
