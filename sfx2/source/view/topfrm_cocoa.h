@@ -57,6 +57,7 @@ BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
+::rtl::OUString SFXDocument_documentTitle( SfxTopViewFrame *pFrame );
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall );
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_openPendingDuplicateURLs();

@@ -662,6 +662,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	BOOL					mbReadOnly;
 	NSString*				mpRevertToSavedLocalizedString;
 	BOOL					mbSaved;
+	NSString*				mpTitle;
 	NSURL*					mpURL;
 	NSView*					mpView;
 }
@@ -672,11 +673,13 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)dealloc;
 - (SFXDocument *)document;
 - (void)getDocument:(id)pObject;
+- (void)getTitle:(id)pObject;
 - (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)revertDocumentToSaved:(id)pObject;
 - (NSString *)revertToSavedLocalizedString;
 - (void)saveVersionOfDocument:(id)pObject;
 - (void)setDocumentModified:(id)pObject;
+- (NSString *)title;
 @end
 
 @implementation RunSFXDocument
@@ -745,6 +748,8 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[mpDoc release];
 	if ( mpRevertToSavedLocalizedString )
 		[mpRevertToSavedLocalizedString release];
+	if ( mpTitle )
+		[mpTitle release];
 	if ( mpURL )
 		[mpURL release];
 	if ( mpView )
@@ -768,17 +773,33 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	}
 }
 
+- (void)getTitle:(id)pObject
+{
+	if ( !mpTitle )
+	{
+		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+		if ( pDoc )
+		{
+			mpTitle = [pDoc displayName];
+			if ( mpTitle )
+				[mpTitle retain];
+		}
+	}
+}
+
 - (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
 {
 	[super init];
 
+	mpDoc = nil;
 	mpFrame = pFrame;
-	mpURL = pURL;
-	if ( mpURL )
-		[mpURL retain];
 	mbReadOnly = bReadOnly;
 	mpRevertToSavedLocalizedString = nil;
 	mbSaved = NO;
+	mpTitle = nil;
+	mpURL = pURL;
+	if ( mpURL )
+		[mpURL retain];
 	mpView = pView;
 	if ( mpView )
 		[mpView retain];
@@ -828,6 +849,11 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		else
 			[pDoc setDocumentModified:NO];
 	}
+}
+
+- (NSString *)title
+{
+	return mpTitle;
 }
 
 @end
@@ -934,6 +960,25 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 	}
 
 	[pPool release];
+}
+
+OUString SFXDocument_documentTitle( SfxTopViewFrame *pFrame )
+{
+	OUString aRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pFrame )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
+		[pRunSFXDocument performSelectorOnMainThread:@selector(getTitle:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		aRet = NSStringToOUString( [pRunSFXDocument title] );
+	}
+
+	[pPool release];
+
+	return aRet;
 }
 
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
