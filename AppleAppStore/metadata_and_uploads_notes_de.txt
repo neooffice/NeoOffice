@@ -1,0 +1,48 @@
+Metadata and Uploads - German
+-----------------------------
+
+App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
+NeoOffice
+
+Description:
+Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
+
+NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, Nutzer können Text Dokumente, Tabellenkalkulation und Präsentationen erstellen und bearbeiten. NeoOffice kann Openoffice-Dokumente öffnen. NeoOffice kann auch zu öffnen meisten Microsoft Word-, Excel- und Powerpoint-Dokumente.
+
+Do you already use NeoOffice or OpenOffice? We recommend that you click on the NeoOffice support link and read the list of changes before you upgrade to this version of NeoOffice.
+
+NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die NeoOffice-ingenieure erstellt NeoOffice im Jahr 2003, wenn sie gemacht OpenOffice ausführen nativ auf OS X zum ersten Mal.
+
+Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in Openoffice zu finden, wie:
+
+• Öffnen von Calc oder Impress anstelle von Writer beim Start
+• OS X Gatekeeper
+• OS X Versionen
+• Native OS X Text Markierung
+• Native Unterstützung für Datei Sperrung auf lokalen und entfernten Volumes
+• OS X Dienste Unterstützung
+• Native schwebende Werkzeugfenster
+
+
+What's New in this Version:
+This version fixes the slow scrolling bug when swiping on the trackpad that some of our users found in the previous version.
+
+In addition to the slow scrolling bug, this version fixes the following bugs:
+
+• NeoOffice would occassionally hang when dragging an image within a particular Writer document
+• NeoOffice would crash when pressing an arrow key in an empty field in Base's query design window
+• NeoOffice would crash when opening a particular Writer file with comments
+• NeoOffice would crash when opening a particular .svg image file with gradients
+• NeoOffice would create two duplicate versions instead of one version in the OS X Versions browser each time a document was saved
+• NeoOffice would display an uncloseable window if the document window was closed while in the OS X Versions browser
+• NeoOffice would sometimes display a blank popover window when clicking on the downward arrow icon next to the document name in a document window's titlebar while running on OS X 10.9
+
+
+Keywords:
+neo,office,kalkulationstabelle,excel,xlsx,xls,text,word,docx,doc,präsentationen,powerpoint,pptx,ppt
+
+Support URL:
+http://www.neooffice.org/neojava/macappstore.php
+
+Mac OS X App Screenshots:
+Upload ScreenSnapshotWriterAndCalc_de.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.

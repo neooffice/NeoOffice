@@ -27,39 +27,13 @@ Business
 Metadata and Uploads
 --------------------
 
-Only English localizations is available for the following descriptive text so do not add any localizations in the Apple Mac App Store. Only fill in the default English fields.
+See the following files for the respective localized text to use:
 
-App Name: Note that the App Name is only one word so that it will be first in the search list before any other "NeoOffice *" apps when searching in the Apple Mac App Store:
-NeoOffice
-
-Description:
-Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
-
-NeoOffice is a complete office suite for Mac OS X. With NeoOffice, users can create and edit text documents, spreadsheets, and presentations. NeoOffice can open OpenOffice documents. NeoOffice can also open most Microsoft Word, Excel, and PowerPoint documents.
-
-Do you already use NeoOffice or OpenOffice? We recommend that you click on the NeoOffice support link and read the list of changes before you upgrade to this version of NeoOffice.
-
-NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice engineers created NeoOffice in 2003 when they made OpenOffice run natively on Mac OS X for the first time.
-
-Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have continually added improvements to NeoOffice that users will not find in OpenOffice such as:
-
-• Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
-• OS X Versions
-• Native OS X text highlighting
-• Significant speed improvements to the OpenOffice text layout, rendering, and printing code
-• Native file locking support for local and networked volumes
-• OS X Services support
-• Native floating tool windows
-
-
-Keywords:
-neo,office,spreadsheet,excel,xlsx,xls,write,word,docx,doc,presentation,powerpoint,pptx,ppt
-
-Support URL:
-http://www.neooffice.org/neojava/macappstore.php
-
-Mac OS X App Screenshots:
-Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
+metadata_and_uploads_notes.txt - English
+metadata_and_uploads_notes_de.txt - German
+metadata_and_uploads_notes_fr.txt - French
+metadata_and_uploads_notes_it.txt - Italian
+metadata_and_uploads_notes_nl.txt - Dutch
 
 
 App Review Information
