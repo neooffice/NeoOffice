@@ -15,7 +15,7 @@ NeoOffice is extreem stabiel en duizenden gebruikers gebruiken het dagelijks. De
 
 Sindsdien is de NeoOffice ingenieurs - Patrick Luby and Ed Peterlin - hebben voortdurend verbeteringen toegevoegd aan NeoOffice dat gebruikers niet zult vinden in OpenOffice, zoals:
 
-• Bij starten Calc of Impress tonen in plaats van Writer
+• Bij starten Calc of Impress tonen in plaats van Writer met de NeoOffice > Toon bij starten menu
 • OS X Gatekeeper
 • OS X Versies
 • OS X-eigen tekstmarkering

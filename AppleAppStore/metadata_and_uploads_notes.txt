@@ -15,7 +15,7 @@ NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice
 
 Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have continually added improvements to NeoOffice that users will not find in OpenOffice such as:
 
-• Open Calc or Impress instead of Writer at launch using the NeoOffice :: Open at Launch menu 
+• Open Calc or Impress instead of Writer at launch using the NeoOffice > Open at Launch menu 
 • OS X Gatekeeper
 • OS X Versions
 • Native OS X text highlighting

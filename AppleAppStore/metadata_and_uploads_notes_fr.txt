@@ -15,7 +15,7 @@ NeoOffice est extrêmement stable et des milliers d'utilisateurs utilisent quoti
 
 Depuis lors, les ingénieurs de NeoOffice - Patrick Luby et Ed Peterlin - ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
 
-• Ouverture de Calc ou Impress au lieu de Writer au démarrage
+• Ouverture de Calc ou Impress au lieu de Writer au démarrage utilisant le menu de NeoOffice > Document par défault
 • Gatekeeper de OS X
 • Versions de OS X
 • Surlignage natif OS X

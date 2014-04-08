@@ -15,7 +15,7 @@ NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die 
 
 Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in Openoffice zu finden, wie:
 
-• Öffnen von Calc oder Impress anstelle von Writer beim Start
+• Öffnen von Calc oder Impress anstelle von Writer beim Start mit dem NeoOffice > Beim Starten Öffnen Menü
 • OS X Gatekeeper
 • OS X Versionen
 • Native OS X Text Markierung
