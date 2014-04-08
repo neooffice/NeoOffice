@@ -1247,6 +1247,13 @@ String SfxTopViewFrame::UpdateTitle()
             if ( aURL )
                 CFRelease( aURL );
         }
+
+		// Fix bug reported in the following NeoOffice forum by using the
+		// NSDocument's display name for the window title:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8619
+        ::rtl::OUString aDocTitle( SFXDocument_documentTitle( this ) );
+        if ( aDocTitle.getLength() )
+            aTitle = aDocTitle;
     }
 #endif	// USE_JAVA && MACOSX
 	return aTitle;
