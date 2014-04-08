@@ -2385,6 +2385,7 @@ sal_Bool SfxObjectShell::ConnectTmpStorage_Impl(
 sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 {
 #if defined USE_JAVA && defined MACOSX
+    GetMedium()->CheckForMovedFile( this );
     rMedium.CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
@@ -2432,6 +2433,7 @@ sal_Bool SfxObjectShell::DoSaveObjectAs( SfxMedium& rMedium, BOOL bCommit )
 sal_Bool SfxObjectShell::DoSaveAs( SfxMedium& rMedium )
 {
 #if defined USE_JAVA && defined MACOSX
+    GetMedium()->CheckForMovedFile( this );
     rMedium.CheckForMovedFile( this );
 #endif	// USE_JAVA && MACOSX
 
