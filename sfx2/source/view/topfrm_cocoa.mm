@@ -136,6 +136,7 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 + (void)initialize;
+- (void)close;
 - (void)dealloc;
 - (NSDocument *)duplicateAndReturnError:(NSError **)ppError;
 - (void)duplicateDocument:(id)pObject;
@@ -225,14 +226,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 				[pOldDoc close];
 
 			if ( pDoc )
-			{
-
 				[pFrameDict setObject:pDoc forKey:pKey];
-			}
 			else
-			{
 				[pFrameDict removeObjectForKey:pKey];
-			}
 		}
 	}
 }
@@ -262,6 +258,14 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		if ( aOldIMP && aNewIMP && class_addMethod( aNSQuickLookWrapperDocumentClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
+}
+
+- (void)close
+{
+	[super close];
+
+	// Set undo manager to nil otherwise the document will never be released
+	[self setUndoManager:nil];
 }
 
 - (void)dealloc
