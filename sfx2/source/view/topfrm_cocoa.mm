@@ -720,7 +720,14 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 					// If the URL has changed, disconnect the document from
 					// the old URL's version history
 					if ( !mpURL || !pOldURL || ![pOldURL isEqual:mpURL] )
+					{
+ 						// Fix bug reported in the following NeoOffice forum
+						// post by preserving the edited status of the document:
+						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64685#64685
+						BOOL bIsEdited = [pOldDoc isDocumentEdited];
 						[pOldDoc updateChangeCount:NSChangeCleared];
+						[self setDocumentModified:[NSNumber numberWithBool:bIsEdited]];
+					}
 				}
 				else if ( mpURL )
 				{
