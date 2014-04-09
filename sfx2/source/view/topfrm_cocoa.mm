@@ -754,7 +754,8 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64685#64685
 						BOOL bIsEdited = [pOldDoc isDocumentEdited];
 						[pOldDoc updateChangeCount:NSChangeCleared];
-						[self setDocumentModified:[NSNumber numberWithBool:bIsEdited]];
+						if ( mpURL )
+							[self setDocumentModified:[NSNumber numberWithBool:bIsEdited]];
 					}
 				}
 				else if ( mpURL )
