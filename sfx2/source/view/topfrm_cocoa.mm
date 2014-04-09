@@ -127,6 +127,7 @@ static OUString aSaveAVersionLocalizedString;
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 - (void)browseDocumentVersions:(id)pSender;
+- (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (void)poseAsMakeWindowControllers;
 @end
 
@@ -147,6 +148,7 @@ static OUString aSaveAVersionLocalizedString;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (BOOL)isInVersionBrowser;
 - (void)makeWindowControllers;
+- (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)reloadFrame;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
@@ -487,6 +489,33 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	}
 }
 
+- (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler
+{
+	// Fix bug reported in the following NeoOffice forum by detecting when the
+	// user has moved or renamed the file:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8619
+	if ( [super respondsToSelector:@selector(moveToURL:completionHandler:)] )
+	{
+		[super moveToURL:pURL completionHandler:^(NSError *pError) {
+			if ( aCompletionHandler )
+				aCompletionHandler( pError );
+
+			if ( !pError )
+			{
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				rSolarMutex.acquire();
+				if ( !Application::IsShutDown() )
+				{
+					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+					if ( pDoc == self )
+						SFXDocument_documentHasMoved( mpFrame );
+				}
+				rSolarMutex.release();
+			}
+		}];
+	}
+}
+
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
 	if ( ppError )
@@ -673,7 +702,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)dealloc;
 - (SFXDocument *)document;
 - (void)getDocument:(id)pObject;
-- (void)getTitle:(id)pObject;
 - (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)revertDocumentToSaved:(id)pObject;
 - (NSString *)revertToSavedLocalizedString;
@@ -733,7 +761,8 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64685#64685
 						BOOL bIsEdited = [pOldDoc isDocumentEdited];
 						[pOldDoc updateChangeCount:NSChangeCleared];
-						[self setDocumentModified:[NSNumber numberWithBool:bIsEdited]];
+						if ( mpDoc )
+							[self setDocumentModified:[NSNumber numberWithBool:bIsEdited]];
 					}
 				}
 				else if ( mpURL )
@@ -777,20 +806,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		mpDoc = GetDocumentForFrame( mpFrame );
 		if ( mpDoc )
 			[mpDoc retain];
-	}
-}
-
-- (void)getTitle:(id)pObject
-{
-	if ( !mpTitle )
-	{
-		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-		if ( pDoc )
-		{
-			mpTitle = [pDoc displayName];
-			if ( mpTitle )
-				[mpTitle retain];
-		}
 	}
 }
 
@@ -967,25 +982,6 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 	}
 
 	[pPool release];
-}
-
-OUString SFXDocument_documentTitle( SfxTopViewFrame *pFrame )
-{
-	OUString aRet;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pFrame )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(getTitle:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
-		aRet = NSStringToOUString( [pRunSFXDocument title] );
-	}
-
-	[pPool release];
-
-	return aRet;
 }
 
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
