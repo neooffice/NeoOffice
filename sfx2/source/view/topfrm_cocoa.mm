@@ -506,6 +506,11 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 			if ( !pError )
 			{
+				if ( !pApplication_cacheSecurityScopedURL )
+					pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+				if ( pApplication_cacheSecurityScopedURL )
+					pApplication_cacheSecurityScopedURL( [self fileURL] );
+
 				IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
 				if ( !Application::IsShutDown() )
