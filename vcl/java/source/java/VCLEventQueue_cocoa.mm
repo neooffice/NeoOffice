@@ -590,6 +590,8 @@ static void RegisterMainBundleWithLaunchServices()
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
 - (void)paste:(id)pSender;
+- (void)redo:(id)pSender;
+- (void)undo:(id)pSender;
 @end
 
 @interface NSView (VCLViewPoseAs)
@@ -1144,6 +1146,10 @@ static NSUInteger nMouseMask = 0;
 			else if ( [pChars isEqualToString:@"z"] )
 			{
 				bRet = [pApp sendAction:@selector(undo:) to:nil from:self];
+			}
+			else if ( [pChars isEqualToString:@"Z"] )
+			{
+				bRet = [pApp sendAction:@selector(redo:) to:nil from:self];
 			}
 		}
 	}
