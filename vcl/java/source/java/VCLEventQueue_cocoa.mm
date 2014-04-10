@@ -1137,9 +1137,13 @@ static NSUInteger nMouseMask = 0;
 				[self performClose:self];
 				bRet = YES;
 			}
-			else if ( [pChars isEqualToString:@"x"] && [pResponder respondsToSelector:@selector(cut:)] )
+			else if ( [pChars isEqualToString:@"x"] )
 			{
 				bRet = [pApp sendAction:@selector(cut:) to:nil from:self];
+			}
+			else if ( [pChars isEqualToString:@"z"] )
+			{
+				bRet = [pApp sendAction:@selector(undo:) to:nil from:self];
 			}
 		}
 	}
