@@ -930,16 +930,31 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				NSString *pString = [pHelper stringForType];
 				if ( pString )
 				{
-					const char *pUTF8String = [pString UTF8String];
-					if ( pUTF8String )
-					{
-						OUString aString( pUTF8String, strlen( pUTF8String ), RTL_TEXTENCODING_UTF8 );
-						// Replace carriage returns with line feeds
-						aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
+					NSUInteger nLen = [pString length];
+					OUStringBuffer aExportData( nLen );
 
-						out <<= aString;
-						bDataRetrieved = true;
+					// Replace carriage returns with line feeds
+					unsigned int nCopiedChars = 0;
+					for ( NSUInteger j = 0; j < nLen; j++, nCopiedChars++ )
+					{
+						unichar nChar = [pString characterAtIndex:j];
+						if ( nChar == (unichar)'\r' )
+						{
+							aExportData.append( (sal_Unicode)'\n' );
+
+							// Replace \r\n with a single newline
+							if ( j < nLen - 1 && [pString characterAtIndex:j + 1] == (unichar)'\n' )
+								j++;
+						}
+						else
+						{
+								aExportData.append( (sal_Unicode)nChar );
+						}
 					}
+
+					OUString aString( aExportData.makeStringAndClear() );
+					out <<= aString;
+					bDataRetrieved = true;
 				}
 			}
 			else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
@@ -951,23 +966,37 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					NSData *pData = [pHelper dataForType];
 					if ( pData )
 					{
-						const void *pArray = [pData bytes];
+						const char *pArray = (const char *)[pData bytes];
 						unsigned int nLen = [pData length];
 
 						if ( pArray && nLen )
 						{
 							Sequence< sal_Int8 > aExportData( nLen );
-							memcpy( aExportData.getArray(), pArray, nLen );
 
 							// Replace carriage returns with line feeds
 							sal_Char *pCharArray = (sal_Char *)aExportData.getArray();
 							if ( pCharArray )
 							{
-								for ( unsigned int j = 0; j < nLen; j++ )
+								memset( pCharArray, 0, nLen );
+
+								unsigned int nCopiedChars = 0;
+								for ( unsigned int j = 0; j < nLen; j++, nCopiedChars++ )
 								{
-									if ( pCharArray[ j ] == '\r' )
-										pCharArray[ j ] = '\n';
+									if ( pArray[ j ] == '\r' )
+									{
+										pCharArray[ nCopiedChars ] = '\n';
+
+										// Replace \r\n with a single newline
+										if ( j < nLen - 1 && pArray[ j + 1 ] == '\n' )
+											j++;
+									}
+									else
+									{
+										pCharArray[ nCopiedChars ] = pArray[ j ];
+									}
 								}
+
+								aExportData.realloc( nCopiedChars );
 							}
 
 							// Strip out HTML Microsoft Office headers
