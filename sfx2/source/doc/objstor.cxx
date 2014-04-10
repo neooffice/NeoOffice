@@ -2201,21 +2201,25 @@ sal_Bool SfxObjectShell::SaveTo_Impl
                         // Don't create native documents for temporary files
                         if ( aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
                         {
-                            CFURLRef aURL = nil;
                             if ( aPath.getLength() )
                             {
                                 CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
                                 if ( aString )
                                 {
-                                    aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+									// Fix titlebar changing bug reported in
+									// the following NeoOffice forum post by
+									// not creating documents for nil URLs:
+									// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64697#64697
+                            		CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+									if ( aURL )
+									{
+                            			SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
+                                		CFRelease( aURL );
+                                	}
+
                                     CFRelease( aString );
                                 }
                             }
-
-                            // Invoke even if URL is NULL
-                            SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
-                            if ( aURL )
-                                CFRelease( aURL );
                         }
                     }
                 }
