@@ -1112,24 +1112,25 @@ static NSUInteger nMouseMask = 0;
 	// closable non-Java windows.
 	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![self isKindOfClass:[VCLPanel class]] && ![self isKindOfClass:[VCLWindow class]] )
 	{
+		NSApplication *pApp = [NSApplication sharedApplication];
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
-		if ( pChars && pResponder )
+		if ( pApp && pChars && pResponder )
 		{
-			if ( [pChars isEqualToString:@"a"] && [pResponder respondsToSelector:@selector(selectAll:)] )
+			// Fix broken key shortcuts when running in the sandbox by having
+			// NSApplication send find the applicable responder that can handle
+			// the key shortcut
+			if ( [pChars isEqualToString:@"a"] )
 			{
-				[pResponder selectAll:self];
-				bRet = YES;
+				bRet = [pApp sendAction:@selector(selectAll:) to:nil from:self];
 			}
-			else if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
+			else if ( [pChars isEqualToString:@"c"] )
 			{
-				[pResponder copy:self];
-				bRet = YES;
+				bRet = [pApp sendAction:@selector(copy:) to:nil from:self];
 			}
-			else if ( [pChars isEqualToString:@"v"] && [pResponder respondsToSelector:@selector(paste:)] )
+			else if ( [pChars isEqualToString:@"v"] )
 			{
-				[pResponder paste:self];
-				bRet = YES;
+				bRet = [pApp sendAction:@selector(paste:) to:nil from:self];
 			}
 			else if ( [pChars isEqualToString:@"w"] && [self styleMask] & NSClosableWindowMask )
 			{
@@ -1138,8 +1139,7 @@ static NSUInteger nMouseMask = 0;
 			}
 			else if ( [pChars isEqualToString:@"x"] && [pResponder respondsToSelector:@selector(cut:)] )
 			{
-				[pResponder cut:self];
-				bRet = YES;
+				bRet = [pApp sendAction:@selector(cut:) to:nil from:self];
 			}
 		}
 	}
