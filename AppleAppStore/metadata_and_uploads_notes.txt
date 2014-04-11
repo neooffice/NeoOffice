@@ -25,17 +25,7 @@ Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have contin
 
 
 What's New in this Version:
-This version fixes the slow scrolling bug when swiping on the trackpad that some of our users found in the previous version.
-
-In addition to the slow scrolling bug, this version fixes the following bugs:
-
-• NeoOffice would occassionally hang when dragging an image within a particular Writer document
-• NeoOffice would crash when pressing an arrow key in an empty field in Base's query design window
-• NeoOffice would crash when opening a particular Writer file with comments
-• NeoOffice would crash when opening a particular .svg image file with gradients
-• NeoOffice would create two duplicate versions instead of one version in the OS X Versions browser each time a document was saved
-• NeoOffice would display an uncloseable window if the document window was closed while in the OS X Versions browser
-• NeoOffice would sometimes display a blank popover window when clicking on the downward arrow icon next to the document name in a document window's titlebar while running on OS X 10.9
+This version increases scrolling speed and fixes several crashing bugs. This version also fixes several bugs that occur when renaming a document or using the Versions feature.
 
 
 Keywords:
