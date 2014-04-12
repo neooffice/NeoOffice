@@ -107,14 +107,16 @@
 - (short)volumeDB:(AvmediaArgs *)pArgs;
 @end
 
-@interface AvmediaMovieView : QTMovieView
+@interface AvmediaMovieView : NSView
 {
 	NSCursor*				mpCursor;
 	AvmediaMoviePlayer*		mpMoviePlayer;
+	NSView*					mpQTMovieView;
 }
++ (NSMenu *)defaultMenu;
 - (MacOSBOOL)becomeFirstResponder;
 - (void)dealloc;
-- (id)init;
+- (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent;
 - (void)mouseDown:(NSEvent *)pEvent;
@@ -131,7 +133,10 @@
 - (void)otherMouseUp:(NSEvent *)pEvent;
 - (void)resetCursorRects;
 - (void)setCursor:(NSCursor *)pCursor;
+- (void)setFrame:(NSRect)aRect;
+- (void)setMovie:(NSObject *)pMovie;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
+- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio;
 @end
 
 #endif	// _COMMON_H
