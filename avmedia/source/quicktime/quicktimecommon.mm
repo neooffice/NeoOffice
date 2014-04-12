@@ -268,7 +268,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
-	if ( mpMovie && [mpMovie respondsToSelector:@selector(currentTime:)] )
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(currentTime)] )
 	{
 		NSTimeInterval aInterval;
 		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
