@@ -116,6 +116,7 @@
 + (NSMenu *)defaultMenu;
 - (MacOSBOOL)becomeFirstResponder;
 - (void)dealloc;
+- (NSView *)hitTest:(NSPoint)aPoint;
 - (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent;

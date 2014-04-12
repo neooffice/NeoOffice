@@ -844,6 +844,15 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[super dealloc];
 }
 
+- (NSView *)hitTest:(NSPoint)aPoint
+{
+	// Don't allow subview to get any mouse events
+	if ( [super hitTest:aPoint] )
+		return self;
+	else
+		return nil;
+}
+
 - (id)initWithFrame:(NSRect)aFrame
 {
 	[super initWithFrame:aFrame];
