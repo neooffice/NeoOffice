@@ -33,35 +33,70 @@
  *
  ************************************************************************/
 
-#include "quicktimecommon.h"
+#import <dlfcn.h>
+
+#import "quicktimecommon.h"
 #include "quicktimewindow.hxx"
 
-#ifndef _COM_SUN_STAR_AWT_KEYMODIFIER_HDL_
 #include <com/sun/star/awt/KeyModifier.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_MOUSEBUTTON_HDL_
 #include <com/sun/star/awt/MouseButton.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_SYSTEMPOINTER_HDL_
 #include <com/sun/star/awt/SystemPointer.hpp>
-#endif
-#ifndef _COM_SUN_STAR_MEDIA_ZOOMLEVEL_HDL_
 #include <com/sun/star/media/ZoomLevel.hpp>
-#endif
-
-#include <dlfcn.h>
 
 typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+typedef MacOSBOOL QTGetTimeInterval_Type( QTTime time, NSTimeInterval *timeInterval );
+typedef QTTimeRange QTMakeTimeRange_Type( QTTime time, QTTime duration );
+typedef QTTime QTMakeTimeWithTimeInterval_Type( NSTimeInterval timeInterval );
+typedef NSString * const QTMovieLoopsAttribute_Type;
 
 static Application_acquireSecurityScopedURLFromNSURL_Type *pApplication_acquireSecurityScopedURLFromNSURL = NULL;
 static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
+static MacOSBOOL bQTKitInitialized = NO;
+static Class aQTMovieClass = nil;
+static Class aQTMovieViewClass = nil;
+static QTGetTimeInterval_Type *pQTGetTimeInterval = NULL;
+static QTMakeTimeRange_Type *pQTMakeTimeRange = NULL;
+static QTMakeTimeWithTimeInterval_Type *pQTMakeTimeWithTimeInterval = NULL;
+static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = NULL;
 
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::media;
+
+static void InitializeQTKit()
+{
+	if ( !bQTKitInitialized )
+	{
+		NSBundle *pQTKitBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/QTKit.framework"];
+		if ( pQTKitBundle )
+		{
+			Class aClass = [pQTKitBundle classNamed:@"QTMovieView"];
+			if ( [aClass isSubclassOfClass:[NSView class]] )
+			{
+				aQTMovieViewClass = aClass;
+				aQTMovieClass = [pQTKitBundle classNamed:@"QTMovie"];
+				if ( aQTMovieClass && aQTMovieViewClass );
+				{
+					void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+					if ( pLib )
+					{
+						pQTGetTimeInterval = (QTGetTimeInterval_Type *)dlsym( pLib, "QTGetTimeInterval" );
+						pQTMakeTimeRange = (QTMakeTimeRange_Type *)dlsym( pLib, "QTMakeTimeRange" );
+						pQTMakeTimeWithTimeInterval = (QTMakeTimeWithTimeInterval_Type *)dlsym( pLib, "QTMakeTimeWithTimeInterval" );
+						pQTMovieLoopsAttribute = (QTMovieLoopsAttribute_Type *)dlsym( pLib, "QTMovieLoopsAttribute" );
+
+						dlclose( pLib );
+					}
+				}
+			}
+		}
+
+		bQTKitInitialized = YES;
+	}
+}
 
 static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, AvmediaMoviePlayer *pMoviePlayer )
 {
@@ -199,6 +234,32 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 @end
 
+@interface NSObject (QTMovie)
+- (QTTime)currentTime;
+- (QTTime)duration;
+- (NSImage *)frameImageAtTime:(QTTime)aTime;
+- (MacOSBOOL)muted;
+- (float)rate;
+- (QTTime)selectionEnd;
+- (void)setAttribute:(id)pValue forKey:(NSString *)pAttributeKey;
+- (void)setCurrentTime:(QTTime)aTime;
+- (void)setMuted:(MacOSBOOL)bMute;
+- (void)setRate:(float)fRate;
+- (void)setSelection:(QTTimeRange)aSelection;
+- (void)setVolume:(float)fVolume;
+- (void)play;
+- (void)stop;
+- (float)volume;
+@end
+
+@interface NSView (QTMovieView)
+- (void)setControllerVisible:(MacOSBOOL)bControllerVisible;
+- (void)setEditable:(MacOSBOOL)bEditable;
+- (void)setMovie:(QTMovie *)pMovie;
+- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio;
+- (void)setShowsResizeIndicator:(MacOSBOOL)bShow;
+@end
+
 @implementation AvmediaMoviePlayer
 
 - (void)bounds:(AvmediaArgs *)pArgs
@@ -211,9 +272,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
-		fRet = aInterval;
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(currentTime)] )
+	{
+		NSTimeInterval aInterval;
+		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
+			fRet = aInterval;
+	}
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -223,8 +287,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)destroy:(id)pObject
 {
-	if ( mpMovie || [mpMovie rate] != 0 )
-		[mpMovie stop];
+	[self stop:self];
 
 	if ( mpMovieView )
 	{
@@ -259,9 +322,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie duration], &aInterval ) )
-		fRet = aInterval;
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(duration)] )
+	{
+		NSTimeInterval aInterval;
+		if ( pQTGetTimeInterval && pQTGetTimeInterval( [mpMovie duration], &aInterval ) )
+			fRet = aInterval;
+	}
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -281,7 +347,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return pRet;
 
-	NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+	NSImage *pImage = ( mpMovie && [mpMovie respondsToSelector:@selector(frameImageAtTime:)] && pQTMakeTimeWithTimeInterval ? [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )] : nil );
 	if ( pImage )
 	{
 		NSSize aSize = [pImage size];
@@ -330,6 +396,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)initialize:(NSURL *)pURL
 {
+	InitializeQTKit();
+
 	[self destroy:self];
 
 	if ( !pURL )
@@ -342,48 +410,48 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
 		mpSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( pURL, sal_True, nil );
 
-	NSError *pError = nil;
-	mpMovie = [QTMovie movieWithURL:pURL error:&pError];
-	if ( mpMovie && !pError )
+	mpMovie = nil;
+	mpMovieView  = nil;
+	if ( aQTMovieClass && class_getClassMethod( aQTMovieClass, @selector(movieWithURL:error:) ) && pQTGetTimeInterval && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval && pQTMovieLoopsAttribute )
 	{
-		[mpMovie retain];
-		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
-		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
+		NSError *pError = nil;
+		mpMovie = [aQTMovieClass movieWithURL:pURL error:&pError];
+		if ( mpMovie && !pError )
+		{
+			[mpMovie retain];
+			if ( [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] );
+				[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:*pQTMovieLoopsAttribute];
+			if ( [mpMovie respondsToSelector:@selector(setSelection:)] && [mpMovie respondsToSelector:@selector(duration)] )
+				[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
 
-		NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
-		if ( pImage )
-			maPreferredSize = [pImage size];
-		else
-			maPreferredSize = NSMakeSize( 0, 0 );
-		maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
+			NSImage *pImage = [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( 0 )];
+			if ( pImage )
+				maPreferredSize = [pImage size];
+			else
+				maPreferredSize = NSMakeSize( 0, 0 );
+			maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
 
-		mpMovieView = [[AvmediaMovieView alloc] init];
-		[mpMovieView setMoviePlayer:self];
-		[mpMovieView setControllerVisible:NO];
-		if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
-			[mpMovieView setPreservesAspectRatio:NO];
-		else
-			[mpMovieView setPreservesAspectRatio:YES];
-		[mpMovieView setShowsResizeIndicator:NO];
-		[mpMovieView setMovie:mpMovie];
-		[mpMovieView setEditable:NO];
-		[mpMovieView setFrame:maRealFrame];
+			mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
+			[mpMovieView setMoviePlayer:self];
+			[mpMovieView setPreservesAspectRatio:( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW ? NO : YES )];
+			[mpMovieView setMovie:mpMovie];
+		}
 	}
 }
 
-- (QTMovie *)movie
+- (NSObject *)movie
 {
 	return mpMovie;
 }
 
-- (QTMovieView *)movieView
+- (AvmediaMovieView *)movieView
 {
 	return mpMovieView;
 }
 
 - (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs
 {
-	MacOSBOOL bRet = ( [mpMovie rate] != 0 );
+	MacOSBOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -393,7 +461,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (double)rate:(AvmediaArgs *)pArgs
 {
-	double fRet = (double)[mpMovie rate];
+	double fRet = (double)( mpMovie && [mpMovie respondsToSelector:@selector(rate)] ? [mpMovie rate] : 0 );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
@@ -403,7 +471,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (MacOSBOOL)mute:(AvmediaArgs *)pArgs
 {
-	MacOSBOOL bRet = [mpMovie muted];
+	MacOSBOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -413,7 +481,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)play:(id)pObject
 {
-	if ( [mpMovie rate] == 0 )
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(play)] && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] == 0 )
 		[mpMovie play];
 }
 
@@ -427,14 +495,17 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	double fRet = 0;
 
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie selectionEnd], &aInterval ) )
+	if ( mpMovie && pQTGetTimeInterval )
 	{
-		fRet = aInterval;
-	}
-	else if ( QTGetTimeInterval( [mpMovie duration], &aInterval ) )
-	{
-		fRet = aInterval;
+		NSTimeInterval aInterval;
+		if ( [mpMovie respondsToSelector:@selector(selectionEnd)] && pQTGetTimeInterval( [mpMovie selectionEnd], &aInterval ) )
+		{
+			fRet = aInterval;
+		}
+		else if ( [mpMovie respondsToSelector:@selector(duration)] && pQTGetTimeInterval( [mpMovie duration], &aInterval ) )
+		{
+			fRet = aInterval;
+		}
 	}
 
 	if ( pArgs )
@@ -481,7 +552,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setCurrentTime:)] && pQTMakeTimeWithTimeInterval )
+		[mpMovie setCurrentTime:pQTMakeTimeWithTimeInterval( [pTime doubleValue] )];
 }
 
 - (void)setFocus:(id)pObject
@@ -526,10 +598,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			break;
 	}
 
-	if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
-		[mpMovieView setPreservesAspectRatio:NO];
-	else
-		[mpMovieView setPreservesAspectRatio:YES];
+	[mpMovieView setPreservesAspectRatio:( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW ? NO : YES )];
 
 	// Center zoom bounds with real bounds
 	aZoomFrame.origin.x += ( maRealFrame.size.width - aZoomFrame.size.width ) / 2;
@@ -551,7 +620,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pLooping )
 		return;
 
-	[mpMovie setAttribute:pLooping forKey:QTMovieLoopsAttribute];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] && pQTMovieLoopsAttribute );
+		[mpMovie setAttribute:pLooping forKey:*pQTMovieLoopsAttribute];
 }
 
 - (void)setMute:(AvmediaArgs *)pArgs
@@ -564,7 +634,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pMute )
 		return;
 
-	[mpMovie setMuted:[pMute boolValue]];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setMuted:)] )
+		[mpMovie setMuted:[pMute boolValue]];
 }
 
 - (void)setPointer:(AvmediaArgs *)pArgs
@@ -613,7 +684,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	[mpMovie setRate:[pTime floatValue]];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setRate:)] )
+		[mpMovie setRate:[pTime floatValue]];
 }
 
 - (void)setSelection:(AvmediaArgs *)pArgs
@@ -626,7 +698,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setSelection:)] && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval )
+		[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), pQTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
 }
 
 - (void)setSuperview:(AvmediaArgs *)pArgs
@@ -697,7 +770,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pDB )
 		return;
 
-	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setVolume:)] )
+		[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
 }
 
 - (void)setZoomLevel:(AvmediaArgs *)pArgs
@@ -738,13 +812,13 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)stop:(id)pObject
 {
-	if ( [mpMovie rate] != 0 )
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie respondsToSelector:@selector(stop)] && [mpMovie rate] != 0 )
 		[mpMovie stop];
 }
 
 - (short)volumeDB:(AvmediaArgs *)pArgs
 {
-	short nRet = (short)( [mpMovie volume] * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
+	short nRet = (short)( ( mpMovie && [mpMovie respondsToSelector:@selector(volume)] ? [mpMovie volume] : 0 ) * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithShort:nRet]];
@@ -780,15 +854,49 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[self setCursor:nil];
 	[self setMoviePlayer:nil];
 
+	if ( mpQTMovieView )
+	{
+		[mpQTMovieView removeFromSuperview];
+		[mpQTMovieView release];
+	}
+
 	[super dealloc];
 }
 
-- (id)init
+- (NSView *)hitTest:(NSPoint)aPoint
 {
-	[super init];
+	// Don't allow subview to get any mouse events
+	if ( [super hitTest:aPoint] )
+		return self;
+	else
+		return nil;
+}
+
+- (id)initWithFrame:(NSRect)aFrame
+{
+	[super initWithFrame:aFrame];
+
+	InitializeQTKit();
 
 	mpCursor = nil;
 	mpMoviePlayer = nil;
+	mpQTMovieView = nil;
+	if ( aQTMovieViewClass )
+	{
+		mpQTMovieView = [[aQTMovieViewClass alloc] init];
+		if ( mpQTMovieView )
+		{
+			[mpQTMovieView retain];
+			[mpQTMovieView setFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
+			if ( [mpQTMovieView respondsToSelector:@selector(setControllerVisible:)] )
+				[mpQTMovieView setControllerVisible:NO];
+			if ( [mpQTMovieView respondsToSelector:@selector(setShowsResizeIndicator:)] )
+				[mpQTMovieView setShowsResizeIndicator:NO];
+			if ( [mpQTMovieView respondsToSelector:@selector(setEditable:)] )
+				[mpQTMovieView setEditable:NO];
+			[self addSubview:mpQTMovieView];
+		}
+	}
 
 	return self;
 }
@@ -892,6 +1000,23 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	}
 }
 
+- (void)setFrame:(NSRect)aRect
+{
+	[super setFrame:aRect];
+
+	if ( mpQTMovieView )
+		[mpQTMovieView setFrame:NSMakeRect( 0, 0, aRect.size.width, aRect.size.height )];
+}
+
+- (void)setMovie:(NSObject *)pMovie
+{
+	if ( pMovie && [pMovie isKindOfClass:aQTMovieClass] )
+	{
+		if ( [pMovie isKindOfClass:aQTMovieClass] && mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
+			[mpQTMovieView setMovie:(QTMovie *)pMovie];
+	}
+}
+
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
 {
 	if ( mpMoviePlayer )
@@ -901,6 +1026,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	if ( mpMoviePlayer )
 		[mpMoviePlayer retain];
+}
+
+- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio
+{
+	if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setPreservesAspectRatio:)] )
+		[mpQTMovieView setPreservesAspectRatio:bPreservesAspectRatio];
 }
 
 @end

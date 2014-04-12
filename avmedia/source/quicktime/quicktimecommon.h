@@ -37,7 +37,9 @@
 #define _COMMON_H
 
 #import <premac.h>
+// Need to include for QuickTime constants but we don't link to it
 #import <QTKit/QTKit.h>
+#import <objc/objc-class.h>
 #import <postmac.h>
 
 // Redefine Cocoa YES and NO defines types for convenience
@@ -67,7 +69,7 @@
 
 @interface AvmediaMoviePlayer : NSObject
 {
-	QTMovie*				mpMovie;
+	NSObject*				mpMovie;
 	AvmediaMovieView*		mpMovieView;
 	NSView*					mpSuperview;
 	NSSize					maPreferredSize;
@@ -83,8 +85,8 @@
 - (id)init;
 - (void)initialize:(NSURL *)pURL;
 - (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs;
-- (QTMovie *)movie;
-- (QTMovieView *)movieView;
+- (NSObject *)movie;
+- (AvmediaMovieView *)movieView;
 - (MacOSBOOL)mute:(AvmediaArgs *)pArgs;
 - (void)play:(id)pObject;
 - (void)preferredSize:(AvmediaArgs *)pArgs;
@@ -106,14 +108,17 @@
 - (short)volumeDB:(AvmediaArgs *)pArgs;
 @end
 
-@interface AvmediaMovieView : QTMovieView
+@interface AvmediaMovieView : NSView
 {
 	NSCursor*				mpCursor;
 	AvmediaMoviePlayer*		mpMoviePlayer;
+	NSView*					mpQTMovieView;
 }
++ (NSMenu *)defaultMenu;
 - (MacOSBOOL)becomeFirstResponder;
 - (void)dealloc;
-- (id)init;
+- (NSView *)hitTest:(NSPoint)aPoint;
+- (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent;
 - (void)mouseDown:(NSEvent *)pEvent;
@@ -130,7 +135,10 @@
 - (void)otherMouseUp:(NSEvent *)pEvent;
 - (void)resetCursorRects;
 - (void)setCursor:(NSCursor *)pCursor;
+- (void)setFrame:(NSRect)aRect;
+- (void)setMovie:(NSObject *)pMovie;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
+- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio;
 @end
 
 #endif	// _COMMON_H
