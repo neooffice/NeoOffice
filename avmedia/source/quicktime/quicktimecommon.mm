@@ -50,6 +50,12 @@ typedef NSString * const QTMovieLoopsAttribute_Type;
 
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
+#if __x86_64__
+static MacOSBOOL bAVKitInitialized = NO;
+static Class aAVAssetClass = nil;
+static Class aAVPlayerClass = nil;
+static Class aAVPlayerViewClass = nil;
+#endif	// __x86_64__
 static MacOSBOOL bQTKitInitialized = NO;
 static Class aQTMovieClass = nil;
 static Class aQTMovieViewClass = nil;
@@ -61,6 +67,28 @@ static QTMovieLoopsAttribute_Type *pQTMovieLoopsAttribute = NULL;
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::media;
+
+static void InitializeAVKit()
+{
+#if __x86_64__
+	if ( !bAVKitInitialized )
+	{
+		NSBundle *pAVKitBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/AVKit.framework"];
+		if ( pAVKitBundle )
+		{
+			Class aClass = [pAVKitBundle classNamed:@"AVPlayerView"];
+			if ( [aClass isSubclassOfClass:[NSView class]] )
+			{
+				aAVPlayerViewClass = aClass;
+				aAVAssetClass = [pAVKitBundle classNamed:@"AVAsset"];
+				aAVPlayerClass = [pAVKitBundle classNamed:@"AVPlayer"];
+			}
+		}
+
+		bAVKitInitialized = YES;
+	}
+#endif // __x86_64__
+}
 
 static void InitializeQTKit()
 {
@@ -74,7 +102,7 @@ static void InitializeQTKit()
 			{
 				aQTMovieViewClass = aClass;
 				aQTMovieClass = [pQTKitBundle classNamed:@"QTMovie"];
-				if ( aQTMovieClass && aQTMovieViewClass );
+				if ( aQTMovieClass && aQTMovieViewClass )
 				{
 					void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
 					if ( pLib )
@@ -231,6 +259,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 @end
 
 @interface NSObject (QTMovie)
++ (id)movieWithURL:(NSURL *)pURL error:(NSError **)ppError;
 - (QTTime)currentTime;
 - (QTTime)duration;
 - (NSImage *)frameImageAtTime:(QTTime)aTime;
@@ -384,6 +413,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)initialize:(NSURL *)pURL
 {
+	InitializeAVKit();
 	InitializeQTKit();
 
 	[self destroy:self];
@@ -857,6 +887,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	[super initWithFrame:aFrame];
 
+	InitializeAVKit();
 	InitializeQTKit();
 
 	mpCursor = nil;
