@@ -435,7 +435,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			if ( [mpMovie respondsToSelector:@selector(setSelection:)] && [mpMovie respondsToSelector:@selector(duration)] )
 				[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
 
-			NSImage *pImage = [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( 0 )];
+			NSImage *pImage = nil;
+			if ( [mpMovie respondsToSelector:@selector(frameImageAtTime:)] )
+				pImage = [mpMovie frameImageAtTime:pQTMakeTimeWithTimeInterval( 0 )];
 			if ( pImage )
 				maPreferredSize = [pImage size];
 			else
