@@ -2187,21 +2187,25 @@ sal_Bool SfxObjectShell::SaveTo_Impl
             SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
             if ( pTopViewFrame )
             {
-                Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
-                if ( pWindow )
+                // Fix titlebar changing bug reported in the following
+                // NeoOffice forum post by not creating documents when
+                // in a SID_SAVETO action:
+				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8623
+                if ( !bCopyTo )
                 {
-                    NSView *pView = pWindow->GetSystemData()->pView;
-                    if ( pView )
+                    Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
+                    if ( pWindow )
                     {
-                        ::rtl::OUString aPath;
-                        ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
-                        if ( aBaseURL.getLength() )
-                            ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
-
-                        // Don't create native documents for temporary files
-                        if ( aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
+                        NSView *pView = pWindow->GetSystemData()->pView;
+                        if ( pView )
                         {
-                            if ( aPath.getLength() )
+                            ::rtl::OUString aPath;
+                            ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
+                            if ( aBaseURL.getLength() )
+                                ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
+
+                            // Don't create native documents for temporary files
+                            if ( aPath.getLength() && aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
                             {
                                 CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
                                 if ( aString )
