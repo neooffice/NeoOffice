@@ -1380,7 +1380,7 @@ void JavaSalGraphics::setNeedsDisplay( NSView *pView )
 		NSRect aBounds = [pView bounds];
 		NSRect aDirtyRect = NSRectFromCGRect( maNeedsDisplayRect );
 
-		// If window is flipped, flip coordiantes. If window is unflipped and
+		// If view is flipped, flip coordinates. If view is unflipped and
 		// source and destination height do not match, adjust so that they
 		// align coordinates so that the source's top matches the destination's
 		// top
@@ -1389,7 +1389,9 @@ void JavaSalGraphics::setNeedsDisplay( NSView *pView )
 		else
 			aDirtyRect.origin.y += aBounds.size.height - aLayerSize.height;
 
-		[pView setNeedsDisplayInRect:aDirtyRect];
+		aDirtyRect = NSIntersectionRect( aDirtyRect, aBounds );
+		if ( aDirtyRect.size.width > 0 && aDirtyRect.size.height > 0 )
+			[pView setNeedsDisplayInRect:aDirtyRect];
 	}
 
 	maNeedsDisplayRect = CGRectNull;
