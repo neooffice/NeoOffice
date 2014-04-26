@@ -264,6 +264,12 @@ build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
 	( cd "$(OOO-BUILD_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
+build.oo_bridges_patch: $(OO_PATCHES_HOME)/bridges.patch build.ooo-build_patches
+	cd "$(OOO-BUILD_BUILD_HOME)/bridges/source/cpp_uno/gcc3_macosx_intel" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/bridges_source_cpp_uno_cxx_macosx_x86-64.tar.gz"
+	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
 build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
 	cd "$(OOO-BUILD_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/nss.tar.gz"
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
