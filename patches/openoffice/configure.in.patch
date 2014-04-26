@@ -1,5 +1,5 @@
---- configure.in	2010-02-10 00:15:20.000000000 -0800
-+++ configure.in	2010-02-10 00:24:15.000000000 -0800
+--- configure.in	2014-04-22 16:31:37.000000000 -0700
++++ configure.in	2014-04-22 16:59:18.000000000 -0700
 @@ -2559,7 +2559,7 @@
        LDFLAGS=$sharedlink_ldflags_save
     fi
@@ -9,7 +9,21 @@
        AC_MSG_CHECKING([if gcc has a visibility bug with class-level attributes (GCC bug 26905)])
        cat >visibility.cxx <<_ACEOF
  #pragma GCC visibility push(hidden)
-@@ -4346,11 +4346,6 @@
+@@ -4305,9 +4305,11 @@
+ 
+ if test "$BUILD_MOZAB" = "TRUE"; then
+    if test -z "$MOZILLA_VERSION"; then
+-      MOZILLA_VERSION=1.7.5
++      MOZILLA_VERSION=3.16
+    fi
+-   if test "$MOZILLA_VERSION" = "1.7b" ; then
++   if test "$MOZILLA_VERSION" = "3.16" ; then
++      MOZILLA_SOURCE_VERSION="nss-3.16-with-nspr-4.10.4"
++   elif test "$MOZILLA_VERSION" = "1.7b" ; then
+       MOZILLA_SOURCE_VERSION="mozilla-source-1.7b-source"
+    else
+       MOZILLA_SOURCE_VERSION="mozilla-source-${MOZILLA_VERSION}"
+@@ -4346,11 +4348,6 @@
        if test "$MOZILLA_TOOLKIT" = "gtk2"; then
           AC_MSG_NOTICE([checking whether mozilla can be built...])
           PKG_CHECK_MODULES(MOZGTK2, gtk+-2.0 >= 2.4 libIDL-2.0 >= 0.8, AC_MSG_NOTICE([OK - can build mozilla]), AC_MSG_ERROR([Prerequisites to build mozilla not met. Either use the precompiled mozilla binaries or install the missing packages]))

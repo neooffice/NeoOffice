@@ -1,4 +1,4 @@
 #!/bin/sh
 
-# Force 32 bit compilation for all binaries
-exec /usr/bin/`basename "$0"` -arch i386 "${@}"
+# Force 64 bit compilation for all binaries
+exec /usr/bin/`basename "$0"` -arch x86_64 "${@}"

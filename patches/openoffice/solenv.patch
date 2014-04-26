@@ -193,3 +193,20 @@
  .IF "$(SOLAR_JAVA)"!=""
  	JAVADEF=-DSOLAR_JAVA
  	JAVAFLAGSDEBUG=-g
+--- bin/macosx-create-bundle	2008-04-10 09:50:40.000000000 -0700
++++ bin/macosx-create-bundle	2014-04-21 08:20:25.000000000 -0700
+@@ -84,12 +84,12 @@
+ 	filetype=`file -L "$inputfile"`
+ 
+ 	# Create bundle based on file type
+-	if printf "$filetype" | grep -q 'Mach-O executable'; then
++	if printf "$filetype" | grep -q 'Mach-O 64-bit executable'; then
+ 
+ 		# Do nothing as this step is obsolete
+         :
+ 
+-	elif printf "$filetype" | grep -q 'Mach-O dynamically linked shared library'; then
++	elif printf "$filetype" | grep -q 'Mach-O 64-bit dynamically linked shared library'; then
+ 		# Screen out lib\w+static libraries as they are not used directly
+ 		if ! printf "$inputfilename" | grep -q -x -E 'lib\w+static.*\.dylib'; then
+ 			# Create jnilib link

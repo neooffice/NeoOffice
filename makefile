@@ -194,7 +194,7 @@ build.ooo-build_configure: build.ooo-build_checkout build.sun-source_download
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
 ifeq ("$(OS_TYPE)","MacOSX")
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java=no --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.5 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java=no --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.5 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=cocoa --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
@@ -254,7 +254,7 @@ build.oo_patches: \
 	build.oo_vos_patch \
 	build.oo_wizards_patch \
 	build.oo_xmlhelp_patch
-# Copy modified compiler scripts to force 32 bit compilation of all binaries
+# Copy modified compiler scripts to force 64 bit compilation of all binaries
 	mkdir -p "$(COMPILERDIR)"
 	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
@@ -265,11 +265,10 @@ build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
 	touch "$@"
 
 build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
-ifeq ("$(OS_TYPE)","MacOSX")
+	cd "$(OOO-BUILD_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(MOZILLA_PATCHES_HOME)/aoo-4.0.1_main_nss.tar.gz"
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/mozilla-source-1.7.5.tar.gz" .
-endif
+	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/nss-3.16-with-nspr-4.10.4.tar.gz" .
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
