@@ -265,7 +265,7 @@ build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
 	touch "$@"
 
 build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
-	cd "$(OOO-BUILD_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(MOZILLA_PATCHES_HOME)/aoo-4.0.1_main_nss.tar.gz"
+	cd "$(OOO-BUILD_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/nss.tar.gz"
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/nss-3.16-with-nspr-4.10.4.tar.gz" .
