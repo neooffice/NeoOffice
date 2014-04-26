@@ -7,8 +7,6 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-OpenOffice ne démarre pas? Essayez-vous NeoOffice.
-
 NeoOffice est une suite bureautique complète pour OS X. Avec NeoOffice, les utilisateurs peuvent lire, créer et modifier des documents textes, feuilles de calcul et présentations. NeoOffice peut ouvrir des documents OpenOffice. NeoOffice peut aussi ouvrir la plupart des documents Microsoft Word, Excel et PowerPoint.
 
 Utilisez-vous déjà NeoOffice ou OpenOffice? Nous vous recommandons de cliquer sur le lien de Assistance : NeoOffice et de lire la liste des modifications avant vous mettez à niveau vers cette version de NeoOffice.
