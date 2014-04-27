@@ -34,8 +34,6 @@
 ##########################################################################
 
 # Macros that are overridable by make command line options
-CC=cc
-CXX=c++
 EXTRA_PATH=/opt/local/bin
 GNUCP=$(EXTRA_PATH)/gcp
 LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
@@ -61,6 +59,9 @@ PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 ifndef TMP
 TMP:=/tmp
 endif
+# Force use of gcc as build will fail with clang
+CC=gcc
+CXX=g++
 SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
 ifeq ("$(shell uname -s)","Darwin")

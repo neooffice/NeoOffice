@@ -50,9 +50,11 @@ Steps for building on 10.8 Mountain Lion for Intel
 At this time, the NeoOffice will not build on Mac OS X 10.8 Mountain Lion. This section is only for keeping track of the requirements that we have found so far. 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   Xcode Tools v4.6.2
+   Xcode Tools v4.6.3
 
    After installing Xcode, install the XCode Command Line Tools by launching XCode and selecting the Xcode :: Preferences menu. In the dialog that appears, click on the Downloads tab and press the "Install" button for the "Command Line Tools" option.
+
+   Warning: do *not* install Xcode 5 or a separately downloaded command line tools package as it will cause the "gcc" and "g++" to really use the clang compiler instead of the gcc compiler.
 
 2. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
