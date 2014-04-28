@@ -9,14 +9,25 @@
  }
  // -------------------------------------------------------------------------
  
---- source/drivers/mozab/MResultSet.cxx	2008-12-30 06:32:01.000000000 -0800
-+++ source/drivers/mozab/MResultSet.cxx	2012-09-29 17:38:29.000000000 -0700
-@@ -551,7 +551,7 @@
-     ResultSetEntryGuard aGuard( *this );
+--- source/drivers/mozab/makefile.mk	2009-02-17 01:08:51.000000000 -0800
++++ source/drivers/mozab/makefile.mk	2014-04-28 07:26:50.000000000 -0700
+@@ -34,7 +34,7 @@
+ TARGET=mozab
+ TARGET2=$(TARGET)drv
  
-     OSL_TRACE("In/Out: OResultSet::getStatement" );
--	return m_xStatement;
-+	return Reference< XInterface >( m_xStatement );
- }
- // -------------------------------------------------------------------------
+-.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || ( "$(OS)" == "MACOSX" )
++.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || ( "$(OS)" == "MACOSX" ) || "$(UPD)"=="310"
+ all: 
+ 	@echo "    Not building the mozilla address book driver"
+ 	@echo "    dependency to Mozilla developer snapshots not feasable at the moment"
+--- source/drivers/mozab/mozillasrc/makefile.mk	2008-12-30 06:32:01.000000000 -0800
++++ source/drivers/mozab/mozillasrc/makefile.mk	2014-04-28 07:25:56.000000000 -0700
+@@ -52,7 +52,7 @@
  
+ .INCLUDE : settings.mk
+ 
+-.IF  ("$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO"
++.IF  ("$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || "$(UPD)"=="310"
+ dummy:
+ 	@echo "		Not building the mozillasrc stuff in OpenOffice.org build"
+ 	@echo "		dependency to Mozilla developer snapshots not feasable at the moment"
