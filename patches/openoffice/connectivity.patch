@@ -31,3 +31,14 @@
  dummy:
  	@echo "		Not building the mozillasrc stuff in OpenOffice.org build"
  	@echo "		dependency to Mozilla developer snapshots not feasable at the moment"
+--- source/drivers/mozab/bootstrap/makefile.mk	2009-02-17 01:08:51.000000000 -0800
++++ source/drivers/mozab/bootstrap/makefile.mk	2014-04-28 07:49:37.000000000 -0700
+@@ -64,7 +64,7 @@
+ 	$(SLO)$/MMozillaBootstrap.obj \
+ 	$(SLO)$/MNSFolders.obj
+ 
+-.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES" ) || ( "$(WITH_MOZILLA)" == "NO" ) || ( "$(OS)" == "MACOSX" )
++.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES" ) || ( "$(WITH_MOZILLA)" == "NO" ) || ( "$(OS)" == "MACOSX" ) || "$(UPD)" == "310"
+ CDEFS+=-DMINIMAL_PROFILEDISCOVER
+ 
+ SHL1TARGET=$(TARGET)
