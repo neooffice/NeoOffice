@@ -216,6 +216,7 @@ build.ooo-build_patches: \
 build.oo_patches: \
 	build.oo_configure.in_patch \
 	build.oo_set_soenv.in_patch \
+	build.oo_avmedia_patch \
 	build.oo_basic_patch \
 	build.oo_bean_patch \
 	build.oo_binfilter_patch \
