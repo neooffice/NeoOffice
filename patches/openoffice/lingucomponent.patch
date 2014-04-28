@@ -16,3 +16,14 @@ diff -u -r1.7 mythes.cxx
  
      if (thInitialize(idxpath, datpath) != 1) {
          fprintf(stderr,"Error - can't open %s or %s\n",idxpath, datpath);
+--- source/spellcheck/macosxspell/macspellimp.cxx	2008-12-15 05:01:46.000000000 -0800
++++ source/spellcheck/macosxspell/macspellimp.cxx	2014-04-28 12:34:33.000000000 -0700
+@@ -318,7 +318,7 @@
+             aLang = [aLang  stringByAppendingString:aTaggedCountry];
+         }
+         
+-        int aCount;
++        NSInteger aCount;
+         NSRange range = [macSpell checkSpellingOfString:aNSStr startingAt:0 language:aLang wrap:FALSE inSpellDocumentWithTag:macTag wordCount:&aCount];
+ 		int rVal = 0; 
+ 		if(range.length>0)
