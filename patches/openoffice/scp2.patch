@@ -27,7 +27,7 @@
  #endif
  
  #if defined(WNT) && !defined(DISABLE_ATL)
-@@ -1863,3 +1863,153 @@
+@@ -1863,3 +1863,141 @@
  STD_UNO_LIB_FILE_PATCH( gid_File_Lib_For, for)
  STD_LIB_FILE_PATCH( gid_File_Lib_Forui, forui)
  
@@ -42,7 +42,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Nspr4
@@ -54,7 +53,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Nss3
@@ -66,7 +64,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Nsckbi
@@ -78,7 +75,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Nssdbm3
@@ -90,7 +86,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Nssutil3
@@ -102,7 +97,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Plc4
@@ -114,7 +108,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Plds4
@@ -126,7 +119,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Smime3
@@ -138,7 +130,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Softokn3
@@ -150,7 +141,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +File gid_File_Lib_Ssl3
@@ -162,7 +152,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +#ifndef MACOSX
@@ -175,7 +164,6 @@
 +    #endif
 +    Dir = gid_Dir_Program;
 +    Styles = (PACKED,UNO_COMPONENT);
-+    RegistryID = gid_Starregistry_Services_Rdb;
 +End
 +
 +#endif
