@@ -36,8 +36,8 @@
 #ifndef __PLUGIN_INC_JAVAPLUG_HXX
 #define __PLUGIN_INC_JAVAPLUG_HXX
 
-#include <npapi.h>
-#include <npupp.h>
+#include <npsdk/npapi.h>
+#include <npsdk/npupp.h>
 
 #include <plugin/plcom.hxx>
 
