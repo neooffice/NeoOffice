@@ -27,25 +27,159 @@
  #endif
  
  #if defined(WNT) && !defined(DISABLE_ATL)
-@@ -1863,3 +1863,19 @@
+@@ -1863,3 +1863,153 @@
  STD_UNO_LIB_FILE_PATCH( gid_File_Lib_For, for)
  STD_LIB_FILE_PATCH( gid_File_Lib_Forui, forui)
  
 +#if !defined(SYSTEM_MOZILLA) && !defined(WITHOUT_MOZILLA) && SUPD == 310
-+STD_LIB_FILE(gid_File_Lib_Freebl3, freebl3)
-+STD_LIB_FILE(gid_File_Lib_Nspr4, nspr4)
-+STD_LIB_FILE(gid_File_Lib_Nss3, nss3)
-+STD_LIB_FILE(gid_File_Lib_Nsckbi, nssckbi)
-+STD_LIB_FILE(gid_File_Lib_Nssdbm3, nssdbm3)
-+STD_LIB_FILE(gid_File_Lib_Nssutil3, nssutil3)
-+STD_LIB_FILE(gid_File_Lib_Plc4, plc4)
-+STD_LIB_FILE(gid_File_Lib_Plds4, plds4)
-+STD_LIB_FILE(gid_File_Lib_Smime3, smime3)
-+STD_LIB_FILE(gid_File_Lib_Softokn3, softokn3)
-+STD_LIB_FILE(gid_File_Lib_Ssl3, ssl3)
++
++File gid_File_Lib_Freebl3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libfreebl3,UNXSUFFIX));
++    #else
++        Name = "freebl3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Nspr4
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libnspr4,UNXSUFFIX));
++    #else
++        Name = "nspr4.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Nss3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libnss3,UNXSUFFIX));
++    #else
++        Name = "nss3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Nsckbi
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libnssckbi,UNXSUFFIX));
++    #else
++        Name = "nssckbi.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Nssdbm3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libnssdbm3,UNXSUFFIX));
++    #else
++        Name = "nssdbm3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Nssutil3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libnssutil3,UNXSUFFIX));
++    #else
++        Name = "nssutil3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Plc4
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libplc4,UNXSUFFIX));
++    #else
++        Name = "plc4.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Plds4
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libplds4,UNXSUFFIX));
++    #else
++        Name = "plds4.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Smime3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libsmime3,UNXSUFFIX));
++    #else
++        Name = "smime3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Softokn3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libsoftokn3,UNXSUFFIX));
++    #else
++        Name = "softokn3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
++File gid_File_Lib_Ssl3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libssl3,UNXSUFFIX));
++    #else
++        Name = "ssl3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
 +#ifndef MACOSX
-+STD_LIB_FILE( gid_File_Lib_Sqlite3, sqlite3)
++File gid_File_Lib_Sqlite3
++    TXT_FILE_BODY;
++	#ifdef UNX
++        Name = STRING(CONCAT2(libsqlite3,UNXSUFFIX));
++    #else
++        Name = "sqlite3.dll";
++    #endif
++    Dir = gid_Dir_Program;
++    Styles = (PACKED,UNO_COMPONENT);
++    RegistryID = gid_Starregistry_Services_Rdb;
++End
++
 +#endif
++
 +#endif
 --- source/ooo/file_ooo.scp	2011-02-01 19:30:06.000000000 -0800
 +++ source/ooo/file_ooo.scp	2011-12-20 10:45:11.000000000 -0800
