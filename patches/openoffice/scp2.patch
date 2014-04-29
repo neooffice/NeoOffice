@@ -27,6 +27,26 @@
  #endif
  
  #if defined(WNT) && !defined(DISABLE_ATL)
+@@ -1863,3 +1863,19 @@
+ STD_UNO_LIB_FILE_PATCH( gid_File_Lib_For, for)
+ STD_LIB_FILE_PATCH( gid_File_Lib_Forui, forui)
+ 
++#if !defined(SYSTEM_MOZILLA) && !defined(WITHOUT_MOZILLA) && SUPD == 310
++STD_LIB_FILE(gid_File_Lib_Freebl3, freebl3)
++STD_LIB_FILE(gid_File_Lib_Nspr4, nspr4)
++STD_LIB_FILE(gid_File_Lib_Nss3, nss3)
++STD_LIB_FILE(gid_File_Lib_Nsckbi, nssckbi)
++STD_LIB_FILE(gid_File_Lib_Nssdbm3, nssdbm3)
++STD_LIB_FILE(gid_File_Lib_Nssutil3, nssutil3)
++STD_LIB_FILE(gid_File_Lib_Plc4, plc4)
++STD_LIB_FILE(gid_File_Lib_Plds4, plds4)
++STD_LIB_FILE(gid_File_Lib_Smime3, smime3)
++STD_LIB_FILE(gid_File_Lib_Softokn3, softokn3)
++STD_LIB_FILE(gid_File_Lib_Ssl3, ssl3)
++#ifndef MACOSX
++STD_LIB_FILE( gid_File_Lib_Sqlite3, sqlite3)
++#endif
++#endif
 --- source/ooo/file_ooo.scp	2011-02-01 19:30:06.000000000 -0800
 +++ source/ooo/file_ooo.scp	2011-12-20 10:45:11.000000000 -0800
 @@ -480,7 +480,7 @@
