@@ -1,5 +1,14 @@
 --- source/ooo/file_library_ooo.scp	2011-02-01 19:30:04.000000000 -0800
 +++ source/ooo/file_library_ooo.scp	2011-12-20 10:44:48.000000000 -0800
+@@ -123,7 +123,7 @@
+   #endif
+ End
+ 
+-#ifdef WITH_LDAP
++#if defined WITH_LDAP && SUPD != 310
+ File gid_File_Lib_Ldapbe2
+     TXT_FILE_BODY;
+     Styles = (PACKED,UNO_COMPONENT);
 @@ -1072,7 +1072,7 @@
  STD_UNO_LIB_FILE( gid_File_Lib_Offacc, offacc)
  
@@ -37,6 +46,15 @@
  
  #endif
  
+@@ -1152,7 +1152,7 @@
+     Name = "text.mod";
+ End
+ 
+-#if !defined(SYSTEM_MOZILLA) && !defined(WITHOUT_MOZILLA) 
++#if !defined(SYSTEM_MOZILLA) && !defined(WITHOUT_MOZILLA) && SUPD != 310
+ 
+ File gid_File_Mozilla_Runtime
+     TXT_FILE_BODY;
 --- prj/build.lst	2008-07-30 06:38:31.000000000 -0700
 +++ prj/build.lst	2012-09-29 16:18:12.000000000 -0700
 @@ -1,4 +1,4 @@
