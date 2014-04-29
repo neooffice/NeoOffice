@@ -1311,26 +1311,35 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
-		// Fix bug 2977 font misencoding and bad font matching
-		if (nUSHORT==2010)
-			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+		{
+			// Fix bug 2977 font misencoding and bad font matching
+			if (nUSHORT==2010)
+				aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
 
 #ifdef MACOSX
-		Str255 aPascalName;
-		*aPascalName = '\0';
-		GetFontName( nUSHORT, aPascalName );
-		if ( *aPascalName )
-		{
-			sal_Char sFontName[ *aPascalName + 1 ];
-			memcpy( sFontName, (sal_Char *)aPascalName + 1, *aPascalName );
-			sFontName[ *aPascalName ] = '\0';
-			aActFont.SetName( String( sFontName, gsl_getSystemTextEncoding() ) );
-		}
-		else
+			CTFontRef aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)nUSHORT, 0, NULL, NULL );
+			if ( aCTFont )
+			{
+				CFStringRef aCTFontName = CTFontCopyFullName( aCTFont );
+				if ( aCTFontName )
+				{
+					CFIndex nCTLen = CFStringGetLength( aCTFontName );
+					CFRange aCTRange = CFRangeMake( 0, nCTLen );
+					sal_Unicode pCTBuffer[ nCTLen + 1 ];
+					CFStringGetCharacters( aCTFontName, aCTRange, pCTBuffer );
+					pCTBuffer[ nCTLen ] = 0;
+					CFRelease( aCTFontName );
+					aActFont.SetName( ::rtl::OUString( pCTBuffer ) );
+				}
+
+				CFRelease( aCTFont );
+			}
+			else
 #endif	// MACOSX
 			if (nUSHORT==2515)
-		{
-			aActFont.SetName( aMTExtraFontName );
+			{
+				aActFont.SetName( aMTExtraFontName );
+			}
 		}
 #endif	// USE_JAVA
 		eActMethod=PDM_UNDEFINED;
