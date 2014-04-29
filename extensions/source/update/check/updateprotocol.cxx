@@ -62,7 +62,7 @@
 #include <CoreServices/CoreServices.h>
 #include <postmac.h>
 
-typedef OSErr Gestalt_Type( OSType selector, long *response );
+typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
 
 #endif	// MACOSX
 
