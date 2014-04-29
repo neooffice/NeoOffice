@@ -41,7 +41,7 @@
 +        Name = "freebl3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Nspr4
@@ -52,7 +52,7 @@
 +        Name = "nspr4.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Nss3
@@ -63,7 +63,7 @@
 +        Name = "nss3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Nsckbi
@@ -74,7 +74,7 @@
 +        Name = "nssckbi.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Nssdbm3
@@ -85,7 +85,7 @@
 +        Name = "nssdbm3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Nssutil3
@@ -96,7 +96,7 @@
 +        Name = "nssutil3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Plc4
@@ -107,7 +107,7 @@
 +        Name = "plc4.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Plds4
@@ -118,7 +118,7 @@
 +        Name = "plds4.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Smime3
@@ -129,7 +129,7 @@
 +        Name = "smime3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Softokn3
@@ -140,7 +140,7 @@
 +        Name = "softokn3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +File gid_File_Lib_Ssl3
@@ -151,7 +151,7 @@
 +        Name = "ssl3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +#ifndef MACOSX
@@ -163,7 +163,7 @@
 +        Name = "sqlite3.dll";
 +    #endif
 +    Dir = gid_Dir_Program;
-+    Styles = (PACKED,UNO_COMPONENT);
++    Styles = (PACKED);
 +End
 +
 +#endif
