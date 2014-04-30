@@ -610,7 +610,7 @@ JavaSalGraphics::~JavaSalGraphics()
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
+void JavaSalGraphics::GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY )
 {
 	rDPIX = mnDPIX;
 	rDPIY = mnDPIY;
@@ -924,18 +924,18 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
+void JavaSalGraphics::drawPolyPolygon( sal_uInt32 nPoly, const sal_uInt32* pPoints, PCONSTSALPOINT* pPtAry )
 {
 	if ( ( mnFillColor || mnLineColor ) && nPoly && pPoints && pPtAry )
 	{
 		::basegfx::B2DPolyPolygon aPolyPoly;
-		for ( ULONG i = 0 ; i < nPoly; i++ )
+		for ( sal_uInt32 i = 0 ; i < nPoly; i++ )
 		{
 			PCONSTSALPOINT pPolyPtAry = pPtAry[ i ];
 			if ( pPolyPtAry )
 			{
 				::basegfx::B2DPolygon aPoly;
-				for ( ULONG j = 0 ; j < pPoints[ i ]; j++ )
+				for ( sal_uInt32 j = 0 ; j < pPoints[ i ]; j++ )
 					aPoly.append( ::basegfx::B2DPoint( pPolyPtAry[ j ].mnX, pPolyPtAry[ j ].mnY ) );
 				aPoly.setClosed( true );
 				aPoly.removeDoublePoints();
@@ -1042,7 +1042,7 @@ sal_Bool JavaSalGraphics::drawPolygonBezier( ULONG nPoints, const SalPoint* pPtA
 
 // -----------------------------------------------------------------------
 
-sal_Bool JavaSalGraphics::drawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry )
+sal_Bool JavaSalGraphics::drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt32* nPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry )
 {
 	return sal_False;
 }
@@ -1261,8 +1261,8 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 	// Scale printer context to match OOo resolution
 	if ( mpPrinter )
 	{
-		long nDPIX;
-		long nDPIY;
+		sal_Int32 nDPIX;
+		sal_Int32 nDPIY;
 		GetResolution( nDPIX, nDPIY );
 		if ( nDPIX && nDPIY && !CGRectIsEmpty( aBounds ) )
 		{

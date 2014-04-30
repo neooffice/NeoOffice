@@ -959,7 +959,7 @@ bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* pList, const String& rFil
 // -----------------------------------------------------------------------
 
 BOOL JavaSalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
-                                    const ImplFontData* pFont, long* pGlyphIDs,
+                                    const ImplFontData* pFont, sal_Int32* pGlyphIDs,
                                     sal_uInt8* pEncoding, sal_Int32* pWidths,
                                     int nGlyphs, FontSubsetInfo& rInfo )
 {
