@@ -546,16 +546,16 @@ void ProcessShutdownIconCommand( int nCommand )
 {
 	const ::std::vector< QuickstartMenuItemDescriptor >*	mpItems;
 }
-+ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
++ (id)createWithItemDescriptors:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 - (void)addMenuItems:(id)pObject;
-- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
+- (id)initWithItemDescriptors:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 @end
 
 @implementation QuickstartMenuItems
 
-+ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
++ (id)createWithItemDescriptors:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
-	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItems:pItems];
+	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItemDescriptors:pItems];
 	[pRet autorelease];
 	return pRet;
 }
@@ -612,7 +612,7 @@ void ProcessShutdownIconCommand( int nCommand )
 	}
 }
 
-- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
+- (id)initWithItemDescriptors:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
 	[super init];
 
@@ -787,7 +787,7 @@ extern "C" void java_init_systray()
 
 	ULONG nCount = Application::ReleaseSolarMutex();
 
-	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItems:&aAppMenuItems];
+	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItemDescriptors:&aAppMenuItems];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
 
