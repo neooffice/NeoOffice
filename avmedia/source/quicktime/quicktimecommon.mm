@@ -916,18 +916,25 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	mpQTMovieView = nil;
 	if ( aQTMovieViewClass )
 	{
-		mpQTMovieView = [[aQTMovieViewClass alloc] init];
+		mpQTMovieView = [aQTMovieViewClass alloc];
 		if ( mpQTMovieView )
 		{
-			[mpQTMovieView retain];
-			[mpQTMovieView setFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
-			if ( [mpQTMovieView respondsToSelector:@selector(setControllerVisible:)] )
-				[mpQTMovieView setControllerVisible:NO];
-			if ( [mpQTMovieView respondsToSelector:@selector(setShowsResizeIndicator:)] )
-				[mpQTMovieView setShowsResizeIndicator:NO];
-			if ( [mpQTMovieView respondsToSelector:@selector(setEditable:)] )
-				[mpQTMovieView setEditable:NO];
-			[self addSubview:mpQTMovieView];
+			if ( [mpQTMovieView isKindOfClass:[NSView class]] )
+			{
+				[(NSView *)mpQTMovieView initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
+				if ( [mpQTMovieView respondsToSelector:@selector(setControllerVisible:)] )
+					[mpQTMovieView setControllerVisible:NO];
+				if ( [mpQTMovieView respondsToSelector:@selector(setShowsResizeIndicator:)] )
+					[mpQTMovieView setShowsResizeIndicator:NO];
+				if ( [mpQTMovieView respondsToSelector:@selector(setEditable:)] )
+					[mpQTMovieView setEditable:NO];
+				[self addSubview:mpQTMovieView];
+			}
+			else
+			{
+				[mpQTMovieView release];
+				mpQTMovieView = nil;
+			}
 		}
 	}
 
@@ -1045,7 +1052,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	if ( pMovie && [pMovie isKindOfClass:aQTMovieClass] )
 	{
-		if ( [pMovie isKindOfClass:aQTMovieClass] && mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
+		if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
 			[mpQTMovieView setMovie:(QTMovie *)pMovie];
 	}
 }
