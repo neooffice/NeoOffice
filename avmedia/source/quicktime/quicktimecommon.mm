@@ -1050,7 +1050,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)setMovie:(NSObject *)pMovie
 {
-	if ( pMovie && [pMovie isKindOfClass:aQTMovieClass] )
+	if ( !pMovie || [pMovie isKindOfClass:aQTMovieClass] )
 	{
 		if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setMovie:)] )
 			[mpQTMovieView setMovie:(QTMovie *)pMovie];
