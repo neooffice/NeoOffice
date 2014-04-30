@@ -995,7 +995,7 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
 	{
-		sal_uInt64 nPtr = 0;
+		sal_IntPtr nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
 			pView = (NSView *)nPtr;
