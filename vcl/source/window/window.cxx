@@ -8527,10 +8527,10 @@ Reference< XDragSource > Window::GetDragSource()
 #elif defined USE_JAVA && defined MACOSX
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
-                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt32)pEnvData->pView );
-                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt32)this );
-                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt32)pEnvData->pView );
-                        aDropTargetAL[ 1 ] = makeAny( (sal_uInt32)this );
+                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt64)pEnvData->pView );
+                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt64)this );
+                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt64)pEnvData->pView );
+                        aDropTargetAL[ 1 ] = makeAny( (sal_uInt64)this );
 #elif defined QUARTZ
 			/* FIXME: Mac OS X specific dnd interface does not exist! *
 			 * Using Windows based dnd as a temporary solution        */
