@@ -262,6 +262,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)newDocument:(id)pSender;
 - (NSOpenPanel *)openPanel;
+- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(MacOSBOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, MacOSBOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler;
 @end
 
 @implementation VCLDocumentController
@@ -353,6 +354,29 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		[self beginOpenPanelWithCompletionHandler:^(NSArray *pResult) {}];
 
 	return mpOpenPanel;
+}
+
+- (void)reopenDocumentForURL:(NSURL *)pURL withContentsOfURL:(NSURL *)pContentsURL display:(MacOSBOOL)bDisplayDocument completionHandler:(void (^)(NSDocument *pDocument, MacOSBOOL bDocumentWasAlreadyOpen, NSError *error))aCompletionHandler
+{
+	VCLDocument *pDoc = nil;
+	if ( pContentsURL )
+	{
+		pContentsURL = [pContentsURL filePathURL];
+		if ( pContentsURL )
+		{
+			NSString *pPath = [pContentsURL path];
+			if ( pPath && [pPath length] )
+			{
+				HandleOpenPrintFileRequest( [pPath UTF8String], sal_False );
+
+				pDoc = [[VCLDocument alloc] init];
+				[pDoc autorelease];
+			}
+		}
+	}
+
+	if ( aCompletionHandler )
+		aCompletionHandler( pDoc, NO, nil );
 }
 
 @end
