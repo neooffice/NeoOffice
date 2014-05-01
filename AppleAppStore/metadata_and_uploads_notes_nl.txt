@@ -7,9 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers tekstdocumenten, werkbladen en presentaties lezen, maken en bewerken. NeoOffice kan OpenOffice-documenten te openen, en ook de meeste Microsoft Word-, Excel- en PowerPoint-documenten te openen.
-
-Al gebruik van NeoOffice of OpenOffice? Wij raden u klikt op de NeoOffice Ondersteuning link en lees de lijst met wijzigingen voordat u een upgrade naar deze versie van NeoOffice.
+NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers tekstdocumenten, werkbladen en presentaties lezen, maken en bewerken. NeoOffice kan OpenOffice-documenten te openen, en ook de meeste Microsoft Word-, Excel- en PowerPoint-documenten te openen. Let op: als u Base, NeoOffice 3.x of OpenOffice gebruiken, wij raden u klikt op de NeoOffice Ondersteuning link en lees de lijst met wijzigingen voordat u een upgrade naar deze versie van NeoOffice.
 
 NeoOffice is zeer stabiel en wordt dagelijks gebruikt door duizenden mensen. De ontwikkelaars van NeoOffice hebben NeoOffice gecreëerd in 2003, toen ze OpenOffice voor het eerst draaiend kregen op OS X.
 
