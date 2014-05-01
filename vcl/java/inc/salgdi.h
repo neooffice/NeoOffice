@@ -252,12 +252,12 @@ public:
 	virtual void			drawRect( long nX, long nY, long nWidth, long nHeight );
 	virtual void			drawPolyLine( ULONG nPoints, const SalPoint* pPtAry );
 	virtual void			drawPolygon( ULONG nPoints, const SalPoint* pPtAry );
-	virtual void			drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry );
+	virtual void			drawPolyPolygon( sal_uInt32 nPoly, const sal_uInt32* pPoints, PCONSTSALPOINT* pPtAry );
 	virtual bool			drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency );
 	virtual bool			drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin );
 	virtual sal_Bool		drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
 	virtual sal_Bool		drawPolygonBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
-	virtual sal_Bool		drawPolyPolygonBezier( ULONG nPoly, const ULONG* pPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry );
+	virtual sal_Bool		drawPolyPolygonBezier( sal_uInt32 nPoly, const sal_uInt32* pPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry );
 	virtual void			copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags );
 	virtual void			copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics );
 	virtual void			drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap );
