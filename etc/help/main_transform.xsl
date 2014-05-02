@@ -1004,6 +1004,13 @@
 <!-- Remove OpenOffice.org support text -->
 <xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3149140' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
+<!-- Remove crash reporting text -->
+<xsl:template match="paragraph[@id='par_id3153345' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[(@id='par_id3147088' or @id='par_id3153681' or @id='hd_id3148538' or @id='par_id3149811' or @id='hd_id3154046' or @id='par_id3147335' or @id='hd_id3159399' or @id='par_id3150504' or @id='par_id3149670' or @id='par_id3153526' or @id='hd_id3150792' or @id='par_id3154366' or @id='par_id3151177') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+
 <!-- Remove Download and Language Pack text -->
 <xsl:template match="paragraph[(@id='hd_id3168534' or @id='par_id3028143') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 <xsl:template match="paragraph[@id='hd_id9999694' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidelanguage_selectxml']]]" />
@@ -1066,6 +1073,81 @@
 <xsl:template match="paragraph[not(@id='hd_id3147143') and not(@id='par_id3143267') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidemobiledevicefiltersxml']]]" />
 <xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidemobiledevicefiltersxml']]]" />
 <xsl:template match="paragraph[(@id='hd_id3151172' or @id='par_id3148386') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0000000005xml']]]" />
+<xsl:template match="paragraph[@id='par_idN105C1' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportsxhp']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[(@id='par_id4094363' or @id='hd_id8414258' or @id='par_idN105C4') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportsxhp']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportsxhp']]]" />
+<xsl:template match="table[@id='tbl_id1888180' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportsxhp']]]" />
+<xsl:template match="paragraph[@id='hd_id3145609' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportxml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="paragraph[(@id='par_id3147265' or @id='hd_id1695608' or @id='par_id7510910' or @id='par_id8138065' or @id='par_id5086825' or @id='par_id4747154' or @id='hd_id3153104' or @id='par_id3125863' or @id='par_id3155431' or @id='par_idN107D7') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportxml']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_reportxml']]]" />
+<xsl:template match="paragraph[@id='par_id3147102' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01040000xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000401.xhp#autopilotagenda']]" />
+<xsl:template match="paragraph[(@id='par_id3156414' or @id='par_id3147571' or @id='hd_id3147088' or @id='par_id3149177' or @id='hd_id3155391' or @id='par_id3156426' or @id='hd_id3145382' or @id='par_id3156346' or @id='par_id3149235') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01040000xml']]]" />
+<xsl:template match="embed[@href='text/shared/autopi/01040100.xhp#seite1']" />
+<xsl:template match="embed[@href='text/shared/autopi/01040200.xhp#seite2']" />
+<xsl:template match="embed[@href='text/shared/autopi/01040300.xhp#seite3']" />
+<xsl:template match="embed[@href='text/shared/autopi/01040400.xhp#seite4']" />
+<xsl:template match="embed[@href='text/shared/autopi/01040500.xhp#seite5']" />
+<xsl:template match="embed[@href='text/shared/autopi/01040600.xhp#seite6']" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#abbrechen' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01040000xml']]]" />
+<xsl:template match="paragraph[@id='par_idN1055C' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="embed[@href='text/shared/explorer/database/tablewizard01.xhp#selecttable']" />
+<xsl:template match="embed[@href='text/shared/explorer/database/tablewizard02.xhp#settype']" />
+<xsl:template match="embed[@href='text/shared/explorer/database/tablewizard03.xhp#setprimary']" />
+<xsl:template match="embed[@href='text/shared/explorer/database/tablewizard04.xhp#createtable']" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#zurueckautopi' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#weiterautopi' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]" />
+<xsl:template match="paragraph[@id='par_idN105AF' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#finish' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#abbrechen' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedexplorerdatabasetablewizard00xml']]]" />
+<xsl:template match="paragraph[(@id='par_idN1061A' or @id='par_idN1061E') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_queriesxhp']]]" />
+<xsl:template match="list[child::listitem[paragraph[@id='par_idN10632']] and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguidedata_queriesxhp']]]" />
+<xsl:template match="paragraph[@id='par_id3153394' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01020000xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000401.xhp#autopilotfax']]" />
+<xsl:template match="paragraph[(@id='par_id3154824' or @id='par_id3147088' or @id='hd_id3156156' or @id='par_id3155628' or @id='hd_id3147335' or @id='par_id3156117' or @id='hd_id3152350' or @id='par_id3146948') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01020000xml']]]" />
+<xsl:template match="embed[@href='text/shared/autopi/01020100.xhp#seite1']" />
+<xsl:template match="embed[@href='text/shared/autopi/01020200.xhp#seite2']" />
+<xsl:template match="embed[@href='text/shared/autopi/01020300.xhp#seite3']" />
+<xsl:template match="embed[@href='text/shared/autopi/01020400.xhp#seite4']" />
+<xsl:template match="embed[@href='text/shared/autopi/01020500.xhp#seite5']" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#abbrechen' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01020000xml']]]" />
+<xsl:template match="paragraph[@id='par_id3150247' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01090000xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000401.xhp#autopilotformular']]" />
+<xsl:template match="paragraph[(@id='par_id3152801' or @id='par_idN10686') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01090000xml']]]" />
+<xsl:template match="embed[@href='text/shared/autopi/01090100.xhp#fieldselection']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090200.xhp#setupsubform']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090210.xhp#addsubformfields']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090220.xhp#getjoinedfields']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090300.xhp#arrangecontrols']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090400.xhp#setdataentry']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090500.xhp#applystyles']" />
+<xsl:template match="embed[@href='text/shared/autopi/01090600.xhp#setname']" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#zurueckautopi' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01090000xml']]]" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#weiterautopi' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01090000xml']]]" />
+<xsl:template match="embed[@href='text/shared/00/00000001.xhp#abbrechen' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01090000xml']]]" />
+<xsl:template match="paragraph[@id='par_id3093440' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01010000xml']]]">
+	<xsl:apply-templates mode="securitywarning" select="." />
+</xsl:template>
+<xsl:template match="section[embed[@href='text/shared/00/00000401.xhp#autopilotbrief']]" />
+<xsl:template match="paragraph[(@id='par_id3149178' or @id='par_id3153748' or @id='par_id3153824' or @id='hd_id3159176' or @id='par_id3153543' or @id='hd_id3150254' or @id='par_id3155923' or @id='hd_id3148944' or @id='par_id3149669' or @id='par_id3144433') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01010000xml']]]" />
+<xsl:template match="embed[@href='text/shared/autopi/01010100.xhp#seite1']" />
+<xsl:template match="embed[@href='text/shared/autopi/01010200.xhp#seite2']" />
+<xsl:template match="embed[@href='text/shared/autopi/01010300.xhp#seite3']" />
+<xsl:template match="embed[@href='text/shared/autopi/01010400.xhp#seite4']" />
+<xsl:template match="embed[@href='text/shared/autopi/01010500.xhp#seite5']" />
+<xsl:template match="embed[@href='text/shared/autopi/01010600.xhp#seite6']" />
 
 <!-- Remove Online Registration text -->
 <xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
