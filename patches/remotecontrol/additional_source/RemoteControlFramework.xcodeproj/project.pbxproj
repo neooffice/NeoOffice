@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3F0C8F5D10FB715100716719 /* MainController.h in Headers */ = {isa = PBXBuildFile; fileRef = 3F0C8F5B10FB715100716719 /* MainController.h */; };
 		3F0C8F5E10FB715100716719 /* MainController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F0C8F5C10FB715100716719 /* MainController.m */; };
+		3FC9AFD21912DB8F00E881AD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351A80DED05A20081A4AD /* AppKit.framework */; };
 		ACA34FB80DED043F0081A4AD /* license.txt in Resources */ = {isa = PBXBuildFile; fileRef = ACA34FA50DED043F0081A4AD /* license.txt */; };
 		ACA34FBA0DED043F0081A4AD /* MultiClickRemoteBehavior.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		ACA34FBB0DED043F0081A4AD /* MultiClickRemoteBehavior.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */; };
@@ -18,10 +19,6 @@
 		ACA34FBF0DED043F0081A4AD /* HIDRemoteControlDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FAE0DED043F0081A4AD /* HIDRemoteControlDevice.m */; };
 		ACA34FC00DED043F0081A4AD /* AppleRemote.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FB00DED043F0081A4AD /* AppleRemote.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		ACA34FC10DED043F0081A4AD /* AppleRemote.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FB10DED043F0081A4AD /* AppleRemote.m */; };
-		ACA351AD0DED05A20081A4AD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351A80DED05A20081A4AD /* AppKit.framework */; };
-		ACA351AE0DED05A20081A4AD /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351A90DED05A20081A4AD /* Carbon.framework */; };
-		ACA351AF0DED05A20081A4AD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AA0DED05A20081A4AD /* Cocoa.framework */; };
-		ACA351B00DED05A20081A4AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AB0DED05A20081A4AD /* Foundation.framework */; };
 		ACA351B10DED05A20081A4AD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AC0DED05A20081A4AD /* IOKit.framework */; };
 		ACA351B30DED05B90081A4AD /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351B20DED05B90081A4AD /* System.framework */; };
 /* End PBXBuildFile section */
@@ -53,7 +50,7 @@
 		3F0C8F5B10FB715100716719 /* MainController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainController.h; sourceTree = "<group>"; };
 		3F0C8F5C10FB715100716719 /* MainController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MainController.m; sourceTree = "<group>"; };
 		3F555B4A10FAF7E000AF0F00 /* RemoteControl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RemoteControl.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		ACA34F880DED03E00081A4AD /* RemoteControl-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "RemoteControl-Info.plist"; sourceTree = "<group>"; };
+		ACA34F880DED03E00081A4AD /* RemoteControl-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "RemoteControl-Info.plist"; sourceTree = "<group>"; };
 		ACA34FA50DED043F0081A4AD /* license.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = license.txt; sourceTree = SOURCE_ROOT; };
 		ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MultiClickRemoteBehavior.h; sourceTree = SOURCE_ROOT; };
 		ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MultiClickRemoteBehavior.m; sourceTree = SOURCE_ROOT; };
@@ -76,10 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ACA351AD0DED05A20081A4AD /* AppKit.framework in Frameworks */,
-				ACA351AE0DED05A20081A4AD /* Carbon.framework in Frameworks */,
-				ACA351AF0DED05A20081A4AD /* Cocoa.framework in Frameworks */,
-				ACA351B00DED05A20081A4AD /* Foundation.framework in Frameworks */,
+				3FC9AFD21912DB8F00E881AD /* AppKit.framework in Frameworks */,
 				ACA351B10DED05A20081A4AD /* IOKit.framework in Frameworks */,
 				ACA351B30DED05B90081A4AD /* System.framework in Frameworks */,
 			);
@@ -197,10 +191,16 @@
 		ACA34F770DED03CA0081A4AD /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = ACA34F780DED03CA0081A4AD /* Build configuration list for PBXProject "RemoteControlFramework" */;
+			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
 			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
 			mainGroup = ACA34F750DED03CA0081A4AD;
 			productRefGroup = ACA34F870DED03E00081A4AD /* Products */;
 			projectDirPath = "";
+			projectRoot = "";
 			targets = (
 				ACA34F850DED03E00081A4AD /* RemoteControl */,
 			);
@@ -263,10 +263,8 @@
 		ACA34F8A0DED03E20081A4AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					ppc,
-					i386,
-				);
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = NO;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -286,6 +284,8 @@
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = RemoteControl;
+				SDKROOT = "";
+				VALID_ARCHS = x86_64;
 				ZERO_LINK = YES;
 			};
 			name = Debug;
@@ -293,10 +293,8 @@
 		ACA34F8B0DED03E20081A4AD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					ppc,
-					i386,
-				);
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -314,6 +312,8 @@
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = RemoteControl;
+				SDKROOT = "";
+				VALID_ARCHS = x86_64;
 				ZERO_LINK = NO;
 			};
 			name = Release;
