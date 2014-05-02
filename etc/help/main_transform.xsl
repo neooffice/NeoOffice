@@ -1012,6 +1012,13 @@
 <!-- Remove OpenOffice.org support text -->
 <xsl:template match="paragraph[(@id='par_id9173253' or @id='par_id3149140' or @id='par_id3154230' or @id='hd_id26327' or @id='par_id1318380' or @id='hd_id2611386' or @id='par_id3166335' or @id='hd_id0915200811081722' or @id='par_id0915200811081778' or @id='hd_id0804200803314150' or @id='par_id0804200803314235') and ancestor::body/preceding-sibling::meta[topic[@id='textshared0500000001xml']]]" />
 
+<!-- Remove crash reporting text -->
+<xsl:template match="paragraph[@id='par_id3153345' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]">
+	<xsl:apply-templates mode="notavailable" select="." />
+</xsl:template>
+<xsl:template match="paragraph[(@id='par_id3147088' or @id='par_id3153681' or @id='hd_id3148538' or @id='par_id3149811' or @id='hd_id3154046' or @id='par_id3147335' or @id='hd_id3159399' or @id='par_id3150504' or @id='par_id3149670' or @id='par_id3153526' or @id='hd_id3150792' or @id='par_id3154366' or @id='par_id3151177') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+<xsl:template match="list[ancestor::body/preceding-sibling::meta[topic[@id='textsharedguideerror_reportxml']]]" />
+
 <!-- Remove Online Registration text -->
 <xsl:template match="section[embed[@href='text/shared/00/00000408.xhp#online']]" />
 <xsl:template match="embed[@href='text/shared/01/08060100.xhp#registrierung']" />
