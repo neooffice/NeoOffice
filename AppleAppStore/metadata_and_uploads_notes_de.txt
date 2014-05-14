@@ -25,7 +25,7 @@ Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben imm
 
 
 What's New in this Version:
-Diese Version erhöht die Scrollgeschwindigkeit und behebt einige Absturzfehler. Diese Version behebt auch einige Fehler, beim Umbenennen eines Dokuments oder bei Verwendung der Versionen-Funktion auftreten.
+This version fixes a crashing bug that may occur when playing a video in a presentation document. This version also fixes the incorrect document name that is displayed in a window's titlebar after exporting a document to PDF.
 
 
 Keywords:
