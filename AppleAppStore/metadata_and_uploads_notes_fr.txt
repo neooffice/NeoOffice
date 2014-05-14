@@ -25,7 +25,7 @@ Depuis lors, les ingénieurs de NeoOffice - Patrick Luby et Ed Peterlin - ont co
 
 
 What's New in this Version:
-Cette version augmente la vitesse de défilement et corrige plusieurs bogues qui viennent s'écraser. Cette version corrige également plusieurs bogues qui se produisent lorsque renommer un document ou utiliser la fonctionnalité Versions.
+This version fixes a crashing bug that may occur when playing a video in a presentation document. This version also fixes the incorrect document name that is displayed in a window's titlebar after exporting a document to PDF.
 
 
 Keywords:
