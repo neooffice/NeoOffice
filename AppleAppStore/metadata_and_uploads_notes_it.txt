@@ -25,7 +25,9 @@ Da allora, gli ingegneri di NeoOffice - Patrick Luby e Ed Peterlin - hanno conti
 
 
 What's New in this Version:
-This version fixes a crashing bug that may occur when playing a video in a presentation document. This version also fixes the incorrect document name that is displayed in a window's titlebar after exporting a document to PDF.
+Questa versione corregge i seguenti bug:
+• Riproduzione di video in un documento a volte potrebbe causare il crash di NeoOffice
+• Esportazione in formato PDF causerebbe NeoOffice per visualizzare il nome errato nella barra del titolo del documento
 
 
 Keywords:
