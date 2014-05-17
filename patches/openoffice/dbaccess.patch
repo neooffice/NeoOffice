@@ -31,3 +31,19 @@
  }
  
  //--------------------------------------------------------------------------
+--- source/ui/dlg/odbcconfig.cxx	2008-05-13 07:03:03.000000000 -0700
++++ source/ui/dlg/odbcconfig.cxx	2014-05-16 15:52:05.000000000 -0700
+@@ -98,7 +98,13 @@
+ #endif
+ 
+ #ifdef SYSTEM_ODBC_HEADERS
++#ifdef MACOSX
++#include <premac.h>
++#endif
+ #include <sqlext.h>
++#ifdef MACOSX
++#include <postmac.h>
++#endif
+ #else
+ #ifndef __SQLEXT_H
+ #include <odbc/sqlext.h>
