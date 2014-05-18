@@ -196,7 +196,6 @@ static MacOSBOOL IsInIgnoreURLs( NSString *pURLString )
 				@"/usr/lib",
 				@"/usr/sbin",
 				@"/usr/share",
-				@"/Library/ODBC",
 				@"/System",
 				nil];
 
