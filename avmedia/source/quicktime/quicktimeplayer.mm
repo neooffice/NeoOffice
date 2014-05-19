@@ -138,11 +138,11 @@ bool Player::create( const ::rtl::OUString& rURL )
 					if ( pURL )
 					{
 						// Do not retain as invoking alloc disables autorelease
-						mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
+						mpMoviePlayer = [[AvmediaMoviePlayer alloc] initWithURL:pURL];
 						if ( mpMoviePlayer )
 						{
 							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-							[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
+							[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:(AvmediaMoviePlayer *)mpMoviePlayer waitUntilDone:YES modes:pModes];
 
 							if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
 							{

@@ -76,14 +76,15 @@
 	NSRect					maRealFrame;
 	int						mnZoomLevel;
 	id						mpSecurityScopedURL;
+	NSURL*					mpURL;
 }
 - (void)bounds:(AvmediaArgs *)pArgs;
 - (double)currentTime:(AvmediaArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (double)duration:(AvmediaArgs *)pArgs;
 - (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs;
-- (id)init;
-- (void)initialize:(NSURL *)pURL;
+- (id)initWithURL:(NSURL *)pURL;
+- (void)initialize:(id)pObject;
 - (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs;
 - (NSObject *)movie;
 - (AvmediaMovieView *)movieView;

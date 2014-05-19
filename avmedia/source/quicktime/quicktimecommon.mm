@@ -364,6 +364,16 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return fRet;
 }
 
+- (void)dealloc
+{
+	[self destroy:self];
+
+	if ( mpURL )
+		[mpURL release];
+
+	[super dealloc];
+}
+
 - (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs
 {
 	NSBitmapImageRep *pRet = nil;
@@ -409,7 +419,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return pRet;
 }
 
-- (id)init
+- (id)initWithURL:(NSURL *)pURL
 {
 	[super init];
 
@@ -418,34 +428,45 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	maPreferredSize = NSMakeSize( 0, 0 );
 	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
 	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
+	mpURL = pURL;
 	mpSecurityScopedURL = nil;
+
+	if ( mpURL )
+	{
+		[mpURL retain];
+
+		// Fix crash when loading URL that needs a security scoped URL by
+		// acquiring the URL immediately instead of waiting to do it on the
+		// main thread. This works because releasing the application mutex on
+		// the main thread does nothing in the vcl/java/source/app/salinst.mm
+		// code.
+		if ( !pApplication_acquireSecurityScopedURLFromNSURL )
+			pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
+		if ( !pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+		if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
+			mpSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( mpURL, sal_True, nil );
+	}
 
 	return self;
 }
 
-- (void)initialize:(NSURL *)pURL
+- (void)initialize:(id)pObject
 {
 	InitializeAVKit();
 	InitializeQTKit();
 
 	[self destroy:self];
 
-	if ( !pURL )
+	if ( !mpURL )
 		return;
-
-	if ( !pApplication_acquireSecurityScopedURLFromNSURL )
-		pApplication_acquireSecurityScopedURLFromNSURL = (Application_acquireSecurityScopedURLFromNSURL_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromNSURL" );
-	if ( !pApplication_releaseSecurityScopedURL )
-		pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-	if ( pApplication_acquireSecurityScopedURLFromNSURL && pApplication_releaseSecurityScopedURL )
-		mpSecurityScopedURL = pApplication_acquireSecurityScopedURLFromNSURL( pURL, sal_True, nil );
 
 	mpMovie = nil;
 	mpMovieView  = nil;
 	if ( aQTMovieClass && class_getClassMethod( aQTMovieClass, @selector(movieWithURL:error:) ) && pQTGetTimeInterval && pQTMakeTimeRange && pQTMakeTimeWithTimeInterval && pQTMovieLoopsAttribute )
 	{
 		NSError *pError = nil;
-		mpMovie = [aQTMovieClass movieWithURL:pURL error:&pError];
+		mpMovie = [aQTMovieClass movieWithURL:mpURL error:&pError];
 		if ( mpMovie && !pError )
 		{
 			[mpMovie retain];
