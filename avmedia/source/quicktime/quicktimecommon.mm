@@ -338,13 +338,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpSuperview release];
 		mpSuperview = nil;
 	}
-
-	if ( mpSecurityScopedURL )
-	{
-		if ( pApplication_releaseSecurityScopedURL )
-			pApplication_releaseSecurityScopedURL( mpSecurityScopedURL );
-		mpSecurityScopedURL = nil;
-	}
 }
 
 - (double)duration:(AvmediaArgs *)pArgs
@@ -370,6 +363,13 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	if ( mpURL )
 		[mpURL release];
+
+	if ( mpSecurityScopedURL )
+	{
+		if ( pApplication_releaseSecurityScopedURL )
+			pApplication_releaseSecurityScopedURL( mpSecurityScopedURL );
+		mpSecurityScopedURL = nil;
+	}
 
 	[super dealloc];
 }
