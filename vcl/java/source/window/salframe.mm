@@ -48,6 +48,7 @@
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
+#import <IOKit/pwr_mgt/IOPMLib.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
 
@@ -212,10 +213,10 @@ static void HandleSystemColorsChangedRequest()
 + (id)createFullScreen:(BOOL)bFullScreen;
 - (id)initFullScreen:(BOOL)bFullScreen;
 - (void)setSystemUIMode:(id)pObject;
-- (void)updateSystemActivity;
 @end
 
-static NSTimer *pUpdateTimer = nil;
+static IOPMAssertionID nIOPMAssertionID;
+static BOOL bIOPMAssertionIDSet = NO;
 
 @implementation VCLSetSystemUIMode
 
@@ -244,46 +245,34 @@ static NSTimer *pUpdateTimer = nil;
 		{
 			[pApp setPresentationOptions:NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar | NSApplicationPresentationDisableAppleMenu | NSApplicationPresentationDisableProcessSwitching];
 
-			// Run the update timer every 15 seconds
-			if ( !pUpdateTimer )
+			// Block sleeping
+			if ( !bIOPMAssertionIDSet )
 			{
-				SEL aSelector = @selector(updateSystemActivity);
-				NSMethodSignature *pSignature = [[self class] instanceMethodSignatureForSelector:aSelector];
-				if ( pSignature )
+				NSString *pBundleDisplayName = nil;
+				NSBundle *pBundle = [NSBundle mainBundle];
+				if ( pBundle )
 				{
-					NSInvocation *pInvocation = [NSInvocation invocationWithMethodSignature:pSignature];
-					if ( pInvocation )
-					{
-						[pInvocation setSelector:aSelector];
-						[pInvocation setTarget:self];
-						pUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:15 invocation:pInvocation repeats:YES];
-						if ( pUpdateTimer )
-						{
-							[pUpdateTimer retain];
-							[self updateSystemActivity];
-						}
-					}
+					NSDictionary *pInfoDict = [pBundle infoDictionary];
+					if ( pInfoDict )
+						pBundleDisplayName = [pInfoDict objectForKey:@"CFBundleDisplayName"];
 				}
+
+				if ( IOPMAssertionCreateWithName( kIOPMAssertionTypeNoDisplaySleep, kIOPMAssertionLevelOn, pBundleDisplayName ? (CFStringRef)pBundleDisplayName : CFSTR( "" ), &nIOPMAssertionID ) == kIOReturnSuccess )
+					bIOPMAssertionIDSet = YES;
 			}
 		}
 		else
 		{
 			[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
-			// Stop the update timer
-			if ( pUpdateTimer )
+			// Stop blocking sleep
+			if ( bIOPMAssertionIDSet )
 			{
-				[pUpdateTimer invalidate];
-				[pUpdateTimer release];
-				pUpdateTimer = nil;
+				bIOPMAssertionIDSet = NO;
+				IOPMAssertionRelease( nIOPMAssertionID );
 			}
 		}
 	}
-}
-
-- (void)updateSystemActivity
-{
-	UpdateSystemActivity( OverallAct );
 }
 
 @end

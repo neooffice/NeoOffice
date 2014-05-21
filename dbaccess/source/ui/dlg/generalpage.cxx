@@ -169,6 +169,11 @@ namespace dbaui
         {
             bool operator() ( const DisplayedType& _rLHS, const DisplayedType& _rRHS )
             {
+#ifndef SOLAR_JAVA
+                // List MySQL last when only ODBC driver is available
+                if ( _rRHS.eType == ::dbaccess::DST_MYSQL_ODBC )
+                    return true;
+#endif	// SOLAR_JAVA
                 return _rLHS.eType < _rRHS.eType;
             }
         };

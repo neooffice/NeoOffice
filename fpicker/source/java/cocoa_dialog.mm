@@ -1618,10 +1618,26 @@ using namespace vos;
 				{
 					NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 
+					// Detach the window from its parent window to stop the
+					// NSSavePanel sheet making parent windows modal when
+					// running in the sandbox on Mac OS X 10.8
+					NSWindow *pParentWindow = [mpWindow parentWindow];
+					if ( pParentWindow )
+					{
+						[pParentWindow retain];
+						[pParentWindow removeChildWindow:mpWindow];
+					}
+
 					// Retain self to ensure that we don't release it before
 					// the completion handler executes
 					[self retain];
 					[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
+						if ( pParentWindow )
+						{
+							[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
+							[pParentWindow release];
+						}
+
 						[self setResult:nRet];
 						[self release];
 					}];
