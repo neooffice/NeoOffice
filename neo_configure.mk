@@ -7,3 +7,4 @@ build.neo_configure_phony:
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_MAC_APP_STORE_URL '$(PRODUCT_MAC_APP_STORE_URL)'" >> "$(OO_ENV_JAVA)"
