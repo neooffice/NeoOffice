@@ -103,7 +103,9 @@ OBJFILES += \
 
 .IF "$(GUIBASE)" == "java"
 OBJFILES += \
-    $(OBJ)$/main_java.obj
+    $(OBJ)$/main_java.obj \
+    $(OBJ)$/main_java_init.obj \
+    $(OBJ)$/main_java_init2.obj
 .ENDIF		# "$(GUIBASE)" == "java"
 
 SLOFILES = $(SHL1OBJS)

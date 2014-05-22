@@ -9,13 +9,11 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *		 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, November 2008
+ *  Patrick Luby, May 2014
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2008 Planamesa Inc.
+ *  Copyright 2014 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,20 +31,11 @@
  *
  ************************************************************************/
 
-#ifndef INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
-#define INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
+#include <string.h>
 
-#include "sal/config.h"
+#include "main_java.h"
 
-#if defined __cplusplus
-extern "C" {
-#endif
-
-int java_main( int argc, char **argv );
-void java_main_init();
-
-#if defined __cplusplus
+void java_main_init()
+{
+	putenv( strdup( "SAL_ENABLE_MAS=1" ) );
 }
-#endif
-
-#endif

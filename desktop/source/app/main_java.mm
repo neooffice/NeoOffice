@@ -38,6 +38,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include "main_java.h"
+
 #define TMPDIR "/var/tmp"
 
 typedef int SofficeMain_Type( int argc, char **argv );
@@ -90,6 +92,8 @@ static NSString *GetNSTemporaryDirectory()
 
 int java_main( int argc, char **argv )
 {
+	java_main_init();
+
 	// Determine if we are running in unopkg mode
 	BOOL bUnoPkg = ( argc >= 2 && !strcmp( "-unopkg", argv[ 1 ] ) ? YES : NO );
 
@@ -315,17 +319,17 @@ int java_main( int argc, char **argv )
 			for ( ; i < argc; i++ )
 			{
 				if ( !strcmp( "-calc", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
+					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-calc" );
 				else if ( !strcmp( "-draw", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
+					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-draw" );
 				else if ( !strcmp( "-impress", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
+					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-impress" );
 				else if ( !strcmp( "-writer", argv[ i ] ) )
-					pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+					pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-writer" );
 			}
 			if ( nCurrentArg == 1 )
-				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
-			pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
+				pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-writer" );
+			pPageinArgs[ nCurrentArg++ ] = strdup( "@pagein-common" );
 			pPageinArgs[ nCurrentArg++ ] = NULL;
 
 			// Execute the pagein command in child process
@@ -347,11 +351,11 @@ int java_main( int argc, char **argv )
 	}
 
 	// File locking is enabled by default
-	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
+	putenv( strdup( "SAL_ENABLE_FILE_LOCKING=1" ) );
 
 	// Elminate libxml2 sandbox file-deny-read of /etc by turning off searching
 	// for XML catalogs
-	putenv( "XML_CATALOG_FILES=" );
+	putenv( strdup( "XML_CATALOG_FILES=" ) );
 
 	// Dynamically load app's main symbol to improve startup speed
 	NSString *pAppMainLibPath = nil;

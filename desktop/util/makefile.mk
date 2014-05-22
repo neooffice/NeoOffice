@@ -83,8 +83,9 @@ APP1NOSAL=TRUE
 APP1RPATH=BRAND
 APP1OBJS=$(OBJ)$/copyright_ascii_sun.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP1OBJS+=\
-	$(OBJ)$/main_java.obj
+APP1OBJS+= \
+	$(OBJ)$/main_java.obj \
+	$(OBJ)$/main_java_init.obj
 APP1STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
 .ELSE		# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
@@ -118,8 +119,9 @@ APP5NOSAL=TRUE
 APP5RPATH=BRAND
 APP5OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP5OBJS+=\
-	$(OBJ)$/main_java.obj
+APP5OBJS+= \
+	$(OBJ)$/main_java.obj \
+	$(OBJ)$/main_java_init.obj
 APP5STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
 .ELSE		# "$(GUIBASE)" == "java"
 APP5STDLIBS = $(SALLIB) $(SOFFICELIB)
@@ -182,6 +184,37 @@ APP6STDLIBS = $(SALLIB)
 APP5DEPN= $(APP1TARGETN) $(APP5RES) ooverinfo.rc
 APP5DEF=    $(MISCX)$/$(TARGET).def
 .ENDIF # WNT
+
+.IF "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
+
+APP8TARGET=soffice2
+APP8NOSAL=TRUE
+APP8RPATH=BRAND
+APP8OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
+.IF "$(GUIBASE)" == "java"
+APP8OBJS+= \
+	$(OBJ)$/main_java.obj \
+	$(OBJ)$/main_java_init2.obj
+APP8STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+.ELSE		# "$(GUIBASE)" == "java"
+APP8STDLIBS = $(SALLIB) $(SOFFICELIB)
+.ENDIF		# "$(GUIBASE)" == "java"
+.IF "$(OS)" == "LINUX"
+APP8STDLIBS+= -lXext -lSM -lICE
+.ENDIF # LINUX
+
+APP8DEPN= $(APP1TARGETN) $(APP8RES) ooverinfo.rc
+APP8DEF=    $(MISCX)$/$(TARGET).def
+
+.IF "$(GUI)" == "WNT"
+APP8RES=    $(RES)$/oodesktop.res
+APP8ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
+APP8VERINFO=ooverinfo.rc
+APP8LINKRES=$(MISC)$/ooffice8.res
+APP8STACK=10000000
+.ENDIF # WNT
+
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
 
 # --- Targets -------------------------------------------------------------
 
