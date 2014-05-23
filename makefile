@@ -48,7 +48,7 @@ else
 # JDK_HOME must be defined in custom.mk
 endif
 PRODUCT_NAME=My Untested Office Suite
-PRODUCT_DIR_NAME=My_Untested_Office_Suite
+PRODUCT_DIR_NAME=$(subst $(SPACE),,$(PRODUCT_NAME))
 PRODUCT_TRADEMARKED_NAME=$(PRODUCT_NAME)
 PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 
@@ -59,6 +59,8 @@ PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 -include certs.mk
 
 # Set the shell to tcsh since the OpenOffice.org build requires it
+EMPTY:=
+SPACE:=$(EMPTY) $(EMPTY)
 ifndef TMP
 TMP:=/tmp
 endif
@@ -97,8 +99,13 @@ endif
 
 # Build location macros
 BUILD_HOME:=build
+ifdef PRODUCT_BUILD2
+INSTALL_HOME:=install2
+PATCH_INSTALL_HOME:=patch_install2
+else
 INSTALL_HOME:=install
 PATCH_INSTALL_HOME:=patch_install
+endif
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 MOZILLA_PATCHES_HOME:=patches/mozilla
@@ -133,15 +140,16 @@ OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_INSTALL_DIR_NAME=$(PRODUCT_NAME)
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION_BASE=2014
+PRODUCT_VERSION_BASE=Free $(PRODUCT_VERSION_BASE2)
+PRODUCT_VERSION_BASE2=2014
 PRODUCT_VERSION=$(PRODUCT_VERSION_BASE) Developer Preview 2
-PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE)_Developer_Preview_2
+PRODUCT_DIR_VERSION=$(subst $(SPACE),_,$(PRODUCT_VERSION))
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PREVIOUS_PRODUCT_VERSION_BASE=$(PRODUCT_VERSION_BASE)
-PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
+PRODUCT_DIR_LANG_PACK_VERSION=$(subst $(SPACE),_,$(PRODUCT_LANG_PACK_VERSION))
 PRODUCT_PATCH_VERSION=
-PRODUCT_DIR_PATCH_VERSION=
+PRODUCT_DIR_PATCH_VERSION=$(subst $(SPACE),_,$(PRODUCT_PATCH_VERSION))
 PRODUCT_MIN_OSVERSION=10.8
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
@@ -436,12 +444,18 @@ build.package: build.neo_patches
 	"$(MAKE)" $(MFLAGS) "build.package_shared"
 	touch "$@"
 
+build.package2: build.neo_patches
+ifndef PRODUCT_BUILD2
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION_BASE=$(PRODUCT_VERSION_BASE2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "build.package_shared"
+	touch "$@"
+endif
+
 build.package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	sh -e -c 'if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ; fi'
-	hdiutil attach "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
+	hdiutil attach -nobrowse "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)/OpenOffice.org.app" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) )
 	hdiutil eject -force "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)"
@@ -455,12 +469,12 @@ build.package_shared:
 # Regroup the OOo language packs
 	cd "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^follow_me$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
 # Include certain languages in the main installer
-	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
+	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
 ifndef LANGPACKS
 # Bypass the language pack installers
 else
 # Create the language pack installers
-	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; rm -f "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/MacOS/resource/ooo"*.res "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/basis-link/program/resource/dba"*.res ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
+	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; rm -f "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/MacOS/resource/ooo"*.res "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/basis-link/program/resource/dba"*.res ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
 endif
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmedia$(DLLSUFFIX).dylib" "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmediaquicktime.dylib" "$(PWD)/basic/$(UOUTPUTDIR)/lib/libsb$(DLLSUFFIX).dylib" "$(PWD)/canvas/$(UOUTPUTDIR)/lib/vclcanvas.uno.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libcalc$(DLLSUFFIX).dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libdbtools$(DLLSUFFIX).dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libmacab1.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libmacabdrv1.dylib" "$(PWD)/cppcanvas/$(UOUTPUTDIR)/lib/libcppcanvas$(DLLSUFFIX).dylib" "$(PWD)/dbaccess/$(UOUTPUTDIR)/lib/libdba$(DLLSUFFIX).dylib" "$(PWD)/dbaccess/$(UOUTPUTDIR)/lib/libdbu$(DLLSUFFIX).dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/deployment$(DLLSUFFIX).uno.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/deploymentgui$(DLLSUFFIX).uno.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libdeploymentmisc$(DLLSUFFIX).dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libspl$(DLLSUFFIX).dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/libunopkgapp.dylib" "$(PWD)/desktop/$(UOUTPUTDIR)/lib/migrationoo2.uno.dylib" "$(PWD)/drawinglayer/$(UOUTPUTDIR)/lib/libdrawinglayer$(DLLSUFFIX).dylib" "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/extensions/$(UOUTPUTDIR)/lib/libscn$(DLLSUFFIX).dylib" "$(PWD)/filter/$(UOUTPUTDIR)/lib/libpdffilter$(DLLSUFFIX).dylib" "$(PWD)/formula/$(UOUTPUTDIR)/lib/libfor$(DLLSUFFIX).dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fpicker.uno.dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/framework/$(UOUTPUTDIR)/lib/libfwe$(DLLSUFFIX).dylib" "$(PWD)/framework/$(UOUTPUTDIR)/lib/libfwk$(DLLSUFFIX).dylib" "$(PWD)/goodies/$(UOUTPUTDIR)/lib/libgo$(DLLSUFFIX).dylib" "$(PWD)/goodies/$(UOUTPUTDIR)/lib/libipt$(DLLSUFFIX).dylib" "$(PWD)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$(DLLSUFFIX).dylib" "$(PWD)/moz/$(UOUTPUTDIR)/lib/libfreebl3.dylib" "$(PWD)/moz/$(UOUTPUTDIR)/lib/libsoftokn3.dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/package/$(UOUTPUTDIR)/lib/libpackage2.dylib" "$(PWD)/package/$(UOUTPUTDIR)/lib/libxstor.dylib" "$(PWD)/reportdesign/$(UOUTPUTDIR)/lib/librpt$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libscui$(DLLSUFFIX).dylib" "$(PWD)/sd/$(UOUTPUTDIR)/lib/libsdui$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/cmdmail.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/localebe1.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/macbe1.uno.dylib" "$(PWD)/shell/$(UOUTPUTDIR)/lib/syssh.uno.dylib" "$(PWD)/sot/$(UOUTPUTDIR)/lib/libsot$(DLLSUFFIX).dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvl$(DLLSUFFIX).dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libcui$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvx$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxcore$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libmsword$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libswui$(DLLSUFFIX).dylib" "$(PWD)/tools/$(UOUTPUTDIR)/lib/libtl$(DLLSUFFIX).dylib" "$(PWD)/ucb/$(UOUTPUTDIR)/lib/libucpdav1.dylib" "$(PWD)/ucb/$(UOUTPUTDIR)/lib/libucpfile1.dylib" "$(PWD)/ucbhelper/$(UOUTPUTDIR)/lib/libucbhelper4gcc3.dylib" "$(PWD)/unotools/$(UOUTPUTDIR)/lib/libutl$(DLLSUFFIX).dylib" "$(PWD)/unoxml/$(UOUTPUTDIR)/lib/libunordf$(DLLSUFFIX).dylib" "$(PWD)/unoxml/$(UOUTPUTDIR)/lib/libunoxml$(DLLSUFFIX).dylib" "$(PWD)/uui/$(UOUTPUTDIR)/lib/libuui$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/vos/$(UOUTPUTDIR)/lib/libvos3gcc3.dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "$(PWD)/writerperfect/$(UOUTPUTDIR)/lib/libmsworks$(DLLSUFFIX).dylib" "$(PWD)/writerperfect/$(UOUTPUTDIR)/lib/libwpft$(DLLSUFFIX).dylib" "$(PWD)/writerperfect/$(UOUTPUTDIR)/lib/libwpgimport$(DLLSUFFIX).dylib" "$(PWD)/xmloff/$(UOUTPUTDIR)/lib/libxo$(DLLSUFFIX).dylib" "basis-link/program"
@@ -468,7 +482,11 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/bin/salapp"*.res "MacOS/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/cpputools/$(UOUTPUTDIR)/bin/uno" "basis-link/ure-link/bin/uno.bin" ; chmod a+x "basis-link/ure-link/bin/uno.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/misc/soffice.sh" "MacOS/soffice" ; chmod a+x "MacOS/soffice"
+ifdef PRODUCT_BUILD2
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice2" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+else
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/unopkg" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/misc/unopkg.sh" "MacOS/unopkg" ; chmod a+x "MacOS/unopkg"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/unopkg.bin" ; ln -sf "unopkg" "MacOS/unopkg.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjava"*.res "MacOS/resource"
@@ -656,6 +674,13 @@ build.patch_package: build.package
 	"$(MAKE)" $(MFLAGS) "build.patch_package_shared"
 	touch "$@"
 
+build.patch_package2: build.package2
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+ifndef PRODUCT_BUILD2
+	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION_BASE=$(PRODUCT_VERSION_BASE2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "build.patch_package_shared"
+	touch "$@"
+endif
+
 build.patch_package_shared:
 # Check that codesign and productsign executables exist before proceeding
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
@@ -667,7 +692,11 @@ build.patch_package_shared:
 # existing installation
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Resources" ; find . \! -type d -print0 | xargs -0 gnutar cvf - ) | gnutar xvf - );
+ifdef PRODUCT_BUILD2
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice2" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmediaquicktime.dylib" "$(PWD)/connectivity/$(UOUTPUTDIR)/lib/libdbtools$(DLLSUFFIX).dylib" "$(PWD)/dbaccess/$(UOUTPUTDIR)/lib/libdbu$(DLLSUFFIX).dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "Info.plist"
@@ -859,5 +888,8 @@ build.cd_package_shared:
 	sync ; hdiutil create -srcfolder "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)" -format UDTO -ov -o "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 	mv "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg.cdr" "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 
-build.all: build.package
+build.all: build.package build.package2
+	touch "$@"
+
+build.all_patches: build.patch_package build.patch_package2
 	touch "$@"
