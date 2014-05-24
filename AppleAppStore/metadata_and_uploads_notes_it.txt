@@ -25,9 +25,7 @@ Da allora, gli ingegneri di NeoOffice - Patrick Luby e Ed Peterlin - hanno conti
 
 
 What's New in this Version:
-Questa versione corregge i seguenti bug:
-• Riproduzione di video in un documento a volte potrebbe causare il crash di NeoOffice
-• Esportazione in formato PDF causerebbe NeoOffice per visualizzare il nome errato nella barra del titolo del documento
+This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Apri dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Apri dialog appeared.
 
 
 Keywords:
