@@ -540,7 +540,11 @@ endif
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/MacOS/about.bmp" "MacOS"
+ifdef PRODUCT_BUILD2
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_free.bmp" "MacOS/intro.bmp"
+else
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/MacOS/intro.bmp" "MacOS"
+endif
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/Resources/"*.icns "Resources"
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" .
