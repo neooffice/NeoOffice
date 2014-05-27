@@ -586,25 +586,23 @@ Sequence<sal_Int8> OTools::getBytesValue(OConnection* _pConnection,
 			// Handle case where SQLWCHAR is 32 bits instead of only 16 bits
 			if (sizeof(SQLWCHAR) == sizeof(sal_Unicode) * 2)
 			{
-				CFStringRef aCFString = CFStringCreateWithBytesNoCopy(NULL, (const UInt8 *)waCharArray, nLen * sizeof(sal_Unicode), kCFStringEncodingUTF32LE, true, kCFAllocatorNull);
+				CFStringRef aCFString = CFStringCreateWithBytes(NULL, (const UInt8 *)waCharArray, nLen * sizeof(sal_Unicode), kCFStringEncodingUTF32LE, true);
 				if (aCFString)
 				{
-					nLen = CFStringGetLength(aCFString);
-					sal_Unicode aBuffer[nLen+1];
-					CFStringGetCharacters(aCFString, CFRangeMake(0, nLen), aBuffer);
-					aBuffer[nLen] = 0;
-					aData.append(aBuffer, nLen);
+					CFIndex nNewSize = CFStringGetLength(aCFString);
+					if (nNewSize)
+					{
+						nLen = std::min(nNewSize, nMaxLen);
+						sal_Unicode aBuffer[nLen+1];
+						CFStringGetCharacters(aCFString, CFRangeMake(0, nLen), waCharArray);
+					}
+
 					CFRelease(aCFString);
 				}
 			}
-			else
-			{
 #endif	// USE_JAVA && MACOSX
 			waCharArray[nLen] = 0;
 			aData.append(waCharArray,nLen);
-#if defined USE_JAVA && defined MACOSX
-			}
-#endif	// USE_JAVA && MACOSX
 
 			// Es handelt sich um Binaerdaten, um einen String, der fuer
 			// StarView zu lang ist oder der Treiber kann die Laenge der
@@ -637,26 +635,24 @@ Sequence<sal_Int8> OTools::getBytesValue(OConnection* _pConnection,
 				// Handle case where SQLWCHAR is 32 bits instead of only 16 bits
 				if (sizeof(SQLWCHAR) == sizeof(sal_Unicode) * 2)
 				{
-					CFStringRef aCFString = CFStringCreateWithBytesNoCopy(NULL, (const UInt8 *)waCharArray, nLen * sizeof(sal_Unicode), kCFStringEncodingUTF32LE, true, kCFAllocatorNull);
+					CFStringRef aCFString = CFStringCreateWithBytes(NULL, (const UInt8 *)waCharArray, nLen * sizeof(sal_Unicode), kCFStringEncodingUTF32LE, true);
 					if (aCFString)
 					{
-						nLen = CFStringGetLength(aCFString);
-						sal_Unicode aBuffer[nLen+1];
-						CFStringGetCharacters(aCFString, CFRangeMake(0, nLen), aBuffer);
-						aBuffer[nLen] = 0;
-						aData.append(aBuffer, nLen);
+						CFIndex nNewSize = CFStringGetLength(aCFString);
+						if (nNewSize)
+						{
+							nLen = std::min(nNewSize, nMaxLen);
+							sal_Unicode aBuffer[nLen+1];
+							CFStringGetCharacters(aCFString, CFRangeMake(0, nLen), waCharArray);
+						}
+
 						CFRelease(aCFString);
 					}
 				}
-				else
-				{
 #endif	// USE_JAVA && MACOSX
 				waCharArray[nLen] = 0;
 
 				aData.append(::rtl::OUString(waCharArray));
-#if defined USE_JAVA && defined MACOSX
-				}
-#endif	// USE_JAVA && MACOSX
 			}
 		}
 		break;
