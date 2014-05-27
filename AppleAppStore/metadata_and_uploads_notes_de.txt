@@ -25,9 +25,7 @@ Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben imm
 
 
 What's New in this Version:
-Diese Version behebt die folgenden Fehler:
-• Wiedergabe von Videos in einem Dokument würde manchmal zu NeoOffice zum Absturz
-• Exportieren als PDF verursachen würde NeoOffice, den falschen Namen in der Titelleiste des Dokuments angezeigt
+This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Öffnen dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Öffnen dialog appeared.
 
 
 Keywords:

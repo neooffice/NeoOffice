@@ -25,9 +25,7 @@ Sindsdien hebben de NeoOffice ingenieurs - Patrick Luby en Ed Peterlin - voortdu
 
 
 What's New in this Version:
-Deze versie lost de volgende problemen:
-• Video's afspelen in een document zou veroorzaken soms NeoOffice crasht
-• Exporteren als PDF zou veroorzaken NeoOffice om te laten zien, de verkeerde naam in de titelbalk van het document
+This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Open dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Open dialog appeared.
 
 
 Keywords:

@@ -25,9 +25,7 @@ Depuis lors, les ingénieurs de NeoOffice - Patrick Luby et Ed Peterlin - ont co
 
 
 What's New in this Version:
-Cette version corrige les bogues suivants :
-• La lecture de vidéos dans un document entraînait parfois un plantage de NeoOffice
-• Exportation au format PDF entraînerait NeoOffice pour afficher le mauvais nom dans la barre de titre du document
+This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Ouvrir dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Ouvrir dialog appeared.
 
 
 Keywords:

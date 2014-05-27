@@ -25,9 +25,7 @@ Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have contin
 
 
 What's New in this Version:
-This version fixes the following bugs:
-• Playing videos in a document would sometimes cause NeoOffice to crash
-• Exporting as PDF would cause NeoOffice to display the wrong name in the document's titlebar
+This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Open dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Open dialog appeared.
 
 
 Keywords:
