@@ -529,7 +529,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler
 		if ( pSalData->maNativeEventCondition.check() )
-			NSApplication_dispatchPendingEvents( bInNativeDrag );
+			NSApplication_dispatchPendingEvents( bInNativeDrag, bWait );
 	}
 	else
 	{
