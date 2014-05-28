@@ -39,7 +39,7 @@
 #include <salinst.h>
 #include <sal/types.h>
 
-SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag );
+SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag, BOOL bWait );
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
 SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
 SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();

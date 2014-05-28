@@ -107,7 +107,7 @@
 
 @end
 
-void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag )
+void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag, BOOL bWait )
 {
 	// Do not dispatch any native events in a native drag session as it causes
 	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
@@ -123,7 +123,7 @@ void NSApplication_dispatchPendingEvents( BOOL bInNativeDrag )
 		// Fix excessive CPU usage when this is called from by adding a slight
 		// wait if there are no pending events
 		NSDate *pDate = [NSDate date];
-		if ( pDate )
+		if ( pDate && bWait )
 			pDate = [NSDate dateWithTimeInterval:0.05f sinceDate:pDate];
 
 		NSEvent *pEvent;
