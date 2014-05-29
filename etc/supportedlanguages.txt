@@ -8,11 +8,13 @@
 #    file or the language is listed as having at least 50 million speakers in
 #    the http://en.wikipedia.org/wiki/List_of_languages_by_number_of_native_speakers#50_to_100_million_native_speakers article
 #
+# The list was then trimmed to fit in the Mac App Store by dropping the languages with the lowest number of downloads in past versions.
+#
 # af,0,Afrikaans
 ar,1,Arabic
 # as-IN,0,Assamese
 # be-BY,0,Byelorussian
-bg,1,Bulgarian
+# bg,1,Bulgarian
 # bn,0,Bengali
 # bn-BD,0,Bengali
 # bn-IN,0,Bengali
@@ -30,7 +32,7 @@ de,1,German
 el,1,Greek
 en-GB,1,British English
 en-US,1,American English
-en-ZA,1,South African English
+# en-ZA,1,South African English
 # eo,0,Esperanto
 es,1,Spanish
 # et,1,Estonian
@@ -44,7 +46,7 @@ fr,1,French
 # gu,0,Gujurati
 # gu-IN,0,Gujurati
 he,1,Hebrew
-hi-IN,1,Hindi
+# hi-IN,1,Hindi
 # hr,0,Croatian
 hu,1,Hungarian
 it,1,Italian
@@ -77,7 +79,7 @@ nl,1,Dutch
 # or-IN,0,Oriya
 # pa-IN,0,Punjabi
 pl,1,Polish
-pt,1,Portuguese
+# pt,1,Portuguese
 pt-BR,1,Brazilian Portuguese
 # ro,0,Romanian
 ru,1,Russian
@@ -95,19 +97,19 @@ sk,1,Slovak
 sv,1,Swedish
 # sw,0,Swahili
 # sw-TZ,0,Tanzanian Swahili
-ta-IN,1,Tamil
-te-IN,1,Telugu
+# ta-IN,1,Tamil
+# te-IN,1,Telugu
 # tg,0,Tajik
 th,1,Thai
 # ti-ER,0,Tswana
 # tn,0,Tsonga
-tr,1,Turkish
+# tr,1,Turkish
 # ts,0,Tsonga
 # uk,0,Ukrainian
-ur-IN,1,Urdu
+# ur-IN,1,Urdu
 # uz,1,Uzbek
 # ve,0,Venda
-vi,1,Vietnamese
+# vi,1,Vietnamese
 # xh,0,Xhosa
 zh-CN,1,Simplified Chinese
 zh-TW,1,Traditional Chinese
