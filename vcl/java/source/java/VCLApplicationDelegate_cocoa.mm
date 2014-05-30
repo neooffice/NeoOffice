@@ -131,7 +131,7 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 			JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			while ( !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
-				Application::Yield();
+				Application::Reschedule();
 			pEvent->release();
 
 			if ( Application::IsShutDown() )
