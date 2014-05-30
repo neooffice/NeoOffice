@@ -35,6 +35,7 @@
 
 #include <sfx2/objsh.hxx>
 #include <sfx2/sfxsids.hrc>
+#include <vcl/svapp.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -70,10 +71,32 @@
 - (void)showSaveDisabledDialog:(id)pObject
 {
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-	if ( pWorkspace )
+	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
+	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] )
+		pURL = nil;
+
+	NSAlert *pAlert;
+	if ( pWorkspace && pURL )
+		pAlert = [NSAlert alertWithMessageText:@"Not available" defaultButton:@"Yes" alternateButton:@"No" otherButton:nil informativeTextWithFormat:@"Download on the Mac App Store?"];
+	else
+		pAlert = [NSAlert alertWithMessageText:@"Not available" defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+
+	if ( pAlert )
 	{
-		NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
-		if ( pURL )
+		NSArray *pButtons = [pAlert buttons];
+		if ( [pButtons count] > 1 )
+		{
+			NSButton *pAlternateButton = [pButtons objectAtIndex:1];
+			if ( pAlternateButton )
+			{
+				unichar cEscapeChar = 0x1b;
+				NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
+				if ( pEscapeKey )
+					[pAlternateButton setKeyEquivalent:pEscapeKey];
+			}
+		}
+
+		if ( [pAlert runModal] == NSAlertDefaultReturn && pWorkspace && pURL )
 			[pWorkspace openURL:pURL];
 	}
 }
@@ -91,9 +114,15 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 		{
 			bRet = sal_False;
 
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog create];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			ULONG nCount = Application::ReleaseSolarMutex();
 			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:YES modes:pModes];
+			Application::AcquireSolarMutex( nCount );
+
+			[pPool release];
 		}
 	}
 
