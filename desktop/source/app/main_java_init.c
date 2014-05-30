@@ -37,5 +37,5 @@
 
 void java_main_init()
 {
-	putenv( strdup( "SAL_ENABLE_MAS=0" ) );
+	putenv( strdup( "SAL_ENABLE_MAS=1" ) );
 }
