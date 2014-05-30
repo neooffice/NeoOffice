@@ -43,6 +43,43 @@
 
 #import "objserv_cocoa.h"
 
+@interface ShowSaveDisabledDialog : NSObject
+{
+}
++ (id)create;
+- (id)init;
+- (void)showSaveDisabledDialog:(id)pObject;
+@end
+
+@implementation ShowSaveDisabledDialog
+
++ (id)create
+{
+	ShowSaveDisabledDialog *pRet = [[ShowSaveDisabledDialog alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+
+	return self;
+}
+
+- (void)showSaveDisabledDialog:(id)pObject
+{
+	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+	if ( pWorkspace )
+	{
+		NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
+		if ( pURL )
+			[pWorkspace openURL:pURL];
+	}
+}
+
+@end
+
 sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 {
 	sal_Bool bRet = sal_True;
@@ -53,6 +90,10 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 		if ( !env || strcmp( env, "1" ) )
 		{
 			bRet = sal_False;
+
+			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog create];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:YES modes:pModes];
 		}
 	}
 

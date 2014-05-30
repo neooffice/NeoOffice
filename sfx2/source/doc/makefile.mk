@@ -43,6 +43,10 @@ ENABLE_EXCEPTIONS=TRUE
 CFLAGS+=-DUDK_MAJOR=$(UDK_MAJOR)
 .ENDIF
 
+.IF "$(PRODUCT_MAC_APP_STORE_URL)" != ""
+CFLAGS+=-DPRODUCT_MAC_APP_STORE_URL='"$(PRODUCT_MAC_APP_STORE_URL)"'
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 SRS1NAME=$(TARGET)
