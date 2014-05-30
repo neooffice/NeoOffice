@@ -112,6 +112,7 @@
 
 #include <vcl/sysdata.hxx>
 
+#include "objserv_cocoa.h"
 #include "../view/topfrm_cocoa.h"
 
 class NSView;
@@ -391,6 +392,16 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 	USHORT nId = rReq.GetSlot();
 
 #ifdef USE_JAVA
+#ifdef MACOSX
+	if( !SfxObjectShell_canSave( this, nId ) )
+	{
+		rReq.SetReturnValue( SfxBoolItem( 0, sal_False ) );
+		ResetError();
+		Invalidate();
+		return;
+	}
+#endif	// MACOSX
+
 	// If we are saving to an Office XML format, forcing the file save as
 	// dialog to appear by changing this to a save as operation. Note that
 	// we had to put "OXML" in the "UserData" field in each filter's
