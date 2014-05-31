@@ -92,10 +92,18 @@ SLOFILES =	\
         $(SLO)$/querytemplate.obj
 
 .IF "$(GUIBASE)" == "java"
+
 SLOFILES +=	\
 		$(SLO)$/objmisc_cocoa.obj \
 		$(SLO)$/objserv_cocoa.obj
-.ENDIF
+
+SRS2NAME=objserv_cocoa
+SRC2FILES=objserv_cocoa.src
+RESLIB2NAME=objserv_cocoa
+RESLIB2IMAGES=$(PRJ)$/res
+RESLIB2SRSFILES=$(SRS)$/objserv_cocoa.srs
+
+.ENDIF "$(GUIBASE)" == "java"
 
 # --- Tagets -------------------------------------------------------
 
