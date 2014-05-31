@@ -75,11 +75,12 @@
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 
+	NSString *pMessage = @"Free Edition cannot save documents.";
 	NSAlert *pAlert;
 	if ( pWorkspace && pURL )
-		pAlert = [NSAlert alertWithMessageText:@"Not available" defaultButton:@"Yes" alternateButton:@"No" otherButton:nil informativeTextWithFormat:@"Download on the Mac App Store?"];
+		pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:@"Download" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"To save documents, download on the Mac\u00A0App\u00A0Store."];
 	else
-		pAlert = [NSAlert alertWithMessageText:@"Not available" defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+		pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
 
 	if ( pAlert )
 	{
