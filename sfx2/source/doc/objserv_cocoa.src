@@ -37,10 +37,10 @@
 
 String STR_FREEPRODUCTCANNOTSAVE
 {
-	Text [ en-US ] = "%PRODUCTNAME cannot save documents.";
+	Text [ en-US ] = "%PRODUCTNAME %PRODUCTVERSION cannot save documents.";
 };
 
 String STR_FREEPRODUCTDOWNLOADPAIDPRODUCTTOSAVE
 {
-	Text [ en-US ] = "To save documents, download %PRODUCTNAME on the Mac App Store.";
+	Text [ en-US ] = "To save documents, download %PRODUCTNAME on the Mac App Store.";
 };
