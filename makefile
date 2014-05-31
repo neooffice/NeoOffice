@@ -157,7 +157,7 @@ PRODUCT_MIN_OSVERSION=10.8
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
-PRODUCT_SUPPORT_URL=http://www.neooffice.org/neojava/secure.php
+PRODUCT_SUPPORT_URL=http://www.neooffice.org/neojava/macappstore.php
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 PRODUCT_DOCUMENTATION_URL=http://neowiki.neooffice.org/
 PRODUCT_DOCUMENTATION_URL_TEXT=$(PRODUCT_NAME) Wiki
