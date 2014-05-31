@@ -90,13 +90,13 @@ static XubString GetJavaResString( int nId )
     {
         pJavaResMgr = SfxApplication::CreateResManager( "shutdowniconjava" );
         if ( !pJavaResMgr )
-            return OUString();
+            return XubString();
     }
 
     ResId aResId( nId, *pJavaResMgr );
     aResId.SetRT( RSC_STRING );
     if ( !pJavaResMgr->IsAvailable( aResId ) )
-        return OUString();
+        return XubString();
  
     return XubString( ResId( nId, *pJavaResMgr ) );
 }
