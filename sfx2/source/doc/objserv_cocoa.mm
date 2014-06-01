@@ -33,8 +33,10 @@
  *
  ************************************************************************/
 
+#include <sfx2/app.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/sfxsids.hrc>
+#include <tools/rcid.h>
 #include <vcl/svapp.hxx>
 
 #include <premac.h>
@@ -43,27 +45,79 @@
 #include <postmac.h>
 
 #import "objserv_cocoa.h"
+#import "objserv_cocoa.hrc"
+
+static ResMgr *pObjServResMgr = NULL;
+
+static XubString GetObjServResString( int nId )
+{
+	if ( !pObjServResMgr )
+	{
+		pObjServResMgr = SfxApplication::CreateResManager( "objserv_cocoa" );
+		if ( !pObjServResMgr )
+			return XubString();
+	}
+
+	ResId aResId( nId, *pObjServResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pObjServResMgr->IsAvailable( aResId ) )
+		return XubString();
+ 
+	return XubString( ResId( nId, *pObjServResMgr ) );
+}
 
 @interface ShowSaveDisabledDialog : NSObject
 {
+	NSString*				mpMessageText;
+	NSString*				mpDefaultButton;
+	NSString*				mpAlternateButton;
+	NSString*				mpInformativeText;
 }
-+ (id)create;
-- (id)init;
++ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText;
+- (void)dealloc;
+- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText;
 - (void)showSaveDisabledDialog:(id)pObject;
 @end
 
 @implementation ShowSaveDisabledDialog
 
-+ (id)create
++ (id)createWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText
 {
-	ShowSaveDisabledDialog *pRet = [[ShowSaveDisabledDialog alloc] init];
+	ShowSaveDisabledDialog *pRet = [[ShowSaveDisabledDialog alloc] initWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)init
+- (void)dealloc
+{
+	if ( mpMessageText )
+		[mpMessageText release];
+	if ( mpDefaultButton )
+		[mpDefaultButton release];
+	if ( mpAlternateButton )
+		[mpAlternateButton release];
+	if ( mpInformativeText )
+		[mpInformativeText release];
+	
+	[super dealloc];
+}
+
+- (id)initWithMessageText:(NSString *)pMessageText defaultButton:(NSString *)pDefaultButton alternateButton:(NSString *)pAlternateButton informativeText:(NSString *)pInformativeText
 {
 	[super init];
+
+	mpMessageText = pMessageText;
+	if ( mpMessageText )
+		[mpMessageText retain];
+	mpDefaultButton = pDefaultButton;
+	if ( mpDefaultButton )
+		[mpDefaultButton retain];
+	mpAlternateButton = pAlternateButton;
+	if ( mpAlternateButton )
+		[mpAlternateButton retain];
+	mpInformativeText = pInformativeText;
+	if ( mpInformativeText )
+		[mpInformativeText retain];
 
 	return self;
 }
@@ -75,30 +129,37 @@
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 
-	NSString *pMessage = @"Free Edition cannot save documents.";
 	NSAlert *pAlert;
 	if ( pWorkspace && pURL )
-		pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:@"Download" alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@"To save documents, download on the Mac\u00A0App\u00A0Store."];
-	else
-		pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-
-	if ( pAlert )
 	{
-		NSArray *pButtons = [pAlert buttons];
-		if ( [pButtons count] > 1 )
+		NSString *pInformativeText = mpInformativeText;
+		if ( !pInformativeText )
+			pInformativeText = @"";
+		pAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:mpDefaultButton alternateButton:mpAlternateButton otherButton:nil informativeTextWithFormat:pInformativeText, nil];
+		if ( pAlert )
 		{
-			NSButton *pAlternateButton = [pButtons objectAtIndex:1];
-			if ( pAlternateButton )
+			NSArray *pButtons = [pAlert buttons];
+			if ( [pButtons count] > 1 )
 			{
-				unichar cEscapeChar = 0x1b;
-				NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
-				if ( pEscapeKey )
-					[pAlternateButton setKeyEquivalent:pEscapeKey];
+				NSButton *pAlternateButton = [pButtons objectAtIndex:1];
+				if ( pAlternateButton )
+				{
+					unichar cEscapeChar = 0x1b;
+					NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
+					if ( pEscapeKey )
+						[pAlternateButton setKeyEquivalent:pEscapeKey];
+				}
 			}
-		}
 
-		if ( [pAlert runModal] == NSAlertDefaultReturn && pWorkspace && pURL )
-			[pWorkspace openURL:pURL];
+			if ( [pAlert runModal] == NSAlertDefaultReturn )
+				[pWorkspace openURL:pURL];
+		}
+	}
+	else
+	{
+		pAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+		if ( pAlert )
+			[pAlert runModal];
 	}
 }
 
@@ -117,7 +178,23 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog create];
+			XubString aDesc = GetObjServResString( STR_SAVEDISABLEDCANNOTSAVE );
+			aDesc.EraseAllChars( '~' );
+			NSString *pMessageText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+
+			aDesc = GetObjServResString( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
+			aDesc.EraseAllChars( '~' );
+			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+
+			aDesc = GetObjServResString( STR_SAVEDISABLEDDOWNLOAD );
+			aDesc.EraseAllChars( '~' );
+			NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+
+			aDesc = GetObjServResString( STR_SAVEDISABLEDCANCEL );
+			aDesc.EraseAllChars( '~' );
+			NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
+
+			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			ULONG nCount = Application::ReleaseSolarMutex();
 			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:YES modes:pModes];
