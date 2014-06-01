@@ -145,7 +145,7 @@ static XubString GetUpdResString( int nId )
 {
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
-	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] )
+	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] && ![@"http" isEqualToString:[pURL scheme]] && ![@"https" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 
 	NSAlert *pAlert;
