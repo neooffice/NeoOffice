@@ -46,8 +46,10 @@
 
 #import "objserv_cocoa.h"
 #import "objserv_cocoa.hrc"
+#import "../../../extensions/source/update/check/updatehdl.hrc"
 
 static ResMgr *pObjServResMgr = NULL;
+static ResMgr *pUpdResMgr = NULL;
 
 static XubString GetObjServResString( int nId )
 {
@@ -64,6 +66,23 @@ static XubString GetObjServResString( int nId )
 		return XubString();
  
 	return XubString( ResId( nId, *pObjServResMgr ) );
+}
+
+static XubString GetUpdResString( int nId )
+{
+	if ( !pUpdResMgr )
+	{
+		pUpdResMgr = SfxApplication::CreateResManager( "upd" );
+		if ( !pUpdResMgr )
+			return XubString();
+	}
+
+	ResId aResId( nId, *pUpdResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pUpdResMgr->IsAvailable( aResId ) )
+		return XubString();
+ 
+	return XubString( ResId( nId, *pUpdResMgr ) );
 }
 
 @interface ShowSaveDisabledDialog : NSObject
@@ -186,11 +205,11 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 			aDesc.EraseAllChars( '~' );
 			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
 
-			aDesc = GetObjServResString( STR_SAVEDISABLEDDOWNLOAD );
+			aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
 			aDesc.EraseAllChars( '~' );
 			NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
 
-			aDesc = GetObjServResString( STR_SAVEDISABLEDCANCEL );
+			aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
 			aDesc.EraseAllChars( '~' );
 			NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
 

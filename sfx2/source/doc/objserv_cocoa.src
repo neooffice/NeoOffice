@@ -44,13 +44,3 @@ String STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE
 {
 	Text [ en-US ] = "To save documents, download %PRODUCTNAME on the Mac App Store.";
 };
-
-String STR_SAVEDISABLEDDOWNLOAD
-{
-	Text [ en-US ] = "Download";
-};
-
-String STR_SAVEDISABLEDCANCEL
-{
-	Text [ en-US ] = "Cancel";
-};
