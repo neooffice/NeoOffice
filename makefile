@@ -338,7 +338,6 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_desktop_patch \
 	build.neo_drawinglayer_patch \
 	build.neo_dtrans_patch \
-	build.neo_extensions_patch \
 	build.neo_filter_patch \
 	build.neo_formula_patch \
 	build.neo_fpicker_patch \
@@ -358,7 +357,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_sc_patch \
 	build.neo_sd_patch \
 	build.neo_sdext_patch \
-	build.neo_shell_patch build.neo_sfx2_patch \
+	build.neo_extensions_patch build.neo_shell_patch build.neo_sfx2_patch \
 	build.neo_sot_patch \
 	build.neo_store_patch \
 	build.neo_svtools_patch \
