@@ -37,10 +37,18 @@
 
 String STR_SAVEDISABLEDCANNOTSAVE
 {
+	Text [ de ] = "%PRODUCTNAME %PRODUCTVERSION kann Dokumente nicht speichern.";
 	Text [ en-US ] = "%PRODUCTNAME %PRODUCTVERSION cannot save documents.";
+	Text [ fr ] = "%PRODUCTNAME %PRODUCTVERSION ne peut pas enregistrer des documents.";
+	Text [ it ] = "%PRODUCTNAME %PRODUCTVERSION non può salvare i documenti.";
+	Text [ nl ] = "%PRODUCTNAME %PRODUCTVERSION kan niet documenten op te slaan.";
 };
 
 String STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE
 {
-	Text [ en-US ] = "To save documents, download %PRODUCTNAME on the Mac App Store.";
+	Text [ de ] = "Laden %PRODUCTNAME im Mac App Store?";
+	Text [ en-US ] = "Download %PRODUCTNAME on the Mac App Store?";
+	Text [ fr ] = "Télécharger %PRODUCTNAME dans le Mac App Store ?";
+	Text [ it ] = "Scarica %PRODUCTNAME su Mac App Store?";
+	Text [ nl ] = "Download %PRODUCTNAME in de Mac App Store?";
 };
