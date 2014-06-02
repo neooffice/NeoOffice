@@ -188,7 +188,7 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 {
 	sal_Bool bRet = sal_True;
 
-	if ( pObjShell && ( nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
+	if ( pObjShell && ( nID == SID_DOCTEMPLATE || nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
 	{
 		char *env = getenv( "SAL_ENABLE_MAS" );
 		if ( !env || strcmp( env, "1" ) )
