@@ -277,6 +277,7 @@
 		<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 	</node>
 
+<!-- Disable Java-based filters
 	<node oor:name="MS Excel 2003 XML" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 		<prop oor:name="UIComponent"/>
@@ -287,6 +288,7 @@
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 	</node>
+-->
 
 <node oor:name="Calc MS Excel 2007 XML" oor:op="replace">
 	<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER PREFERRED</value></prop>
