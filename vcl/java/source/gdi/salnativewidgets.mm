@@ -186,6 +186,7 @@ static bool IsRunningMavericksOrLower()
 - (MacOSBOOL)_hasActiveControls;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)isKeyWindow;
 - (void)orderFrontRegardless;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
 - (void)setInactive:(MacOSBOOL)bInactive;
@@ -242,6 +243,11 @@ static bool IsRunningMavericksOrLower()
 	mbInactive = NO;
 
 	return self;
+}
+
+- (MacOSBOOL)isKeyWindow
+{
+	return [self _hasActiveControls];
 }
 
 - (void)orderFrontRegardless
@@ -338,7 +344,8 @@ static bool IsRunningMavericksOrLower()
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled
-	[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
+	if ( IsRunningMavericksOrLower() || mnButtonType == NSMomentaryLightButton || mnControlState & CTRL_STATE_INACTIVE )
+		[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
 
 	[pButton sizeToFit];
 
@@ -384,8 +391,15 @@ static bool IsRunningMavericksOrLower()
 						{
 							// Do not use VCLNativeButtonCell animation as
 							// it sometimes draws darker than expected
-							[pButton highlight:NO];
-							mbRedraw = YES;
+							if ( IsRunningMavericksOrLower() )
+							{
+								[pButton highlight:NO];
+								mbRedraw = YES;
+							}
+							else
+							{
+								[pButton setKeyEquivalent:@"\r"];
+							}
 						}
 					}
 				}
