@@ -98,6 +98,8 @@
 #define TABITEM_FOCUSRING_BOTTOM_OFFSET	2
 #define TABITEM_FOCUSRING_ROUNDED_RECT_RADIUS	5
 
+typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
+
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
@@ -117,6 +119,9 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect );
 	void					ReleaseContext();
 };
+
+static bool bIsRunningMavericksOrLowerInitizalized  = false;
+static bool bIsRunningMavericksOrLower = false;
 
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
@@ -138,6 +143,38 @@ static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
+
+// =======================================================================
+
+static bool IsRunningMavericksOrLower()
+{
+	if ( !bIsRunningMavericksOrLowerInitizalized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res <= 9 )
+						bIsRunningMavericksOrLower = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bIsRunningMavericksOrLowerInitizalized = true;
+	}
+
+	return bIsRunningMavericksOrLower;
+}
 
 // =======================================================================
 
