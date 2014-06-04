@@ -2067,7 +2067,10 @@ static bool IsRunningMavericksOrLower()
 						}
 						else
 						{
-							[[NSColor controlBackgroundColor] set];
+							if ( IsRunningMavericksOrLower() )
+								[[NSColor controlBackgroundColor] set];
+							else
+								[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];
