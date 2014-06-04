@@ -45,8 +45,6 @@
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
-typedef OSErr Gestalt_Type( OSType selector, long *response );
-
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;

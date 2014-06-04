@@ -84,7 +84,6 @@ public:
 	virtual void			toggle() {}
 };
 
-typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 
