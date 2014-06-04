@@ -4506,14 +4506,36 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
 
+	if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
+
 	switch( nType )
 	{
 
 		case CTRL_PUSHBUTTON:
+			{
+				if( nState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED | CTRL_STATE_PRESSED ) )
+				{
+					if ( IsRunningMavericksOrLower() )
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+					else
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+				}
+				else
+				{
+					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+				}
+			}
+			break;
+
 		case CTRL_RADIOBUTTON:
 		case CTRL_CHECKBOX:
 		case CTRL_LISTBOX:
-			{				
+			{
 				if( nState & CTRL_STATE_PRESSED )
 					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
@@ -4526,13 +4548,24 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		case CTRL_TAB_ITEM:
 			{
 				if ( nState & CTRL_STATE_SELECTED )
-					bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+				{
+					if ( IsRunningMavericksOrLower() || ! ( nState & CTRL_STATE_INACTIVE ) )
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+					else
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+				}
 				else if ( nState & CTRL_STATE_PRESSED )
+				{
 					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
 					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+				}
 				else
+				{
 					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+				}
 			}
 			break;
 
