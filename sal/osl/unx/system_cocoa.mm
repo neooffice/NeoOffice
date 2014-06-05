@@ -269,13 +269,7 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pPath];
 				if ( pURL && [pFileManager isUbiquitousItemAtURL:pURL] )
-				{
-					// Do not allow folders to be treated as iCloud objects
-					// since iCloud does not allow any folders
-					NSNumber *pDir = nil;
-					if ( [pURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] && pDir && ![pDir boolValue] )
-						bRet = sal_True;
-				}
+					bRet = sal_True;
 			}
 		}
 
