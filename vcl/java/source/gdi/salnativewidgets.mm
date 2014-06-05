@@ -3553,6 +3553,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 #endif	// USE_NATIVE_CTRL_FRAME
 
+		case CTRL_TOOLTIP:
+			if( !IsRunningMavericksOrLower() && nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+
 		default:
 			isSupported = FALSE;
 			break;
@@ -3761,6 +3766,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			break;
 
 		case CTRL_MENU_POPUP:
+		case CTRL_TOOLTIP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
@@ -4371,6 +4377,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_MENU_POPUP:
+		case CTRL_TOOLTIP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// we can draw menu backgrounds for any size rectangular area
