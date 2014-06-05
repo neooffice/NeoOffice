@@ -2529,7 +2529,7 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
 			{
 				Color aTextColor;
 				
-				BOOL bNativeTextOK = false;
+				BOOL bNativeTextOK = FALSE;
 				if ( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL ) )
 				{
 					ImplControlValue aValue;
@@ -2548,7 +2548,7 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
 			{
 				Color aTextColor;
 				
-				BOOL bNativeTextOK = false;
+				BOOL bNativeTextOK = FALSE;
 				if ( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL ) )
 				{
 					ImplControlValue aValue;
@@ -2589,12 +2589,28 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
                 {
                     aTmpPos.Y() = aPos.Y() + ((pData->aSz.Height()-2)/2);
                     aTmpPos.X() = aPos.X() + 2 + nOuterSpace;
+
+#ifdef USE_JAVA
+                    BOOL bNativeOK = FALSE;
+                    if ( pWin->IsNativeControlSupported( CTRL_FIXEDLINE, PART_ENTIRE_CONTROL ) )
+                    {
+                        const ImplControlValue aValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
+                        Region aCtrlRegion( Rectangle( aPos, Size( aOutSz.Width(), pData->aSz.Height() ) ) );
+                        bNativeOK = pWin->DrawNativeControl( CTRL_FIXEDLINE, PART_ENTIRE_CONTROL, aCtrlRegion, ( ( pData->bEnabled ) ? CTRL_STATE_ENABLED : 0 ), aValue, rtl::OUString() );
+                    }
+
+                    if ( !bNativeOK )
+                    {
+#endif	// USE_JAVA
                     pWin->SetLineColor( rSettings.GetShadowColor() );
                     pWin->DrawLine( aTmpPos, Point( aOutSz.Width() - 3 - 2*nOuterSpace, aTmpPos.Y() ) );
                     aTmpPos.Y()++;
                     pWin->SetLineColor( rSettings.GetLightColor() );
                     pWin->DrawLine( aTmpPos, Point( aOutSz.Width() - 3 - 2*nOuterSpace, aTmpPos.Y() ) );
                     pWin->SetLineColor();
+#ifdef USE_JAVA
+                    }
+#endif	// USE_JAVA
                 }
 
                 // Image:
