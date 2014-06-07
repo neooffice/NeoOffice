@@ -262,14 +262,54 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		NSFileManager *pFileManager = [NSFileManager defaultManager];
-		if ( pFileManager && [pFileManager respondsToSelector:@selector(isUbiquitousItemAtURL:)] )
+		if ( pFileManager )
 		{
 			NSString *pPath = [NSString stringWithCharacters:path length:len];
 			if ( pPath && [pPath length] )
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pPath];
-				if ( pURL && [pFileManager isUbiquitousItemAtURL:pURL] )
-					bRet = sal_True;
+				if ( pURL && [pURL isFileURL] )
+				{
+					pURL = [pURL URLByStandardizingPath];
+					if ( pURL )
+					{
+						pURL = [pURL URLByResolvingSymlinksInPath];
+						if ( pURL )
+						{
+							if ( [pFileManager isUbiquitousItemAtURL:pURL] )
+							{
+								bRet = sal_True;
+							}
+							else
+							{
+								NSArray *pLibraryFolders = NSSearchPathForDirectoriesInDomains( NSLibraryDirectory, NSUserDomainMask, NO );
+								NSString *pRealHomeFolder = nil;
+								struct passwd *pPasswd = getpwuid( getuid() );
+								if ( pPasswd )
+									pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
+								if ( pLibraryFolders && pRealHomeFolder && [pRealHomeFolder length] )
+								{
+									NSUInteger nCount = [pLibraryFolders count];
+									NSUInteger i = 0;
+									for ( ; i < nCount; i++ )
+									{
+										NSString *pFolder = [pLibraryFolders objectAtIndex:i];
+										if ( pFolder && [pFolder length] )
+										{
+											pFolder = [[pFolder stringByAppendingPathComponent:@"Mobile Documents"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
+											if ( pFolder && [pFolder length] )
+											{
+												NSRange aRange = [pFolder rangeOfString:[pURL path]];
+												if ( !aRange.location && aRange.length )
+													bRet = sal_True;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 
