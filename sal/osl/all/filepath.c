@@ -30,10 +30,6 @@
 #include <osl/file.h>
 #include <rtl/ustring.h>
 
-#if defined USE_JAVA && defined MACOSX
-#include "../unx/system.h"
-#endif	/* defined USE_JAVA && defined MACOSX */
-
 static sal_uInt32 SAL_CALL osl_defCalcTextWidth( rtl_uString *ustrText )
 {
 	return ustrText ? ustrText->length : 0;
@@ -56,12 +52,15 @@ oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl
 		if ( iLastSlash >= 0 )
 		{
 #if defined USE_JAVA && defined MACOSX
-			if ( macxp_isUbiquitousPath( ustrSystemPath->buffer, ustrSystemPath->length ) )
-				rtl_uString_newFromAscii( &ustrPath, "iCloud:" );
+			rtl_uString_new( &ustrPath );
+			if ( ++iLastSlash < ustrSystemPath->length )
+				rtl_uString_newFromStr_WithLength( &ustrFile, &ustrSystemPath->buffer[iLastSlash], ustrSystemPath->length - iLastSlash );
 			else
-#endif	/* defined USE_JAVA && defined MACOSX */
+				rtl_uString_new( &ustrFile );
+#else	/* defined USE_JAVA && defined MACOSX */
 			rtl_uString_newFromStr_WithLength( &ustrPath, ustrSystemPath->buffer, iLastSlash );
 			rtl_uString_newFromStr_WithLength( &ustrFile, &ustrSystemPath->buffer[iLastSlash], ustrSystemPath->length - iLastSlash );
+#endif	/* defined USE_JAVA && defined MACOSX */
 		}
 		else
 		{
