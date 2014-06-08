@@ -37,7 +37,6 @@
 #include <sfx2/objsh.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <tools/rcid.h>
-#include <vcl/svapp.hxx>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -215,9 +214,7 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 
 			ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			ULONG nCount = Application::ReleaseSolarMutex();
-			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
+			[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
 
 			[pPool release];
 		}
