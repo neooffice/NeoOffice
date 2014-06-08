@@ -276,11 +276,12 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 						pURL = [pURL URLByResolvingSymlinksInPath];
 						if ( pURL )
 						{
+							NSString *pURLPath = [pURL path];
 							if ( [pFileManager isUbiquitousItemAtURL:pURL] )
 							{
 								bRet = sal_True;
 							}
-							else
+							else if ( pURLPath && [pURLPath length] )
 							{
 								NSArray *pLibraryFolders = NSSearchPathForDirectoriesInDomains( NSLibraryDirectory, NSUserDomainMask, NO );
 								NSString *pRealHomeFolder = nil;
@@ -299,7 +300,7 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 											pFolder = [[pFolder stringByAppendingPathComponent:@"Mobile Documents"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
 											if ( pFolder && [pFolder length] )
 											{
-												NSRange aRange = [pFolder rangeOfString:[pURL path]];
+												NSRange aRange = [pURLPath rangeOfString:pFolder];
 												if ( !aRange.location && aRange.length )
 													bRet = sal_True;
 											}
