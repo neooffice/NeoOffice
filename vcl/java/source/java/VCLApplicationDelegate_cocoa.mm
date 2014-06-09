@@ -196,6 +196,10 @@ static void HandleDidChangeScreenParametersRequest()
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
+@interface NSDocument (SFXDocument)
+- (MacOSBOOL)isInVersionBrowser;
+@end
+
 @interface VCLDocument : NSDocument
 + (MacOSBOOL)autosavesInPlace;
 - (MacOSBOOL)hasUnautosavedChanges;
@@ -299,6 +303,24 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	// Handle call normally if we are in the version browser
+	VCLDocumentController *pDocController = [VCLDocumentController sharedDocumentController];
+	if ( pDocController )
+	{
+		NSArray *pDocs = [pDocController documents];
+		if ( pDocs )
+		{
+			NSUInteger nCount = [pDocs count];
+			NSUInteger i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSDocument *pDoc = [pDocs objectAtIndex:i];
+				if ( pDoc && [pDoc respondsToSelector:@selector(isInVersionBrowser)] && [pDoc isInVersionBrowser] )
+					return [super makeDocumentWithContentsOfURL:pAbsoluteURL ofType:pTypeName error:ppError];
+			}
+		}
+	}
+
 	if ( ppError )
 		*ppError = nil;
 
