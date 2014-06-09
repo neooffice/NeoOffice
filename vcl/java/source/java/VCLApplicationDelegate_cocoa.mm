@@ -361,6 +361,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	VCLDocument *pDoc = nil;
 	if ( pContentsURL )
 	{
+		Application_cacheSecurityScopedURL( pContentsURL );
+
 		pContentsURL = [pContentsURL filePathURL];
 		if ( pContentsURL )
 		{
