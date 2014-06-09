@@ -54,7 +54,6 @@ typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
-static NSString *pNSQuickLookWrapperDocument = @"NSQuickLookWrapperDocument";
 
 using namespace com::sun::star;
 using namespace rtl;
@@ -138,7 +137,6 @@ static OUString aSaveAVersionLocalizedString;
 	NSWindow*				mpWindow;
 }
 + (BOOL)autosavesInPlace;
-+ (void)initialize;
 + (BOOL)isInVersionBrowser;
 - (void)close;
 - (void)dealloc;
@@ -147,7 +145,6 @@ static OUString aSaveAVersionLocalizedString;
 - (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
-- (void)makeWindowControllers;
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)reloadFrame;
@@ -158,6 +155,10 @@ static OUString aSaveAVersionLocalizedString;
 - (void)updateChangeCount:(NSDocumentChangeType)nChangeType;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
 - (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+@end
+
+@interface SFXDocumentRevision : SFXDocument
+- (void)makeWindowControllers;
 @end
 
 @interface SFXUndoManager : NSUndoManager
@@ -245,25 +246,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 + (BOOL)autosavesInPlace
 {
 	return NSDocument_versionsSupported();
-}
-
-+ (void)initialize
-{
-	Class aNSQuickLookWrapperDocumentClass = NSClassFromString( pNSQuickLookWrapperDocument );
-	if ( aNSQuickLookWrapperDocumentClass )
-	{
-		SEL aSelector = @selector(makeWindowControllers);
-		SEL aPoseAsSelector = @selector(poseAsMakeWindowControllers);
-		Method aOldMethod = class_getInstanceMethod( aNSQuickLookWrapperDocumentClass, aSelector );
-		Method aNewMethod = class_getInstanceMethod( [SFXDocument class], aSelector );
-		if ( aOldMethod && aNewMethod )
-		{
-			IMP aOldIMP = method_getImplementation( aOldMethod );
-			IMP aNewIMP = method_getImplementation( aNewMethod );
-			if ( aOldIMP && aNewIMP && class_addMethod( aNSQuickLookWrapperDocumentClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-	}
 }
 
 + (BOOL)isInVersionBrowser
@@ -382,117 +364,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[self setUndoManager:[SFXUndoManager createWithDocument:self]];
 
 	return self;
-}
-
-- (void)makeWindowControllers
-{
-	if ( [[self className] isEqualToString:pNSQuickLookWrapperDocument] && [self respondsToSelector:@selector(poseAsMakeWindowControllers)] )
-	{
-		[self poseAsMakeWindowControllers];
-
-		NSMutableData *pPDFData = nil;
-		NSURL *pFileURL = [self fileURL];
-		if ( pFileURL )
-		{
-			if ( !pApplication_cacheSecurityScopedURL )
-				pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
-			if ( pApplication_cacheSecurityScopedURL )
-				pApplication_cacheSecurityScopedURL( pFileURL );
-
-			OUString aFileURL( NSStringToOUString( [pFileURL absoluteString] ) );
-			if ( aFileURL.getLength() )
-			{
-				SfxMedium aMedium( aFileURL, STREAM_STD_READ );
-				uno::Reference< io::XInputStream > xPDFInputStream;
-				try
-				{
-					uno::Reference< embed::XStorage > xStorage( aMedium.GetStorage() );
-					if ( xStorage.is() )
-					{
-						uno::Reference< embed::XStorage > xThumbnails = xStorage->openStorageElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "Thumbnails" ) ), embed::ElementModes::READ );
-						if ( xThumbnails.is() )
-						{
-							uno::Reference< io::XStream > xPDFStream = xThumbnails->openStreamElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "thumbnail.pdf" ) ), embed::ElementModes::READ );
-							if ( xPDFStream.is() )
-							{
-								uno::Reference< io::XInputStream > xPDFInputStream = xPDFStream->getInputStream();
-								if ( xPDFInputStream.is() )
-								{
-									pPDFData = [NSMutableData dataWithCapacity:PDF_BUF_SIZE];
-									if ( pPDFData )
-									{
-										static const sal_uInt32 nBytes = 4096;
-										sal_Int32 nBytesRead;
-										uno::Sequence< ::sal_Int8 > aBytes( nBytes );
-										while ( ( nBytesRead = xPDFInputStream->readBytes( aBytes, nBytes ) ) > 0 )
-											[pPDFData appendBytes:aBytes.getConstArray() length:nBytesRead];
-									}
-								}
-							}
-						}
-					}
-				}
-				catch ( ... )
-				{
-				}
-
-				if ( xPDFInputStream.is() )
-				{
-					try
-					{
-						xPDFInputStream->closeInput();
-					}
-					catch ( ... )
-					{
-					}
-				}
-
-				aMedium.CloseAndRelease();
-			}
-		}
-
-		if ( pPDFData )
-		{
-			PDFDocument *pPDFDoc = [[PDFDocument alloc] initWithData:pPDFData];
-			if ( pPDFDoc )
-			{
-				[pPDFDoc autorelease];
-
-				NSArray *pWindowControllers = [self windowControllers];
-				if ( pWindowControllers )
-				{
-					NSUInteger nCount = [pWindowControllers count];
-					NSUInteger i = 0;
-					for ( ; i < nCount; i++ )
-					{
-						NSWindowController *pWindowController = [pWindowControllers objectAtIndex:i];
-						if ( pWindowController && [pWindowController isKindOfClass:[NSWindowController class]] )
-						{
-							NSWindow *pWindow = [pWindowController window];
-							if ( pWindow )
-							{
-								PDFView *pPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
-								if ( pPDFView )
-								{
-									[pPDFView autorelease];
-
-									[pPDFView setDocument:pPDFDoc];
-									[pPDFView setAllowsDragging:NO];
-									[pPDFView setAutoScales:YES];
-									[pPDFView setDisplaysPageBreaks:NO];
-									[pWindow setContentView:pPDFView];
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		[super makeWindowControllers];
-	}
 }
 
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler
@@ -646,6 +517,111 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		*ppError = nil;
 
 	return NO;
+}
+
+@end
+
+@implementation SFXDocumentRevision
+
+- (void)makeWindowControllers
+{
+	[super makeWindowControllers];
+
+	NSMutableData *pPDFData = nil;
+	NSURL *pFileURL = [self fileURL];
+	if ( pFileURL )
+	{
+		if ( !pApplication_cacheSecurityScopedURL )
+			pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+		if ( pApplication_cacheSecurityScopedURL )
+			pApplication_cacheSecurityScopedURL( pFileURL );
+
+		OUString aFileURL( NSStringToOUString( [pFileURL absoluteString] ) );
+		if ( aFileURL.getLength() )
+		{
+			SfxMedium aMedium( aFileURL, STREAM_STD_READ );
+			uno::Reference< io::XInputStream > xPDFInputStream;
+		try
+			{
+				uno::Reference< embed::XStorage > xStorage( aMedium.GetStorage() );
+				if ( xStorage.is() )
+				{
+					uno::Reference< embed::XStorage > xThumbnails = xStorage->openStorageElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "Thumbnails" ) ), embed::ElementModes::READ );
+					if ( xThumbnails.is() )
+					{
+						uno::Reference< io::XStream > xPDFStream = xThumbnails->openStreamElement( OUString( RTL_CONSTASCII_USTRINGPARAM( "thumbnail.pdf" ) ), embed::ElementModes::READ );
+						if ( xPDFStream.is() )
+						{
+							uno::Reference< io::XInputStream > xPDFInputStream = xPDFStream->getInputStream();
+							if ( xPDFInputStream.is() )
+							{
+								pPDFData = [NSMutableData dataWithCapacity:PDF_BUF_SIZE];
+								if ( pPDFData )
+								{
+									static const sal_uInt32 nBytes = 4096;
+									sal_Int32 nBytesRead;
+									uno::Sequence< ::sal_Int8 > aBytes( nBytes );
+									while ( ( nBytesRead = xPDFInputStream->readBytes( aBytes, nBytes ) ) > 0 )
+										[pPDFData appendBytes:aBytes.getConstArray() length:nBytesRead];
+								}
+							}
+						}
+					}
+				}
+			}
+			catch ( ... )
+			{
+			}
+
+			if ( xPDFInputStream.is() )
+			{
+				try
+				{
+					xPDFInputStream->closeInput();
+				}
+				catch ( ... )
+				{
+				}
+			}
+
+			aMedium.CloseAndRelease();
+		}
+	}
+
+	if ( pPDFData )
+	{
+		PDFDocument *pPDFDoc = [[PDFDocument alloc] initWithData:pPDFData];
+		if ( pPDFDoc )
+		{
+			[pPDFDoc autorelease];
+
+			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+			if ( pWindow )
+			{
+				[pWindow autorelease];
+
+				NSWindowController *pWinController = [[NSWindowController alloc] initWithWindow:pWindow];
+				if ( pWinController )
+				{
+					[pWinController autorelease];
+
+					[self addWindowController:pWinController];
+
+					PDFView *pPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
+					if ( pPDFView )
+					{
+						[pPDFView autorelease];
+
+						[pPDFView setDocument:pPDFDoc];
+						[pPDFView setAllowsDragging:NO];
+						[pPDFView setAutoScales:YES];
+						[pPDFView setDisplaysPageBreaks:NO];
+						[pWindow setContentView:pPDFView];
+					}
+				}
+			}
+		}
+	}
 }
 
 @end
