@@ -138,6 +138,7 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 + (BOOL)isInVersionBrowser;
+- (void)browseDocumentVersions:(id)pObject;
 - (void)close;
 - (void)dealloc;
 - (NSDocument *)duplicateAndReturnError:(NSError **)ppError;
@@ -241,6 +242,8 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 #import <Quartz/Quartz.h>
 #include <postmac.h>
 
+static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
+
 @implementation SFXDocument
 
 + (BOOL)autosavesInPlace
@@ -263,6 +266,13 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	}
 
 	return NO;
+}
+
+- (void)browseDocumentVersions:(id)pObject
+{
+	aLastVersionBrowserDocumentFrame = ( mpWindow ? [NSWindow contentRectForFrameRect:[mpWindow frame] styleMask:[mpWindow styleMask]] : NSZeroRect );
+
+	[super browseDocumentVersions:pObject];
 }
 
 - (void)close
@@ -595,7 +605,29 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		{
 			[pPDFDoc autorelease];
 
-			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+			NSApplication *pApp = [NSApplication sharedApplication];
+			NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+			if ( pApp && pDocController )
+			{
+				NSDocument *pDoc = [pDocController currentDocument];
+				NSArray *pWindows = [pApp windows];
+				if ( pDoc && pWindows )
+				{
+					NSUInteger nCount = [pWindows count];
+					NSUInteger i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSWindow *pWindow = [pWindows objectAtIndex:i];
+						if ( pWindow && [pDocController documentForWindow:pWindow] == pDoc )
+						{
+							aLastVersionBrowserDocumentFrame = [NSWindow contentRectForFrameRect:[pWindow frame] styleMask:[pWindow styleMask]];
+							break;
+						}
+					}
+				}
+			}
+
+			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:aLastVersionBrowserDocumentFrame styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
 			if ( pWindow )
 			{
 				[pWindow autorelease];
