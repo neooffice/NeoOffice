@@ -139,6 +139,7 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 + (void)initialize;
++ (BOOL)isInVersionBrowser;
 - (void)close;
 - (void)dealloc;
 - (NSDocument *)duplicateAndReturnError:(NSError **)ppError;
@@ -146,7 +147,6 @@ static OUString aSaveAVersionLocalizedString;
 - (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
-- (BOOL)isInVersionBrowser;
 - (void)makeWindowControllers;
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -250,17 +250,37 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 + (void)initialize
 {
 	Class aNSQuickLookWrapperDocumentClass = NSClassFromString( pNSQuickLookWrapperDocument );
-	SEL aSelector = @selector(makeWindowControllers);
-	SEL aPoseAsSelector = @selector(poseAsMakeWindowControllers);
-	Method aOldMethod = class_getInstanceMethod( aNSQuickLookWrapperDocumentClass, aSelector );
-	Method aNewMethod = class_getInstanceMethod( [SFXDocument class], aSelector );
-	if ( aOldMethod && aNewMethod )
+	if ( aNSQuickLookWrapperDocumentClass )
 	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( aNSQuickLookWrapperDocumentClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
+		SEL aSelector = @selector(makeWindowControllers);
+		SEL aPoseAsSelector = @selector(poseAsMakeWindowControllers);
+		Method aOldMethod = class_getInstanceMethod( aNSQuickLookWrapperDocumentClass, aSelector );
+		Method aNewMethod = class_getInstanceMethod( [SFXDocument class], aSelector );
+		if ( aOldMethod && aNewMethod )
+		{
+			IMP aOldIMP = method_getImplementation( aOldMethod );
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aOldIMP && aNewIMP && class_addMethod( aNSQuickLookWrapperDocumentClass, aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
 	}
+}
+
++ (BOOL)isInVersionBrowser
+{
+	NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
+	if ( pBundle )
+	{
+		Class aClass = [pBundle classNamed:@"NSDocumentRevisionsController"];
+		if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
+		{
+			id pController = [aClass sharedController];
+			if ( pController && [pController respondsToSelector:@selector(isVisualizing)] )
+				return [pController isVisualizing];
+		}
+	}
+
+	return NO;
 }
 
 - (void)close
@@ -362,23 +382,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[self setUndoManager:[SFXUndoManager createWithDocument:self]];
 
 	return self;
-}
-
-- (BOOL)isInVersionBrowser
-{
-	NSBundle *pBundle = [NSBundle bundleForClass:[NSDocument class]];
-	if ( pBundle )
-	{
-		Class aClass = [pBundle classNamed:@"NSDocumentRevisionsController"];
-		if ( aClass && class_getClassMethod( aClass, @selector(sharedController) ) )
-		{
-			id pController = [aClass sharedController];
-			if ( pController && [pController respondsToSelector:@selector(isVisualizing)] )
-				return [pController isVisualizing];
-		}
-	}
-
-	return NO;
 }
 
 - (void)makeWindowControllers
@@ -536,7 +539,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 {
 	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
-		if ( [self isInVersionBrowser] )
+		if ( [SFXDocument isInVersionBrowser] )
 		{
 			[self performSelector:@selector(reloadFrame) withObject:nil afterDelay:0];
 		}
@@ -562,7 +565,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)revertDocumentToSaved:(id)pObject
 {
-	if ( [self isInVersionBrowser] )
+	if ( [SFXDocument isInVersionBrowser] )
 		return;
 
 	[self browseDocumentVersions:pObject];

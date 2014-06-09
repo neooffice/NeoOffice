@@ -52,14 +52,6 @@
 // Comment out the following line to disable native resume support
 #define USE_NATIVE_RESUME
 
-#ifndef NSURLBookmarkCreationWithSecurityScope
-#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
-#endif	// !NSURLBookmarkCreationWithSecurityScope
-
-#ifndef NSURLBookmarkResolutionWithSecurityScope
-#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
-#endif	// !NSURLBookmarkResolutionWithSecurityScope
-
 struct ImplPendingOpenPrintFileRequest
 {
 	::rtl::OString		maPath;
@@ -70,6 +62,7 @@ struct ImplPendingOpenPrintFileRequest
 };
 
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
+static NSString *pSFXDocument = @"SFXDocument";
 
 using namespace rtl;
 using namespace vcl;
@@ -196,8 +189,8 @@ static void HandleDidChangeScreenParametersRequest()
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
-@interface NSDocument (SFXDocument)
-- (MacOSBOOL)isInVersionBrowser;
+@interface NSObject (SFXDocument)
++ (MacOSBOOL)isInVersionBrowser;
 @end
 
 @interface VCLDocument : NSDocument
@@ -304,22 +297,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
 	// Handle call normally if we are in the version browser
-	VCLDocumentController *pDocController = [VCLDocumentController sharedDocumentController];
-	if ( pDocController )
-	{
-		NSArray *pDocs = [pDocController documents];
-		if ( pDocs )
-		{
-			NSUInteger nCount = [pDocs count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSDocument *pDoc = [pDocs objectAtIndex:i];
-				if ( pDoc && [pDoc respondsToSelector:@selector(isInVersionBrowser)] && [pDoc isInVersionBrowser] )
-					return [super makeDocumentWithContentsOfURL:pAbsoluteURL ofType:pTypeName error:ppError];
-			}
-		}
-	}
+	Class aSFXDocumentClass = NSClassFromString( pSFXDocument );
+	if ( aSFXDocumentClass && class_getClassMethod( aSFXDocumentClass, @selector(isInVersionBrowser) ) && [aSFXDocumentClass isInVersionBrowser] )
+		return [super makeDocumentWithContentsOfURL:pAbsoluteURL ofType:pTypeName error:ppError];
 
 	if ( ppError )
 		*ppError = nil;
