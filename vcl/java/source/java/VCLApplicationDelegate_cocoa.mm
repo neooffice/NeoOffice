@@ -63,6 +63,7 @@ struct ImplPendingOpenPrintFileRequest
 
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
 static NSString *pSFXDocument = @"SFXDocument";
+static NSString *pSFXDocumentRevision = @"SFXDocumentRevision";
 
 using namespace rtl;
 using namespace vcl;
@@ -280,9 +281,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (Class)documentClassForType:(NSString *)pDocumentTypeName
 {
-	// Always return nil otherwise versions browser will create NSDocument
-	// instances
-	return nil;
+	// Always return our custom class for rendering in the version browser
+	return NSClassFromString( pSFXDocumentRevision );
 }
 
 - (id)init
