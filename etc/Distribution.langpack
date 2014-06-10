@@ -14,4 +14,4 @@
         identifier or else the main installer's files will be deleted on
         Mac OS X 10.6 and higher
     -->
-    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_SHORT_VERSION)" auth="root">#contents.pkg</pkg-ref>
