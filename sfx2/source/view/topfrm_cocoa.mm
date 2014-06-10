@@ -605,29 +605,39 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		{
 			[pPDFDoc autorelease];
 
-			NSApplication *pApp = [NSApplication sharedApplication];
-			NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
-			if ( pApp && pDocController )
+			NSUInteger nStyleMask = NSTitledWindowMask | NSClosableWindowMask;
+
+			if ( NSIsEmptyRect( aLastVersionBrowserDocumentFrame ) )
 			{
-				NSDocument *pDoc = [pDocController currentDocument];
-				NSArray *pWindows = [pApp windows];
-				if ( pDoc && pWindows )
+				NSApplication *pApp = [NSApplication sharedApplication];
+				NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+				if ( pApp && pDocController )
 				{
-					NSUInteger nCount = [pWindows count];
-					NSUInteger i = 0;
-					for ( ; i < nCount; i++ )
+					NSArray *pWindows = [pApp windows];
+					if ( pWindows )
 					{
-						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pDocController documentForWindow:pWindow] == pDoc )
+						NSDocument *pDoc = [pDocController currentDocument];
+						NSUInteger nCount = [pWindows count];
+						NSUInteger i = 0;
+						for ( ; i < nCount; i++ )
 						{
-							aLastVersionBrowserDocumentFrame = [NSWindow contentRectForFrameRect:[pWindow frame] styleMask:[pWindow styleMask]];
-							break;
+							NSWindow *pWindow = [pWindows objectAtIndex:i];
+							if ( pWindow )
+							{
+								NSRect aContentRect = [NSWindow contentRectForFrameRect:[pWindow frame] styleMask:[pWindow styleMask]];
+								if ( !NSIsEmptyRect( aContentRect ) )
+								{
+									aLastVersionBrowserDocumentFrame = aContentRect;
+									if ( pDoc && [pDocController documentForWindow:pWindow] == pDoc )
+										break;
+								}
+							}
 						}
 					}
 				}
 			}
 
-			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:aLastVersionBrowserDocumentFrame styleMask:NSTitledWindowMask | NSClosableWindowMask backing:NSBackingStoreBuffered defer:YES];
+			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:aLastVersionBrowserDocumentFrame styleMask:nStyleMask backing:NSBackingStoreBuffered defer:YES];
 			if ( pWindow )
 			{
 				[pWindow autorelease];
