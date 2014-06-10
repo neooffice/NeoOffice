@@ -65,6 +65,7 @@ struct ImplPendingOpenPrintFileRequest
 };
 
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
+static NSString *pSFXDocument = @"SFXDocument";
 
 using namespace rtl;
 using namespace vcl;
@@ -191,6 +192,10 @@ static void HandleDidChangeScreenParametersRequest()
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
+@interface NSObject (SFXDocument)
++ (MacOSBOOL)isInVersionBrowser;
+@end
+
 @interface VCLDocument : NSDocument
 + (MacOSBOOL)autosavesInPlace;
 - (MacOSBOOL)hasUnautosavedChanges;
@@ -278,9 +283,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (Class)documentClassForType:(NSString *)pDocumentTypeName
 {
-	// Always return nil otherwise versions browser will create NSDocument
-	// instances
-	return nil;
+	// Always return our custom class for rendering in the version browser
+	return NSClassFromString( pSFXDocument );
 }
 
 - (id)init
@@ -294,6 +298,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	// Handle call normally if we are in the version browser
+	Class aSFXDocumentClass = NSClassFromString( pSFXDocument );
+	if ( aSFXDocumentClass && class_getClassMethod( aSFXDocumentClass, @selector(isInVersionBrowser) ) && [aSFXDocumentClass isInVersionBrowser] )
+		return [super makeDocumentWithContentsOfURL:pAbsoluteURL ofType:pTypeName error:ppError];
+
 	if ( ppError )
 		*ppError = nil;
 
