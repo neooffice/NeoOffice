@@ -25,7 +25,7 @@ Depuis lors, les ingénieurs de NeoOffice - Patrick Luby et Ed Peterlin - ont co
 
 
 What's New in this Version:
-This version fixes a bug that would sometimes cause NeoOffice to stop responding. NeoOffice displays the Ouvrir dialog when opening some documents containing videos and the bug would cause NeoOffice to stop responding immediately after the Ouvrir dialog appeared.
+This version fixes a bug that would sometimes cause saving a document to be very slow. This bug would occur when the user tried to quit NeoOffice and NeoOffice would ask the user to save any unsaved changes. Saving at that point would be several times slower than normal.
 
 
 Keywords:
