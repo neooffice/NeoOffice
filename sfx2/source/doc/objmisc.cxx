@@ -93,6 +93,7 @@
 #include <vcl/sysdata.hxx>
 
 #include "objmisc_cocoa.h"
+#include "objserv_cocoa.h"
 #include "../view/topfrm_cocoa.h"
 
 #endif	// USE_JAVA && MACOSX
@@ -409,6 +410,14 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 				SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
 			else
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
+
+			// Check if we can save after first edit
+			static bool bCheckIfCanSave = true;
+			if ( bCheckIfCanSave && IsModified() )
+			{
+				bCheckIfCanSave = false;
+				SfxObjectShell_canSave( this, SID_SAVEDOC );
+			}
 		}
 #endif	// USE_JAVA && MACOSX
 	}
