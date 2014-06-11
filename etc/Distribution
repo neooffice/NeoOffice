@@ -2,7 +2,7 @@
 <installer-gui-script minSpecVersion="2">
     <title>$(PRODUCT_NAME) $(PRODUCT_VERSION)</title>
     <options customize="never" require-scripts="false" hostArchitectures="$(TARGET_MACHINE)"/>
-    <domains enable_anywhere="true"/>
+    <domains enable_localSystem="true"/>
     <choices-outline>
         <line choice="default">
             <line choice="org.neooffice.$(PRODUCT_DIR_NAME)"/>
