@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-Kann Microsoft Office-Dokumente nicht öffnen? Versuchen Sie NeoOffice. NeoOffice kann die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente öffnen und Openoffice-Dokumente öffnen. Mit NeoOffice, Benutzer können Text Dokumente, Tabellenkalkulation und Präsentationen lesen, erstellen und bearbeiten.
+Kann Microsoft Office-Dokumente nicht öffnen? NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, Benutzer können Text Dokumente, Tabellenkalkulation und Präsentationen lesen, erstellen und bearbeiten. NeoOffice kann Openoffice-Dokumente öffnen und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente öffnen.
 
 NeoOffice 3.x und Openoffice Benutzer: Wir empfehlen Ihnen klicken Sie auf den NeoOffice Support Link und lesen Sie die Liste der Änderungen, bevor Sie auf diese Version von NeoOffice aktualisieren.
 
@@ -25,7 +25,9 @@ Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben imm
 
 
 What's New in this Version:
-This version fixes a bug that would sometimes cause saving a document to be very slow. This bug would occur when the user tried to quit NeoOffice and NeoOffice would ask the user to save any unsaved changes. Saving at that point would be several times slower than normal.
+NeoOffice is now a "64 bit" application.
+
+Most NeoOffice 2013.5 users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the NeoOffice Support link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.
 
 
 Keywords:
