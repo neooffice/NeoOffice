@@ -7,13 +7,13 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-Kann Microsoft Office-Dokumente nicht öffnen? NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, Benutzer können Text Dokumente, Tabellenkalkulation und Präsentationen lesen, erstellen und bearbeiten. NeoOffice kann Openoffice-Dokumente öffnen und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente öffnen.
+Kann Microsoft Office-Dokumente nicht öffnen? NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, Benutzer können Text Dokumente, Tabellenkalkulation und Präsentationen lesen, erstellen und bearbeiten. NeoOffice kann OpenOffice-Dokumente öffnen und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente öffnen.
 
-NeoOffice 3.x und Openoffice Benutzer: Wir empfehlen Ihnen, dass Sie auf den NeoOffice Support Link klicken und lesen Sie die Liste der Änderungen, bevor Sie auf diese Version von NeoOffice aktualisieren.
+NeoOffice 3.x und OpenOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den NeoOffice Support Link klicken und lesen Sie die Liste der Änderungen.
 
 NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die NeoOffice-ingenieure erstellt NeoOffice im Jahr 2003, wenn sie gemacht OpenOffice ausführen nativ auf OS X zum ersten Mal.
 
-Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in Openoffice zu finden, wie:
+Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in OpenOffice zu finden, wie:
 
 • Öffnen von Calc oder Impress anstelle von Writer beim Start mit dem NeoOffice > Beim Starten Öffnen Menü
 • OS X Gatekeeper
