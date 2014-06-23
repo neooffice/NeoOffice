@@ -34,5 +34,8 @@ neo,office,werkblad,excel,xlsx,xls,tekst,word,docx,doc,presentatie,powerpoint,pp
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
 
+Marketing URL:
+http://www.neooffice.org/neojava/features.php
+
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_nl.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
