@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-Kan Microsoft Office-documenten niet openen? NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers tekstdocumenten, werkbladen en presentaties lezen, maken en bewerken. NeoOffice kan OpenOffice-documenten te openen, en ook de meeste Microsoft Word-, Excel- en PowerPoint-documenten te openen.
+NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers tekstdocumenten, werkbladen en presentaties lezen, maken en bewerken. NeoOffice kan OpenOffice-documenten te openen, en ook de meeste Microsoft Word-, Excel- en PowerPoint-documenten te openen.
 
 NeoOffice 3.x en OpenOffice gebruikers: voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de lijst met wijzigingen.
 
