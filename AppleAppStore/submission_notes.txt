@@ -3,11 +3,6 @@ This file contains notes for submitting a new version of NeoOffice to the Apple 
 Warning: since NeoOffice is a registered trademark of Planamesa Inc. and Planamesa Inc. owns the copyright to all NeoOffice source code, these notes are only applicable to submissions made by Planamesa Inc.
 
 
-Rights and Pricing
-------------------
-Set to "Tier 10".
-
-
 Version Information
 -------------------
 
