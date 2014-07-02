@@ -32,7 +32,11 @@
 
 #include <uno/lbnames.h>			// CPPU_CURRENT_LANGUAGE_BINDING_NAME macro, which specify the environment type
 #include <cppuhelper/implbase1.hxx>	// helper for implementations
+#if defined USE_JAVA && defined MACOSX
+#include <cppuhelper/implbase7.hxx>	// helper for implementations
+#else	// USE_JAVA && MACOSX
 #include <cppuhelper/implbase6.hxx>	// helper for implementations
+#endif	// USE_JAVA && MACOSX
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceDisplayName.hpp>
@@ -50,6 +54,8 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#include <com/sun/star/linguistic2/XProofreader.hpp>
+
 #include <map>
 #include "sspellimp_cocoa.h"
 
@@ -66,7 +72,11 @@ using namespace ::com::sun::star::linguistic2;
 
 
 class SpellChecker :
+#if defined USE_JAVA && defined MACOSX
+	public cppu::WeakImplHelper7
+#else	// USE_JAVA && MACOSX
 	public cppu::WeakImplHelper6
+#endif	// USE_JAVA && MACOSX
 	<
 		XSpellChecker,
 		XLinguServiceEventBroadcaster,
@@ -74,6 +84,9 @@ class SpellChecker :
 		XComponent,
 		XServiceInfo,
 		XServiceDisplayName
+#if defined USE_JAVA && defined MACOSX
+		, XProofreader
+#endif	// USE_JAVA && MACOSX
 	>
 {
 	Sequence< Locale >                 aSuppLocales;
@@ -177,6 +190,24 @@ public:
 		getSupportedServiceNames() 
 			throw(RuntimeException);
 
+#if defined USE_JAVA && defined MACOSX
+	// XProofreader
+	virtual sal_Bool SAL_CALL
+		isSpellChecker()
+			throw(RuntimeException);
+
+	virtual ProofreadingResult SAL_CALL
+		doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties )
+			throw (IllegalArgumentException, RuntimeException);
+
+	virtual void SAL_CALL
+		ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale )
+			throw (IllegalArgumentException, RuntimeException);
+
+	virtual void SAL_CALL
+		resetIgnoreRules()
+			throw(RuntimeException);
+#endif	// USE_JAVA && MACOSX
 
 	static inline OUString	
 		getImplementationName_Static() throw();
