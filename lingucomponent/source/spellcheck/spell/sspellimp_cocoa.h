@@ -38,8 +38,10 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
+#include <com/sun/star/linguistic2/XProofreader.hpp>
 #include <rtl/ustring.hxx>
 
+SAL_DLLPRIVATE void NSSpellChecker_checkGrammarOfString( ::com::sun::star::linguistic2::ProofreadingResult *pResult, CFStringRef aLocale );
 SAL_DLLPRIVATE sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale );
 SAL_DLLPRIVATE CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale );
 SAL_DLLPRIVATE CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales );

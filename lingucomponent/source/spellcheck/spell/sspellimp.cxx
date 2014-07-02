@@ -1168,9 +1168,29 @@ ProofreadingResult SpellChecker::doProofreading( const OUString& aDocumentIdenti
 	MutexGuard	aGuard( GetLinguMutex() );
 
 	ProofreadingResult aRet;
-#ifdef DEBUG
-	fprintf( stderr, "SpellChecker::doProofreading not implemented\n" );
-#endif
+	aRet.aDocumentIdentifier = aDocumentIdentifier;
+	aRet.aText = aText;
+	aRet.aLocale = aLocale;
+	aRet.nStartOfSentencePosition = nStartOfSentencePosition;
+	aRet.nBehindEndOfSentencePosition = nSuggestedBehindEndOfSentencePosition;
+
+	bool bFound = false;
+	OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+	::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+	if ( it != maPrimaryNativeLocaleMap.end() )
+	{
+		bFound = true;
+	}
+	else
+	{
+		it = maSecondaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maSecondaryNativeLocaleMap.end() )
+			bFound = true;
+	}
+
+	if ( bFound )
+		NSSpellChecker_checkGrammarOfString( &aRet, it->second );
+
 	return aRet;
 }
 

@@ -35,11 +35,36 @@
 #import <AppKit/AppKit.h>
 #include <postmac.h>
 
+#include <com/sun/star/text/TextMarkupType.hpp>
+
 #include "sspellimp_cocoa.h"
 
 #ifndef BOOL
 #define BOOL MacOSBOOL
 #endif
+
+using namespace ::com::sun::star::linguistic2;
+using namespace ::com::sun::star::text;
+using namespace ::rtl;
+
+static OUString NSStringToOUString( NSString *pString )
+{
+	OUString aRet;
+
+	if ( pString )
+	{
+		NSUInteger nLen = [pString length];
+		if ( nLen )
+		{
+			sal_Unicode aBuf[ nLen + 1 ];
+			[pString getCharacters:aBuf];
+			aBuf[ nLen ] = 0;
+			aRet = OUString( aBuf );
+		}
+	}
+
+	return aRet;
+}
 
 @interface RunSpellCheckerArgs : NSObject
 {
@@ -111,6 +136,7 @@
 
 @interface RunSpellChecker : NSObject
 + (id)create;
+- (void)checkGrammarOfString:(RunSpellCheckerArgs *)pArgs;
 - (void)checkSpellingOfString:(RunSpellCheckerArgs *)pArgs;
 - (void)getGuesses:(RunSpellCheckerArgs *)pArgs;
 - (void)getLocales:(RunSpellCheckerArgs *)pArgs;
@@ -123,6 +149,108 @@
 	RunSpellChecker *pRet = [[RunSpellChecker alloc] init];
 	[pRet autorelease];
 	return pRet;
+}
+
+- (void)checkGrammarOfString:(RunSpellCheckerArgs *)pArgs
+{
+    NSArray *pArgArray = [pArgs args];
+    if ( !pArgArray || [pArgArray count] < 2 )
+        return;
+
+	NSValue *pResultValue = (NSValue *)[pArgArray objectAtIndex:0];
+	if ( !pResultValue )
+		return;
+
+    ProofreadingResult *pResult = (ProofreadingResult *)[pResultValue pointerValue];
+	if ( !pResult || !pResult->aText.getLength() || pResult->nStartOfSentencePosition < 0 || pResult->nStartOfSentencePosition >= pResult->nBehindEndOfSentencePosition || pResult->nStartOfSentencePosition >= pResult->aText.getLength() )
+		return;
+
+    NSString *pLocale = (NSString *)[pArgArray objectAtIndex:1];
+	if ( !pLocale )
+		return;
+
+	@try
+	{
+		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
+		if ( pChecker )
+		{
+			NSUInteger nLen;
+			if ( pResult->aText.getLength() < pResult->nBehindEndOfSentencePosition > pResult->aText.getLength() )
+				nLen = pResult->aText.getLength() - pResult->nStartOfSentencePosition;
+			else
+ 				nLen = pResult->nBehindEndOfSentencePosition - pResult->nStartOfSentencePosition;
+			NSString *pString = [NSString stringWithCharacters:pResult->aText.getStr() + pResult->nStartOfSentencePosition length:nLen];
+			if ( pString )
+			{
+				NSArray *pDetails = nil;
+				[pChecker checkGrammarOfString:pString startingAt:0 language:pLocale wrap:NO inSpellDocumentWithTag:0 details:&pDetails];
+				if ( pDetails )
+				{
+					NSUInteger nCount = [pDetails count];
+					NSUInteger i = 0;
+					sal_Int32 nErrors = 0;
+
+					pResult->aErrors.realloc( nCount );
+					SingleProofreadingError *pErrors = pResult->aErrors.getArray();
+					if ( pErrors )
+					{
+						for ( ; i < nCount; i++ )
+						{
+							NSDictionary *pDict = [pDetails objectAtIndex:i];
+							if ( pDict )
+							{
+								NSRange aRange = NSMakeRange( 0, [pString length] );
+								NSValue *pRangeValue = [pDict objectForKey:NSGrammarRange];
+								if ( pRangeValue )
+									aRange = [pRangeValue rangeValue];
+
+								if ( aRange.location != NSNotFound && aRange.length > 0 )
+								{
+									OUString aDesc = NSStringToOUString( [pDict objectForKey:NSGrammarUserDescription] );
+									if ( aDesc.getLength() )
+									{
+										SingleProofreadingError aError;
+										aError.nErrorStart = pResult->nStartOfSentencePosition + aRange.location;
+										aError.nErrorLength = aRange.length;
+										aError.nErrorType = TextMarkupType::PROOFREADING;
+										aError.aShortComment = aDesc;
+										aError.aFullComment = aDesc;
+										NSArray *pCorrections = [pDict objectForKey:NSGrammarCorrections];
+										if ( pCorrections )
+										{
+											NSUInteger nCorrections = [pCorrections count];
+											NSUInteger j = 0;
+											sal_Int32 nSuggestions = 0;
+
+											aError.aSuggestions.realloc( nCorrections );
+											OUString *pSuggestions = aError.aSuggestions.getArray();
+											if ( pSuggestions )
+											{
+												for ( ; j < nCorrections; j++ )
+												{
+													OUString aSuggestion = NSStringToOUString( [pCorrections objectAtIndex:j] );
+													if ( aSuggestion.getLength() )
+														pSuggestions[ nSuggestions++ ] = aSuggestion;
+												}
+											}
+											aError.aSuggestions.realloc( nSuggestions );
+										}
+
+										pErrors[ nErrors++ ] = aError;
+									}
+								}
+							}
+						}
+					}
+					pResult->aErrors.realloc( nErrors );
+				}
+			}
+		}
+	}
+	@catch ( NSException *pExc )
+	{
+		NSLog( @"%@", [pExc reason] );
+	}
 }
 
 - (void)checkSpellingOfString:(RunSpellCheckerArgs *)pArgs
@@ -253,13 +381,28 @@
 
 @end
 
+void NSSpellChecker_checkGrammarOfString( ::com::sun::star::linguistic2::ProofreadingResult *pResult, CFStringRef aLocale )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pResult && aLocale && CFStringGetLength( aLocale ) && pResult->aText.getLength() && pResult->aText.getLength() > pResult->nStartOfSentencePosition )
+	{
+		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pResult], (NSString *)aLocale, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSpellChecker *pRunSpellChecker = [RunSpellChecker create];
+		[pRunSpellChecker performSelectorOnMainThread:@selector(checkGrammarOfString:) withObject:pArgs waitUntilDone:YES modes:pModes];
+	}
+
+	[pPool release];
+}
+
 sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale )
 {
 	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( aString && aLocale )
+	if ( aString && aLocale && CFStringGetLength( aString ) && CFStringGetLength( aLocale ) )
 	{
 		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:(NSString *)aString, (NSString *)aLocale, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -281,7 +424,7 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( aString && aLocale )
+	if ( aString && aLocale && CFStringGetLength( aString ) && CFStringGetLength( aLocale ) )
 	{
 		RunSpellCheckerArgs *pArgs = [RunSpellCheckerArgs argsWithArgs:[NSArray arrayWithObjects:(NSString *)aString, (NSString *)aLocale, nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -338,7 +481,7 @@ CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 			for ( ; i < nCount; i++ )
 			{
 				NSString *pString = [pRet objectAtIndex:i];
-				if ( pString )
+				if ( pString && [pString length] )
 				{
 					CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
 					if ( aString )
