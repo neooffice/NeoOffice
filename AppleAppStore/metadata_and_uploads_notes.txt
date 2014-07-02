@@ -27,7 +27,7 @@ Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have contin
 What's New in this Version:
 Before you buy NeoOffice, click on the "Planamesa Inc. Web Site" link and try NeoOffice 2014 Free Edition for free.
 
-NeoOffice is now a "64 bit" application. Most NeoOffice 2013.5 users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the "NeoOffice support" link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.
+NeoOffice is now a 64 bit application. Most NeoOffice 2013.5 users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the "NeoOffice support" link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.
 
 
 Keywords:
