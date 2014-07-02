@@ -34,22 +34,14 @@
 #ifndef _LINGU2_SPELLIMP_COCOA_H_
 #define _LINGU2_SPELLIMP_COCOA_H_
 
-#ifdef __cplusplus
 #include <premac.h>
-#endif
 #include <CoreFoundation/CoreFoundation.h>
-#ifdef __cplusplus
 #include <postmac.h>
-#endif
 
-#ifdef __cplusplus
-BEGIN_C
-#endif
-BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale );
-CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale );
-CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales );
-#ifdef __cplusplus
-END_C
-#endif
+#include <rtl/ustring.hxx>
+
+SAL_DLLPRIVATE sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale );
+SAL_DLLPRIVATE CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale );
+SAL_DLLPRIVATE CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales );
 
 #endif

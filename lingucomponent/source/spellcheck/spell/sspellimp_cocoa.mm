@@ -31,8 +31,15 @@
  *
  ************************************************************************/
 
-#import <Cocoa/Cocoa.h>
-#import "sspellimp_cocoa.h"
+#include <premac.h>
+#import <AppKit/AppKit.h>
+#include <postmac.h>
+
+#include "sspellimp_cocoa.h"
+
+#ifndef BOOL
+#define BOOL MacOSBOOL
+#endif
 
 @interface RunSpellCheckerArgs : NSObject
 {
@@ -102,10 +109,6 @@
 
 @end
 
-@interface NSSpellChecker (RunSpellChecker)
-- (NSArray *)guessesForWordRange:(NSRange)aRange inString:(NSString *)pString language:(NSString *)pLanguage inSpellDocumentWithTag:(NSInteger)nTag;
-@end
-
 @interface RunSpellChecker : NSObject
 + (id)create;
 - (void)checkSpellingOfString:(RunSpellCheckerArgs *)pArgs;
@@ -172,12 +175,7 @@
 		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 		if ( pChecker )
 		{
-			NSArray *pArray = nil;
-			if ( [pChecker respondsToSelector:@selector(guessesForWordRange:inString:language:inSpellDocumentWithTag:)] )
-				pArray = [pChecker guessesForWordRange:NSMakeRange( 0, [pString length] ) inString:pString language:pLocale inSpellDocumentWithTag:0];
-			else if ( [pChecker setLanguage:pLocale] )
-				pArray = [pChecker guessesForWord:pString];
-
+			NSArray *pArray = [pChecker guessesForWordRange:NSMakeRange( 0, [pString length] ) inString:pString language:pLocale inSpellDocumentWithTag:0];
 			if ( pArray && [pArray count] )
 				[pArgs setResult:pArray];
 		}
@@ -255,9 +253,9 @@
 
 @end
 
-BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale )
+sal_Bool NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale )
 {
-	BOOL bRet = YES;
+	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -269,7 +267,7 @@ BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLoc
 		[pRunSpellChecker performSelectorOnMainThread:@selector(checkSpellingOfString:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
-			bRet = [pRet boolValue];
+			bRet = (sal_Bool)[pRet boolValue];
 	}
 
 	[pPool release];
