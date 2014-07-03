@@ -213,6 +213,7 @@ static OUString NSStringToOUString( NSString *pString )
 										aError.nErrorStart = pResult->nStartOfSentencePosition + aRange.location;
 										aError.nErrorLength = aRange.length;
 										aError.nErrorType = TextMarkupType::PROOFREADING;
+										aError.aRuleIdentifier = aDesc;
 										aError.aShortComment = aDesc;
 										aError.aFullComment = aDesc;
 										NSArray *pCorrections = [pDict objectForKey:NSGrammarCorrections];
