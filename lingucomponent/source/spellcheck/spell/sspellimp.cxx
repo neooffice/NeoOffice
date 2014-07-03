@@ -1173,6 +1173,7 @@ ProofreadingResult SpellChecker::doProofreading( const OUString& aDocumentIdenti
 	aRet.aLocale = aLocale;
 	aRet.nStartOfSentencePosition = nStartOfSentencePosition;
 	aRet.nBehindEndOfSentencePosition = nSuggestedBehindEndOfSentencePosition;
+	aRet.xProofreader = this;
 
 	bool bFound = false;
 	OUString aLocaleString( ImplGetLocaleString( aLocale ) );
