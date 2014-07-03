@@ -159,6 +159,39 @@ using namespace ::com::sun::star::container;
 #include "appbaslib.hxx"
 #include <openflag.hxx>                 // SFX_STREAM_READWRITE
 
+#if defined USE_JAVA && defined MACOSX
+
+class SAL_DLLPRIVATE CheckIfCanSaveTimer : public Timer
+{
+public:
+	DECL_LINK( TimeoutHdl, void * );
+};
+
+static bool bCheckIfCanSave = true;
+static CheckIfCanSaveTimer aCheckIfCanSaveTimer;
+
+IMPL_LINK( CheckIfCanSaveTimer, TimeoutHdl, void *, EMPTYARG )
+{
+	Stop();
+
+	if ( bCheckIfCanSave )
+	{
+		for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext( *pObjShell ) )
+		{
+			if ( pObjShell->IsModified() )
+			{
+				bCheckIfCanSave = false;
+				SfxObjectShell_canSave( pObjShell, SID_SAVEDOC );
+				break;
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::com::sun::star;
 
 // class SfxHeaderAttributes_Impl ----------------------------------------
@@ -412,11 +445,11 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 
 			// Check if we can save after first edit
-			static bool bCheckIfCanSave = true;
-			if ( bCheckIfCanSave && IsModified() )
+			if ( bCheckIfCanSave && IsModified() && !aCheckIfCanSaveTimer.IsActive() )
 			{
-				bCheckIfCanSave = false;
-				SfxObjectShell_canSave( this, SID_SAVEDOC );
+				aCheckIfCanSaveTimer.SetTimeout( 5000 );
+				aCheckIfCanSaveTimer.SetTimeoutHdl( LINK( &aCheckIfCanSaveTimer, CheckIfCanSaveTimer, TimeoutHdl ) );
+				aCheckIfCanSaveTimer.Start();
 			}
 		}
 #endif	// USE_JAVA && MACOSX
