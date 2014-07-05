@@ -179,11 +179,24 @@ namespace /* private */
 				aLocaleBuffer.setLength(0); // clear buffer which still contains fallback value
 				
 				CFStringRef lang = (CFStringRef)CFArrayGetValueAtIndex(subs, 0);
+#ifdef USE_JAVA
+				if (CFStringCompare(lang, CFSTR("nn"), 0) == kCFCompareEqualTo || CFStringCompare(lang, CFSTR("no"), 0) == kCFCompareEqualTo)
+					lang = CFSTR("nb");
+#endif	// USE_JAVA
 				OUStringBufferAppendCFString(aLocaleBuffer, lang);
 				
 				// country also available? Assumption: if the array contains more than one
 				// value the second value is always the country!
+#ifdef USE_JAVA
+				if (CFStringCompare(lang, CFSTR("pt"), 0) == kCFCompareEqualTo)
+				{
+					aLocaleBuffer.appendAscii("-");
+					OUStringBufferAppendCFString(aLocaleBuffer, CFSTR("BR"));
+				}
+				else if (CFArrayGetCount(subs) > 1) 
+#else	// USE_JAVA
 				if (CFArrayGetCount(subs) > 1) 
+#endif	// USE_JAVA
 				{	
 #ifdef USE_JAVA
 					CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
