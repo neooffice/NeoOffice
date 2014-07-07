@@ -236,10 +236,14 @@ static sal_Int32 lcl_BacktraceWhiteSpaces( const OUString &rText, sal_Int32 nSta
 
 //////////////////////////////////////////////////////////////////////
 
+#ifndef USE_JAVA
+
 extern "C" void workerfunc (void * gci)
 {
     ((GrammarCheckingIterator*)gci)->DequeueAndCheck();
 }
+
+#endif	// !USE_JAVA
 
 static lang::Locale lcl_GetPrimaryLanguageOfSentence(
     uno::Reference< text::XFlatParagraph > xFlatPara,
@@ -291,7 +295,12 @@ GrammarCheckingIterator::GrammarCheckingIterator( const uno::Reference< lang::XM
     m_aEventListeners( MyMutex::get() ),
     m_aNotifyListeners( MyMutex::get() )
 {
+#ifdef USE_JAVA
+    m_aDequeueAndCheckTimer.SetTimeout( 50 );
+    m_aDequeueAndCheckTimer.SetTimeoutHdl( LINK( this, GrammarCheckingIterator, DequeueAndCheck ) );
+#else	// USE_JAVA
     osl_createThread( workerfunc, this );
+#endif	// USE_JAVA
 }
 
 
@@ -357,8 +366,13 @@ void GrammarCheckingIterator::AddEntry(
         ::osl::Guard< ::osl::Mutex > aGuard( MyMutex::get() );
         m_aFPEntriesQueue.push_back( aNewFPEntry );
 
+#ifdef USE_JAVA
+        if ( !m_aDequeueAndCheckTimer.IsActive() );
+            m_aDequeueAndCheckTimer.Start();
+#else	// USE_JAVA
         // wake up the thread in order to do grammar checking
         m_aWakeUpThread.set();
+#endif	// USE_JAVA
     }
 }
 
@@ -527,7 +541,11 @@ uno::Reference< linguistic2::XProofreader > GrammarCheckingIterator::GetGrammarC
 }
 
 
+#ifdef USE_JAVA
+IMPL_LINK( GrammarCheckingIterator, DequeueAndCheck, Timer*, pTimer )
+#else	// USE_JAVA
 void GrammarCheckingIterator::DequeueAndCheck()
+#endif	// USE_JAVA
 {
     uno::Sequence< sal_Int32 >      aLangPortions;
     uno::Sequence< lang::Locale >   aLangPortionsLocale;
@@ -539,7 +557,11 @@ void GrammarCheckingIterator::DequeueAndCheck()
 		bEnd = m_bEnd;
 	}
     // ---- THREAD SAFE END ----
+#ifdef USE_JAVA
+    if (!bEnd)
+#else	// USE_JAVA
     while (!bEnd)
+#endif	// USE_JAVA
 	{
         // ---- THREAD SAFE START ----
 		bool bQueueEmpty = false;
@@ -649,16 +671,25 @@ void GrammarCheckingIterator::DequeueAndCheck()
                 ::osl::Guard< ::osl::Mutex > aGuard( MyMutex::get() );
 				// Check queue state again
                 if (m_aFPEntriesQueue.empty())
+#ifdef USE_JAVA
+                {
+                    if ( m_aDequeueAndCheckTimer.IsActive() );
+                        m_aDequeueAndCheckTimer.Stop();
+                }
+#else	// USE_JAVA
                     m_aWakeUpThread.reset();
+#endif	// USE_JAVA
 			}
             // ---- THREAD SAFE END ----
 
+#ifndef USE_JAVA
 			//if the queue is empty
             // IMPORTANT: Don't call condition.wait() with locked
             // mutex. Otherwise you would keep out other threads
             // to add entries to the queue! A condition is thread-
             // safe implemented.
             m_aWakeUpThread.wait();
+#endif	// !USE_JAVA
 		}
 
         // ---- THREAD SAFE START ----
@@ -669,8 +700,12 @@ void GrammarCheckingIterator::DequeueAndCheck()
         // ---- THREAD SAFE END ----
     }
 
+#ifdef USE_JAVA
+	return bEnd;
+#else	// USE_JAVA
     //!! This one must be the very last statement to call in this function !!
     m_aRequestEndThread.set();
+#endif	// USE_JAVA
 }
 
 
@@ -942,20 +977,27 @@ throw (uno::RuntimeException)
     lang::EventObject aEvt( (linguistic2::XProofreadingIterator *) this );
     m_aEventListeners.disposeAndClear( aEvt );
 
+#ifdef USE_JAVA
+    if ( m_aDequeueAndCheckTimer.IsActive() );
+        m_aDequeueAndCheckTimer.Stop();
+#else	// USE_JAVA
     //
     // now end the thread...
     //
     m_aRequestEndThread.reset();
+#endif	// USE_JAVA
     // ---- THREAD SAFE START ----
     {
         ::osl::Guard< ::osl::Mutex > aGuard( MyMutex::get() );
         m_bEnd = sal_True;
     }
     // ---- THREAD SAFE END ----
+#ifndef USE_JAVA
     m_aWakeUpThread.set();
     const TimeValue aTime = { 3, 0 };   // wait 3 seconds...
     m_aRequestEndThread.wait( &aTime );
     // if the call ends because of time-out we will end anyway...
+#endif	// !USE_JAVA
 
 
     // ---- THREAD SAFE START ----
