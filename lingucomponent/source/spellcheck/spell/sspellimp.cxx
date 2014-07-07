@@ -1025,7 +1025,7 @@ OUString SAL_CALL
 {
 	MutexGuard	aGuard( GetLinguMutex() );
 #ifdef PRODUCT_NAME
-	return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
+	return A2OU( PRODUCT_NAME " OS X Spellchecker + Grammarchecker" );
 #else	// PRODUCT_NAME
 	return A2OU( "Hunspell SpellChecker" );
 #endif	// PRODUCT_NAME
@@ -1141,11 +1141,79 @@ Sequence< OUString > SpellChecker::getSupportedServiceNames_Static()
 {
 	MutexGuard	aGuard( GetLinguMutex() );
 
+#if defined USE_JAVA && defined MACOSX
+	Sequence< OUString > aSNS( 2 );
+#else	// USE_JAVA && MACOSX
 	Sequence< OUString > aSNS( 1 );	// auch mehr als 1 Service moeglich
+#endif	// USE_JAVA && MACOSX
 	aSNS.getArray()[0] = A2OU( SN_SPELLCHECKER );
+#if defined USE_JAVA && defined MACOSX
+	aSNS.getArray()[1] = A2OU( SN_GRAMMARCHECKER );
+#endif	// USE_JAVA && MACOSX
 	return aSNS;
 }
 
+#if defined USE_JAVA && defined MACOSX
+
+sal_Bool SpellChecker::isSpellChecker()
+		throw(RuntimeException)
+{
+	return sal_True;
+}
+
+
+ProofreadingResult SpellChecker::doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties )
+		throw (IllegalArgumentException, RuntimeException)
+{
+	MutexGuard	aGuard( GetLinguMutex() );
+
+	ProofreadingResult aRet;
+	aRet.aDocumentIdentifier = aDocumentIdentifier;
+	aRet.aText = aText;
+	aRet.aLocale = aLocale;
+	aRet.nStartOfSentencePosition = nStartOfSentencePosition;
+	aRet.nBehindEndOfSentencePosition = nSuggestedBehindEndOfSentencePosition;
+	aRet.xProofreader = this;
+
+	bool bFound = false;
+	OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+	::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+	if ( it != maPrimaryNativeLocaleMap.end() )
+	{
+		bFound = true;
+	}
+	else
+	{
+		it = maSecondaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maSecondaryNativeLocaleMap.end() )
+			bFound = true;
+	}
+
+	if ( bFound )
+		NSSpellChecker_checkGrammarOfString( &aRet, it->second );
+
+	return aRet;
+}
+
+
+void SpellChecker::ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale )
+		throw (IllegalArgumentException, RuntimeException)
+{
+#ifdef DEBUG
+	fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
+#endif
+}
+
+
+void SpellChecker::resetIgnoreRules()
+		throw(RuntimeException)
+{
+#ifdef DEBUG
+	fprintf( stderr, "SpellChecker::resetIgnoreRules not implemented\n" );
+#endif
+}
+
+#endif	// USE_JAVA && MACOSX
 
 sal_Bool SAL_CALL SpellChecker_writeInfo(
 			void * /*pServiceManager*/, registry::XRegistryKey * pRegistryKey )
