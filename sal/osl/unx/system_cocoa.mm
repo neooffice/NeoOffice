@@ -49,10 +49,6 @@
 #define NO (MacOSBOOL)0
 #endif
 
-@interface NSFileManager (SalFileManager)
-- (MacOSBOOL)isUbiquitousItemAtURL:(NSURL *)pURL;
-@end
-
 static NSURL *macxp_resolveAliasImpl(const NSURL *url )
 {
 	NSURL *pRet = nil;
@@ -276,12 +272,10 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 						pURL = [pURL URLByResolvingSymlinksInPath];
 						if ( pURL )
 						{
+							// Don't call [NSFileManager isUbiquitousItemAtURL:]
+							// as it will cause momentary hanging on OS X 10.9
 							NSString *pURLPath = [pURL path];
-							if ( [pFileManager isUbiquitousItemAtURL:pURL] )
-							{
-								bRet = sal_True;
-							}
-							else if ( pURLPath && [pURLPath length] )
+							if ( pURLPath && [pURLPath length] )
 							{
 								NSArray *pLibraryFolders = NSSearchPathForDirectoriesInDomains( NSLibraryDirectory, NSUserDomainMask, NO );
 								NSString *pRealHomeFolder = nil;
