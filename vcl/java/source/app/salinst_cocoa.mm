@@ -60,23 +60,13 @@
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
 // #define USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
-typedef NSString* const NSURLIsReadableKey_Type;
-typedef NSString* const NSURLIsWritableKey_Type;
-
 static ::osl::Mutex aCurrentInstanceSecurityURLCacheMutex;
 static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
-static NSURLIsReadableKey_Type *pNSURLIsReadableKey = NULL;
-static NSURLIsWritableKey_Type *pNSURLIsWritableKey = NULL;
 
 using namespace osl;
 using namespace vos;
 
 static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDialogIfNoBookmark, MacOSBOOL bResolveAliasURLs, const NSString *pTitle, NSMutableArray *pSecurityScopedURLs );
-
-@interface NSURL (VCLURL)
-- (MacOSBOOL)startAccessingSecurityScopedResource;
-- (void)stopAccessingSecurityScopedResource;
-@end
 
 @interface VCLRequestSecurityScopedURL : NSObject
 {
@@ -111,17 +101,10 @@ static MacOSBOOL IsURLReadableOrWritable( NSURL *pURL )
 
 	if ( pURL )
 	{
-		if ( !pNSURLIsReadableKey )
-			pNSURLIsReadableKey = (NSURLIsReadableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsReadableKey" );
-		if ( !pNSURLIsWritableKey )
-			pNSURLIsWritableKey = (NSURLIsWritableKey_Type *)dlsym( RTLD_DEFAULT, "NSURLIsWritableKey" );
-		if ( pNSURLIsReadableKey && pNSURLIsWritableKey && *pNSURLIsReadableKey && *pNSURLIsWritableKey )
-		{
-			NSNumber *pReadable = nil;
-			NSNumber *pWritable = nil;
-			if ( ( [pURL getResourceValue:&pReadable forKey:*pNSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:*pNSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
-				bRet = YES;
-		}
+		NSNumber *pReadable = nil;
+		NSNumber *pWritable = nil;
+		if ( ( [pURL getResourceValue:&pReadable forKey:NSURLIsReadableKey error:nil] && pReadable && [pReadable boolValue] ) || ( [pURL getResourceValue:&pWritable forKey:NSURLIsWritableKey error:nil] && pWritable && [pWritable boolValue] ) )
+			bRet = YES;
 	}
 
 	return bRet;
@@ -436,7 +419,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 							{
 								MacOSBOOL bStale = NO;
 								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-								if ( !bStale && pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] )
+								if ( !bStale && pSecurityScopedURL )
 								{
 									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
 									{
@@ -481,7 +464,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
 
 						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
-						if ( pSecurityScopedURL && [pSecurityScopedURL respondsToSelector:@selector(startAccessingSecurityScopedResource)] && [pSecurityScopedURL startAccessingSecurityScopedResource] )
+						if ( pSecurityScopedURL && [pSecurityScopedURL startAccessingSecurityScopedResource] )
 						{
 							bSecurityScopedURLFound = YES;
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
@@ -1135,7 +1118,7 @@ void Application_releaseSecurityScopedURL( id pSecurityScopedURLs )
 			for ( ; i < nCount; i++ )
 			{
 				NSURL *pURL = [pArray objectAtIndex:i];
-				if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL respondsToSelector:@selector(stopAccessingSecurityScopedResource)] )
+				if ( pURL && [pURL isKindOfClass:[NSURL class]] )
 					[(NSURL *)pURL stopAccessingSecurityScopedResource];
 			}
 		}
