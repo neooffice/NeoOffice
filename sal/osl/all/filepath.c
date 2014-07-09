@@ -58,7 +58,7 @@ oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl
 #if defined USE_JAVA && defined MACOSX
 			if ( macxp_isUbiquitousPath( ustrSystemPath->buffer, ustrSystemPath->length ) )
 			{
-				rtl_uString_newFromAscii( &ustrPath, "iCloud: " );
+				rtl_uString_newFromAscii( &ustrPath, "iCloud Drive: " );
 				if ( ++iLastSlash < ustrSystemPath->length )
 					rtl_uString_newFromStr_WithLength( &ustrFile, &ustrSystemPath->buffer[iLastSlash], ustrSystemPath->length - iLastSlash );
 				else
