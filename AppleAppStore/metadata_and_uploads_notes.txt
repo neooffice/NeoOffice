@@ -7,6 +7,8 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
+Before you buy NeoOffice, click on the "Planamesa Inc. Web Site" link and try NeoOffice 2014 Free Edition for free.
+
 NeoOffice is a complete office suite for OS X. With NeoOffice, users can read, create, and edit text documents, spreadsheets, and presentations. NeoOffice can open OpenOffice documents and most Microsoft Word, Excel, and PowerPoint documents.
 
 NeoOffice 3.x and OpenOffice users: before you buy NeoOffice, we recommend that you click on the "NeoOffice support" link and read the list of changes.
@@ -25,8 +27,6 @@ Since then, the NeoOffice engineers - Patrick Luby and Ed Peterlin - have contin
 
 
 What's New in this Version:
-Before you buy NeoOffice, click on the "Planamesa Inc. Web Site" link and try NeoOffice 2014 Free Edition for free.
-
 NeoOffice is now a 64 bit application. Most NeoOffice 2013.5 users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the "NeoOffice support" link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.
 
 
