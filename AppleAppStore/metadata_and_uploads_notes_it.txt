@@ -42,4 +42,4 @@ Marketing URL:
 http://www.neooffice.org/neojava/download.php
 
 Mac OS X App Screenshots:
-Upload ScreenSnapshotWriterAndCalc_it.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
+Upload ScreenSnapshotWriterAndCalc_it.png file. Note: the ScreenSnapshotWriterAndCalc_it.png was created using the document files in the ScreenSnapshotWriterAndCalc/it subdirectory.
