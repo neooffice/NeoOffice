@@ -7,8 +7,6 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-Bevor Sie NeoOffice kaufen, klicken auf den „Website von Planamesa Inc.” Link und versuchen NeoOffice 2014.1 Free Edition kostenlos.
-
 NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, Benutzer können Text Dokumente, Tabellenkalkulation und Präsentationen lesen, erstellen und bearbeiten. NeoOffice kann OpenOffice-Dokumente öffnen und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente öffnen.
 
 NeoOffice 3.x und OpenOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Liste der Änderungen.
@@ -27,7 +25,7 @@ Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben imm
 
 
 What's New in this Version:
-The NeoOffice engineers have integrated the OS X grammar checker into this version of NeoOffice. This new grammar checking feature automatically runs whenever NeoOffice's spellcheck feature runs.
+Bevor Sie NeoOffice kaufen, klicken auf den „Website von Planamesa Inc.” Link und versuchen NeoOffice 2014.1 Free Edition kostenlos. This version of NeoOffice adds automatic grammar checking. When you spellcheck a document in Writer, NeoOffice now automatically does grammar checking using the OS X grammar checker.
 
 NeoOffice 2013.x users: NeoOffice is now a 64 bit application. Most NeoOffice 2013.x users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the „NeoOffice Support” link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.1.
 
