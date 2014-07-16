@@ -187,8 +187,8 @@ YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-2014-1
-NEO_TAG2:=NeoOffice-2014-1_Free_Edition
+NEO_TAG:=NeoOffice-2014_1
+NEO_TAG2:=NeoOffice-2014_1_Free_Edition
 
 all: build.all
 
