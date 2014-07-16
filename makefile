@@ -130,7 +130,7 @@ OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/winenv.set
 OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
 COMPILERDIR=$(OOO-BUILD_BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
-OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
+OO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
