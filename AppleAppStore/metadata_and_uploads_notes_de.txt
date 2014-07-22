@@ -13,7 +13,7 @@ NeoOffice 3.x und OpenOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen 
 
 NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die NeoOffice-ingenieure erstellt NeoOffice im Jahr 2003, wenn sie gemacht OpenOffice ausführen nativ auf OS X zum ersten Mal.
 
-Seitdem sind die NeoOffice-Ingenieure - Patrick Luby und Ed Peterlin - haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in OpenOffice zu finden, wie:
+Seitdem sind die NeoOffice-Ingenieure haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in OpenOffice zu finden, wie:
 
 • Öffnen von Calc oder Impress anstelle von Writer beim Start mit dem NeoOffice > Beim Starten Öffnen Menü
 • OS X Gatekeeper

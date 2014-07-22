@@ -13,7 +13,7 @@ Les utilisateurs de NeoOffice 3.x et OpenOffice : avant d'acheter NeoOffice, nou
 
 NeoOffice est extrêmement stable et des milliers d'utilisateurs utilisent quotidiennement. Les ingénieurs de NeoOffice ont crée NeoOffice en 2003 quand ils ont fait OpenOffice s'exécutent en mode natif sur OS X pour la première fois.
 
-Depuis lors, les ingénieurs de NeoOffice - Patrick Luby et Ed Peterlin - ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
+Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
 
 • Ouverture de Calc ou Impress au lieu de Writer au démarrage utilisant le menu de NeoOffice > Document par défault
 • Gatekeeper de OS X

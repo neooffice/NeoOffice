@@ -13,7 +13,7 @@ NeoOffice 3.x en OpenOffice gebruikers: voordat u koopt NeoOffice, raden we u kl
 
 NeoOffice is zeer stabiel en wordt dagelijks gebruikt door duizenden mensen. De ontwikkelaars van NeoOffice hebben NeoOffice gecreëerd in 2003, toen ze OpenOffice voor het eerst draaiend kregen op OS X.
 
-Sindsdien hebben de NeoOffice ingenieurs - Patrick Luby en Ed Peterlin - voortdurend verbeteringen toegevoegd aan NeoOffice die gebruikers niet in vinden in OpenOffice, zoals:
+Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice die gebruikers niet in vinden in OpenOffice, zoals:
 
 • Bij starten Calc of Impress tonen in plaats van Writer
 • OS X Gatekeeper
