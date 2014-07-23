@@ -350,14 +350,14 @@
 	</node>
 -->
 
-    <node oor:name="MS Word 2007 XML" oor:op="replace">
+    <node oor:name="MS Word 2008 XML" oor:op="replace">
         <prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
         <prop oor:name="UIComponent"/>
         <prop oor:name="FilterService"><value>com.sun.star.comp.Writer.WriterFilter</value></prop>
         <!-- <prop oor:name="FilterService"><value>com.sun.star.comp.Writer.DocxExport</value></prop> -->
         <prop oor:name="UserData"><value>OXML</value></prop>
         <prop oor:name="UIName">
-            <value xml:lang="x-default">Microsoft Word 2007 XML</value>
+            <value xml:lang="x-default">Microsoft Word 2008/2011</value>
         </prop>
         <prop oor:name="FileFormatVersion"><value>0</value></prop>
         <prop oor:name="Type"><value>writer_MS_Word_2007</value></prop>
@@ -365,13 +365,13 @@
         <prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
     </node>
 
-    <node oor:name="MS Word 2007 XML Template" oor:op="replace">
+    <node oor:name="MS Word 2008 XML Template" oor:op="replace">
         <prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER TEMPLATE TEMPLATEPATH</value></prop>
         <prop oor:name="UIComponent"/>
         <prop oor:name="FilterService"><value>com.sun.star.comp.Writer.WriterFilter</value></prop>
         <prop oor:name="UserData"><value>OXML</value></prop>
         <prop oor:name="UIName">
-            <value xml:lang="x-default">Microsoft Word 2007 XML Template</value>
+            <value xml:lang="x-default">Microsoft Word 2008/2011 Template</value>
         </prop>
         <prop oor:name="FileFormatVersion"><value>0</value></prop>
         <prop oor:name="Type"><value>writer_MS_Word_2007_Template</value></prop>
