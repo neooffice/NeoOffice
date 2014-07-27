@@ -136,8 +136,20 @@ static void ImplFontListChanged()
 				NSArray *pFonts = NSFontManager_getAllFonts();
 				if ( pFonts )
 				{
+					const OUString aCalibriPS( OUString::createFromAscii( "Calibri" ) );
+					const OUString aCalibriBoldPS( OUString::createFromAscii( "Calibri-Bold" ) );
+					const OUString aCalibriBoldItalicPS( OUString::createFromAscii( "Calibri-BoldItalic" ) );
+					const OUString aCalibriItalicPS( OUString::createFromAscii( "Calibri-Italic" ) );
+					const OUString aCambriaPS( OUString::createFromAscii( "Cambria" ) );
+					const OUString aCambriaBoldPS( OUString::createFromAscii( "Cambria-Bold" ) );
+					const OUString aCambriaBoldItalicPS( OUString::createFromAscii( "Cambria-BoldItalic" ) );
+					const OUString aCambriaItalicPS( OUString::createFromAscii( "Cambria-Italic" ) );
 					const OUString aCourier( OUString::createFromAscii( "Courier" ) );
 					const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
+					const OUString aGillSansPS( OUString::createFromAscii( "GillSans" ) );
+					const OUString aGillSansBoldPS( OUString::createFromAscii( "GillSans-Bold" ) );
+					const OUString aGillSansBoldItalicPS( OUString::createFromAscii( "GillSans-BoldItalic" ) );
+					const OUString aGillSansItalicPS( OUString::createFromAscii( "GillSans-Italic" ) );
 					const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
 					const OUString aMincho( OUString::createFromAscii( "Mincho" ) );
 					const OUString aMing( OUString::createFromAscii( "Ming" ) );
@@ -154,6 +166,10 @@ static void ImplFontListChanged()
 					const OUString aRegular( OUString::createFromAscii( " Regular" ) );
 					const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
 					const OUString aTimes( OUString::createFromAscii( "Times" ) );
+					const OUString aTimesNewRomanPS( OUString::createFromAscii( "TimesNewRomanPSMT" ) );
+					const OUString aTimesNewRomanBoldPS( OUString::createFromAscii( "TimesNewRomanPS-BoldMT" ) );
+					const OUString aTimesNewRomanBoldItalicPS( OUString::createFromAscii( "TimesNewRomanPS-BoldItalicMT" ) );
+					const OUString aTimesNewRomanItalicPS( OUString::createFromAscii( "TimesNewRomanPS-ItalicMT" ) );
 					const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 
 					unsigned int i = 0;
@@ -260,6 +276,38 @@ static void ImplFontListChanged()
 							// Fix bug 3668 by adding family name to map
 							// for "regular" fonts
 							aMapName += aFontSeparator + aFamilyName;
+						}
+						else if ( aPSName == aGillSansPS )
+						{
+							aMapName += aFontSeparator + aCalibriPS;
+						}
+						else if ( aPSName == aGillSansBoldPS )
+						{
+							aMapName += aFontSeparator + aCalibriBoldPS;
+						}
+						else if ( aPSName == aGillSansBoldItalicPS )
+						{
+							aMapName += aFontSeparator + aCalibriBoldItalicPS;
+						}
+						else if ( aPSName == aGillSansItalicPS )
+						{
+							aMapName += aFontSeparator + aCalibriItalicPS;
+						}
+						else if ( aPSName == aTimesNewRomanPS )
+						{
+							aMapName += aFontSeparator + aCambriaPS;
+						}
+						else if ( aPSName == aTimesNewRomanBoldPS )
+						{
+							aMapName += aFontSeparator + aCambriaBoldPS;
+						}
+						else if ( aPSName == aTimesNewRomanBoldItalicPS )
+						{
+							aMapName += aFontSeparator + aCambriaBoldItalicPS;
+						}
+						else if ( aPSName == aTimesNewRomanItalicPS )
+						{
+							aMapName += aFontSeparator + aCambriaItalicPS;
 						}
 
 						String aXubMapName( aMapName );
