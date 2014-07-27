@@ -277,6 +277,7 @@
 		<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 	</node>
 
+<!-- Disable Java-based filters
 	<node oor:name="MS Excel 2003 XML" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 		<prop oor:name="UIComponent"/>
@@ -287,36 +288,40 @@
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 	</node>
+-->
 
-<node oor:name="Calc MS Excel 2007 XML" oor:op="replace">
+<node oor:name="Calc MS Excel 2008 XML" oor:op="replace">
 	<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER PREFERRED</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"><value>com.sun.star.comp.oox.ExcelFilter</value></prop>
 	<prop oor:name="UserData"><value>OXML</value></prop>
 	<prop oor:name="FileFormatVersion"/>
 	<prop oor:name="Type"><value>MS Excel 2007 XML</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2008/2011</value></prop>
 	<prop oor:name="TemplateName"/>
 	<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 </node>
 
-<node oor:name="Calc MS Excel 2007 XML Template" oor:op="replace">
+<node oor:name="Calc MS Excel 2008 XML Template" oor:op="replace">
 	<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER TEMPLATE TEMPLATEPATH</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"><value>com.sun.star.comp.oox.ExcelFilter</value></prop>
 	<prop oor:name="UserData"><value>OXML</value></prop>
 	<prop oor:name="FileFormatVersion"/>
 	<prop oor:name="Type"><value>MS Excel 2007 XML Template</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2008/2011 Template</value></prop>
 	<prop oor:name="TemplateName"/>
 	<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 </node>
 
-<node oor:name="Calc MS Excel 2007 Binary" oor:op="replace">
+<node oor:name="Calc MS Excel 2008 Binary" oor:op="replace">
 	<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER PREFERRED</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"><value>com.sun.star.comp.oox.ExcelFilter</value></prop>
 	<prop oor:name="UserData"/>
 	<prop oor:name="FileFormatVersion"/>
 	<prop oor:name="Type"><value>MS Excel 2007 Binary</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2008/2011 Binary</value></prop>
 	<prop oor:name="TemplateName"/>
 	<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 </node>

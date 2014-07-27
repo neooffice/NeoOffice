@@ -151,8 +151,8 @@
 	<prop oor:name="Extensions"><value>pptx pptm ppsx</value></prop>
 	<prop oor:name="MediaType"/>
 	<prop oor:name="Preferred"><value>true</value></prop>
-	<prop oor:name="PreferredFilter"><value>Impress MS PowerPoint 2007 XML</value></prop>
-	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft PowerPoint 2007 XML</value></prop>
+	<prop oor:name="PreferredFilter"><value>Impress MS PowerPoint 2008 XML</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft PowerPoint 2008/2011</value></prop>
 	<prop oor:name="ClipboardFormat"/>
 </node>
 
@@ -162,8 +162,8 @@
 	<prop oor:name="Extensions"><value>potm potx</value></prop>
 	<prop oor:name="MediaType"/>
 	<prop oor:name="Preferred"><value>true</value></prop>
-	<prop oor:name="PreferredFilter"><value>Impress MS PowerPoint 2007 XML Template</value></prop>
-	<prop oor:name="UIName"><value>Microsoft PowerPoint 2007 XML Template</value></prop>
+	<prop oor:name="PreferredFilter"><value>Impress MS PowerPoint 2008 XML Template</value></prop>
+	<prop oor:name="UIName"><value>Microsoft PowerPoint 2008/2011 Template</value></prop>
 	<prop oor:name="ClipboardFormat"/>
 </node>
 
