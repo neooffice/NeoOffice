@@ -83,6 +83,9 @@ done << !
 !
 
 if check_installation "$lastcontentshome" ; then
+	# Let logging catch up
+	sleep 1
+
 	sudouser=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudouser="$USER"
@@ -90,6 +93,10 @@ if check_installation "$lastcontentshome" ; then
 
 	# Launch installation
 	if [ ! -z "$sudouser" ] ; then
+		if [ -x /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister ] ; then
+			sudo -H -u "$sudouser" /bin/sh -l -c "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user"
+		fi
+
 		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read \"$HOME/Library/Containers/org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/org.neooffice.$(PRODUCT_DIR_NAME).plist\" updateSuppressLaunchAfterInstallation 2>/dev/null"`
 		if [ -z "$launch" -o "$launch" = "0" ] ; then
 			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""

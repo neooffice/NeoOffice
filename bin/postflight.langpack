@@ -83,6 +83,9 @@ done << !
 !
 
 if check_installation "$lastcontentshome" ; then
+	# Let logging catch up
+	sleep 1
+
 	sudouser=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudouser="$USER"
