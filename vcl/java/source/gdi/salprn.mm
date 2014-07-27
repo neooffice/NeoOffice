@@ -56,8 +56,6 @@
 #include "../app/salinst_cocoa.h"
 #include "../../../../sfx2/source/doc/doc.hrc"
 
-typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
-
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 static ResMgr *pSfxResMgr = NULL;
 
@@ -991,19 +989,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 	// Also set the job name via the PMPrintSettings so that the Save As
 	// dialog gets the job name
-	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-	if ( pLib )
-	{
-		PMSetJobNameCFString_Type *pPMSetJobNameCFString = (PMSetJobNameCFString_Type *)dlsym( pLib, "PMSetJobNameCFString" );
-		if ( pPMSetJobNameCFString )
-		{
-			PMPrintSettings aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
-			if ( aSettings )
-				pPMSetJobNameCFString( aSettings, (CFStringRef)mpJobName );
-		}
-
-		dlclose( pLib );
-	}
+	PMPrintSettings aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
+	if ( aSettings )
+		PMPrintSettingsSetJobName( aSettings, (CFStringRef)mpJobName );
 
 	// Fix bug 1548 by setting to print all pages
 	NSMutableDictionary *pDictionary = [mpInfo dictionary];
