@@ -31,7 +31,7 @@ NeoOffice 2013.x users: NeoOffice is now a 64 bit application. Most NeoOffice 20
 
 
 Keywords:
-neo,office,电子表格,excel,xlsx,xls,文本文档,word,docx,doc,演示文稿,powerpoint,pptx,ppt
+neo,office,pdf,电子表格,excel,xlsx,xls,文本文档,word,docx,doc,演示文稿,powerpoint,pptx,ppt
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
