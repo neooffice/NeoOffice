@@ -125,6 +125,8 @@ typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIT
 
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
+static bool bIsRunningMavericksOrLowerInitizalized  = false;
+static bool bIsRunningMavericksOrLower = false;
 static bool bHIThemeInitialized = false;
 static HIThemeGetGrowBoxBounds_Type *pHIThemeGetGrowBoxBounds = NULL;
 
@@ -153,7 +155,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 static bool IsRunningSnowLeopard()
 {
-	if ( !bIsRunningSnowLeopardInitizalized )
+	if ( !bIsRunningSnowLeopardInitizalized || !bIsRunningMavericksOrLowerInitizalized )
 	{
 		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
 		if ( pLib )
@@ -169,6 +171,8 @@ static bool IsRunningSnowLeopard()
 					pGestalt( gestaltSystemVersionMinor, &res );
 					if ( res == 6 )
 						bIsRunningSnowLeopard = true;
+					if ( res <= 9 )
+						bIsRunningMavericksOrLower = true;
 				}
 			}
 
@@ -176,9 +180,16 @@ static bool IsRunningSnowLeopard()
 		}
 
 		bIsRunningSnowLeopardInitizalized = true;
+		bIsRunningMavericksOrLowerInitizalized = true;
 	}
 
 	return bIsRunningSnowLeopard;
+}
+
+static bool IsRunningMavericksOrLower()
+{
+	IsRunningSnowLeopard();
+	return bIsRunningMavericksOrLower;
 }
 
 // =======================================================================
@@ -191,6 +202,7 @@ static bool IsRunningSnowLeopard()
 - (MacOSBOOL)_hasActiveControls;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)isKeyWindow;
 - (void)orderFrontRegardless;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(NSInteger)nOtherWindowNumber;
 - (void)setInactive:(MacOSBOOL)bInactive;
@@ -247,6 +259,11 @@ static bool IsRunningSnowLeopard()
 	mbInactive = NO;
 
 	return self;
+}
+
+- (MacOSBOOL)isKeyWindow
+{
+	return [self _hasActiveControls];
 }
 
 - (void)orderFrontRegardless
@@ -343,7 +360,8 @@ static bool IsRunningSnowLeopard()
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
 	// selector so we need to attach a custom hidden window to draw enabled
-	[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
+	if ( IsRunningMavericksOrLower() || mnButtonType == NSMomentaryLightButton || mnControlState & CTRL_STATE_INACTIVE )
+		[VCLNativeControlWindow createAndAttachToView:pButton controlState:mnControlState];
 
 	[pButton sizeToFit];
 
@@ -389,8 +407,15 @@ static bool IsRunningSnowLeopard()
 						{
 							// Do not use VCLNativeButtonCell animation as
 							// it sometimes draws darker than expected
-							[pButton highlight:NO];
-							mbRedraw = YES;
+							if ( IsRunningMavericksOrLower() )
+							{
+								[pButton highlight:NO];
+								mbRedraw = YES;
+							}
+							else
+							{
+								[pButton setKeyEquivalent:@"\r"];
+							}
 						}
 					}
 				}
@@ -2063,7 +2088,10 @@ static bool IsRunningSnowLeopard()
 						}
 						else
 						{
-							[[NSColor controlBackgroundColor] set];
+							if ( IsRunningMavericksOrLower() )
+								[[NSColor controlBackgroundColor] set];
+							else
+								[[NSColor controlColor] set];
 							[NSBezierPath fillRect:aDrawRect];
 						}
 						[NSGraphicsContext setCurrentContext:pOldContext];
@@ -3608,6 +3636,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 #endif	// USE_NATIVE_CTRL_FRAME
 
+		case CTRL_TOOLTIP:
+			if( !IsRunningMavericksOrLower() && nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+
 		default:
 			isSupported = FALSE;
 			break;
@@ -3816,6 +3849,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			break;
 
 		case CTRL_MENU_POPUP:
+		case CTRL_TOOLTIP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
@@ -4426,6 +4460,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_MENU_POPUP:
+		case CTRL_TOOLTIP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// we can draw menu backgrounds for any size rectangular area
@@ -4564,14 +4599,36 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
 
+	if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
+		nState |= CTRL_STATE_INACTIVE;
+
 	switch( nType )
 	{
 
 		case CTRL_PUSHBUTTON:
+			{
+				if( nState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED | CTRL_STATE_PRESSED ) )
+				{
+					if ( IsRunningMavericksOrLower() )
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+					else
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+				}
+				else
+				{
+					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+				}
+			}
+			break;
+
 		case CTRL_RADIOBUTTON:
 		case CTRL_CHECKBOX:
 		case CTRL_LISTBOX:
-			{				
+			{
 				if( nState & CTRL_STATE_PRESSED )
 					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
@@ -4584,13 +4641,24 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 		case CTRL_TAB_ITEM:
 			{
 				if ( nState & CTRL_STATE_SELECTED )
-					bReturn = IsRunningSnowLeopard() ? JavaSalFrame::GetSelectedControlTextColor( textColor ) : JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+				{
+					if ( !IsRunningSnowLeopard() && ( IsRunningMavericksOrLower() || ! ( nState & CTRL_STATE_INACTIVE ) ) )
+						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
+					else
+						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+				}
 				else if ( nState & CTRL_STATE_PRESSED )
+				{
 					bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
+				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
 					bReturn = JavaSalFrame::GetDisabledControlTextColor( textColor );
+				}
 				else
+				{
 					bReturn = JavaSalFrame::GetControlTextColor( textColor );
+				}
 			}
 			break;
 
