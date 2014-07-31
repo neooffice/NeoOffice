@@ -38,11 +38,8 @@
 
 #import <Cocoa/Cocoa.h>
 
-// Uncomment the following line to enable OS X unsupported version check
-// #define USE_OSX_UNSUPPORTED_VERSION_CHECK
-
 #define MIN_MACOSX_MAJOR_VERSION 6
-#define MAX_MACOSX_MAJOR_VERSION 9
+#define MAX_MACOSX_MAJOR_VERSION 10
 #define TMPDIR "/var/tmp"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
@@ -51,7 +48,6 @@ typedef int UnoPkgMain_Type( int argc, char **argv );
 
 static BOOL IsSupportedMacOSXVersion()
 {
-#ifdef USE_OSX_UNSUPPORTED_VERSION_CHECK
 	// Allow users to disable the Mac OS X version check by using the
 	// following command:
 	//   defaults write org.neooffice.NeoOffice DisableMacOSXVersionCheck -bool YES
@@ -81,9 +77,6 @@ static BOOL IsSupportedMacOSXVersion()
 	}
 
 	return bRet;
-#else	// USE_OSX_UNSUPPORTED_VERSION_CHECK
-	return YES;
-#endif	// USE_OSX_UNSUPPORTED_VERSION_CHECK
 }
 
 static NSString *GetNSTemporaryDirectory()
