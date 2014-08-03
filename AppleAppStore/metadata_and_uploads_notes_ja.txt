@@ -7,7 +7,7 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete office suite for OS X. With NeoOffice, users can view, edit, and save OpenOffice documents, PDF files, and most Microsoft Word, Excel, and PowerPoint documents.
+NeoOfficeのは、OS Xのための完全なオフィススイートです。NeoOfficeのを使用すると、ユーザーは、表示、編集、OpenOfficeの文書、PDFファイル、およびほとんどのMicrosoftのWord、Excel、およびPowerPointのドキュメントを保存することができます。
 
 NeoOffice 3.x and OpenOffice users: before you buy NeoOffice, we recommend that you click on the 「NeoOffice のサポート」 link and read the list of changes.
 
@@ -25,7 +25,7 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 
 
 What's New in this Version:
-Before you buy NeoOffice, click on the 「Planamesa Inc. Web サイト」 link and try NeoOffice for free. This version of NeoOffice adds improved rendering of Calibri and Cambria fonts in Microsoft Office documents. Since many NeoOffice users do not have these fonts because they are only available from Microsoft, this version of NeoOffice automatically uses Apple's Gill Sans font when Calibri is not installed and uses Apple's Times New Roman font when Cambria is not installed.
+あなたはNeoOfficeのを購入する前に、「Planamesa Inc. Web サイト」のリンクをクリックして、無料でNeoOfficeのを試してみてください。This version of NeoOffice adds improved rendering of Calibri and Cambria fonts in Microsoft Office documents. Since many NeoOffice users do not have these fonts because they are only available from Microsoft, this version of NeoOffice automatically uses Apple's Gill Sans font when Calibri is not installed and uses Apple's Times New Roman font when Cambria is not installed.
 
 NeoOffice 2013.x users: NeoOffice is now a 64 bit application. Most NeoOffice 2013.x users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the 「NeoOffice のサポート」 link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.1.
 
