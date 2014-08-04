@@ -974,12 +974,20 @@ oslFileError osl_closeFile( oslFileHandle Handle )
         // path so that we don't release native file locks too soon
         if ( pHandleImpl->bLocked )
         {
-            for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::const_iterator it = aOpenFilesMap.find( rtl::OUString( pHandleImpl->ustrFilePath ) ); it != aOpenFilesMap.end(); ++it )
+            char realPath[ MAXPATHLEN + 1 ];
+            if ( !fcntl( pHandleImpl->fd, F_GETPATH, realPath ) )
             {
-                if ( it->second->bLocked )
+                char buffer[ MAXPATHLEN + 1 ];
+        	    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
                 {
-                    pHandleImpl->bLocked = sal_False;
-                    break;
+                    if ( it->second->bLocked )
+                    {
+                        if ( !fcntl( it->second->fd, F_GETPATH, buffer ) && !strcmp( realPath, buffer ) )
+                        {
+                            pHandleImpl->bLocked = sal_False;
+                            break;
+                        }
+                    }
                 }
             }
         }
