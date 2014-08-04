@@ -1367,7 +1367,14 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                             // Do not create a lock file and rely exclusively
                             // on the native file locking
                             if ( bUseSystemLock )
+                            {
+                                // Fix failure to reacquire native file lock
+                                // after saving by forcing the output stream to
+                                // be recreated if it doesn't exist
+                                if ( !bLoading )
+                                    GetOutStream();
                                 bResult = sal_True;
+                            }
                             else
 #endif	// USE_JAVA
                                 bResult = aLockFile.CreateOwnLockFile();
