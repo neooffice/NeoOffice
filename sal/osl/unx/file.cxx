@@ -969,6 +969,21 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 break;
             }
         }
+
+        // Check if other file descriptors have a native file lock on the same
+        // path so that we don't release native file locks too soon
+        if ( pHandleImpl->bLocked )
+        {
+            for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::const_iterator it = aOpenFilesMap.find( rtl::OUString( pHandleImpl->ustrFilePath ) ); it != aOpenFilesMap.end(); ++it )
+            {
+                if ( it->second->bLocked )
+                {
+                    pHandleImpl->bLocked = sal_False;
+                    break;
+                }
+            }
+        }
+
         aGuard.clear();
 #endif	// USE_JAVA
 
