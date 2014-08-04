@@ -1420,6 +1420,11 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                             try
                             {
                                 // impossibility to get data is no real problem
+#ifdef USE_JAVA
+                                // Don't create OOo lock file if we are using
+                                // system file locking
+                                if ( !bUseSystemLock )
+#endif	// USE_JAVA
                                 aData = aLockFile.GetLockData();
                             }
                             catch( uno::Exception ) {}
