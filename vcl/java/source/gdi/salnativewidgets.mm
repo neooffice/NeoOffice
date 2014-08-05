@@ -2327,6 +2327,18 @@ static bool IsRunningMavericksOrLower()
 
 		[pPreItem autorelease];
 		[pTabView addTabViewItem:pPreItem];
+
+		// Fix tab divider line color on OS X 10.10 by adding a second tab item
+		// to the left of the tab item to be drawn
+		if ( !IsRunningMavericksOrLower() && ! ( mnControlState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) ) )
+		{
+			pPreItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
+			if ( !pPreItem )
+				return nil;
+
+			[pPreItem autorelease];
+			[pTabView addTabViewItem:pPreItem];
+		}
 	}
 
 	VCLNativeTabViewItem *pItem = [[VCLNativeTabViewItem alloc] initWithIdentifier:@""];
