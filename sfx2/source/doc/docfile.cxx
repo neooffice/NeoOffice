@@ -1084,7 +1084,13 @@ uno::Reference < embed::XStorage > SfxMedium::GetOutputStorage()
 
             try
             {
+#ifdef USE_JAVA
+                // Fix failure to reacquire native file lock after saving by
+                // explicitly opening the writable stream with a locking
+                xStream = aContent.openWriteableStream();
+#else	// USE_JAVA
                 xStream = aContent.openWriteableStreamNoLock();
+#endif	// USE_JAVA
 
                 if ( !bOverWrite )
                 {
@@ -1111,7 +1117,13 @@ uno::Reference < embed::XStorage > SfxMedium::GetOutputStorage()
                     aContent.executeCommand( rtl::OUString::createFromAscii( "insert" ), uno::makeAny( aInsertArg ) );
 
                     // Try to open one more time
+#ifdef USE_JAVA
+                    // Fix failure to reacquire native file lock after saving
+                    // by explicitly opening the writable stream with a locking
+                    xStream = aContent.openWriteableStream();
+#else	// USE_JAVA
                     xStream = aContent.openWriteableStreamNoLock();
+#endif	// USE_JAVA
                     bDeleteOnFailure = sal_True;
                 }
                 else
@@ -1367,14 +1379,7 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                             // Do not create a lock file and rely exclusively
                             // on the native file locking
                             if ( bUseSystemLock )
-                            {
-                                // Fix failure to reacquire native file lock
-                                // after saving by forcing the output stream to
-                                // be recreated if it doesn't exist
-                                if ( !bLoading )
-                                    GetOutStream();
                                 bResult = sal_True;
-                            }
                             else
 #endif	// USE_JAVA
                                 bResult = aLockFile.CreateOwnLockFile();
