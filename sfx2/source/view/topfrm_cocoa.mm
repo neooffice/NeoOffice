@@ -50,8 +50,10 @@
 
 #define PDF_BUF_SIZE ( 128 * 1024 )
 
+typedef sal_Bool osl_setLockedFilesLock_Type( const char *pOrigPath, sal_Bool bLock );
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
+static osl_setLockedFilesLock_Type *pSetLockedFilesLock = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
 
@@ -148,7 +150,10 @@ static OUString aSaveAVersionLocalizedString;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
-- (void)reloadFrame;
+- (void)relinquishPresentedItem:(BOOL)bWriter reacquirer:(void (^)(void (^reacquirer)(void)))aReacquirer;
+- (void)relinquishPresentedItemToReader:(void (^)(void (^reacquirer)(void)))aReader;
+- (void)relinquishPresentedItemToWriter:(void (^)(void (^reacquirer)(void)))aWriter;
+- (void)reloadFrame:(NSNumber *)pSilent;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 - (void)revertDocumentToSaved:(id)pObject;
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -400,7 +405,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				{
 					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 					if ( pDoc == self )
-						SFXDocument_documentHasMoved( mpFrame );
+						SFXDocument_documentHasMoved( mpFrame, sal_True );
 				}
 				rSolarMutex.release();
 			}
@@ -416,13 +421,134 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	return YES;
 }
 
-- (void)reloadFrame
+- (void)relinquishPresentedItem:(BOOL)bWriter reacquirer:(void (^)(void (^reacquirer)(void)))aReacquirer
+{
+	if ( !pSetLockedFilesLock )
+		pSetLockedFilesLock = (osl_setLockedFilesLock_Type *)dlsym( RTLD_DEFAULT, "osl_setLockedFilesLock" );
+	if ( pSetLockedFilesLock )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+			if ( pDoc == self )
+			{
+				SfxObjectShell *pObjSh = mpFrame->GetObjectShell();
+				while ( pObjSh && !pObjSh->IsLoadingFinished() )
+				{
+					ULONG nCount = Application::ReleaseSolarMutex();
+					OThread::yield();
+					Application::AcquireSolarMutex( nCount );
+
+					pDoc = GetDocumentForFrame( mpFrame );
+					if ( pDoc == self )
+						pObjSh = mpFrame->GetObjectShell();
+					else
+						pObjSh = NULL;
+				}
+
+				if ( pObjSh && !Application::IsShutDown() )
+				{
+					SfxMedium *pMedium = pObjSh->GetMedium();
+					if ( pMedium )
+						; // TODO: Set flag
+				}
+			}
+		}
+
+		if ( bWriter )
+		{
+			NSURL *pURL = [self fileURL];
+			if ( pURL )
+			{
+				NSString *pURLPath = [pURL path];
+				if ( pURLPath )
+					pSetLockedFilesLock( [pURLPath UTF8String], sal_False );
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	if ( aReacquirer )
+	{
+		aReacquirer(^{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+
+			sal_Bool bRelock = !bWriter;
+			if ( bWriter )
+			{
+				NSURL *pURL = [self fileURL];
+				if ( pURL )
+				{
+					NSString *pURLPath = [pURL path];
+					if ( pURLPath )
+						bRelock = pSetLockedFilesLock( [pURLPath UTF8String], sal_True );
+				}
+			}
+
+			if ( !Application::IsShutDown() )
+			{
+				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+				if ( pDoc == self )
+				{
+					SfxObjectShell *pObjSh = mpFrame->GetObjectShell();
+					while ( pObjSh && !pObjSh->IsLoadingFinished() )
+					{
+						ULONG nCount = Application::ReleaseSolarMutex();
+						OThread::yield();
+						Application::AcquireSolarMutex( nCount );
+
+						pDoc = GetDocumentForFrame( mpFrame );
+						if ( pDoc == self )
+							pObjSh = mpFrame->GetObjectShell();
+						else
+							pObjSh = NULL;
+					}
+
+					if ( pObjSh && !Application::IsShutDown() )
+					{
+						if ( !bRelock )
+							pObjSh->SetReadOnlyUI();
+
+						SfxMedium *pMedium = pObjSh->GetMedium();
+						if ( pMedium )
+							; // TODO: Unset flag
+
+						if ( bWriter )
+						{
+							[self moveToURL:[self fileURL] completionHandler:nil];
+							[self reloadFrame:[NSNumber numberWithBool:NO]];
+						}
+					}
+				}
+			}
+
+			rSolarMutex.release();
+		});
+	}
+}
+
+- (void)relinquishPresentedItemToReader:(void (^)(void (^reacquirer)(void)))aReader
+{
+	[self relinquishPresentedItem:NO reacquirer:aReader];
+}
+
+- (void)relinquishPresentedItemToWriter:(void (^)(void (^reacquirer)(void)))aWriter
+{
+	[self relinquishPresentedItem:YES reacquirer:aWriter];
+}
+
+- (void)reloadFrame:(NSNumber *)pSilent
 {
 	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
 		if ( [SFXDocument isInVersionBrowser] )
 		{
-			[self performSelector:@selector(reloadFrame) withObject:nil afterDelay:0];
+			[self performSelector:@selector(reloadFrame:) withObject:pSilent afterDelay:0];
 		}
 		else
 		{
@@ -432,7 +558,12 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			{
 				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 				if ( pDoc == self )
-					SFXDocument_reload( mpFrame );
+				{
+					sal_Bool bSilent = sal_True;
+					if ( pSilent && ![pSilent boolValue] )
+						bSilent = sal_False;
+					SFXDocument_reload( mpFrame, bSilent );
+				}
 			}
 			rSolarMutex.release();
 		}
@@ -457,7 +588,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	if ( ppError )
 		*ppError = nil;
 
-	[self reloadFrame];
+	[self reloadFrame:nil];
 
 	return YES;
 }
@@ -703,7 +834,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	// This selector is called when the document is locked and the user cancels
 	// unlocking so revert any changes
 	if ( mpDoc )
-		[mpDoc reloadFrame];
+		[mpDoc reloadFrame:nil];
 }
 
 @end
@@ -967,6 +1098,12 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 	}
 
 	return aSaveAVersionLocalizedString;
+}
+
+BOOL NSDocument_filePresenterSupported()
+{
+	Protocol *pProtocol = objc_getProtocol( "NSFilePresenter" );
+	return ( pProtocol && [NSDocument conformsToProtocol:pProtocol] ? YES : NO );
 }
 
 BOOL NSDocument_versionsEnabled()

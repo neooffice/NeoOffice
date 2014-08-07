@@ -53,16 +53,17 @@ extern "C" {
 #endif
 SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_revertToSavedLocalizedString( Window *pWindow );
 SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_saveAVersionLocalizedString( Window *pWindow );
+BOOL NSDocument_filePresenterSupported();
 BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
-void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame );
+void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, sal_Bool bForce );
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall );
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_openPendingDuplicateURLs();
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
-void SFXDocument_reload( SfxTopViewFrame *pFrame );
+void SFXDocument_reload( SfxTopViewFrame *pFrame, sal_Bool bSilent );
 void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame );
 void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified );

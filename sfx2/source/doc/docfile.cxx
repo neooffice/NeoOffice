@@ -150,6 +150,10 @@ using namespace ::com::sun::star::io;
 
 #include <dlfcn.h>
 #include <osl/file.h>
+#include <sfx2/topfrm.hxx>
+#include <sfx2/viewfrm.hxx>
+
+#include "../view/topfrm_cocoa.h"
 
 typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
 
@@ -4442,7 +4446,7 @@ sal_Bool SfxMedium::SwitchDocumentToFile( ::rtl::OUString aURL )
 
 #if defined USE_JAVA && defined MACOSX
 
-void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
+void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, sal_Bool bForce )
 {
     // Load libuno_sal and invoke the osl_getOpenFilePath function
     if ( !pGetOpenFilePath )
@@ -4457,8 +4461,27 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
             ::rtl::OUString aOpenFilePath( pGetOpenFilePath( aOrigPath ) );
             if ( aOpenFilePath != aOrigPath )
             {
+                bool bReopen = true;
+
+                // Ignore moves to versions directory and iCloud Drive cache
+                // when running on OS X 10.10 by only responding to
+                // notifications from our NSDocument subclass
+                if ( NSDocument_filePresenterSupported() && !bForce )
+                {
+                    SfxViewFrame* pFrame = pDoc->GetFrame();
+                    if ( !pFrame )
+                        pFrame = SfxViewFrame::GetFirst( pDoc );
+                    if ( pFrame )
+                    {
+                        if ( pFrame->GetFrame()->GetParentFrame() )
+                            pFrame = pFrame->GetTopViewFrame();
+                        if ( pFrame && SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+                            bReopen = false;
+                    }
+                }
+
                 ::rtl::OUString aOpenFileURL;
-                if ( osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
+                if ( bReopen && osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
                 {
                     bool bUseOrigURL = false;
                     bool bUseLogicNameMainURL = false;
@@ -4487,6 +4510,9 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
                         }
                     }
 
+                    // Stop display of native open dialog for old path when
+                    // running on OS X 10.10 by setting the physical name
+                    SetPhysicalName_Impl( String( aOpenFilePath ) );
                     SetName( String( aOpenFileURL ), sal_True );
 
                     if ( bUseOrigURL )

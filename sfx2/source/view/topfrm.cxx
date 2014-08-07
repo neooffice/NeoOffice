@@ -161,7 +161,7 @@ void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 	}
 }
 
-void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame )
+void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, sal_Bool bForce )
 {
 	if ( pFrame )
 	{
@@ -170,7 +170,7 @@ void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame )
 		{
 			SfxMedium *pMedium = pObjShell->GetMedium();
 			if ( pMedium )
-				pMedium->CheckForMovedFile( pObjShell );
+				pMedium->CheckForMovedFile( pObjShell, bForce );
 		}
 	}
 }
@@ -231,12 +231,12 @@ void SFXDocument_openPendingDuplicateURLs()
 	}
 }
 
-void SFXDocument_reload( SfxTopViewFrame *pFrame )
+void SFXDocument_reload( SfxTopViewFrame *pFrame, sal_Bool bSilent )
 {
 	if ( pFrame )
 	{
 		SfxRequest aReloadReq( pFrame, SID_RELOAD );
-		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
+		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, bSilent ) );
 		pFrame->ExecReload_Impl( aReloadReq, sal_True );
 	}
 
