@@ -148,23 +148,11 @@ using namespace ::com::sun::star::io;
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef _OSL_FILE_H_
+#include <dlfcn.h>
 #include <osl/file.h>
-#endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
-#ifndef UDK_MAJOR
-#error UDK_MAJOR must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
 
 typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
 
-static ::vos::OModule aModule;
 static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
 
 #endif	// USE_JAVA && MACOSX
@@ -4458,13 +4446,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
 {
     // Load libuno_sal and invoke the osl_getOpenFilePath function
     if ( !pGetOpenFilePath )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libuno_sal" );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib." ) );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( UDK_MAJOR ) );
-        if ( aModule.load( aLibName ) )
-            pGetOpenFilePath = (osl_getOpenFilePath_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "osl_getOpenFilePath" ) );
-    }
+        pGetOpenFilePath = (osl_getOpenFilePath_Type *)dlsym( RTLD_DEFAULT, "osl_getOpenFilePath" );
 
     if ( pGetOpenFilePath && pDoc && pDoc->IsLoadingFinished() && GetName() == GetOrigURL() )
     {
