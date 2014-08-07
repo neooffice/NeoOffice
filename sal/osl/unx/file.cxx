@@ -285,6 +285,7 @@ extern "C" int TextToUnicode(
 
 #ifdef USE_JAVA
 extern "C" rtl::OUString SAL_DLLPUBLIC_EXPORT osl_getOpenFilePath( rtl::OUString &aOrigPath );
+extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOrigPath, sal_Bool bLock );
 #endif	// USE_JAVA
 
 /******************************************************************************
@@ -2566,7 +2567,7 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
 rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
 {
     rtl::OUString aRet( aOrigPath );
-	
+
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
@@ -2601,6 +2602,67 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
     }
 
     return aRet;
+}
+
+extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOrigPath, sal_Bool bLock )
+{
+    sal_Bool bRet = sal_True;
+
+    if ( !pOrigPath )
+        return bRet;
+
+    char realPath[ PATH_MAX + 1 ];
+    char buffer[ MAXPATHLEN + 1 ];
+
+    if ( !realpath( pOrigPath, realPath ) )
+        strcpy( realPath, pOrigPath );
+
+    osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
+    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
+    {
+        if ( it->second->bLocked && !fcntl( it->second->fd, F_GETPATH, buffer ) )
+        {
+            if ( strlen( buffer ) && !strcmp( buffer, realPath ) )
+            {
+                bRet = sal_False;
+                if ( bLock )
+                {
+                    /*
+                     * Mac OS X will return ENOTSUP for mounted file systems so
+                     * ignore the error for write locks. Also, fix bug 3110 by
+                     * using flock() instead of fcntl() to lock the file.
+                     */
+                    if( 0 == flock( it->second->fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
+                    {
+                        if( errno == ENOTSUP )
+                        {
+                            /* Try to get at least a read lock */
+                            if ( 0 == flock( it->second->fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
+                            {
+                                bRet = sal_True;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            bRet = sal_True;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if ( 0 == flock( it->second->fd, LOCK_UN | LOCK_NB ) || errno == ENOTSUP )
+                    {
+                        bRet = sal_True;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return bRet;
 }
 
 #endif	// USE_JAVA

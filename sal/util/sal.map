@@ -575,6 +575,7 @@ UDK_3.8 { # OOo 3.0
         rtl_math_approxValue;
         #ifdef USE_JAVA
         osl_getOpenFilePath;
+        osl_setLockedFilesLock;
         #endif	// USE_JAVA
 } UDK_3.7;
 
