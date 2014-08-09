@@ -978,6 +978,8 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             char realPath[ MAXPATHLEN + 1 ];
             if ( !fcntl( pHandleImpl->fd, F_GETPATH, realPath ) )
             {
+                realPath[ sizeof( realPath ) - 1 ] = '\0';
+
                 char buffer[ MAXPATHLEN + 1 ];
         	    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
                 {
@@ -985,6 +987,7 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                     {
                         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) && !strcmp( realPath, buffer ) )
                         {
+                            buffer[ sizeof( buffer ) - 1 ] = '\0';
                             pHandleImpl->bLocked = sal_False;
                             break;
                         }
@@ -2571,9 +2574,12 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
-    rtl::OUString aRealPath( aOrigPath );
-    if ( realpath( rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() ).getStr(), realPath ) )
-        aRealPath = rtl::OUString( realPath, strlen( realPath ), osl_getThreadTextEncoding() );
+    rtl::OString aRealPath = rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() );
+    if ( realpath( aRealPath.getStr(), realPath ) )
+    {
+        realPath[ sizeof( realPath ) - 1 ] = '\0';
+        aRealPath = rtl::OString( realPath, strlen( realPath ) );
+    }
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     std::list< oslFileHandleImpl* > aMovedFilesList;
@@ -2581,10 +2587,10 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
     {
         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
-            rtl::OUString aFdPath( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
-            if ( aFdPath.getLength() && aFdPath != aRealPath )
+            buffer[ sizeof( buffer ) - 1 ] = '\0';
+            if ( strlen( buffer ) && strcmp( buffer, aRealPath.getStr() ) )
             {
-                aRet = aFdPath;
+                aRet = rtl::OUString( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
                 aMovedFilesList.push_back( it->second );
                 aOpenFilesMap.erase( it );
             }
@@ -2614,15 +2620,20 @@ extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOr
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
-    if ( !realpath( pOrigPath, realPath ) )
-        strcpy( realPath, pOrigPath );
+    rtl::OString aRealPath = rtl::OString( pOrigPath, strlen( pOrigPath ) );
+    if ( realpath( aRealPath.getStr(), realPath ) )
+    {
+        realPath[ sizeof( realPath ) - 1 ] = '\0';
+        aRealPath = rtl::OString( realPath, strlen( realPath ) );
+    }
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
     {
         if ( it->second->bLocked && !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
-            if ( strlen( buffer ) && !strcmp( buffer, realPath ) )
+            buffer[ sizeof( buffer ) - 1 ] = '\0';
+            if ( strlen( buffer ) && !strcmp( buffer, aRealPath.getStr() ) )
             {
                 bRet = sal_False;
                 if ( bLock )
