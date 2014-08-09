@@ -909,9 +909,8 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         if ( uFlags & osl_File_OpenFlag_Create ) 
                             macxp_setFileType( buffer );
 
-                        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+                        osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
                         aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl ) );
-                        aGuard.clear();
 #endif	// USE_JAVA
 
                         return osl_File_E_None;
@@ -961,7 +960,7 @@ oslFileError osl_closeFile( oslFileHandle Handle )
     if( pHandleImpl )
     {
 #ifdef USE_JAVA
-        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+        osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
         for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
         {
             if ( pHandleImpl == it->second )
@@ -976,18 +975,17 @@ oslFileError osl_closeFile( oslFileHandle Handle )
         if ( pHandleImpl->bLocked )
         {
             char realPath[ MAXPATHLEN + 1 ];
+            memset( realPath, 0, sizeof( realPath ) );
             if ( !fcntl( pHandleImpl->fd, F_GETPATH, realPath ) )
             {
-                realPath[ sizeof( realPath ) - 1 ] = '\0';
-
                 char buffer[ MAXPATHLEN + 1 ];
         	    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
                 {
                     if ( it->second->bLocked )
                     {
+                        memset( buffer, 0, sizeof( buffer ) );
                         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) && !strcmp( realPath, buffer ) )
                         {
-                            buffer[ sizeof( buffer ) - 1 ] = '\0';
                             pHandleImpl->bLocked = sal_False;
                             break;
                         }
@@ -995,8 +993,6 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 }
             }
         }
-
-        aGuard.clear();
 #endif	// USE_JAVA
 
         rtl_uString_release( pHandleImpl->ustrFilePath );
@@ -2574,20 +2570,18 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
+    memset( realPath, 0, sizeof( realPath ) );
     rtl::OString aRealPath = rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() );
     if ( realpath( aRealPath.getStr(), realPath ) )
-    {
-        realPath[ sizeof( realPath ) - 1 ] = '\0';
         aRealPath = rtl::OString( realPath, strlen( realPath ) );
-    }
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     std::list< oslFileHandleImpl* > aMovedFilesList;
     for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
     {
+        memset( buffer, 0, sizeof( buffer ) );
         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
-            buffer[ sizeof( buffer ) - 1 ] = '\0';
             if ( strlen( buffer ) && strcmp( buffer, aRealPath.getStr() ) )
             {
                 aRet = rtl::OUString( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
@@ -2620,19 +2614,17 @@ extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOr
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
+    memset( realPath, 0, sizeof( realPath ) );
     rtl::OString aRealPath = rtl::OString( pOrigPath, strlen( pOrigPath ) );
     if ( realpath( aRealPath.getStr(), realPath ) )
-    {
-        realPath[ sizeof( realPath ) - 1 ] = '\0';
         aRealPath = rtl::OString( realPath, strlen( realPath ) );
-    }
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
     {
+        memset( buffer, 0, sizeof( buffer ) );
         if ( it->second->bLocked && !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
-            buffer[ sizeof( buffer ) - 1 ] = '\0';
             if ( strlen( buffer ) && !strcmp( buffer, aRealPath.getStr() ) )
             {
                 bRet = sal_False;
