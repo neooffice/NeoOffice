@@ -53,6 +53,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "../java/VCLEventQueue_cocoa.h"
+
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
@@ -4538,7 +4540,9 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			{
 				if( nState & ( CTRL_STATE_DEFAULT | CTRL_STATE_FOCUSED | CTRL_STATE_PRESSED ) )
 				{
-					if ( IsRunningMavericksOrLower() )
+					// Fix text color when running on OS X 10.10 and our
+					// application is not the active application
+					if ( IsRunningMavericksOrLower() || !NSApplication_isActive() )
 						bReturn = JavaSalFrame::GetSelectedControlTextColor( textColor );
 					else
 						bReturn = JavaSalFrame::GetAlternateSelectedControlTextColor( textColor );
