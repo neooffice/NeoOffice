@@ -262,7 +262,7 @@ public:
 
     sal_Bool            SupportsActiveStreaming( const rtl::OUString &rName ) const;
 #if defined USE_JAVA && defined MACOSX
-	void				CheckForMovedFile( SfxObjectShell *pDoc, sal_Bool bForce = sal_False );
+	void				CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL = ::rtl::OUString() );
 #endif	// USE_JAVA && MACOSX
 
 #if _SOLAR__PRIVATE

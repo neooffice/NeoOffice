@@ -161,7 +161,7 @@ void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 	}
 }
 
-void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, sal_Bool bForce )
+void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNewURL )
 {
 	if ( pFrame )
 	{
@@ -170,7 +170,7 @@ void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, sal_Bool bForce )
 		{
 			SfxMedium *pMedium = pObjShell->GetMedium();
 			if ( pMedium )
-				pMedium->CheckForMovedFile( pObjShell, bForce );
+				pMedium->CheckForMovedFile( pObjShell, aNewURL );
 		}
 	}
 }

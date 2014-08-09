@@ -59,6 +59,7 @@ static NSString *pNoTranslationValue = @" ";
 
 using namespace com::sun::star;
 using namespace rtl;
+using namespace osl;
 using namespace vos;
 
 static BOOL HasNativeVersion( Window *pWindow )
@@ -178,6 +179,7 @@ static OUString aSaveAVersionLocalizedString;
 @end
 
 static NSMutableDictionary *pFrameDict = nil;
+static ::osl::Mutex aFrameDictMutex;
 
 static OUString NSStringToOUString( NSString *pString )
 {
@@ -202,6 +204,8 @@ static SFXDocument *GetDocumentForFrame( SfxTopViewFrame *pFrame )
 {
 	SFXDocument *pRet = nil;
 
+	MutexGuard aGuard( aFrameDictMutex );
+
 	if ( pFrame && pFrameDict )
 	{
 		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
@@ -216,6 +220,8 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 {
 	if ( !pFrame )
 		return;
+
+	MutexGuard aGuard( aFrameDictMutex );
 
 	if ( !pFrameDict )
 	{
@@ -392,12 +398,12 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			if ( aCompletionHandler )
 				aCompletionHandler( pError );
 
-			if ( !pError )
+			if ( !pError && pURL )
 			{
 				if ( !pApplication_cacheSecurityScopedURL )
 					pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
 				if ( pApplication_cacheSecurityScopedURL )
-					pApplication_cacheSecurityScopedURL( [self fileURL] );
+					pApplication_cacheSecurityScopedURL( pURL );
 
 				IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
@@ -405,7 +411,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				{
 					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 					if ( pDoc == self )
-						SFXDocument_documentHasMoved( mpFrame, sal_True );
+						SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
 				}
 				rSolarMutex.release();
 			}
@@ -423,6 +429,12 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)relinquishPresentedItem:(BOOL)bWriter reacquirer:(void (^)(void (^reacquirer)(void)))aReacquirer
 {
+	SfxObjectShell *pObjSh = NULL;
+	sal_Bool bOldEnableSetModified = sal_False;
+	NSDate *pModDate = nil;
+	id pFileID = nil;
+	NSURL *pURL = [self fileURL];
+
 	if ( !pSetLockedFilesLock )
 		pSetLockedFilesLock = (osl_setLockedFilesLock_Type *)dlsym( RTLD_DEFAULT, "osl_setLockedFilesLock" );
 	if ( pSetLockedFilesLock )
@@ -435,7 +447,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 			if ( pDoc == self )
 			{
-				SfxObjectShell *pObjSh = mpFrame->GetObjectShell();
+				pObjSh = mpFrame->GetObjectShell();
 				while ( pObjSh && !pObjSh->IsLoadingFinished() )
 				{
 					ULONG nCount = Application::ReleaseSolarMutex();
@@ -449,23 +461,37 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 						pObjSh = NULL;
 				}
 
+				// Block editing and saving
 				if ( pObjSh && !Application::IsShutDown() )
 				{
-					SfxMedium *pMedium = pObjSh->GetMedium();
-					if ( pMedium )
-						; // TODO: Set flag
+					bOldEnableSetModified = pObjSh->IsEnableSetModified();
+					pObjSh->EnableSetModified( sal_False );
 				}
 			}
 		}
 
-		if ( bWriter )
+		pURL = [self fileURL];
+		if ( pURL )
 		{
-			NSURL *pURL = [self fileURL];
+			pURL = [pURL URLByStandardizingPath];
 			if ( pURL )
 			{
-				NSString *pURLPath = [pURL path];
-				if ( pURLPath )
-					pSetLockedFilesLock( [pURLPath UTF8String], sal_False );
+				pURL = [pURL URLByResolvingSymlinksInPath];
+				if ( pURL )
+				{
+					if ( [pURL checkResourceIsReachableAndReturnError:nil] )
+					{
+						[pURL getResourceValue:&pModDate forKey:NSURLContentModificationDateKey error:nil];
+						[pURL getResourceValue:&pFileID forKey:NSURLFileResourceIdentifierKey error:nil];
+					}
+
+					if ( bWriter )
+					{
+						NSString *pURLPath = [pURL path];
+						if ( pURLPath )
+							pSetLockedFilesLock( [pURLPath UTF8String], sal_False );
+					}
+				}
 			}
 		}
 
@@ -478,50 +504,95 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			IMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
 
-			sal_Bool bRelock = !bWriter;
-			if ( bWriter )
+			sal_Bool bRelocked = !bWriter;
+			NSDate *pNewModDate = nil;
+			id pNewFileID = nil;
+			NSURL *pNewURL = [self fileURL];
+			if ( pNewURL )
 			{
-				NSURL *pURL = [self fileURL];
-				if ( pURL )
+				pNewURL = [pNewURL URLByStandardizingPath];
+				if ( pNewURL )
 				{
-					NSString *pURLPath = [pURL path];
-					if ( pURLPath )
-						bRelock = pSetLockedFilesLock( [pURLPath UTF8String], sal_True );
+					pNewURL = [pNewURL URLByResolvingSymlinksInPath];
+					if ( pNewURL )
+					{
+						if ( pSetLockedFilesLock )
+						{
+							NSString *pNewURLPath = [pNewURL path];
+							if ( pNewURLPath )
+								bRelocked = pSetLockedFilesLock( [pNewURLPath UTF8String], sal_True );
+						}
+
+						if ( [pNewURL checkResourceIsReachableAndReturnError:nil] )
+						{
+							[pNewURL getResourceValue:&pNewModDate forKey:NSURLContentModificationDateKey error:nil];
+							[pNewURL getResourceValue:&pNewFileID forKey:NSURLFileResourceIdentifierKey error:nil];
+						}
+					}
 				}
 			}
 
 			if ( !Application::IsShutDown() )
 			{
-				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-				if ( pDoc == self )
+				SFXDocument *pNewDoc = GetDocumentForFrame( mpFrame );
+				if ( pNewDoc == self )
 				{
-					SfxObjectShell *pObjSh = mpFrame->GetObjectShell();
-					while ( pObjSh && !pObjSh->IsLoadingFinished() )
+					SfxObjectShell *pNewObjSh = mpFrame->GetObjectShell();
+					while ( pNewObjSh && !pNewObjSh->IsLoadingFinished() )
 					{
 						ULONG nCount = Application::ReleaseSolarMutex();
 						OThread::yield();
 						Application::AcquireSolarMutex( nCount );
 
-						pDoc = GetDocumentForFrame( mpFrame );
-						if ( pDoc == self )
-							pObjSh = mpFrame->GetObjectShell();
+						pNewDoc = GetDocumentForFrame( mpFrame );
+						if ( pNewDoc == self )
+							pNewObjSh = mpFrame->GetObjectShell();
 						else
-							pObjSh = NULL;
+							pNewObjSh = NULL;
 					}
 
-					if ( pObjSh && !Application::IsShutDown() )
+					if ( pNewObjSh && !Application::IsShutDown() )
 					{
-						if ( !bRelock )
-							pObjSh->SetReadOnlyUI();
+						pNewObjSh->EnableSetModified( bOldEnableSetModified);
 
-						SfxMedium *pMedium = pObjSh->GetMedium();
-						if ( pMedium )
-							; // TODO: Unset flag
+						BOOL bDeleted = NO;
+						BOOL bMoved = NO;
+						BOOL bChanged = NO;
 
-						if ( bWriter )
+						if ( !pNewURL || !pNewModDate || !pNewFileID )
 						{
-							[self moveToURL:[self fileURL] completionHandler:nil];
-							[self reloadFrame:[NSNumber numberWithBool:NO]];
+							bDeleted = YES;
+						}
+						else if ( !pURL || !pModDate || !pFileID )
+						{
+							bChanged = YES;
+							bMoved = YES;
+						}
+						else if ( pURL && pNewURL)
+						{
+							if ( [pURL isEqual:pNewURL] && pModDate && pNewModDate && ![pModDate isEqual:pNewModDate] )
+								bChanged = YES;
+							else if ( ![pURL isEqual:pNewURL] && pFileID && pNewFileID && [pFileID isEqual:pNewFileID] )
+								bMoved = YES;
+						}
+
+						if ( bDeleted )
+						{
+							// TODO
+						}
+						else
+						{
+							if ( bMoved && pNewURL )
+							{
+								if ( !pApplication_cacheSecurityScopedURL )
+									pApplication_cacheSecurityScopedURL = (Application_cacheSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURL" );
+								if ( pApplication_cacheSecurityScopedURL )
+									pApplication_cacheSecurityScopedURL( pNewURL );
+								SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pNewURL absoluteString] ) );
+							}
+
+							if ( bChanged || !bRelocked )
+								[self reloadFrame:[NSNumber numberWithBool:NO]];
 						}
 					}
 				}

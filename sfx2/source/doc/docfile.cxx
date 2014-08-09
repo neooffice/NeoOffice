@@ -4446,7 +4446,7 @@ sal_Bool SfxMedium::SwitchDocumentToFile( ::rtl::OUString aURL )
 
 #if defined USE_JAVA && defined MACOSX
 
-void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, sal_Bool bForce )
+void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL )
 {
     // Load libuno_sal and invoke the osl_getOpenFilePath function
     if ( !pGetOpenFilePath )
@@ -4458,7 +4458,15 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, sal_Bool bForce )
         ::rtl::OUString aOrigPath;
         if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None )
         {
-            ::rtl::OUString aOpenFilePath( pGetOpenFilePath( aOrigPath ) );
+            ::rtl::OUString aNewPath;
+            if ( aNewURL.getLength() )
+                osl_getSystemPathFromFileURL( aNewURL.pData, &aNewPath.pData );
+
+            ::rtl::OUString aOpenFilePath;
+            if ( aNewPath.getLength() )
+                aOpenFilePath = aNewPath;
+            else
+                aOpenFilePath = pGetOpenFilePath( aOrigPath );
             if ( aOpenFilePath != aOrigPath )
             {
                 bool bReopen = true;
@@ -4466,7 +4474,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, sal_Bool bForce )
                 // Ignore moves to versions directory and iCloud Drive cache
                 // when running on OS X 10.10 by only responding to
                 // notifications from our NSDocument subclass
-                if ( NSDocument_filePresenterSupported() && !bForce )
+                if ( NSDocument_filePresenterSupported() && !aNewURL.getLength() )
                 {
                     SfxViewFrame* pFrame = pDoc->GetFrame();
                     if ( !pFrame )
