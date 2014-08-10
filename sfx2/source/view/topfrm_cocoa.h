@@ -57,6 +57,7 @@ BOOL NSDocument_filePresenterSupported();
 BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
+void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame );
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
 void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNewURL );
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall );

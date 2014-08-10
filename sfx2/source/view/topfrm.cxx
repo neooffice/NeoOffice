@@ -151,6 +151,33 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 #if defined USE_JAVA && defined MACOSX
 
+void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+		{
+			SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
+			pObjShell->ExecFile_Impl( aSaveAsReq );
+			const SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
+            if ( !pItem || !pItem->GetValue() )
+			{
+				pObjShell->ExecFile_Impl( aSaveAsReq );
+				pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
+            	if ( !pItem || !pItem->GetValue() )
+				{
+					pObjShell->SetModified( sal_False );
+					SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
+					pObjShell->ExecFile_Impl( aCloseReq );
+				}
+			}
+		}
+	}
+
+	SFXDocument_openPendingDuplicateURLs();
+}
+
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )

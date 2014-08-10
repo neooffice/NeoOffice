@@ -578,7 +578,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 						if ( bDeleted )
 						{
-							// TODO
+							SFXDocument_documentHasBeenDeleted( mpFrame );
 						}
 						else
 						{
