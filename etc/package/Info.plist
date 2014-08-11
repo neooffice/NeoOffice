@@ -457,6 +457,29 @@
 				<string>doc</string>
 				<string>docm</string>
 				<string>docx</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxw_sdw_doc_Option_1.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/msword</string>
+				<string>application/vnd.ms-word.document.macroEnabled.12</string>
+				<string>application/vnd.ms-word.template.macroEnabled.12</string>
+				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.document</string>
+				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.template</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
+			<key>NSDocumentClass</key>
+			<string>VCLDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
 				<string>wp</string>
 				<string>wpd</string>
 				<string>wri</string>
@@ -472,9 +495,6 @@
 			<string>sxw_sdw_doc_Option_1.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
-				<string>application/msword</string>
-				<string>application/vnd.ms-word.document.macroEnabled.12</string>
-				<string>application/vnd.ms-word.template.macroEnabled.12</string>
 				<string>application/vnd.wordperfect</string>
 				<string>application/vnd.wordperfect5.1</string>
 				<string>application/wordperfect5.1</string>
@@ -483,8 +503,6 @@
 				<string>application/x-aportisdoc</string>
 				<string>application/vnd.aportisdoc</string>
 				<string>application/x-pocket-word</string>
-				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.document</string>
-				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.template</string>
 				<string>application/vnd.ms-works</string>
 			</array>
 			<key>CFBundleTypeName</key>
@@ -524,9 +542,9 @@
 				<string>s6BN</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<true/>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 		</dict>
@@ -607,9 +625,9 @@
 				<string>PPOT</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<true/>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 		</dict>
@@ -619,6 +637,7 @@
 				<string>pps</string>
 				<string>ppt</string>
 				<string>pptm</string>
+				<string>ppsx</string>
 				<string>pptx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
@@ -642,9 +661,9 @@
 				<string>PPSS</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<true/>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 		</dict>
@@ -702,12 +721,6 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>123</string>
-				<string>slk</string>
-				<string>sylk</string>
-				<string>wk1</string>
-				<string>wks</string>
-				<string>wk2</string>
 				<string>xl</string>
 				<string>xlc</string>
 				<string>xlm</string>
@@ -715,11 +728,7 @@
 				<string>xlsb</string>
 				<string>xlsm</string>
 				<string>xlsx</string>
-				<string>xltm</string>
-				<string>xltx</string>
 				<string>xlw</string>
-				<string>xml</string>
-				<string>pxl</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxc_sdc_slk_xls.icns</string>
@@ -732,13 +741,6 @@
 				<string>application/vnd.ms-excel.sheet.macroEnabled.12</string>
 				<string>application/vnd.ms-excel.template.macroEnabled.12</string>
 				<string>application/x-msexcel</string>
-				<string>application/vnd.lotus-1-2-3</string>
-				<string>application/x-123</string>
-				<string>application/lotus123</string>
-				<string>application/x-lotus123</string>
-				<string>application/wk1</string>
-				<string>applivation/x-quattropro</string>
-				<string>application/x-pocket-excel</string>
 				<string>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</string>
 				<string>application/vnd.openxmlformats-officedocument.spreadsheetml.template</string>
 			</array>
@@ -753,6 +755,39 @@
 				<string>LWKS</string>
 			</array>
 			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
+			<key>NSDocumentClass</key>
+			<string>VCLDocument</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>123</string>
+				<string>slk</string>
+				<string>sylk</string>
+				<string>wk1</string>
+				<string>wks</string>
+				<string>wk2</string>
+				<string>xml</string>
+				<string>pxl</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxc_sdc_slk_xls.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.lotus-1-2-3</string>
+				<string>application/x-123</string>
+				<string>application/lotus123</string>
+				<string>application/x-lotus123</string>
+				<string>application/wk1</string>
+				<string>applivation/x-quattropro</string>
+				<string>application/x-pocket-excel</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
@@ -763,6 +798,8 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>xlt</string>
+				<string>xltm</string>
+				<string>xltx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>stc_xlt.icns</string>
@@ -776,9 +813,9 @@
 				<string>sLS3</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
+			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
-			<false/>
+			<true/>
 			<key>NSDocumentClass</key>
 			<string>VCLDocument</string>
 		</dict>

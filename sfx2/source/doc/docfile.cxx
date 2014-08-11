@@ -148,23 +148,15 @@ using namespace ::com::sun::star::io;
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef _OSL_FILE_H_
+#include <dlfcn.h>
 #include <osl/file.h>
-#endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
+#include <sfx2/topfrm.hxx>
+#include <sfx2/viewfrm.hxx>
 
-#ifndef UDK_MAJOR
-#error UDK_MAJOR must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
+#include "../view/topfrm_cocoa.h"
 
 typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
 
-static ::vos::OModule aModule;
 static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
 
 #endif	// USE_JAVA && MACOSX
@@ -1084,7 +1076,13 @@ uno::Reference < embed::XStorage > SfxMedium::GetOutputStorage()
 
             try
             {
+#ifdef USE_JAVA
+                // Fix failure to reacquire native file lock after saving by
+                // explicitly opening the writable stream with a locking
+                xStream = aContent.openWriteableStream();
+#else	// USE_JAVA
                 xStream = aContent.openWriteableStreamNoLock();
+#endif	// USE_JAVA
 
                 if ( !bOverWrite )
                 {
@@ -1111,7 +1109,13 @@ uno::Reference < embed::XStorage > SfxMedium::GetOutputStorage()
                     aContent.executeCommand( rtl::OUString::createFromAscii( "insert" ), uno::makeAny( aInsertArg ) );
 
                     // Try to open one more time
+#ifdef USE_JAVA
+                    // Fix failure to reacquire native file lock after saving
+                    // by explicitly opening the writable stream with a locking
+                    xStream = aContent.openWriteableStream();
+#else	// USE_JAVA
                     xStream = aContent.openWriteableStreamNoLock();
+#endif	// USE_JAVA
                     bDeleteOnFailure = sal_True;
                 }
                 else
@@ -1413,6 +1417,11 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                             try
                             {
                                 // impossibility to get data is no real problem
+#ifdef USE_JAVA
+                                // Don't create OOo lock file if we are using
+                                // system file locking
+                                if ( !bUseSystemLock )
+#endif	// USE_JAVA
                                 aData = aLockFile.GetLockData();
                             }
                             catch( uno::Exception ) {}
@@ -4437,17 +4446,11 @@ sal_Bool SfxMedium::SwitchDocumentToFile( ::rtl::OUString aURL )
 
 #if defined USE_JAVA && defined MACOSX
 
-void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
+void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL )
 {
     // Load libuno_sal and invoke the osl_getOpenFilePath function
     if ( !pGetOpenFilePath )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libuno_sal" );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib." ) );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( UDK_MAJOR ) );
-        if ( aModule.load( aLibName ) )
-            pGetOpenFilePath = (osl_getOpenFilePath_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "osl_getOpenFilePath" ) );
-    }
+        pGetOpenFilePath = (osl_getOpenFilePath_Type *)dlsym( RTLD_DEFAULT, "osl_getOpenFilePath" );
 
     if ( pGetOpenFilePath && pDoc && pDoc->IsLoadingFinished() && GetName() == GetOrigURL() )
     {
@@ -4455,11 +4458,38 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
         ::rtl::OUString aOrigPath;
         if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None )
         {
-            ::rtl::OUString aOpenFilePath( pGetOpenFilePath( aOrigPath ) );
+            ::rtl::OUString aNewPath;
+            if ( aNewURL.getLength() )
+                osl_getSystemPathFromFileURL( aNewURL.pData, &aNewPath.pData );
+
+            ::rtl::OUString aOpenFilePath;
+            if ( aNewPath.getLength() )
+                aOpenFilePath = aNewPath;
+            else
+                aOpenFilePath = pGetOpenFilePath( aOrigPath );
             if ( aOpenFilePath != aOrigPath )
             {
+                bool bReopen = true;
+
+                // Ignore moves to versions directory and iCloud Drive cache
+                // when running on OS X 10.10 by only responding to
+                // notifications from our NSDocument subclass
+                if ( NSDocument_filePresenterSupported() && !aNewURL.getLength() )
+                {
+                    SfxViewFrame* pFrame = pDoc->GetFrame();
+                    if ( !pFrame )
+                        pFrame = SfxViewFrame::GetFirst( pDoc );
+                    if ( pFrame )
+                    {
+                        if ( pFrame->GetFrame()->GetParentFrame() )
+                            pFrame = pFrame->GetTopViewFrame();
+                        if ( pFrame && SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+                            bReopen = false;
+                    }
+                }
+
                 ::rtl::OUString aOpenFileURL;
-                if ( osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
+                if ( bReopen && osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
                 {
                     bool bUseOrigURL = false;
                     bool bUseLogicNameMainURL = false;
@@ -4488,6 +4518,9 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
                         }
                     }
 
+                    // Stop display of native open dialog for old path when
+                    // running on OS X 10.10 by setting the physical name
+                    SetPhysicalName_Impl( String( aOpenFilePath ) );
                     SetName( String( aOpenFileURL ), sal_True );
 
                     if ( bUseOrigURL )

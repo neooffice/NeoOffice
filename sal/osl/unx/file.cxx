@@ -285,6 +285,7 @@ extern "C" int TextToUnicode(
 
 #ifdef USE_JAVA
 extern "C" rtl::OUString SAL_DLLPUBLIC_EXPORT osl_getOpenFilePath( rtl::OUString &aOrigPath );
+extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOrigPath, sal_Bool bLock );
 #endif	// USE_JAVA
 
 /******************************************************************************
@@ -908,9 +909,8 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         if ( uFlags & osl_File_OpenFlag_Create ) 
                             macxp_setFileType( buffer );
 
-                        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+                        osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
                         aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl ) );
-                        aGuard.clear();
 #endif	// USE_JAVA
 
                         return osl_File_E_None;
@@ -960,7 +960,7 @@ oslFileError osl_closeFile( oslFileHandle Handle )
     if( pHandleImpl )
     {
 #ifdef USE_JAVA
-        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+        osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
         for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
         {
             if ( pHandleImpl == it->second )
@@ -969,7 +969,30 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 break;
             }
         }
-        aGuard.clear();
+
+        // Check if other file descriptors have a native file lock on the same
+        // path so that we don't release native file locks too soon
+        if ( pHandleImpl->bLocked )
+        {
+            char realPath[ MAXPATHLEN + 1 ];
+            memset( realPath, 0, sizeof( realPath ) );
+            if ( !fcntl( pHandleImpl->fd, F_GETPATH, realPath ) )
+            {
+                char buffer[ MAXPATHLEN + 1 ];
+        	    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
+                {
+                    if ( it->second->bLocked )
+                    {
+                        memset( buffer, 0, sizeof( buffer ) );
+                        if ( !fcntl( it->second->fd, F_GETPATH, buffer ) && !strcmp( realPath, buffer ) )
+                        {
+                            pHandleImpl->bLocked = sal_False;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 #endif	// USE_JAVA
 
         rtl_uString_release( pHandleImpl->ustrFilePath );
@@ -2543,24 +2566,25 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
 rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
 {
     rtl::OUString aRet( aOrigPath );
-	
+
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
-    rtl::OUString aRealPath( aOrigPath );
-    if ( realpath( rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() ).getStr(), realPath ) )
-        aRealPath = rtl::OUString( realPath, strlen( realPath ), osl_getThreadTextEncoding() );
+    memset( realPath, 0, sizeof( realPath ) );
+    rtl::OString aRealPath = rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() );
+    if ( realpath( aRealPath.getStr(), realPath ) )
+        aRealPath = rtl::OString( realPath, strlen( realPath ) );
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     std::list< oslFileHandleImpl* > aMovedFilesList;
     for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
     {
+        memset( buffer, 0, sizeof( buffer ) );
         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
-            rtl::OUString aFdPath( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
-            if ( aFdPath.getLength() && aFdPath != aRealPath )
+            if ( strlen( buffer ) && strcmp( buffer, aRealPath.getStr() ) )
             {
-                aRet = aFdPath;
+                aRet = rtl::OUString( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
                 aMovedFilesList.push_back( it->second );
                 aOpenFilesMap.erase( it );
             }
@@ -2578,6 +2602,70 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
     }
 
     return aRet;
+}
+
+extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT osl_setLockedFilesLock( const char *pOrigPath, sal_Bool bLock )
+{
+    sal_Bool bRet = sal_True;
+
+    if ( !pOrigPath )
+        return bRet;
+
+    char realPath[ PATH_MAX + 1 ];
+    char buffer[ MAXPATHLEN + 1 ];
+
+    memset( realPath, 0, sizeof( realPath ) );
+    rtl::OString aRealPath = rtl::OString( pOrigPath, strlen( pOrigPath ) );
+    if ( realpath( aRealPath.getStr(), realPath ) )
+        aRealPath = rtl::OString( realPath, strlen( realPath ) );
+
+    osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
+    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
+    {
+        memset( buffer, 0, sizeof( buffer ) );
+        if ( it->second->bLocked && !fcntl( it->second->fd, F_GETPATH, buffer ) )
+        {
+            if ( strlen( buffer ) && !strcmp( buffer, aRealPath.getStr() ) )
+            {
+                bRet = sal_False;
+                if ( bLock )
+                {
+                    /*
+                     * Mac OS X will return ENOTSUP for mounted file systems so
+                     * ignore the error for write locks. Also, fix bug 3110 by
+                     * using flock() instead of fcntl() to lock the file.
+                     */
+                    if( 0 == flock( it->second->fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
+                    {
+                        if( errno == ENOTSUP )
+                        {
+                            /* Try to get at least a read lock */
+                            if ( 0 == flock( it->second->fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
+                            {
+                                bRet = sal_True;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            bRet = sal_True;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if ( 0 == flock( it->second->fd, LOCK_UN | LOCK_NB ) || errno == ENOTSUP )
+                    {
+                        bRet = sal_True;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return bRet;
 }
 
 #endif	// USE_JAVA

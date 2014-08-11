@@ -594,7 +594,7 @@ endif
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/package.pkg/Distribution"
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cp "etc/package/ship.tiff" "$(INSTALL_HOME)/package.pkg/Resources/background.tiff"
-	echo '<background file="background.tiff" alignment="bottomright" scaling="proportional"/>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
+	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
 endif
 	mkbom "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/package.pkg/contents.pkg/Bom" >& /dev/null
 	( cd "$(INSTALL_HOME)/package" ; find . | cpio -ozH cpio ) > "$(INSTALL_HOME)/package.pkg/contents.pkg/Payload"
@@ -653,6 +653,7 @@ build.patch_package_shared:
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS/resource"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 # Copy all resource files in the main installer and overwrite newer resources
 # so that the codesigning will not remove resource files marked as signed in an
 # existing installation
@@ -662,6 +663,7 @@ build.patch_package_shared:
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjava"*.res "MacOS/resource"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/avmedia/$(UOUTPUTDIR)/lib/libavmediaquicktime.dylib" "$(PWD)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/filter/$(UOUTPUTDIR)/lib/libsvgfilter$(DLLSUFFIX).dylib" "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/goodies/$(UOUTPUTDIR)/lib/libipt$(DLLSUFFIX).dylib" "$(PWD)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$(DLLSUFFIX).dylib" "$(PWD)/linguistic/$(UOUTPUTDIR)/lib/liblng$(DLLSUFFIX).dylib" "$(PWD)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxcore$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program" ; cp "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program/services.rdb" .
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
@@ -698,7 +700,7 @@ build.patch_package_shared:
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution.patch" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/package.pkg/Distribution"
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cp "etc/package/ship.tiff" "$(PATCH_INSTALL_HOME)/package.pkg/Resources/background.tiff"
-	echo '<background file="background.tiff" alignment="bottomright" scaling="proportional"/>' >> "$(PATCH_INSTALL_HOME)/package.pkg/Distribution"
+	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$(PATCH_INSTALL_HOME)/package.pkg/Distribution"
 endif
 # Copy shared .oxt files
 # Sign all binaries in .oxt files
@@ -776,7 +778,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Distribution.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$<.pkg/Distribution"
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cp "etc/package/ship.tiff" "$<.pkg/Resources/background.tiff"
-	echo '<background file="background.tiff" alignment="bottomright" scaling="proportional"/>' >> "$<.pkg/Distribution"
+	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$<.pkg/Distribution"
 endif
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(INSTALL_HOME)/emptydir"

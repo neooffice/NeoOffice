@@ -110,7 +110,16 @@
 
 #include "topfrm_cocoa.h"
 
-static ::std::list< String > aPendingDuplicateURLsList;
+struct SAL_DLLPRIVATE SfxPendingDuplicateURL
+{
+	String				maURL;
+	BOOL				mbSetModified;
+
+						SfxPendingDuplicateURL( String &rURL, BOOL bSetModified ) : maURL( rURL ), mbSetModified( bSetModified ) {}
+	virtual				~SfxPendingDuplicateURL() {}
+};
+
+static ::std::list< SfxPendingDuplicateURL* > aPendingDuplicateURLsList;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -151,6 +160,21 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 #if defined USE_JAVA && defined MACOSX
 
+void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+		{
+			SFXDocument_duplicate( pFrame, FALSE, TRUE );
+			pObjShell->SetModified( sal_False );
+			SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
+			pObjShell->ExecFile_Impl( aCloseReq );
+		}
+	}
+}
+
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
@@ -161,7 +185,7 @@ void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
 	}
 }
 
-void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame )
+void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNewURL )
 {
 	if ( pFrame )
 	{
@@ -170,12 +194,12 @@ void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame )
 		{
 			SfxMedium *pMedium = pObjShell->GetMedium();
 			if ( pMedium )
-				pMedium->CheckForMovedFile( pObjShell );
+				pMedium->CheckForMovedFile( pObjShell, aNewURL );
 		}
 	}
 }
 
-void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall )
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall, BOOL bSetModified )
 {
 	if ( pFrame )
 	{
@@ -189,7 +213,10 @@ void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall )
 				if ( pMedium )
 				{
 					if ( pObjShell->DoSaveAs( *pMedium ) )
-						aPendingDuplicateURLsList.push_back( aTempURL );
+					{
+						SfxPendingDuplicateURL *pPendingDuplicateURL = new SfxPendingDuplicateURL( aTempURL, bSetModified );
+						aPendingDuplicateURLsList.push_back( pPendingDuplicateURL );
+					}
 					delete pMedium;
 
 					if ( !bWaitForRevertCall )
@@ -219,24 +246,35 @@ void SFXDocument_openPendingDuplicateURLs()
 			Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
 			aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
 			aSeq[0].Value <<= sal_True;
-			Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			Reference< XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
 			if ( xLoader.is() )
-				xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+			{
+				Reference< XModel > xModel( xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front()->maURL, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq ), UNO_QUERY );
+				if ( xModel.is() && aPendingDuplicateURLsList.front()->mbSetModified )
+				{
+					for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext(*pObjShell ) )
+					{
+						if ( pObjShell->GetModel() == xModel.get() )
+							pObjShell->SetModified( sal_True );
+					}
+				}
+			}
 		}
 		catch ( ... )
 		{
 		}
 
+		delete aPendingDuplicateURLsList.front();
 		aPendingDuplicateURLsList.pop_front();
 	}
 }
 
-void SFXDocument_reload( SfxTopViewFrame *pFrame )
+void SFXDocument_reload( SfxTopViewFrame *pFrame, sal_Bool bSilent )
 {
 	if ( pFrame )
 	{
 		SfxRequest aReloadReq( pFrame, SID_RELOAD );
-		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
+		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, bSilent ) );
 		pFrame->ExecReload_Impl( aReloadReq, sal_True );
 	}
 
