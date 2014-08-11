@@ -60,7 +60,7 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame );
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
 void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNewURL );
-void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall );
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall, BOOL bSetModified );
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_openPendingDuplicateURLs();
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );

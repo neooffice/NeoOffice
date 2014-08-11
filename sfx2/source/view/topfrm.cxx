@@ -109,9 +109,17 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
-#include "../doc/objserv_cocoa.h"
 
-static ::std::list< String > aPendingDuplicateURLsList;
+struct SAL_DLLPRIVATE SfxPendingDuplicateURL
+{
+	String				maURL;
+	BOOL				mbSetModified;
+
+						SfxPendingDuplicateURL( String &rURL, BOOL bSetModified ) : maURL( rURL ), mbSetModified( bSetModified ) {}
+	virtual				~SfxPendingDuplicateURL() {}
+};
+
+static ::std::list< SfxPendingDuplicateURL* > aPendingDuplicateURLsList;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -156,46 +164,15 @@ void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
 	{
-		BOOL bSaved = FALSE;
 		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
 		if ( pObjShell )
 		{
-			if ( SfxObjectShell_canSave( pObjShell, SID_SAVEASDOC ) )
-			{
-				SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
-				pObjShell->ExecFile_Impl( aSaveAsReq );
-				const SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
-				if ( pItem && pItem->GetValue() )
-				{
-					bSaved = TRUE;
-				}
-				else
-				{
-					pObjShell->ExecFile_Impl( aSaveAsReq );
-					pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
-					if ( pItem && pItem->GetValue() )
-					{
-						bSaved = TRUE;
-					}
-				}
-			}
-
+			SFXDocument_duplicate( pFrame, FALSE, TRUE );
 			pObjShell->SetModified( sal_False );
-			if ( bSaved )
-			{
-				SfxRequest aReloadReq( pFrame, SID_RELOAD );
-				aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
-				pFrame->ExecReload_Impl( aReloadReq, sal_True );
-			}
-			else
-			{
-				SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
-				pObjShell->ExecFile_Impl( aCloseReq );
-			}
+			SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
+			pObjShell->ExecFile_Impl( aCloseReq );
 		}
 	}
-
-	SFXDocument_openPendingDuplicateURLs();
 }
 
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
@@ -222,7 +199,7 @@ void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNew
 	}
 }
 
-void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall )
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall, BOOL bSetModified )
 {
 	if ( pFrame )
 	{
@@ -236,7 +213,10 @@ void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall )
 				if ( pMedium )
 				{
 					if ( pObjShell->DoSaveAs( *pMedium ) )
-						aPendingDuplicateURLsList.push_back( aTempURL );
+					{
+						SfxPendingDuplicateURL *pPendingDuplicateURL = new SfxPendingDuplicateURL( aTempURL, bSetModified );
+						aPendingDuplicateURLsList.push_back( pPendingDuplicateURL );
+					}
 					delete pMedium;
 
 					if ( !bWaitForRevertCall )
@@ -266,14 +246,25 @@ void SFXDocument_openPendingDuplicateURLs()
 			Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
 			aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
 			aSeq[0].Value <<= sal_True;
-			Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			Reference< XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
 			if ( xLoader.is() )
-				xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+			{
+				Reference< XModel > xModel( xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front()->maURL, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq ), UNO_QUERY );
+				if ( xModel.is() && aPendingDuplicateURLsList.front()->mbSetModified )
+				{
+					for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext(*pObjShell ) )
+					{
+						if ( pObjShell->GetModel() == xModel.get() )
+							pObjShell->SetModified( sal_True );
+					}
+				}
+			}
 		}
 		catch ( ... )
 		{
 		}
 
+		delete aPendingDuplicateURLsList.front();
 		aPendingDuplicateURLsList.pop_front();
 	}
 }

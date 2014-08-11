@@ -345,7 +345,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		{
 			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 			if ( pDoc == self )
-				SFXDocument_duplicate( mpFrame, bWait );
+				SFXDocument_duplicate( mpFrame, bWait, NO );
 		}
 		rSolarMutex.release();
 	}
