@@ -109,6 +109,7 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
+#include "../doc/objserv_cocoa.h"
 
 static ::std::list< String > aPendingDuplicateURLsList;
 
@@ -155,22 +156,41 @@ void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
 	{
+		BOOL bSaved = FALSE;
 		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
 		if ( pObjShell )
 		{
-			SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
-			pObjShell->ExecFile_Impl( aSaveAsReq );
-			const SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
-            if ( !pItem || !pItem->GetValue() )
+			if ( SfxObjectShell_canSave( pObjShell, SID_SAVEASDOC ) )
 			{
+				SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
 				pObjShell->ExecFile_Impl( aSaveAsReq );
-				pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
-            	if ( !pItem || !pItem->GetValue() )
+				const SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
+				if ( pItem && pItem->GetValue() )
 				{
-					pObjShell->SetModified( sal_False );
-					SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
-					pObjShell->ExecFile_Impl( aCloseReq );
+					bSaved = TRUE;
 				}
+				else
+				{
+					pObjShell->ExecFile_Impl( aSaveAsReq );
+					pItem = PTR_CAST( SfxBoolItem, aSaveAsReq.GetReturnValue() );
+					if ( pItem && pItem->GetValue() )
+					{
+						bSaved = TRUE;
+					}
+				}
+			}
+
+			pObjShell->SetModified( sal_False );
+			if ( bSaved )
+			{
+				SfxRequest aReloadReq( pFrame, SID_RELOAD );
+				aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
+				pFrame->ExecReload_Impl( aReloadReq, sal_True );
+			}
+			else
+			{
+				SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
+				pObjShell->ExecFile_Impl( aCloseReq );
 			}
 		}
 	}
