@@ -307,7 +307,7 @@ void Gallery::ImplLoadSubDirs( const INetURLObject& rBaseURL, sal_Bool& rbDirIsR
 		struct stat aSystemPathStat;
 		if ( ::osl::FileBase::getSystemPathFromFileURL( rBaseURL.GetMainURL( INetURLObject::NO_DECODE ), aSystemPath ) == ::osl::FileBase::E_None && !stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) )
 		{
-			if ( access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), W_OK ) )
+			if ( access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), W_OK ) )
 				rbDirIsReadOnly = sal_True;
 		}
 		else
