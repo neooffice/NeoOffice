@@ -135,7 +135,10 @@ static MacOSBOOL IsCurrentInstanceCacheSecurityURL( NSURL *pURL, MacOSBOOL bExis
 					}
 					else
 					{
-						bRet = ![pValue boolValue];
+						// Fix unexpected display of native open dialog when
+						// the URL has been deleted or renamed after caching
+						// the URL by assuming all the URL is still accessible
+						bRet = YES;
 					}
 				}
 			}
