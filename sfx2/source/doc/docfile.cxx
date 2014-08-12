@@ -4471,10 +4471,15 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
             {
                 bool bReopen = true;
 
+                // Ignore inaccessible paths
+                ::rtl::OString aNativeOpenFilePath = ::rtl::OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
+                if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
+                    bReopen = false;
+
                 // Ignore moves to versions directory and iCloud Drive cache
-                // when running on OS X 10.10 by only responding to
-                // notifications from our NSDocument subclass
-                if ( NSDocument_filePresenterSupported() && !aNewURL.getLength() )
+                // when running on OS X 10.10 by not reopening while the
+                // SFXDocument instance has relinquished to a reader or writer
+                if ( bReopen && !aNewURL.getLength() )
                 {
                     SfxViewFrame* pFrame = pDoc->GetFrame();
                     if ( !pFrame )
@@ -4483,7 +4488,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
                     {
                         if ( pFrame->GetFrame()->GetParentFrame() )
                             pFrame = pFrame->GetTopViewFrame();
-                        if ( pFrame && SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+                        if ( pFrame && SFXDocument_documentIsReliquished( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
                             bReopen = false;
                     }
                 }
