@@ -109,6 +109,7 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
+#include "../doc/objserv_cocoa.h"
 
 struct SAL_DLLPRIVATE SfxPendingDuplicateURL
 {
@@ -167,12 +168,15 @@ void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
 		if ( pObjShell )
 		{
-			SFXDocument_duplicate( pFrame, FALSE, TRUE );
+			SFXDocument_duplicate( pFrame, TRUE, TRUE );
 			pObjShell->SetModified( sal_False );
 			SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
 			pObjShell->ExecFile_Impl( aCloseReq );
 		}
 	}
+
+	// Wait for document to be closed before opening duplicate
+	SFXDocument_openPendingDuplicateURLs();
 }
 
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
@@ -255,7 +259,19 @@ void SFXDocument_openPendingDuplicateURLs()
 					for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext(*pObjShell ) )
 					{
 						if ( pObjShell->GetModel() == xModel.get() )
+						{
 							pObjShell->SetModified( sal_True );
+
+							if ( SfxObjectShell_canSave( pObjShell, SID_SAVEASDOC ) )
+							{
+								SfxViewFrame *pFrame = SfxViewFrame::GetFirst( pObjShell );
+								if ( pFrame )
+								{
+									SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
+									pObjShell->ExecFile_Impl( aSaveAsReq );
+								}
+							}
+						}
 					}
 				}
 			}
