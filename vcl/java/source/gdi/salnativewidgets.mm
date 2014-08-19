@@ -1383,7 +1383,7 @@ static bool IsRunningMavericksOrLower()
 
 // =======================================================================
 
-@interface VCLNativeScrollView : NSObject
+@interface VCLNativeBorderView : NSObject
 {
 	ControlState			mnControlState;
 	VCLBitmapBuffer*		mpBuffer;
@@ -1392,48 +1392,65 @@ static bool IsRunningMavericksOrLower()
 	MacOSBOOL				mbDrawn;
 }
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
-- (NSScrollView *)scrollView;
+- (NSView *)borderView;
 - (void)draw:(id)pObject;
 - (MacOSBOOL)drawn;
 - (id)initWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
 @end
 
-@implementation VCLNativeScrollView
+@implementation VCLNativeBorderView
 
 + (id)createWithControlState:(ControlState)nControlState bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect
 {
-	VCLNativeScrollView *pRet = [[VCLNativeScrollView alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
+	VCLNativeBorderView *pRet = [[VCLNativeBorderView alloc] initWithControlState:nControlState bitmapBuffer:pBuffer graphics:pGraphics destRect:aDestRect];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (NSScrollView *)scrollView
+- (NSView *)borderView
 {
-	NSScrollView *pScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
-	if ( !pScrollView )
-		return nil;
+	if ( IsRunningMavericksOrLower() )
+	{
+		NSScrollView *pScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+		if ( !pScrollView )
+			return nil;
 
-	[pScrollView autorelease];
+		[pScrollView autorelease];
 
-	[pScrollView setBorderType:NSBezelBorder];
-	[pScrollView setDrawsBackground:NO];
+		[pScrollView setBorderType:NSBezelBorder];
+		[pScrollView setDrawsBackground:NO];
 
-	return pScrollView;
+		return pScrollView;
+	}
+	else
+	{
+		NSBox *pBox = [[NSBox alloc] initWithFrame:NSMakeRect( 0, 0, maDestRect.size.width, maDestRect.size.height )];
+		if ( !pBox )
+			return nil;
+
+		[pBox autorelease];
+
+		[pBox setBoxType:NSBoxCustom];
+		[pBox setBorderType:NSLineBorder];
+		[pBox setBorderColor:[NSColor gridColor]];
+
+		return pBox;
+	}
 }
 
 - (void)draw:(id)pObject
 {
 	if ( !mbDrawn && mpBuffer && mpGraphics && !CGRectIsEmpty( maDestRect ) )
 	{
-		NSScrollView *pScrollView = [self scrollView];
-		if ( pScrollView )
+		NSView *pView = [self borderView];
+		if ( pView )
 		{
 			float fOffscreenHeight = maDestRect.size.height;
 			CGRect aAdjustedDestRect = CGRectMake( 0, 0, maDestRect.size.width, fOffscreenHeight );
 			if ( mpBuffer->Create( (long)maDestRect.origin.x, (long)maDestRect.origin.y, (long)maDestRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == maDestRect.size.height ) )
 			{
 				CGContextSaveGState( mpBuffer->maContext );
-				if ( [pScrollView isFlipped] )
+				if ( [pView isFlipped] )
 				{
 					CGContextTranslateCTM( mpBuffer->maContext, 0, aAdjustedDestRect.size.height );
 					CGContextScaleCTM( mpBuffer->maContext, 1.0f, -1.0f );
@@ -1445,7 +1462,7 @@ static bool IsRunningMavericksOrLower()
 				{
 					NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 					[NSGraphicsContext setCurrentContext:pContext];
-					[pScrollView drawRect:[pScrollView frame]];
+					[pView drawRect:[pView frame]];
 					[NSGraphicsContext setCurrentContext:pOldContext];
 
 					mbDrawn = YES;
@@ -3122,10 +3139,10 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 		nState |= CTRL_STATE_INACTIVE;
 
-	VCLNativeScrollView *pVCLNativeScrollView = [VCLNativeScrollView createWithControlState:nState bitmapBuffer:&aSharedListViewFrameBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
+	VCLNativeBorderView *pVCLNativeBorderView = [VCLNativeBorderView createWithControlState:nState bitmapBuffer:&aSharedListViewFrameBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeScrollView performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeScrollView waitUntilDone:YES modes:pModes];
-	bRet = [pVCLNativeScrollView drawn];
+	[pVCLNativeBorderView performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeBorderView waitUntilDone:YES modes:pModes];
+	bRet = [pVCLNativeBorderView drawn];
 
 	[pPool release];
 
