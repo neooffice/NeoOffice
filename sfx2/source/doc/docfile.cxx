@@ -150,6 +150,7 @@ using namespace ::com::sun::star::io;
 
 #include <dlfcn.h>
 #include <osl/file.h>
+#include <sfx2/sfxbasemodel.hxx>
 #include <sfx2/topfrm.hxx>
 #include <sfx2/viewfrm.hxx>
 
@@ -4452,109 +4453,113 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
     if ( !pGetOpenFilePath )
         pGetOpenFilePath = (osl_getOpenFilePath_Type *)dlsym( RTLD_DEFAULT, "osl_getOpenFilePath" );
 
-    if ( pGetOpenFilePath && pDoc && pDoc->IsLoadingFinished() && GetName() == GetOrigURL() )
+    if ( !pGetOpenFilePath || !pDoc || !pDoc->IsLoadingFinished() || GetName() != GetOrigURL() )
+		return;
+
+    ::rtl::OUString aOrigURL( GetOrigURL() );
+    ::rtl::OUString aOrigPath;
+    if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) != osl_File_E_None )
+        return;
+
+    ::rtl::OUString aNewPath;
+    if ( aNewURL.getLength() && osl_getSystemPathFromFileURL( aNewURL.pData, &aNewPath.pData ) != osl_File_E_None )
+        return;
+
+    // Ignore moves to versions directory and iCloud Drive cache when running
+    // on OS X 10.10 by not reopening while the SFXDocument instance has
+    // relinquished to a reader or writer
+    if ( !aNewPath.getLength() )
     {
-        ::rtl::OUString aOrigURL( GetOrigURL() );
-        ::rtl::OUString aOrigPath;
-        if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None )
+        SfxViewFrame* pFrame = pDoc->GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( pDoc );
+        if ( pFrame )
         {
-            ::rtl::OUString aNewPath;
-            if ( aNewURL.getLength() )
-                osl_getSystemPathFromFileURL( aNewURL.pData, &aNewPath.pData );
-
-            ::rtl::OUString aOpenFilePath;
-            if ( aNewPath.getLength() )
-                aOpenFilePath = aNewPath;
-            else
-                aOpenFilePath = pGetOpenFilePath( aOrigPath );
-            if ( aOpenFilePath != aOrigPath )
-            {
-                bool bReopen = true;
-
-                // Ignore inaccessible paths
-                ::rtl::OString aNativeOpenFilePath = ::rtl::OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
-                if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
-                    bReopen = false;
-
-                // Ignore moves to versions directory and iCloud Drive cache
-                // when running on OS X 10.10 by not reopening while the
-                // SFXDocument instance has relinquished to a reader or writer
-                if ( bReopen && !aNewURL.getLength() )
-                {
-                    SfxViewFrame* pFrame = pDoc->GetFrame();
-                    if ( !pFrame )
-                        pFrame = SfxViewFrame::GetFirst( pDoc );
-                    if ( pFrame )
-                    {
-                        if ( pFrame->GetFrame()->GetParentFrame() )
-                            pFrame = pFrame->GetTopViewFrame();
-                        if ( pFrame && SFXDocument_documentIsReliquished( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
-                            bReopen = false;
-                    }
-                }
-
-                ::rtl::OUString aOpenFileURL;
-                if ( bReopen && osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
-                {
-                    bool bUseOrigURL = false;
-                    bool bUseLogicNameMainURL = false;
-                    bool bUsePhysicalName = false;
-                    bool bUseName = false;
-                    SFX_ITEMSET_ARG( pSet, pFileNameItem, SfxStringItem, SID_FILE_NAME, FALSE );
-                    if ( pFileNameItem && pFileNameItem->GetValue().Len() )
-                    {
-                        if ( pFileNameItem->GetValue().Equals( GetOrigURL() ) )
-                        {
-                            bUseOrigURL = true;
-                        }
-                        else if ( pFileNameItem->GetValue().Equals( String( INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) ) )
-                        {
-                            bUseLogicNameMainURL = true;
-                        }
-                        else if ( pFileNameItem->GetValue().Equals( GetName() ) )
-                        {
-                            bUseName = true;
-                        }
-                        else if ( aName.Len() )
-                        {
-                           String aFileName;
-                           if ( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) && pFileNameItem->GetValue().Equals( aFileName ) )
-                                bUsePhysicalName = true;
-                        }
-                    }
-
-                    // Stop display of native open dialog for old path when
-                    // running on OS X 10.10 by setting the physical name
-                    SetPhysicalName_Impl( String( aOpenFilePath ) );
-                    SetName( String( aOpenFileURL ), sal_True );
-
-                    if ( bUseOrigURL )
-                    {
-                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetOrigURL() ) );
-                    }
-                    else if ( bUseLogicNameMainURL )
-                    {
-                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) );
-                    }
-                    else if ( bUseName )
-                    {
-                        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
-                    }
-                    else if ( bUsePhysicalName )
-                    {
-                        String aFileName;
-                        if ( aName.Len() && ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) )
-                            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, aFileName ) );
-                        else
-                            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
-                    }
-
-                    ReOpen();
-                    pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
-                }
-            }
+            if ( pFrame->GetFrame()->GetParentFrame() )
+                pFrame = pFrame->GetTopViewFrame();
+            if ( pFrame && SFXDocument_documentIsReliquished( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+                return;
         }
     }
+
+    ::rtl::OUString aOpenFilePath = pGetOpenFilePath( aOrigPath );
+    if ( aNewPath.getLength() )
+        aOpenFilePath = pGetOpenFilePath( aNewPath );
+
+    ::rtl::OUString aOpenFileURL;
+    if ( aOpenFilePath == aOrigPath || osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) != osl_File_E_None )
+        return;
+
+    // Ignore inaccessible paths
+    ::rtl::OString aNativeOpenFilePath = ::rtl::OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
+    if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
+        return;
+
+    bool bUseOrigURL = false;
+    bool bUseLogicNameMainURL = false;
+    bool bUsePhysicalName = false;
+    bool bUseName = false;
+    SFX_ITEMSET_ARG( pSet, pFileNameItem, SfxStringItem, SID_FILE_NAME, FALSE );
+    if ( pFileNameItem && pFileNameItem->GetValue().Len() )
+    {
+        if ( pFileNameItem->GetValue().Equals( GetOrigURL() ) )
+        {
+            bUseOrigURL = true;
+        }
+        else if ( pFileNameItem->GetValue().Equals( String( INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) ) )
+        {
+            bUseLogicNameMainURL = true;
+        }
+        else if ( pFileNameItem->GetValue().Equals( GetName() ) )
+        {
+            bUseName = true;
+        }
+        else if ( aName.Len() )
+        {
+           String aFileName;
+           if ( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) && pFileNameItem->GetValue().Equals( aFileName ) )
+                bUsePhysicalName = true;
+        }
+    }
+
+    // Stop display of native open dialog for old path when running on
+    // OS X 10.10 by setting the physical name
+    SetPhysicalName_Impl( String( aOpenFilePath ) );
+    SetName( String( aOpenFileURL ), sal_True );
+
+    // Stop loading of second read-only instance whne moved file is opened
+    // from the Finder or the Open dialog by updating the base model's URL
+    Reference< frame::XModel > xModel = pDoc->GetBaseModel();
+    if ( xModel.is() )
+    {
+        SfxBaseModel *pBaseModel = dynamic_cast< SfxBaseModel* >( xModel.get() );
+        if ( pBaseModel )
+            pBaseModel->setURL( aOpenFileURL );
+    }
+
+    if ( bUseOrigURL )
+    {
+        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetOrigURL() ) );
+    }
+    else if ( bUseLogicNameMainURL )
+    {
+        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) );
+    }
+    else if ( bUseName )
+    {
+        GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+    }
+    else if ( bUsePhysicalName )
+    {
+        String aFileName;
+        if ( aName.Len() && ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aName, aFileName ) )
+            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, aFileName ) );
+        else
+            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, GetName() ) );
+    }
+
+    ReOpen();
+    pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
 }
 
 #endif	// USE_JAVA && MACOSX

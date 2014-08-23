@@ -3803,3 +3803,13 @@ css::uno::Reference< css::frame::XController2 > SAL_CALL SfxBaseModel::createVie
 {
     return css::uno::Reference< css::frame::XController2 >();
 }
+
+#if defined USE_JAVA && defined MACOSX
+
+//=============================================================================
+void SfxBaseModel::setURL( const OUSTRING& sURL )
+{
+    m_pData->m_sURL = sURL;
+}
+
+#endif  // USE_JAVA && MACOSX
