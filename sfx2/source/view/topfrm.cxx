@@ -163,20 +163,9 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 {
-	if ( pFrame )
-	{
-		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
-		if ( pObjShell )
-		{
-			SFXDocument_duplicate( pFrame, TRUE, TRUE );
-			pObjShell->SetModified( sal_False );
-			SfxRequest aCloseReq( pFrame, SID_CLOSEDOC );
-			pObjShell->ExecFile_Impl( aCloseReq );
-		}
-	}
-
-	// Wait for document to be closed before opening duplicate
-	SFXDocument_openPendingDuplicateURLs();
+	// Don't do anything as displaying a native save dialog here will close
+	// all open windows when multiple open iCloud Drive documents are deleted 
+	// at the same time
 }
 
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
