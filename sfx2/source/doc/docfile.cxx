@@ -153,6 +153,7 @@ using namespace ::com::sun::star::io;
 #include <sfx2/sfxbasemodel.hxx>
 #include <sfx2/topfrm.hxx>
 #include <sfx2/viewfrm.hxx>
+#include <vcl/sysdata.hxx>
 
 #include "../view/topfrm_cocoa.h"
 
@@ -4454,7 +4455,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
         pGetOpenFilePath = (osl_getOpenFilePath_Type *)dlsym( RTLD_DEFAULT, "osl_getOpenFilePath" );
 
     if ( !pGetOpenFilePath || !pDoc || !pDoc->IsLoadingFinished() || GetName() != GetOrigURL() )
-		return;
+        return;
 
     ::rtl::OUString aOrigURL( GetOrigURL() );
     ::rtl::OUString aOrigPath;
@@ -4473,13 +4474,8 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
         SfxViewFrame* pFrame = pDoc->GetFrame();
         if ( !pFrame )
             pFrame = SfxViewFrame::GetFirst( pDoc );
-        if ( pFrame )
-        {
-            if ( pFrame->GetFrame()->GetParentFrame() )
-                pFrame = pFrame->GetTopViewFrame();
-            if ( pFrame && SFXDocument_documentIsReliquished( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
-                return;
-        }
+        if ( pFrame && SFXDocument_documentIsReliquished( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+            return;
     }
 
     ::rtl::OUString aOpenFilePath = pGetOpenFilePath( aOrigPath );
@@ -4493,7 +4489,45 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
     // Ignore inaccessible paths
     ::rtl::OString aNativeOpenFilePath = ::rtl::OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
     if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
+	{
+        // Reset NSDocument's file URL to original URL
+        if ( NSDocument_versionsEnabled() )
+        {
+            SfxViewFrame* pFrame = NULL;
+            pFrame = pDoc->GetFrame();
+            if ( !pFrame )
+                pFrame = SfxViewFrame::GetFirst( pDoc );
+            if ( pFrame )
+            {
+                SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+                if ( pTopViewFrame )
+                {
+                    Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
+                    if ( pWindow )
+                    {
+                        NSView *pView = pWindow->GetSystemData()->pView;
+                        if ( pView )
+                        {
+                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aOrigPath.getStr(), aOrigPath.getLength(), kCFAllocatorNull );
+                            if ( aString )
+                            {
+                                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                                if ( aURL )
+                                {
+                                    SFXDocument_createDocument( pTopViewFrame, pView, aURL, pDoc->IsReadOnly() );
+                                    CFRelease( aURL );
+                                }
+
+                                CFRelease( aString );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return;
+    }
 
     bool bUseOrigURL = false;
     bool bUseLogicNameMainURL = false;
