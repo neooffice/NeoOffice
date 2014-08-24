@@ -439,9 +439,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 			pFrame = SfxViewFrame::GetFirst( this );
 		if ( pFrame )
 		{
-			if ( NSDocument_versionsEnabled() )
-				SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
-			else
+			if ( !NSDocument_versionsSupported() || !SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() ) )
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 
 			// Check if we can save after first edit

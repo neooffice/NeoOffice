@@ -1146,13 +1146,13 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)setDocumentModified:(id)pObject
 {
-	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-	if ( pDoc )
+	[self getDocument:pObject];
+	if ( mpDoc )
 	{
 		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
-			[pDoc setDocumentModified:YES];
+			[mpDoc setDocumentModified:YES];
 		else
-			[pDoc setDocumentModified:NO];
+			[mpDoc setDocumentModified:NO];
 	}
 }
 
@@ -1343,13 +1343,19 @@ void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 	[pPool release];
 }
 
-void SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
+BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
 {
+	BOOL bRet = NO;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSNumber *pNumber = [NSNumber numberWithBool:bModified];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	[pRunSFXDocument performSelectorOnMainThread:@selector(setDocumentModified:) withObject:pNumber waitUntilDone:YES modes:pModes];
+	bRet = ( [pRunSFXDocument document] ? YES : NO );
+
 	[pPool release];
+
+	return bRet;
 }
