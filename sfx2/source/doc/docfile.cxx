@@ -4499,28 +4499,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
         {
             SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
             if ( pTopViewFrame )
-            {
-                Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
-                if ( pWindow )
-                {
-                    NSView *pView = pWindow->GetSystemData()->pView;
-                    if ( pView )
-                    {
-                        CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aOrigPath.getStr(), aOrigPath.getLength(), kCFAllocatorNull );
-                        if ( aString )
-                        {
-                            CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-                            if ( aURL )
-                            {
-                                SFXDocument_createDocument( pTopViewFrame, pView, aURL, pDoc->IsReadOnly() );
-                                CFRelease( aURL );
-                            }
-
-                            CFRelease( aString );
-                        }
-                    }
-                }
-            }
+                pTopViewFrame->UpdateTitle();
         }
 
         return;
