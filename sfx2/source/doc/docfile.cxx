@@ -4491,7 +4491,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
     if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
 	{
         // Reset NSDocument's file URL to original URL
-        if ( NSDocument_versionsEnabled() )
+        if ( NSDocument_versionsSupported() )
         {
             SfxViewFrame* pFrame = NULL;
             pFrame = pDoc->GetFrame();
