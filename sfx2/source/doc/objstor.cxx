@@ -2176,60 +2176,58 @@ sal_Bool SfxObjectShell::SaveTo_Impl
     }
 
 #if defined USE_JAVA && defined MACOSX
-    if ( NSDocument_versionsEnabled() )
+    SfxViewFrame* pFrame = NULL;
+    pFrame = GetFrame();
+    if ( !pFrame )
+        pFrame = SfxViewFrame::GetFirst( this );
+    if ( pFrame )
     {
-        SfxViewFrame* pFrame = NULL;
-        pFrame = GetFrame();
-        if ( !pFrame )
-            pFrame = SfxViewFrame::GetFirst( this );
-        if ( pFrame )
+        SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+        if ( pTopViewFrame )
         {
-            SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
-            if ( pTopViewFrame )
+            // Fix titlebar changing bug reported in the following
+            // NeoOffice forum post by not creating documents when
+            // in a SID_SAVETO action:
+            // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8623
+            if ( !bCopyTo )
             {
-                // Fix titlebar changing bug reported in the following
-                // NeoOffice forum post by not creating documents when
-                // in a SID_SAVETO action:
-				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8623
-                if ( !bCopyTo )
+                Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
+                if ( pWindow )
                 {
-                    Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
-                    if ( pWindow )
+                    NSView *pView = pWindow->GetSystemData()->pView;
+                    if ( pView )
                     {
-                        NSView *pView = pWindow->GetSystemData()->pView;
-                        if ( pView )
+                        ::rtl::OUString aPath;
+                        ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
+                        if ( aBaseURL.getLength() )
+                            ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
+
+                        // Don't create native documents for temporary files
+                        if ( aPath.getLength() && aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
                         {
-                            ::rtl::OUString aPath;
-                            ::rtl::OUString aBaseURL( rMedium.GetBaseURL( true ) );
-                            if ( aBaseURL.getLength() )
-                                ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
-
-                            // Don't create native documents for temporary files
-                            if ( aPath.getLength() && aPath.indexOf( ::utl::TempFile::GetTempNameBaseDirectory() ) != 0 )
+                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
+                            if ( aString )
                             {
-                                CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
-                                if ( aString )
+                                // Fix titlebar changing bug reported in
+                                // the following NeoOffice forum post by
+                                // not creating documents for nil URLs:
+                                // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64697#64697
+                            	CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                                if ( aURL )
                                 {
-									// Fix titlebar changing bug reported in
-									// the following NeoOffice forum post by
-									// not creating documents for nil URLs:
-									// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64697#64697
-                            		CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-									if ( aURL )
-									{
-                            			SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
-                                		CFRelease( aURL );
-                                	}
+                                    SFXDocument_createDocument( pTopViewFrame, pView, aURL, IsReadOnly() );
+                                    CFRelease( aURL );
+                            	}
 
-                                    CFRelease( aString );
-                                }
+                                CFRelease( aString );
                             }
                         }
                     }
                 }
-
-                SFXDocument_saveVersionOfDocument( pTopViewFrame );
             }
+
+            if ( NSDocument_versionsEnabled() )
+                SFXDocument_saveVersionOfDocument( pTopViewFrame );
         }
     }
 #endif	// USE_JAVA && MACOSX

@@ -4491,35 +4491,32 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
     if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
 	{
         // Reset NSDocument's file URL to original URL
-        if ( NSDocument_versionsSupported() )
+        SfxViewFrame* pFrame = NULL;
+        pFrame = pDoc->GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( pDoc );
+        if ( pFrame )
         {
-            SfxViewFrame* pFrame = NULL;
-            pFrame = pDoc->GetFrame();
-            if ( !pFrame )
-                pFrame = SfxViewFrame::GetFirst( pDoc );
-            if ( pFrame )
+            SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+            if ( pTopViewFrame )
             {
-                SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
-                if ( pTopViewFrame )
+                Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
+                if ( pWindow )
                 {
-                    Window* pWindow = pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl();
-                    if ( pWindow )
+                    NSView *pView = pWindow->GetSystemData()->pView;
+                    if ( pView )
                     {
-                        NSView *pView = pWindow->GetSystemData()->pView;
-                        if ( pView )
+                        CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aOrigPath.getStr(), aOrigPath.getLength(), kCFAllocatorNull );
+                        if ( aString )
                         {
-                            CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aOrigPath.getStr(), aOrigPath.getLength(), kCFAllocatorNull );
-                            if ( aString )
+                            CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                            if ( aURL )
                             {
-                                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
-                                if ( aURL )
-                                {
-                                    SFXDocument_createDocument( pTopViewFrame, pView, aURL, pDoc->IsReadOnly() );
-                                    CFRelease( aURL );
-                                }
-
-                                CFRelease( aString );
+                                SFXDocument_createDocument( pTopViewFrame, pView, aURL, pDoc->IsReadOnly() );
+                                CFRelease( aURL );
                             }
+
+                            CFRelease( aString );
                         }
                     }
                 }
