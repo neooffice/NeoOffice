@@ -744,6 +744,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	mbInSetDocumentModified = YES;
 
+	// Remove any modified state set on the window before it was attached to
+	// this document
+	if ( mpWindow )
+		[mpWindow setDocumentEdited:NO];
+
 	if ( bModified )
 	{
 		if ( [self respondsToSelector:@selector(_checkAutosavingThenUpdateChangeCount:)] )
