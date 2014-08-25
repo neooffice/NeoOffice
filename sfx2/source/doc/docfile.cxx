@@ -4488,7 +4488,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
 
     // Ignore inaccessible paths
     ::rtl::OString aNativeOpenFilePath = ::rtl::OUStringToOString( aOpenFilePath, osl_getThreadTextEncoding() );
-    if ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) )
+    if ( !NSDocument_isValidMoveToPath( aOpenFilePath ) || ( access( aNativeOpenFilePath.getStr(), R_OK) && access( aNativeOpenFilePath.getStr(), W_OK ) ) )
 	{
         // Reset NSDocument's file URL to original URL
         SfxViewFrame* pFrame = NULL;
