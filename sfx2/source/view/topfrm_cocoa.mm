@@ -1294,6 +1294,9 @@ BOOL NSDocument_versionsSupported()
 
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame && pView )
@@ -1309,6 +1312,9 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 BOOL SFXDocument_documentIsReliquished( SfxTopViewFrame *pFrame )
 {
 	BOOL bRet = NO;
+
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1329,6 +1335,9 @@ BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
 {
 	BOOL bRet = NO;
 
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame )
@@ -1346,6 +1355,9 @@ BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
 
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame )
@@ -1360,6 +1372,9 @@ void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 
 void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1373,6 +1388,9 @@ void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 
 void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1385,6 +1403,9 @@ void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
 {
 	BOOL bRet = NO;
+
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
