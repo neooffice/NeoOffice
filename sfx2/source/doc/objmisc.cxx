@@ -405,9 +405,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 			pFrame = SfxViewFrame::GetFirst( this );
 		if ( pFrame )
 		{
-			if ( NSDocument_versionsEnabled() )
-				SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
-			else
+			if ( !SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() ) )
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 		}
 #endif	// USE_JAVA && MACOSX

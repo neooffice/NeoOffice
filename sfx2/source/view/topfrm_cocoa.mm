@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <dlfcn.h>
+#import <pwd.h>
 
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <sfx2/docfile.hxx>
@@ -427,7 +428,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 			if ( aCompletionHandler )
 				aCompletionHandler( pError );
 
-			if ( !pError && pURL )
+			if ( !pError && pURL && ![self isRelinquished] )
 			{
 				IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
@@ -603,6 +604,41 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 							bChanged = YES;
 						else if ( ![pURL isEqual:pNewURL] && pFileID && pNewFileID && [pFileID isEqual:pNewFileID] )
 							bMoved = YES;
+					}
+
+					if ( !bDeleted && pNewURL )
+					{
+						NSString *pNewURLPath = [pNewURL path];
+						if ( pNewURLPath && [pNewURLPath length] )
+						{
+							NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, NO );
+							NSString *pRealHomeFolder = nil;
+							struct passwd *pPasswd = getpwuid( getuid() );
+							if ( pPasswd )
+								pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
+							if ( pCachesFolders && pRealHomeFolder && [pRealHomeFolder length] )
+							{
+								NSUInteger nCount = [pCachesFolders count];
+								NSUInteger i = 0;
+								for ( ; i < nCount; i++ )
+								{
+									NSString *pFolder = [pCachesFolders objectAtIndex:i];
+									if ( pFolder && [pFolder length] )
+									{
+										pFolder = [[pFolder stringByAppendingPathComponent:@"com.apple.bird"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
+										if ( pFolder && [pFolder length] )
+										{
+											NSRange aRange = [pNewURLPath rangeOfString:pFolder];
+											if ( !aRange.location && aRange.length )
+											{
+												bDeleted = YES;
+												break;
+											}
+										}
+									}
+								}
+							}
+						}
 					}
 
 					if ( bDeleted )
@@ -1137,13 +1173,13 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)setDocumentModified:(id)pObject
 {
-	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-	if ( pDoc )
+	[self getDocument:pObject];
+	if ( mpDoc )
 	{
 		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
-			[pDoc setDocumentModified:YES];
+			[mpDoc setDocumentModified:YES];
 		else
-			[pDoc setDocumentModified:NO];
+			[mpDoc setDocumentModified:NO];
 	}
 }
 
@@ -1246,6 +1282,9 @@ BOOL NSDocument_versionsSupported()
 
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame && pView )
@@ -1261,6 +1300,9 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 BOOL SFXDocument_documentIsReliquished( SfxTopViewFrame *pFrame )
 {
 	BOOL bRet = NO;
+
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1281,6 +1323,9 @@ BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
 {
 	BOOL bRet = NO;
 
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame )
@@ -1298,6 +1343,9 @@ BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
 
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pFrame )
@@ -1312,6 +1360,9 @@ void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 
 void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1325,6 +1376,9 @@ void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 
 void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 {
+	if ( !NSDocument_versionsSupported() )
+		return;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1334,13 +1388,22 @@ void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 	[pPool release];
 }
 
-void SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
+BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
 {
+	BOOL bRet = NO;
+
+	if ( !NSDocument_versionsSupported() )
+		return bRet;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSNumber *pNumber = [NSNumber numberWithBool:bModified];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	[pRunSFXDocument performSelectorOnMainThread:@selector(setDocumentModified:) withObject:pNumber waitUntilDone:YES modes:pModes];
+	bRet = ( [pRunSFXDocument document] ? YES : NO );
+
 	[pPool release];
+
+	return bRet;
 }
