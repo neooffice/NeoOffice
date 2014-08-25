@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #import <dlfcn.h>
-#import <pwd.h>
 
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <sfx2/docfile.hxx>
@@ -98,12 +97,8 @@ static BOOL IsValidMoveToPath( NSString *pPath )
 
 	BOOL bRet = YES;
 
-	NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, NO );
-	NSString *pRealHomeFolder = nil;
-	struct passwd *pPasswd = getpwuid( getuid() );
-	if ( pPasswd )
-		pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
-	if ( pCachesFolders && pRealHomeFolder && [pRealHomeFolder length] )
+	NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, YES );
+	if ( pCachesFolders )
 	{
 		NSUInteger nCount = [pCachesFolders count];
 		NSUInteger i = 0;
@@ -112,7 +107,7 @@ static BOOL IsValidMoveToPath( NSString *pPath )
 			NSString *pFolder = [pCachesFolders objectAtIndex:i];
 			if ( pFolder && [pFolder length] )
 			{
-				pFolder = [[pFolder stringByAppendingPathComponent:@"com.apple.bird"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
+				pFolder = [pFolder stringByAppendingPathComponent:@"com.apple.bird"];
 				if ( pFolder && [pFolder length] )
 				{
 					NSRange aRange = [pPath rangeOfString:pFolder];
