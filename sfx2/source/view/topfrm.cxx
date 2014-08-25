@@ -163,9 +163,15 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 {
-	// Don't do anything as displaying a native save dialog here will close
-	// all open windows when multiple open iCloud Drive documents are deleted 
-	// at the same time
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+		{
+			pObjShell->SetModified( sal_True );
+			pObjShell->SetReadOnlyUI( sal_True );
+		}
+	}
 }
 
 void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame )
@@ -248,19 +254,7 @@ void SFXDocument_openPendingDuplicateURLs()
 					for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext(*pObjShell ) )
 					{
 						if ( pObjShell->GetModel() == xModel.get() )
-						{
 							pObjShell->SetModified( sal_True );
-
-							if ( SfxObjectShell_canSave( pObjShell, SID_SAVEASDOC ) )
-							{
-								SfxViewFrame *pFrame = SfxViewFrame::GetFirst( pObjShell );
-								if ( pFrame )
-								{
-									SfxRequest aSaveAsReq( pFrame, SID_SAVEASDOC );
-									pObjShell->ExecFile_Impl( aSaveAsReq );
-								}
-							}
-						}
 					}
 				}
 			}

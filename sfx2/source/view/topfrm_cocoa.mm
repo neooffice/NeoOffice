@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <dlfcn.h>
+#import <pwd.h>
 
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <sfx2/docfile.hxx>
@@ -429,15 +430,18 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				if ( pApplication_cacheSecurityScopedURL )
 					pApplication_cacheSecurityScopedURL( pURL );
 
-				IMutex& rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-				if ( !Application::IsShutDown() )
+				if ( ![self isRelinquished] )
 				{
-					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-					if ( pDoc == self )
-						SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
+					IMutex& rSolarMutex = Application::GetSolarMutex();
+					rSolarMutex.acquire();
+					if ( !Application::IsShutDown() )
+					{
+						SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+						if ( pDoc == self )
+							SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
+					}
+					rSolarMutex.release();
 				}
-				rSolarMutex.release();
 			}
 		}];
 	}
@@ -601,6 +605,41 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 							bChanged = YES;
 						else if ( ![pURL isEqual:pNewURL] && pFileID && pNewFileID && [pFileID isEqual:pNewFileID] )
 							bMoved = YES;
+					}
+
+					if ( !bDeleted && pNewURL )
+					{
+						NSString *pNewURLPath = [pNewURL path];
+						if ( pNewURLPath && [pNewURLPath length] )
+						{
+							NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, NO );
+							NSString *pRealHomeFolder = nil;
+							struct passwd *pPasswd = getpwuid( getuid() );
+							if ( pPasswd )
+								pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
+							if ( pCachesFolders && pRealHomeFolder && [pRealHomeFolder length] )
+							{
+								NSUInteger nCount = [pCachesFolders count];
+								NSUInteger i = 0;
+								for ( ; i < nCount; i++ )
+								{
+									NSString *pFolder = [pCachesFolders objectAtIndex:i];
+									if ( pFolder && [pFolder length] )
+									{
+										pFolder = [[pFolder stringByAppendingPathComponent:@"com.apple.bird"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
+										if ( pFolder && [pFolder length] )
+										{
+											NSRange aRange = [pNewURLPath rangeOfString:pFolder];
+											if ( !aRange.location && aRange.length )
+											{
+												bDeleted = YES;
+												break;
+											}
+										}
+									}
+								}
+							}
+						}
 					}
 
 					if ( bDeleted )
