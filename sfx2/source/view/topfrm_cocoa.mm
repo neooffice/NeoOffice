@@ -91,6 +91,44 @@ static BOOL HasNativeVersion( Window *pWindow )
 	return NO;
 }
 
+static BOOL IsValidMoveToPath( NSString *pPath )
+{
+	if ( !pPath || ![pPath length] )
+		return NO;
+
+	BOOL bRet = YES;
+
+	NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, NO );
+	NSString *pRealHomeFolder = nil;
+	struct passwd *pPasswd = getpwuid( getuid() );
+	if ( pPasswd )
+		pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
+	if ( pCachesFolders && pRealHomeFolder && [pRealHomeFolder length] )
+	{
+		NSUInteger nCount = [pCachesFolders count];
+		NSUInteger i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSString *pFolder = [pCachesFolders objectAtIndex:i];
+			if ( pFolder && [pFolder length] )
+			{
+				pFolder = [[pFolder stringByAppendingPathComponent:@"com.apple.bird"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
+				if ( pFolder && [pFolder length] )
+				{
+					NSRange aRange = [pPath rangeOfString:pFolder];
+					if ( !aRange.location && aRange.length )
+					{
+						bRet = NO;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	return bRet;
+}
+
 static const NSString *pWritableTypeEntries[] = {
 	#ifdef PRODUCT_NAME
 	@PRODUCT_NAME" Chart Document",
@@ -606,40 +644,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 							bMoved = YES;
 					}
 
-					if ( !bDeleted && pNewURL )
-					{
-						NSString *pNewURLPath = [pNewURL path];
-						if ( pNewURLPath && [pNewURLPath length] )
-						{
-							NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, NO );
-							NSString *pRealHomeFolder = nil;
-							struct passwd *pPasswd = getpwuid( getuid() );
-							if ( pPasswd )
-								pRealHomeFolder = [NSString stringWithUTF8String:pPasswd->pw_dir];
-							if ( pCachesFolders && pRealHomeFolder && [pRealHomeFolder length] )
-							{
-								NSUInteger nCount = [pCachesFolders count];
-								NSUInteger i = 0;
-								for ( ; i < nCount; i++ )
-								{
-									NSString *pFolder = [pCachesFolders objectAtIndex:i];
-									if ( pFolder && [pFolder length] )
-									{
-										pFolder = [[pFolder stringByAppendingPathComponent:@"com.apple.bird"] stringByReplacingOccurrencesOfString:@"~" withString:pRealHomeFolder];
-										if ( pFolder && [pFolder length] )
-										{
-											NSRange aRange = [pNewURLPath rangeOfString:pFolder];
-											if ( !aRange.location && aRange.length )
-											{
-												bDeleted = YES;
-												break;
-											}
-										}
-									}
-								}
-							}
-						}
-					}
+					if ( !bDeleted && pNewURL && !IsValidMoveToPath( [pNewURL path] ) )
+						bDeleted = YES;
 
 					if ( bDeleted )
 					{
@@ -730,6 +736,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		return;
 
 	mbInSetDocumentModified = YES;
+
+	// Remove any modified state set on the window before it was attached to
+	// this document
+	if ( mpWindow )
+		[mpWindow setDocumentEdited:NO];
 
 	if ( bModified )
 	{
@@ -1249,6 +1260,26 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 	}
 
 	return aSaveAVersionLocalizedString;
+}
+
+BOOL NSDocument_isValidMoveToPath( ::rtl::OUString aPath )
+{
+	if ( !aPath.getLength() )
+		return NO;
+	else if ( !NSDocument_versionsSupported() )
+		return YES;
+
+	BOOL bRet = YES;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSString *pPath = [NSString stringWithCharacters:aPath.getStr() length:aPath.getLength()];
+	if ( pPath )
+		bRet = IsValidMoveToPath( pPath );
+
+	[pPool release];
+
+	return bRet;
 }
 
 BOOL NSDocument_versionsEnabled()

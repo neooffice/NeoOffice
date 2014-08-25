@@ -4486,6 +4486,24 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
     if ( aOpenFilePath == aOrigPath || osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) != osl_File_E_None )
         return;
 
+    // Ignore inaccessible paths
+    if ( !NSDocument_isValidMoveToPath( aOpenFilePath ) )
+	{
+        // Reset NSDocument's file URL to original URL
+        SfxViewFrame* pFrame = NULL;
+        pFrame = pDoc->GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( pDoc );
+        if ( pFrame )
+        {
+            SfxTopViewFrame * pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+            if ( pTopViewFrame )
+                pTopViewFrame->UpdateTitle();
+        }
+
+        return;
+    }
+
     bool bUseOrigURL = false;
     bool bUseLogicNameMainURL = false;
     bool bUsePhysicalName = false;
