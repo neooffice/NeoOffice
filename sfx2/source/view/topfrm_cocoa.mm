@@ -589,7 +589,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					if ( [pNewURL checkResourceIsReachableAndReturnError:nil] )
 					{
 						[pNewURL getResourceValue:&pNewModDate forKey:NSURLContentModificationDateKey error:nil];
-						[pNewURL getResourceValue:&pFileID forKey:*pNSURLFileResourceIdentifierKey error:nil];
+						[pNewURL getResourceValue:&pNewFileID forKey:*pNSURLFileResourceIdentifierKey error:nil];
 					}
 				}
 			}
