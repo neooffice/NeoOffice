@@ -1705,8 +1705,25 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                     lcl_CalcCrop( m_pImpl->nLeftCrop, aGraphicSize.Width );
                     lcl_CalcCrop( m_pImpl->nRightCrop, aGraphicSize.Width );
 
+#ifndef NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
+                    // We need a separate try-catch here, otherwise a bad crop setting will also nuke the size settings as well.
+                    try
+                    {
+#endif	// !NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
                     xGraphicProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_GRAPHIC_CROP ),
                         uno::makeAny(text::GraphicCrop(m_pImpl->nTopCrop, m_pImpl->nBottomCrop, m_pImpl->nLeftCrop, m_pImpl->nRightCrop)));
+#ifndef NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
+                    }
+                    catch (const uno::Exception& e)
+                    {
+#if SUPD == 310
+                        clog << __FILE__ << ":" << __LINE__ << " failed. Message :" ;
+                        clog << rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( )  << endl;
+#else	// SUPD == 310
+                        SAL_WARN("writerfilter", "failed. Message :" << e.Message);
+#endif	// SUPD == 310
+                    }
+#endif	// !NO_LIBO_4_1_GRAPHIC_IMPORT_FIXES
                 }
             }
             
