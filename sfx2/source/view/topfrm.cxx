@@ -193,6 +193,9 @@ void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNew
 			SfxMedium *pMedium = pObjShell->GetMedium();
 			if ( pMedium )
 				pMedium->CheckForMovedFile( pObjShell, aNewURL );
+
+			// Reset modified state as it will be unset on OS X 10.10
+			SFXDocument_setDocumentModified( pFrame, pObjShell->IsModified() );
 		}
 	}
 }
