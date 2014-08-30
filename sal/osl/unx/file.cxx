@@ -2577,8 +2577,10 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
     std::list< oslFileHandleImpl* > aMovedFilesList;
-    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
+    std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.lower_bound( aOrigPath );
+    while ( it != aOpenFilesMap.end() && it->first == aOrigPath )
     {
+        bool bErase = false;
         memset( buffer, 0, sizeof( buffer ) );
         if ( !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
@@ -2586,17 +2588,20 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
             {
                 aRet = rtl::OUString( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
                 aMovedFilesList.push_back( it->second );
-                aOpenFilesMap.erase( it );
+                bErase = true;
             }
         }
+
+        if ( bErase )
+            aOpenFilesMap.erase( it++ );
+        else
+            ++it;
     }
 
     while ( aMovedFilesList.size() )
     {
         oslFileHandleImpl *pHandleImpl = aMovedFilesList.front();
-        rtl_uString_release( pHandleImpl->ustrFilePath );
-        rtl_uString_acquire( aRet.pData );
-        pHandleImpl->ustrFilePath = aRet.pData;
+        rtl_uString_assign( &pHandleImpl->ustrFilePath, aRet.pData );
         aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( aRet, pHandleImpl ) );
         aMovedFilesList.pop_front();
     }
