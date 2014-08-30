@@ -109,7 +109,6 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
-#include "../doc/objserv_cocoa.h"
 
 struct SAL_DLLPRIVATE SfxPendingDuplicateURL
 {
