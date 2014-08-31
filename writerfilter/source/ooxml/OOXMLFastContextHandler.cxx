@@ -1,28 +1,27 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * OpenOffice.org - a multi-platform office productivity suite
+ * This file is part of NeoOffice.
  *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3sen
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified August 2014 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,6 +39,10 @@
 #include "OOXMLFactory.hxx"
 #include "Handler.hxx"
 #include "ooxmlLoggers.hxx"
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+#include <dmapper/DomainMapper.hxx>
+#include "../dmapper/GraphicHelpers.hxx"
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
 static const ::rtl::OUString aEmptyStr;
 
@@ -138,6 +141,9 @@ OOXMLFastContextHandler::OOXMLFastContextHandler
   mnTableDepth(0),
   mnInstanceNumber(mnInstanceCount),
   mnRefCount(0),
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+  inPositionV(false),
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
   m_xContext(context)
 {
     mnInstanceCount++;
@@ -160,6 +166,9 @@ OOXMLFastContextHandler::OOXMLFastContextHandler
   mnTableDepth(0),
   mnInstanceNumber(mnInstanceCount),
   mnRefCount(0),
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+  inPositionV(pContext->inPositionV),
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
   m_xContext(pContext->m_xContext)
 {
     if (pContext != NULL)
@@ -273,6 +282,12 @@ void OOXMLFastContextHandler::lcl_startFastElement
     throw (uno::RuntimeException, xml::sax::SAXException)
 {
     OOXMLFactory::getInstance()->startAction(this, Element);
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+    if( Element == (NS_wordprocessingDrawing|OOXML_positionV) )
+        inPositionV = true;
+    else if( Element == (NS_wordprocessingDrawing|OOXML_positionH) )
+        inPositionV = false;
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
 
 void OOXMLFastContextHandler::lcl_endFastElement
@@ -891,6 +906,53 @@ void OOXMLFastContextHandler::text(const ::rtl::OUString & sText)
                         (sText.getStr()),
                         sText.getLength());
 }
+
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+
+/*
+ HACK. An ugly hack. The problem with wp:positionOffset, wp:alignV and wp:alignH
+ is that they do not work in the usual OOXML way of <tag val="value"/> but instead
+ it's <tag>value</tag>, which is otherwise used only things like <t>. And I really
+ haven't managed to find out how to make this XML parsing monstrosity to handle this
+ on its own, so the code is modelled after <t> handling and does it manually in a hackish
+ way - it reads the value as text and converts itself, moreover the reading of the value
+ is done sooner than lcl_sprms() actually results in processing the tags it is enclosed
+ in, so the values are stored in PositionHandler for later use.
+*/
+void OOXMLFastContextHandler::positionOffset(const ::rtl::OUString & sText)
+{
+#ifdef DEBUG_ELEMENT
+    debug_logger->startElement("positionOffset");
+    debug_logger->chars(sText);
+    debug_logger->endElement();
+#endif
+    if (isForwardEvents())
+        ::writerfilter::dmapper::PositionHandler::setPositionOffset( sText, inPositionV );
+}
+
+void OOXMLFastContextHandler::alignH(const ::rtl::OUString & sText)
+{
+#ifdef DEBUG_ELEMENT
+    debug_logger->startElement("alignH");
+    debug_logger->chars(sText);
+    debug_logger->endElement();
+#endif
+    if (isForwardEvents())
+        ::writerfilter::dmapper::PositionHandler::setAlignH( sText );
+}
+
+void OOXMLFastContextHandler::alignV(const ::rtl::OUString & sText)
+{
+#ifdef DEBUG_ELEMENT
+    debug_logger->startElement("alignV");
+    debug_logger->chars(sText);
+    debug_logger->endElement();
+#endif
+    if (isForwardEvents())
+        ::writerfilter::dmapper::PositionHandler::setAlignV( sText );
+}
+
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
 void OOXMLFastContextHandler::propagateCharacterProperties()
 {

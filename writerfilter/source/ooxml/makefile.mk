@@ -38,6 +38,7 @@ ENABLE_EXCEPTIONS=TRUE
 
 .IF "$(UPD)"=="310"
 GPERF=gperf
+SOLARINC+=-I..$/dmapper
 .ENDIF		# "$(UPD)"=="310"
 
 #CFLAGS+=-DISOLATION_AWARE_ENABLED -DWIN32_LEAN_AND_MEAN -DXML_UNICODE -D_NTSDK -DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0501
@@ -90,7 +91,9 @@ SLOFILES= \
     $(SLO)$/OOXMLFastContextHandler.obj \
     $(SLO)$/OOXMLFastTokenHandler.obj
 
+.IF "$(UPD)"!="310"
 SHL1TARGET=$(TARGET)
+.ENDIF		# "$(UPD)"!="310"
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
 RESOURCEMODELLIB=-lresourcemodel
