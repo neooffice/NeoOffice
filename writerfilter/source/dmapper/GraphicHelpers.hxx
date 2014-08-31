@@ -16,8 +16,17 @@ namespace dmapper
 class WRITERFILTER_DLLPRIVATE PositionHandler: public Properties
 {
 public:
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     PositionHandler( );
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+    PositionHandler( bool vertical );
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     ~PositionHandler( );
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+    static void setPositionOffset(const ::rtl::OUString & sText, bool vertical);
+    static void setAlignH(const ::rtl::OUString & sText);
+    static void setAlignV(const ::rtl::OUString & sText);
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
     sal_Int16 m_nOrient;
     sal_Int16 m_nRelation;
@@ -25,6 +34,10 @@ public:
 
     virtual void attribute( Id aName, Value& rVal );
     virtual void sprm( Sprm& rSprm );
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+    static int savedPositionOffsetV, savedPositionOffsetH;
+    static int savedAlignV, savedAlignH;
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }; 
 typedef boost::shared_ptr<PositionHandler> PositionHandlerPtr;
 

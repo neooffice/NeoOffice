@@ -1009,7 +1009,14 @@ void GraphicImport::attribute(Id nName, Value & val)
             //enable overlapping - ignored
         break;
         case NS_ooxml::LN_CT_Point2D_x: // 90405;
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+            m_pImpl->nLeftPosition = ConversionHelper::convertTwipToMM100(nIntValue);
+            m_pImpl->nHoriRelation = text::RelOrientation::PAGE_FRAME;
+            m_pImpl->nHoriOrient = text::HoriOrientation::NONE;
+        break;
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
         case NS_ooxml::LN_CT_Point2D_y: // 90406;
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             if( m_pImpl->bUseSimplePos )
             {
@@ -1018,6 +1025,11 @@ void GraphicImport::attribute(Id nName, Value & val)
                                                         m_pImpl->nTopPosition = ConversionHelper::convertTwipToMM100(nIntValue);
                 
             }    
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+            m_pImpl->nTopPosition = ConversionHelper::convertTwipToMM100(nIntValue);
+            m_pImpl->nVertRelation = text::RelOrientation::PAGE_FRAME;
+            m_pImpl->nVertOrient = text::VertOrientation::NONE;
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
         break;
         case NS_ooxml::LN_CT_WrapTight_wrapText: // 90934;            
             /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
@@ -1410,30 +1422,50 @@ void GraphicImport::sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_Anchor_positionH: // 90976;
         {
             // Use a special handler for the positionning
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             PositionHandlerPtr pHandler( new PositionHandler );
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+            PositionHandlerPtr pHandler( new PositionHandler( false ));
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             if( pProperties.get( ) )
             {
                 pProperties->resolve( *pHandler );
-
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+                if( !m_pImpl->bUseSimplePos )
+                {
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
                 m_pImpl->nHoriRelation = pHandler->m_nRelation;
                 m_pImpl->nHoriOrient = pHandler->m_nOrient;
                 m_pImpl->nLeftPosition = pHandler->m_nPosition;
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+                }
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             }
         }
         break;
         case NS_ooxml::LN_CT_Anchor_positionV: // 90977;
         {
             // Use a special handler for the positionning
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             PositionHandlerPtr pHandler( new PositionHandler );
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+            PositionHandlerPtr pHandler( new PositionHandler( true ));
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             if( pProperties.get( ) )
             {
                 pProperties->resolve( *pHandler );
-
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+                if( !m_pImpl->bUseSimplePos )
+                {
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
                 m_pImpl->nVertRelation = pHandler->m_nRelation;
                 m_pImpl->nVertOrient = pHandler->m_nOrient;
                 m_pImpl->nTopPosition = pHandler->m_nPosition;
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+                }
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             }
         }
         break;

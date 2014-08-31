@@ -6530,17 +6530,21 @@
           </element>
         </choice>
       </define>
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
       <define name="CT_PositionOffset">
         <ref name="ST_PositionOffset"/>
       </define>
+     #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
       <define name="ST_PositionOffset">
         <data type="int">
           <xs:documentation>Absolute Position Offset Value</xs:documentation>
         </data>
       </define>
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
       <define name="CT_AlignH">
         <ref name="ST_AlignH"/>
       </define>
+     #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
       <define name="ST_AlignH">
         <list>
           <xs:documentation>Relative Horizontal Alignment Positions</xs:documentation>
@@ -6584,10 +6588,18 @@
       <define name="CT_PosH">
         <choice>
           <element name="align">
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             <ref name="CT_AlignH"/>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+            <ref name="ST_AlignH"/>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
           </element>
           <element name="posOffset">
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             <ref name="CT_PositionOffset"/>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+            <ref name="ST_PositionOffset"/>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
           </element>
         </choice>
         <attribute name="relativeFrom">
@@ -6595,9 +6607,11 @@
           <xs:documentation>Horizontal Position Relative Base</xs:documentation>
         </attribute>
       </define>
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
       <define name="CT_AlignV">
         <ref name="ST_AlignV"/>
       </define>
+     #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
       <define name="ST_AlignV">
         <list>
           <xs:documentation>Vertical Alignment Definition</xs:documentation>
@@ -6641,10 +6655,18 @@
       <define name="CT_PosV">
         <choice>
           <element name="align">
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             <ref name="CT_AlignV"/>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+            <ref name="ST_AlignV"/>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
           </element>
           <element name="posOffset">
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
             <ref name="CT_PositionOffset"/>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+            <ref name="ST_PositionOffset"/>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
           </element>
         </choice>
         <attribute name="relativeFrom">
@@ -6826,6 +6848,7 @@
       <element name="wrapThrough" tokenid="ooxml:EG_WrapType_wrapThrough"/>
       <element name="wrapTopAndBottom" tokenid="ooxml:EG_WrapType_wrapTopAndBottom"/>
     </resource>
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     <resource name="CT_PositionOffset" resource="Value"/>
     <resource name="ST_PositionOffset" resource="Integer" generated="yes"/>
     <resource name="CT_AlignH" resource="Value"/>
@@ -6836,6 +6859,14 @@
       <value name="inside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_inside">inside</value>
       <value name="outside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_outside">outside</value>
     </resource>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+    <resource name="ST_PositionOffset" resource="Value">
+      <action name="characters" action="positionOffset"/>
+    </resource>
+    <resource name="ST_AlignH" resource="Value">
+      <action name="characters" action="alignH"/>
+    </resource>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
     <resource name="ST_RelFromH" resource="List" generated="yes">
       <value name="margin" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromH_margin">margin</value>
       <value name="page" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromH_page">page</value>
@@ -6851,6 +6882,7 @@
       <element name="posOffset" tokenid="ooxml:CT_PosH_posOffset"/>
       <attribute name="relativeFrom" tokenid="ooxml:CT_PosH_relativeFrom"/>
     </resource>
+<!-- #ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     <resource name="CT_AlignV" resource="Value"/>
     <resource name="ST_AlignV" resource="List" generated="yes">
       <value name="top" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_top">top</value>
@@ -6859,6 +6891,11 @@
       <value name="inside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_inside">inside</value>
       <value name="outside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_outside">outside</value>
     </resource>
+     #else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
+    <resource name="ST_AlignV" resource="Value">
+      <action name="characters" action="alignV"/>
+    </resource>
+<!-- #endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES -->
     <resource name="ST_RelFromV" resource="List" generated="yes">
       <value name="margin" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromV_margin">margin</value>
       <value name="page" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromV_page">page</value>

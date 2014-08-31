@@ -17,12 +17,39 @@ namespace dmapper {
 
 using namespace com::sun::star;
 
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 PositionHandler::PositionHandler( ) :
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+int PositionHandler::savedPositionOffsetV = 0;
+int PositionHandler::savedPositionOffsetH = 0;
+int PositionHandler::savedAlignV = text::VertOrientation::NONE;
+int PositionHandler::savedAlignH = text::HoriOrientation::NONE;
+
+PositionHandler::PositionHandler( bool vertical ) :
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     Properties( )
 {
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     m_nOrient = text::VertOrientation::NONE;
     m_nRelation = text::RelOrientation::FRAME;
     m_nPosition = 0;
+#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+    m_nRelation = text::RelOrientation::FRAME;
+    if( vertical )
+    {
+        m_nPosition = savedPositionOffsetV;
+        m_nOrient = savedAlignV;
+        savedPositionOffsetV = 0;
+        savedAlignV = text::VertOrientation::NONE;
+    }
+    else
+    {
+        m_nPosition = savedPositionOffsetH;
+        m_nOrient = savedAlignH;
+        savedPositionOffsetH = 0;
+        savedAlignH = text::HoriOrientation::NONE;
+    }
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
 
 PositionHandler::~PositionHandler( )
@@ -92,6 +119,7 @@ void PositionHandler::attribute( Id aName, Value& rVal )
 
 void PositionHandler::sprm( Sprm& rSprm )
 {
+#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     Value::Pointer_t pValue = rSprm.getValue();
     sal_Int32 nIntValue = pValue->getInt();
     
@@ -156,7 +184,48 @@ void PositionHandler::sprm( Sprm& rSprm )
             m_nPosition = ConversionHelper::convertEMUToMM100( nIntValue );
         default:;
     }
+#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
+
+#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
+
+void PositionHandler::setPositionOffset(const ::rtl::OUString & sText, bool vertical)
+{
+    if( vertical )
+        savedPositionOffsetV = ConversionHelper::convertEMUToMM100( sText.toInt32());
+    else
+        savedPositionOffsetH = ConversionHelper::convertEMUToMM100( sText.toInt32());
+}
+
+void PositionHandler::setAlignH(const ::rtl::OUString & sText)
+{
+    if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "left" ) ) )
+        savedAlignH = text::HoriOrientation::LEFT;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "right" ) ) )
+        savedAlignH = text::HoriOrientation::RIGHT;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "center" ) ) )
+        savedAlignH = text::HoriOrientation::CENTER;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "inside" ) ) )
+        savedAlignH = text::HoriOrientation::INSIDE;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "outside" ) ) )
+        savedAlignH = text::HoriOrientation::OUTSIDE;
+}
+
+void PositionHandler::setAlignV(const ::rtl::OUString & sText)
+{
+    if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "top" ) ) )
+        savedAlignV = text::VertOrientation::TOP;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "bottom" ) ) )
+        savedAlignV = text::VertOrientation::BOTTOM;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "center" ) ) )
+        savedAlignV = text::VertOrientation::CENTER;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "inside" ) ) )
+        savedAlignV = text::VertOrientation::NONE;
+    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "outside" ) ) )
+        savedAlignV = text::VertOrientation::NONE;
+}
+
+#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
 WrapHandler::WrapHandler( ) :
     Properties( ),
