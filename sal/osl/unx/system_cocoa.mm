@@ -248,3 +248,64 @@ void macxp_setFileType(const sal_Char* path)
 	}
 #endif	// PRODUCT_FILETYPE
 }
+
+sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
+{
+	sal_Bool bRet = sal_False;
+
+	if ( path && len > 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if ( pFileManager )
+		{
+			NSString *pPath = [NSString stringWithCharacters:path length:len];
+			if ( pPath && [pPath length] )
+			{
+				NSURL *pURL = [NSURL fileURLWithPath:pPath];
+				if ( pURL && [pURL isFileURL] )
+				{
+					pURL = [pURL URLByStandardizingPath];
+					if ( pURL )
+					{
+						pURL = [pURL URLByResolvingSymlinksInPath];
+						if ( pURL )
+						{
+							// Don't call [NSFileManager isUbiquitousItemAtURL:]
+							// as it will cause momentary hanging on OS X 10.9
+							NSString *pURLPath = [pURL path];
+							if ( pURLPath && [pURLPath length] )
+							{
+								NSArray *pLibraryFolders = NSSearchPathForDirectoriesInDomains( NSLibraryDirectory, NSUserDomainMask, YES );
+								if ( pLibraryFolders )
+								{
+									NSUInteger nCount = [pLibraryFolders count];
+									NSUInteger i = 0;
+									for ( ; i < nCount; i++ )
+									{
+										NSString *pFolder = [pLibraryFolders objectAtIndex:i];
+										if ( pFolder && [pFolder length] )
+										{
+											pFolder = [pFolder stringByAppendingPathComponent:@"Mobile Documents"];
+											if ( pFolder && [pFolder length] )
+											{
+												NSRange aRange = [pURLPath rangeOfString:pFolder];
+												if ( !aRange.location && aRange.length )
+													bRet = sal_True;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		[pPool release];
+	}
+
+	return bRet;
+}
