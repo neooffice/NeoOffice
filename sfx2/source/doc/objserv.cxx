@@ -402,26 +402,34 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 	}
 #endif	// MACOSX
 
-	// If we are saving to an Office XML format, forcing the file save as
-	// dialog to appear by changing this to a save as operation. Note that
-	// we had to put "OXML" in the "UserData" field in each filter's
-	// modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
 	::rtl::OUString aUserData;
-	if ( nId == SID_SAVEDOC && GetMedium() )
+	if ( nId == SID_SAVEDOC )
 	{
-		String aFilterName;
-		SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pFilterNameItem, SfxStringItem, SID_FILTER_NAME, sal_False );
-		if( pFilterNameItem )
+		if ( IsDeleted() )
 		{
-			aFilterName = pFilterNameItem->GetValue();
-			const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
-			if ( pFilter )
+			nId = SID_SAVEASDOC;
+			rReq.SetSlot( nId );
+		}
+		// If we are saving to an Office XML format, forcing the file save as
+		// dialog to appear by changing this to a save as operation. Note that
+		// we had to put "OXML" in the "UserData" field in each filter's
+		// modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
+		else if ( GetMedium() )
+		{
+			String aFilterName;
+			SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pFilterNameItem, SfxStringItem, SID_FILTER_NAME, sal_False );
+			if( pFilterNameItem )
 			{
-				aUserData = pFilter->GetUserData();
-				if ( aUserData == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
+				aFilterName = pFilterNameItem->GetValue();
+				const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
+				if ( pFilter )
 				{
-					nId = SID_SAVEASDOC;
-					rReq.SetSlot( nId );
+					aUserData = pFilter->GetUserData();
+					if ( aUserData == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
+					{
+						nId = SID_SAVEASDOC;
+						rReq.SetSlot( nId );
+					}
 				}
 			}
 		}
