@@ -385,6 +385,9 @@ SfxObjectShell::SfxObjectShell
 
 	bHasName = sal_False;
 	nViewNo = 0;
+#ifdef USE_JAVA
+	bIsDeleted = sal_False;
+#endif	// USE_JAVA
 
 	pImp->bWaitingForPicklist = sal_True;
 
@@ -718,32 +721,12 @@ sal_uInt16 SfxObjectShell::PrepareClose
                     SfxStringItem aItem( SID_DOCINFO_COMMENTS, String( SfxResId( STR_AUTOMATICVERSION ) ) );
                     SfxBoolItem aWarnItem( SID_FAIL_ON_WARNING, bUI );
                     const SfxPoolItem* ppArgs[] = { &aItem, &aWarnItem, 0 };
-#ifdef USE_JAVA
-                    sal_Bool bOldIsReadOnlyUI = IsReadOnlyUI();
-                    if ( bOldIsReadOnlyUI )
-                    {
-                        SetReadOnlyUI( sal_False );
-                        pPoolItem = pFrame->GetBindings().ExecuteSynchron( SID_SAVEASDOC, ppArgs );
-                        SetReadOnlyUI( bOldIsReadOnlyUI );
-                    }
-                    else
-#endif	// USE_JAVA
                     pPoolItem = pFrame->GetBindings().ExecuteSynchron( SID_SAVEDOC, ppArgs );
 				}
 				else
                 {
                     SfxBoolItem aWarnItem( SID_FAIL_ON_WARNING, bUI );
                     const SfxPoolItem* ppArgs[] = { &aWarnItem, 0 };
-#ifdef USE_JAVA
-                    sal_Bool bOldIsReadOnlyUI = IsReadOnlyUI();
-                    if ( bOldIsReadOnlyUI )
-                    {
-                        SetReadOnlyUI( sal_False );
-                        pPoolItem = pFrame->GetBindings().ExecuteSynchron( SID_SAVEASDOC, ppArgs );
-                        SetReadOnlyUI( bOldIsReadOnlyUI );
-                    }
-                    else
-#endif	// USE_JAVA
                     pPoolItem = pFrame->GetBindings().ExecuteSynchron( SID_SAVEDOC, ppArgs );
                 }
 

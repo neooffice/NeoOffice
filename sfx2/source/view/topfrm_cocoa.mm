@@ -90,12 +90,26 @@ static BOOL HasNativeVersion( Window *pWindow )
 	return NO;
 }
 
-static BOOL IsValidMoveToPath( NSString *pPath )
+static BOOL IsValidMoveToURL( NSURL *pURL )
 {
-	if ( !pPath || ![pPath length] )
+	if ( !pURL )
 		return NO;
 
-	BOOL bRet = YES;
+	NSString *pURLString = [pURL absoluteString];
+	if ( !pURLString || ![pURLString length] )
+		return NO;
+
+	NSURL *pRevisionsURL = [NSURL fileURLWithPath:@"/.DocumentRevisions-V100"];
+	if ( pRevisionsURL )
+	{
+		NSString *pRevisionsURLString = [pRevisionsURL absoluteString];
+		if ( pRevisionsURLString && [pRevisionsURLString length] )
+		{
+			NSRange aRange = [pURLString rangeOfString:pRevisionsURLString];
+			if ( !aRange.location && aRange.length )
+				return NO;
+		}
+	}
 
 	NSArray *pCachesFolders = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, YES );
 	if ( pCachesFolders )
@@ -110,18 +124,31 @@ static BOOL IsValidMoveToPath( NSString *pPath )
 				pFolder = [pFolder stringByAppendingPathComponent:@"com.apple.bird"];
 				if ( pFolder && [pFolder length] )
 				{
-					NSRange aRange = [pPath rangeOfString:pFolder];
-					if ( !aRange.location && aRange.length )
+					NSURL *pFolderURL = [NSURL fileURLWithPath:pFolder];
+					if ( pFolderURL )
 					{
-						bRet = NO;
-						break;
+						NSString *pFolderURLString = [pFolderURL absoluteString];
+						if ( pFolderURLString && [pFolderURLString length] )
+						{
+							NSRange aRange = [pURLString rangeOfString:pFolderURLString];
+							if ( !aRange.location && aRange.length )
+								return NO;
+						}
 					}
 				}
 			}
 		}
 	}
 
-	return bRet;
+	return YES;
+}
+
+static BOOL IsValidMoveToPath( NSString *pPath )
+{
+	if ( !pPath || ![pPath length] )
+		return NO;
+
+	return IsValidMoveToURL( [NSURL fileURLWithPath:pPath] );
 }
 
 static const NSString *pWritableTypeEntries[] = {
@@ -639,7 +666,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 							bMoved = YES;
 					}
 
-					if ( !bDeleted && pNewURL && !IsValidMoveToPath( [pNewURL path] ) )
+					if ( !bDeleted && pNewURL && ( !pURL || ![pURL isEqual:pNewURL] ) && !IsValidMoveToURL( pNewURL ) )
 						bDeleted = YES;
 
 					if ( bDeleted )

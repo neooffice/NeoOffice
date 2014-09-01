@@ -168,7 +168,7 @@ void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame )
 		if ( pObjShell )
 		{
 			pObjShell->SetModified( sal_True );
-			pObjShell->SetReadOnlyUI( sal_True );
+			pObjShell->SetIsDeleted();
 		}
 	}
 }
