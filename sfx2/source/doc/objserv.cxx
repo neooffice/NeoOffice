@@ -110,6 +110,7 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#include <osl/file.h>
 #include <vcl/sysdata.hxx>
 
 #include "objserv_cocoa.h"
@@ -405,17 +406,13 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 	::rtl::OUString aUserData;
 	if ( nId == SID_SAVEDOC )
 	{
-		if ( IsDeleted() )
+		if ( GetMedium() )
 		{
-			nId = SID_SAVEASDOC;
-			rReq.SetSlot( nId );
-		}
-		// If we are saving to an Office XML format, forcing the file save as
-		// dialog to appear by changing this to a save as operation. Note that
-		// we had to put "OXML" in the "UserData" field in each filter's
-		// modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
-		else if ( GetMedium() )
-		{
+			// If we are saving to an Office XML format, forcing the file save
+			// as dialog to appear by changing this to a save as operation.
+			// Note that we had to put "OXML" in the "UserData" field in each
+			// filter's modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu
+			// file.
 			String aFilterName;
 			SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pFilterNameItem, SfxStringItem, SID_FILTER_NAME, sal_False );
 			if( pFilterNameItem )
@@ -432,6 +429,26 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 					}
 				}
 			}
+
+#ifdef MACOSX
+			if ( nId == SID_SAVEDOC )
+			{
+				// Discourage saving to invalid system paths
+				::rtl::OUString aOrigURL( GetMedium()->GetOrigURL() );
+				::rtl::OUString aOrigPath;
+				if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None && !NSDocument_isValidMoveToPath( aOrigPath ) )
+				{
+					nId = SID_SAVEASDOC;
+					rReq.SetSlot( nId );
+				}
+			}
+#endif	// MACOSX
+		}
+
+		if ( nId == SID_SAVEDOC && IsDeleted() )
+		{
+			nId = SID_SAVEASDOC;
+			rReq.SetSlot( nId );
 		}
 	}
 #endif	// USE_JAVA
@@ -825,6 +842,11 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 				// or due to an error. So IO abort must be handled like an error!
 				nErrorCode = ( lErr != ERRCODE_IO_ABORT ) && ( nErrorCode == ERRCODE_NONE ) ? nErrorCode : lErr;
 			}
+
+#ifdef USE_JAVA
+			if ( IsDeleted() && nId == SID_SAVEASDOC && lErr != ERRCODE_IO_ABORT && nErrorCode == ERRCODE_NONE )
+				SetIsDeleted( sal_False );
+#endif	// USE_JAVA
 
 			rReq.SetReturnValue( SfxBoolItem(0, nErrorCode == ERRCODE_NONE ) );
 

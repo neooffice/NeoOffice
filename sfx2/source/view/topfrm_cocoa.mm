@@ -672,7 +672,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 							bMoved = YES;
 					}
 
-					if ( !bDeleted && pNewURL && !IsValidMoveToURL( pNewURL ) )
+					if ( !bDeleted && pNewURL && ( !pURL || ![pURL isEqual:pNewURL] ) && !IsValidMoveToURL( pNewURL ) )
 						bDeleted = YES;
 
 					if ( bDeleted )
