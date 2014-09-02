@@ -25,9 +25,7 @@ Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améli
 
 
 What's New in this Version:
-Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice adds improved rendering of Calibri and Cambria fonts in Microsoft Office documents. Since many NeoOffice users do not have these fonts because they are only available from Microsoft, this version of NeoOffice automatically uses Apple's Gill Sans font when Calibri is not installed and uses Apple's Times New Roman font when Cambria is not installed.
-
-NeoOffice 2013.x users: NeoOffice is now a 64 bit application. Most NeoOffice 2013.x users should not notice any changes in this version. However, the small number of users that use third-party ODBC drivers and native extensions will need to obtain 64 bit versions of their third-party ODBC drivers and native extensions. Click on the « Assistance : NeoOffice » link to see steps for configuring MySQL's ODBC driver to work with NeoOffice 2014.1.
+Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice adds support for iCloud Drive. We have made signficant changes to NeoOffice's native file locking code to safely coordinate opening, saving, and deleting files in iCloud Drive or files on a shared volume.
 
 
 Keywords:
