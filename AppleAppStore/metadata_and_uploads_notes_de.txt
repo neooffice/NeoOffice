@@ -16,9 +16,9 @@ NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die 
 Seitdem sind die NeoOffice-Ingenieure haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in OpenOffice zu finden, wie:
 
 • Öffnen von Calc oder Impress anstelle von Writer beim Start mit dem NeoOffice > Beim Starten Öffnen Menü
-• OS X Gatekeeper
 • OS X Versionen
-• Native OS X Text Markierung
+• Nativen OS X Grammatikprüfung
+• Nativen OS X Textmarkierung
 • Native Unterstützung für Datei Sperrung auf lokalen und entfernten Volumes
 • OS X Dienste Unterstützung
 • Native schwebende Werkzeugfenster

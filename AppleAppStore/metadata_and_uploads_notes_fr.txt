@@ -16,8 +16,8 @@ NeoOffice est extrêmement stable et des milliers d'utilisateurs utilisent quoti
 Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
 
 • Ouverture de Calc ou Impress au lieu de Writer au démarrage utilisant le menu de NeoOffice > Document par défault
-• Gatekeeper de OS X
 • Versions de OS X
+• Vérification de la grammaire natif OS X
 • Surlignage natif OS X
 • Prise en charge du verrouillage natif des fichiers pour les volumes locaux ou en réseau
 • Prise en charge des Services OS X
