@@ -27,6 +27,10 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 What's New in this Version:
 Before you buy NeoOffice, click on the »Planamesa Inc.s websted« link and try NeoOffice for free. This version of NeoOffice adds support for iCloud Drive. We have made signficant changes to NeoOffice's native file locking code to safely coordinate opening, saving, and deleting files in iCloud Drive or files on a shared volume.
 
+This version of NeoOffice also includes fixes for the following bugs:
+• NeoOffice would randomly crash when checking if a document has been moved or renamed
+• NeoOffice would only display the first image in the many .docx, .xlsx, and .pptx documents
+
 
 Keywords:
 neo,office,pdf,regneark,excel,xlsx,xls,tekst,word,docx,doc,præsentation,powerpoint,pptx,ppt
