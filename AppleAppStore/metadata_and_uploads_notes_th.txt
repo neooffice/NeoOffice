@@ -29,7 +29,7 @@ Before you buy NeoOffice, click on the "เว็บไซต์ของ Planam
 
 This version of NeoOffice also includes fixes for the following bugs:
 • NeoOffice would randomly crash when checking if a document has been moved or renamed
-• NeoOffice would only display the first image in the many .docx, .xlsx, and .pptx documents
+• NeoOffice would only display the first image in many .docx, .xlsx, and .pptx documents
 
 
 Keywords:
