@@ -1036,6 +1036,20 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 	return pRet;
 }
 
+void Application_cacheSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL )
+{
+	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
+		if ( pString )
+			Application_cacheSecurityScopedURL( [NSURL URLWithString:pString] );
+
+		[pPool release];
+	}
+}
+
 void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];

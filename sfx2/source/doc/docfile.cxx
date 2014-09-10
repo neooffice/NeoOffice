@@ -158,8 +158,10 @@ using namespace ::com::sun::star::io;
 #include "../view/topfrm_cocoa.h"
 
 typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
+typedef void Application_cacheSecurityScopedURLFromOUString_Type( const ::rtl::OUString *pURL );
 
 static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
+static Application_cacheSecurityScopedURLFromOUString_Type *pApplication_cacheSecurityScopedURLFromOUString = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -4504,6 +4506,13 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc, ::rtl::OUString aNewURL
 
         return;
     }
+
+    // Stop unexpected display of native Open dialogs when a Dropbox file is
+    // moved on a different machine by caching the new URL
+    if ( !pApplication_cacheSecurityScopedURLFromOUString )
+        pApplication_cacheSecurityScopedURLFromOUString = (Application_cacheSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_cacheSecurityScopedURLFromOUString" );
+    if ( pApplication_cacheSecurityScopedURLFromOUString )
+        pApplication_cacheSecurityScopedURLFromOUString( &aOpenFileURL );
 
     bool bUseOrigURL = false;
     bool bUseLogicNameMainURL = false;
