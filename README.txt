@@ -22,6 +22,7 @@ At this time, the NeoOffice will not build on Mac OS X 10.8 Mountain Lion. This 
    sudo /opt/local/bin/port install gperf
    sudo /opt/local/bin/port install flex
    sudo /opt/local/bin/port install wget
+   sudo /opt/local/bin/port install gnutar
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can find the "autoconf" and other commands.
 
