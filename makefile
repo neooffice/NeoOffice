@@ -657,7 +657,7 @@ ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$(INSTALL_HOME)/package.pkg/Distribution"
 endif
 	mkbom "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/package.pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(INSTALL_HOME)/package" ; find . | cpio -ozH cpio ) > "$(INSTALL_HOME)/package.pkg/contents.pkg/Payload"
+	( cd "$(INSTALL_HOME)/package" ; pax -w -z -x cpio . ) > "$(INSTALL_HOME)/package.pkg/contents.pkg/Payload"
 ifdef PRODUCT_BUILD2
 	echo '<scripts><postinstall file="./postflight"/></scripts>' >> "$(INSTALL_HOME)/package.pkg/contents.pkg/PackageInfo"
 endif
@@ -776,7 +776,7 @@ endif
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(PATCH_INSTALL_HOME)/emptydir"
 	mkbom "$(PATCH_INSTALL_HOME)/emptydir" "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(PATCH_INSTALL_HOME)/emptydir" ; find . | cpio -ozH cpio ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Payload"
+	( cd "$(PATCH_INSTALL_HOME)/emptydir" ; pax -w -z -x cpio . ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Payload"
 	( cd "$(PATCH_INSTALL_HOME)/package" ; pax -w -z -x cpio . ) > "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts/Archive.pax.gz"
 	rm -Rf "$(PATCH_INSTALL_HOME)/emptydir"
 	echo '<payload installKBytes="'`du -sk "$(PATCH_INSTALL_HOME)/package" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/PackageInfo"
@@ -847,7 +847,7 @@ endif
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(INSTALL_HOME)/emptydir"
 	mkbom "$(INSTALL_HOME)/emptydir" "$<.pkg/contents.pkg/Bom" >& /dev/null
-	( cd "$(INSTALL_HOME)/emptydir" ; find . | cpio -ozH cpio ) > "$<.pkg/contents.pkg/Payload"
+	( cd "$(INSTALL_HOME)/emptydir" ; pax -w -z -x cpio . ) > "$<.pkg/contents.pkg/Payload"
 	( cd "$<" ; pax -w -z -x cpio . ) > "$<.pkg/contents.pkg/Scripts/Archive.pax.gz"
 	rm -Rf "$(INSTALL_HOME)/emptydir"
 	echo '<payload installKBytes="'`du -sk "$<" | awk '{ print $$1 }'`'" numberOfFiles="'`lsbom "$<.pkg/contents.pkg/Bom" | wc -l`'"/>' >> "$<.pkg/contents.pkg/PackageInfo"
