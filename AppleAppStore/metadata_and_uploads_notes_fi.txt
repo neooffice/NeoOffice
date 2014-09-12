@@ -25,7 +25,7 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 
 
 What's New in this Version:
-Before you buy NeoOffice, click on the "Planamesa Inc. - verkkosivusto" link and try NeoOffice for free. This version of NeoOffice adds support for OS X Yosemite's new iCloud Drive feature. We have made signficant changes to NeoOffice's native file locking code to safely coordinate opening, saving, and deleting files in iCloud Drive or files on a shared volume.
+Before you buy NeoOffice, click on the "Planamesa Inc. - verkkosivusto" link and try NeoOffice for free. This version of NeoOffice adds support for OS X Yosemite's new iCloud Drive feature. We have made signficant changes to NeoOffice's native file locking code to safely coordinate opening, saving, and deleting files in iCloud Drive, in Dropbox, or on a shared volume.
 
 This version of NeoOffice also includes fixes for the following bugs:
 • NeoOffice would randomly crash when checking if a document has been moved or renamed
