@@ -921,7 +921,7 @@
 	<key>CFBundleSignature</key>
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
-	<string>$(PRODUCT_VERSION)</string>
+	<string>$(PRODUCT_BUILD_VERSION)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleInfoDictionaryVersion</key>
