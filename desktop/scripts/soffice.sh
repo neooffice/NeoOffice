@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cmd=`dirname "$0"`/soffice.bin
+cmd=`dirname "$0"`/../MacOS/soffice.bin
 exec "$cmd" "$@"
