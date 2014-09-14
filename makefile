@@ -630,6 +630,7 @@ endif
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 # Sign all binaries
 	chmod -Rf u+rw "$(INSTALL_HOME)/package"
+	xattr -rc "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.mdimporter"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.qlgenerator"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign "A" version of each framework
@@ -741,6 +742,7 @@ endif
 # Sign all binaries and use code resources file from main installer so that an
 # updated code resources is created without reshipping all referenced files
 	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
+	xattr -rc "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.mdimporter"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.qlgenerator"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign "A" version of each framework
