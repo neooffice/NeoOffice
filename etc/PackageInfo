@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" overwrite-permissions="true" relocatable="true" identifier="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" install-location="/Applications" auth="root">
+<pkg-info format-version="2" overwrite-permissions="true" relocatable="true" identifier="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" install-location="/Applications" auth="root" preserve-xattr="true">
     <bundle path="./$(PRODUCT_INSTALL_DIR_NAME).app" id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_SHORT_VERSION)"/>
 	<!-- Allow downgrading -->
     <bundle-version/>
