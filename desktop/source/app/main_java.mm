@@ -41,6 +41,7 @@
 #include "main_java.h"
 
 #define TMPDIR "/var/tmp"
+#define UNOPKGARG "-unopkg"
 
 typedef int SofficeMain_Type( int argc, char **argv );
 typedef int UnoPkgMain_Type( int argc, char **argv );
@@ -94,25 +95,42 @@ int java_main( int argc, char **argv )
 {
 	java_main_init();
 
-	// Determine if we are running in unopkg mode
-	BOOL bUnoPkg = ( argc >= 2 && !strcmp( "-unopkg", argv[ 1 ] ) ? YES : NO );
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	// Don't allow running as root as we really cannot trust that we won't
-	// do any accidental damage
-	if ( !bUnoPkg && getuid() == 0 )
-	{
-		NSLog( @"Running as root user is not allowed" );
-		[pPool release];
-		_exit( 1 );
-	}
 
 	// Use CFBundle as [NSBundle mainBundle] will cause Java menu load failures
 	CFBundleRef aMainBundle = CFBundleGetMainBundle();
 	if ( !aMainBundle )
 	{
 		NSLog( @"Application's main bundle is nil" );
+		[pPool release];
+		_exit( 1 );
+	}
+
+	NSString *pCmdPath = nil;
+	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
+	if ( aCmdURL )
+	{
+		pCmdPath = (NSString *)CFURLCopyFileSystemPath( aCmdURL, kCFURLPOSIXPathStyle );
+		if ( pCmdPath )
+			[pCmdPath autorelease];
+		CFRelease( aCmdURL );
+	}
+	if ( !pCmdPath )
+	{
+		NSLog( @"Application's executable path is nil" );
+		[pPool release];
+		_exit( 1 );
+	}
+
+	// Determine if we are running in unopkg mode
+	NSString *pCmdName = [pCmdPath lastPathComponent];
+	BOOL bUnoPkg = ( ( ( argc >= 2 && !strcmp( UNOPKGARG, argv[ 1 ] ) ) || [@"unopkg" isEqualToString:pCmdName] || [@"unopkg.bin" isEqualToString:pCmdName] ) ? YES : NO );
+
+	// Don't allow running as root as we really cannot trust that we won't
+	// do any accidental damage
+	if ( !bUnoPkg && getuid() == 0 )
+	{
+		NSLog( @"Running as root user is not allowed" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -143,22 +161,6 @@ int java_main( int argc, char **argv )
 	if ( !pFileManager || !pProgramPath || ![pFileManager destinationOfSymbolicLinkAtPath:pProgramPath error:nil] )
 	{
 		NSLog( @"Application's main bundle path missing program softlink" );
-		[pPool release];
-		_exit( 1 );
-	}
-
-	NSString *pCmdPath = nil;
-	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
-	if ( aCmdURL )
-	{
-		pCmdPath = (NSString *)CFURLCopyFileSystemPath( aCmdURL, kCFURLPOSIXPathStyle );
-		if ( pCmdPath )
-			[pCmdPath autorelease];
-		CFRelease( aCmdURL );
-	}
-	if ( !pCmdPath )
-	{
-		NSLog( @"Application's executable path is nil" );
 		[pPool release];
 		_exit( 1 );
 	}
@@ -255,10 +257,51 @@ int java_main( int argc, char **argv )
 		putenv( strdup( [pDyFallbackLibPathEnv UTF8String] ) );
 	}
 
-	if ( !bUnoPkg )
+	if ( bUnoPkg )
 	{
+		// Insert UNOPKGARG if missing
+		if ( argc < 2 || strcmp( UNOPKGARG, argv[ 1 ] ) )
+		{
+			char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+			memcpy( pNewArgv + 1, argv, sizeof( char** ) * argc );
+			pNewArgv[ 0 ] = strdup( argv[ 0 ] );
+			pNewArgv[ 1 ] = strdup( UNOPKGARG );
+			argc++;
+
+			pNewArgv[ argc ] = NULL;
+			argv = pNewArgv;
+		}
+	}
+	else
+	{
+		// Insert module argument if missing
+		const char *pNewArg = NULL;
+		if ( [@"sbase" isEqualToString:pCmdName] )
+			pNewArg = "-base";
+		else if ( [@"scalc" isEqualToString:pCmdName] )
+			pNewArg = "-calc";
+		else if ( [@"sdraw" isEqualToString:pCmdName] )
+			pNewArg = "-draw";
+		else if ( [@"simpress" isEqualToString:pCmdName] )
+			pNewArg = "-impress";
+		else if ( [@"smath" isEqualToString:pCmdName] )
+			pNewArg = "-math";
+		else if ( [@"swriter" isEqualToString:pCmdName] )
+			pNewArg = "-writer";
+
+		if ( pNewArg )
+		{
+			char **pNewArgv = (char **)malloc( sizeof( char** ) * ( argc + 2 ) );
+			memcpy( pNewArgv + 1, argv, sizeof( char** ) * argc );
+			pNewArgv[ 0 ] = strdup( argv[ 0 ] );
+			pNewArgv[ 1 ] = strdup( pNewArg );
+			argc++;
+
+			pNewArgv[ argc ] = NULL;
+			argv = pNewArgv;
+		}
 		// Use default launch options if there are no application arguments
-		if ( argc < 2 || ( argc == 2 && !strncmp( "-psn", argv[ 1 ], 4 ) ) )
+		else if ( argc < 2 || ( argc == 2 && !strncmp( "-psn", argv[ 1 ], 4 ) ) )
 		{
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DefaultLaunchOptions" ), kCFPreferencesCurrentApplication );
 			if ( aPref )

@@ -490,15 +490,15 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/cppuhelper/$(UOUTPUTDIR)/lib/libuno_cppuhelpergcc3.dylib.3" "$(PWD)/jvmfwk/$(UOUTPUTDIR)/lib/libjvmfwk.dylib.3" "$(PWD)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/store/$(UOUTPUTDIR)/lib/libstore.dylib.3" "basis-link/ure-link/lib"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/vcl/$(UOUTPUTDIR)/bin/salapp"*.res "etc/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/cpputools/$(UOUTPUTDIR)/bin/uno" "basis-link/ure-link/bin/uno.bin" ; chmod a+x "basis-link/ure-link/bin/uno.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/soffice" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/misc/soffice.sh" "etc/soffice" ; chmod a+x "etc/soffice" ; ln -sf "../etc/soffice" "MacOS/soffice"
 ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice2" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 else
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/unopkg" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/misc/unopkg.sh" "etc/unopkg" ; chmod a+x "etc/unopkg" ; ln -sf "../etc/unopkg" "MacOS/unopkg"
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/unopkg.bin" ; ln -sf "../etc/unopkg" "MacOS/unopkg.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath swriter unoinfo ; do mv -f "MacOS/$$i" "etc/$$i" ; ln -sf "../etc/$$i" "MacOS/$$i" ; done'
+# Mac App Store will reject apps with shell scripts
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "MacOS/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "basis-link/program/gengal" ; ln -sf "gengal.bin" "basis-link/program/gengal"
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "basis-link/ure-link/bin/$$i" ; ln -sf "$$i.bin" "basis-link/ure-link/bin/$$i" ; done'
 ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/objserv_cocoa"*.res "etc/resource"
 endif
@@ -584,7 +584,7 @@ endif
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libspell$(DLLSUFFIX).dylib'
 # Add Mac OS X localized resources
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "basis-link/program/open-url" LICENSE* README* basis-link/licenses basis-link/readmes share/readme
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "MacOS/unoinfo" "basis-link/program/open-url" "basis-link/program/senddoc" LICENSE* README* basis-link/licenses basis-link/readmes "basis-link/ure-link/bin/startup.sh" share/readme
 # Fix bug 3273 by not installing any OOo or ooo-build fonts
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "basis-link/program/libAppleRemote$(DLLSUFFIX).dylib" "basis-link/program/libMacOSXSpell$(DLLSUFFIX).dylib" "basis-link/program/libavmediaQuickTime$(DLLSUFFIX).dylib" "basis-link/program/libdtransaqua$(DLLSUFFIX).dylib" "basis-link/program/fps_aqua.uno.dylib" "basis-link/program/liblwpft$(DLLSUFFIX).dylib" "basis-link/share/fonts/truetype" "basis-link/share/psprint"
 # Remove all update check files since the Mac App Store has its own update
@@ -629,11 +629,11 @@ endif
 # bundle IDs.
 	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; sed 's#$(NEOPEEK_QLPLUGIN_ID)#$(NEOPEEK_QLPLUGIN_ID).$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).'"`date '+%Y%m%d%H%M%S'`"'#g' "neopeek.qlgenerator/Contents/Info.plist" > "../../out" ; mv -f "../../out" "neopeek.qlgenerator/Contents/Info.plist"
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+	xattr -rc "$(INSTALL_HOME)/package"
 # Sign all binaries
 	chmod -Rf u+rw "$(INSTALL_HOME)/package"
 # Mac App Store will reject apps with shell scripts
-	cd "$(INSTALL_HOME)/package" ; find . ! -type d -exec file {} \; | grep 'script text executable' | sed 's#: .*$$##' | xargs -n1 rm
-	xattr -rc "$(INSTALL_HOME)/package"
+#	cd "$(INSTALL_HOME)/package" ; sh -e -c 'if find . ! -type d -exec file {} \; | grep "script text executable" ; then exit 1 ; fi'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.mdimporter"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.qlgenerator"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign "A" version of each framework
@@ -742,10 +742,10 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" | grep -v "components"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+	xattr -rc "$(PATCH_INSTALL_HOME)/package"
 # Sign all binaries and use code resources file from main installer so that an
 # updated code resources is created without reshipping all referenced files
 	chmod -Rf u+rw "$(PATCH_INSTALL_HOME)/package"
-	xattr -rc "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.mdimporter"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type d -name "*.qlgenerator"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 # Sign "A" version of each framework
@@ -832,6 +832,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 # Add Mac OS X localized resources
 	cd "$</Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_LANG_PACK_LOCALE)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 	cd "$<" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+	xattr -rc "$<"
 # Mac App Store requires files to be writable by root
 	chmod -Rf u+w,og-w,a+r "$<"
 # Mark certain directories writable for group
