@@ -47,7 +47,7 @@ done
 while read i ; do
 	check_running "$i" && exit 25
 done << !
-`ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
+`ps -a -x -w -w -o command | grep '/Contents/MacOS/s' | sed 's#/Contents/MacOS/s.*$##'`
 !
 
 exit 0
