@@ -47,6 +47,10 @@ SLOFILES= \
     $(SLO)$/cmdmailsuppl.obj \
     $(SLO)$/cmdmailmsg.obj \
     $(SLO)$/cmdmailentry.obj
+.IF "$(GUIBASE)" == "java"
+SLOFILES+= \
+    $(SLO)$/cmdmailsuppl_cocoa.obj
+.ENDIF		# "$(GUIBASE)" == "java"
 SHL1OBJS=$(SLOFILES) 
 			
 SHL1TARGET=$(TARGET).uno
@@ -57,7 +61,7 @@ SHL1STDLIBS=$(CPPULIB)\
 			$(SALLIB)
 
 .IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+=-framework CoreFoundation
+SHL1STDLIBS+=-framework AppKit
 .ENDIF		# "$(GUIBASE)" == "java"
 
 SHL1VERSIONMAP=exports.map
