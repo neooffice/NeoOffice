@@ -113,33 +113,16 @@ using namespace com::sun::star::uno;
 			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:mpAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 		if ( !mbResult )
 		{
-			CFPropertyListRef aLSHandlersPref = CFPreferencesCopyValue( CFSTR( "LSHandlers" ), CFSTR( "com.apple.LaunchServices" ), kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-			if ( aLSHandlersPref )
+			NSURL *pDefaultMailApp = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
+			if ( pDefaultMailApp )
 			{
-				if ( CFGetTypeID( aLSHandlersPref ) == CFArrayGetTypeID() )
+				NSBundle *pBundle = [NSBundle bundleWithURL:pDefaultMailApp];
+				if ( pBundle )
 				{
-					CFArrayRef aArray = (CFArrayRef)aLSHandlersPref;
-					CFIndex nCount = CFArrayGetCount( aArray );
-					for ( CFIndex i = 0; i < nCount; i++ )
-					{
-						const void *pValue = CFArrayGetValueAtIndex( aArray, i );
-						if ( pValue && CFGetTypeID( pValue ) == CFDictionaryGetTypeID() )
-						{
-							const CFStringRef aURLScheme = (const CFStringRef)CFDictionaryGetValue( (CFDictionaryRef)pValue, CFSTR( "LSHandlerURLScheme" ) );
-							if ( aURLScheme && !CFStringCompare( aURLScheme, CFSTR( "mailto" ), 0 ) )
-							{
-								const CFStringRef aRoleAll = (const CFStringRef)CFDictionaryGetValue( (CFDictionaryRef)pValue, CFSTR( "LSHandlerRoleAll" ) );
-								if ( aRoleAll && CFStringGetLength( aRoleAll ) )
-								{
-									mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:(NSString *)aRoleAll options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-									break;
-								}
-							}
-						}
-					}
+					NSString *pDefaultMailAppID = [pBundle bundleIdentifier];
+					if ( pDefaultMailAppID && [pDefaultMailAppID length] )
+						mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:pDefaultMailAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 				}
-
-				CFRelease( aLSHandlersPref ); 
 			}
 		}
 
