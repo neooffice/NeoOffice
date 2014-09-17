@@ -2350,13 +2350,6 @@ IMPL_LINK(  SvxEMailTabPage, FileDialogHdl_Impl, PushButton*, pButton )
         {
             sUrl = aHelper.GetPath();
             ::utl::LocalFileHelper::ConvertURLToPhysicalName(sUrl,sPath);
-#ifdef USE_JAVA
-            String sTmpPath;
-            sTmpPath.AppendAscii("'");
-            sTmpPath.Append( sPath );
-            sTmpPath.AppendAscii("'");
-            sPath = sTmpPath;
-#endif	// USE_JAVA
             aMailerURLED.SetText(sPath);
         }
     }
