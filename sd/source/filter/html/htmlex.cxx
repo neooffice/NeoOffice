@@ -2929,7 +2929,11 @@ String HtmlExport::CreatePageURL( USHORT nPgNum )
 		return *mpHTMLFiles[nPgNum];
 }
 
+#ifdef USE_JAVA
+bool HtmlExport::CopyScript( const String& rPath, const String& rSource, const String& rDest, bool bUnix /* = false */, bool bPrependPerlCommand /* = false */ )
+#else	// USE_JAVA
 bool HtmlExport::CopyScript( const String& rPath, const String& rSource, const String& rDest, bool bUnix /* = false */ )
+#endif	// USE_JAVA
 {
 	INetURLObject	aURL( SvtPathOptions().GetConfigPath() );
 	String		aScript;
@@ -2944,6 +2948,11 @@ bool HtmlExport::CopyScript( const String& rPath, const String& rSource, const S
 
 	if( pIStm )
 	{
+#ifdef USE_JAVA
+		if ( bPrependPerlCommand )
+			aScript.AppendAscii( "#!/usr/bin/perl\n" );
+#endif	// USE_JAVA
+
 		ByteString aLine;
 
 		while( pIStm->ReadLine( aLine ) )
@@ -3038,7 +3047,11 @@ bool HtmlExport::CreatePERLScripts()
 	{
 		String aScript;
 		aScript.AssignAscii( PERL_Scripts[n] );
+#ifdef USE_JAVA
+		if(!CopyScript(maExportPath, aScript, aScript, true, strcmp(PERL_Scripts[n], "common.pl")))
+#else	// USE_JAVA
 		if(!CopyScript(maExportPath, aScript, aScript, true))
+#endif	// USE_JAVA
 			return false;
 	}
 
