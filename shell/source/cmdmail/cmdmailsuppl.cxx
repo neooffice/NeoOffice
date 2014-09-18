@@ -53,11 +53,7 @@
 #include <unistd.h>
 
 #ifdef USE_JAVA
-
-#include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <postmac.h>
-
+#include "cmdmailsuppl_cocoa.h"
 #endif  // USE_JAVA
 
 //------------------------------------------------------------------------
@@ -161,6 +157,9 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
             static_cast < XSimpleMailClient * > (this) );
     }
 
+#ifdef USE_JAVA
+    OUString aMailerPath;
+#else	// USE_JAVA
     OStringBuffer aBuffer;
     aBuffer.append("\"");
 
@@ -177,6 +176,7 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
 
     aBuffer.append(OUStringToOString(aProgram, osl_getThreadTextEncoding()));
     aBuffer.append("\" ");
+#endif	// USE_JAVA
 
     try
     {
@@ -213,64 +213,17 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
                 // make sure we have a system path
                 FileBase::getSystemPathFromFileURL( aMailer, aMailer );
 
+#ifdef USE_JAVA
+                aMailerPath = aMailer;
+#else	// USE_JAVA
                 aBuffer.append("--mailclient ");
                 aBuffer.append(OUStringToOString( aMailer, osl_getThreadTextEncoding() ));
                 aBuffer.append(" ");
-            }
-#ifdef MACOSX
-            else
-#ifdef USE_JAVA
-            {
-                CFStringRef aMailtoClass = NULL;
-
-                CFPropertyListRef aLSHandlersPref = CFPreferencesCopyValue( CFSTR( "LSHandlers" ), CFSTR( "com.apple.LaunchServices" ), kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-                if ( aLSHandlersPref )
-                {
-                    if ( CFGetTypeID( aLSHandlersPref ) == CFArrayGetTypeID() )
-                    {
-                        CFArrayRef aArray = (CFArrayRef)aLSHandlersPref;
-                        CFIndex nCount = CFArrayGetCount( aArray );
-                        for ( CFIndex i = 0; i < nCount; i++ )
-                        {
-                            const void *pValue = CFArrayGetValueAtIndex( aArray, i );
-                            if ( pValue && CFGetTypeID( pValue ) == CFDictionaryGetTypeID() )
-                            {
-                                const CFStringRef aURLScheme = (const CFStringRef)CFDictionaryGetValue( (CFDictionaryRef)pValue, CFSTR( "LSHandlerURLScheme" ) );
-                                if ( aURLScheme && !CFStringCompare( aURLScheme, CFSTR( "mailto" ), 0 ) )
-                                {
-                                    const CFStringRef aRoleAll = (const CFStringRef)CFDictionaryGetValue( (CFDictionaryRef)pValue, CFSTR( "LSHandlerRoleAll" ) );
-                                    if ( aRoleAll )
-                                    {
-                                        CFRetain( aRoleAll );
-                                        aMailtoClass = aRoleAll;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    CFRelease( aLSHandlersPref ); 
-                }
-
-                if ( aMailtoClass && CFStringGetLength( aMailtoClass ) )
-                {
-                    CFIndex nLen = CFStringGetLength( aMailtoClass );
-                    CFRange aRange = CFRangeMake( 0, nLen );
-                    sal_Unicode pBuffer[ nLen + 1 ];
-                    CFStringGetCharacters( aMailtoClass, aRange, pBuffer );
-                    pBuffer[ nLen ] = 0;
-                    CFRelease( aMailtoClass );
-                    aBuffer.append("--mailclient ");
-                    aBuffer.append( OUStringToOString( OUString( pBuffer ), RTL_TEXTENCODING_UTF8 ).getStr() );
-                    aBuffer.append(" ");
-                }
-                else
-                    aBuffer.append("--mailclient Mail ");
-            }
-#else	// USE_JAVA
-                aBuffer.append("--mailclient Mail ");
 #endif	// USE_JAVA
+            }
+#if defined MACOSX && !defined USE_JAVA
+            else
+                aBuffer.append("--mailclient Mail ");
 #endif
         }
 
@@ -284,6 +237,7 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
         throw e;                
     }
         
+#ifndef USE_JAVA
     // Append originator if set in the message
     if ( xSimpleMailMessage->getOriginator().getLength() > 0 )
     {
@@ -341,9 +295,15 @@ void SAL_CALL CmdMailSuppl::sendSimpleMailMessage( const Reference< XSimpleMailM
             aBuffer.append("\" ");
         }
     }
+#endif	// !USE_JAVA
 
+#ifdef USE_JAVA
+    Sequence< OUString > aStringList = xSimpleMailMessage->getAttachement();
+    if ( !CmdMailSuppl_sendSimpleMailMessage( aStringList, aMailerPath ) )
+#else	// USE_JAVA
     OString cmd = aBuffer.makeStringAndClear();
     if ( 0 != pclose(popen(cmd.getStr(), "w")) )
+#endif	// USE_JAVA
     {
         throw ::com::sun::star::uno::Exception(
             OUString(RTL_CONSTASCII_USTRINGPARAM( "No mail client configured" )), 
