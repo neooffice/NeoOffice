@@ -104,17 +104,6 @@ update_installation() {
 
 	sync
 
-	# Install shared .oxt files
-	if [ -d "$2/Contents/share/uno_packages/cache/uno_packages" ] ; then
-		for i in `cd "$1" ; find . -name "*.oxt"` ; do
-			oxtfile=`basename "$i"`
-			for j in `cd "$2/Contents/share/uno_packages/cache/uno_packages" ; find . -type d -name "$oxtfile"` ; do
-				unzip -o "$1/$i" -d "$2/Contents/share/uno_packages/cache/uno_packages/$j"
-				sync
-			done
-		done
-	fi
-
     # Make sure that all directories and files are readable by all
     chmod -Rf a+r "$2" || return 1
 
