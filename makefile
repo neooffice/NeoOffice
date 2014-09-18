@@ -773,6 +773,12 @@ ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cp "etc/package/ship.tiff" "$(PATCH_INSTALL_HOME)/package.pkg/Resources/background.tiff"
 	echo '<background file="background.tiff" alignment="bottomleft" scaling="proportional"/>' >> "$(PATCH_INSTALL_HOME)/package.pkg/Distribution"
 endif
+# Copy shared .oxt files
+# Sign all binaries in .oxt files
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
+	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
+	cd "$(PATCH_INSTALL_HOME)/tmp" ; sh -e -c 'for i in `echo "$(PRODUCT_COMPONENT_PATCH_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then mkdir "$$i" ; ( cd "$$i" ; unzip "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ; for j in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$j" ; done ; zip -r "$(PWD)/$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Scripts/$$i.oxt" . ) ; rm -Rf "$$i" ; fi ; done'
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(PATCH_INSTALL_HOME)/emptydir"
 	mkbom "$(PATCH_INSTALL_HOME)/emptydir" "$(PATCH_INSTALL_HOME)/package.pkg/contents.pkg/Bom" >& /dev/null
