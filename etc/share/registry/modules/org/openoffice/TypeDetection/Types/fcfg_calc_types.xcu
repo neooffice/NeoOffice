@@ -275,6 +275,7 @@
 		<prop oor:name="ClipboardFormat"><value>Calc 8 Template</value></prop>
 	</node>
 
+<!-- Disable Java-based types
 	<node oor:name="calc_MS_Excel_2003_XML" oor:op="replace">
 		<prop oor:name="DetectService"><value>com.sun.star.comp.filters.XMLFilterDetect</value></prop>
 		<prop oor:name="URLPattern"/>
@@ -287,6 +288,7 @@
 		</prop>
 		<prop oor:name="ClipboardFormat"><value>doctype:Workbook</value></prop>
 	</node>
+-->
 
 <node oor:name="MS Excel 2007 XML" oor:op="replace" >
 	<prop oor:name="DetectService"><value>com.sun.star.comp.oox.FormatDetector</value></prop>
