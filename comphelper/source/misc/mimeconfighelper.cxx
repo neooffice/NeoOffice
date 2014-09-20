@@ -38,6 +38,9 @@
 #include <comphelper/classids.hxx>
 #include <comphelper/sequenceashashmap.hxx>
 
+#ifdef USE_JAVA
+#include <svtools/moduleoptions.hxx>
+#endif	// USE_JAVA
 
 using namespace ::com::sun::star;
 using namespace comphelper;
@@ -591,28 +594,46 @@ uno::Sequence< beans::NamedValue > MimeConfigurationHelper::GetObjectPropsByDocu
 		// typedetection can change the mode, add a stream and so on, thus a copy should be used
 		uno::Sequence< beans::PropertyValue > aTempMD( aMediaDescr );
 
+#ifndef USE_JAVA
 		// get TypeName
 		::rtl::OUString aTypeName = xTypeDetection->queryTypeByDescriptor( aTempMD, sal_True );
-
-#ifdef USE_JAVA
-		// Fix missing linked OLE objects in Writer and Impress files that
-		// occur when the linked file does not exist or we don't have the
-		// permissions to read it by using the URL to determine the type
-		if ( !aTypeName.getLength() )
-		{
-			::rtl::OUString aURL;
-			for ( sal_Int32 nInd = 0; nInd < aTempMD.getLength(); nInd++ )
-				if ( aTempMD[nInd].Name.equalsAscii( "URL" ) )
-					aTempMD[nInd].Value >>= aURL;
-			if ( aURL.getLength() )
-				aTypeName = xTypeDetection->queryTypeByURL( aURL );
-		}
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 
 		// get FilterName
 		for ( sal_Int32 nInd = 0; nInd < aTempMD.getLength(); nInd++ )
 			if ( aTempMD[nInd].Name.equalsAscii( "FilterName" ) )
 				aTempMD[nInd].Value >>= aFilterName;
+
+#ifdef USE_JAVA
+		// get TypeName
+		::rtl::OUString aTypeName;
+		if ( !aFilterName.getLength() && !bIgnoreType )
+		{
+			aTypeName = xTypeDetection->queryTypeByDescriptor( aTempMD, sal_True );
+
+			// Fix missing linked OLE objects in Writer and Impress files that
+			// occur when the linked file does not exist or we don't have the
+			// permissions to read it by using the URL to determine the type
+			if ( !aTypeName.getLength() )
+			{
+				::rtl::OUString aURL;
+				for ( sal_Int32 nInd = 0; nInd < aTempMD.getLength(); nInd++ )
+					if ( aTempMD[nInd].Name.equalsAscii( "URL" ) )
+						aTempMD[nInd].Value >>= aURL;
+
+				if ( aURL.getLength() )
+					aTypeName = xTypeDetection->queryTypeByURL( aURL );
+
+				// If no matching type name, use the default module's filter
+				if ( !aTypeName.getLength() )
+				{
+					SvtModuleOptions aOpt;
+					SvtModuleOptions::EFactory nFactory = aOpt.ClassifyFactoryByShortName( aOpt.GetDefaultModuleName() );
+					aFilterName = aOpt.GetFactoryDefaultFilter( nFactory );
+				}
+			}
+		}
+#endif	// USE_JAVA
 
 		if ( aFilterName.getLength() )
 		{
