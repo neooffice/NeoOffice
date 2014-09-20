@@ -2,7 +2,7 @@
 <!DOCTYPE oor:component-data SYSTEM "../../../../component-update.dtd">
 <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.TypeDetection" oor:name="Types">
 	<node oor:name="Types">
-<!-- Disable Java-based types -->
+<!-- Disable Java-based types
 	<node oor:name="calc_ODS_FlatXML" oor:op="replace">
 		<prop oor:name="DetectService"><value>com.sun.star.comp.filters.XMLFilterDetect</value></prop>
 		<prop oor:name="URLPattern"/>
