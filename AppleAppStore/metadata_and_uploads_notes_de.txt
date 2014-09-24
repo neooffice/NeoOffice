@@ -18,7 +18,7 @@ Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice 
 • NeoOffice > Beim Starten Öffnen Menü für die Öffnung von Calc oder Impress anstelle Writer beim Start
 • Datei > Alle Versionen durchsuchen Menü für die Wiederherstellung von vorherigen Versionen von Ihrer Dokumente
 • Native Datei-Sperrung für die sichere Bearbeitung von Dateien in iCloud Drive, Dropbox oder Netzlaufwerke
-• Nativen OS X Grammatikprüfung
+• Native OS X Grammatikprüfung
 • Native OS X Textmarkierung
 • Unterstützung von OS X Dienste
 • Native schwebende Werkzeugfenster
