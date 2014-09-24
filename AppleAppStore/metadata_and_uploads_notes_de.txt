@@ -7,20 +7,20 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice, können Benutzer OpenOffice-Dokumente, PDF Dateien und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente anzeigen, bearbeiten und speichern.
+NeoOffice ist ein vollständiges Office-Paket für OS X. Mit NeoOffice können Benutzer OpenOffice-Dokumente, PDF-Dateien und die meisten Microsoft Word-, Excel- und Powerpoint-Dokumente anzeigen, bearbeiten und speichern.
 
 NeoOffice 3.x und OpenOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Liste der Änderungen.
 
-NeoOffice ist extrem stabil und Tausenden von Benutzern nutzen es täglich. Die NeoOffice-ingenieure erstellt NeoOffice im Jahr 2003, wenn sie gemacht OpenOffice ausführen nativ auf OS X zum ersten Mal.
+NeoOffice ist extrem stabil und Tausende Benutzer nutzen es täglich. Die NeoOffice-Ingenieure erstellten NeoOffice im Jahr 2003, als sie OpenOffice auf OS X zum ersten Mal native ausführbar machten.
 
-Seitdem sind die NeoOffice-Ingenieure haben immer wieder zu NeoOffice Verbesserungen hinzugefügt, dass die Benutzer nicht werden in OpenOffice zu finden, wie:
+Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice hinzugefügt, die Benutzer nicht in OpenOffice finden werden, wie zum Beispiel:
 
-• Öffnen von Calc oder Impress anstelle von Writer beim Start mit dem NeoOffice > Beim Starten Öffnen Menü
-• OS X Versionen
+• NeoOffice > Beim Starten Öffnen Menü für die Öffnung von Calc oder Impress anstelle Writer beim Start
+• Datei > Alle Versionen durchsuchen Menü für die Wiederherstellung von vorherigen Versionen von Ihrer Dokumente
+• Native Datei-Sperrung für die sichere Bearbeitung von Dateien in iCloud Drive, Dropbox oder Netzlaufwerke
 • Nativen OS X Grammatikprüfung
-• Nativen OS X Textmarkierung
-• Native Unterstützung für Datei Sperrung auf lokalen und entfernten Volumes
-• OS X Dienste Unterstützung
+• Native OS X Textmarkierung
+• Unterstützung von OS X Dienste
 • Native schwebende Werkzeugfenster
 
 

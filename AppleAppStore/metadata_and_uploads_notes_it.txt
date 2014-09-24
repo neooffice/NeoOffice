@@ -15,11 +15,11 @@ NeoOffice è estremamente stabile e migliaia di utenti lo usano giornalmente. Gl
 
 Da allora, gli ingegneri di NeoOffice hanno continuamente aggiunti miglioramenti a NeoOffice che gli utenti non troveranno in OpenOffice come ad esempio:
 
-• Aprire Calc o Impress, invece di Writer al inizio con il menu di NeoOffice > Apri al inizio
-• Versioni di OS X
+• Menu di NeoOffice > Apri al inizio per aprire Calc o Impress, invece di Writer al inizio
+• Menu di File > Sfoglia tutte le versioni per ripristinare le versioni precedenti dei voi documenti
+• Blocco nativo dei file per modificare in modo sicuro i file in iCloud Drive, Dropbox o dischi di rete
 • Controllo di grammatica nativo OS X
 • Evidenziazione nativo OS X
-• Supporto per blocco nativo dei file per i volumi locali o di rete
 • Sopporto per i Servizi di OS X
 • Finestre degli strumenti native flottante
 

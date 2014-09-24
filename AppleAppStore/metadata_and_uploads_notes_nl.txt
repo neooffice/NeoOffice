@@ -15,13 +15,13 @@ NeoOffice is zeer stabiel en wordt dagelijks gebruikt door duizenden mensen. De 
 
 Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice die gebruikers niet in vinden in OpenOffice, zoals:
 
-• Bij starten Calc of Impress tonen in plaats van Writer
-• OS X Versies
+• NeoOffice > Toon bij starten menu voor de opening van Calc of Impress in plaats van Writer bij opstarten
+• Bestand > Blader door alle versies menu voor de restauratie van vorige versies van uw documenten
+• OS X-eigen bestandsblokkering voor het veilig bewerken van bestanden in iCloud Drive, Dropbox of netwerkschijven
 • OS X-eigen grammaticacontrole
 • OS X-eigen tekstmarkering
-• Systeem-eigen ondersteuning voor blokkeren van bestanden op lokale- en netwerkschijven
 • Ondersteuning voor OS X Voorzieningen
-• OS X-eigen zwevende hulpvensters
+• OS X-eigen zwevende hulpvensters 
 
 
 What's New in this Version:

@@ -15,14 +15,13 @@ NeoOffice est extrêmement stable et des milliers d'utilisateurs utilisent quoti
 
 Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
 
-• Ouverture de Calc ou Impress au lieu de Writer au démarrage utilisant le menu de NeoOffice > Document par défault
-• Versions de OS X
+• Menu de NeoOffice > Document par défault pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
+• Menu de Fichier > Parcourir toutes les versions pour restaurer les versions précédentes de vos documents
+• Verrouillage natif des fichiers pour modifier sans encombre des fichiers dans iCloud Drive, Dropbox ou lecteurs réseau
 • Vérification de la grammaire natif OS X
 • Surlignage natif OS X
-• Prise en charge du verrouillage natif des fichiers pour les volumes locaux ou en réseau
 • Prise en charge des Services OS X
 • Fenêtres d'outils flottantes natives
-
 
 What's New in this Version:
 Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice adds support for OS X Yosemite's new iCloud Drive feature. We have made significant changes to NeoOffice's native file locking code to safely open, save, or delete files in iCloud Drive, Dropbox, or network drives.
