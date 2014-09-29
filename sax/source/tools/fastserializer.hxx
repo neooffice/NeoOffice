@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #ifndef SAX_FASTSERIALIZER_HXX
 #define SAX_FASTSERIALIZER_HXX
@@ -53,41 +48,41 @@ public:
 
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > getOutputStream() {return mxOutputStream;}
 
-    // The implementation details
+	// The implementation details
     static ::com::sun::star::uno::Sequence< ::rtl::OUString > 	getSupportedServiceNames_Static(void);
-    static ::rtl::OUString 				                        getImplementationName_Static();
+	static ::rtl::OUString 				                        getImplementationName_Static();
 
-    // XFastSerializer
-    virtual void SAL_CALL startDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+	// XFastSerializer
+	virtual void SAL_CALL startDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL endDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL startFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL startUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL endFastElement( ::sal_Int32 Element )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL endUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL singleFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL singleUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL characters( const ::rtl::OUString& aChars )
-        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL setOutputStream( const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream >& xOutputStream )
-        throw (::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL setFastTokenHandler( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xFastTokenHandler )
-        throw (::com::sun::star::uno::RuntimeException);
+		throw (::com::sun::star::uno::RuntimeException);
 
-    // XServiceInfo
+	// XServiceInfo
     virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw ( ::com::sun::star::uno::RuntimeException );
     virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw ( ::com::sun::star::uno::RuntimeException );
     virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw ( ::com::sun::star::uno::RuntimeException );
 
-    // C++ helpers
+	// C++ helpers
     virtual void SAL_CALL writeId( ::sal_Int32 Element );
 
-    static ::rtl::OUString escapeXml( const ::rtl::OUString& s );
+	static ::rtl::OUString escapeXml( const ::rtl::OUString& s );
 
 public:
     /** From now on, don't write directly to the stream, but to top of a stack.
@@ -122,8 +117,8 @@ public:
     void mergeTopMarks( sax_fastparser::MergeMarksEnum eMergeType = sax_fastparser::MERGE_MARKS_APPEND );
 
 private:
-    ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > mxOutputStream;
-    ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxFastTokenHandler;
+	::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > mxOutputStream;
+	::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxFastTokenHandler;
 
     typedef ::com::sun::star::uno::Sequence< ::sal_Int8 > Int8Sequence;
     class ForMerge
@@ -135,9 +130,6 @@ private:
         ForMerge() : maData(), maPostponed() {}
 
         Int8Sequence& getData();
-#if DEBUG
-        void print();
-#endif
 
         void prepend( const Int8Sequence &rWhat );
         void append( const Int8Sequence &rWhat );
@@ -147,13 +139,9 @@ private:
         static void merge( Int8Sequence &rTop, const Int8Sequence &rMerge, bool bAppend );
     };
 
-#if DEBUG
-        void printMarkStack( );
-#endif
-
     ::std::stack< ForMerge > maMarkStack;
 
-    void writeFastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs );
+	void writeFastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs );
     void write( const ::rtl::OUString& s );
 
 protected:
@@ -167,5 +155,3 @@ protected:
 } // namespace sax_fastparser
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _SAX_FASTATTRIBS_HXX_
 #define _SAX_FASTATTRIBS_HXX_
@@ -45,15 +40,15 @@ namespace sax_fastparser
 
 struct UnknownAttribute
 {
-    ::rtl::OUString maNamespaceURL;
-    ::rtl::OString maName;
-    ::rtl::OString maValue;
+	::rtl::OUString maNamespaceURL;
+	::rtl::OString maName;
+	::rtl::OString maValue;
 
-    UnknownAttribute( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
+	UnknownAttribute( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
-    UnknownAttribute( const ::rtl::OString& rName, const ::rtl::OString& rValue );
+	UnknownAttribute( const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
-    void FillAttribute( ::com::sun::star::xml::Attribute* pAttrib ) const;
+	void FillAttribute( ::com::sun::star::xml::Attribute* pAttrib ) const;
 };
 
 typedef std::map< sal_Int32, ::rtl::OString > FastAttributeMap;
@@ -62,13 +57,13 @@ typedef std::vector< UnknownAttribute > UnknownAttributeList;
 class SAX_DLLPUBLIC FastAttributeList : public ::cppu::WeakImplHelper1< ::com::sun::star::xml::sax::XFastAttributeList > 
 {
 public:
-    FastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xTokenHandler );
-    virtual ~FastAttributeList();
+	FastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xTokenHandler );
+	virtual ~FastAttributeList();
 
-    void clear();
-    void add( sal_Int32 nToken, const ::rtl::OString& rValue );
-    void addUnknown( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
-    void addUnknown( const ::rtl::OString& rName, const ::rtl::OString& rValue );
+	void clear();
+	void add( sal_Int32 nToken, const ::rtl::OString& rValue );
+	void addUnknown( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
+	void addUnknown( const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
     // XFastAttributeList
     virtual ::sal_Bool SAL_CALL hasAttribute( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException);
@@ -80,15 +75,13 @@ public:
     virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::FastAttribute > SAL_CALL getFastAttributes() throw (::com::sun::star::uno::RuntimeException);
 
 private:
-    FastAttributeMap maAttributes;
-    UnknownAttributeList maUnknownAttributes;
-    FastAttributeMap::iterator maLastIter;
-    ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxTokenHandler;
+	FastAttributeMap maAttributes;
+	UnknownAttributeList maUnknownAttributes;
+	FastAttributeMap::iterator maLastIter;
+	::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxTokenHandler;
 
 };
 
 }
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

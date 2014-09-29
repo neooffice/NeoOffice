@@ -1,61 +1,31 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 
 #include <com/sun/star/i18n/UnicodeType.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/util/Date.hpp>
-#if SUPD == 310
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace util
-{
-struct Duration
-{
-    sal_Bool Negative;
-    sal_uInt16 Years;
-    sal_uInt16 Months;
-    sal_uInt16 Days;
-    sal_uInt16 Hours;
-    sal_uInt16 Minutes;
-    sal_uInt16 Seconds;
-    sal_uInt16 MilliSeconds;
-};
-}
-}
-}
-}
-#else	// SUPD == 310
 #include <com/sun/star/util/Duration.hpp>
-#endif	// SUPD == 310
 #include <com/sun/star/uno/Sequence.hxx>
 
 #include <rtl/ustrbuf.hxx>
@@ -84,15 +54,15 @@ const sal_Int8 XML_MAXDIGITSCOUNT_DATETIME = 6;
 
 /** convert string to measure using optional min and max values*/
 bool Converter::convertMeasure(	sal_Int32& rValue,
-                                const OUString& rString,
-                                sal_Int16 nTargetUnit /* = MeasureUnit::MM_100TH */,
-                                sal_Int32 nMin /* = SAL_MIN_INT32 */,
-                                sal_Int32 nMax /* = SAL_MAX_INT32 */ )
+								const OUString& rString,
+								sal_Int16 nTargetUnit /* = MeasureUnit::MM_100TH */,
+								sal_Int32 nMin /* = SAL_MIN_INT32 */,
+								sal_Int32 nMax /* = SAL_MAX_INT32 */ )
 {
     bool bNeg = false;
     double nVal = 0;
 
-    sal_Int32 nPos = 0L;
+    sal_Int32 nPos = 0;
     sal_Int32 nLen = rString.getLength();
 
     // skip white space
@@ -138,12 +108,12 @@ bool Converter::convertMeasure(	sal_Int32& rValue,
     if( nPos < nLen )
     {
 
-        if( MeasureUnit::PERCENT == nTargetUnit )
+		if( MeasureUnit::PERCENT == nTargetUnit )
         {
             if( sal_Unicode('%') != rString[nPos] )
                 return false;
         }
-        else if( MeasureUnit::PIXEL == nTargetUnit )
+		else if( MeasureUnit::PIXEL == nTargetUnit )
         {
             if( nPos + 1 >= nLen ||
                 (sal_Unicode('p') != rString[nPos] &&
@@ -196,7 +166,7 @@ bool Converter::convertMeasure(	sal_Int32& rValue,
             }
             else if( MeasureUnit::MM_100TH == nTargetUnit || MeasureUnit::MM_10TH == nTargetUnit )
             {
-                double nScaleFactor = (MeasureUnit::MM_100TH == nTargetUnit) ? 100.0 : 10.0;
+				double nScaleFactor = (MeasureUnit::MM_100TH == nTargetUnit) ? 100.0 : 10.0;
                 switch( rString[nPos] )
                 {
                 case sal_Unicode('c'):
@@ -291,27 +261,214 @@ bool Converter::convertMeasure(	sal_Int32& rValue,
 
 /** convert measure in given unit to string with given unit */
 void Converter::convertMeasure( OUStringBuffer& rBuffer,
-                                sal_Int32 nMeasure,
-                                sal_Int16 nSourceUnit /* = MeasureUnit::MM_100TH */,
-                                sal_Int16 nTargetUnit /* = MeasureUnit::INCH */  )
+								sal_Int32 nMeasure,
+								sal_Int16 nSourceUnit /* = MeasureUnit::MM_100TH */,
+								sal_Int16 nTargetUnit /* = MeasureUnit::INCH */  )
 {
     OSL_ENSURE( false, "Converter::convertMeasure - not implemented, tools/BigInt needs replacement" );
     (void)rBuffer;
     (void)nMeasure;
     (void)nSourceUnit;
     (void)nTargetUnit;
+#if 0
+    if( nSourceUnit == MeasureUnit::PERCENT )
+    {
+        OSL_ENSURE( nTargetUnit == MeasureUnit::PERCENT,
+                    "MeasureUnit::PERCENT only maps to MeasureUnit::PERCENT!" );
+
+        rBuffer.append( nMeasure );
+        rBuffer.append( sal_Unicode('%' ) );
+    }
+    else
+    {
+	// the sign is processed seperatly
+	if( nMeasure < 0 )
+	{
+		nMeasure = -nMeasure;
+		rBuffer.append( sal_Unicode('-') );
+	}
+
+	// The new length is (nVal * nMul)/(nDiv*nFac*10)
+	long nMul = 1000;
+	long nDiv = 1;
+	long nFac = 100;
+	const sal_Char* psUnit = 0;
+	switch( nSourceUnit )
+	{
+	case MeasureUnit::TWIP:
+		switch( nTargetUnit )
+		{
+		case MeasureUnit::MM_100TH:
+		case MeasureUnit::MM_10TH:
+            OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,"output unit not supported for twip values" );
+		case MeasureUnit::MM:
+			// 0.01mm = 0.57twip (exactly)
+			nMul = 25400;	// 25.4 * 1000
+			nDiv = 1440;	// 72 * 20;
+			nFac = 100;
+			psUnit = gpsMM;
+			break;
+
+		case MeasureUnit::CM:
+			// 0.001cm = 0.57twip (exactly)
+			nMul = 25400;	// 2.54 * 10000
+			nDiv = 1440;	// 72 * 20;
+			nFac = 1000;
+			psUnit = gpsCM;
+			break;
+
+		case MeasureUnit::POINT:
+			// 0.01pt = 0.2twip (exactly)
+			nMul = 1000;
+			nDiv = 20;
+			nFac = 100;
+			psUnit = gpsPT;
+			break;
+
+		case MeasureUnit::INCH:
+		default:
+            OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,
+						"output unit not supported for twip values" );
+			// 0.0001in = 0.144twip (exactly)
+			nMul = 100000;
+			nDiv = 1440;	// 72 * 20;
+			nFac = 10000;
+			psUnit = gpsINCH;
+			break;
+		}
+		break;
+
+	case MeasureUnit::POINT:
+		// 1pt = 1pt (exactly)
+        OSL_ENSURE( MeasureUnit::POINT == nTargetUnit,
+					"output unit not supported for pt values" );
+		nMul = 10;
+		nDiv = 1;
+		nFac = 1;
+		psUnit = gpsPT;
+		break;
+    case MeasureUnit::MM_10TH:
+	case MeasureUnit::MM_100TH:
+        {
+            long nFac2 = (MeasureUnit::MM_100TH == nSourceUnit) ? 100 : 10;
+		    switch( nTargetUnit )
+		    {
+		    case MeasureUnit::MM_100TH:
+		    case MeasureUnit::MM_10TH:
+                OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,
+						    "output unit not supported for 1/100mm values" );
+		    case MeasureUnit::MM:
+			    // 0.01mm = 1 mm/100 (exactly)
+			    nMul = 10;
+			    nDiv = 1;
+			    nFac = nFac2;
+			    psUnit = gpsMM;
+			    break;
+
+		    case MeasureUnit::CM:
+			    // 0.001mm = 1 mm/100 (exactly)
+			    nMul = 10;
+			    nDiv = 1;	// 72 * 20;
+			    nFac = 10*nFac2;
+			    psUnit = gpsCM;
+			    break;
+
+		    case MeasureUnit::POINT:
+			    // 0.01pt = 0.35 mm/100 (exactly)
+			    nMul = 72000;
+			    nDiv = 2540;
+			    nFac = nFac2;
+			    psUnit = gpsPT;
+			    break;
+
+		    case MeasureUnit::INCH:
+		    default:
+                OSL_ENSURE( MeasureUnit::INCH == nTargetUnit,
+						    "output unit not supported for 1/100mm values" );
+			    // 0.0001in = 0.254 mm/100 (exactly)
+			    nMul = 100000;
+			    nDiv = 2540;
+			    nFac = 100*nFac2;
+			    psUnit = gpsINCH;
+			    break;
+		    }
+		    break;
+        }
+	}
+
+	long nLongVal = 0;
+	bool bOutLongVal = true;
+	if( nMeasure > SAL_INT32_MAX / nMul )
+	{
+		// A big int is required for calculation
+		BigInt nBigVal( nMeasure );
+		BigInt nBigFac( nFac );
+		nBigVal *= nMul;
+		nBigVal /= nDiv;
+		nBigVal += 5;
+		nBigVal /= 10;
+
+		if( nBigVal.IsLong() )
+		{
+			// To convert the value into a string a long is sufficient
+			nLongVal = (long)nBigVal;
+		}
+		else
+		{
+			BigInt nBigFac2( nFac );
+			BigInt nBig10( 10 );
+			rBuffer.append( (sal_Int32)(nBigVal / nBigFac2) );
+			if( !(nBigVal % nBigFac2).IsZero() )
+			{
+				rBuffer.append( sal_Unicode('.') );
+				while( nFac > 1 && !(nBigVal % nBigFac2).IsZero() )
+				{
+					nFac /= 10;
+					nBigFac2 = nFac;
+					rBuffer.append( (sal_Int32)((nBigVal / nBigFac2) % nBig10 ) );
+				}
+			}
+			bOutLongVal = false;
+		}
+	}
+	else
+	{
+		nLongVal = nMeasure * nMul;
+		nLongVal /= nDiv;
+		nLongVal += 5;
+		nLongVal /= 10;
+	}
+
+	if( bOutLongVal )
+	{
+		rBuffer.append( (sal_Int32)(nLongVal / nFac) );
+		if( nFac > 1 && (nLongVal % nFac) != 0 )
+		{
+			rBuffer.append( sal_Unicode('.') );
+			while( nFac > 1 && (nLongVal % nFac) != 0 )
+			{
+				nFac /= 10;
+				rBuffer.append( (sal_Int32)((nLongVal / nFac) % 10) );
+			}
+		}
+	}
+
+	if( psUnit )
+		rBuffer.appendAscii( psUnit );
+    }
+#endif
 }
 
 static const OUString& getTrueString()
 {
-    static const OUString sTrue( RTL_CONSTASCII_USTRINGPARAM( "true" ) );
-    return sTrue;
+	static const OUString sTrue( RTL_CONSTASCII_USTRINGPARAM( "true" ) );
+	return sTrue;
 }
 
 static const OUString& getFalseString()
 {
-    static const OUString sFalse( RTL_CONSTASCII_USTRINGPARAM( "false" ) );
-    return sFalse;
+	static const OUString sFalse( RTL_CONSTASCII_USTRINGPARAM( "false" ) );
+	return sFalse;
 }
 
 /** convert string to boolean */
@@ -373,13 +530,13 @@ bool Converter::convertColor( sal_Int32& rColor, const OUString& rValue )
     if( rValue.getLength() != 7 || rValue[0] != '#' )
         return false;
 
-    rColor = lcl_gethex( rValue[1] ) * 16 + lcl_gethex( rValue[2] );
-    rColor <<= 8;
+	rColor = lcl_gethex( rValue[1] ) * 16 + lcl_gethex( rValue[2] );
+	rColor <<= 8;
 
-    rColor |= ( lcl_gethex( rValue[3] ) * 16 + lcl_gethex( rValue[4] ) );
-    rColor <<= 8;
+	rColor |= ( lcl_gethex( rValue[3] ) * 16 + lcl_gethex( rValue[4] ) );
+	rColor <<= 8;
 
-    rColor |= ( lcl_gethex( rValue[5] ) * 16 + lcl_gethex( rValue[6] ) );
+	rColor |= ( lcl_gethex( rValue[5] ) * 16 + lcl_gethex( rValue[6] ) );
 
     return true;
 }
@@ -412,13 +569,13 @@ void Converter::convertNumber( OUStringBuffer& rBuffer, sal_Int32 nNumber )
 
 /** convert string to number with optional min and max values */
 bool Converter::convertNumber(	sal_Int32& rValue,
-                                const OUString& rString,
-                                sal_Int32 nMin, sal_Int32 nMax )
+								const OUString& rString,
+								sal_Int32 nMin, sal_Int32 nMax )
 {
     bool bNeg = false;
     rValue = 0;
 
-    sal_Int32 nPos = 0L;
+    sal_Int32 nPos = 0;
     sal_Int32 nLen = rString.getLength();
 
     // skip white space
@@ -445,20 +602,20 @@ bool Converter::convertNumber(	sal_Int32& rValue,
     if( bNeg )
         rValue *= -1;
 
-    if( rValue < nMin )
-        rValue = nMin;
-    else if( rValue > nMax )
-        rValue = nMax;
+	if( rValue < nMin )
+		rValue = nMin;
+	else if( rValue > nMax )
+		rValue = nMax;
 
     return nPos == nLen;
 }
 
 /** convert double number to string (using ::rtl::math) */
 void Converter::convertDouble(  OUStringBuffer& rBuffer,
-                                double fNumber,
-                                bool bWriteUnits,
-                                sal_Int16 nSourceUnit,
-                                sal_Int16 nTargetUnit)
+								double fNumber,
+								bool bWriteUnits,
+								sal_Int16 nSourceUnit,
+								sal_Int16 nTargetUnit)
 {
     if(MeasureUnit::PERCENT == nSourceUnit)
     {
@@ -489,9 +646,9 @@ void Converter::convertDouble( ::rtl::OUStringBuffer& rBuffer, double fNumber)
 bool Converter::convertDouble(double& rValue,
     const ::rtl::OUString& rString, sal_Int16 nTargetUnit)
 {
-    sal_Int16 nSourceUnit = GetUnitFromString(rString, nTargetUnit);
+	sal_Int16 nSourceUnit = GetUnitFromString(rString, nTargetUnit);
 
-    return convertDouble(rValue, rString, nSourceUnit, nTargetUnit );
+	return convertDouble(rValue, rString, nSourceUnit, nTargetUnit );
 }
 
 /** convert string to double number (using ::rtl::math) */
@@ -503,7 +660,7 @@ bool Converter::convertDouble(double& rValue,
 
     if(eStatus == rtl_math_ConversionStatus_Ok)
     {
-        OUStringBuffer sUnit;
+		OUStringBuffer sUnit;
         double fFactor = GetConversionFactor(sUnit, nSourceUnit, nTargetUnit);
         if(fFactor != 1.0 && fFactor != 0.0)
             rValue /= fFactor;
@@ -519,6 +676,264 @@ bool Converter::convertDouble(double& rValue, const ::rtl::OUString& rString)
     rValue = ::rtl::math::stringToDouble( rString, (sal_Unicode)('.'), (sal_Unicode)(','), &eStatus, NULL );
     return ( eStatus == rtl_math_ConversionStatus_Ok );
 }
+
+#if SUPD == 310
+
+/** convert double to ISO Time String; negative durations allowed */
+void Converter::convertTime( ::rtl::OUStringBuffer& rBuffer,
+                            const double& fTime)
+{
+
+    double fValue = fTime;
+
+    // take care of negative durations as specified in:
+    // XML Schema, W3C Working Draft 07 April 2000, section 3.2.6.1
+    if (fValue < 0.0)
+    {
+        rBuffer.append(sal_Unicode('-'));
+        fValue = - fValue;
+    }
+
+    rBuffer.appendAscii(RTL_CONSTASCII_STRINGPARAM( "PT" ));
+    fValue *= 24;
+    double fHoursValue = ::rtl::math::approxFloor (fValue);
+    fValue -= fHoursValue;
+    fValue *= 60;
+    double fMinsValue = ::rtl::math::approxFloor (fValue);
+    fValue -= fMinsValue;
+    fValue *= 60;
+    double fSecsValue = ::rtl::math::approxFloor (fValue);
+    fValue -= fSecsValue;
+    double f100SecsValue;
+    if (fValue > 0.00001)
+        f100SecsValue = ::rtl::math::round( fValue, XML_MAXDIGITSCOUNT_TIME - 5);
+    else
+        f100SecsValue = 0.0;
+
+    if (f100SecsValue == 1.0)
+    {
+        f100SecsValue = 0.0;
+        fSecsValue += 1.0;
+    }
+    if (fSecsValue >= 60.0)
+    {
+        fSecsValue -= 60.0;
+        fMinsValue += 1.0;
+    }
+    if (fMinsValue >= 60.0)
+    {
+        fMinsValue -= 60.0;
+        fHoursValue += 1.0;
+    }
+
+    if (fHoursValue < 10)
+        rBuffer.append( sal_Unicode('0'));
+    rBuffer.append( sal_Int32( fHoursValue));
+    rBuffer.append( sal_Unicode('H'));
+    if (fMinsValue < 10)
+        rBuffer.append( sal_Unicode('0'));
+    rBuffer.append( sal_Int32( fMinsValue));
+    rBuffer.append( sal_Unicode('M'));
+    if (fSecsValue < 10)
+        rBuffer.append( sal_Unicode('0'));
+    rBuffer.append( sal_Int32( fSecsValue));
+    if (f100SecsValue > 0.0)
+    {
+        ::rtl::OUString a100th( ::rtl::math::doubleToUString( fValue,
+                    rtl_math_StringFormat_F, XML_MAXDIGITSCOUNT_TIME - 5, '.',
+                    true));
+        if ( a100th.getLength() > 2 )
+        {
+            rBuffer.append( sal_Unicode('.'));
+            rBuffer.append( a100th.copy( 2 ) );     // strip 0.
+        }
+    }
+    rBuffer.append( sal_Unicode('S'));
+}
+
+/** convert ISO Time String to double; negative durations allowed */
+bool Converter::convertTime( double& fTime,
+                            const ::rtl::OUString& rString)
+{
+    rtl::OUString aTrimmed = rString.trim().toAsciiUpperCase();
+    const sal_Unicode* pStr = aTrimmed.getStr();
+
+    // negative time duration?
+    bool bIsNegativeDuration = false;
+    if ( sal_Unicode('-') == (*pStr) )
+    {
+        bIsNegativeDuration = true;
+        pStr++;
+    }
+
+    if ( *(pStr++) != sal_Unicode('P') )            // duration must start with "P"
+        return false;
+
+    rtl::OUString sDoubleStr;
+    bool bSuccess = true;
+    bool bDone = false;
+    bool bTimePart = false;
+    bool bIsFraction = false;
+    sal_Int32 nDays  = 0;
+    sal_Int32 nHours = 0;
+    sal_Int32 nMins  = 0;
+    sal_Int32 nSecs  = 0;
+    sal_Int32 nTemp = 0;
+
+    while ( bSuccess && !bDone )
+    {
+        sal_Unicode c = *(pStr++);
+        if ( !c )                               // end
+            bDone = true;
+        else if ( sal_Unicode('0') <= c && sal_Unicode('9') >= c )
+        {
+            if ( nTemp >= SAL_MAX_INT32 / 10 )
+                bSuccess = false;
+            else
+            {
+                if ( !bIsFraction )
+                {
+                    nTemp *= 10;
+                    nTemp += (c - sal_Unicode('0'));
+                }
+                else
+                {
+                    sDoubleStr += OUString::valueOf(c);
+                }
+            }
+        }
+        else if ( bTimePart )
+        {
+            if ( c == sal_Unicode('H') )
+            {
+                nHours = nTemp;
+                nTemp = 0;
+            }
+            else if ( c == sal_Unicode('M') )
+            {
+                nMins = nTemp;
+                nTemp = 0;
+            }
+            else if ( (c == sal_Unicode(',')) || (c == sal_Unicode('.')) )
+            {
+                nSecs = nTemp;
+                nTemp = 0;
+                bIsFraction = true;
+                sDoubleStr = OUString(RTL_CONSTASCII_USTRINGPARAM("0."));
+            }
+            else if ( c == sal_Unicode('S') )
+            {
+                if ( !bIsFraction )
+                {
+                    nSecs = nTemp;
+                    nTemp = 0;
+                    sDoubleStr = OUString(RTL_CONSTASCII_USTRINGPARAM("0.0"));
+                }
+            }
+            else
+                bSuccess = false;               // invalid character
+        }
+        else
+        {
+            if ( c == sal_Unicode('T') )            // "T" starts time part
+                bTimePart = true;
+            else if ( c == sal_Unicode('D') )
+            {
+                nDays = nTemp;
+                nTemp = 0;
+            }
+            else if ( c == sal_Unicode('Y') || c == sal_Unicode('M') )
+            {
+                //! how many days is a year or month?
+
+                OSL_ENSURE( false, "years or months in duration: not implemented");
+                bSuccess = false;
+            }
+            else
+                bSuccess = false;               // invalid character
+        }
+    }
+
+    if ( bSuccess )
+    {
+        if ( nDays )
+            nHours += nDays * 24;               // add the days to the hours part
+        double fTempTime = 0.0;
+        double fHour = nHours;
+        double fMin = nMins;
+        double fSec = nSecs;
+        double fSec100 = 0.0;
+        double fFraction = sDoubleStr.toDouble();
+        fTempTime = fHour / 24;
+        fTempTime += fMin / (24 * 60);
+        fTempTime += fSec / (24 * 60 * 60);
+        fTempTime += fSec100 / (24 * 60 * 60 * 60);
+        fTempTime += fFraction / (24 * 60 * 60);
+
+        // negative duration?
+        if ( bIsNegativeDuration )
+        {
+            fTempTime = -fTempTime;
+        }
+
+        fTime = fTempTime;
+    }
+    return bSuccess;
+}
+
+/** convert util::DateTime to ISO Time String */
+void Converter::convertTime( ::rtl::OUStringBuffer& rBuffer,
+                            const ::com::sun::star::util::DateTime& rDateTime )
+{
+    double fHour = rDateTime.Hours;
+    double fMin = rDateTime.Minutes;
+    double fSec = rDateTime.Seconds;
+    double fSec100 = rDateTime.HundredthSeconds;
+    double fTempTime = fHour / 24;
+    fTempTime += fMin / (24 * 60);
+    fTempTime += fSec / (24 * 60 * 60);
+    fTempTime += fSec100 / (24 * 60 * 60 * 100);
+    convertTime( rBuffer, fTempTime );
+}
+
+/** convert ISO Time String to util::DateTime */
+bool Converter::convertTime( ::com::sun::star::util::DateTime& rDateTime,
+                             const ::rtl::OUString& rString )
+{
+    double fCalculatedTime = 0.0;
+    if( convertTime( fCalculatedTime, rString ) )
+    {
+        // #101357# declare as volatile to prevent optimization
+        // (gcc 3.0.1 Linux)
+        volatile double fTempTime = fCalculatedTime;
+        fTempTime *= 24;
+        double fHoursValue = ::rtl::math::approxFloor (fTempTime);
+        fTempTime -= fHoursValue;
+        fTempTime *= 60;
+        double fMinsValue = ::rtl::math::approxFloor (fTempTime);
+        fTempTime -= fMinsValue;
+        fTempTime *= 60;
+        double fSecsValue = ::rtl::math::approxFloor (fTempTime);
+        fTempTime -= fSecsValue;
+        double f100SecsValue = 0.0;
+
+        if( fTempTime > 0.00001 )
+            f100SecsValue = fTempTime;
+
+        rDateTime.Year = 0;
+        rDateTime.Month = 0;
+        rDateTime.Day = 0;
+        rDateTime.Hours = static_cast < sal_uInt16 > ( fHoursValue );
+        rDateTime.Minutes = static_cast < sal_uInt16 > ( fMinsValue );
+        rDateTime.Seconds = static_cast < sal_uInt16 > ( fSecsValue );
+        rDateTime.HundredthSeconds = static_cast < sal_uInt16 > ( f100SecsValue * 100.0 );
+
+        return true;
+    }
+    return false;
+}
+
+#endif	// SUPD == 310
 
 /** convert double to ISO "duration" string; negative durations allowed */
 void Converter::convertDuration(::rtl::OUStringBuffer& rBuffer,
@@ -1178,8 +1593,8 @@ readDateTimeComponent(const ::rtl::OUString & rString,
 
 static bool lcl_isLeapYear(const sal_uInt32 nYear)
 {
-    return ((nYear % 4) == 0)
-        && !(((nYear % 100) == 0) || ((nYear % 400) == 0));
+    return (((nYear % 4 == 0) && (nYear % 100 != 0)) ||
+	(nYear % 400 == 0));
 }
 
 static sal_uInt16
@@ -1334,6 +1749,13 @@ bool Converter::convertDateOrDateTime(
             {
                 bSuccess = false; // only 24:00:00 is valid
             }
+#if 0
+            else
+            {
+                nHours = 0; // normalize 24:00:00 to 00:00:00 of next day
+                lcl_addDay(bNegative, nYear, nMonth, nDay, 1);
+            }
+#endif
         }
     }
 
@@ -1401,6 +1823,11 @@ bool Converter::convertDateOrDateTime(
     if (bSuccess && bHaveTimezone)
     {
         // util::DateTime does not support timezones!
+#if 0
+        // do not add timezone, just strip it (as suggested by er)
+        lcl_addTimezone(bNegative, nYear, nMonth, nDay, nHours, nMinutes,
+                !bHaveTimezoneMinus, nTimezoneHours, nTimezoneMinutes);
+#endif
     }
 
     if (bSuccess)
@@ -1552,168 +1979,168 @@ void ThreeByteToFourByte (const sal_Int8* pBuffer, const sal_Int32 nStart, const
 
 void Converter::encodeBase64(rtl::OUStringBuffer& aStrBuffer, const uno::Sequence<sal_Int8>& aPass)
 {
-    sal_Int32 i(0);
-    sal_Int32 nBufferLength(aPass.getLength());
-    const sal_Int8* pBuffer = aPass.getConstArray();
-    while (i < nBufferLength)
-    {
-        rtl::OUStringBuffer sBuffer;
-        ThreeByteToFourByte (pBuffer, i, nBufferLength, sBuffer);
-        aStrBuffer.append(sBuffer);
-        i += 3;
-    }
+	sal_Int32 i(0);
+	sal_Int32 nBufferLength(aPass.getLength());
+	const sal_Int8* pBuffer = aPass.getConstArray();
+	while (i < nBufferLength)
+	{
+		rtl::OUStringBuffer sBuffer;
+		ThreeByteToFourByte (pBuffer, i, nBufferLength, sBuffer);
+		aStrBuffer.append(sBuffer);
+		i += 3;
+	}
 }
 
 void Converter::decodeBase64(uno::Sequence<sal_Int8>& aBuffer, const rtl::OUString& sBuffer)
 {
 #if OSL_DEBUG_LEVEL > 0
-    sal_Int32 nCharsDecoded =
+	sal_Int32 nCharsDecoded =
 #endif
-    decodeBase64SomeChars( aBuffer, sBuffer );
-    OSL_ENSURE( nCharsDecoded == sBuffer.getLength(), "some bytes left in base64 decoding!" );
+	decodeBase64SomeChars( aBuffer, sBuffer );
+	OSL_ENSURE( nCharsDecoded == sBuffer.getLength(), "some bytes left in base64 decoding!" );
 }
 
 sal_Int32 Converter::decodeBase64SomeChars(
-        uno::Sequence<sal_Int8>& rOutBuffer,
-        const rtl::OUString& rInBuffer)
+		uno::Sequence<sal_Int8>& rOutBuffer,
+		const rtl::OUString& rInBuffer)
 {
-    sal_Int32 nInBufferLen = rInBuffer.getLength();
-    sal_Int32 nMinOutBufferLen = (nInBufferLen / 4) * 3;
-    if( rOutBuffer.getLength() < nMinOutBufferLen )
-        rOutBuffer.realloc( nMinOutBufferLen );
+	sal_Int32 nInBufferLen = rInBuffer.getLength();
+	sal_Int32 nMinOutBufferLen = (nInBufferLen / 4) * 3;
+	if( rOutBuffer.getLength() < nMinOutBufferLen )
+		rOutBuffer.realloc( nMinOutBufferLen );
 
-    const sal_Unicode *pInBuffer = rInBuffer.getStr();
-    sal_Int8 *pOutBuffer = rOutBuffer.getArray();
-    sal_Int8 *pOutBufferStart = pOutBuffer;
-    sal_Int32 nCharsDecoded = 0;
+	const sal_Unicode *pInBuffer = rInBuffer.getStr();
+	sal_Int8 *pOutBuffer = rOutBuffer.getArray();
+	sal_Int8 *pOutBufferStart = pOutBuffer;
+	sal_Int32 nCharsDecoded = 0;
 
-    sal_uInt8 aDecodeBuffer[4];
-    sal_Int32 nBytesToDecode = 0;
-    sal_Int32 nBytesGotFromDecoding = 3;
-    sal_Int32 nInBufferPos= 0;
-    while( nInBufferPos < nInBufferLen )
-    {
-        sal_Unicode cChar = *pInBuffer;
-        if( cChar >= '+' && cChar <= 'z' )
-        {
-            sal_uInt8 nByte = aBase64DecodeTable[cChar-'+'];
-            if( nByte != 255 )
-            {
-                // We have found a valid character!
-                aDecodeBuffer[nBytesToDecode++] = nByte;
+	sal_uInt8 aDecodeBuffer[4];
+	sal_Int32 nBytesToDecode = 0;
+	sal_Int32 nBytesGotFromDecoding = 3;
+	sal_Int32 nInBufferPos= 0;
+	while( nInBufferPos < nInBufferLen )
+	{
+		sal_Unicode cChar = *pInBuffer;
+		if( cChar >= '+' && cChar <= 'z' )
+		{
+			sal_uInt8 nByte = aBase64DecodeTable[cChar-'+'];
+			if( nByte != 255 )
+			{
+				// We have found a valid character!
+				aDecodeBuffer[nBytesToDecode++] = nByte;
 
-                // One '=' character at the end means 2 out bytes
-                // Two '=' characters at the end mean 1 out bytes
-                if( '=' == cChar && nBytesToDecode > 2 )
-                    nBytesGotFromDecoding--;
-                if( 4 == nBytesToDecode )
-                {
-                    // Four characters found, so we may convert now!
-                    sal_uInt32 nOut = (aDecodeBuffer[0] << 18) +
-                                      (aDecodeBuffer[1] << 12) +
-                                      (aDecodeBuffer[2] << 6) +
-                                       aDecodeBuffer[3];
+				// One '=' character at the end means 2 out bytes
+				// Two '=' characters at the end mean 1 out bytes
+				if( '=' == cChar && nBytesToDecode > 2 )
+					nBytesGotFromDecoding--;
+				if( 4 == nBytesToDecode )
+				{
+					// Four characters found, so we may convert now!
+					sal_uInt32 nOut = (aDecodeBuffer[0] << 18) +
+									  (aDecodeBuffer[1] << 12) +
+									  (aDecodeBuffer[2] << 6) +
+									   aDecodeBuffer[3];
 
-                    *pOutBuffer++  = (sal_Int8)((nOut & 0xff0000) >> 16);
-                    if( nBytesGotFromDecoding > 1 )
-                        *pOutBuffer++  = (sal_Int8)((nOut & 0xff00) >> 8);
-                    if( nBytesGotFromDecoding > 2 )
-                        *pOutBuffer++  = (sal_Int8)(nOut & 0xff);
-                    nCharsDecoded = nInBufferPos + 1;
-                    nBytesToDecode = 0;
-                    nBytesGotFromDecoding = 3;
-                }
-            }
-            else
-            {
-                nCharsDecoded++;
-            }
-        }
-        else
-        {
-            nCharsDecoded++;
-        }
+					*pOutBuffer++  = (sal_Int8)((nOut & 0xff0000) >> 16);
+					if( nBytesGotFromDecoding > 1 )
+						*pOutBuffer++  = (sal_Int8)((nOut & 0xff00) >> 8);
+					if( nBytesGotFromDecoding > 2 )
+						*pOutBuffer++  = (sal_Int8)(nOut & 0xff);
+					nCharsDecoded = nInBufferPos + 1;
+					nBytesToDecode = 0;
+					nBytesGotFromDecoding = 3;
+				}
+			}
+			else
+			{
+				nCharsDecoded++;
+			}
+		}
+		else
+		{
+			nCharsDecoded++;
+		}
 
-        nInBufferPos++;
-        pInBuffer++;
-    }
-    if( (pOutBuffer - pOutBufferStart) != rOutBuffer.getLength() )
-        rOutBuffer.realloc( pOutBuffer - pOutBufferStart );
+		nInBufferPos++;
+		pInBuffer++;
+	}
+	if( (pOutBuffer - pOutBufferStart) != rOutBuffer.getLength() )
+		rOutBuffer.realloc( pOutBuffer - pOutBufferStart );
 
-    return nCharsDecoded;
+	return nCharsDecoded;
 }
 
 void Converter::clearUndefinedChars(rtl::OUString& rTarget, const rtl::OUString& rSource)
 {
-    sal_uInt32 nLength(rSource.getLength());
-    rtl::OUStringBuffer sBuffer(nLength);
-    for (sal_uInt32 i = 0; i < nLength; i++)
-    {
-        sal_Unicode cChar = rSource[i];
-        if (!(cChar < 0x0020) ||
-            (cChar == 0x0009) ||		// TAB
-            (cChar == 0x000A) ||		// LF
-            (cChar == 0x000D))			// legal character
-            sBuffer.append(cChar);
-    }
-    rTarget = sBuffer.makeStringAndClear();
+	sal_uInt32 nLength(rSource.getLength());
+	rtl::OUStringBuffer sBuffer(nLength);
+	for (sal_uInt32 i = 0; i < nLength; i++)
+	{
+		sal_Unicode cChar = rSource[i];
+		if (!(cChar < 0x0020) ||
+			(cChar == 0x0009) ||		// TAB
+			(cChar == 0x000A) ||		// LF
+			(cChar == 0x000D))			// legal character
+			sBuffer.append(cChar);
+	}
+	rTarget = sBuffer.makeStringAndClear();
 }
 
 double Converter::GetConversionFactor(::rtl::OUStringBuffer& rUnit, sal_Int16 nSourceUnit, sal_Int16 nTargetUnit)
 {
-    double fRetval(1.0);
-    rUnit.setLength(0L);
+	double fRetval(1.0);
+	rUnit.setLength(0L);
 
-    const sal_Char* psUnit = 0;
+	const sal_Char* psUnit = 0;
 
-    if(nSourceUnit != nTargetUnit)
-    {
-        switch(nSourceUnit)
-        {
-            case MeasureUnit::TWIP:
-            {
-                switch(nTargetUnit)
-                {
-                    case MeasureUnit::MM_100TH:
-                    case MeasureUnit::MM_10TH:
-                    {
+	if(nSourceUnit != nTargetUnit)
+	{
+		switch(nSourceUnit)
+		{
+			case MeasureUnit::TWIP:
+			{
+				switch(nTargetUnit)
+				{
+					case MeasureUnit::MM_100TH:
+					case MeasureUnit::MM_10TH:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for twip values");
-                    }
-                    case MeasureUnit::MM:
-                    {
-                        // 0.01mm = 0.57twip (exactly)
-                        fRetval = ((25400.0 / 1440.0) / 1000.0);
-                        psUnit = gpsMM;
-                        break;
-                    }
-                    case MeasureUnit::CM:
-                    {
-                        // 0.001cm = 0.57twip (exactly)
-                        fRetval = ((25400.0 / 1440.0) / 10000.0);
-                        psUnit = gpsCM;
-                        break;
-                    }
-                    case MeasureUnit::POINT:
-                    {
-                        // 0.01pt = 0.2twip (exactly)
-                        fRetval = ((1000.0 / 20.0) / 1000.0);
-                        psUnit = gpsPT;
-                        break;
-                    }
-                    case MeasureUnit::INCH:
-                    default:
-                    {
+					}
+					case MeasureUnit::MM:
+					{
+						// 0.01mm = 0.57twip (exactly)
+						fRetval = ((25400.0 / 1440.0) / 1000.0);
+						psUnit = gpsMM;
+						break;
+					}
+					case MeasureUnit::CM:
+					{
+						// 0.001cm = 0.57twip (exactly)
+						fRetval = ((25400.0 / 1440.0) / 10000.0);
+						psUnit = gpsCM;
+						break;
+					}
+					case MeasureUnit::POINT:
+					{
+						// 0.01pt = 0.2twip (exactly)
+						fRetval = ((1000.0 / 20.0) / 1000.0);
+						psUnit = gpsPT;
+						break;
+					}
+					case MeasureUnit::INCH:
+					default:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for twip values");
-                        // 0.0001in = 0.144twip (exactly)
-                        fRetval = ((100000.0 / 1440.0) / 100000.0);
-                        psUnit = gpsINCH;
-                        break;
-                    }
-                }
-                break;
-            }
-            case MeasureUnit::POINT:
-            {
+						// 0.0001in = 0.144twip (exactly)
+						fRetval = ((100000.0 / 1440.0) / 100000.0);
+						psUnit = gpsINCH;
+						break;
+					}
+				}
+				break;
+			}
+			case MeasureUnit::POINT:
+			{
                 switch(nTargetUnit)
                 {
                     case MeasureUnit::MM:
@@ -1743,185 +2170,183 @@ double Converter::GetConversionFactor(::rtl::OUStringBuffer& rUnit, sal_Int16 nS
                         break;
                 }
                 break;
-            }
+			}
             case MeasureUnit::MM_10TH:
-            {
-                switch(nTargetUnit)
-                {
-                    case MeasureUnit::MM_100TH:
-                    case MeasureUnit::MM_10TH:
-                    {
+			{
+				switch(nTargetUnit)
+				{
+					case MeasureUnit::MM_100TH:
+					case MeasureUnit::MM_10TH:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for 1/100mm values");
-                    }
-                    case MeasureUnit::MM:
-                    {
-                        // 0.01mm = 1 mm/100 (exactly)
-                        fRetval = ((10.0 / 1.0) / 100.0);
-                        psUnit = gpsMM;
-                        break;
-                    }
-                    case MeasureUnit::CM:
-                    {
-                        // 0.001mm = 1 mm/100 (exactly)
-                        fRetval = ((10.0 / 1.0) / 1000.0);
-                        psUnit = gpsCM;
-                        break;
-                    }
-                    case MeasureUnit::POINT:
-                    {
-                        // 0.01pt = 0.35 mm/100 (exactly)
-                        fRetval = ((72000.0 / 2540.0) / 100.0);
-                        psUnit = gpsPT;
-                        break;
-                    }
-                    case MeasureUnit::INCH:
-                    default:
-                    {
+					}
+					case MeasureUnit::MM:
+					{
+						// 0.01mm = 1 mm/100 (exactly)
+						fRetval = ((10.0 / 1.0) / 100.0);
+						psUnit = gpsMM;
+						break;
+					}
+					case MeasureUnit::CM:
+					{
+						// 0.001mm = 1 mm/100 (exactly)
+						fRetval = ((10.0 / 1.0) / 1000.0);
+						psUnit = gpsCM;
+						break;
+					}
+					case MeasureUnit::POINT:
+					{
+						// 0.01pt = 0.35 mm/100 (exactly)
+						fRetval = ((72000.0 / 2540.0) / 100.0);
+						psUnit = gpsPT;
+						break;
+					}
+					case MeasureUnit::INCH:
+					default:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for 1/100mm values");
-                        // 0.0001in = 0.254 mm/100 (exactly)
-                        fRetval = ((100000.0 / 2540.0) / 10000.0);
-                        psUnit = gpsINCH;
-                        break;
-                    }
-                }
-                break;
+						// 0.0001in = 0.254 mm/100 (exactly)
+						fRetval = ((100000.0 / 2540.0) / 10000.0);
+						psUnit = gpsINCH;
+						break;
+					}
+				}
+				break;
             }
-            case MeasureUnit::MM_100TH:
-            {
-                switch(nTargetUnit)
-                {
-                    case MeasureUnit::MM_100TH:
-                    case MeasureUnit::MM_10TH:
-                    {
+			case MeasureUnit::MM_100TH:
+			{
+				switch(nTargetUnit)
+				{
+					case MeasureUnit::MM_100TH:
+					case MeasureUnit::MM_10TH:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for 1/100mm values");
-                    }
-                    case MeasureUnit::MM:
-                    {
-                        // 0.01mm = 1 mm/100 (exactly)
-                        fRetval = ((10.0 / 1.0) / 1000.0);
-                        psUnit = gpsMM;
-                        break;
-                    }
-                    case MeasureUnit::CM:
-                    {
-                        // 0.001mm = 1 mm/100 (exactly)
-                        fRetval = ((10.0 / 1.0) / 10000.0);
-                        psUnit = gpsCM;
-                        break;
-                    }
-                    case MeasureUnit::POINT:
-                    {
-                        // 0.01pt = 0.35 mm/100 (exactly)
-                        fRetval = ((72000.0 / 2540.0) / 1000.0);
-                        psUnit = gpsPT;
-                        break;
-                    }
-                    case MeasureUnit::INCH:
-                    default:
-                    {
+					}
+					case MeasureUnit::MM:
+					{
+						// 0.01mm = 1 mm/100 (exactly)
+						fRetval = ((10.0 / 1.0) / 1000.0);
+						psUnit = gpsMM;
+						break;
+					}
+					case MeasureUnit::CM:
+					{
+						// 0.001mm = 1 mm/100 (exactly)
+						fRetval = ((10.0 / 1.0) / 10000.0);
+						psUnit = gpsCM;
+						break;
+					}
+					case MeasureUnit::POINT:
+					{
+						// 0.01pt = 0.35 mm/100 (exactly)
+						fRetval = ((72000.0 / 2540.0) / 1000.0);
+						psUnit = gpsPT;
+						break;
+					}
+					case MeasureUnit::INCH:
+					default:
+					{
                         OSL_ENSURE( MeasureUnit::INCH == nTargetUnit, "output unit not supported for 1/100mm values");
-                        // 0.0001in = 0.254 mm/100 (exactly)
-                        fRetval = ((100000.0 / 2540.0) / 100000.0);
-                        psUnit = gpsINCH;
-                        break;
-                    }
-                }
-                break;
-            }
-        }
+						// 0.0001in = 0.254 mm/100 (exactly)
+						fRetval = ((100000.0 / 2540.0) / 100000.0);
+						psUnit = gpsINCH;
+						break;
+					}
+				}
+				break;
+			}
+		}
 
-        if( psUnit )
-            rUnit.appendAscii( psUnit );
-    }
+		if( psUnit )
+			rUnit.appendAscii( psUnit );
+	}
 
-    return fRetval;
+	return fRetval;
 }
 
 sal_Int16 Converter::GetUnitFromString(const ::rtl::OUString& rString, sal_Int16 nDefaultUnit)
 {
-    sal_Int32 nPos = 0L;
-    sal_Int32 nLen = rString.getLength();
-    sal_Int16 nRetUnit = nDefaultUnit;
+	sal_Int32 nPos = 0L;
+	sal_Int32 nLen = rString.getLength();
+	sal_Int16 nRetUnit = nDefaultUnit;
 
-    // skip white space
-    while( nPos < nLen && sal_Unicode(' ') == rString[nPos] )
-        nPos++;
+	// skip white space
+	while( nPos < nLen && sal_Unicode(' ') == rString[nPos] )
+		nPos++;
 
-    // skip negative
-    if( nPos < nLen && sal_Unicode('-') == rString[nPos] )
-        nPos++;
+	// skip negative
+	if( nPos < nLen && sal_Unicode('-') == rString[nPos] )
+		nPos++;
 
-    // skip number
-    while( nPos < nLen && sal_Unicode('0') <= rString[nPos] && sal_Unicode('9') >= rString[nPos] )
-        nPos++;
+	// skip number
+	while( nPos < nLen && sal_Unicode('0') <= rString[nPos] && sal_Unicode('9') >= rString[nPos] )
+		nPos++;
 
-    if( nPos < nLen && sal_Unicode('.') == rString[nPos] )
-    {
-        nPos++;
-        while( nPos < nLen && sal_Unicode('0') <= rString[nPos] && sal_Unicode('9') >= rString[nPos] )
-            nPos++;
-    }
+	if( nPos < nLen && sal_Unicode('.') == rString[nPos] )
+	{
+		nPos++;
+		while( nPos < nLen && sal_Unicode('0') <= rString[nPos] && sal_Unicode('9') >= rString[nPos] )
+			nPos++;
+	}
 
-    // skip white space
-    while( nPos < nLen && sal_Unicode(' ') == rString[nPos] )
-        nPos++;
+	// skip white space
+	while( nPos < nLen && sal_Unicode(' ') == rString[nPos] )
+		nPos++;
 
-    if( nPos < nLen )
-    {
-        switch(rString[nPos])
-        {
-            case sal_Unicode('%') :
-            {
-                nRetUnit = MeasureUnit::PERCENT;
-                break;
-            }
-            case sal_Unicode('c'):
-            case sal_Unicode('C'):
-            {
-                if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('m')
-                    || rString[nPos+1] == sal_Unicode('M')))
-                    nRetUnit = MeasureUnit::CM;
-                break;
-            }
-            case sal_Unicode('e'):
-            case sal_Unicode('E'):
-            {
-                // CSS1_EMS or CSS1_EMX later
-                break;
-            }
-            case sal_Unicode('i'):
-            case sal_Unicode('I'):
-            {
-                if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('n')
-                    || rString[nPos+1] == sal_Unicode('n')))
-                    nRetUnit = MeasureUnit::INCH;
-                break;
-            }
-            case sal_Unicode('m'):
-            case sal_Unicode('M'):
-            {
-                if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('m')
-                    || rString[nPos+1] == sal_Unicode('M')))
-                    nRetUnit = MeasureUnit::MM;
-                break;
-            }
-            case sal_Unicode('p'):
-            case sal_Unicode('P'):
-            {
-                if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('t')
-                    || rString[nPos+1] == sal_Unicode('T')))
-                    nRetUnit = MeasureUnit::POINT;
-                if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('c')
-                    || rString[nPos+1] == sal_Unicode('C')))
-                    nRetUnit = MeasureUnit::TWIP;
-                break;
-            }
-        }
-    }
+	if( nPos < nLen )
+	{
+		switch(rString[nPos])
+		{
+			case sal_Unicode('%') :
+			{
+				nRetUnit = MeasureUnit::PERCENT;
+				break;
+			}
+			case sal_Unicode('c'):
+			case sal_Unicode('C'):
+			{
+				if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('m')
+					|| rString[nPos+1] == sal_Unicode('M')))
+					nRetUnit = MeasureUnit::CM;
+				break;
+			}
+			case sal_Unicode('e'):
+			case sal_Unicode('E'):
+			{
+				// CSS1_EMS or CSS1_EMX later
+				break;
+			}
+			case sal_Unicode('i'):
+			case sal_Unicode('I'):
+			{
+				if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('n')
+					|| rString[nPos+1] == sal_Unicode('n')))
+					nRetUnit = MeasureUnit::INCH;
+				break;
+			}
+			case sal_Unicode('m'):
+			case sal_Unicode('M'):
+			{
+				if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('m')
+					|| rString[nPos+1] == sal_Unicode('M')))
+					nRetUnit = MeasureUnit::MM;
+				break;
+			}
+			case sal_Unicode('p'):
+			case sal_Unicode('P'):
+			{
+				if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('t')
+					|| rString[nPos+1] == sal_Unicode('T')))
+					nRetUnit = MeasureUnit::POINT;
+				if(nPos+1 < nLen && (rString[nPos+1] == sal_Unicode('c')
+					|| rString[nPos+1] == sal_Unicode('C')))
+					nRetUnit = MeasureUnit::TWIP;
+				break;
+			}
+		}
+	}
 
-    return nRetUnit;
+	return nRetUnit;
 }
 
 }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,4 +1,5 @@
-/**************************************************************
+<?xml version="1.0" encoding="UTF-8"?>
+<!--***********************************************************
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,19 +18,16 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
- *************************************************************/
+ ***********************************************************-->
 
 
 
-#ifndef INCLUDED_SAX_DLLAPI_H
-#define INCLUDED_SAX_DLLAPI_H
-
-#include "sal/types.h"
-
-#if defined SAX_DLLIMPLEMENTATION
-#define SAX_DLLPUBLIC SAL_DLLPUBLIC_EXPORT
-#else
-#define SAX_DLLPUBLIC SAL_DLLPUBLIC_IMPORT
-#endif
-
-#endif
+<component loader="com.sun.star.loader.SharedLibrary"
+    xmlns="http://openoffice.org/2010/uno-components">
+  <implementation name="com.sun.star.comp.extensions.xml.sax.FastParser">
+    <service name="com.sun.star.xml.sax.FastParser"/>
+  </implementation>
+  <implementation name="com.sun.star.comp.extensions.xml.sax.FastSerializer">
+    <service name="com.sun.star.xml.sax.FastSerializer"/>
+  </implementation>
+</component>
