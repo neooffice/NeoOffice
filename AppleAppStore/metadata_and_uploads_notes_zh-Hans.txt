@@ -25,11 +25,11 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 
 
 What's New in this Version:
-Before you buy NeoOffice, click on the "Planamesa Inc. Web 网站" link and try NeoOffice for free. This version of NeoOffice adds support for OS X Yosemite's new iCloud Drive feature. We have made significant changes to NeoOffice's native file locking code to safely open, save, or delete files in iCloud Drive, Dropbox, or network drives.
+Before you buy NeoOffice, click on the "Planamesa Inc. Web 网站" link and try NeoOffice for free. This version of NeoOffice includes fixes for the following bugs:
 
-This version of NeoOffice also includes fixes for the following bugs:
-• NeoOffice would randomly crash when checking if a document has been moved or renamed
-• NeoOffice would only display the first image in many .docx, .xlsx, and .pptx documents
+• After saving an .odp document, all bullet characters would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
+• After saving certain .odt documents, some pages would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
+• After opening a document that contains a link to an unreadable or nonexistent .ods document, clicking on the linked .ods document would cause NeoOffice to crash
 
 
 Keywords:
