@@ -29,7 +29,7 @@ Before you buy NeoOffice, click on the "Planamesa Inc. Web 网站" link and try 
 
 • After saving an .odp document, all bullet characters would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
 • After saving certain .odt documents, some pages would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
-• After opening an .ods document that contains a link to an unreadable or nonexistent .ods document, clicking on the link would cause NeoOffice to crash
+• After opening a document that contains a link to an unreadable or nonexistent .ods document, clicking on the linked .ods document would cause NeoOffice to crash
 
 
 Keywords:
