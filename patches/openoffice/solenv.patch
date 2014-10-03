@@ -61,3 +61,12 @@
  }
  
  ($gui		= lc($ENV{GUI})) 		|| die "Can't determine 'GUI'. Please set environment.\n";
+--- inc/rules.mk	2014-10-03 15:39:33.000000000 -0700
++++ inc/rules.mk	2014-10-03 15:49:34.000000000 -0700
+@@ -884,5 +884,5 @@
+ # dirty hack
+ # if local *.sdf file is missing
+ %.sdf:
+-    echo > $@
++	$(TOUCH) $@
+ 
