@@ -26,7 +26,11 @@
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/implbase1.hxx>
+#if SUPD == 310
+#include <com/sun/star/xml/sax/XFastShapeContextHandler2.hpp>
+#else	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
+#endif	// SUPD == 310
 #include "oox/drawingml/graphicshapecontext.hxx"
 #include "oox/drawingml/shape.hxx"
 #include "oox/drawingml/theme.hxx"

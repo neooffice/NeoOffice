@@ -36,5 +36,5 @@ VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
 LOCALIDLFILES=TRUE
-INCLOCAL += -I$(PRJ)$/..$/comphelper/inc -I$(INCCOM)$/csschart -I$(INCCOM)$/csssheet
+INCLOCAL += -I$(PRJ)$/..$/comphelper/inc -I$(PRJ)$/..$/sax$/$(INPATH)$/inc/$/cssxmlsax -I$(INCCOM)$/csschart -I$(INCCOM)$/csssheet
 .ENDIF		# "$(UPD)" == "310"
