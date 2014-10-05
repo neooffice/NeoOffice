@@ -1,4 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef INCLUDED_NUMBERINGMANAGER_HXX
 #define INCLUDED_NUMBERINGMANAGER_HXX
 
@@ -6,7 +27,7 @@
 
 #include <WriterFilterDllApi.hxx>
 #include <dmapper/DomainMapper.hxx>
-#include <resourcemodel/WW8ResourceModel.hxx>
+#include <resourcemodel/LoggedResources.hxx>
 
 #include <com/sun/star/container/XIndexReplace.hpp>
 
@@ -106,6 +127,9 @@ private:
 
     // Only used during the numberings import
     ListLevel::Pointer                         m_pCurrentLevel;
+    
+    // The style name linked to.
+    ::rtl::OUString                      m_sNumStyleLink;
 
 public:
     typedef boost::shared_ptr< AbstractListDef > Pointer;
@@ -130,6 +154,9 @@ public:
     virtual com::sun::star::uno::Sequence< 
         com::sun::star::uno::Sequence< 
             com::sun::star::beans::PropertyValue > > GetPropertyValues( );
+
+    void                  SetNumStyleLink(rtl::OUString sValue) { m_sNumStyleLink = sValue; };
+    ::rtl::OUString       GetNumStyleLink() { return m_sNumStyleLink; };
 };
 
 class ListDef : public AbstractListDef
@@ -171,8 +198,8 @@ public:
 /** This class provides access to the defined numbering styles.
   */
 class ListsManager : 
-    public Properties,
-    public Table
+    public LoggedProperties,
+    public LoggedTable
 {
 private:
 
@@ -191,6 +218,13 @@ private:
 
     AbstractListDef::Pointer    GetAbstractList( sal_Int32 nId );
 
+    // Properties
+    virtual void lcl_attribute( Id nName, Value & rVal );
+    virtual void lcl_sprm(Sprm & sprm);
+
+    // Table
+    virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
+
 public:
 
     ListsManager(
@@ -199,13 +233,6 @@ public:
     virtual ~ListsManager();
     
     typedef boost::shared_ptr< ListsManager >  Pointer;
-
-    // Properties
-    virtual void attribute( Id nName, Value & rVal );
-    virtual void sprm(Sprm & sprm);
-
-    // Table
-    virtual void entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
 
     // Config methods
     void SetLFOImport( bool bLFOImport ) { m_bIsLFOImport = bLFOImport; };
@@ -225,4 +252,3 @@ public:
 
 #endif
 
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

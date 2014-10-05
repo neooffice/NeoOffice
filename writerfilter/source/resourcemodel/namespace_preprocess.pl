@@ -1,3 +1,23 @@
+# *************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+# *************************************************************
 $ARGV0 = shift @ARGV;
 
 print <<EOF;
@@ -30,31 +50,16 @@ EOF
 
 # print the mapping
 open ( NAMESPACES, $ARGV0 ) || die "can't open namespace file: $!";
-$group = 0;
-$i = 1;
 while ( <NAMESPACES> )
 {
     chomp( $_ );
-    $_ =~ s/\s*//g;
-    if ( $_ =~ m/^$/ )
-    {
-        # Start a new group
-        $i = 0;
-        $group++;
-    } 
-    elsif ( $_ =~ m/^[^#]/ )
-    {
-        # Neither an empty line nor a comment
-        $_ =~ /^[a-zA-Z0-9-_]+$/ or die "Invalid namespace token $_";
-        $_ =~ s/-/_/g;
-        $no = $group*10 + $i;
-        print <<EOF;
-      <xsl:when test="\$id = '$_'">
-        <xsl:text>$no</xsl:text>
+    # line format is: numeric-id short-name namespace-URL
+    $_ =~ /^([0-9]+)\s+([a-zA-Z]+)\s+([a-zA-Z0-9-.:\/]+)\s*$/ or die "Error: invalid character in input data";
+    print <<EOF;
+      <xsl:when test="\$id = '$2'">
+        <xsl:text>$1</xsl:text>
       </xsl:when>
 EOF
-        ++$i;
-    }
 }
 
 print <<EOF;

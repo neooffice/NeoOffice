@@ -1,34 +1,34 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #ifndef INCLUDED_OOXML_FAST_CONTEXT_HANDLER_HXX
 #define INCLUDED_OOXML_FAST_CONTEXT_HANDLER_HXX
 
+#if SUPD == 310
+#include <com/sun/star/xml/sax/XFastShapeContextHandler2.hpp>
+#else	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
+#endif	// SUPD == 310
 
 #include <string>
 #include <set>
@@ -63,11 +63,12 @@ public:
     enum ResourceEnum_t { UNKNOWN, STREAM, PROPERTIES, TABLE, SHAPE };
 
     OOXMLFastContextHandler();
-    explicit OOXMLFastContextHandler
-    (uno::Reference< uno::XComponentContext > const & context);
 
-    explicit OOXMLFastContextHandler
-    (OOXMLFastContextHandler * pContext);
+    explicit OOXMLFastContextHandler(
+        uno::Reference< uno::XComponentContext > const & context );
+
+    explicit OOXMLFastContextHandler(
+        OOXMLFastContextHandler * pContext );
 
     virtual ~OOXMLFastContextHandler();
 
@@ -145,9 +146,10 @@ public:
 
     void mark(const Id & rId, OOXMLValue::Pointer_t pVal);
 
-    void resolveFootnote(const sal_Int32 nId);
-    void resolveEndnote(const sal_Int32 nId);
-    void resolveComment(const sal_Int32 nId);
+    void resolveFootnote( const sal_Int32 nIDForXNoteStream );
+    void resolveEndnote( const sal_Int32 nIDForXNoteStream );
+    void resolveComment( const sal_Int32 nIDForXNoteStream );
+
     void resolvePicture(const rtl::OUString & rId);
     void resolveHeader(const sal_Int32 type, 
                                 const rtl::OUString & rId);
@@ -164,9 +166,9 @@ public:
 
     void setDocument(OOXMLDocument * pDocument);
     OOXMLDocument * getDocument();
-    void setXNoteId(OOXMLValue::Pointer_t pValue);
-    void setXNoteId(const sal_Int32 nId);
-    sal_Int32 getXNoteId() const;
+
+    void setIDForXNoteStream(OOXMLValue::Pointer_t pValue);
+
     void setForwardEvents(bool bForwardEvents);
     bool isForwardEvents() const;
     virtual void setParent(OOXMLFastContextHandler * pParent);
@@ -203,11 +205,6 @@ public:
     void handleLastParagraphInSection();
     void endOfParagraph();
     void text(const ::rtl::OUString & sText);
-#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-    void positionOffset(const ::rtl::OUString & sText);
-    void alignH(const ::rtl::OUString & sText);
-    void alignV(const ::rtl::OUString & sText);
-#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     virtual void propagateCharacterProperties();
     virtual void propagateCharacterPropertiesAsSet(const Id & rId);
     virtual void propagateTableProperties();
@@ -235,18 +232,13 @@ public:
     virtual string toString() const;
 #endif
 
-#ifdef DEBUG_MEMORY
-    virtual void SAL_CALL acquire() throw();
-    virtual void SAL_CALL release() throw();
-#endif
-
 protected:
     OOXMLFastContextHandler * mpParent;
     Id mId;
     Id mnDefine;
     Token_t mnToken;
     
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_CONTEXT_HANDLER
     string msTokenString;
 #endif
     
@@ -293,11 +285,6 @@ protected:
 
     sal_uInt32 mnInstanceNumber;
     sal_uInt32 mnRefCount;
-
-#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-    bool inPositionV;
-#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-
 private:
     void operator =(OOXMLFastContextHandler &); // not defined
 
@@ -437,7 +424,7 @@ protected:
     void addCurrentChild();
 };
 
-class OOXMLFastContextHandlerXNote : public OOXMLFastContextHandler
+class OOXMLFastContextHandlerXNote : public OOXMLFastContextHandlerProperties
 {
 public:
     OOXMLFastContextHandlerXNote(OOXMLFastContextHandler * pContext);
@@ -547,7 +534,11 @@ public:
     void sendShape( Token_t Element );
 
 protected:
+#if SUPD == 310
+    typedef uno::Reference<XFastShapeContextHandler2> ShapeContextRef;
+#else	// SUPD == 310
     typedef uno::Reference<XFastShapeContextHandler> ShapeContextRef;
+#endif	// SUPD == 310
     ShapeContextRef mrShapeContext;
 
     virtual void lcl_startFastElement
@@ -652,5 +643,3 @@ private:
 };
 }}
 #endif // INCLUDED_OOXML_FAST_CONTEXT_HANDLER_HXX
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef INCLUDED_STYLESHEETTABLE_HXX
 #define INCLUDED_STYLESHEETTABLE_HXX
 
@@ -35,11 +30,7 @@
 #include <com/sun/star/lang/XComponent.hpp>
 #include <PropertyMap.hxx>
 #include <FontTable.hxx>
-#include <resourcemodel/WW8ResourceModel.hxx>
-
-#ifdef DEBUG_DOMAINMAPPER
-#include <resourcemodel/TagLogger.hxx>
-#endif
+#include <resourcemodel/LoggedResources.hxx>
 
 namespace com{ namespace sun { namespace star { namespace text{
     class XTextDocument;
@@ -77,20 +68,18 @@ public:
     PropertyMapPtr  pProperties;
     ::rtl::OUString sConvertedStyleName;
     
-#ifdef DEBUG_DOMAINMAPPER
-    virtual XMLTag::Pointer_t toTag();
-#endif
-    
     StyleSheetEntry();
     virtual ~StyleSheetEntry();
 };
 
 typedef boost::shared_ptr<StyleSheetEntry> StyleSheetEntryPtr;
+typedef ::std::deque<StyleSheetEntryPtr> StyleSheetEntryDeque;
+typedef boost::shared_ptr<StyleSheetEntryDeque> StyleSheetEntryDequePtr;
 
 class DomainMapper;
 class StyleSheetTable :
-        public Properties,
-        public Table
+        public LoggedProperties,
+        public LoggedTable
 {
     StyleSheetTable_Impl   *m_pImpl;
 
@@ -98,13 +87,6 @@ public:
     StyleSheetTable( DomainMapper& rDMapper,
                         ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument> xTextDocument );
     virtual ~StyleSheetTable();
-
-    // Properties
-    virtual void attribute(Id Name, Value & val);
-    virtual void sprm(Sprm & sprm);
-
-    // Table
-    virtual void entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
 
     void ApplyStyleSheets( FontTablePtr rFontTable );
     const StyleSheetEntryPtr FindStyleSheetByISTD(const ::rtl::OUString& sIndex);
@@ -119,6 +101,13 @@ public:
     ::rtl::OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
 
 private:
+    // Properties
+    virtual void lcl_attribute(Id Name, Value & val);
+    virtual void lcl_sprm(Sprm & sprm);
+
+    // Table
+    virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
+
     void resolveAttributeProperties(Value & val);
     void resolveSprmProps(Sprm & sprm_);
     void applyDefaults(bool bParaProperties); 
@@ -147,22 +136,21 @@ public:
     // Gets all the properties 
     //     + corresponding to the mask,
     //     + from the parent styles
-    PropertyMapPtr GetProperties( sal_Int32 nMask );
+    // 
+    // @param mask      mask describing which properties to return
+    // @param pStack    already processed StyleSheetEntries
+    PropertyMapPtr GetProperties( sal_Int32 nMask, StyleSheetEntryDequePtr pStack = StyleSheetEntryDequePtr());
     
-#ifdef DEBUG_DOMAINMAPPER
-    virtual XMLTag::Pointer_t toTag();
-#endif
-
     TableStyleSheetEntry( StyleSheetEntry& aEntry, StyleSheetTable* pStyles );
     virtual ~TableStyleSheetEntry( );
 
 protected:
-    PropertyMapPtr GetLocalPropertiesFromMask( sal_Int32 nMask );
+    PropertyMapPtr GetLocalPropertiesFromMask( const sal_Int32 nMask );
+    void           MergePropertiesFromMask(const short nBit, const sal_Int32 nMask, 
+                                           const TblStyleType nStyleId, PropertyMapPtr pToFill);
 };
 typedef boost::shared_ptr<TableStyleSheetEntry> TableStyleSheetEntryPtr;
 
 }}
 
 #endif //
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

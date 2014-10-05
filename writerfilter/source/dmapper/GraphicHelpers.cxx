@@ -1,4 +1,24 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
 #include "ConversionHelper.hxx"
 #include "GraphicHelpers.hxx"
 
@@ -9,6 +29,8 @@
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/WrapTextMode.hpp>
 
+#include "dmapperLoggers.hxx"
+
 #include <iostream>
 using namespace std;
 
@@ -17,46 +39,19 @@ namespace dmapper {
 
 using namespace com::sun::star;
 
-#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 PositionHandler::PositionHandler( ) :
-#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-int PositionHandler::savedPositionOffsetV = 0;
-int PositionHandler::savedPositionOffsetH = 0;
-int PositionHandler::savedAlignV = text::VertOrientation::NONE;
-int PositionHandler::savedAlignH = text::HoriOrientation::NONE;
-
-PositionHandler::PositionHandler( bool vertical ) :
-#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-    Properties( )
+LoggedProperties(dmapper_logger, "PositionHandler")
 {
-#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     m_nOrient = text::VertOrientation::NONE;
     m_nRelation = text::RelOrientation::FRAME;
     m_nPosition = 0;
-#else	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-    m_nRelation = text::RelOrientation::FRAME;
-    if( vertical )
-    {
-        m_nPosition = savedPositionOffsetV;
-        m_nOrient = savedAlignV;
-        savedPositionOffsetV = 0;
-        savedAlignV = text::VertOrientation::NONE;
-    }
-    else
-    {
-        m_nPosition = savedPositionOffsetH;
-        m_nOrient = savedAlignH;
-        savedPositionOffsetH = 0;
-        savedAlignH = text::HoriOrientation::NONE;
-    }
-#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
 
 PositionHandler::~PositionHandler( )
 {
 }
 
-void PositionHandler::attribute( Id aName, Value& rVal )
+void PositionHandler::lcl_attribute( Id aName, Value& rVal )
 {
     sal_Int32 nIntValue = rVal.getInt( );
     switch ( aName )
@@ -113,13 +108,16 @@ void PositionHandler::attribute( Id aName, Value& rVal )
                 }
             }
             break;
-        default:;
+        default:
+#ifdef DEBUG_DOMAINMAPPER
+            dmapper_logger->element("unhandled");
+#endif
+            break;
     }
 }
 
-void PositionHandler::sprm( Sprm& rSprm )
+void PositionHandler::lcl_sprm( Sprm& rSprm )
 {
-#ifdef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
     Value::Pointer_t pValue = rSprm.getValue();
     sal_Int32 nIntValue = pValue->getInt();
     
@@ -182,53 +180,16 @@ void PositionHandler::sprm( Sprm& rSprm )
         case NS_ooxml::LN_CT_PosH_posOffset:
         case NS_ooxml::LN_CT_PosV_posOffset:
             m_nPosition = ConversionHelper::convertEMUToMM100( nIntValue );
-        default:;
+        default:
+#ifdef DEBUG_DOMAINMAPPER
+            dmapper_logger->element("unhandled");
+#endif
+            break;
     }
-#endif	// NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 }
-
-#ifndef NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
-
-void PositionHandler::setPositionOffset(const ::rtl::OUString & sText, bool vertical)
-{
-    if( vertical )
-        savedPositionOffsetV = ConversionHelper::convertEMUToMM100( sText.toInt32());
-    else
-        savedPositionOffsetH = ConversionHelper::convertEMUToMM100( sText.toInt32());
-}
-
-void PositionHandler::setAlignH(const ::rtl::OUString & sText)
-{
-    if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "left" ) ) )
-        savedAlignH = text::HoriOrientation::LEFT;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "right" ) ) )
-        savedAlignH = text::HoriOrientation::RIGHT;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "center" ) ) )
-        savedAlignH = text::HoriOrientation::CENTER;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "inside" ) ) )
-        savedAlignH = text::HoriOrientation::INSIDE;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "outside" ) ) )
-        savedAlignH = text::HoriOrientation::OUTSIDE;
-}
-
-void PositionHandler::setAlignV(const ::rtl::OUString & sText)
-{
-    if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "top" ) ) )
-        savedAlignV = text::VertOrientation::TOP;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "bottom" ) ) )
-        savedAlignV = text::VertOrientation::BOTTOM;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "center" ) ) )
-        savedAlignV = text::VertOrientation::CENTER;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "inside" ) ) )
-        savedAlignV = text::VertOrientation::NONE;
-    else if( sText == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "outside" ) ) )
-        savedAlignV = text::VertOrientation::NONE;
-}
-
-#endif	// !NO_LIBO_4_1_GRAPHICS_POSITION_FIXES
 
 WrapHandler::WrapHandler( ) :
-    Properties( ),
+LoggedProperties(dmapper_logger, "WrapHandler"),
     m_nType( 0 ),
     m_nSide( 0 )
 {
@@ -238,7 +199,7 @@ WrapHandler::~WrapHandler( )
 {
 }
 
-void WrapHandler::attribute( Id aName, Value& rVal )
+void WrapHandler::lcl_attribute( Id aName, Value& rVal )
 {
     switch ( aName )
     {
@@ -252,7 +213,7 @@ void WrapHandler::attribute( Id aName, Value& rVal )
     }
 }
 
-void WrapHandler::sprm( Sprm& )
+void WrapHandler::lcl_sprm( Sprm& )
 {
 }
 
@@ -291,5 +252,3 @@ sal_Int32 WrapHandler::getWrapMode( )
 }
 
 } }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

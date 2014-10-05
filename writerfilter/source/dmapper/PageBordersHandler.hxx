@@ -1,4 +1,24 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
 #ifndef INCLUDED_PAGEBORDERSHANDLER_HXX
 #define INCLUDED_PAGEBORDERSHANDLER_HXX
 
@@ -6,15 +26,10 @@
 #include "PropertyMap.hxx"
 
 #include <WriterFilterDllApi.hxx>
-#include <resourcemodel/WW8ResourceModel.hxx>
+#include <resourcemodel/LoggedResources.hxx>
 #include <boost/shared_ptr.hpp>
 
-#if SUPD == 310
 #include <com/sun/star/table/BorderLine.hpp>
-#define BorderLine2 BorderLine
-#else	 // SUPD == 310
-#include <com/sun/star/table/BorderLine2.hpp>
-#endif	// 
 
 #include <vector>
 
@@ -25,7 +40,7 @@ namespace dmapper {
 class _PgBorder
 {
 public:
-    com::sun::star::table::BorderLine2 m_rLine;
+    com::sun::star::table::BorderLine m_rLine;
     sal_Int32   m_nDistance;
     BorderPosition m_ePos;
 
@@ -33,7 +48,7 @@ public:
     ~_PgBorder( );
 };
 
-class WRITERFILTER_DLLPRIVATE PageBordersHandler : public Properties
+class WRITERFILTER_DLLPRIVATE PageBordersHandler : public LoggedProperties
 {
 private:
 
@@ -42,13 +57,13 @@ private:
     sal_Int32 m_nOffset;
     vector<_PgBorder> m_aBorders;
 
+    // Properties
+    virtual void lcl_attribute( Id eName, Value& rVal );
+    virtual void lcl_sprm( Sprm& rSprm );
+
 public:
     PageBordersHandler( );
     ~PageBordersHandler( );
-
-    // Properties
-    virtual void attribute( Id eName, Value& rVal );
-    virtual void sprm( Sprm& rSprm );
 
     inline sal_Int32 GetDisplayOffset( ) 
     { 
@@ -61,5 +76,3 @@ typedef boost::shared_ptr< PageBordersHandler > PageBordersHandlerPtr;
 } }
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef INCLUDED_DMAPPER_DOMAINMAPPER_IMPL_HXX
 #define INCLUDED_DMAPPER_DOMAINMAPPER_IMPL_HXX
 
@@ -56,6 +51,7 @@
 #include <FFDataHandler.hxx>
 #include <FormControlHelper.hxx>
 #include <map>
+#include <hash_map>
 
 #include <string.h>
 
@@ -178,8 +174,10 @@ struct TextAppendContext
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextAppend >       xTextAppend;
     ParagraphPropertiesPtr                                                        pLastParagraphProperties;
 
-    TextAppendContext( const ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextAppend >& xAppend ) :
-        xTextAppend( xAppend ){}
+    TextAppendContext( const ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextAppend >& xAppend )
+        : xTextAppend( xAppend )
+    {
+    }
 };
 
 typedef boost::shared_ptr<FieldContext>  FieldContextPtr;
@@ -216,11 +214,16 @@ class FIB
 struct DeletableTabStop : public ::com::sun::star::style::TabStop
 {
     bool bDeleted;
-    DeletableTabStop() :
-        bDeleted( false ){}
-    DeletableTabStop( const ::com::sun::star::style::TabStop& rTabStop ) :
-        TabStop( rTabStop ),
-            bDeleted( false ){}
+
+    DeletableTabStop()
+        : TabStop()
+        , bDeleted( false )
+    {}
+
+    DeletableTabStop( const ::com::sun::star::style::TabStop& rTabStop )
+        : TabStop( rTabStop )
+        , bDeleted( false )
+    {}
 };
 /*-- 12.06.2007 07:15:31---------------------------------------------------
     /// helper to remember bookmark start position
@@ -230,12 +233,28 @@ struct BookmarkInsertPosition
     bool                                                                    m_bIsStartOfText;
     ::rtl::OUString                                                         m_sBookmarkName;
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  m_xTextRange;
-    BookmarkInsertPosition(bool bIsStartOfText, const ::rtl::OUString& rName, ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  xTextRange):
-        m_bIsStartOfText( bIsStartOfText ),
-        m_sBookmarkName( rName ),
-        m_xTextRange( xTextRange )
+
+    BookmarkInsertPosition(
+        bool bIsStartOfText,
+        const ::rtl::OUString& rName,
+        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  xTextRange )
+        : m_bIsStartOfText( bIsStartOfText )
+        , m_sBookmarkName( rName )
+        , m_xTextRange( xTextRange )
      {}
 };
+
+/// Stores the start/end positions of an annotation before its insertion.
+struct AnnotationPosition
+{
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  m_xStart;
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  m_xEnd;
+};
+#if SUPD == 310
+typedef std::map< sal_Int32, AnnotationPosition > AnnotationPositions_t;
+#else	// SUPD == 310
+typedef std::unordered_map< sal_Int32, AnnotationPosition > AnnotationPositions_t;
+#endif	// SUPD == 310
 
 struct RedlineParams
 {
@@ -274,7 +293,7 @@ class DomainMapper_Impl
 public:
     typedef TableManager< ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >, PropertyMapPtr > TableManager_t;
     typedef TableDataHandler< ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >, TablePropertyMapPtr > TableDataHandler_t;
-    typedef std::map < ::rtl::OUString, BookmarkInsertPosition > BookmarkMap_t;
+    typedef std::map < sal_Int32, BookmarkInsertPosition > BookmarkMap_t;
 
 private:
     SourceDocumentType                                                              m_eDocumentType;
@@ -347,9 +366,12 @@ private:
 
     bool                            m_bParaChanged;
     bool                            m_bIsLastParaInSection;
+    bool                            m_bIsInComments;
 
     //annotation import
-    uno::Reference< beans::XPropertySet >                                      m_xAnnotationField;
+    uno::Reference< beans::XPropertySet > m_xAnnotationField;
+    sal_Int32 m_nAnnotationId;
+    AnnotationPositions_t m_aAnnotationPositions;
 
     void                            GetCurrentLocale(::com::sun::star::lang::Locale& rLocale);
     void                            SetNumberFormat( const ::rtl::OUString& rCommand,
@@ -536,7 +558,13 @@ public:
     //the end of field is reached (0x15 appeared) - the command might still be open
     void PopFieldContext();
 
-    void AddBookmark( const ::rtl::OUString& rBookmarkName, const ::rtl::OUString& rId );
+    void AddBookmark(
+        const ::rtl::OUString& rBookmarkName,
+        const sal_Int32 nId );
+
+    void AddAnnotationPosition(
+        const bool bStart,
+        const sal_Int32 nAnnotationId );
 
     DomainMapperTableManager& getTableManager()
     {
@@ -544,7 +572,7 @@ public:
         return *pMngr.get( );
     }
 
-    void appendTableManager( )
+    void appendTableManager()
     {
         boost::shared_ptr< DomainMapperTableManager > pMngr(
                 new DomainMapperTableManager( m_eDocumentType == DOCUMENT_OOXML ) );
@@ -577,6 +605,8 @@ public:
     void SetCustomFtnMark(bool bSet) { m_bIsCustomFtnMark = bSet; }
     bool IsCustomFtnMark() const { return m_bIsCustomFtnMark;  }
 
+    bool IsInComments() const { return m_bIsInComments; };
+
     void RegisterFrameConversion(
         ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xFrameStartRange,
         ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xFrameEndRange,
@@ -587,7 +617,7 @@ public:
     void AddNewRedline( );
 
     RedlineParamsPtr GetTopRedline( );
-    
+
     sal_Int32 GetCurrentRedlineToken( ); 
     void SetCurrentRedlineAuthor( rtl::OUString sAuthor );
     void SetCurrentRedlineDate( rtl::OUString sDate );
@@ -595,12 +625,11 @@ public:
     void SetCurrentRedlineToken( sal_Int32 nToken );
     void RemoveCurrentRedline( );
     void ResetParaRedline( );
-    
+    void SetCurrentRedlineInitials( rtl::OUString sInitials );
+
     void ApplySettingsTable();
     SectionPropertyMap * GetSectionContext();
 };
 } //namespace dmapper
 } //namespace writerfilter
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

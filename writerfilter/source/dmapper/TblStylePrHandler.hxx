@@ -1,4 +1,24 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
 #ifndef INCLUDED_TBLSTYLEPRHANDLER_HXX
 #define INCLUDED_TBLSTYLEPRHANDLER_HXX
 
@@ -6,7 +26,7 @@
 
 #include <dmapper/DomainMapper.hxx>
 #include <WriterFilterDllApi.hxx>
-#include <resourcemodel/WW8ResourceModel.hxx>
+#include <resourcemodel/LoggedResources.hxx>
 #include <boost/shared_ptr.hpp>
 
 namespace writerfilter {
@@ -33,7 +53,7 @@ enum TblStyleType
     TBL_STYLE_SWCELL
 };
 
-class WRITERFILTER_DLLPRIVATE TblStylePrHandler : public Properties
+class WRITERFILTER_DLLPRIVATE TblStylePrHandler : public LoggedProperties
 {
 private:
     DomainMapper &              m_rDMapper;
@@ -41,14 +61,14 @@ private:
 
     TblStyleType                m_nType;
     PropertyMapPtr              m_pProperties;
+    
+    // Properties
+    virtual void lcl_attribute(Id Name, Value & val);
+    virtual void lcl_sprm(Sprm & sprm);
 
 public:
     TblStylePrHandler( DomainMapper & rDMapper );
     virtual ~TblStylePrHandler( );
-    
-    // Properties
-    virtual void attribute(Id Name, Value & val);
-    virtual void sprm(Sprm & sprm);
     
     inline PropertyMapPtr       getProperties() { return m_pProperties; };
     inline TblStyleType         getType() { return m_nType; };
@@ -63,5 +83,3 @@ typedef boost::shared_ptr< TblStylePrHandler > TblStylePrHandlerPtr;
 }}
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

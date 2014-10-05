@@ -1,30 +1,23 @@
-#************************************************************************
-#
-# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-# 
-# Copyright 2000, 2010 Oracle and/or its affiliates.
-#
-# OpenOffice.org - a multi-platform office productivity suite
-#
-# This file is part of OpenOffice.org.
-#
-# OpenOffice.org is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# OpenOffice.org is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenOffice.org.  If not, see
-# <http://www.openoffice.org/license.html>
-# for a copy of the LGPLv3 License.
-#
-# ***********************************************************************/
-
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#**************************************************************
 PRJ=..$/..
 PRJNAME=writerfilter
 TARGET=resourcemodel
@@ -41,22 +34,35 @@ ENABLE_EXCEPTIONS=TRUE
 #CFLAGS+=-wd4710 -wd4711 -wd4514 -wd4619 -wd4217 -wd4820
 CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 
+.IF "$(UPD)" == "310"
+INCLOCAL += -I$(PRJ)$/..$/sal/inc
+.ENDIF		# "$(UPD)" == "310"
+
 
 # --- Files --------------------------------------------------------
 
 # work around gcc taking hours and/or OOM'ing on this file
 NOOPTFILES= \
-    $(SLO)$/qnametostr.obj
+	$(SLO)$/qnametostr.obj
 
 SLOFILES= \
-    $(SLO)$/qnametostr.obj \
-    $(SLO)$/sprmcodetostr.obj \
-    $(SLO)$/resourcemodel.obj \
-    $(SLO)$/util.obj \
-    $(SLO)$/TagLogger.obj \
-    $(SLO)$/ResourceModelHelper.obj \
-    $(SLO)$/WW8Analyzer.obj \
-    $(SLO)$/Protocol.obj
+	$(SLO)$/Fraction.obj \
+	$(SLO)$/LoggedResources.obj \
+	$(SLO)$/Protocol.obj \
+	$(SLO)$/ResourceModelHelper.obj \
+	$(SLO)$/TagLogger.obj \
+	$(SLO)$/WW8Analyzer.obj \
+	$(SLO)$/XPathLogger.obj \
+	$(SLO)$/qnametostr.obj \
+	$(SLO)$/resourcemodel.obj \
+	$(SLO)$/sprmcodetostr.obj \
+	$(SLO)$/util.obj \
+
+# FreeBSD/Linux 64-bit: compiler (gcc 4.2.x) fails with 'out of memory'
+.IF "$(OUTPATH)"=="unxfbsdx" || "$(OUTPATH)"=="unxfbsdi" || "$(OUTPATH)"=="unxlngx6"
+NOOPTFILES= \
+	$(SLO)$/qnametostr.obj
+.ENDIF
 
 SHL1TARGET=$(TARGET)
 
@@ -71,8 +77,8 @@ OOXMLLIB=$(LB)$/iooxml.lib
 .ENDIF
 
 SHL1STDLIBS=$(SALLIB)\
-    $(CPPULIB)\
-    $(CPPUHELPERLIB) \
+	$(CPPULIB)\
+	$(CPPUHELPERLIB) \
     $(COMPHELPERLIB)
 
 SHL1IMPLIB=i$(SHL1TARGET)
@@ -124,35 +130,39 @@ SPRMIDSHXX=$(DOCTOKHXXOUTDIR)$/sprmids.hxx
 OOXMLRESOURCEIDSHXX=$(OOXMLHXXOUTDIR)$/resourceids.hxx
 
 NSXSL=$(MISC)$/namespacesmap.xsl
-NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/namespaces.txt
+.IF "$(UPD)" == "310"
+NAMESPACESTXT=$(PRJ)$/..$/oox$/$(INPATH)$/misc/namespaces.txt
+.ELSE		# "$(UPD)" == "310"
+NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/namespaces.txt
+.ENDIF		# "$(UPD)" == "310"
 
 GENERATEDHEADERS=$(DOCTOKRESOURCEIDSHXX) $(OOXMLRESOURCEIDSHXX) $(SPRMIDSHXX)
 GENERATEDFILES= \
-    $(GENERATEDHEADERS) \
-    $(QNAMETOSTRCXX) \
-    $(SPRMCODETOSTRCXX) \
-    $(MODELPROCESSED) \
-    $(OOXMLQNAMETOSTRTMP) \
-    $(DOCTOKQNAMETOSTRTMP) \
-    $(SPRMCODETOSTRTMP)
+	$(GENERATEDHEADERS) \
+	$(QNAMETOSTRCXX) \
+	$(SPRMCODETOSTRCXX) \
+	$(MODELPROCESSED) \
+	$(OOXMLQNAMETOSTRTMP) \
+	$(DOCTOKQNAMETOSTRTMP) \
+	$(SPRMCODETOSTRTMP)
 
 $(OOXMLQNAMETOSTRTMP): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
+	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
 
 $(DOCTOKQNAMETOSTRTMP): $(DOCTOKQNAMETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-    $(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
+	$(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 $(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrheader qnametostrfooter $(OOXMLFACTORYTOOLSXSL) $(DOCTOKRESOURCETOOLS)
-    @$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
+	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
 
 $(SPRMCODETOSTRTMP): $(DOCTOKSPRMCODETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-    $(XSLTPROC) $(DOCTOKSPRMCODETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
+	$(XSLTPROC) $(DOCTOKSPRMCODETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 $(SPRMCODETOSTRCXX): sprmcodetostrheader $(SPRMCODETOSTRTMP) sprmcodetostrfooter
-    @$(TYPE) $< > $@
+	@$(TYPE) $< > $@
 
 $(SLO)$/sprmcodetostr.obj: $(SPRMCODETOSTRCXX)
 $(SLO)$/qnametostr.obj: $(QNAMETOSTRCXX)
@@ -160,39 +170,39 @@ $(SLO)$/qnametostr.obj: $(QNAMETOSTRCXX)
 $(SLOFILES): $(GENERATEDHEADERS)
 
 $(DOCTOKHXXOUTDIRCREATED):
-    @$(MKDIRHIER) $(DOCTOKHXXOUTDIR)
-    @$(TOUCH) $@
+	@$(MKDIRHIER) $(DOCTOKHXXOUTDIR)
+	@$(TOUCH) $@
 
 $(DOCTOKRESOURCEIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKRESOURCETOOLS) $(DOCTOKRESOURCEIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKRESOURCEIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKRESOURCEIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 $(OOXMLHXXOUTDIRCREATED):
-    @$(MKDIRHIER) $(OOXMLHXXOUTDIR)
-    @$(TOUCH) $@
+	@$(MKDIRHIER) $(OOXMLHXXOUTDIR)
+	@$(TOUCH) $@
 
 $(OOXMLPREPROCESSXSLCOPIED): $(OOXMLPREPROCESSXSL)
-    @$(COPY) $(OOXMLPREPROCESSXSL) $@
+	@$(COPY) $(OOXMLPREPROCESSXSL) $@
 
 $(NSXSL) : $(OOXMLMODEL) $(NAMESPACESTXT) $(NSPROCESS)
-    @$(PERL) $(NSPROCESS) $(NAMESPACESTXT) > $@
+	@$(PERL) $(NSPROCESS) $(NAMESPACESTXT) > $@
 
 $(MODELPROCESSED): $(NSXSL) $(OOXMLPREPROCESSXSLCOPIED) $(OOXMLMODEL)
-    @echo "Making:   " $(@:f)
-    $(COMMAND_ECHO)$(XSLTPROC) $(NSXSL) $(OOXMLMODEL) > $@
+	@echo "Making:   " $(@:f)
+	$(COMMAND_ECHO)$(XSLTPROC) $(NSXSL) $(OOXMLMODEL) > $@
 
 $(OOXMLRESOURCEIDSHXX): $(OOXMLHXXOUTDIRCREATED) $(OOXMLFACTORYTOOLSXSL) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL:s!\!/!) $(MODELPROCESSED) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL:s!\!/!) $(MODELPROCESSED) > $@
 
 $(SPRMIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKSPRMIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-    $(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKSPRMIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
+	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKSPRMIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 .PHONY: genclean genmake gendirs
 
 genclean: 
-    rm -f $(GENERATEDFILES)
+	rm -f $(GENERATEDFILES)
 
 genmake: $(GENERATEDFILES)
 

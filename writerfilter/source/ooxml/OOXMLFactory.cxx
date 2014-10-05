@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #include <stdio.h>
 
@@ -132,8 +127,8 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
     
     if (pFactory.get() != NULL)
     {
-#ifdef DEBUG_ATTRIBUTES
-        debug_logger->startElement("attributes");
+#ifdef DEBUG_FACTORY
+        debug_logger->startElement("factory.attributes");
         debug_logger->attribute("define", pFactory->getDefineName(nDefine));
         char sBuffer[256];
         snprintf(sBuffer, sizeof(sBuffer), "%08" SAL_PRIxUINT32, nDefine);
@@ -149,8 +144,8 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
         for (aIt = pMap->begin(); aIt != aEndIt; aIt++)
         {
             Id nId = (*pTokenToIdMap)[aIt->first];
-#ifdef DEBUG_ATTRIBUTES
-            debug_logger->startElement("attribute");
+#ifdef DEBUG_FACTORY
+            debug_logger->startElement("factory.attribute");
             debug_logger->attribute("name", fastTokenToId(aIt->first));
             debug_logger->attribute("tokenid", (*QNameToString::Instance())(nId));
             snprintf(sBuffer, sizeof(sBuffer), "%08" SAL_PRIxUINT32, nId);
@@ -162,7 +157,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                 {
                 case RT_Boolean:
                     {
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->element("boolean");
 #endif
                         ::rtl::OUString aValue(Attribs->getValue(aIt->first));
@@ -174,7 +169,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                     break;
                 case RT_String:
                     {
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->element("string");
 #endif
                         ::rtl::OUString aValue(Attribs->getValue(aIt->first));
@@ -187,7 +182,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                     break;
                 case RT_Integer:
                     {
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->element("integer");
 #endif
                         ::rtl::OUString aValue(Attribs->getValue(aIt->first));
@@ -200,7 +195,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                     break;
                 case RT_Hex:
                     {
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->element("hex");
 #endif
                         ::rtl::OUString aValue(Attribs->getValue(aIt->first));
@@ -213,7 +208,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                     break;
                 case RT_List:
                     {
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->startElement("list");
 #endif
                         ListValueMapPointer pListValueMap = 
@@ -224,7 +219,7 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                             ::rtl::OUString aValue(Attribs->getValue(aIt->first));
                             sal_uInt32 nValue = (*pListValueMap)[aValue];
 
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                             debug_logger->attribute("value", aValue);
                             debug_logger->attribute("value-num", nValue);
 #endif
@@ -235,25 +230,25 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
                             OOXMLValue::Pointer_t pValue(new OOXMLIntegerValue(nValue));
                             pFactory->attributeAction(pHandler, aIt->first, pValue);
                         }
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                         debug_logger->endElement("list");
 #endif
                     }
                     break;
                 default:
-#ifdef DEBUG_ATTRIBUTES
+#ifdef DEBUG_FACTORY
                     debug_logger->element("unknown-attribute-type");
 #endif 
                     break;
                 }
             }
-#ifdef DEBUG_ATTRIBUTES
-            debug_logger->endElement("attribute");
+#ifdef DEBUG_FACTORY
+            debug_logger->endElement("factory.attribute");
 #endif
         }
 
-#ifdef DEBUG_ATTRIBUTES
-        debug_logger->endElement("attributes");
+#ifdef DEBUG_FACTORY
+        debug_logger->endElement("factory.attributes");
 #endif
     }
 }
@@ -262,6 +257,11 @@ uno::Reference< xml::sax::XFastContextHandler>
 OOXMLFactory::createFastChildContext(OOXMLFastContextHandler * pHandler,
                                      Token_t Element)
 {
+#ifdef DEBUG_FACTORY
+    debug_logger->startElement("factory.createFastChildContext");
+    debug_logger->attribute("token", fastTokenToId(Element));
+#endif
+
     Id nDefine = pHandler->getDefine();
     
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
@@ -272,12 +272,21 @@ OOXMLFactory::createFastChildContext(OOXMLFastContextHandler * pHandler,
     if ((Element & 0xffff) < OOXML_FAST_TOKENS_END)
         ret = createFastChildContextFromFactory(pHandler, pFactory, Element);
 
+#ifdef DEBUG_FACTORY
+    debug_logger->endElement("factory.createFastChildContext");
+#endif
+
     return ret;
 }
 
 void OOXMLFactory::characters(OOXMLFastContextHandler * pHandler,
                               const ::rtl::OUString & rString)
 {
+#ifdef DEBUG_FACTORY
+    debug_logger->startElement("factory.characters");
+    debug_logger->chars(rString);
+#endif
+
     Id nDefine = pHandler->getDefine();
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
     
@@ -285,6 +294,10 @@ void OOXMLFactory::characters(OOXMLFastContextHandler * pHandler,
     {
         pFactory->charactersAction(pHandler, rString);
     }
+
+#ifdef DEBUG_FACTORY
+    debug_logger->endElement("factory.characters");
+#endif
 }
 
 void OOXMLFactory::startAction(OOXMLFastContextHandler * pHandler, Token_t /*nToken*/)
@@ -295,11 +308,11 @@ void OOXMLFactory::startAction(OOXMLFastContextHandler * pHandler, Token_t /*nTo
     if (pFactory.get() != NULL)
     {
 #ifdef DEBUG_ELEMENT
-        debug_logger->startElement("factory-startAction");
+        debug_logger->startElement("factory.startAction");
 #endif
         pFactory->startAction(pHandler);
 #ifdef DEBUG_ELEMENT
-        debug_logger->endElement("factory-startAction");
+        debug_logger->endElement("factory.startAction");
 #endif
     }
 }
@@ -312,11 +325,11 @@ void OOXMLFactory::endAction(OOXMLFastContextHandler * pHandler, Token_t /*nToke
     if (pFactory.get() != NULL)
     {
 #ifdef DEBUG_ELEMENT
-        debug_logger->startElement("factory-endAction");
+        debug_logger->startElement("factory.endAction");
 #endif
         pFactory->endAction(pHandler);
 #ifdef DEBUG_ELEMENT
-        debug_logger->endElement("factory-endAction");
+        debug_logger->endElement("factory.endAction");
 #endif
     }
 }
@@ -337,7 +350,13 @@ void OOXMLFactory_ns::attributeAction(OOXMLFastContextHandler *, Token_t, OOXMLV
 {
 }
 
+#ifdef DEBUG_FACTORY
+string OOXMLFactory_ns::getName() const
+{
+    return "noname";
+}
+#endif
+
 }
 }
 
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

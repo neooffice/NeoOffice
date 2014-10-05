@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef INCLUDED_FAST_HELPER_HXX
 #define INCLUDED_FAST_HELPER_HXX
 
@@ -75,6 +70,12 @@ uno::Reference<XFastContextHandler>
 OOXMLFastHelper<T>::createAndSetParent
 (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId)
 {
+#ifdef DEBUG_HELPER
+    debug_logger->startElement("helper.createAndSetParent");
+    debug_logger->attribute("context", pHandler->getType());
+    debug_logger->attribute("id", (*QNameToString::Instance())(nId));
+#endif
+
     OOXMLFastContextHandler * pTmp = new T(pHandler);
 
     pTmp->setToken(nToken);
@@ -89,7 +90,7 @@ OOXMLFastHelper<T>::createAndSetParent
     debug_logger->startElement("created");
     debug_logger->addTag(pTmp->toTag());
     debug_logger->endElement("created");
-    debug_logger->endElement("createAndSetParent");
+    debug_logger->endElement("helper.createAndSetParent");
 #endif
 
     uno::Reference<XFastContextHandler> aResult(pTmp);
@@ -102,27 +103,29 @@ uno::Reference<XFastContextHandler>
 OOXMLFastHelper<T>::createAndSetParentAndDefine
 (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId, Id nDefine)
 {
-    OOXMLFastContextHandler * pTmp = new T(pHandler);
-    
-    pTmp->setToken(nToken);
-    pTmp->setId(nId);
-    pTmp->setDefine(nDefine);
-    
-#ifdef DEBUG_CREATE
-    debug_logger->startElement("createAndSetParentAndDefine");
+#ifdef DEBUG_HELPER
+    debug_logger->startElement("helper.createAndSetParentAndDefine");
     debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("token", fastTokenToId(pTmp->getToken()));
     debug_logger->attribute("id", (*QNameToString::Instance())(nId));
     
     static char buffer[16];
     snprintf(buffer, sizeof(buffer), "0x%08" SAL_PRIxUINT32, nId);
      
     debug_logger->attribute("idnum", buffer);
+#endif
     
+    OOXMLFastContextHandler * pTmp = new T(pHandler);
+    
+    pTmp->setToken(nToken);
+    pTmp->setId(nId);
+    pTmp->setDefine(nDefine);
+    
+    
+#ifdef DEBUG_HELPER
     debug_logger->startElement("created");
     debug_logger->addTag(pTmp->toTag());
     debug_logger->endElement("created");
-    debug_logger->endElement("createAndSetParentAndDefine");
+    debug_logger->endElement("helper.createAndSetParentAndDefine");
 #endif
 
     uno::Reference<XFastContextHandler> aResult(pTmp);
@@ -136,6 +139,12 @@ OOXMLFastHelper<T>::createAndSetParentRef
 (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken,
  const uno::Reference < xml::sax::XFastAttributeList > & Attribs)
 {
+#ifdef DEBUG_HELPER
+    debug_logger->startElement("helper.createAndSetParentRef");
+    debug_logger->attribute("context", pHandler->getType());
+    debug_logger->attribute("type", fastTokenToId(nToken));
+#endif
+
     boost::shared_ptr<OOXMLFastContextHandler> pTmp(new T(pHandler));
 
     uno::Reference<XFastContextHandler> xChild = 
@@ -150,15 +159,11 @@ OOXMLFastHelper<T>::createAndSetParentRef
     }
 
 
-#ifdef DEBUG_CREATE
-    debug_logger->startElement("createAndSetParentRef");
-    debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("type", fastTokenToId(nToken));
-    
+#ifdef DEBUG_HELPER
     debug_logger->startElement("created");
-    debug_logger->chars(pTmp->getType());
+    debug_logger->addTag(pTmp->toTag());
     debug_logger->endElement("created");
-    debug_logger->endElement("createAndSetParentRef");
+    debug_logger->endElement("helper.createAndSetParentRef");
 #endif
 
     return xChild;
@@ -171,7 +176,7 @@ void OOXMLFastHelper<T>::newProperty(OOXMLFastContextHandler * pHandler,
 {
     OOXMLValue::Pointer_t pVal(new T(rValue));
 
-#ifdef DEBUG_PROPERTIES
+#ifdef DEBUG_HELPER
     string aStr = (*QNameToString::Instance())(nId); 
 
     debug_logger->startElement("newProperty-from-string");
@@ -183,11 +188,14 @@ void OOXMLFastHelper<T>::newProperty(OOXMLFastContextHandler * pHandler,
 
     if (aStr.size() == 0)
         debug_logger->addTag(XMLTag::Pointer_t(new XMLTag("unknown-qname")));
+#endif
     
+    pHandler->newProperty(nId, pVal);
+
+#ifdef DEBUG_HELPER
     debug_logger->endElement("newProperty-from-string");
 #endif
 
-    pHandler->newProperty(nId, pVal);
 }
 
 template <class T>
@@ -197,17 +205,17 @@ void OOXMLFastHelper<T>::newProperty(OOXMLFastContextHandler * pHandler,
 {
     OOXMLValue::Pointer_t pVal(new T(nVal));
 
-#ifdef DEBUG_PROPERTIES
+#ifdef DEBUG_HELPER
     string aStr = (*QNameToString::Instance())(nId); 
 
-    debug_logger->startElement("newProperty-from-int");
+    debug_logger->startElement("helper.newProperty-from-int");
     debug_logger->attribute("name", aStr);
     debug_logger->attribute("value", pVal->toString());
     
     if (aStr.size() == 0)
         debug_logger->addTag(XMLTag::Pointer_t(new XMLTag("unknown-qname")));
     
-    debug_logger->endElement("newProperty-from-int");
+    debug_logger->endElement("helper.newProperty-from-int");
 #endif
 
     pHandler->newProperty(nId, pVal);
@@ -222,8 +230,8 @@ void OOXMLFastHelper<T>::mark(OOXMLFastContextHandler * pHandler,
 
     string aStr = (*QNameToString::Instance())(nId); 
 
-#ifdef DEBUG_PROPERTIES
-    debug_logger->startElement("mark");
+#ifdef DEBUG_HELPER
+    debug_logger->startElement("helper.mark");
     debug_logger->attribute("name", aStr);
     debug_logger->attribute
     ("value",
@@ -233,24 +241,10 @@ void OOXMLFastHelper<T>::mark(OOXMLFastContextHandler * pHandler,
     if (aStr.size() == 0)
         debug_logger->addTag(XMLTag::Pointer_t(new XMLTag("unknown-qname")));
 
-    debug_logger->endElement("mark");
+    debug_logger->endElement("helper.mark");
 #endif
 
     pHandler->mark(nId, pVal);
 }
-
-template <class T>
-void OOXMLFastHelper<T>::attributes
-(OOXMLFastContextHandler * pContext,
- const uno::Reference < xml::sax::XFastAttributeList > & Attribs)
-    {
-    T aContext(pContext);
-
-    aContext.setPropertySet(pContext->getPropertySet());
-    aContext.attributes(Attribs);
-}
-
 }}
 #endif // INCLUDED_FAST_HELPER_HXX
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

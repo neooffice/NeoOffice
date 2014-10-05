@@ -1,39 +1,34 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #include <ThemeTable.hxx>
 #ifndef INCLUDED_RESOURCESIDS
 #include <doctok/resourceids.hxx>
 #include <ooxml/resourceids.hxx>
 #endif
-#include <stdio.h>
-#ifdef DEBUG_DOMAINMAPPER
 #include "dmapperLoggers.hxx"
+
+#ifdef DEBUG_DOMAINMAPPER
 #include <resourcemodel/QNameToString.hxx>
 #endif
 
@@ -51,8 +46,10 @@ struct ThemeTable_Impl
     std::map<sal_uInt32, ::rtl::OUString> m_currentFontThemeEntry;
 };
 
-ThemeTable::ThemeTable() :
-    m_pImpl( new ThemeTable_Impl )
+ThemeTable::ThemeTable()
+: LoggedProperties(dmapper_logger, "ThemeTable")
+, LoggedTable(dmapper_logger, "ThemeTable")
+, m_pImpl( new ThemeTable_Impl )
 {
     // printf("ThemeTable::ThemeTable()\n");
 }
@@ -62,7 +59,7 @@ ThemeTable::~ThemeTable()
     delete m_pImpl;
 }
 
-void ThemeTable::attribute(Id Name, Value & val)
+void ThemeTable::lcl_attribute(Id Name, Value & val)
 {
 #ifdef DEBUG_DOMAINMAPPER
     dmapper_logger->startElement("ThemeTable.attribute");
@@ -76,10 +73,10 @@ void ThemeTable::attribute(Id Name, Value & val)
     switch(Name)
     {
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
-        case NS_ooxml::LN_CT_TextFont_typeface:
-         if (sValue.getLength())
-             m_pImpl->m_currentFontThemeEntry[m_pImpl->m_currentThemeFontId] = sValue;
-         break;
+    	case NS_ooxml::LN_CT_TextFont_typeface:
+	     if (sValue.getLength())
+	         m_pImpl->m_currentFontThemeEntry[m_pImpl->m_currentThemeFontId] = sValue;
+	     break;
         default:
         {
 #ifdef DEBUG_DOMAINMAPPER
@@ -92,7 +89,7 @@ void ThemeTable::attribute(Id Name, Value & val)
 #endif
 }
 
-void ThemeTable::sprm(Sprm& rSprm)
+void ThemeTable::lcl_sprm(Sprm& rSprm)
 {
 #ifdef DEBUG_DOMAINMAPPER
     dmapper_logger->startElement("ThemeTable.sprm");
@@ -115,23 +112,23 @@ void ThemeTable::sprm(Sprm& rSprm)
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
     case NS_ooxml::LN_CT_BaseStyles_fontScheme:
         {
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+    	    writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             if( pProperties.get())
                 pProperties->resolve(*this);
-    }
-    break;
+	}
+	break;
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
     case NS_ooxml::LN_CT_FontScheme_majorFont:
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
     case NS_ooxml::LN_CT_FontScheme_minorFont:
         {
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        m_pImpl->m_currentFontThemeEntry = std::map<sal_uInt32, rtl::OUString>();
+    	    writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+	    m_pImpl->m_currentFontThemeEntry = std::map<sal_uInt32, rtl::OUString>();
             if( pProperties.get())
                 pProperties->resolve(*this);
             m_pImpl->m_themeFontMap[nSprmId] = m_pImpl->m_currentFontThemeEntry;
-    }
-    break;
+	}
+	break;
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
     case NS_ooxml::LN_CT_FontCollection_latin:
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
@@ -139,12 +136,12 @@ void ThemeTable::sprm(Sprm& rSprm)
         /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
     case NS_ooxml::LN_CT_FontCollection_cs:
         {
-        m_pImpl->m_currentThemeFontId = nSprmId;
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+	    m_pImpl->m_currentThemeFontId = nSprmId;
+    	    writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             if( pProperties.get())
                 pProperties->resolve(*this);
-    }
-    break;
+	}
+	break;
     default:
         {
 #ifdef DEBUG_DOMAINMAPPER
@@ -157,7 +154,7 @@ void ThemeTable::sprm(Sprm& rSprm)
 #endif
 }
 
-void ThemeTable::entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t ref)
+void ThemeTable::lcl_entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t ref)
 {
 #ifdef DEBUG_DOMAINMAPPER
     dmapper_logger->startElement("ThemeTable.entry");
@@ -180,13 +177,13 @@ const ::rtl::OUString ThemeTable::getFontNameForTheme(const Id id) const
     case NS_ooxml::LN_Value_ST_Theme_majorAscii:
     case NS_ooxml::LN_Value_ST_Theme_majorHAnsi:
         tmpThemeFontMap = m_pImpl->m_themeFontMap[NS_ooxml::LN_CT_FontScheme_majorFont];
-    break;
+	break;
     case NS_ooxml::LN_Value_ST_Theme_minorEastAsia:
     case NS_ooxml::LN_Value_ST_Theme_minorBidi:
     case NS_ooxml::LN_Value_ST_Theme_minorAscii:
     case NS_ooxml::LN_Value_ST_Theme_minorHAnsi:
         tmpThemeFontMap = m_pImpl->m_themeFontMap[NS_ooxml::LN_CT_FontScheme_minorFont];
-    break;
+	break;
     default:
         return ::rtl::OUString();
     }
@@ -197,8 +194,8 @@ const ::rtl::OUString ThemeTable::getFontNameForTheme(const Id id) const
     case NS_ooxml::LN_Value_ST_Theme_majorHAnsi:
     case NS_ooxml::LN_Value_ST_Theme_minorAscii:
     case NS_ooxml::LN_Value_ST_Theme_minorHAnsi:
-    {
-         std::map<sal_uInt32, ::rtl::OUString>::const_iterator Iter = tmpThemeFontMap.find(NS_ooxml::LN_CT_FontCollection_latin);
+	{
+	     std::map<sal_uInt32, ::rtl::OUString>::const_iterator Iter = tmpThemeFontMap.find(NS_ooxml::LN_CT_FontCollection_latin);
              if (Iter != tmpThemeFontMap.end())
                   return (Iter)->second;
              return ::rtl::OUString();
@@ -220,11 +217,9 @@ const ::rtl::OUString ThemeTable::getFontNameForTheme(const Id id) const
              return ::rtl::OUString();
         }
     default:
-    return ::rtl::OUString();
+	return ::rtl::OUString();
     }
 }
 
 }//namespace dmapper
 } //namespace writerfilter
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

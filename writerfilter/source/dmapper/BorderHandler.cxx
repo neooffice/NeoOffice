@@ -1,39 +1,31 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #include <BorderHandler.hxx>
 #include <PropertyMap.hxx>
 #include <resourcemodel/QNameToString.hxx>
 #include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
-#if SUPD == 310
 #include <com/sun/star/table/BorderLine.hpp>
-#else	 // SUPD == 310
-#include <com/sun/star/table/BorderLine2.hpp>
-#endif	// SUPD == 310
 #include <ooxml/resourceids.hxx>
 #include <dmapperLoggers.hxx>
 
@@ -48,16 +40,17 @@ using namespace ::com::sun::star;
 
   -----------------------------------------------------------------------*/
 BorderHandler::BorderHandler( bool bOOXML ) :
-    m_nCurrentBorderPosition( BORDER_TOP ),
-    m_nLineWidth(0),
-    m_nLineType(0),
-    m_nLineColor(0),
-    m_nLineDistance(0),
-    m_bOOXML( bOOXML )
+LoggedProperties(dmapper_logger, "BorderHandler"),
+m_nCurrentBorderPosition( BORDER_TOP ),
+m_nLineWidth(0),
+m_nLineType(0),
+m_nLineColor(0),
+m_nLineDistance(0),
+m_bOOXML( bOOXML )
 {
     const int nBorderCount(BORDER_COUNT);
     std::fill_n(m_aFilledLines, nBorderCount, false);
-    std::fill_n(m_aBorderLines, nBorderCount, table::BorderLine2());
+    std::fill_n(m_aBorderLines, nBorderCount, table::BorderLine());
 }
 /*-- 24.04.2007 09:06:35---------------------------------------------------
 
@@ -68,14 +61,8 @@ BorderHandler::~BorderHandler()
 /*-- 24.04.2007 09:06:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void BorderHandler::attribute(Id rName, Value & rVal)
+void BorderHandler::lcl_attribute(Id rName, Value & rVal)
 {
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->startElement("BorderHandler.attribute");
-    dmapper_logger->attribute("id", (*QNameToString::Instance())(rName));
-    dmapper_logger->endElement("BorderHandler.attribute");
-#endif
-
     sal_Int32 nIntValue = rVal.getInt();
     /* WRITERFILTERSTATUS: table: BorderHandler_attributedata */
     switch( rName )
@@ -127,13 +114,8 @@ void BorderHandler::attribute(Id rName, Value & rVal)
 /*-- 24.04.2007 09:06:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void BorderHandler::sprm(Sprm & rSprm)
+void BorderHandler::lcl_sprm(Sprm & rSprm)
 {
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->startElement("BorderHandler.sprm");
-    dmapper_logger->attribute("sprm", rSprm.toString());
-#endif
-    
     /* WRITERFILTERSTATUS: table: BorderHandler_sprm */
     switch( rSprm.getId())
     {
@@ -160,12 +142,7 @@ void BorderHandler::sprm(Sprm & rSprm)
         }
         break;
         default:;
-    }
-    
-#ifdef DEBUG_DOMAINMAPPER
-    dmapper_logger->endElement("BorderHandler.sprm");
-#endif
-                              
+    }                                  
 }
 /*-- 24.04.2007 09:09:01---------------------------------------------------
 
@@ -197,14 +174,12 @@ PropertyMapPtr  BorderHandler::getProperties()
 /*-- 14.11.2007 12:42:52---------------------------------------------------
     used only in OOXML import
   -----------------------------------------------------------------------*/
-table::BorderLine2 BorderHandler::getBorderLine()
+table::BorderLine BorderHandler::getBorderLine()
 {
-    table::BorderLine2 aBorderLine;
+    table::BorderLine aBorderLine;
     ConversionHelper::MakeBorderLine( m_nLineWidth, m_nLineType, m_nLineColor, aBorderLine, m_bOOXML );
     return aBorderLine;
 }
 
 } //namespace dmapper
 } //namespace writerfilter
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

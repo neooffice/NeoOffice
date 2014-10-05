@@ -1,36 +1,23 @@
-<!--
-/*************************************************************************
- *
-  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-  
-  Copyright 2008 by Sun Microsystems, Inc.
- 
-  OpenOffice.org - a multi-platform office productivity suite
- 
-  $RCSfile$
- 
-  $Revision$
- 
-  This file is part of OpenOffice.org.
- 
-  OpenOffice.org is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3
-  only, as published by the Free Software Foundation.
- 
-  OpenOffice.org is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License version 3 for more details
-  (a copy is included in the LICENSE file that accompanied this code).
- 
-  You should have received a copy of the GNU Lesser General Public License
-  version 3 along with OpenOffice.org.  If not, see
-  <http://www.openoffice.org/license.html>
-  for a copy of the LGPLv3 License.
- 
- ************************************************************************/
-
--->
+<!--***********************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ ***********************************************************-->
 <xsl:stylesheet 
     version="1.0" 
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
@@ -69,19 +56,18 @@
 
 <xsl:template name="factoryactiondecls">
     <xsl:variable name="ns" select="@name"/>
-    <xsl:for-each select="resource/action">
+    <xsl:for-each select="resource/action[not(@name='characters')]">
         <xsl:sort select="@name"/>
         <xsl:if test="generate-id(key('actions', @name)[ancestor::namespace/@name=$ns][1]) = generate-id(.)">
             <xsl:text>
     void </xsl:text>
             <xsl:value-of select="@name"/>
             <xsl:text>Action(OOXMLFastContextHandler * pHandler</xsl:text>
-            <xsl:if test="@name='characters'">
-                <xsl:text>, const ::rtl::OUString &amp; sText</xsl:text>
-            </xsl:if>
             <xsl:text>);</xsl:text>
         </xsl:if>
     </xsl:for-each>
+    <xsl:text>
+    virtual void charactersAction(OOXMLFastContextHandler * pHandler, const ::rtl::OUString &amp; sText);</xsl:text>
 </xsl:template>
 
 <!-- factorydecl -->
@@ -106,6 +92,10 @@ public:
     virtual string getDefineName(Id nId) const;</xsl:text>
     <xsl:call-template name="factoryactiondecls"/>
     virtual void attributeAction(OOXMLFastContextHandler * pHandler, Token_t nToken, OOXMLValue::Pointer_t pValue);
+
+#ifdef DEBUG_FACTORY
+    virtual string getName() const;
+#endif
     <xsl:text>
     
     virtual ~</xsl:text>

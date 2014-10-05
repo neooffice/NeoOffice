@@ -1,30 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- ************************************************************************/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 #include <FontTable.hxx>
 #ifndef INCLUDED_RESOURCESIDS
@@ -34,21 +29,26 @@
 #include <vector>
 #include <stdio.h>
 
+#include "dmapperLoggers.hxx"
+
 namespace writerfilter {
 namespace dmapper
 {
 
 struct FontTable_Impl
 {
-    std::vector< FontEntry > aFontEntries;
+    std::vector< FontEntry::Pointer_t > aFontEntries;
     FontEntry::Pointer_t pCurrentEntry;
     FontTable_Impl() {}
 };
 /*-- 19.06.2006 12:04:32---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-FontTable::FontTable() :
-    m_pImpl( new FontTable_Impl )
+FontTable::FontTable() 
+: LoggedProperties(dmapper_logger, "FontTable")
+, LoggedTable(dmapper_logger, "FontTable")
+, LoggedStream(dmapper_logger, "FontTable")
+, m_pImpl( new FontTable_Impl )
 {
 }
 /*-- 19.06.2006 12:04:33---------------------------------------------------
@@ -61,7 +61,7 @@ FontTable::~FontTable()
 /*-- 19.06.2006 12:04:33---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::attribute(Id Name, Value & val)
+void FontTable::lcl_attribute(Id Name, Value & val)
 {
     OSL_ENSURE( m_pImpl->pCurrentEntry, "current entry has to be set here");
     if(!m_pImpl->pCurrentEntry)
@@ -534,7 +534,7 @@ void FontTable::attribute(Id Name, Value & val)
 /*-- 19.06.2006 12:04:33---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::sprm(Sprm& rSprm)
+void FontTable::lcl_sprm(Sprm& rSprm)
 {
     OSL_ENSURE( m_pImpl->pCurrentEntry, "current entry has to be set here");
     if(!m_pImpl->pCurrentEntry)
@@ -562,94 +562,94 @@ void FontTable::sprm(Sprm& rSprm)
 /*-- 19.06.2006 12:04:33---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t ref)
+void FontTable::lcl_entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t ref)
 {
     //create a new font entry
     OSL_ENSURE( !m_pImpl->pCurrentEntry, "current entry has to be NULL here");
     m_pImpl->pCurrentEntry.reset(new FontEntry);
     ref->resolve(*this);
     //append it to the table
-    m_pImpl->aFontEntries.push_back( *m_pImpl->pCurrentEntry );
+    m_pImpl->aFontEntries.push_back( m_pImpl->pCurrentEntry );
     m_pImpl->pCurrentEntry.reset();
 }
 /*-- 19.06.2006 12:04:34---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::startSectionGroup()
+void FontTable::lcl_startSectionGroup()
 {
 }
 /*-- 19.06.2006 12:04:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::endSectionGroup()
+void FontTable::lcl_endSectionGroup()
 {
 }
 /*-- 19.06.2006 12:04:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::startParagraphGroup()
+void FontTable::lcl_startParagraphGroup()
 {
 }
 /*-- 19.06.2006 12:04:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::endParagraphGroup()
+void FontTable::lcl_endParagraphGroup()
 {
 }
 /*-- 19.06.2006 12:04:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::startCharacterGroup()
+void FontTable::lcl_startCharacterGroup()
 {
 }
 /*-- 19.06.2006 12:04:35---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::endCharacterGroup()
+void FontTable::lcl_endCharacterGroup()
 {
 }
 /*-- 19.06.2006 12:04:36---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::text(const sal_uInt8*, size_t )
+void FontTable::lcl_text(const sal_uInt8*, size_t )
 {
 }
 /*-- 19.06.2006 12:04:36---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::utext(const sal_uInt8* , size_t)
+void FontTable::lcl_utext(const sal_uInt8* , size_t)
 {
 }
 /*-- 19.06.2006 12:04:37---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::props(writerfilter::Reference<Properties>::Pointer_t)
+void FontTable::lcl_props(writerfilter::Reference<Properties>::Pointer_t)
 {
 }
 /*-- 19.06.2006 12:04:37---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::table(Id, writerfilter::Reference<Table>::Pointer_t)
+void FontTable::lcl_table(Id, writerfilter::Reference<Table>::Pointer_t)
 {
 }
 /*-- 19.06.2006 12:04:38---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::substream(Id, ::writerfilter::Reference<Stream>::Pointer_t)
+void FontTable::lcl_substream(Id, ::writerfilter::Reference<Stream>::Pointer_t)
 {
 }
 /*-- 19.06.2006 12:04:39---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void FontTable::info(const string& )
+void FontTable::lcl_info(const string& )
 {
 }
 
-void FontTable::startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > )
+void FontTable::lcl_startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > )
 {
 }
 
-void FontTable::endShape( )
+void FontTable::lcl_endShape( )
 {
 }
 
@@ -658,12 +658,9 @@ void FontTable::endShape( )
   -----------------------------------------------------------------------*/
 const FontEntry::Pointer_t FontTable::getFontEntry(sal_uInt32 nIndex)
 {
-    FontEntry::Pointer_t pRet;
-    if(m_pImpl->aFontEntries.size() > nIndex)
-    {        
-        pRet.reset(&m_pImpl->aFontEntries[nIndex]);
-    }
-    return pRet;
+    return (m_pImpl->aFontEntries.size() > nIndex)
+        ?   m_pImpl->aFontEntries[nIndex]
+        :   FontEntry::Pointer_t();
 }
 /*-- 21.06.2006 11:21:38---------------------------------------------------
 
@@ -675,5 +672,3 @@ sal_uInt32 FontTable::size()
 
 }//namespace dmapper
 }//namespace writerfilter
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

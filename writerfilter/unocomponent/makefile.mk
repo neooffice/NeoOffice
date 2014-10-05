@@ -1,31 +1,30 @@
-#************************************************************************
-#
-# Copyright 2000, 2010 Oracle and/or its affiliates.
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified August 2014 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-# ***********************************************************************/
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#**************************************************************
 PRJ=..
 PRJNAME=writerfilter
+.IF "$(GUI)" == "OS2"
+TARGET=wfltuno
+.ELSE
 TARGET=writerfilter.uno
+.ENDIF
 LIBTARGET=NO
 ENABLE_EXCEPTIONS=TRUE
 
@@ -39,18 +38,12 @@ CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 
 SLOFILES=$(SLO)$/component.obj
 
-.IF "$(UPD)"!="310"
 SHL1TARGET=$(TARGET)
-.ENDIF		# "$(UPD)"!="310"
 
-.IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
+.IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC" || "$(GUI)"=="OS2"
 DOCTOKLIB=-ldoctok
 OOXMLLIB=-looxml
 RESOURCEMODELLIB=-lresourcemodel
-.ELIF "$(GUI)"=="OS2"
-DOCTOKLIB=$(LB)$/idoctok.lib
-OOXMLLIB=$(LB)$/iooxml.lib
-RESOURCEMODELLIB=$(LB)$/iresourcemodel.lib
 .ELIF "$(GUI)"=="WNT"
 .IF "$(COM)"=="GCC"
 DOCTOKLIB=-ldoctok
@@ -64,17 +57,17 @@ RESOURCEMODELLIB=$(LB)$/iresourcemodel.lib
 .ENDIF
 
 SHL1STDLIBS=$(SALLIB)\
-    $(CPPULIB)\
-    $(COMPHELPERLIB)\
-    $(CPPUHELPERLIB)\
-    $(UCBHELPERLIB)\
-    $(DOCTOKLIB) \
-    $(OOXMLLIB) \
-    $(RESOURCEMODELLIB)
+	$(CPPULIB)\
+	$(COMPHELPERLIB)\
+	$(CPPUHELPERLIB)\
+	$(UCBHELPERLIB)\
+	$(DOCTOKLIB) \
+	$(OOXMLLIB) \
+	$(RESOURCEMODELLIB)
 
 SHL1LIBS=\
-    $(SLB)$/debugservices_doctok.lib \
-    $(SLB)$/debugservices_ooxml.lib
+	$(SLB)$/debugservices_doctok.lib \
+	$(SLB)$/debugservices_ooxml.lib
 
 SHL1IMPLIB=i$(SHL1TARGET)
 

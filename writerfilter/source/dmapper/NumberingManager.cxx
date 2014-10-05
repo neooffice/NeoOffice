@@ -1,4 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #include "ConversionHelper.hxx"
 #include "NumberingManager.hxx"
 #include "StyleSheetTable.hxx"
@@ -19,6 +40,8 @@
 #if DEBUG
 #include <stdio.h>
 #endif
+
+#include "dmapperLoggers.hxx"
 
 using namespace rtl;
 using namespace com::sun::star;
@@ -615,10 +638,12 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
 //-------------------------------------  NumberingManager implementation
 
 
-ListsManager::ListsManager( DomainMapper& rDMapper, 
-        const uno::Reference< lang::XMultiServiceFactory > xFactory ) :
-    m_rDMapper( rDMapper ),
-    m_xFactory( xFactory )
+ListsManager::ListsManager(DomainMapper& rDMapper, 
+                           const uno::Reference< lang::XMultiServiceFactory > xFactory) :
+LoggedProperties(dmapper_logger, "ListsManager"),
+LoggedTable(dmapper_logger, "ListsManager"),
+m_rDMapper( rDMapper ),
+m_xFactory( xFactory )
 {
 }
 
@@ -626,7 +651,7 @@ ListsManager::~ListsManager( )
 {
 }
 
-void ListsManager::attribute( Id nName, Value& rVal )
+void ListsManager::lcl_attribute( Id nName, Value& rVal )
 {
     OSL_ENSURE( m_pCurrentDefinition.get(), "current entry has to be set here");
     if(!m_pCurrentDefinition.get())
@@ -765,7 +790,7 @@ void ListsManager::attribute( Id nName, Value& rVal )
     }
 }
 
-void ListsManager::sprm( Sprm& rSprm )
+void ListsManager::lcl_sprm( Sprm& rSprm )
 {
     //fill the attributes of the style sheet
     sal_uInt32 nSprmId = rSprm.getId();
@@ -922,6 +947,13 @@ void ListsManager::sprm( Sprm& rSprm )
                 pLevel->SetParaStyle( pStyle );
             }
             break;
+            case NS_ooxml::LN_CT_AbstractNum_numStyleLink:
+            {
+                OUString sStyleName = rSprm.getValue( )->getString( );
+                AbstractListDef* pAbstractListDef = dynamic_cast< AbstractListDef* >( m_pCurrentDefinition.get( ) );
+                pAbstractListDef->SetNumStyleLink(sStyleName);
+            }
+            break;
             case NS_ooxml::LN_EG_RPrBase_rFonts: //contains font properties
             case NS_ooxml::LN_EG_RPrBase_color:
             case NS_ooxml::LN_EG_RPrBase_u:
@@ -940,8 +972,8 @@ void ListsManager::sprm( Sprm& rSprm )
     }
 }
 
-void ListsManager::entry( int /* pos */, 
-        writerfilter::Reference<Properties>::Pointer_t ref )
+void ListsManager::lcl_entry( int /* pos */, 
+                          writerfilter::Reference<Properties>::Pointer_t ref )
 {
     if( m_rDMapper.IsOOXMLImport() )
     {
@@ -982,7 +1014,33 @@ AbstractListDef::Pointer ListsManager::GetAbstractList( sal_Int32 nId )
     while ( !pAbstractList.get( ) && i < nLen )
     {
         if ( m_aAbstractLists[i]->GetId( ) == nId )
-            pAbstractList = m_aAbstractLists[i];
+        {
+            if ( m_aAbstractLists[i]->GetNumStyleLink().getLength() > 0 )
+            {
+                // If the abstract num has a style linked, check the linked style's number id.
+                StyleSheetTablePtr pStylesTable = m_rDMapper.GetStyleSheetTable( );
+                
+                const StyleSheetEntryPtr pStyleSheetEntry = 
+                    pStylesTable->FindStyleSheetByISTD( m_aAbstractLists[i]->GetNumStyleLink() );                                
+                
+                const StyleSheetPropertyMap* pStyleSheetProperties = 
+                    dynamic_cast<const StyleSheetPropertyMap*>(pStyleSheetEntry ? pStyleSheetEntry->pProperties.get() : 0);
+                
+                if( pStyleSheetProperties && pStyleSheetProperties->GetNumId() >= 0 )
+                {
+                    ListDef::Pointer pList = GetList( pStyleSheetProperties->GetNumId() );
+                    if( bool(pList) )
+                        return pList->GetAbstractDefinition();
+                    else
+                        pAbstractList = m_aAbstractLists[i];
+                }
+
+            } 
+            else
+            {
+                pAbstractList = m_aAbstractLists[i];
+            }
+        }
         i++;
     }
 
@@ -1016,5 +1074,3 @@ void ListsManager::CreateNumberingRules( )
 }
 
 } }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

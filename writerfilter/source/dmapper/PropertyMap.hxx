@@ -1,35 +1,33 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef INCLUDED_DMAPPER_PROPERTYMAP_HXX
 #define INCLUDED_DMAPPER_PROPERTYMAP_HXX
 
 #include <rtl/ustring.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
+#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HXX_
 #include <com/sun/star/beans/PropertyValue.hpp>
+#endif
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/uno/Any.h>
 #include <PropertyIds.hxx>
@@ -37,13 +35,7 @@
 #include <map>
 #include <vector>
 
-#ifdef DEBUG_DOMAINMAPPER
 #include <resourcemodel/TagLogger.hxx>
-#endif
-
-#if SUPD == 310
-#define BorderLine2 BorderLine
-#endif	// SUPD == 310
 
 namespace com{namespace sun{namespace star{
     namespace beans{
@@ -62,7 +54,7 @@ namespace com{namespace sun{namespace star{
         class XFootnote;
     }
     namespace table{
-        struct BorderLine2;
+        struct BorderLine;
     }
 }}}
 
@@ -138,10 +130,7 @@ public:
 
     virtual void insertTableProperties( const PropertyMap* );
     
-#ifdef DEBUG_DOMAINMAPPER
-    virtual XMLTag::Pointer_t toTag() const;
-#endif
-    
+    virtual XMLTag::Pointer_t toTag() const;    
 };
 typedef boost::shared_ptr<PropertyMap>  PropertyMapPtr;
 
@@ -164,7 +153,7 @@ class SectionPropertyMap : public PropertyMap
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >   m_aFirstPageStyle;
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >   m_aFollowPageStyle;
 
-    ::com::sun::star::table::BorderLine2*   m_pBorderLines[4];
+    ::com::sun::star::table::BorderLine*    m_pBorderLines[4];
     sal_Int32                               m_nBorderDistances[4];
     sal_Int32                               m_nBorderParams;
 
@@ -240,7 +229,7 @@ public:
             const ::com::sun::star::uno::Reference < ::com::sun::star::lang::XMultiServiceFactory >& xTextFactory,
             bool bFirst );
 
-    void SetBorder( BorderPosition ePos, sal_Int32 nLineDistance, const ::com::sun::star::table::BorderLine2& rBorderLine );
+    void SetBorder( BorderPosition ePos, sal_Int32 nLineDistance, const ::com::sun::star::table::BorderLine& rBorderLine );
     void SetBorderParams( sal_Int32 nSet ) { m_nBorderParams = nSet; }
 
     void SetColumnCount( sal_Int16 nCount ) { m_nColumnCount = nCount; }
@@ -395,6 +384,7 @@ typedef boost::shared_ptr<ParagraphProperties>  ParagraphPropertiesPtr;
   -----------------------------------------------------------------------*/
 
 #define WW_OUTLINE_MAX  sal_Int16( 9 )
+#define WW_OUTLINE_MIN  sal_Int16( 0 )
 
 class StyleSheetPropertyMap : public PropertyMap, public ParagraphProperties
 
@@ -427,6 +417,8 @@ class StyleSheetPropertyMap : public PropertyMap, public ParagraphProperties
     sal_Int16               mnListLevel;
 
     sal_Int16               mnOutlineLevel;
+    
+    sal_Int32               mnNumId;
 public: 
     explicit StyleSheetPropertyMap();
     ~StyleSheetPropertyMap();
@@ -504,9 +496,12 @@ public:
     sal_Int16   GetOutlineLevel() const            { return mnOutlineLevel; }
     void        SetOutlineLevel(sal_Int16 nLevel)  
     { 
-        if ( nLevel < WW_OUTLINE_MAX )
+        if ( nLevel <= WW_OUTLINE_MAX )
             mnOutlineLevel = nLevel; 
     }
+    
+    sal_Int32   GetNumId() const               { return mnNumId; }
+    void        SetNumId(sal_Int32 nId)        { mnNumId = nId; }
 };
 /*-- 27.12.2007 12:38:06---------------------------------------------------
 
@@ -561,5 +556,3 @@ typedef boost::shared_ptr<TablePropertyMap>  TablePropertyMapPtr;
 } //namespace dmapper
 } //namespace writerfilter
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

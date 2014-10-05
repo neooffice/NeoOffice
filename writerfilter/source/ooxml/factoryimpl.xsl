@@ -1,36 +1,23 @@
-<!--
-/*************************************************************************
- *
-  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-  
-  Copyright 2008 by Sun Microsystems, Inc.
- 
-  OpenOffice.org - a multi-platform office productivity suite
- 
-  $RCSfile$
- 
-  $Revision$
- 
-  This file is part of OpenOffice.org.
- 
-  OpenOffice.org is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License version 3
-  only, as published by the Free Software Foundation.
- 
-  OpenOffice.org is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License version 3 for more details
-  (a copy is included in the LICENSE file that accompanied this code).
- 
-  You should have received a copy of the GNU Lesser General Public License
-  version 3 along with OpenOffice.org.  If not, see
-  <http://www.openoffice.org/license.html>
-  for a copy of the LGPLv3 License.
- 
- ************************************************************************/
-
--->
+<!--***********************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ ***********************************************************-->
 <xsl:stylesheet 
     version="1.0" 
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
@@ -78,6 +65,10 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
     uno::Reference &lt; xml::sax::XFastContextHandler &gt; aResult;
     Id nDefine = pHandler->getDefine();
     
+#ifdef DEBUG_FACTORY
+    debug_logger->startElement("factory.createFastChildContextFromFactory");            
+#endif
+
     if (pFactory.get() != NULL)
     {
         CreateElementMapPointer pMap = pFactory-&gt;getCreateElementMap(nDefine);
@@ -86,12 +77,13 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
         if (pMap.get() != NULL)
         {
             Id nId = (*pTokenMap)[Element];
-#ifdef DEBUG_CREATE
+#ifdef DEBUG_FACTORY
+            string sFactoryName(pFactory->getName());
             string sDefine(pFactory->getDefineName(nDefine));
             string sElement(fastTokenToId(Element));
             string sQName((*QNameToString::Instance())(nId));
             
-            debug_logger->startElement("createFastChildContextFromFactory");            
+            debug_logger->attribute("factory-name", sFactoryName);
             debug_logger->attribute("define", sDefine);
             debug_logger->attribute("element", sElement);
             debug_logger->attribute("qname", sQName);
@@ -134,12 +126,13 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
                 break;
             }
 
-#ifdef DEBUG_CREATE
-            debug_logger->endElement("createFastChildContextFromFactory");        
-#endif
         }
     }
     
+#ifdef DEBUG_FACTORY
+    debug_logger->endElement("factory.createFastChildContextFromFactory");        
+#endif
+
     return aResult;
 }
 </xsl:text>
@@ -178,8 +171,8 @@ OOXMLFactory_ns::Pointer_t OOXMLFactory::getFactoryForNamespace(Id nId)
 uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastChildContextFromStart
 (OOXMLFastContextHandler * pHandler, Token_t Element)
 {
-#ifdef DEBUG_CREATE
-    debug_logger->startElement("createFastChildContextFromStart");
+#ifdef DEBUG_FACTORY
+    debug_logger->startElement("factory.createFastChildContextFromStart");
 #endif
 
     uno::Reference &lt; xml::sax::XFastContextHandler &gt; aResult;
@@ -198,8 +191,8 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
     </xsl:for-each>
     <xsl:text>
     
-#ifdef DEBUG_CREATE
-    debug_logger->endElement("createFastChildContextFromStart");
+#ifdef DEBUG_FACTORY
+    debug_logger->endElement("factory.createFastChildContextFromStart");
 #endif
     return aResult;
 }

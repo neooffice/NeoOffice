@@ -1,36 +1,27 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*************************************************************************
- *
- * Copyright 2000, 2010 Oracle and/or its affiliates.
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #include <ConversionHelper.hxx>
-#if SUPD == 310
 #include <com/sun/star/table/BorderLine.hpp>
-#   include <svx/paperinf.hxx>      //lA0Width...
-#else	 // SUPD == 310
-#include <com/sun/star/table/BorderLine2.hpp>
-#endif	// SUPD == 310
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
@@ -45,10 +36,6 @@ using namespace com::sun::star;
 namespace writerfilter {
 namespace dmapper{
 namespace ConversionHelper{
-
-const sal_Int16  API_LINE_SOLID    = 0;
-const sal_Int16  API_LINE_DOTTED   = 1;
-const sal_Int16  API_LINE_DASHED   = 2;
 
 #define TWIP_TO_MM100(TWIP)     ((TWIP) >= 0 ? (((TWIP)*127L+36L)/72L) : (((TWIP)*127L-36L)/72L))
 
@@ -104,7 +91,7 @@ const sal_Int16  API_LINE_DASHED   = 2;
 #define DOUBLE_LINE10_IN    LINE_WIDTH_0
 #define DOUBLE_LINE10_DIST  LINE_WIDTH_2
 
-sal_Int32 MakeBorderLine( sal_Int32 nSprmValue, table::BorderLine2& rToFill )
+sal_Int32 MakeBorderLine( sal_Int32 nSprmValue, table::BorderLine& rToFill )
 {
     //TODO: Lines are always solid
     //Border
@@ -129,11 +116,12 @@ sal_Int32 MakeBorderLine( sal_Int32 nSprmValue, table::BorderLine2& rToFill )
 }
 void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
                                             sal_Int32 nLineColor,
-                                            table::BorderLine2& rToFill, bool bIsOOXML )
+                                            table::BorderLine& rToFill, bool bIsOOXML )
 {
     static const sal_Int32 aBorderDefColor[] =
     {
-        COL_AUTO, COL_BLACK, COL_LIGHTBLUE, COL_LIGHTCYAN, COL_LIGHTGREEN,
+        static_cast<sal_Int32>(COL_AUTO),
+        COL_BLACK, COL_LIGHTBLUE, COL_LIGHTCYAN, COL_LIGHTGREEN,
         COL_LIGHTMAGENTA, COL_LIGHTRED, COL_YELLOW, COL_WHITE, COL_BLUE,
         COL_CYAN, COL_GREEN, COL_MAGENTA, COL_RED, COL_BROWN, COL_GRAY,
         COL_LIGHTGRAY
@@ -150,7 +138,7 @@ void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
         single0, single1, single2, single3, single4, single5,
         double0, double1, double2, double3, double4, double5, double6,
         double7, double8, double9, double10,
-        none, dashed, dotted
+        none
     } eCodeIdx = none;
 
     // Map to our border types, we should use of one equal line
@@ -163,14 +151,9 @@ void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
         case  1: break;
         case  2:
         case  5:
-        // Dotted and dashed lines
-        case  6:
-                 eCodeIdx = dotted;
-                 break;
-        case  7:
-                 eCodeIdx = dashed;
-                 break;
         // and the unsupported special cases which we map to a single line
+        case  6:
+        case  7:
         case  8:
         case  9:
         case 22:
@@ -298,32 +281,29 @@ void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
         sal_Int16 nOut;
         sal_Int16 nIn;
         sal_Int16 nDist;
-        sal_Int16 eStyle;
     };
 
 
     static const BorderDefinition aLineTab[] =
     {
-        /* 0*/  { LINE_WIDTH_0, 0, 0, API_LINE_SOLID },
-        /* 1*/  { LINE_WIDTH_1, 0, 0, API_LINE_SOLID },
-        /* 2*/  { LINE_WIDTH_2, 0, 0, API_LINE_SOLID },
-        /* 3*/  { LINE_WIDTH_3, 0, 0, API_LINE_SOLID },
-        /* 4*/  { LINE_WIDTH_4, 0, 0, API_LINE_SOLID },
-        /* 5*/  { LINE_WIDTH_5, 0, 0, API_LINE_SOLID },
-        /* 6*/  { DOUBLE_LINE0_OUT, DOUBLE_LINE0_IN, DOUBLE_LINE0_DIST, API_LINE_SOLID },
-        /* 7*/  { DOUBLE_LINE1_OUT, DOUBLE_LINE1_IN, DOUBLE_LINE1_DIST, API_LINE_SOLID },
-        /* 8*/  { DOUBLE_LINE2_OUT, DOUBLE_LINE2_IN, DOUBLE_LINE2_DIST, API_LINE_SOLID },
-        /* 9*/  { DOUBLE_LINE3_OUT, DOUBLE_LINE3_IN, DOUBLE_LINE3_DIST, API_LINE_SOLID },
-        /*10*/  { DOUBLE_LINE4_OUT, DOUBLE_LINE4_IN, DOUBLE_LINE4_DIST, API_LINE_SOLID },
-        /*11*/  { DOUBLE_LINE5_OUT, DOUBLE_LINE5_IN, DOUBLE_LINE5_DIST, API_LINE_SOLID },
-        /*12*/  { DOUBLE_LINE6_OUT, DOUBLE_LINE6_IN, DOUBLE_LINE6_DIST, API_LINE_SOLID },
-        /*13*/  { DOUBLE_LINE7_OUT, DOUBLE_LINE7_IN, DOUBLE_LINE7_DIST, API_LINE_SOLID },
-        /*14*/  { DOUBLE_LINE8_OUT, DOUBLE_LINE8_IN, DOUBLE_LINE8_DIST, API_LINE_SOLID },
-        /*15*/  { DOUBLE_LINE9_OUT, DOUBLE_LINE9_IN, DOUBLE_LINE9_DIST, API_LINE_SOLID },
-        /*16*/  { DOUBLE_LINE10_OUT,DOUBLE_LINE10_IN,DOUBLE_LINE10_DIST, API_LINE_SOLID},
-        /*17*/  { 0, 0, 0, API_LINE_SOLID },
-        /*18*/  { LINE_WIDTH_5, 0, 0, API_LINE_DASHED },
-        /*19*/  { LINE_WIDTH_5, 0, 0, API_LINE_DOTTED }
+        /* 0*/  { LINE_WIDTH_0, 0, 0 },
+        /* 1*/  { LINE_WIDTH_1, 0, 0 },
+        /* 2*/  { LINE_WIDTH_2, 0, 0 },
+        /* 3*/  { LINE_WIDTH_3, 0, 0 },
+        /* 4*/  { LINE_WIDTH_4, 0, 0 },
+        /* 5*/  { LINE_WIDTH_5, 0, 0 },
+        /* 6*/  { DOUBLE_LINE0_OUT, DOUBLE_LINE0_IN, DOUBLE_LINE0_DIST },
+        /* 7*/  { DOUBLE_LINE1_OUT, DOUBLE_LINE1_IN, DOUBLE_LINE1_DIST },
+        /* 8*/  { DOUBLE_LINE2_OUT, DOUBLE_LINE2_IN, DOUBLE_LINE2_DIST },
+        /* 9*/  { DOUBLE_LINE3_OUT, DOUBLE_LINE3_IN, DOUBLE_LINE3_DIST },
+        /*10*/  { DOUBLE_LINE4_OUT, DOUBLE_LINE4_IN, DOUBLE_LINE4_DIST },
+        /*11*/  { DOUBLE_LINE5_OUT, DOUBLE_LINE5_IN, DOUBLE_LINE5_DIST },
+        /*12*/  { DOUBLE_LINE6_OUT, DOUBLE_LINE6_IN, DOUBLE_LINE6_DIST },
+        /*13*/  { DOUBLE_LINE7_OUT, DOUBLE_LINE7_IN, DOUBLE_LINE7_DIST },
+        /*14*/  { DOUBLE_LINE8_OUT, DOUBLE_LINE8_IN, DOUBLE_LINE8_DIST },
+        /*15*/  { DOUBLE_LINE9_OUT, DOUBLE_LINE9_IN, DOUBLE_LINE9_DIST },
+        /*16*/  { DOUBLE_LINE10_OUT,DOUBLE_LINE10_IN,DOUBLE_LINE10_DIST},
+        /*17*/  { 0, 0, 0 }
     };
 
     rToFill.Color = nLineColor;
@@ -332,18 +312,13 @@ void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
         rToFill.InnerLineWidth = 0;
         rToFill.OuterLineWidth = sal_Int16(nLineThickness);
         rToFill.LineDistance = 0;
-#if SUPD != 310
-        rToFill.LineStyle = API_LINE_SOLID;
-#endif	// SUPD != 310
+
     }
     else
     {
         rToFill.InnerLineWidth = aLineTab[eCodeIdx].nIn;
         rToFill.OuterLineWidth = aLineTab[eCodeIdx].nOut;
         rToFill.LineDistance = aLineTab[eCodeIdx].nDist;
-#if SUPD != 310
-        rToFill.LineStyle = aLineTab[eCodeIdx].eStyle;
-#endif	// SUPD != 310
     }
 }
 
@@ -507,58 +482,6 @@ sal_Int32 ConvertColor(sal_Int32 nWordColor)
     sal_Int32 nRet = (t<<24) + (r<<16) + (g<<8) + b;
     return nRet;
 }
-#if SUPD == 310
-/*-- 12.12.2006 08:59:42---------------------------------------------------
-
-  -----------------------------------------------------------------------*/
-class closeenough : public std::unary_function<long, bool>
-{
-private:
-    long mnValue;
-    long mnWriggleRoom;
-public:
-    closeenough(long nValue, long nWriggleRoom)
-        : mnValue(nValue), mnWriggleRoom(nWriggleRoom) {}
-    bool operator()(long nTest) const
-    {
-        return (
-                (mnValue - nTest < mnWriggleRoom) &&
-                (mnValue - nTest > -mnWriggleRoom)
-               );
-    }
-};
-/*-- 12.12.2006 08:59:42---------------------------------------------------
-
-  -----------------------------------------------------------------------*/
-sal_Int32 SnapPageDimension( sal_Int32 nVal )
-{
-    static const long aSizes[] =
-    {
-        lA0Width, lA0Height, lA1Width, lA2Width, lA3Width, lA4Width,
-        lA5Width, lB4Width, lB4Height, lB5Width, lB6Width, lC4Width,
-        lC4Height, lC5Width, lC6Width, lC65Width, lC65Height, lDLWidth,
-        lDLHeight, lJISB4Width, lJISB4Height, lJISB5Width, lJISB6Width,
-        lLetterWidth, lLetterHeight, lLegalHeight, lTabloidWidth,
-        lTabloidHeight, lDiaWidth, lDiaHeight, lScreenWidth,
-        lScreenHeight, lAWidth, lAHeight, lBHeight, lCHeight, lDHeight,
-        lEHeight, lExeWidth, lExeHeight, lLegal2Width, lLegal2Height,
-        lCom675Width, lCom675Height, lCom9Width, lCom9Height,
-        lCom10Width, lCom10Height, lCom11Width, lCom11Height,
-        lCom12Width, lMonarchHeight, lKai16Width, lKai16Height,
-        lKai32Width, lKai32BigWidth, lKai32BigHeight
-    };
-
-    const long nWriggleRoom = 5;
-    const long *pEnd = aSizes + sizeof(aSizes) / sizeof(aSizes[0]);
-    const long *pEntry =
-        std::find_if(aSizes, pEnd, closeenough(nVal, nWriggleRoom));
-
-    if (pEntry != pEnd)
-        nVal = *pEntry;
-
-    return nVal;
-}
-#endif	// SUPD == 310
 /*-- 27.06.2007 13:42:32---------------------------------------------------
 
   -----------------------------------------------------------------------*/
@@ -723,7 +646,11 @@ sal_Int16 ConvertNumberingType(sal_Int32 nNFC)
         case NS_ooxml::LN_Value_ST_NumberFormat_japaneseCounting:
         case NS_ooxml::LN_Value_ST_NumberFormat_taiwaneseCounting:
         case NS_ooxml::LN_Value_ST_NumberFormat_ideographDigital:
+        case NS_ooxml::LN_Value_ST_NumberFormat_chineseCountingThousand:
             nRet = style::NumberingType::NUMBER_LOWER_ZH;
+            break;
+        case NS_ooxml::LN_Value_ST_NumberFormat_chineseLegalSimplified:
+            nRet = style::NumberingType::NUMBER_UPPER_ZH;
             break;
         default: nRet = style::NumberingType::ARABIC;
     }
@@ -763,5 +690,3 @@ sal_Int16 ConvertNumberingType(sal_Int32 nNFC)
 } // namespace ConversionHelper
 } //namespace dmapper
 } //namespace writerfilter
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
