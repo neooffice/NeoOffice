@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "attrlistimpl.hxx"
 
@@ -38,33 +34,35 @@ using namespace ::com::sun::star::xml::sax;
 namespace sax_expatwrap {
 struct TagAttribute
 {
-	TagAttribute()
-		{}
-	TagAttribute( const OUString &aName, const OUString &aType , const OUString &aValue )
-	{
-		this->sName 	= aName;
-		this->sType 	= aType;
-		this->sValue 	= aValue;
-	}
+    TagAttribute( const OUString &aName, const OUString &aType , const OUString &aValue )
+    {
+        this->sName     = aName;
+        this->sType     = aType;
+        this->sValue    = aValue;
+    }
 
-	OUString sName;
-	OUString sType;
-	OUString sValue;
+    OUString sName;
+    OUString sType;
+    OUString sValue;
 };
 
 struct AttributeList_impl
 {
-	AttributeList_impl()
-	{
-		// performance improvement during adding
-		vecAttribute.reserve(20);
-	}
-	vector<struct TagAttribute> vecAttribute;
+    AttributeList_impl()
+    {
+        // performance improvement during adding
+        vecAttribute.reserve(20);
+    }
+    vector<struct TagAttribute> vecAttribute;
 };
 
 
 
+#if SUPD == 310
 sal_Int16 AttributeList::getLength(void) throw (RuntimeException)
+#else	// SUPD == 310
+sal_Int16 AttributeList::getLength(void) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return static_cast<sal_Int16>(m_pImpl->vecAttribute.size());
 }
@@ -73,92 +71,122 @@ sal_Int16 AttributeList::getLength(void) throw (RuntimeException)
 AttributeList::AttributeList( const AttributeList &r ) :
     cppu::WeakImplHelper2<XAttributeList, XCloneable>()
 {
-	m_pImpl = new AttributeList_impl;
-	*m_pImpl = *(r.m_pImpl);
+    m_pImpl = new AttributeList_impl;
+    *m_pImpl = *(r.m_pImpl);
 }
 
+#if SUPD == 310
 OUString AttributeList::getNameByIndex(sal_Int16 i) throw (RuntimeException)
+#else	// SUPD == 310
+OUString AttributeList::getNameByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
-		return m_pImpl->vecAttribute[i].sName;
-	}
-	return OUString();
+    if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
+        return m_pImpl->vecAttribute[i].sName;
+    }
+    return OUString();
 }
 
 
+#if SUPD == 310
 OUString AttributeList::getTypeByIndex(sal_Int16 i) throw (RuntimeException)
+#else	// SUPD == 310
+OUString AttributeList::getTypeByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
-		return m_pImpl->vecAttribute[i].sType;
-	}
-	return OUString();
+    if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
+        return m_pImpl->vecAttribute[i].sType;
+    }
+    return OUString();
 }
 
+#if SUPD == 310
 OUString AttributeList::getValueByIndex(sal_Int16 i) throw (RuntimeException)
+#else	// SUPD == 310
+OUString AttributeList::getValueByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
-		return m_pImpl->vecAttribute[i].sValue;
-	}
-	return OUString();
+    if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
+        return m_pImpl->vecAttribute[i].sValue;
+    }
+    return OUString();
 
 }
 
+#if SUPD == 310
 OUString AttributeList::getTypeByName( const OUString& sName ) throw (RuntimeException)
+#else	// SUPD == 310
+OUString AttributeList::getTypeByName( const OUString& sName ) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
+    vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-	for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
-		if( (*ii).sName == sName ) {
-			return (*ii).sType;
-		}
-	}
-	return OUString();
+    for (; ii != m_pImpl->vecAttribute.end(); ++ii )
+    {
+        if( (*ii).sName == sName )
+        {
+            return (*ii).sType;
+        }
+    }
+    return OUString();
 }
 
+#if SUPD == 310
 OUString AttributeList::getValueByName(const OUString& sName) throw (RuntimeException)
+#else	// SUPD == 310
+OUString AttributeList::getValueByName(const OUString& sName) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
+    vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-	for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
-		if( (*ii).sName == sName ) {
-			return (*ii).sValue;
-		}
-	}
-	return OUString();
+    for (; ii != m_pImpl->vecAttribute.end(); ++ii)
+    {
+        if( (*ii).sName == sName )
+        {
+            return (*ii).sValue;
+        }
+    }
+    return OUString();
 }
 
 
+#if SUPD == 310
 Reference< XCloneable > AttributeList::createClone() throw (RuntimeException)
+#else	// SUPD == 310
+Reference< XCloneable > AttributeList::createClone() throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-	AttributeList *p = new AttributeList( *this );
-	return Reference< XCloneable > ( (XCloneable * ) p );
+    AttributeList *p = new AttributeList( *this );
+    return Reference< XCloneable > ( (XCloneable * ) p );
 }
 
 
 
 AttributeList::AttributeList()
 {
-	m_pImpl = new AttributeList_impl;
+    m_pImpl = new AttributeList_impl;
 }
 
 
 
 AttributeList::~AttributeList()
 {
-	delete m_pImpl;
+    delete m_pImpl;
 }
 
 
-void AttributeList::addAttribute( 	const OUString &sName ,
-										const OUString &sType ,
-										const OUString &sValue )
+void AttributeList::addAttribute(   const OUString &sName ,
+                                        const OUString &sType ,
+                                        const OUString &sValue )
 {
-	m_pImpl->vecAttribute.push_back( TagAttribute( sName , sType , sValue ) );
+    m_pImpl->vecAttribute.push_back( TagAttribute( sName , sType , sValue ) );
 }
 
 void AttributeList::clear()
 {
-	m_pImpl->vecAttribute.clear();
+    m_pImpl->vecAttribute.clear();
 }
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

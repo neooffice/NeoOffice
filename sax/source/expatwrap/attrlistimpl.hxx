@@ -1,34 +1,30 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef _SAX_ATTRLISTIMPL_HXX
-#define _SAX_ATTRLISTIMPL_HXX
+#ifndef INCLUDED_SAX_SOURCE_EXPATWRAP_ATTRLISTIMPL_HXX
+#define INCLUDED_SAX_SOURCE_EXPATWRAP_ATTRLISTIMPL_HXX
 
 #include "sal/config.h"
-//#include "sax/saxdllapi.h"
-
+#if SUPD == 310
+#include <sax/saxdllapi.h>
+#endif	// SUPD == 310
 #include <cppuhelper/implbase2.hxx>
-
 #include <com/sun/star/uno/RuntimeException.hpp>
 #include <com/sun/star/util/XCloneable.hpp>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
@@ -39,43 +35,63 @@ namespace sax_expatwrap
 struct AttributeList_impl;
 
 //FIXME
-class /*SAX_DLLPUBLIC*/ AttributeList :
-	public ::cppu::WeakImplHelper2<
+class AttributeList :
+    public ::cppu::WeakImplHelper2<
                 ::com::sun::star::xml::sax::XAttributeList,
                 ::com::sun::star::util::XCloneable >
 {
 public:
-	AttributeList();
-	AttributeList( const AttributeList & );
-	virtual ~AttributeList();
+    AttributeList();
+    AttributeList( const AttributeList & );
+    virtual ~AttributeList();
 
-	void addAttribute( const ::rtl::OUString &sName ,
-        const ::rtl::OUString &sType , const ::rtl::OUString &sValue );
-	void clear();
+    void addAttribute( const OUString &sName ,
+        const OUString &sType , const OUString &sValue );
+    void clear();
 public:
     // XAttributeList
+#if SUPD == 310
     virtual sal_Int16 SAL_CALL getLength(void)
-        throw(::com::sun::star::uno::RuntimeException);
-    virtual ::rtl::OUString SAL_CALL getNameByIndex(sal_Int16 i)
-        throw(::com::sun::star::uno::RuntimeException);
-    virtual ::rtl::OUString SAL_CALL getTypeByIndex(sal_Int16 i)
-        throw(::com::sun::star::uno::RuntimeException);
-    virtual ::rtl::OUString SAL_CALL getTypeByName(const ::rtl::OUString& aName)
-        throw(::com::sun::star::uno::RuntimeException);
-    virtual ::rtl::OUString SAL_CALL getValueByIndex(sal_Int16 i)
-        throw(::com::sun::star::uno::RuntimeException);
-    virtual ::rtl::OUString SAL_CALL getValueByName(const ::rtl::OUString& aName)
-        throw( ::com::sun::star::uno::RuntimeException);
+        throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getNameByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getTypeByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getTypeByName(const OUString& aName)
+        throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getValueByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getValueByName(const OUString& aName)
+        throw( ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
 
     // XCloneable
-	virtual ::com::sun::star::uno::Reference< XCloneable > SAL_CALL
-        createClone()	throw(::com::sun::star::uno::RuntimeException);
+    virtual ::com::sun::star::uno::Reference< XCloneable > SAL_CALL
+        createClone()   throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual sal_Int16 SAL_CALL getLength(void)
+        throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getNameByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getTypeByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getTypeByName(const OUString& aName)
+        throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getValueByIndex(sal_Int16 i)
+        throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getValueByName(const OUString& aName)
+        throw( ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    // XCloneable
+    virtual ::com::sun::star::uno::Reference< XCloneable > SAL_CALL
+        createClone()   throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
 private:
-	struct AttributeList_impl *m_pImpl;
+    struct AttributeList_impl *m_pImpl;
 };
 
 }
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

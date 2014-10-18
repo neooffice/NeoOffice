@@ -48,10 +48,18 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
-	Duration.idl
+	DateTime2.idl \
+	DateTimeWithTimezone.idl \
+	DateWithTimezone.idl \
+	Duration.idl \
+	Time2.idl
 
 UNOTYPES= \
-	com.sun.star.util.Duration
+	com.sun.star.util.DateTime2 \
+	com.sun.star.util.DateTimeWithTimezone \
+	com.sun.star.util.DateWithTimezone \
+	com.sun.star.util.Duration \
+	com.sun.star.util.Time2
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db

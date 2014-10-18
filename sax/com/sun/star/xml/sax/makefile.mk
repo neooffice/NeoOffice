@@ -48,10 +48,12 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
-	XFastShapeContextHandler2.idl
+	XFastShapeContextHandler2.idl \
+	XWriter.idl
 
 UNOTYPES= \
-	com.sun.star.xml.sax.XFastShapeContextHandler2
+	com.sun.star.xml.sax.XFastShapeContextHandler2 \
+	com.sun.star.xml.sax.XWriter
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db

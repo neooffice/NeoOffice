@@ -21,10 +21,18 @@
 
 
 namespace sax_expatwrap {
+#if SUPD == 310
+css::uno::Reference< css::uno::XInterface > SAL_CALL SaxWriter_CreateInstance(
+	const css::uno::Reference< css::lang::XMultiServiceFactory > & rSMgr ) throw (css::uno::Exception);
+::rtl::OUString SaxWriter_getServiceName() throw();
+::rtl::OUString SaxWriter_getImplementationName() throw();
+css::uno::Sequence< ::rtl::OUString > 	SaxWriter_getSupportedServiceNames(void) throw();
+#else	// SUPD == 310
 Reference< XInterface > SAL_CALL SaxWriter_CreateInstance(
 	const Reference< XMultiServiceFactory > & rSMgr ) throw (Exception);
 OUString SaxWriter_getServiceName() throw();
 OUString SaxWriter_getImplementationName() throw();
 Sequence< OUString > 	SaxWriter_getSupportedServiceNames(void) throw();
+#endif	// SUPD == 310
 }
 

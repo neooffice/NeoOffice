@@ -48,6 +48,14 @@ CFLAGS+=-DSYSTEM_ZLIB
 CFLAGS+=-DSYSTEM_EXPAT
 .ENDIF
 
+.IF "$(UPD)" == "310"
+ENVINCPRE += -I$(PRJ)$/..$/include
+INCLOCAL += -I$(PRJ)$/..$/sal/inc -I$(INCCOM)$/cssutil -I$(INCCOM)$/cssxmlsax
+# Link to modified libexpat*.a and libuno_salhelper
+SOLARLIB:=-L$(PRJ)$/..$/expat$/$(INPATH)$/lib -L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib $(SOLARLIB)
+SOLARLIBDIR:=$(PRJ)$/..$/expat$/$(INPATH)$/lib -L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 #-----------------------------------------------------------
 
 SLOFILES =\
@@ -68,6 +76,11 @@ SHL1STDLIBS= \
 		$(CPPULIB) \
 		$(CPPUHELPERLIB)\
 		$(EXPATASCII3RDLIB)
+
+.IF "$(UPD)" == "310"
+SHL1STDLIBS+= \
+		$(SALHELPERLIB)
+.ENDIF		# "$(UPD)" == "310"
 
 SHL1DEPN=
 SHL1VERSIONMAP=	$(SOLARENV)$/src$/component.map
