@@ -61,7 +61,9 @@ SLOFILES+=$(SLO)$/staticmb.obj
 .ENDIF
 
 .IF "$(UPD)" == "310"
-SLOFILES+=$(SLO)$/thread.obj
+SLOFILES += \
+	$(SLO)$/thread.obj \
+	$(SLO)$/timer.obj
 .ENDIF		# "$(UPD)" == "310"
 
 .IF "$(GUI)" == "WNT"
