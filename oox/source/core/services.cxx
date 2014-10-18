@@ -115,7 +115,7 @@ void SAL_CALL writeInfo( registry::XRegistryKey * pRegistryKey, const OUString& 
 #define WRITEINFO(className)\
 	writeInfo( pKey, className##_getImplementationName(), className##_getSupportedServiceNames() )
 
-SAL_DLLPUBLIC_EXPORT sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKey )
+extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKey )
 {
 	if( pRegistryKey )
 	{
