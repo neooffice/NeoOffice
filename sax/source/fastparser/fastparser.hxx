@@ -29,7 +29,11 @@
 #include <hash_map>
 #include <boost/shared_ptr.hpp>
 #include <rtl/ref.hxx>
+#if SUPD == 310
+#include <com/sun/star/xml/sax/XFastParser2.hpp>
+#else	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastParser.hpp>
+#endif	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 #include <com/sun/star/xml/sax/XFastDocumentHandler.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -93,7 +97,11 @@ struct Entity : public ParserData
 // --------------------------------------------------------------------
 
 // This class implements the external Parser interface
+#if SUPD == 310
+class FastSaxParser : public ::cppu::WeakImplHelper2< ::com::sun::star::xml::sax::XFastParser2, ::com::sun::star::lang::XServiceInfo >
+#else	// SUPD == 310
 class FastSaxParser : public ::cppu::WeakImplHelper2< ::com::sun::star::xml::sax::XFastParser, ::com::sun::star::lang::XServiceInfo >
+#endif	// SUPD == 310
 {
 public:
     FastSaxParser();

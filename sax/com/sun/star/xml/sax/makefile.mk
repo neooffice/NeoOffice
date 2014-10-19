@@ -49,11 +49,13 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 
 IDLFILES= \
 	FastParser.idl \
+	XFastParser2.idl \
 	XFastShapeContextHandler2.idl \
 	XWriter.idl
 
 UNOTYPES= \
 	com.sun.star.xml.sax.FastParser \
+	com.sun.star.xml.sax.XFastParser2 \
 	com.sun.star.xml.sax.XFastShapeContextHandler2 \
 	com.sun.star.xml.sax.XWriter
 

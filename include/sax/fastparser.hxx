@@ -20,7 +20,11 @@
 #ifndef INCLUDED_SAX_FASTPARSER_HXX
 #define INCLUDED_SAX_FASTPARSER_HXX
 
+#if SUPD == 310
+#include <com/sun/star/xml/sax/XFastParser2.hpp>
+#else	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastParser.hpp>
+#endif	// SUPD == 310
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <cppuhelper/implbase2.hxx>
 
@@ -48,7 +52,11 @@ class FastSaxParserImpl;
 // This class implements the external Parser interface
 class FASTSAX_DLLPUBLIC FastSaxParser
     : public ::cppu::WeakImplHelper2<
+#if SUPD == 310
+                ::com::sun::star::xml::sax::XFastParser2,
+#else	// SUPD == 310
                 ::com::sun::star::xml::sax::XFastParser,
+#endif	// SUPD == 310
                 ::com::sun::star::lang::XServiceInfo >
 {
     FastSaxParserImpl* mpImpl;
