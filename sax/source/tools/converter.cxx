@@ -447,21 +447,13 @@ void Converter::convertMeasure( OUStringBuffer& rBuffer,
 
 static const OUString& getTrueString()
 {
-#if SUPD == 310
-    static const OUString sTrue( RTL_CONSTASCII_USTRINGPARAM( "true" ) );
-#else	// SUPD == 310
     static const OUString sTrue( "true" );
-#endif	// SUPD == 310
     return sTrue;
 }
 
 static const OUString& getFalseString()
 {
-#if SUPD == 310
-    static const OUString sFalse( RTL_CONSTASCII_USTRINGPARAM( "false" ) );
-#else	// SUPD == 310
     static const OUString sFalse( "false" );
-#endif	// SUPD == 310
     return sFalse;
 }
 
@@ -967,11 +959,7 @@ void Converter::convertDuration(OUStringBuffer& rBuffer,
         fValue = - fValue;
     }
 
-#if SUPD == 310
-    rBuffer.append( OUString( RTL_CONSTASCII_USTRINGPARAM( "PT" ) ) );
-#else	// SUPD == 310
     rBuffer.append( "PT" );
-#endif	// SUPD == 310
     fValue *= 24;
     double fHoursValue = ::rtl::math::approxFloor (fValue);
     fValue -= fHoursValue;
@@ -1096,11 +1084,7 @@ bool Converter::convertDuration(double& rfTime,
                 nSecs = nTemp;
                 nTemp = 0;
                 bIsFraction = true;
-#if SUPD == 310
-                sDoubleStr = OUString( RTL_CONSTASCII_USTRINGPARAM( "0." ) );
-#else	// SUPD == 310
                 sDoubleStr = "0.";
-#endif	// SUPD == 310
             }
             else if ( c == 'S' )
             {
@@ -1108,11 +1092,7 @@ bool Converter::convertDuration(double& rfTime,
                 {
                     nSecs = nTemp;
                     nTemp = 0;
-#if SUPD == 310
-                    sDoubleStr = OUString( RTL_CONSTASCII_USTRINGPARAM( "0.0" ) );
-#else	// SUPD == 310
                     sDoubleStr = "0.0";
-#endif	// SUPD == 310
                 }
             }
             else

@@ -295,11 +295,7 @@ public: // module scope
 
 public:
     SaxExpatParser_Impl()
-#if SUPD == 310
-        : sCDATA(OUString(RTL_CONSTASCII_USTRINGPARAM("CDATA")))
-#else	// SUPD == 310
         : sCDATA("CDATA")
-#endif	// SUPD == 310
         , m_bEnableDoS(false)
         , bExceptionWasThrown(false)
         , bRTExceptionWasThrown(false)
@@ -570,11 +566,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
 
     if( ! entity.structSource.aInputStream.is() )
     {
-#if SUPD == 310
-        throw SAXException(OUString(RTL_CONSTASCII_USTRINGPARAM("No input source")),
-#else	// SUPD == 310
         throw SAXException("No input source",
-#endif	// SUPD == 310
                             css::uno::Reference< css::uno::XInterface > () , css::uno::Any() );
     }
 
@@ -589,11 +581,7 @@ void SaxExpatParser::parseStream(   const InputSource& structSource)
     entity.pParser = XML_ParserCreate( 0 );
     if( ! entity.pParser )
     {
-#if SUPD == 310
-        throw SAXException(OUString(RTL_CONSTASCII_USTRINGPARAM("Couldn't create parser")),
-#else	// SUPD == 310
         throw SAXException("Couldn't create parser",
-#endif	// SUPD == 310
                             css::uno::Reference< css::uno::XInterface > (), css::uno::Any() );
     }
 
@@ -861,25 +849,17 @@ OUString getErrorMessage( XML_Error xmlE, const OUString& sSystemId , sal_Int32 
         Message = "not standalone";
     }
 
-#if SUPD == 310
-    OUString str(RTL_CONSTASCII_USTRINGPARAM("["));
-#else	// SUPD == 310
     OUString str("[");
-#endif	// SUPD == 310
     str += sSystemId;
-#if SUPD == 310
-    str += OUString(RTL_CONSTASCII_USTRINGPARAM(" line "));
-    str += OUString::valueOf( nLine );
-    str += OUString(RTL_CONSTASCII_USTRINGPARAM("]: "));
-    str += OUString(RTL_CONSTASCII_USTRINGPARAM(Message));
-    str += OUString(RTL_CONSTASCII_USTRINGPARAM("error"));
-#else	// SUPD == 310
     str += " line ";
+#if SUPD == 310
+    str += OUString::valueOf( nLine );
+#else	// SUPD == 310
     str += OUString::number( nLine );
+#endif	// SUPD == 310
     str += "]: ";
     str += Message;
     str += "error";
-#endif	// SUPD == 310
 
     return str;
 }
@@ -1023,11 +1003,7 @@ void SaxExpatParser_Impl::callbackEntityDecl(
         SAL_INFO("sax","SaxExpatParser: internal entity declaration, stopping");
         XML_StopParser(pImpl->getEntity().pParser, XML_FALSE);
         pImpl->exception = SAXParseException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("SaxExpatParser: internal entity declaration, stopping")),
-#else	// SUPD == 310
             "SaxExpatParser: internal entity declaration, stopping",
-#endif	// SUPD == 310
             0, css::uno::Any(),
             pImpl->rDocumentLocator->getPublicId(),
             pImpl->rDocumentLocator->getSystemId(),

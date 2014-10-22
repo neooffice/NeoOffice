@@ -43,32 +43,16 @@ namespace sax_fastparser
 //--------------------------------------
 // the extern interface 
 //---------------------------------------
-#if SUPD == 310
-css::uno::Reference< XInterface > SAL_CALL FastSaxParser_CreateInstance( const css::uno::Reference< XMultiServiceFactory  >  & ) throw(Exception)
-#else	// SUPD == 310
 Reference< XInterface > SAL_CALL FastSaxParser_CreateInstance( const Reference< XMultiServiceFactory  >  & ) throw(Exception)
-#endif	// SUPD == 310
 {	
 	FastSaxParser *p = new FastSaxParser;
-#if SUPD == 310
-	return css::uno::Reference< XInterface > ( (OWeakObject * ) p );
-#else	// SUPD == 310
 	return Reference< XInterface > ( (OWeakObject * ) p );
-#endif	// SUPD == 310
 }
 
-#if SUPD == 310
-css::uno::Reference< XInterface > SAL_CALL FastSaxSerializer_CreateInstance( const css::uno::Reference< XMultiServiceFactory  >  & ) throw(Exception)
-#else	// SUPD == 310
 Reference< XInterface > SAL_CALL FastSaxSerializer_CreateInstance( const Reference< XMultiServiceFactory  >  & ) throw(Exception)
-#endif	// SUPD == 310
 {	
 	FastSaxSerializer *p = new FastSaxSerializer;
-#if SUPD == 310
-	return css::uno::Reference< XInterface > ( (OWeakObject * ) p );
-#else	// SUPD == 310
 	return Reference< XInterface > ( (OWeakObject * ) p );
-#endif	// SUPD == 310
 }
 }
 
@@ -90,13 +74,13 @@ sal_Bool SAL_CALL component_writeInfo(
     {
         try
         {
-            css::uno::Reference< XRegistryKey > xKey( reinterpret_cast< XRegistryKey * >( pRegistryKey ) );
+            Reference< XRegistryKey > xKey( reinterpret_cast< XRegistryKey * >( pRegistryKey ) );
 
-            css::uno::Reference< XRegistryKey > xNewKey( xKey->createKey(
+            Reference< XRegistryKey > xNewKey( xKey->createKey(
                 OUString::createFromAscii( "/" PARSER_IMPLEMENTATION_NAME "/UNO/SERVICES" ) ) );
             xNewKey->createKey( OUString::createFromAscii( PARSER_SERVICE_NAME ) );
 
-            css::uno::Reference< XRegistryKey > xNewKey1( xKey->createKey(
+            Reference< XRegistryKey > xNewKey1( xKey->createKey(
                 OUString::createFromAscii( "/" SERIALIZER_IMPLEMENTATION_NAME "/UNO/SERVICES" ) ) );
             xNewKey1->createKey( OUString::createFromAscii( SERIALIZER_SERVICE_NAME ) );
                 
@@ -118,13 +102,8 @@ void * SAL_CALL component_getFactory( const sal_Char * pImplName, void * pServic
 
 	if (pServiceManager )
 	{
-#if SUPD == 310
-		css::uno::Reference< XSingleServiceFactory > xRet;
-		css::uno::Reference< XMultiServiceFactory > xSMgr( reinterpret_cast< XMultiServiceFactory * > ( pServiceManager ) );
-#else	// SUPD == 310
 		Reference< XSingleServiceFactory > xRet;
 		Reference< XMultiServiceFactory > xSMgr( reinterpret_cast< XMultiServiceFactory * > ( pServiceManager ) );
-#endif	// SUPD == 310
 
 		OUString aImplementationName( OUString::createFromAscii( pImplName ) );
 		

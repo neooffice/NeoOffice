@@ -622,23 +622,11 @@ OUString lclGetErrorMessage( XML_Error xmlE, const OUString& sSystemId, sal_Int3
 
     OUStringBuffer aBuffer( '[' );
     aBuffer.append( sSystemId );
-#if SUPD == 310
-    aBuffer.append( OUString( RTL_CONSTASCII_USTRINGPARAM( " line " ) ) );
-#else	// SUPD == 310
     aBuffer.append( " line " );
-#endif	// SUPD == 310
     aBuffer.append( nLine );
-#if SUPD == 310
-    aBuffer.append( OUString( RTL_CONSTASCII_USTRINGPARAM( "]: " ) ) );
-#else	// SUPD == 310
     aBuffer.append( "]: " );
-#endif	// SUPD == 310
     aBuffer.appendAscii( pMessage );
-#if SUPD == 310
-    aBuffer.append( OUString( RTL_CONSTASCII_USTRINGPARAM( " error" ) ) );
-#else	// SUPD == 310
     aBuffer.append( " error" );
-#endif	// SUPD == 310
     return aBuffer.makeStringAndClear();
 }
 
@@ -867,7 +855,7 @@ void FastSaxParserImpl::parseStream(const InputSource& maStructSource)
 
     if( !entity.maStructSource.aInputStream.is() )
 #if SUPD == 310
-        throw SAXException(OUString(RTL_CONSTASCII_USTRINGPARAM("No input source")), css::uno::Reference< XInterface >(), Any() );
+        throw SAXException("No input source", css::uno::Reference< XInterface >(), Any() );
 #else	// SUPD == 310
         throw SAXException("No input source", Reference< XInterface >(), Any() );
 #endif	// SUPD == 310
@@ -880,7 +868,7 @@ void FastSaxParserImpl::parseStream(const InputSource& maStructSource)
     entity.mpParser = XML_ParserCreate( 0 );
     if( !entity.mpParser )
 #if SUPD == 310
-        throw SAXException(OUString(RTL_CONSTASCII_USTRINGPARAM("Couldn't create parser")), css::uno::Reference< XInterface >(), Any() );
+        throw SAXException("Couldn't create parser", css::uno::Reference< XInterface >(), Any() );
 #else	// SUPD == 310
         throw SAXException("Couldn't create parser", Reference< XInterface >(), Any() );
 #endif	// SUPD == 310
@@ -1294,11 +1282,7 @@ void FastSaxParserImpl::callbackStartElement( const XML_Char* pwName, const XML_
             rEvent.msElementName = OUString( pName, nNameLen, RTL_TEXTENCODING_UTF8 );
         }
         else // token is always preferred.
-#if SUPD == 310
-            rEvent.msElementName = OUString( RTL_CONSTASCII_USTRINGPARAM( "" ) );
-#else	// SUPD == 310
             rEvent.msElementName = OUString( "" );
-#endif	// SUPD == 310
 
         rEntity.maNamespaceStack.push( NameWithToken(rEvent.msNamespace, nNamespaceToken) );
         if (rEntity.mbEnableThreads)
@@ -1354,11 +1338,7 @@ void FastSaxParserImpl::callbackEntityDecl(
         SAL_INFO("sax", "FastSaxParser: internal entity declaration, stopping");
         XML_StopParser(getEntity().mpParser, XML_FALSE);
         getEntity().saveException( SAXParseException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("FastSaxParser: internal entity declaration, stopping")),
-#else	// SUPD == 310
             "FastSaxParser: internal entity declaration, stopping",
-#endif	// SUPD == 310
             static_cast<OWeakObject*>(mpFront), Any(),
             mxDocumentLocator->getPublicId(),
             mxDocumentLocator->getSystemId(),

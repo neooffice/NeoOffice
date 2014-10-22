@@ -36,9 +36,9 @@
 #include <cppuhelper/implbase2.hxx>
 #if SUPD != 310
 #include <cppuhelper/supportsservice.hxx>
-#endif	// SUPD != 310
 
 #include <rtl/ref.hxx>
+#endif	// SUPD != 310
 #include <rtl/ustrbuf.hxx>
 
 using namespace ::std;
@@ -89,11 +89,7 @@ public:
 #endif
 
 private:
-#if SUPD == 310
-    css::uno::Reference< XOutputStream >  m_out;
-#else	// SUPD == 310
     Reference< XOutputStream >  m_out;
-#endif	// SUPD == 310
     Sequence < sal_Int8 >       m_Sequence;
     sal_Int8*                   mp_Sequence;
 
@@ -116,11 +112,7 @@ private:
                         sal_uInt32& rPos) throw( SAXException );
     inline void FinishStartElement() throw( SAXException );
 public:
-#if SUPD == 310
-    SaxWriterHelper(css::uno::Reference< XOutputStream > m_TempOut) :
-#else	// SUPD == 310
     SaxWriterHelper(Reference< XOutputStream > m_TempOut) :
-#endif	// SUPD == 310
         m_out(m_TempOut),
         m_Sequence(SEQUENCESIZE),
         mp_Sequence(NULL),
@@ -154,11 +146,7 @@ public:
 // returns whether it works correct or invalid characters were in the strings
 // If there are invalid characters in one of the strings it returns sal_False.
 // Than the calling method has to throw the needed Exception.
-#if SUPD == 310
-    inline SaxInvalidCharacterError startElement(const OUString& rName, const css::uno::Reference< XAttributeList >& xAttribs) throw( SAXException );
-#else	// SUPD == 310
     inline SaxInvalidCharacterError startElement(const OUString& rName, const Reference< XAttributeList >& xAttribs) throw( SAXException );
-#endif	// SUPD == 310
     inline bool FinishEmptyElement() throw( SAXException );
 
 // returns whether it works correct or invalid characters were in the string
@@ -217,13 +205,8 @@ inline sal_uInt32 SaxWriterHelper::writeSequence() throw( SAXException )
         Any a;
         a <<= e;
         throw SAXException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("io exception during writing")),
-            css::uno::Reference< XInterface > (),
-#else	// SUPD == 310
             OUString("io exception during writing"),
             Reference< XInterface > (),
-#endif	// SUPD == 310
             a );
     }
     nLastLineFeedPos -= SEQUENCESIZE;
@@ -571,11 +554,7 @@ inline void SaxWriterHelper::startDocument() throw( SAXException )
         nCurrentPos = writeSequence();
 }
 
-#if SUPD == 310
-inline SaxInvalidCharacterError SaxWriterHelper::startElement(const OUString& rName, const css::uno::Reference< XAttributeList >& xAttribs) throw( SAXException )
-#else	// SUPD == 310
 inline SaxInvalidCharacterError SaxWriterHelper::startElement(const OUString& rName, const Reference< XAttributeList >& xAttribs) throw( SAXException )
-#endif	// SUPD == 310
 {
     FinishStartElement();
 
@@ -917,11 +896,10 @@ public:
     }
 
 public: // XActiveDataSource
+    virtual void SAL_CALL setOutputStream(const Reference< XOutputStream > & aStream)
 #if SUPD == 310
-    virtual void SAL_CALL setOutputStream(const css::uno::Reference< XOutputStream > & aStream)
         throw (RuntimeException) SAL_OVERRIDE
 #else	// SUPD == 310
-    virtual void SAL_CALL setOutputStream(const Reference< XOutputStream > & aStream)
         throw (RuntimeException, std::exception) SAL_OVERRIDE
 #endif	// SUPD == 310
             {
@@ -941,7 +919,7 @@ public: // XActiveDataSource
                 }
             }
 #if SUPD == 310
-    virtual css::uno::Reference< XOutputStream >  SAL_CALL getOutputStream(void)
+    virtual Reference< XOutputStream >  SAL_CALL getOutputStream(void)
         throw(RuntimeException) SAL_OVERRIDE
 #else	// SUPD == 310
     virtual Reference< XOutputStream >  SAL_CALL getOutputStream(void)
@@ -966,7 +944,7 @@ public: // XDocumentHandler
 
     virtual void SAL_CALL startElement(const OUString& aName,
 #if SUPD == 310
-                                       const css::uno::Reference< XAttributeList > & xAttribs)
+                                       const Reference< XAttributeList > & xAttribs)
         throw (SAXException, RuntimeException) SAL_OVERRIDE;
 #else	// SUPD == 310
                                        const Reference< XAttributeList > & xAttribs)
@@ -997,7 +975,7 @@ public: // XDocumentHandler
                                                 const OUString& aData)
 #if SUPD == 310
         throw(SAXException, RuntimeException) SAL_OVERRIDE;
-    virtual void SAL_CALL setDocumentLocator(const css::uno::Reference< XLocator > & xLocator)
+    virtual void SAL_CALL setDocumentLocator(const Reference< XLocator > & xLocator)
         throw(SAXException, RuntimeException) SAL_OVERRIDE;
 #else	// SUPD == 310
         throw(SAXException, RuntimeException, std::exception) SAL_OVERRIDE;
@@ -1046,11 +1024,7 @@ public: // XServiceInfo
 private:
     sal_Int32 getIndentPrefixLength( sal_Int32 nFirstLineBreakOccurrence ) throw();
 
-#if SUPD == 310
-    css::uno::Reference< XOutputStream >  m_out;
-#else	// SUPD == 310
     Reference< XOutputStream >  m_out;
-#endif	// SUPD == 310
     Sequence < sal_Int8 >       m_seqStartElement;
     SaxWriterHelper*            m_pSaxWriterHelper;
 
@@ -1156,23 +1130,13 @@ void SAXWriter::endDocument(void)                   throw(SAXException, RuntimeE
     if( ! m_bDocStarted )
     {
         throw SAXException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("endDocument called before startDocument")),
-            css::uno::Reference< XInterface >() , Any() );
-#else	// SUPD == 310
             OUString("endDocument called before startDocument"),
             Reference< XInterface >() , Any() );
-#endif	// SUPD == 310
     }
     if( m_nLevel ) {
         throw SAXException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("unexpected end of document")),
-            css::uno::Reference< XInterface >() , Any() );
-#else	// SUPD == 310
             OUString("unexpected end of document"),
             Reference< XInterface >() , Any() );
-#endif	// SUPD == 310
     }
     m_pSaxWriterHelper->endDocument();
     try
@@ -1184,20 +1148,15 @@ void SAXWriter::endDocument(void)                   throw(SAXException, RuntimeE
         Any a;
         a <<= e;
         throw SAXException(
-#if SUPD == 310
-            OUString(RTL_CONSTASCII_USTRINGPARAM("IO exception during closing the IO Stream")),
-            css::uno::Reference< XInterface > (),
-#else	// SUPD == 310
             OUString("IO exception during closing the IO Stream"),
             Reference< XInterface > (),
-#endif	// SUPD == 310
             a );
     }
 }
 
 
 #if SUPD == 310
-void SAXWriter::startElement(const OUString& aName, const css::uno::Reference< XAttributeList >& xAttribs)
+void SAXWriter::startElement(const OUString& aName, const Reference< XAttributeList >& xAttribs)
     throw(SAXException, RuntimeException)
 #else	// SUPD == 310
 void SAXWriter::startElement(const OUString& aName, const Reference< XAttributeList >& xAttribs)
@@ -1207,21 +1166,13 @@ void SAXWriter::startElement(const OUString& aName, const Reference< XAttributeL
     if( ! m_bDocStarted )
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("startElement called before startDocument"));
-#else	// SUPD == 310
         except.Message = "startElement called before startDocument";
-#endif	// SUPD == 310
         throw except;
     }
     if( m_bIsCDATA )
     {
         SAXException except;
-#if SUPD == 310
-        except.Message =  OUString(RTL_CONSTASCII_USTRINGPARAM("startElement call not allowed with CDATA sections"));
-#else	// SUPD == 310
         except.Message =  "startElement call not allowed with CDATA sections";
-#endif	// SUPD == 310
         throw except;
     }
 
@@ -1267,21 +1218,13 @@ void SAXWriter::startElement(const OUString& aName, const Reference< XAttributeL
     if (eRet == SAX_WARNING)
     {
         SAXInvalidCharacterException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export in a attribute value"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export in a attribute value";
-#endif	// SUPD == 310
         throw except;
     }
     else if (eRet == SAX_ERROR)
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
@@ -1329,11 +1272,7 @@ void SAXWriter::endElement(const OUString& aName)   throw (SAXException, Runtime
     if (!bRet)
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
@@ -1347,11 +1286,7 @@ void SAXWriter::characters(const OUString& aChars)  throw(SAXException, RuntimeE
     if( ! m_bDocStarted )
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("characters method called before startDocument"));
-#else	// SUPD == 310
         except.Message = "characters method called before startDocument";
-#endif	// SUPD == 310
         throw except;
     }
 
@@ -1393,11 +1328,7 @@ void SAXWriter::characters(const OUString& aChars)  throw(SAXException, RuntimeE
     if (bThrowException)
     {
         SAXInvalidCharacterException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
@@ -1450,18 +1381,14 @@ void SAXWriter::processingInstruction(const OUString& aTarget, const OUString& a
     if (!m_pSaxWriterHelper->processingInstruction(aTarget, aData))
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
 
 
 #if SUPD == 310
-void SAXWriter::setDocumentLocator(const css::uno::Reference< XLocator >&)
+void SAXWriter::setDocumentLocator(const Reference< XLocator >&)
         throw (SAXException, RuntimeException)
 #else	// SUPD == 310
 void SAXWriter::setDocumentLocator(const Reference< XLocator >&)
@@ -1501,11 +1428,7 @@ void SAXWriter::endCDATA(void) throw (SAXException,RuntimeException, std::except
     if( ! m_bDocStarted || ! m_bIsCDATA)
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("endCDATA was called without startCDATA"));
-#else	// SUPD == 310
         except.Message = "endCDATA was called without startCDATA";
-#endif	// SUPD == 310
         throw except;
     }
 
@@ -1547,11 +1470,7 @@ void SAXWriter::comment(const OUString& sComment) throw(SAXException, RuntimeExc
     if (!m_pSaxWriterHelper->comment(sComment))
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
@@ -1600,11 +1519,7 @@ void SAXWriter::unknown(const OUString& sString) throw (SAXException, RuntimeExc
     if (!m_pSaxWriterHelper->writeString( sString, false, false))
     {
         SAXException except;
-#if SUPD == 310
-        except.Message = OUString(RTL_CONSTASCII_USTRINGPARAM("Invalid character during XML-Export"));
-#else	// SUPD == 310
         except.Message = "Invalid character during XML-Export";
-#endif	// SUPD == 310
         throw except;
     }
 }
@@ -1618,12 +1533,12 @@ namespace sax_expatwrap {
 //--------------------------------------
 // the extern interface
 //---------------------------------------
-css::uno::Reference < XInterface > SAL_CALL SaxWriter_CreateInstance(
-	const css::uno::Reference < XMultiServiceFactory >  &  )
+Reference < XInterface > SAL_CALL SaxWriter_CreateInstance(
+	const Reference < XMultiServiceFactory >  &  )
 	throw (css::uno::Exception)
 {
 	SAXWriter *p = new SAXWriter;
-	return css::uno::Reference< XInterface > ( static_cast< OWeakObject * >( p ) );
+	return Reference< XInterface > ( static_cast< OWeakObject * >( p ) );
 }
 
 OUString SaxWriter_getServiceName() throw()
