@@ -34,7 +34,7 @@ namespace rtl
 {
 	class OString;
 	class OUString;
-};
+}
 
 using namespace rtl;
 
