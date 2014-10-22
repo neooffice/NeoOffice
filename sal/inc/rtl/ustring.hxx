@@ -1,21 +1,30 @@
 /**************************************************************
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * or more contributor license agreements.
  * 
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * $RCSfile$
+ * $Revision$
  * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * This file is part of NeoOffice.
+ * 
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ * 
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ * 
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ * 
+ * Modified October 2014 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 4 of the Apache License v2.0.
  * 
  *************************************************************/
 
@@ -220,6 +229,29 @@ public:
         }
     }
 
+#ifdef USE_JAVA
+    /**
+      New string from an ASCII charactor string.
+
+      @param    value       the 8-Bit ASCII character string
+
+      @exception std::bad_alloc is thrown if an out-of-memory condition occurs
+     */
+    OUString( const sal_Char * value )
+    {
+        pData = 0;
+        rtl_uString_newFromAscii( &pData, value );
+#if defined EXCEPTIONS_OFF
+        OSL_ASSERT(pData != NULL);
+#else
+        if (pData == 0) {
+            throw std::bad_alloc();
+        }
+#endif
+    }
+
+#endif	// USE_JAVA
+
     /**
       Release the string data.
     */
@@ -263,6 +295,21 @@ public:
         rtl_uString_newConcat( &pData, pData, str.pData );
         return *this;
     }
+
+#ifdef USE_JAVA
+    /**
+      Append an ASCII charactor string to this string.
+
+      @param  asciiStr      the 8-Bit ASCII character string to be compared.
+    */
+    OUString & operator+=( const sal_Char* asciiStr ) SAL_THROW(())
+    {
+        OUString str = OUString::createFromAscii( asciiStr );
+        rtl_uString_newConcat( &pData, pData, str.pData );
+        return *this;
+    }
+
+#endif	// USE_JAVA
 
     /**
       Returns the length of this string.
@@ -992,6 +1039,15 @@ public:
     {
         return rStr1.concat( rStr2 );
     }
+
+#ifdef USE_JAVA
+    friend OUString operator+( const OUString& rStr1, const sal_Char* pStr2 ) SAL_THROW(())
+    {
+        OUString str = OUString::createFromAscii( pStr2 );
+        return rStr1.concat( str );
+    }
+
+#endif	// USE_JAVA
 
     /**
       Returns a new string resulting from replacing n = count characters
