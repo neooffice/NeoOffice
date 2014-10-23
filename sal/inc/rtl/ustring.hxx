@@ -1525,6 +1525,38 @@ public:
         rtl_uString_newFromAscii( &pNew, value );
         return OUString( pNew, (DO_NOT_ACQUIRE*)0 );
     }
+
+#ifdef USE_JAVA
+    static OUString number( sal_Bool b ) SAL_THROW(())
+    {
+        return OUString::valueOf( b );
+    }
+
+    static OUString number( sal_Unicode c ) SAL_THROW(())
+    {
+        return OUString::valueOf( c );
+    }
+
+    static OUString number( sal_Int32 i, sal_Int16 radix = 10 ) SAL_THROW(())
+    {
+        return OUString::valueOf( i, radix );
+    }
+
+    static OUString number( sal_Int64 ll, sal_Int16 radix = 10 ) SAL_THROW(())
+    {
+        return OUString::valueOf( ll, radix );
+    }
+
+    static OUString number( float f ) SAL_THROW(())
+    {
+        return OUString::valueOf( f );
+    }
+
+    static OUString number( double d ) SAL_THROW(())
+    {
+        return OUString::valueOf( d );
+    }
+#endif	// USE_JAVA
 };
 
 /* ======================================================================= */
