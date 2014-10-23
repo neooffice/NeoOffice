@@ -852,11 +852,7 @@ OUString getErrorMessage( XML_Error xmlE, const OUString& sSystemId , sal_Int32 
     OUString str("[");
     str += sSystemId;
     str += " line ";
-#if SUPD == 310
-    str += OUString::valueOf( nLine );
-#else	// SUPD == 310
     str += OUString::number( nLine );
-#endif	// SUPD == 310
     str += "]: ";
     str += Message;
     str += "error";

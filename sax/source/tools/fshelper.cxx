@@ -122,29 +122,17 @@ FastSerializerHelper* FastSerializerHelper::write(const OUString& value)
 
 FastSerializerHelper* FastSerializerHelper::write(sal_Int32 value)
 {
-#if SUPD == 310
-    return write(OUString::valueOf(value));
-#else	// SUPD == 310
     return write(OUString::number(value));
-#endif	// SUPD == 310
 }
 
 FastSerializerHelper* FastSerializerHelper::write(sal_Int64 value)
 {
-#if SUPD == 310
-    return write(OUString::valueOf(value));
-#else	// SUPD == 310
     return write(OUString::number(value));
-#endif	// SUPD == 310
 }
 
 FastSerializerHelper* FastSerializerHelper::write(double value)
 {
-#if SUPD == 310
-    return write(OUString::valueOf(value));
-#else	// SUPD == 310
     return write(OUString::number(value));
-#endif	// SUPD == 310
 }
 
 FastSerializerHelper* FastSerializerHelper::writeEscaped(const char* value)
