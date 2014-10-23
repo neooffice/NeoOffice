@@ -1556,6 +1556,16 @@ public:
     {
         return OUString::valueOf( d );
     }
+
+    bool startsWith( OUString const & str ) const
+    {
+        return match( str );
+    }
+
+    bool endsWith( OUString const & str ) const
+    {
+        return ( getLength() >= str.getLength() && match( str, getLength() - str.getLength() ) );
+    }
 #endif	// USE_JAVA
 };
 
