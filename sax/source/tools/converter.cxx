@@ -457,16 +457,6 @@ static const OUString& getFalseString()
     return sFalse;
 }
 
-#if SUPD == 310
-
-static bool isDateTime2( const com::sun::star::util::DateTime &i_rDateTime )
-{
-    static const com::sun::star::util::DateTime2 aDateTime2;
-    return ( getCppuType( &i_rDateTime ) == getCppuType( &aDateTime2 ) );
-}
-
-#endif	// SUPD == 310
-
 /** convert string to boolean */
 bool Converter::convertBool( bool& rBool, const OUString& rString )
 {
@@ -892,7 +882,7 @@ void Converter::convertTime( ::rtl::OUStringBuffer& rBuffer,
     double fSec = rDateTime.Seconds;
     double fSec100 = 0;
     double fSecNano = 0;
-    if ( isDateTime2( rDateTime ) )
+    if ( ::getCppuType( &rDateTime ) == ::getCppuType( (com::sun::star::util::DateTime2*)0 ) )
         fSecNano = ((const com::sun::star::util::DateTime2&)rDateTime).NanoSeconds;
     else
         fSec100 = rDateTime.HundredthSeconds;
@@ -935,7 +925,7 @@ bool Converter::convertTime( ::com::sun::star::util::DateTime& rDateTime,
         rDateTime.Minutes = static_cast < sal_uInt16 > ( fMinsValue );
         rDateTime.Seconds = static_cast < sal_uInt16 > ( fSecsValue );
         rDateTime.HundredthSeconds = static_cast < sal_uInt16 > ( f100SecsValue * 100.0 );
-        if ( isDateTime2( rDateTime ) )
+        if ( ::getCppuType( &rDateTime ) == ::getCppuType( (com::sun::star::util::DateTime2*)0 ) )
             ((com::sun::star::util::DateTime2&)rDateTime).NanoSeconds = static_cast < sal_uInt16 > ( fTempTime * 1000000000.0 );
 
         return true;
@@ -1569,7 +1559,7 @@ static void convertTime(
     }
     i_rBuffer.append( static_cast<sal_Int32>(i_rDateTime.Seconds) );
 #if SUPD == 310
-    if (isDateTime2(i_rDateTime)) {
+    if (::getCppuType(&i_rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0)) {
         if (((const com::sun::star::util::DateTime2&)i_rDateTime).NanoSeconds > 0) {
             OSL_ENSURE(((const com::sun::star::util::DateTime2&)i_rDateTime).NanoSeconds < 1000000000,"NanoSeconds cannot be more than 999 999 999");
             i_rBuffer.append('.');
@@ -1614,7 +1604,7 @@ static void convertTimeZone(
         lcl_AppendTimezone(i_rBuffer, *pTimeZoneOffset);
     }
 #if SUPD == 310
-    else if (isDateTime2(i_rDateTime) && ((const com::sun::star::util::DateTime2&)i_rDateTime).IsUTC)
+    else if (::getCppuType(&i_rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0) && ((const com::sun::star::util::DateTime2&)i_rDateTime).IsUTC)
 #else	// SUPD == 310
     else if (i_rDateTime.IsUTC)
 #endif	// SUPD == 310
@@ -1745,7 +1735,7 @@ void Converter::convertDateTime(
             i_rBuffer.append(zero);
         }
         i_rBuffer.append( static_cast<sal_Int32>(i_rDateTime.Seconds) );
-        if (isDateTime2(i_rDateTime)) {
+        if (::getCppuType(&i_rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0)) {
             if (((const com::sun::star::util::DateTime2&)i_rDateTime).NanoSeconds > 0) {
                 OSL_ENSURE(((const com::sun::star::util::DateTime2&)i_rDateTime).NanoSeconds < 1000000000,"NanoSeconds cannot be more than 999 999 999");
                 i_rBuffer.append('.');
@@ -1784,7 +1774,7 @@ bool Converter::convertDateTime( util::DateTime& rDateTime,
             rDateTime.Minutes = 0;
             rDateTime.Seconds = 0;
             rDateTime.HundredthSeconds = 0;
-            if (isDateTime2(rDateTime))
+            if (::getCppuType(&rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0))
                 ((com::sun::star::util::DateTime2&)rDateTime).NanoSeconds = 0;
         }
         return true;
@@ -2199,7 +2189,7 @@ static bool lcl_parseDateTime(
             rDateTime.Seconds = static_cast<sal_uInt16>(nSeconds);
 #if SUPD == 310
             rDateTime.HundredthSeconds = static_cast<sal_uInt32>(nNanoSeconds)/10000000;
-            if (isDateTime2(rDateTime))
+            if (::getCppuType(&rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0))
             {
                 ((com::sun::star::util::DateTime2&)rDateTime).NanoSeconds = static_cast<sal_uInt32>(nNanoSeconds);
 #else	// SUPD == 310
@@ -2534,7 +2524,7 @@ bool Converter::convertDateOrDateTime(
             // util::DateTime does not support 3 decimal digits of precision!
             rDateTime.HundredthSeconds =
                 static_cast<sal_uInt16>(nMilliSeconds / 10);
-            if (isDateTime2(rDateTime))
+            if (::getCppuType(&rDateTime) == ::getCppuType((com::sun::star::util::DateTime2*)0))
                 ((com::sun::star::util::DateTime2&)rDateTime).NanoSeconds = static_cast<sal_uInt16>(nMilliSeconds * 1000000);
             rbDateTime = true;
         }
