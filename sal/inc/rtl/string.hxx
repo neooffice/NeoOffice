@@ -930,7 +930,6 @@ public:
     }
 
 #if USE_JAVA
-
     static OString number( sal_Bool b ) SAL_THROW(())
     {
         return OString::valueOf( b );
@@ -959,6 +958,16 @@ public:
     static OString number( double d ) SAL_THROW(())
     {
         return OString::valueOf( d );
+    }
+
+    bool startsWith( OString const & str ) const
+    {
+        return match( str );
+    }
+
+    bool endsWith( OString const & str ) const
+    {
+        return ( getLength() >= str.getLength() && match( str, getLength() - str.getLength() ) );
     }
 #endif	// USE_JAVA
 };
