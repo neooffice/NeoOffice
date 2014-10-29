@@ -59,9 +59,13 @@ SOLARLIBDIR:=$(PRJ)$/..$/expat$/$(INPATH)$/lib -L$(PRJ)$/..$/salhelper$/$(INPATH
 #-----------------------------------------------------------
 
 SLOFILES =\
-		$(SLO)$/facreg.obj\
-		$(SLO)$/fastparser.obj\
+		$(SLO)$/facreg.obj
+
+.IF "$(UPD)" != "310"
+SLOFILES += \
+		$(SLO)$/fastparser.obj \
 		$(SLO)$/xml2utf.obj
+.ENDIF		# "$(UPD)" != "310"
 
 .IF "$(GUI)" == "OS2"
 SHL1TARGET= fastsax
@@ -76,11 +80,6 @@ SHL1STDLIBS= \
 		$(CPPULIB) \
 		$(CPPUHELPERLIB)\
 		$(EXPATASCII3RDLIB)
-
-.IF "$(UPD)" == "310"
-SHL1STDLIBS+= \
-		$(SALHELPERLIB)
-.ENDIF		# "$(UPD)" == "310"
 
 SHL1DEPN=
 SHL1VERSIONMAP=	$(SOLARENV)$/src$/component.map
