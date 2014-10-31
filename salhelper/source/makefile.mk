@@ -45,7 +45,7 @@ UNIXVERSIONNAMES=UDK
 .INCLUDE :  settings.mk
 
 .IF "$(UPD)" == "310"
-ENVINCPRE += -I$(PRJ)$/..$/include
+INCLOCAL += -I$(PRJ)$/..$/sal/inc
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
