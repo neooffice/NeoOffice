@@ -49,8 +49,7 @@ CFLAGS+=-DSYSTEM_EXPAT
 .ENDIF
 
 .IF "$(UPD)" == "310"
-ENVINCPRE += -I$(PRJ)$/..$/include
-INCLOCAL += -I$(PRJ)$/..$/sal/inc -I$(INCCOM)$/cssutil -I$(INCCOM)$/cssxmlsax
+INCLOCAL += -I$(PRJ)$/..$/sal/inc -I$(PRJ)$/..$/salhelper/inc -I$(INCCOM)$/cssutil -I$(INCCOM)$/cssxmlsax
 # Link to modified libexpat*.a and libuno_salhelper
 SOLARLIB:=-L$(PRJ)$/..$/expat$/$(INPATH)$/lib -L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib $(SOLARLIB)
 SOLARLIBDIR:=$(PRJ)$/..$/expat$/$(INPATH)$/lib -L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib -L$(SOLARLIBDIR)
