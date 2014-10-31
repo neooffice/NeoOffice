@@ -25,6 +25,9 @@
 #ifndef _OSL_DIAGNOSE_H_
 #define _OSL_DIAGNOSE_H_
 
+#ifndef NO_LIBO_4_3_2_2_CHANGES
+#include <sal/detail/log.h>
+#endif	// !NO_LIBO_4_3_2_2_CHANGES
 #include <sal/types.h>
 
 #ifdef __cplusplus
@@ -89,6 +92,13 @@ pfunc_osl_printDetailedDebugMessage SAL_CALL osl_setDetailedDebugMessageFunc( pf
 #define OSL_TRACE           _OSL_TRACE
 #define OSL_ASSERT(c) 	    _OSL_ASSERT(c, OSL_THIS_FILE, __LINE__)
 #define OSL_ENSURE(c, m)   _OSL_ENSURE(c, OSL_THIS_FILE, __LINE__, m)
+#ifndef NO_LIBO_4_3_2_2_CHANGES
+#if OSL_DEBUG_LEVEL > 0
+#define OSL_FAIL(m) SAL_DETAIL_WARN_IF_FORMAT(sal_True, "legacy.osl", "%s", m)
+#else
+#define OSL_FAIL(m) ((void) 0)
+#endif
+#endif	// !NO_LIBO_4_3_2_2_CHANGES
 
 #define OSL_VERIFY(c) do { if (!(c)) OSL_ASSERT(0); } while (0)
 #define OSL_PRECOND(c, m)  	OSL_ENSURE(c, m)
