@@ -33,10 +33,17 @@
 namespace rtl
 {
 	class OString;
+	class OStringBuffer;
 	class OUString;
+	class OUStringBuffer;
+	class OUStringHash;
 }
 
-using namespace rtl;
+using rtl::OString;
+using rtl::OStringBuffer;
+using rtl::OUString;
+using rtl::OUStringBuffer;
+using rtl::OUStringHash;
 
 #endif	// SUPD == 310
 

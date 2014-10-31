@@ -51,7 +51,11 @@ CFLAGS += -DXML_UNICODE
 .ENDIF
 
 .IF "$(UPD)" == "310"
-INCLOCAL += -I$(PRJ)$/..$/sal/inc -I$(INCCOM)$/cssutil -I$(INCCOM)$/cssxmlsax
+INCLOCAL+= \
+	-I$(PRJ)$/..$/sal/inc \
+	-I$(INCCOM)$/cssutil \
+	-I$(INCCOM)$/cssxmlsax
+
 # Link to modified libexpat*.a
 SOLARLIB:=-L$(PRJ)$/..$/expat$/$(INPATH)$/lib $(SOLARLIB)
 .ENDIF		# "$(UPD)" == "310"
