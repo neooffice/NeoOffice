@@ -47,6 +47,14 @@ LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
 
 RSCLOCINC+=-I$(PRJ)$/source$/svdraw
 
+.IF "$(UPD)" == "310"
+PREPENDLIBS=$(PRJ)$/..$/vcl$/$(INPATH)$/lib
+
+# Link to modified libcomphelp, libsax, libtl, and libxo
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Svx - DLL ----------
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib

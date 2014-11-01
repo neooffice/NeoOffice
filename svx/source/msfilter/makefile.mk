@@ -65,6 +65,10 @@ LIB1OBJFILES= \
 	$(SLO)$/mstoolbar.obj\
 	$(SLO)$/msvbahelper.obj\
 
+.IF "$(UPD)" == "310"
+LIB1OBJFILES += $(SLO)$/util.obj
+.ENDIF		# "$(UPD)" == "310"
+
 LIB2TARGET= $(SLB)$/$(TARGET)-core.lib
 LIB2OBJFILES= \
 	$(SLO)$/svxmsbas2.obj
@@ -83,10 +87,6 @@ EXCEPTIONSFILES= \
 	$(SLO)$/msfiltertracer.obj\
 	$(SLO)$/mstoolbar.obj\
 	$(SLO)$/msvbahelper.obj\
-
-.IF "$(UPD)" == "310"
-SLOFILES += $(SLO)$/util.obj
-.ENDIF		# "$(UPD)" == "310"
 
 .INCLUDE :  target.mk
 
