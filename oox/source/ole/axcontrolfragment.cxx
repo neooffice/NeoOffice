@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/axcontrolfragment.hxx"
 
@@ -33,7 +29,7 @@
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
@@ -42,9 +38,8 @@ using ::oox::core::ContextHandler2;
 using ::oox::core::ContextHandlerRef;
 using ::oox::core::FragmentHandler2;
 using ::oox::core::XmlFilterBase;
-using ::rtl::OUString;
 
-// ============================================================================
+
 
 AxControlPropertyContext::AxControlPropertyContext( FragmentHandler2& rFragment, ControlModelBase& rModel ) :
     ContextHandler2( rFragment ),
@@ -78,7 +73,7 @@ ContextHandlerRef AxControlPropertyContext::onCreateContext( sal_Int32 nElement,
             if( nElement == AX_TOKEN( picture ) )
             {
                 OUString aPicturePath = getFragmentPathFromRelId( rAttribs.getString( R_TOKEN( id ), OUString() ) );
-                if( aPicturePath.getLength() > 0 )
+                if( !aPicturePath.isEmpty() )
                 {
                     BinaryXInputStream aInStrm( getFilter().openInputStream( aPicturePath ), true );
                     mrModel.importPictureData( mnPropId, aInStrm );
@@ -89,7 +84,7 @@ ContextHandlerRef AxControlPropertyContext::onCreateContext( sal_Int32 nElement,
     return 0;
 }
 
-// ============================================================================
+
 
 AxControlFragment::AxControlFragment( XmlFilterBase& rFilter, const OUString& rFragmentPath, EmbeddedControl& rControl ) :
     FragmentHandler2( rFilter, rFragmentPath, true ),
@@ -112,7 +107,7 @@ ContextHandlerRef AxControlFragment::onCreateContext( sal_Int32 nElement, const 
             case XML_persistStreamInit:
             {
                 OUString aFragmentPath = getFragmentPathFromRelId( rAttribs.getString( R_TOKEN( id ), OUString() ) );
-                if( aFragmentPath.getLength() > 0 )
+                if( !aFragmentPath.isEmpty() )
                 {
                     BinaryXInputStream aInStrm( getFilter().openInputStream( aFragmentPath ), true );
                     if( !aInStrm.isEof() )
@@ -131,13 +126,17 @@ ContextHandlerRef AxControlFragment::onCreateContext( sal_Int32 nElement, const 
             case XML_persistStorage:
             {
                 OUString aFragmentPath = getFragmentPathFromRelId( rAttribs.getString( R_TOKEN( id ), OUString() ) );
-                if( aFragmentPath.getLength() > 0 )
+                if( !aFragmentPath.isEmpty() )
                 {
+#if SUPD == 310
+                    css::uno::Reference< XInputStream > xStrgStrm = getFilter().openInputStream( aFragmentPath );
+#else	// SUPD == 310
                     Reference< XInputStream > xStrgStrm = getFilter().openInputStream( aFragmentPath );
+#endif	// SUPD == 310
                     if( xStrgStrm.is() )
                     {
                         OleStorage aStorage( getFilter().getComponentContext(), xStrgStrm, false );
-                        BinaryXInputStream aInStrm( aStorage.openInputStream( CREATE_OUSTRING( "f" ) ), true );
+                        BinaryXInputStream aInStrm( aStorage.openInputStream( "f" ), true );
                         if( !aInStrm.isEof() )
                             if( AxContainerModelBase* pModel = dynamic_cast< AxContainerModelBase* >( mrControl.createModelFromGuid( aClassId ) ) )
                                 pModel->importBinaryModel( aInStrm );
@@ -150,7 +149,9 @@ ContextHandlerRef AxControlFragment::onCreateContext( sal_Int32 nElement, const 
     return 0;
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

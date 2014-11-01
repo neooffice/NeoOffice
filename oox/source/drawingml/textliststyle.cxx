@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/textliststyle.hxx"
 
@@ -29,7 +25,7 @@ TextListStyle::TextListStyle()
 {
     for ( int i = 0; i < 9; i++ )
     {
-		maListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties() ) );	
+        maListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties() ) );
         maAggregationListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties() ) );
     }
 }
@@ -38,21 +34,49 @@ TextListStyle::~TextListStyle()
 {
 }
 
+TextListStyle::TextListStyle(const TextListStyle& rStyle)
+{
+    assert(rStyle.maListStyle.size() == 9);
+    assert(rStyle.maAggregationListStyle.size() == 9);
+    for ( size_t i = 0; i < 9; i++ )
+    {
+        maListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties(*rStyle.maListStyle[i]) ) );
+        maAggregationListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties(*rStyle.maAggregationListStyle[i]) ) );
+    }
+}
+
+TextListStyle& TextListStyle::operator=(const TextListStyle& rStyle)
+{
+    if(this != &rStyle)
+    {
+        assert(rStyle.maListStyle.size() == 9);
+        assert(rStyle.maAggregationListStyle.size() == 9);
+        assert(maListStyle.size() == 9);
+        assert(maAggregationListStyle.size() == 9);
+        for ( size_t i = 0; i < 9; i++ )
+        {
+            *maListStyle[i] = *rStyle.maListStyle[i];
+            *maAggregationListStyle[i] = *rStyle.maAggregationListStyle[i];
+        }
+    }
+    return *this;
+}
+
 void applyStyleList( const TextParagraphPropertiesVector& rSourceListStyle, TextParagraphPropertiesVector& rDestListStyle )
 {
     TextParagraphPropertiesVector::const_iterator aSourceListStyleIter( rSourceListStyle.begin() );
     TextParagraphPropertiesVector::iterator aDestListStyleIter( rDestListStyle.begin() );
-	while( aSourceListStyleIter != rSourceListStyle.end() )
-	{
-		if ( aDestListStyleIter != rDestListStyle.end() )
-		{
+    while( aSourceListStyleIter != rSourceListStyle.end() )
+    {
+        if ( aDestListStyleIter != rDestListStyle.end() )
+        {
             (*aDestListStyleIter)->apply( **aSourceListStyleIter );
-			aDestListStyleIter++;
-		}
-		else
+            ++aDestListStyleIter;
+        }
+        else
             rDestListStyle.push_back( TextParagraphPropertiesPtr( new TextParagraphProperties( **aSourceListStyleIter ) ) );
-		aSourceListStyleIter++;
-	}
+        ++aSourceListStyleIter;
+    }
 }
 
 void TextListStyle::apply( const TextListStyle& rTextListStyle )
@@ -61,4 +85,16 @@ void TextListStyle::apply( const TextListStyle& rTextListStyle )
     applyStyleList( rTextListStyle.getListStyle(), getListStyle() );
 }
 
+#if defined(DBG_UTIL) && OSL_DEBUG_LEVEL > 1
+void TextListStyle::dump() const
+{
+    for ( int i = 0; i < 9; i++ )
+    {
+        OSL_TRACE("text list style level: %d", i);
+        maListStyle[i]->dump();
+    }
+}
+#endif
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

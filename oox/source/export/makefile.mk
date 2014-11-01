@@ -36,12 +36,36 @@ ENABLE_EXCEPTIONS=TRUE
 SLOFILES =	\
 		$(SLO)$/drawingml.obj \
 		$(SLO)$/shapes.obj \
-		$(SLO)$/vmlexport.obj \
+		$(SLO)$/vmlexport.obj
+
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/ColorPropertySet.obj \
+		$(SLO)$/chartexport.obj
+.ELSE		# "$(UPD)" == "310"
+SLOFILES += \
 		$(SLO)$/vmlexport-shape-types.obj
+.ENDIF		# "$(UPD)" == "310"
 
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk
 
+.IF "$(UPD)" == "310"
+
+ALLTAR: \
+	$(MISC)$/oox-drawingml-adj-names \
+	$(MISC)$/vmlexport-shape-types
+
+$(MISC)$/oox-drawingml-adj-names : preset-definitions-to-shape-types.pl presetShapeDefinitions.xml presetTextWarpDefinitions.xml
+	sh -c "$(PERL) preset-definitions-to-shape-types.pl --drawingml-adj-names-data presetShapeDefinitions.xml presetTextWarpDefinitions.xml > $@.in_progress 2> $@.log" && mv $@.in_progress $@
+
+$(MISC)$/vmlexport-shape-types : preset-definitions-to-shape-types.pl presetShapeDefinitions.xml presetTextWarpDefinitions.xml
+	sh -c "$(PERL) preset-definitions-to-shape-types.pl --vml-shape-types-data presetShapeDefinitions.xml presetTextWarpDefinitions.xml > $@.in_progress 2> $@.log" && mv $@.in_progress $@
+
+.ELSE		# "$(UPD)" == "310"
+
 $(MISC)$/vmlexport-shape-types.cxx : preset-definitions-to-shape-types.pl presetShapeDefinitions.xml presetTextWarpDefinitions.xml
 	$(PERL) $< > $@.in_progress 2> $(MISC)$/vmlexport-shape-types.log && mv $@.in_progress $@
+
+.ENDIF		# "$(UPD)" == "310"

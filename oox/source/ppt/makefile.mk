@@ -67,6 +67,15 @@ SLOFILES =	\
 		$(SLO)$/timenodelistcontext.obj \
 		$(SLO)$/timetargetelementcontext.obj
 
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/comments.obj \
+		$(SLO)$/dgmimport.obj \
+		$(SLO)$/dgmlayout.obj \
+		$(SLO)$/extdrawingfragmenthandler.obj \
+		$(SLO)$/pptgraphicshapecontext.obj
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk

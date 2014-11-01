@@ -186,6 +186,7 @@ IDREF
 IDREFS
 Icon
 Id
+Ignorable
 Inc
 Institution
 Internal
@@ -279,6 +280,7 @@ Override
 Page
 Pages
 ParagraphAlign
+ParagraphFormat
 Paragraphs
 PartName
 PasswordChar
@@ -327,6 +329,7 @@ Relationships
 RelationshipsGroupReference
 Report
 Reporter
+Requires
 Right
 RootElement
 Row
@@ -411,6 +414,7 @@ YZ
 Year
 YearAccessed
 ZX
+a14
 a
 aa
 above
@@ -498,6 +502,7 @@ alg
 algIdExt
 algIdExtSource
 algn
+algorithmName
 alias
 aliases
 aliceBlue
@@ -556,9 +561,11 @@ always
 alwaysMergeEmptyNamespace
 alwaysShow
 alwaysShowPlaceholderText
+amount
 amt
 anchor
 anchorCtr
+anchorId
 anchorLock
 anchorlock
 anchorx
@@ -635,6 +642,33 @@ array
 arrow
 arrowok
 artDeco
+artisticBlur
+artisticCement
+artisticChalkSketch
+artisticCrisscrossEtching
+artisticCutout
+artisticFilmGrain
+artisticGlass
+artisticGlowDiffused
+artisticGlowEdges
+artisticLightScreen
+artisticLineDrawing
+artisticMarker
+artisticMosiaicBubbles
+artisticPaintStrokes
+artisticPaintBrush
+artisticPastelsSmooth
+artisticPencilGrayscale
+artisticPencilSketch
+artisticPhotocopy
+artisticPlasticWrap
+artisticTexturizer
+artisticWatercolorSponge
+artisticBackgroundRemoval
+artisticBrightnessContrast
+artisticColorTemperature
+artisticSaturation
+artisticSharpenSoften
 asDisplayed
 ascending
 ascendingAlpha
@@ -668,11 +702,13 @@ autoCaptions
 autoCompressPictures
 autoEnd
 autoExp
+autoFill
 autoFilter
 autoFilterDateGrouping
 autoFormatId
 autoFormatOverride
 autoHyphenation
+autoLine
 autoLoad
 autoNoTable
 autoPage
@@ -681,6 +717,7 @@ autoRecover
 autoRedefine
 autoRepublish
 autoRev
+autoScale
 autoShow
 autoSortScope
 autoSpaceDE
@@ -707,7 +744,9 @@ axId
 axPos
 axis
 axisCol
+axisColor
 axisPage
+axisPosition
 axisRow
 axisValues
 azure
@@ -937,6 +976,7 @@ brkBinSub
 brown
 browse
 browser
+brushSize
 bstr
 btLr
 btnFace
@@ -983,6 +1023,7 @@ cBhvr
 cGp
 cGpRule
 cMediaNode
+cNvCnPr
 cNvCxnSpPr
 cNvGraphicFramePr
 cNvGrpSpPr
@@ -1066,6 +1107,7 @@ ccw
 ccwIn
 ccwOut
 cd2
+cd3
 cd4
 cd8
 cell
@@ -1114,6 +1156,7 @@ char
 charRg
 charSpace
 character
+characterSet
 characterSpacingControl
 characteristic
 charset
@@ -1128,8 +1171,10 @@ chartStar
 chartX
 chartreuse
 chartsheet
+checkbox
 checkBox
 checkCompatibility
+checkedState
 checkErrors
 checkStyle
 checked
@@ -1212,6 +1257,7 @@ cmd
 cmpd
 cnfStyle
 cnt
+cntxtAlts
 code
 codeName
 codePage
@@ -1224,6 +1270,7 @@ colFields
 colFirst
 colGrandTotals
 colHeaderCaption
+colHidden
 colHierarchiesUsage
 colHierarchyUsage
 colId
@@ -1240,6 +1287,7 @@ color2
 colorFilter
 colorId
 colorScale
+colorTemp
 colormenu
 colormode
 colormru
@@ -1262,6 +1310,7 @@ command
 commandType
 comment
 commentList
+commentPr
 commentRangeEnd
 commentRangeStart
 commentReference
@@ -1273,6 +1322,7 @@ compass
 compat
 compatLnSpc
 compatMode
+compatSetting
 complex
 composite
 compressPunctuation
@@ -1286,6 +1336,7 @@ condense
 conditionalFormat
 conditionalFormats
 conditionalFormatting
+conditionalFormattings
 cone
 coneToMax
 confetti
@@ -1293,6 +1344,7 @@ confettiGrays
 confettiOutline
 confettiStreamers
 confettiWhite
+conformance
 conn
 connDist
 connRout
@@ -1369,6 +1421,7 @@ cover
 coverPg
 cp
 cr
+crackSpacing
 crashSave
 crazyMaze
 created
@@ -1581,6 +1634,7 @@ dataExtractLoad
 dataField
 dataFields
 dataModel
+dataModelExt
 dataOnRows
 dataOnly
 dataPosition
@@ -1599,6 +1653,7 @@ date
 date1904
 dateAx
 dateBetween
+dateCompatibility
 dateEqual
 dateFormat
 dateGroupItem
@@ -1662,6 +1717,7 @@ defaultGridColor
 defaultMemberUniqueName
 defaultPivotStyle
 defaultRowHeight
+defaultSize
 defaultSubtotal
 defaultTabStop
 defaultTableStyle
@@ -1705,6 +1761,7 @@ destId
 destOrd
 destination
 destinationFile
+detail
 detectmouseclick
 dgm
 dgmbasetextscale
@@ -2005,6 +2062,7 @@ encoding
 end
 endA
 endAngle
+endChars
 endChr
 endCnv
 endCondLst
@@ -2405,6 +2463,7 @@ gradientInactiveCaption
 gradientRadial
 gradientUnscaled
 gradientshapeok
+grainSize
 gramEnd
 gramStart
 grammar
@@ -2446,6 +2505,7 @@ gridDropZones
 gridLegend
 gridLines
 gridLinesSet
+gridSize
 gridSpacing
 gridSpan
 group
@@ -2520,8 +2580,11 @@ harsh
 hasCustomPrompt
 hash
 hashData
+hashValue
 hc
+hd10
 hd2
+hd3
 hd4
 hd5
 hd6
@@ -2704,7 +2767,10 @@ imagedata
 imagesize
 imeMode
 img
+imgEffect
 imgH
+imgLayer
+imgProps
 imgSz
 imgW
 immersive
@@ -2767,6 +2833,7 @@ intLim
 intVal
 integer
 integrated
+intensity
 interSp
 interactiveSeq
 intercept
@@ -2859,6 +2926,7 @@ ky
 l
 lB
 lBounds
+lc
 lCtrCh
 lCtrDes
 lIns
@@ -2992,6 +3060,7 @@ lgDashDotDot
 lgGrid
 license
 lid
+ligatures
 light1
 light2
 lightBulb
@@ -3044,6 +3113,7 @@ lines
 linesAndChars
 linestyle
 link
+linkedTxbx
 linkStyles
 linkTarget
 linkToQuery
@@ -3361,6 +3431,7 @@ moveTo
 moveToRangeEnd
 moveToRangeStart
 moveWith
+moveWithCells
 movie
 movingAvg
 mp
@@ -3401,6 +3472,8 @@ nd
 ndxf
 neCell
 negativeInteger
+negativeFillColor
+negativeBarColorSameAsPositive
 neq
 never
 new
@@ -3518,6 +3591,7 @@ numCol
 numFmt
 numFmtId
 numFmts
+numForm
 numId
 numIdMacAtCleanup
 numLit
@@ -3527,11 +3601,13 @@ numPr
 numRef
 numRestart
 numSld
+numSpacing
 numStart
 numStyleLink
 numTab
 number
 numberInDash
+numberOfShades
 numberStoredAsText
 numbering
 numberingChange
@@ -3732,8 +3808,11 @@ panose
 panose1
 papayaWhip
 paperClips
+paperHeight
 paperSize
 paperSrc
+paperUnits
+paperWidth
 papyrus
 par
 parOf
@@ -3794,8 +3873,13 @@ pct85
 pct87
 pct90
 pct95
+pctHeight
+pctPosHOffset
+pctPosVOffset
+pctWidth
 peachPuff
 penClr
+pencilSize
 pencils
 pentagon
 people
@@ -3959,6 +4043,7 @@ preserveSortFilterLayout
 presetClass
 presetID
 presetSubtype
+pressure
 prev
 prevAc
 prevCondLst
@@ -3993,6 +4078,7 @@ proofErr
 proofState
 property
 propertyName
+props3d
 prot
 protected
 protectedRange
@@ -4147,6 +4233,7 @@ regroupid
 regrouptable
 regular
 rel
+relId
 relIds
 relOff
 relSizeAnchor
@@ -4249,6 +4336,7 @@ rowDrillCount
 rowFields
 rowGrandTotals
 rowHeaderCaption
+rowHidden
 rowHierarchiesUsage
 rowHierarchyUsage
 rowItems
@@ -4309,6 +4397,7 @@ saka
 salmon
 salt
 saltData
+saltValue
 sameClick
 sameDir
 sampData
@@ -4362,6 +4451,7 @@ sd
 sdt
 sdtContent
 sdtContentLocked
+sdtEndContent
 sdtEndPr
 sdtLocked
 sdtPr
@@ -4607,7 +4697,10 @@ singleXmlCells
 singleclick
 size
 sizeAuto
+sizeRelH
+sizeRelV
 sizeRepresents
+sizeWithCells
 skew
 skewamt
 skewangle
@@ -4659,6 +4752,7 @@ smartTags
 smileyFace
 smooth
 smoothMarker
+smoothness
 smtClean
 smtId
 snake
@@ -4763,7 +4857,9 @@ srcOrd
 srcRect
 srgbClr
 ss
+ssd16
 ssd2
+ssd32
 ssd4
 ssd6
 ssd8
@@ -4800,6 +4896,7 @@ starsTop
 start
 startAngle
 startAt
+startChars
 startDate
 startNum
 startOverride
@@ -4869,8 +4966,10 @@ styleLockTheme
 styleName
 stylePaneFormatFilter
 stylePaneSortMethod
+styleSet
 styleSheet
 styles
+stylisticSets
 sub
 subDoc
 subFontBySize
@@ -4958,6 +5057,10 @@ tableColumnId
 tableColumns
 tablePart
 tableParts
+tableRowInsert
+tableRowDelete
+tableCellInsert
+tableCellDelete
 tableStyle
 tableStyleElement
 tableStyleId
@@ -5067,13 +5170,16 @@ textFadeUp
 textField
 textFields
 textFile
+textFill
 textFit
+textHAlign
 textInflate
 textInflateBottom
 textInflateTop
 textInput
 textLength
 textNoShape
+textOutline
 textPlain
 textPr
 textRingInside
@@ -5084,6 +5190,7 @@ textSlantUp
 textStop
 textTriangle
 textTriangleInverted
+textVAlign
 textWave1
 textWave2
 textWave4
@@ -5303,6 +5410,8 @@ txOverObj
 txPr
 txSp
 txStyles
+txXfrm
+txbx
 txbxContent
 txtBox
 ty
@@ -5332,6 +5441,7 @@ unbalanced
 unbalancedGroup
 unboundColumnsLeft
 unboundColumnsRight
+uncheckedState
 undOvr
 underDot
 underlineTabInNumList
@@ -5436,6 +5546,7 @@ userhidden
 users
 uturnArrow
 v
+v2
 v3
 v3v4
 v4
@@ -5519,6 +5630,7 @@ vstream
 vt
 w
 w10
+w14
 wAfter
 wArH
 wBefore
@@ -5537,7 +5649,10 @@ wavyDouble
 wavyHeavy
 wd
 wd10
+wd12
 wd2
+wd3
+wd32
 wd4
 wd5
 wd6
@@ -5563,6 +5678,7 @@ wedgeEllipseCallout
 wedgeRectCallout
 wedgeRoundRectCallout
 weight
+wgp
 wheat
 wheel
 whenNotActive
@@ -5618,8 +5734,13 @@ wrapTopAndBottom
 wrapTrailSpaces
 wrapcoords
 writeProtection
+wp14
+wpg
+wps
+wsp
 wsDr
 x
+x14
 xAlign
 xIllusions
 xMode
@@ -5635,6 +5756,7 @@ xfrmType
 xl2000
 xl97
 xlm
+xm
 xml
 xmlBased
 xmlCellPr

@@ -48,14 +48,18 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	ChartLegendExpansion.idl \
 	TimeIncrement.idl \
 	TimeInterval.idl \
-	TimeUnit.idl
+	TimeUnit.idl \
+	XDiagramPositioning.idl
 
 UNOTYPES= \
+	com.sun.star.chart.ChartLegendExpansion \
 	com.sun.star.chart.TimeIncrement \
 	com.sun.star.chart.TimeInterval \
-	com.sun.star.chart.TimeUnit
+	com.sun.star.chart.TimeUnit \
+	com.sun.star.chart.XDiagramPositioning
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db

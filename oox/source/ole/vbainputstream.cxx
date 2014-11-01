@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/vbainputstream.hxx"
 #include <osl/diagnose.h>
@@ -27,7 +23,7 @@
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 namespace {
 
@@ -40,7 +36,7 @@ const sal_uInt16 VBACHUNK_LENMASK           = 0x0FFF;
 
 } // namespace
 
-// ============================================================================
+
 
 VbaInputStream::VbaInputStream( BinaryInputStream& rInStrm ) :
     BinaryStreamBase( false ),
@@ -123,21 +119,32 @@ void VbaInputStream::skip( sal_Int32 nBytes, size_t /*nAtomSize*/ )
 bool VbaInputStream::updateChunk()
 {
     if( mbEof || (mnChunkPos < maChunk.size()) ) return !mbEof;
-
     // try to read next chunk header, this may trigger EOF
     sal_uInt16 nHeader = mpInStrm->readuInt16();
+
     mbEof = mpInStrm->isEof();
     if( mbEof ) return false;
 
     // check header signature
-    OSL_ENSURE( (nHeader & VBACHUNK_SIGMASK) == VBACHUNK_SIG, "VbaInputStream::updateChunk - invalid chunk signature" );
-    mbEof = (nHeader & VBACHUNK_SIGMASK) != VBACHUNK_SIG;
-    if( mbEof ) return false;
+    bool bIgnoreBrokenSig = !( (nHeader & VBACHUNK_SIGMASK) == VBACHUNK_SIG );
 
     // decode length of chunk data and compression flag
     bool bCompressed = getFlag( nHeader, VBACHUNK_COMPRESSED );
     sal_uInt16 nChunkLen = (nHeader & VBACHUNK_LENMASK) + 1;
     OSL_ENSURE( bCompressed || (nChunkLen == 4096), "VbaInputStream::updateChunk - invalid uncompressed chunk size" );
+
+    // From the amazing bit detective work of Valek Filippov<frob@gnome.org>
+    // this tweak and the one at the bottom of the method to seek to the
+    // start of the next chunk we can read those strange broken
+    // ( I guess from a MSO bug ) commpessed streams > 4k
+
+    if ( bIgnoreBrokenSig )
+    {
+        bCompressed = true;
+        nChunkLen = 4094;
+    }
+
+    sal_Int64 target = mpInStrm->tell() + nChunkLen;
     if( bCompressed )
     {
         maChunk.clear();
@@ -178,6 +185,7 @@ bool VbaInputStream::updateChunk()
                         }
                     }
                 }
+                // we suspect this will never be called
                 else
                 {
                     maChunk.resize( maChunk.size() + 1 );
@@ -192,13 +200,17 @@ bool VbaInputStream::updateChunk()
         maChunk.resize( nChunkLen );
         mpInStrm->readMemory( &maChunk.front(), nChunkLen );
     }
-
+    // decompression sometimes leaves the stream pos offset 1 place ( at
+    // least ) past or before the expected stream pos.
+    // here we make sure we are on the chunk boundry
+    mpInStrm->seek( target );
     mnChunkPos = 0;
     return !mbEof;
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

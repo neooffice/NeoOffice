@@ -1,32 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_CHART_MODELBASE_HXX
+#define INCLUDED_OOX_DRAWINGML_CHART_MODELBASE_HXX
 
+#include <oox/helper/helper.hxx>
+#include <oox/helper/refmap.hxx>
+#include <oox/helper/refvector.hxx>
 
-#ifndef OOX_DRAWINGML_CHART_MODELBASE_HXX
-#define OOX_DRAWINGML_CHART_MODELBASE_HXX
-
-#include "oox/helper/helper.hxx"
-#include "oox/helper/refmap.hxx"
-#include "oox/helper/refvector.hxx"
+#if SUPD == 310
+#include <oox/dllapi.h>
+#endif SUPD == 310
 
 namespace oox { class AttributeList; }
 
@@ -34,28 +34,28 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 template< typename ModelType >
 class ModelRef : public ::boost::shared_ptr< ModelType >
 {
 public:
-    inline explicit     ModelRef() {}
-    inline              ModelRef( const ::boost::shared_ptr< ModelType >& rxModel ) : ::boost::shared_ptr< ModelType >( rxModel ) {}
-    inline              ~ModelRef() {}
+                 ModelRef() {}
+                 ModelRef( const ::boost::shared_ptr< ModelType >& rxModel ) : ::boost::shared_ptr< ModelType >( rxModel ) {}
+                 ~ModelRef() {}
 
-    inline bool         is() const { return this->get() != 0; }
+    bool         is() const { return this->get() != 0; }
 
-    inline ModelType&   create() { this->reset( new ModelType ); return **this; }
+    ModelType&   create() { this->reset( new ModelType ); return **this; }
     template< typename Param1Type >
-    inline ModelType&   create( const Param1Type& rParam1 ) { this->reset( new ModelType( rParam1 ) ); return **this; }
+    ModelType&   create( const Param1Type& rParam1 ) { this->reset( new ModelType( rParam1 ) ); return **this; }
 
-    inline ModelType&   getOrCreate() { if( !*this ) this->reset( new ModelType ); return **this; }
+    ModelType&   getOrCreate() { if( !*this ) this->reset( new ModelType ); return **this; }
     template< typename Param1Type >
-    inline ModelType&   getOrCreate( const Param1Type& rParam1 ) { if( !*this ) this->reset( new ModelType( rParam1 ) ); return **this; }
+    ModelType&   getOrCreate( const Param1Type& rParam1 ) { if( !*this ) this->reset( new ModelType( rParam1 ) ); return **this; }
 };
 
-// ============================================================================
+
 
 template< typename ModelType >
 class ModelVector : public RefVector< ModelType >
@@ -64,18 +64,18 @@ public:
     typedef typename RefVector< ModelType >::value_type value_type;
     typedef typename RefVector< ModelType >::size_type  size_type;
 
-    inline explicit     ModelVector() {}
-    inline              ~ModelVector() {}
+                 ModelVector() {}
+                 ~ModelVector() {}
 
-    inline ModelType&   create() { return append( new ModelType ); }
+    ModelType&   create() { return append( new ModelType ); }
     template< typename Param1Type >
-    inline ModelType&   create( const Param1Type& rParam1 ) { return append( new ModelType( rParam1 ) ); }
+    ModelType&   create( const Param1Type& rParam1 ) { return append( new ModelType( rParam1 ) ); }
 
 private:
-    inline ModelType&   append( ModelType* pModel ) { this->push_back( value_type( pModel ) ); return *pModel; }
+    ModelType&   append( ModelType* pModel ) { this->push_back( value_type( pModel ) ); return *pModel; }
 };
 
-// ============================================================================
+
 
 template< typename KeyType, typename ModelType >
 class ModelMap : public RefMap< KeyType, ModelType >
@@ -85,30 +85,30 @@ public:
     typedef typename RefMap< KeyType, ModelType >::mapped_type  mapped_type;
     typedef typename RefMap< KeyType, ModelType >::value_type   value_type;
 
-    inline explicit     ModelMap() {}
-    inline              ~ModelMap() {}
+                 ModelMap() {}
+                 ~ModelMap() {}
 
-    inline ModelType&   create( KeyType eKey ) { return insert( eKey, new ModelType ); }
+    ModelType&   create( KeyType eKey ) { return insert( eKey, new ModelType ); }
     template< typename Param1Type >
-    inline ModelType&   create( KeyType eKey, const Param1Type& rParam1 ) { return insert( eKey, new ModelType( rParam1 ) ); }
+    ModelType&   create( KeyType eKey, const Param1Type& rParam1 ) { return insert( eKey, new ModelType( rParam1 ) ); }
 
 private:
-    inline ModelType&   insert( KeyType eKey, ModelType* pModel ) { (*this)[ eKey ].reset( pModel ); return *pModel; }
+    ModelType&   insert( KeyType eKey, ModelType* pModel ) { (*this)[ eKey ].reset( pModel ); return *pModel; }
 };
 
-// ============================================================================
+
 
 struct NumberFormat
 {
-    ::rtl::OUString     maFormatCode;       /// Number format code.
+    OUString     maFormatCode;       /// Number format code.
     bool                mbSourceLinked;     /// True = number format linked to source data.
 
-    explicit            NumberFormat();
+                        NumberFormat();
 
     void                setAttributes( const AttributeList& rAttribs );
 };
 
-// ============================================================================
+
 
 struct LayoutModel
 {
@@ -123,14 +123,16 @@ struct LayoutModel
     sal_Int32           mnTarget;           /// Layout target for plot area.
     bool                mbAutoLayout;       /// True = automatic positioning.
 
-    explicit            LayoutModel();
+                        LayoutModel();
                         ~LayoutModel();
 };
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

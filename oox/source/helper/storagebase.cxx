@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/storagebase.hxx"
 
@@ -31,36 +27,42 @@
 
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
-// ============================================================================
 
 namespace {
 
-void lclSplitFirstElement( OUString& orElement, OUString& orRemainder, const OUString& rFullName )
+void lclSplitFirstElement( OUString& orElement, OUString& orRemainder, const OUString& _aFullName )
 {
-    sal_Int32 nSlashPos = rFullName.indexOf( '/' );
-    if( (0 <= nSlashPos) && (nSlashPos < rFullName.getLength()) )
+    OUString aFullName = _aFullName;
+    sal_Int32  nSlashPos = aFullName.indexOf( '/' );
+
+    // strip leading slashes
+    while( nSlashPos == 0 )
     {
-        orElement = rFullName.copy( 0, nSlashPos );
-        orRemainder = rFullName.copy( nSlashPos + 1 );
+        aFullName = aFullName.copy(1);
+        nSlashPos = aFullName.indexOf( '/' );
+    }
+
+    if( (0 <= nSlashPos) && (nSlashPos < aFullName.getLength()) )
+    {
+        orElement = aFullName.copy( 0, nSlashPos );
+        orRemainder = aFullName.copy( nSlashPos + 1 );
     }
     else
     {
-        orElement = rFullName;
+        orElement = aFullName;
     }
 }
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 StorageBase::StorageBase( const Reference< XInputStream >& rxInStream, bool bBaseStreamAccess ) :
     mxInStream( rxInStream ),
@@ -97,7 +99,7 @@ bool StorageBase::isStorage() const
 
 bool StorageBase::isRootStorage() const
 {
-    return implIsStorage() && (maStorageName.getLength() == 0);
+    return implIsStorage() && maStorageName.isEmpty();
 }
 
 bool StorageBase::isReadOnly() const
@@ -118,8 +120,12 @@ const OUString& StorageBase::getName() const
 OUString StorageBase::getPath() const
 {
     OUStringBuffer aBuffer( maParentPath );
-    if( aBuffer.getLength() > 0 )
-        aBuffer.append( sal_Unicode( '/' ) );
+#if SUPD == 310
+    if( aBuffer.getLength() )
+#else	// SUPD == 310
+    if( !aBuffer.isEmpty() )
+#endif	// SUPD == 310
+        aBuffer.append( '/' );
     aBuffer.append( maStorageName );
     return aBuffer.makeStringAndClear();
 }
@@ -138,9 +144,9 @@ StorageRef StorageBase::openSubStorage( const OUString& rStorageName, bool bCrea
     {
         OUString aElement, aRemainder;
         lclSplitFirstElement( aElement, aRemainder, rStorageName );
-        if( aElement.getLength() > 0 )
+        if( !aElement.isEmpty() )
             xSubStorage = getSubStorage( aElement, bCreateMissing );
-        if( xSubStorage.get() && (aRemainder.getLength() > 0) )
+        if( xSubStorage.get() && !aRemainder.isEmpty() )
             xSubStorage = xSubStorage->openSubStorage( aRemainder, bCreateMissing );
     }
     return xSubStorage;
@@ -151,9 +157,9 @@ Reference< XInputStream > StorageBase::openInputStream( const OUString& rStreamN
     Reference< XInputStream > xInStream;
     OUString aElement, aRemainder;
     lclSplitFirstElement( aElement, aRemainder, rStreamName );
-    if( aElement.getLength() > 0 )
+    if( !aElement.isEmpty() )
     {
-        if( aRemainder.getLength() > 0 )
+        if( !aRemainder.isEmpty() )
         {
             StorageRef xSubStorage = getSubStorage( aElement, false );
             if( xSubStorage.get() )
@@ -179,9 +185,9 @@ Reference< XOutputStream > StorageBase::openOutputStream( const OUString& rStrea
     {
         OUString aElement, aRemainder;
         lclSplitFirstElement( aElement, aRemainder, rStreamName );
-        if( aElement.getLength() > 0 )
+        if( !aElement.isEmpty() )
         {
-            if( aRemainder.getLength() > 0 )
+            if( !aRemainder.isEmpty() )
             {
                 StorageRef xSubStorage = getSubStorage( aElement, true );
                 if( xSubStorage.get() )
@@ -203,8 +209,8 @@ Reference< XOutputStream > StorageBase::openOutputStream( const OUString& rStrea
 void StorageBase::copyToStorage( StorageBase& rDestStrg, const OUString& rElementName )
 {
     OSL_ENSURE( rDestStrg.isStorage() && !rDestStrg.isReadOnly(), "StorageBase::copyToStorage - invalid destination" );
-    OSL_ENSURE( rElementName.getLength() > 0, "StorageBase::copyToStorage - invalid element name" );
-    if( rDestStrg.isStorage() && !rDestStrg.isReadOnly() && (rElementName.getLength() > 0) )
+    OSL_ENSURE( !rElementName.isEmpty(), "StorageBase::copyToStorage - invalid element name" );
+    if( rDestStrg.isStorage() && !rDestStrg.isReadOnly() && !rElementName.isEmpty() )
     {
         StorageRef xSubStrg = openSubStorage( rElementName, false );
         if( xSubStrg.get() )
@@ -264,6 +270,8 @@ StorageRef StorageBase::getSubStorage( const OUString& rElementName, bool bCreat
     return rxSubStrg;
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

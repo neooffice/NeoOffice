@@ -1,42 +1,43 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
+#define INCLUDED_OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
 
+#include <oox/helper/propertymap.hxx>
+#include <oox/dllapi.h>
 
-#ifndef OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
-#define OOX_DRAWINGML_SHAPEPROPERTYMAP_HXX
-
-#include "oox/helper/propertymap.hxx"
+#include <vector>
 
 namespace oox { class ModelObjectHelper; }
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
-
 /** Enumeration for various properties related to drawing shape formatting.
 
     This is an abstraction for shape formatting properties that have different
     names in various implementations, e.g. drawing shapes vs. chart objects.
+
+    If you *insert* ids into this list, then update spnCommonPropIds, spnLinearPropIds
+    and spnFilledPropIds of oox/source/drawingml/chart/objectformatter.cxx if
+    the newly inserted enum is inside the range they cover
  */
 enum ShapePropertyId
 {
@@ -55,6 +56,7 @@ enum ShapePropertyId
     SHAPEPROP_FillStyle,
     SHAPEPROP_FillColor,
     SHAPEPROP_FillTransparency,
+    SHAPEPROP_GradientTransparency,
     SHAPEPROP_FillGradient,                 /// Explicit fill gradient or name of a fill gradient stored in a global container.
     SHAPEPROP_FillBitmapUrl,                /// Explicit fill bitmap URL or name of a fill bitmap URL stored in a global container.
     SHAPEPROP_FillBitmapMode,
@@ -63,14 +65,15 @@ enum ShapePropertyId
     SHAPEPROP_FillBitmapOffsetX,
     SHAPEPROP_FillBitmapOffsetY,
     SHAPEPROP_FillBitmapRectanglePoint,
+    SHAPEPROP_FillHatch,
+    SHAPEPROP_ShadowXDistance,
+    SHAPEPROP_FillBitmapNameFromUrl,
     SHAPEPROP_END
 };
 
-// ============================================================================
-
-struct ShapePropertyInfo
+struct OOX_DLLPUBLIC ShapePropertyInfo
 {
-    const sal_Int32*    mpnPropertyIds;         /// Pointer to array of property identifiers for all SHAPEPROP properties.
+    std::vector<sal_Int32> maPropertyIds;
     bool                mbNamedLineMarker;      /// True = use named line marker instead of explicit line marker.
     bool                mbNamedLineDash;        /// True = use named line dash instead of explicit line dash.
     bool                mbNamedFillGradient;    /// True = use named fill gradient instead of explicit fill gradient.
@@ -85,13 +88,13 @@ struct ShapePropertyInfo
                             bool bNamedFillGradient,
                             bool bNamedFillBitmapUrl );
 
-    inline bool         has( ShapePropertyId ePropId ) const { return mpnPropertyIds[ ePropId ] >= 0; }
-    inline sal_Int32    operator[]( ShapePropertyId ePropId ) const { return mpnPropertyIds[ ePropId ]; }
+    bool         has( ShapePropertyId ePropId ) const { return maPropertyIds.size() > size_t(ePropId) && maPropertyIds[ ePropId ] >= 0; }
+    sal_Int32    operator[]( ShapePropertyId ePropId ) const { return maPropertyIds[ ePropId ]; }
 };
 
-// ============================================================================
 
-class ShapePropertyMap : public PropertyMap
+
+class OOX_DLLPUBLIC ShapePropertyMap : public PropertyMap
 {
 public:
     explicit            ShapePropertyMap(
@@ -103,19 +106,18 @@ public:
 
     /** Returns true, if named line markers are supported, and the specified
         line marker has already been inserted into the marker table. */
-    bool                hasNamedLineMarkerInTable( const ::rtl::OUString& rMarkerName ) const;
+    bool                hasNamedLineMarkerInTable( const OUString& rMarkerName ) const;
 
     /** Sets the specified shape property to the passed value. */
     bool                setAnyProperty( ShapePropertyId ePropId, const ::com::sun::star::uno::Any& rValue );
 
     /** Sets the specified shape property to the passed value. */
     template< typename Type >
-    inline bool         setProperty( ShapePropertyId ePropId, const Type& rValue )
+    bool         setProperty( ShapePropertyId ePropId, const Type& rValue )
                             { return setAnyProperty( ePropId, ::com::sun::star::uno::Any( rValue ) ); }
 
     using PropertyMap::setAnyProperty;
     using PropertyMap::setProperty;
-    using PropertyMap::operator[];
 
 private:
     /** Sets an explicit line marker, or creates a named line marker. */
@@ -124,8 +126,12 @@ private:
     bool                setLineDash( sal_Int32 nPropId, const ::com::sun::star::uno::Any& rValue );
     /** Sets an explicit fill gradient, or creates a named fill gradient. */
     bool                setFillGradient( sal_Int32 nPropId, const ::com::sun::star::uno::Any& rValue );
+    /** Creates a named transparency gradient. */
+    bool                setGradientTrans( sal_Int32 nPropId, const ::com::sun::star::uno::Any& rValue );
     /** Sets an explicit fill bitmap URL, or creates a named fill bitmap URL. */
     bool                setFillBitmapUrl( sal_Int32 nPropId, const ::com::sun::star::uno::Any& rValue );
+    /** Sets an explicit fill bitmap URL and pushes the name to FillBitmapName */
+    bool                setFillBitmapNameFromUrl( sal_Int32 nPropId, const ::com::sun::star::uno::Any& rValue );
 
     // not implemented, to prevent implicit conversion from enum to int
     ::com::sun::star::uno::Any& operator[]( ShapePropertyId ePropId );
@@ -136,9 +142,11 @@ private:
     ShapePropertyInfo   maShapePropInfo;
 };
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

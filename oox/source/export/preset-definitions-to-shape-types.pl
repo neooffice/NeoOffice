@@ -1,32 +1,28 @@
 #! /usr/bin/perl -w
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#  
-#    http://www.apache.org/licenses/LICENSE-2.0
-#  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
-#  
-#**************************************************************
+#
+# This file is part of the LibreOffice project.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# This file incorporates work covered by the following license notice:
+#
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements. See the NOTICE file distributed
+#   with this work for additional information regarding copyright
+#   ownership. The ASF licenses this file to you under the Apache
+#   License, Version 2.0 (the "License"); you may not use this file
+#   except in compliance with the License. You may obtain a copy of
+#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+#
 
-
-
+use strict;
 use warnings;
 
 sub usage() {
     print STDERR <<EOF;
-Usage: preset-definitions-to-shape-types.pl <shapes> <text>
+Usage: preset-definitions-to-shape-types.pl [ --drawingml-adj-names-data | --vml-shape-types-data ] <shapes> <text>
 
 Converts presetShapeDefinitions.xml and presetTextWarpDefinitions.xml to a
 .cxx that contains VML with the definitions of the shapes.  The result is
@@ -50,36 +46,46 @@ sub show_call_stack
     print STDERR "--- End stack trace ---\n";
 }
 
-$src_shapes = shift;
-$src_text = shift;
+my $drawingml_adj_names_data = 0;
+my $vml_shape_types_data = 0;
+my $src_shapes = shift;
+if ($src_shapes eq "--drawingml-adj-names-data") {
+    $drawingml_adj_names_data = 1;
+    $src_shapes = shift;
+} elsif ($src_shapes eq "--vml-shape-types-data") {
+    $vml_shape_types_data = 1;
+    $src_shapes = shift;
+}
+my $src_text = shift;
 
 usage() if ( !defined( $src_shapes ) || !defined( $src_text ) ||
              $src_shapes eq "-h" || $src_shapes eq "--help" ||
              !-f $src_shapes || !-f $src_text );
 
 # Global variables
-@levels = ();
-$shape_name = "";
-$state = "";
-$path = "";
-$adjust = "";
-$max_adj_no = 0;
-@formulas = ();
-%variables = ();
-$ignore_this_shape = 0;
-$handles = "";
-$textboxrect = "";
-$last_pos_x = "";
-$last_pos_y = "";
-$no_stroke = 0;
-$no_fill = 0;
-$path_w = 1;
-$path_h = 1;
-@quadratic_bezier = ();
+my @levels = ();
+my $shape_name = "";
+my $state = "";
+my $path = "";
+my $adjust = "";
+my %adj_names;
+my $max_adj_no = 0;
+my @formulas = ();
+my %variables = ();
+my $ignore_this_shape = 0;
+my $handles = "";
+my $textboxrect = "";
+my $last_pos_x = "";
+my $last_pos_y = "";
+my $no_stroke = 0;
+my $no_fill = 0;
+my $path_w = 1;
+my $path_h = 1;
+my @quadratic_bezier = ();
 
-%result_shapes = ();
+my %result_shapes = ();
 
-%shapes_ids = (
+my %shapes_ids = (
     0 => 'notPrimitive',
     1 => 'rectangle',
     2 => 'roundRectangle',
@@ -155,7 +161,7 @@ $path_h = 1;
     72 => 'irregularSeal2',
     73 => 'lightningBolt',
     74 => 'heart',
-    75 => 'frame', # pictureFrame
+    75 => 'pictureFrame',
     76 => 'quadArrow',
     77 => 'leftArrowCallout',
     78 => 'rightArrowCallout',
@@ -284,24 +290,13 @@ $path_h = 1;
     201 => 'hostControl', # should not be used
     202 => 'textBox'
 );
-# An error occured, we have to ignore this shape
+# An error occurred, we have to ignore this shape
 sub error( $ )
 {
     my ( $msg ) = @_;
 
     $ignore_this_shape = 1;
     print STDERR "ERROR (in $shape_name ): $msg\n";
-}
-
-# Check that we are in the correct level
-sub is_level( $$ )
-{
-    my ( $level, $value ) = @_;
-
-    if ( $level > 0 ) {
-        error( "Error in is_level(), \$level should be <= 0." );
-    }
-    return ( $#levels + $level > 0 ) && ( $levels[$#levels + $level] eq $value );
 }
 
 # Setup the %variables map with predefined values
@@ -312,22 +307,22 @@ sub setup_variables()
         't'        => 0,
         'r'        => 21600,
         'b'        => 21600,
-                  
+
         'w'        => 21600,
         'h'        => 21600,
         'ss'       => 21600,
         'ls'       => 21600,
-                  
+
         'ssd2'     => 10800, # 1/2
         'ssd4'     => 5400,  # 1/4
         'ssd6'     => 3600,  # 1/6
         'ssd8'     => 2700,  # 1/8
         'ssd16'    => 1350,  # 1/16
         'ssd32'    => 675,   # 1/32
-                  
+
         'hc'       => 10800, # horizontal center
         'vc'       => 10800, # vertical center
-                  
+
         'wd2'      => 10800, # 1/2
         'wd3'      => 7200,  # 1/3
         'wd4'      => 5400,  # 1/4
@@ -337,7 +332,7 @@ sub setup_variables()
         'wd10'     => 2160,  # 1/10
         'wd12'     => 1800,  # 1/12
         'wd32'     => 675,   # 1/32
-                  
+
         'hd2'      => 10800, # 1/2
         'hd3'      => 7200,  # 1/3
         'hd4'      => 5400,  # 1/4
@@ -350,11 +345,11 @@ sub setup_variables()
 
         '25000'    => 5400,
         '12500'    => 2700,
-                  
+
         'cd4'      => 90,    # 1/4 of a circle
         'cd2'      => 180,   # 1/2 of a circle
         '3cd4'     => 270,   # 3/4 of a circle
-                  
+
         'cd8'      => 45,    # 1/8 of a circle
         '3cd8'     => 135,   # 3/8 of a circle
         '5cd8'     => 225,   # 5/8 of a circle
@@ -386,7 +381,7 @@ sub value( $ )
 
     my $result = $variables{$val};
     return $result if ( defined( $result ) );
-    
+
     return $val if ( $val =~ /^[0-9-]+$/ );
 
     error( "Unknown variable '$val'." );
@@ -396,7 +391,7 @@ sub value( $ )
 }
 
 # Convert the DrawingML formula to a VML one
-%command_variables = (
+my %command_variables = (
     'w' => 'width',
     'h' => 'height',
     'r' => 'width',
@@ -409,14 +404,14 @@ sub command_value( $ )
     my ( $value ) = @_;
 
     return "" if ( $value eq "" );
-    
+
     return $value if ( $value =~ /^@/ );
 
     my $command_val = $command_variables{$value};
     if ( defined( $command_val ) ) {
         return $command_val;
     }
-    
+
     return value( $value );
 }
 
@@ -427,7 +422,7 @@ sub insert_formula( $$ )
     my ( $name, $fmla ) = @_;
 
     my $i = 0;
-    foreach $f ( @formulas ) {
+    foreach my $f ( @formulas ) {
         if ( $f eq $fmla ) {
             if ( $name ne "" ) {
                 $variables{$name} = "@" . $i;
@@ -480,7 +475,9 @@ sub convert_formula( $$ )
 
         # parse the parameters
         ( my $values = $fmla ) =~ s/^([^ ]+) *//;
-        my $p1 = "", $p2 = "", $p3 = "";
+        my $p1 = "";
+	my $p2 = "";
+	my $p3 = "";
         if ( $values =~ /^([^ ]+)/ ) {
             $p1 = $1;
             $values =~ s/^([^ ]+) *//;
@@ -634,7 +631,7 @@ sub convert_formula( $$ )
 }
 
 # There's no exact equivalent of 'arcTo' in VML, we have to do some special casing...
-%convert_arcTo = (
+my %convert_arcTo = (
     '0' => {
         '90' => {
             'path' => 'qy',
@@ -682,7 +679,7 @@ sub convert_formula( $$ )
 sub elliptic_quadrant( $$$$ )
 {
     my ( $wR, $hR, $stAng, $swAng ) = @_;
-    
+
     if ( defined( $convert_arcTo{$stAng} ) && defined( $convert_arcTo{$stAng}{$swAng} ) ) {
         my $conv_path = $convert_arcTo{$stAng}{$swAng}{'path'};
         my $conv_op_ref = $convert_arcTo{$stAng}{$swAng}{'op'};
@@ -769,10 +766,11 @@ sub start_element( $% )
     push @levels, $element;
 
     #print "element: $element\n";
-    
-    if ( is_level( -1, "presetShapeDefinitons" ) || is_level( -1, "presetTextWarpDefinitions" ) ) {
+
+    if ( @levels > 1 && ( $levels[-2] eq "presetShapeDefinitons" ||
+			  $levels[-2] eq "presetTextWarpDefinitions" ) ) {
         $shape_name = $element;
-        
+
         $state = "";
         $ignore_this_shape = 0;
         $path = "";
@@ -849,7 +847,7 @@ sub start_element( $% )
             $path .= "x";
         }
         elsif ( $element eq "pt" ) {
-            # rememeber the last position for the arcTo
+            # remember the last position for the arcTo
             $last_pos_x = value( $attr{'x'} );
             $last_pos_y = value( $attr{'y'} );
 
@@ -899,6 +897,10 @@ sub start_element( $% )
     elsif ( $state eq "adjust" ) {
         if ( $element eq "gd" ) {
             my $adj_no = $attr{'name'};
+
+            # Save this adj number for this type for later use.
+            push(@{$adj_names{$shape_name}}, $adj_no);
+
             my $is_const = 0;
 
             $adj_no =~ s/^adj//;
@@ -981,7 +983,7 @@ sub end_element( $ )
         if ( !$ignore_this_shape ) {
             # we have all the info, generate the shape now
             $state = "";
-            
+
             # shape path
             my $out = "<v:shapetype id=\"shapetype___ID__\" coordsize=\"21600,21600\" o:spt=\"__ID__\" ";
             if ( $adjust ne "" ) {
@@ -996,12 +998,12 @@ sub end_element( $ )
 
             # stroke
             $out .= "<v:stroke joinstyle=\"miter\"/>\n";
-            
+
             # formulas
             if ( $#formulas >= 0 )
             {
                 $out .= "<v:formulas>\n";
-                foreach $fmla ( @formulas ) {
+                foreach my $fmla ( @formulas ) {
                     $out .= "<v:f eqn=\"$fmla\"/>\n"
                 }
                 $out .= "</v:formulas>\n";
@@ -1075,7 +1077,7 @@ sub parse_start_element( $ )
 {
     # split the string containing both the elements and attributes
     my ( $element_tmp ) = @_;
-    
+
     $element_tmp =~ s/\s*$//;
     $element_tmp =~ s/^\s*//;
 
@@ -1135,7 +1137,7 @@ sub parse( $ )
         s/^\s*//;
         s/\s*$//;
         next if ( $_ eq "" );
-    
+
         # take care of lines where element continues
         if ( $line ne "" ) {
             $line .= " " . $_;
@@ -1144,17 +1146,17 @@ sub parse( $ )
             $line = $_;
         }
         next if ( !/>$/ );
-    
+
         # the actual parsing
         my @starts = split( /</, $line );
         $line = "";
-        foreach $start ( @starts ) {
+        foreach my $start ( @starts ) {
             next if ( $start eq "" );
-    
-            @ends = split( />/, $start );
+
+            my @ends = split( />/, $start );
             my $element = $ends[0];
             my $data = $ends[1];
-    
+
             # start or end element
             if ( $element =~ /^\/(.*)/ ) {
                 end_element( $1 );
@@ -1167,7 +1169,7 @@ sub parse( $ )
             else {
                 parse_start_element( $element );
             }
-    
+
             # the data
             characters( $data ) if ( defined( $data ) && $data ne "" );
         }
@@ -1175,13 +1177,14 @@ sub parse( $ )
 }
 
 # Do the real work
-open( IN, "<$src_shapes" ) || die "Cannot open $src_shapes.";
-parse( IN );
-close( IN );
+my $file;
+open( $file, "<$src_shapes" ) || die "Cannot open $src_shapes: $!";
+parse( $file );
+close( $file );
 
-open( IN, "<$src_text" ) || die "Cannot open $src_text.";
-parse( IN );
-close( IN );
+open( $file, "<$src_text" ) || die "Cannot open $src_text: $!";
+parse( $file );
+close( $file );
 
 if ( !defined( $result_shapes{'textBox'} ) ) {
     $result_shapes{'textBox'} =
@@ -1192,47 +1195,42 @@ if ( !defined( $result_shapes{'textBox'} ) ) {
         "</v:shapetype>";
 }
 
-# Generate the code
-print <<EOF;
-// Shape types generated from
-//   '$src_shapes'
-// and
-//   '$src_text'
-// which are part of the OOXML documentation
-
-#include <svx/escherex.hxx>
-
-const char* pShapeTypes[ ESCHER_ShpInst_COUNT ] =
-{
-EOF
-
-for ( $i = 0; $i < 203; ++$i ) {
-    if ( $i < 4 ) {
-        print "    /* $i - $shapes_ids{$i} - handled separately */\n    NULL,\n";
+# Generate the data
+if ($drawingml_adj_names_data eq 1) {
+    foreach my $adj_name (keys %adj_names)
+    {
+        foreach my $adj (@{$adj_names{$adj_name}})
+        {
+            print "$adj_name\t$adj\n";
+        }
     }
-    else {
-        print "    /* $i - $shapes_ids{$i} */\n";
-        my $out = $result_shapes{$shapes_ids{$i}};
-        if ( defined( $out ) ) {
-            # set the id
-            $out =~ s/__ID__/$i/g;
-        
-            # escape the '"'s
-            $out =~ s/"/\\"/g;
-
-            # output as string
-            $out =~ s/^/    "/;
-            $out =~ s/\n/"\n    "/g;
-            $out =~ s/$/"/;
-
-            print "$out,\n";
+    exit 0;
+} elsif ($vml_shape_types_data eq 1) {
+    for ( my $i = 0; $i < 203; ++$i ) {
+        if ( $i < 4 ) {
+            print "/* $i - $shapes_ids{$i} - handled separately */\nNULL\n";
         }
         else {
-            print "    NULL,\n";
+            print "/* $i - $shapes_ids{$i} */\n";
+            my $out = $result_shapes{$shapes_ids{$i}};
+            if ( defined( $out ) ) {
+                # set the id
+                $out =~ s/__ID__/$i/g;
+
+                # output as string
+                $out =~ s/\n//g;
+
+                print "$out\n";
+            }
+            else {
+                print "NULL\n";
+            }
         }
     }
+    exit 0;
 }
 
-print <<EOF;
-};
-EOF
+# should not happen
+exit 1;
+
+# vim:set ft=perl shiftwidth=4 softtabstop=4 expandtab: #

@@ -67,7 +67,11 @@ $(SLO)$/namespacemap.obj : $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt
 $(MISC)$/do_namespaces $(do_phony) : namespaces.txt namespaces.pl namespaces.hxx.head namespaces.hxx.tail $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt $(GENHEADERPATH)$/namespaces.hxx
     @@-$(RM) $@
 	$(MKDIRHIER) $(GENHEADERPATH)
+.IF "$(UPD)" == "310"
+	$(PERL) namespaces.pl namespaces.txt $(MISC)$/namespaceids.inc $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt namespaces-strict.txt $(INCCOM)$/namespaces-strictnames.inc && $(TYPE) namespaces.hxx.head $(MISC)$/namespaceids.inc namespaces.hxx.tail > $(GENHEADERPATH)$/namespaces.hxx && $(TOUCH) $@
+.ELSE		# "$(UPD)" == "310"
 	$(PERL) namespaces.pl namespaces.txt $(MISC)$/namespaceids.inc $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt && $(TYPE) namespaces.hxx.head $(MISC)$/namespaceids.inc namespaces.hxx.tail > $(GENHEADERPATH)$/namespaces.hxx && $(TOUCH) $@
+.ENDIF		# "$(UPD)" == "310"
 
 $(SLO)$/propertynames.obj : $(INCCOM)$/propertynames.inc $(GENHEADERPATH)$/properties.hxx $(MISC)$/do_properties
 

@@ -1,31 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_OLE_VBAMODULE_HXX
-#define OOX_OLE_VBAMODULE_HXX
+#ifndef INCLUDED_OOX_OLE_VBAMODULE_HXX
+#define INCLUDED_OOX_OLE_VBAMODULE_HXX
 
 #include <com/sun/star/uno/Reference.hxx>
 #include <rtl/ustring.hxx>
+
+#if SUPD == 310
+#include <oox/dllapi.h>
+#endif	// SUPD == 310
 
 namespace com { namespace sun { namespace star {
     namespace container { class XNameAccess; }
@@ -42,7 +42,7 @@ namespace oox {
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 class VbaModule
 {
@@ -50,19 +50,19 @@ public:
     explicit            VbaModule(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& rxContext,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& rxDocModel,
-                            const ::rtl::OUString& rName,
+                            const OUString& rName,
                             rtl_TextEncoding eTextEnc,
                             bool bExecutable );
 
     /** Returns the module type (com.sun.star.script.ModuleType constant). */
-    inline sal_Int32    getType() const { return mnType; }
+    sal_Int32    getType() const { return mnType; }
     /** Sets the passed module type. */
-    inline void         setType( sal_Int32 nType ) { mnType = nType; }
+    void         setType( sal_Int32 nType ) { mnType = nType; }
 
     /** Returns the name of the module. */
-    inline const ::rtl::OUString& getName() const { return maName; }
+    const OUString& getName() const { return maName; }
     /** Returns the stream name of the module. */
-    inline const ::rtl::OUString& getStreamName() const { return maStreamName; }
+    const OUString& getStreamName() const { return maStreamName; }
 
     /** Imports all records for this module until the MODULEEND record. */
     void                importDirRecords( BinaryInputStream& rDirStrm );
@@ -79,22 +79,22 @@ public:
 
 private:
     /** Reads and returns the VBA source code from the passed storage. */
-    ::rtl::OUString     readSourceCode( StorageBase& rVbaStrg ) const;
+    OUString     readSourceCode( StorageBase& rVbaStrg ) const;
 
     /** Creates a new Basic module and inserts it into the passed Basic library. */
     void                createModule(
-                            const ::rtl::OUString& rVBASourceCode,
+                            const OUString& rVBASourceCode,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >& rxBasicLib,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess >& rxDocObjectNA ) const;
 
 private:
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >
-                        mxContext;          /// Component context with service manager.
+                        mxContext;          ///< Component context with service manager.
     ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >
-                        mxDocModel;         /// Document model used to import/export the VBA project.
-    ::rtl::OUString     maName;
-    ::rtl::OUString     maStreamName;
-    ::rtl::OUString     maDocString;
+                        mxDocModel;         ///< Document model used to import/export the VBA project.
+    OUString     maName;
+    OUString     maStreamName;
+    OUString     maDocString;
     rtl_TextEncoding    meTextEnc;
     sal_Int32           mnType;
     sal_uInt32          mnOffset;
@@ -103,9 +103,11 @@ private:
     bool                mbExecutable;
 };
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

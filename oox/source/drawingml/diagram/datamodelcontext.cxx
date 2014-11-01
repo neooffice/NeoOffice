@@ -1,27 +1,23 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#include "oox/drawingml/diagram/datamodelcontext.hxx"
+#include "datamodelcontext.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/drawingml/shapepropertiescontext.hxx"
@@ -30,301 +26,359 @@
 using namespace ::oox::core;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uno;
-using ::rtl::OUString;
 
 namespace oox { namespace drawingml {
 
-// CL_Cxn
-class CxnContext
-    : public ContextHandler
-{
-public:
-    CxnContext( ContextHandler& rParent,
-				const Reference< XFastAttributeList >& xAttribs,
-				const dgm::ConnectionPtr & pConnection )
-        : ContextHandler( rParent )
-		, mpConnection( pConnection )
-		{
-			sal_Int32 nType = xAttribs->getOptionalValueToken( XML_type, XML_parOf );
-			pConnection->mnType = nType;
-			pConnection->msModelId = xAttribs->getOptionalValue( XML_modelId );
-			pConnection->msSourceId = xAttribs->getOptionalValue( XML_srcId );
-			pConnection->msDestId  = xAttribs->getOptionalValue( XML_destId );
-			pConnection->msPresId  = xAttribs->getOptionalValue( XML_presId );
-			pConnection->msSibTransId  = xAttribs->getOptionalValue( XML_sibTransId );
-			AttributeList attribs( xAttribs );
-			pConnection->mnSourceOrder = attribs.getInteger( XML_srcOrd, 0 );
-			pConnection->mnDestOrder = attribs.getInteger( XML_destOrd, 0 );
-		}
-
-    virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( sal_Int32 aElementToken,
-							const Reference< XFastAttributeList >& /*xAttribs*/ )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
-
-			switch( aElementToken )
-			{
-			case DGM_TOKEN( extLst ):
-                return xRet;
-			default:
-				break;
-			}
-			if( !xRet.is() )
-				xRet.set( this );
-			return xRet;
-		}
-private:
-	dgm::ConnectionPtr mpConnection;
-};
-
-
 // CT_CxnList
 class CxnListContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    CxnListContext( ContextHandler& rParent,  dgm::Connections & aConnections )
-        : ContextHandler( rParent )
-		, maConnections( aConnections )
-		{
-		}
-    virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( sal_Int32 aElementToken,
-							const Reference< XFastAttributeList >& xAttribs )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
+    CxnListContext( ContextHandler2Helper& rParent,
+                    dgm::Connections & aConnections )
+        : ContextHandler2( rParent )
+        , mrConnection( aConnections )
+        {
+        }
 
-			switch( aElementToken )
-			{
-			case DGM_TOKEN( cxn ):
-			{
-				dgm::ConnectionPtr pConnection( new dgm::Connection() );
-				maConnections.push_back( pConnection );
-                xRet.set( new CxnContext( *this, xAttribs, pConnection ) );
-				break;
-			}
-			default:
-				break;
-			}
-			if( !xRet.is() )
-				xRet.set( this );
-			return xRet;
-		}
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElementToken )
+            {
+                case DGM_TOKEN( cxn ):
+                {
+                    mrConnection.push_back( dgm::Connection() );
+                    dgm::Connection& rConnection=mrConnection.back();
 
+                    const sal_Int32 nType = rAttribs.getToken( XML_type, XML_parOf );
+                    rConnection.mnType = nType;
+                    rConnection.msModelId = rAttribs.getString( XML_modelId ).get();
+                    rConnection.msSourceId = rAttribs.getString( XML_srcId ).get();
+                    rConnection.msDestId  = rAttribs.getString( XML_destId ).get();
+                    rConnection.msPresId  = rAttribs.getString( XML_presId ).get();
+                    rConnection.msSibTransId  = rAttribs.getString( XML_sibTransId ).get();
+                    rConnection.msParTransId  = rAttribs.getString( XML_parTransId ).get();
+                    rConnection.mnSourceOrder = rAttribs.getInteger( XML_srcOrd, 0 );
+                    rConnection.mnDestOrder = rAttribs.getInteger( XML_destOrd, 0 );
+
+                    // skip CT_extLst
+                    return 0;
+                }
+                default:
+                    break;
+            }
+
+            return this;
+        }
 private:
-	dgm::Connections  & maConnections;
+    dgm::Connections& mrConnection;
 };
 
+
+// CT_presLayoutVars
+class PresLayoutVarsContext
+    : public ContextHandler2
+{
+public:
+    PresLayoutVarsContext( ContextHandler2Helper& rParent,
+                           dgm::Point & rPoint ) :
+        ContextHandler2( rParent ),
+        mrPoint( rPoint )
+    {
+    }
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+    {
+        switch( aElementToken )
+        {
+            // TODO
+            case DGM_TOKEN( animLvl ):
+            case DGM_TOKEN( animOne ):
+                break;
+            case DGM_TOKEN( bulletEnabled ):
+                mrPoint.mbBulletEnabled = rAttribs.getBool( XML_val, false );
+                break;
+            case DGM_TOKEN( chMax ):
+                mrPoint.mnMaxChildren = rAttribs.getInteger( XML_val, -1 );
+                break;
+            case DGM_TOKEN( chPref ):
+                mrPoint.mnPreferredChildren = rAttribs.getInteger( XML_val, -1 );
+                break;
+            case DGM_TOKEN( dir ):
+                mrPoint.mnDirection = rAttribs.getToken( XML_val, XML_norm );
+                break;
+            case DGM_TOKEN( hierBranch ):
+                mrPoint.mnHierarchyBranch = rAttribs.getToken( XML_val, XML_std );
+                break;
+            case DGM_TOKEN( orgChart ):
+                mrPoint.mbOrgChartEnabled = rAttribs.getBool( XML_val, false );
+                break;
+            case DGM_TOKEN( resizeHandles ):
+                mrPoint.mnResizeHandles = rAttribs.getToken( XML_val, XML_rel );
+                break;
+            default:
+                break;
+        }
+
+        return this;
+    }
+
+private:
+    dgm::Point& mrPoint;
+};
+
+
+// CT_prSet
+class PropertiesContext
+    : public ContextHandler2
+{
+public:
+    PropertiesContext( ContextHandler2Helper& rParent,
+                       dgm::Point & rPoint,
+                       const AttributeList& rAttribs ) :
+        ContextHandler2( rParent ),
+        mrPoint( rPoint )
+    {
+        OUString aEmptyStr;
+
+        mrPoint.msColorTransformCategoryId = rAttribs.getString( XML_csCatId, aEmptyStr );
+        mrPoint.msColorTransformTypeId = rAttribs.getString( XML_csTypeId, aEmptyStr );
+        mrPoint.msLayoutCategoryId = rAttribs.getString( XML_loCatId, aEmptyStr );
+        mrPoint.msLayoutTypeId = rAttribs.getString( XML_loTypeId, aEmptyStr );
+        mrPoint.msPlaceholderText = rAttribs.getString( XML_phldrT, aEmptyStr );
+        mrPoint.msPresentationAssociationId = rAttribs.getString( XML_presAssocID, aEmptyStr );
+        mrPoint.msPresentationLayoutName = rAttribs.getString( XML_presName, aEmptyStr );
+        mrPoint.msPresentationLayoutStyleLabel = rAttribs.getString( XML_presStyleLbl, aEmptyStr );
+        mrPoint.msQuickStyleCategoryId = rAttribs.getString( XML_qsCatId, aEmptyStr );
+        mrPoint.msQuickStyleTypeId = rAttribs.getString( XML_qsTypeId, aEmptyStr );
+
+        mrPoint.mnCustomAngle = rAttribs.getInteger( XML_custAng, -1 );
+        mrPoint.mnPercentageNeighbourWidth = rAttribs.getInteger( XML_custLinFactNeighborX, -1 );
+        mrPoint.mnPercentageNeighbourHeight = rAttribs.getInteger( XML_custLinFactNeighborY, -1 );
+        mrPoint.mnPercentageOwnWidth = rAttribs.getInteger( XML_custLinFactX, -1 );
+        mrPoint.mnPercentageOwnHeight = rAttribs.getInteger( XML_custLinFactY, -1 );
+        mrPoint.mnIncludeAngleScale = rAttribs.getInteger( XML_custRadScaleInc, -1 );
+        mrPoint.mnRadiusScale = rAttribs.getInteger( XML_custRadScaleRad, -1 );
+        mrPoint.mnWidthScale = rAttribs.getInteger( XML_custScaleX, -1 );
+        mrPoint.mnHeightScale = rAttribs.getInteger( XML_custScaleY, -1 );
+        mrPoint.mnWidthOverride = rAttribs.getInteger( XML_custSzX, -1 );
+        mrPoint.mnHeightOverride = rAttribs.getInteger( XML_custSzY, -1 );
+        mrPoint.mnLayoutStyleCount = rAttribs.getInteger( XML_presStyleCnt, -1 );
+        mrPoint.mnLayoutStyleIndex = rAttribs.getInteger( XML_presStyleIdx, -1 );
+
+        mrPoint.mbCoherent3DOffset = rAttribs.getBool( XML_coherent3DOff, false );
+        mrPoint.mbCustomHorizontalFlip = rAttribs.getBool( XML_custFlipHor, false );
+        mrPoint.mbCustomVerticalFlip = rAttribs.getBool( XML_custFlipVert, false );
+        mrPoint.mbCustomText = rAttribs.getBool( XML_custT, false );
+        mrPoint.mbIsPlaceholder = rAttribs.getBool( XML_phldr, false );
+    }
+
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& ) SAL_OVERRIDE
+        {
+            switch( aElementToken )
+            {
+            case DGM_TOKEN( presLayoutVars ):
+                return new PresLayoutVarsContext( *this, mrPoint );
+            case DGM_TOKEN( style ):
+                // skip CT_shapeStyle
+                return 0;
+            default:
+                break;
+            }
+            return this;
+        }
+
+private:
+    dgm::Point& mrPoint;
+};
 
 
 // CL_Pt
 class PtContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    PtContext( ContextHandler& rParent,
-			   const Reference< XFastAttributeList >& xAttribs,
-			   const dgm::PointPtr & pPoint)
-        : ContextHandler( rParent )
-		, mpPoint( pPoint )
-		{
-			mpPoint->setModelId( xAttribs->getOptionalValue( XML_modelId ) );
-			//
-			// the default type is XML_node
-			sal_Int32 nType  = xAttribs->getOptionalValueToken( XML_type, XML_node );
-			mpPoint->setType( nType );
+    PtContext( ContextHandler2Helper& rParent,
+               const AttributeList& rAttribs,
+               dgm::Point & rPoint):
+        ContextHandler2( rParent ),
+        mrPoint( rPoint )
+    {
+        mrPoint.msModelId = rAttribs.getString( XML_modelId ).get();
 
-			// ignore the cxnId unless it is this type. See 5.15.3.1.3 in Primer
-			if( ( nType == XML_parTrans ) || ( nType == XML_sibTrans ) )
-			{
-				mpPoint->setCnxId( xAttribs->getOptionalValue( XML_cxnId ) );
-			}
-		}
+        // the default type is XML_node
+        const sal_Int32 nType  = rAttribs.getToken( XML_type, XML_node );
+        mrPoint.mnType = nType;
+
+        // ignore the cxnId unless it is this type. See 5.15.3.1.3 in Primer
+        if( ( nType == XML_parTrans ) || ( nType == XML_sibTrans ) )
+            mrPoint.msCnxId = rAttribs.getString( XML_cxnId ).get();
+    }
 
 
-    virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( sal_Int32 aElementToken,
-							const Reference< XFastAttributeList >& /*xAttribs*/ )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
-
-			switch( aElementToken )
-			{
-			case DGM_TOKEN( extLst ):
-                return xRet;
-			case DGM_TOKEN( prSet ):
-				// TODO
-				// CT_ElemPropSet
-				break;
-			case DGM_TOKEN( spPr ):
-				OSL_TRACE( "shape props for point");
-                xRet = new ShapePropertiesContext( *this, *mpPoint->getShape() );
-				break;
-			case DGM_TOKEN( t ):
-			{
-				OSL_TRACE( "shape text body for point");
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElementToken )
+            {
+            case DGM_TOKEN( extLst ):
+                return 0;
+            case DGM_TOKEN( prSet ):
+                OSL_TRACE( "diagram property set for point");
+                return new PropertiesContext( *this, mrPoint, rAttribs );
+            case DGM_TOKEN( spPr ):
+                OSL_TRACE( "shape props for point");
+                if( !mrPoint.mpShape )
+                    mrPoint.mpShape.reset( new Shape() );
+                return new ShapePropertiesContext( *this, *(mrPoint.mpShape) );
+            case DGM_TOKEN( t ):
+            {
+                OSL_TRACE( "shape text body for point");
                 TextBodyPtr xTextBody( new TextBody );
-                mpPoint->getShape()->setTextBody( xTextBody );
-                xRet = new TextBodyContext( *this, *xTextBody );
-				break;
-			}
-			default:
-				break;
-			}
-			if( !xRet.is() )
-				xRet.set( this );
-			return xRet;
-		}
+                if( !mrPoint.mpShape )
+                    mrPoint.mpShape.reset( new Shape() );
+                mrPoint.mpShape->setTextBody( xTextBody );
+                return new TextBodyContext( *this, *xTextBody );
+            }
+            default:
+                break;
+            }
+            return this;
+        }
 
 private:
-	dgm::PointPtr mpPoint;
+    dgm::Point& mrPoint;
 };
 
 
 
 // CT_PtList
 class PtListContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    PtListContext( ContextHandler& rParent,  dgm::Points & aPoints)
-        : ContextHandler( rParent )
-		, maPoints( aPoints )
-		{
-		}
-    virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( sal_Int32 aElementToken,
-							const Reference< XFastAttributeList >& xAttribs )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
-
-			switch( aElementToken )
-			{
-			case DGM_TOKEN( pt ):
-			{
-				// CT_Pt
-				dgm::PointPtr pPoint( new dgm::Point() );
-				maPoints.push_back( pPoint );
-                xRet.set( new PtContext( *this, xAttribs, pPoint ) );
-				break;
-			}
-			default:
-				break;
-			}
-			if( !xRet.is() )
-				xRet.set( this );
-			return xRet;
-		}
+    PtListContext( ContextHandler2Helper& rParent,  dgm::Points& rPoints) :
+        ContextHandler2( rParent ),
+        mrPoints( rPoints )
+    {}
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElementToken )
+            {
+            case DGM_TOKEN( pt ):
+            {
+                // CT_Pt
+                mrPoints.push_back( dgm::Point() );
+                return new PtContext( *this, rAttribs, mrPoints.back() );
+            }
+            default:
+                break;
+            }
+            return this;
+        }
 
 private:
-	dgm::Points  & maPoints;
+    dgm::Points& mrPoints;
 };
 
 // CT_BackgroundFormatting
 class BackgroundFormattingContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    BackgroundFormattingContext( ContextHandler& rParent, DiagramDataPtr & pModel )
-        : ContextHandler( rParent )
-		, mpDataModel( pModel )
-		{
-			OSL_ENSURE( pModel, "the data model MUST NOT be NULL" );
-		}
+    BackgroundFormattingContext( ContextHandler2Helper& rParent, DiagramDataPtr & pModel )
+        : ContextHandler2( rParent )
+        , mpDataModel( pModel )
+        {
+            OSL_ENSURE( pModel, "the data model MUST NOT be NULL" );
+        }
 
-    virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( sal_Int32 aElementToken,
-							const Reference< XFastAttributeList >& xAttribs )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
-
-			switch( aElementToken )
-			{
-			case A_TOKEN( blipFill ):
-			case A_TOKEN( gradFill ):
-			case A_TOKEN( grpFill ):
-			case A_TOKEN( noFill ):
-			case A_TOKEN( pattFill ):
-			case A_TOKEN( solidFill ):
-				// EG_FillProperties
-                xRet.set( FillPropertiesContext::createFillContext(
-                    *this, aElementToken, xAttribs, *mpDataModel->getFillProperties() ) );
-				break;
-			case A_TOKEN( effectDag ):
-			case A_TOKEN( effectLst ):
-				// TODO
-				// EG_EffectProperties
-				break;
-			default:
-				break;
-			}
-			if( !xRet.is() )
-				xRet.set( this );
-			return xRet;
-		}
+    virtual ContextHandlerRef
+    onCreateContext( sal_Int32 aElementToken,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElementToken )
+            {
+            case A_TOKEN( blipFill ):
+            case A_TOKEN( gradFill ):
+            case A_TOKEN( grpFill ):
+            case A_TOKEN( noFill ):
+            case A_TOKEN( pattFill ):
+            case A_TOKEN( solidFill ):
+                // EG_FillProperties
+                return FillPropertiesContext::createFillContext(
+                    *this, aElementToken, rAttribs, *mpDataModel->getFillProperties() );
+            case A_TOKEN( effectDag ):
+            case A_TOKEN( effectLst ):
+                // TODO
+                // EG_EffectProperties
+                break;
+            default:
+                break;
+            }
+            return this;
+        }
 private:
-	DiagramDataPtr mpDataModel;
+    DiagramDataPtr mpDataModel;
 };
 
 
 
-DataModelContext::DataModelContext( ContextHandler& rParent,
-									const DiagramDataPtr & pDataModel )
-    : ContextHandler( rParent )
-	, mpDataModel( pDataModel )
+DataModelContext::DataModelContext( ContextHandler2Helper& rParent,
+                                    const DiagramDataPtr & pDataModel )
+    : ContextHandler2( rParent )
+    , mpDataModel( pDataModel )
 {
-	OSL_ENSURE( pDataModel, "Data Model must not be NULL" );
+    OSL_ENSURE( pDataModel, "Data Model must not be NULL" );
 }
 
 
 DataModelContext::~DataModelContext()
 {
-	// some debug
-	mpDataModel->dump();
+    // some debug
+    mpDataModel->dump();
 }
 
-
-Reference< XFastContextHandler > SAL_CALL
-DataModelContext::createFastChildContext( ::sal_Int32 aElement,
-										  const Reference< XFastAttributeList >& /*xAttribs*/ )
-	throw ( SAXException, RuntimeException)
+ContextHandlerRef
+DataModelContext::onCreateContext( ::sal_Int32 aElement,
+                                   const AttributeList& rAttribs )
 {
-	Reference< XFastContextHandler > xRet;
+    switch( aElement )
+    {
+    case DGM_TOKEN( cxnLst ):
+        // CT_CxnList
+        return new CxnListContext( *this, mpDataModel->getConnections() );
+    case DGM_TOKEN( ptLst ):
+        // CT_PtList
+        return new PtListContext( *this, mpDataModel->getPoints() );
+    case DGM_TOKEN( bg ):
+        // CT_BackgroundFormatting
+        return new BackgroundFormattingContext( *this, mpDataModel );
+    case DGM_TOKEN( whole ):
+        // CT_WholeE2oFormatting
+        // TODO
+        return 0;
+    case DGM_TOKEN( extLst ):
+    case A_TOKEN( ext ):
+        break;
+    case DSP_TOKEN( dataModelExt ):
+        mpDataModel->getExtDrawings().push_back( rAttribs.getString( XML_relId ).get() );
+        break;
+    default:
+        break;
+    }
 
-	switch( aElement )
-	{
-	case DGM_TOKEN( cxnLst ):
-		// CT_CxnList
-        xRet.set( new CxnListContext( *this, mpDataModel->getConnections() ) );
-		break;
-	case DGM_TOKEN( ptLst ):
-		// CT_PtList
-        xRet.set( new PtListContext( *this, mpDataModel->getPoints() ) );
-		break;
-	case DGM_TOKEN( bg ):
-		// CT_BackgroundFormatting
-        xRet.set( new BackgroundFormattingContext( *this, mpDataModel ) );
-		break;
-	case DGM_TOKEN( whole ):
-		// CT_WholeE2oFormatting
-		// TODO
-        return xRet;
-	case DGM_TOKEN( extLst ):
-        return xRet;
-	default:
-		break;
-	}
-
-	if( !xRet.is() )
-		xRet.set( this );
-
-	return xRet;
+    return this;
 }
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,34 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/theme.hxx"
-
-using ::rtl::OUString;
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
+
 
 Theme::Theme()
 {
@@ -61,7 +55,7 @@ const LineProperties* Theme::getLineStyle( sal_Int32 nIndex ) const
      return lclGetStyleElement( maLineStyleList, nIndex );
 }
 
-const PropertyMap* Theme::getEffectStyle( sal_Int32 nIndex ) const
+const EffectProperties* Theme::getEffectStyle( sal_Int32 nIndex ) const
 {
     return lclGetStyleElement( maEffectStyleList, nIndex );
 }
@@ -73,13 +67,13 @@ const TextCharacterProperties* Theme::getFontStyle( sal_Int32 nSchemeType ) cons
 
 const TextFont* Theme::resolveFont( const OUString& rName ) const
 {
+    const TextCharacterProperties* pCharProps = 0;
     /*  Resolves the following names:
         +mj-lt, +mj-ea, +mj-cs  --  major Latin, Asian, Complex font
         +mn-lt, +mn-ea, +mn-cs  --  minor Latin, Asian, Complex font
      */
     if( (rName.getLength() == 6) && (rName[ 0 ] == '+') && (rName[ 3 ] == '-') )
     {
-        const TextCharacterProperties* pCharProps = 0;
         if( (rName[ 1 ] == 'm') && (rName[ 2 ] == 'j') )
             pCharProps = maFontScheme.get( XML_major ).get();
         else if( (rName[ 1 ] == 'm') && (rName[ 2 ] == 'n') )
@@ -94,11 +88,27 @@ const TextFont* Theme::resolveFont( const OUString& rName ) const
                 return &pCharProps->maComplexFont;
         }
     }
+
+    // See writerfilter::dmapper::ThemeTable::getFontNameForTheme().
+    if (rName == "majorHAnsi" || rName == "majorAscii" || rName == "majorBidi" || rName == "majorEastAsia")
+        pCharProps = maFontScheme.get(XML_major).get();
+    else if (rName == "minorHAnsi" || rName == "minorAscii" || rName == "minorBidi" || rName == "minorEastAsia")
+        pCharProps = maFontScheme.get(XML_minor).get();
+    if (pCharProps)
+    {
+        if (rName == "majorAscii" || rName == "majorHAnsi" || rName == "minorAscii" || rName == "minorHAnsi")
+            return &pCharProps->maLatinFont;
+        else if (rName == "minorBidi" || rName == "majorBidi")
+            return &pCharProps->maComplexFont;
+        else if (rName == "minorEastAsia" || rName == "majorEastAsia")
+            return &pCharProps->maAsianFont;
+    }
     return 0;
 }
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

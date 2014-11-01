@@ -1,45 +1,41 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <osl/diagnose.h>
 
-#include "oox/drawingml/diagram/diagramfragmenthandler.hxx"
-#include "oox/drawingml/diagram/datamodelcontext.hxx"
 #include "diagramdefinitioncontext.hxx"
+#include "diagramfragmenthandler.hxx"
+#include "datamodelcontext.hxx"
+#include "oox/drawingml/colorchoicecontext.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uno;
-using ::rtl::OUString;
 
 namespace oox { namespace drawingml {
 
 DiagramDataFragmentHandler::DiagramDataFragmentHandler( XmlFilterBase& rFilter,
-														const OUString& rFragmentPath,
-														const DiagramDataPtr pDataPtr )
-	throw( )
-    : FragmentHandler( rFilter, rFragmentPath )
-	, mpDataPtr( pDataPtr )
+                                                        const OUString& rFragmentPath,
+                                                        const DiagramDataPtr pDataPtr )
+    throw( )
+    : FragmentHandler2( rFilter, rFragmentPath )
+    , mpDataPtr( pDataPtr )
 {
 }
 
@@ -49,42 +45,39 @@ DiagramDataFragmentHandler::~DiagramDataFragmentHandler( ) throw ()
 }
 
 void SAL_CALL DiagramDataFragmentHandler::endDocument()
-	throw (SAXException, RuntimeException)
+#if SUPD == 310
+    throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 
 }
 
 
-Reference< XFastContextHandler > SAL_CALL
-DiagramDataFragmentHandler::createFastChildContext( ::sal_Int32 aElement,
-													const Reference< XFastAttributeList >& )
-	throw ( SAXException, RuntimeException)
+ContextHandlerRef
+DiagramDataFragmentHandler::onCreateContext( ::sal_Int32 aElement,
+                                             const AttributeList& )
 {
-	Reference< XFastContextHandler > xRet;
+    switch( aElement )
+    {
+    case DGM_TOKEN( dataModel ):
+        return new DataModelContext( *this, mpDataPtr );
+    default:
+        break;
+    }
 
-	switch( aElement )
-	{
-	case DGM_TOKEN( dataModel ):
-        xRet.set( new DataModelContext( *this, mpDataPtr ) );
-		break;
-	default:
-		break;
-	}
-
-	if( !xRet.is() )
-        xRet = getFastContextHandler();
-
-	return xRet;
+    return this;
 }
 
-///////////////////
+
 
 DiagramLayoutFragmentHandler::DiagramLayoutFragmentHandler( XmlFilterBase& rFilter,
-														const OUString& rFragmentPath,
-														const DiagramLayoutPtr pDataPtr )
-	throw( )
-    : FragmentHandler( rFilter, rFragmentPath )
-	, mpDataPtr( pDataPtr )
+                                                        const OUString& rFragmentPath,
+                                                        const DiagramLayoutPtr pDataPtr )
+    throw( )
+    : FragmentHandler2( rFilter, rFragmentPath )
+    , mpDataPtr( pDataPtr )
 {
 }
 
@@ -94,125 +87,175 @@ DiagramLayoutFragmentHandler::~DiagramLayoutFragmentHandler( ) throw ()
 }
 
 void SAL_CALL DiagramLayoutFragmentHandler::endDocument()
-	throw (SAXException, RuntimeException)
+#if SUPD == 310
+    throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 
 }
 
 
-Reference< XFastContextHandler > SAL_CALL
-DiagramLayoutFragmentHandler::createFastChildContext( ::sal_Int32 aElement,
-													  const Reference< XFastAttributeList >& xAttribs )
-	throw ( SAXException, RuntimeException)
+ContextHandlerRef
+DiagramLayoutFragmentHandler::onCreateContext( ::sal_Int32 aElement,
+                                               const AttributeList& rAttribs )
 {
-	Reference< XFastContextHandler > xRet;
+    switch( aElement )
+    {
+    case DGM_TOKEN( layoutDef ):
+        return new DiagramDefinitionContext( *this, AttributeList( rAttribs ), mpDataPtr );
+    default:
+        break;
+    }
 
-	switch( aElement )
-	{
-	case DGM_TOKEN( layoutDef ):
-        xRet.set( new DiagramDefinitionContext( *this, xAttribs, mpDataPtr ) );
-		break;
-	default:
-		break;
-	}
-
-	if( !xRet.is() )
-        xRet = getFastContextHandler();
-
-	return xRet;
+    return this;
 }
 
-///////////////////////
+
 
 DiagramQStylesFragmentHandler::DiagramQStylesFragmentHandler( XmlFilterBase& rFilter,
-														const OUString& rFragmentPath,
-														const DiagramQStylesPtr pDataPtr )
-	throw( )
-    : FragmentHandler( rFilter, rFragmentPath )
-	, mpDataPtr( pDataPtr )
+                                                              const OUString& rFragmentPath,
+                                                              DiagramQStyleMap& rStylesMap ) :
+    FragmentHandler2( rFilter, rFragmentPath ),
+    maStyleName(),
+    maStyleEntry(),
+    mrStylesMap( rStylesMap )
+{}
+
+::oox::core::ContextHandlerRef DiagramQStylesFragmentHandler::createStyleMatrixContext(
+    sal_Int32 nElement,
+    const AttributeList& rAttribs,
+    ShapeStyleRef& o_rStyle )
 {
+    o_rStyle.mnThemedIdx = (nElement == DGM_TOKEN(fontRef)) ?
+        rAttribs.getToken( XML_idx, XML_none ) : rAttribs.getInteger( XML_idx, 0 );
+    return new ColorContext( *this, o_rStyle.maPhClr );
 }
 
-DiagramQStylesFragmentHandler::~DiagramQStylesFragmentHandler( ) throw ()
+::oox::core::ContextHandlerRef DiagramQStylesFragmentHandler::onCreateContext( sal_Int32 nElement,
+                                                                               const AttributeList& rAttribs )
 {
+    // state-table like way of navigating the color fragment. we
+    // currently ignore everything except styleLbl in the colorsDef
+    // element
+    switch( getCurrentElement() )
+    {
+        case XML_ROOT_CONTEXT:
+            return nElement == DGM_TOKEN(styleDef) ? this : NULL;
+        case DGM_TOKEN(styleDef):
+            return nElement == DGM_TOKEN(styleLbl) ? this : NULL;
+        case DGM_TOKEN(styleLbl):
+            return nElement == DGM_TOKEN(style) ? this : NULL;
+        case DGM_TOKEN(style):
+        {
+            switch( nElement )
+            {
+                case DGM_TOKEN(lnRef) :     // CT_StyleMatrixReference
+                    return createStyleMatrixContext(nElement,rAttribs,
+                                                    maStyleEntry.maLineStyle);
+                case DGM_TOKEN(fillRef) :   // CT_StyleMatrixReference
+                    return createStyleMatrixContext(nElement,rAttribs,
+                                                    maStyleEntry.maFillStyle);
+                case DGM_TOKEN(effectRef) : // CT_StyleMatrixReference
+                    return createStyleMatrixContext(nElement,rAttribs,
+                                                    maStyleEntry.maEffectStyle);
+                case DGM_TOKEN(fontRef) :   // CT_FontRe    ference
+                    return createStyleMatrixContext(nElement,rAttribs,
+                                                    maStyleEntry.maTextStyle);
+            }
+            return 0;
+        }
+    }
 
-}
-
-void SAL_CALL DiagramQStylesFragmentHandler::endDocument()
-	throw (SAXException, RuntimeException)
-{
-
-}
-
-
-Reference< XFastContextHandler > SAL_CALL
-DiagramQStylesFragmentHandler::createFastChildContext( ::sal_Int32 aElement,
-													const Reference< XFastAttributeList >& )
-	throw ( SAXException, RuntimeException)
-{
-	Reference< XFastContextHandler > xRet;
-
-	switch( aElement )
-	{
-	case DGM_TOKEN( styleDef ):
-		// TODO
-		break;
-	default:
-		break;
-	}
-
-	if( !xRet.is() )
-        xRet = getFastContextHandler();
-
-	return xRet;
-}
-
-/////////////////////
-
-DiagramColorsFragmentHandler::DiagramColorsFragmentHandler( XmlFilterBase& rFilter,
-														const OUString& rFragmentPath,
-														const DiagramColorsPtr pDataPtr )
-	throw( )
-    : FragmentHandler( rFilter, rFragmentPath )
-	, mpDataPtr( pDataPtr )
-{
-}
-
-DiagramColorsFragmentHandler::~DiagramColorsFragmentHandler( ) throw ()
-{
-
-}
-
-void SAL_CALL DiagramColorsFragmentHandler::endDocument()
-	throw (SAXException, RuntimeException)
-{
-
+    return 0;
 }
 
 
-Reference< XFastContextHandler > SAL_CALL
-DiagramColorsFragmentHandler::createFastChildContext( ::sal_Int32 aElement,
-													const Reference< XFastAttributeList >& )
-	throw ( SAXException, RuntimeException)
+void DiagramQStylesFragmentHandler::onStartElement( const AttributeList& rAttribs )
 {
-	Reference< XFastContextHandler > xRet;
-
-	switch( aElement )
-	{
-	case DGM_TOKEN( colorsDef ):
-		// TODO
-		break;
-	default:
-		break;
-	}
-
-	if( !xRet.is() )
-        xRet = getFastContextHandler();
-
-	return xRet;
+    if( getCurrentElement() == DGM_TOKEN( styleLbl ) )
+    {
+        maStyleName = rAttribs.getString( XML_name, OUString() );
+        maStyleEntry = mrStylesMap[maStyleName];
+    }
 }
 
 
+
+void DiagramQStylesFragmentHandler::onEndElement( )
+{
+    if( getCurrentElement() == DGM_TOKEN(styleLbl) )
+        mrStylesMap[maStyleName] = maStyleEntry;
+}
+
+ColorFragmentHandler::ColorFragmentHandler( ::oox::core::XmlFilterBase& rFilter,
+                                            const OUString& rFragmentPath,
+                                            DiagramColorMap& rColorsMap ) :
+    FragmentHandler2(rFilter,rFragmentPath),
+    maColorName(),
+    maColorEntry(),
+    mrColorsMap(rColorsMap)
+{}
+
+::oox::core::ContextHandlerRef ColorFragmentHandler::onCreateContext( sal_Int32 nElement,
+                                                                      const AttributeList& /*rAttribs*/ )
+{
+    // state-table like way of navigating the color fragment. we
+    // currently ignore everything except styleLbl in the colorsDef
+    // element
+    switch( getCurrentElement() )
+    {
+        case XML_ROOT_CONTEXT:
+            return nElement == DGM_TOKEN(colorsDef) ? this : NULL;
+        case DGM_TOKEN(colorsDef):
+            return nElement == DGM_TOKEN(styleLbl) ? this : NULL;
+        case DGM_TOKEN(styleLbl):
+        {
+            switch( nElement )
+            {
+                // the actual colors - defer to color fragment handlers.
+
+                // TODO(F1): well, actually, there might be *several* color
+                // definitions in it, after all its called list. but
+                // apparently ColorContext doesn't handle that anyway...
+                case DGM_TOKEN(fillClrLst):
+                    return new ColorContext( *this, maColorEntry.maFillColor );
+                case DGM_TOKEN(linClrLst):
+                    return new ColorContext( *this, maColorEntry.maLineColor );
+                case DGM_TOKEN(effectClrLst):
+                    return new ColorContext( *this, maColorEntry.maEffectColor );
+                case DGM_TOKEN(txFillClrLst):
+                    return new ColorContext( *this, maColorEntry.maTextFillColor );
+                case DGM_TOKEN(txLinClrLst):
+                    return new ColorContext( *this, maColorEntry.maTextLineColor );
+                case DGM_TOKEN(txEffectClrLst):
+                    return new ColorContext( *this, maColorEntry.maTextEffectColor );
+            }
+            break;
+        }
+    }
+
+    return 0;
+}
+
+
+void ColorFragmentHandler::onStartElement( const AttributeList& rAttribs )
+{
+    if( getCurrentElement() == DGM_TOKEN(styleLbl) )
+    {
+        maColorName = rAttribs.getString( XML_name, OUString() );
+        maColorEntry = mrColorsMap[maColorName];
+    }
+}
+
+void ColorFragmentHandler::onEndElement( )
+{
+    if( getCurrentElement() == DGM_TOKEN(styleLbl) )
+        mrColorsMap[maColorName] = maColorEntry;
+}
 
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

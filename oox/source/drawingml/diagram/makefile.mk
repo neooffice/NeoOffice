@@ -44,6 +44,11 @@ SLOFILES = \
 	$(SLO)$/datamodelcontext.obj \
 	$(SLO)$/layoutnodecontext.obj
 
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/constraintlistcontext.obj
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk

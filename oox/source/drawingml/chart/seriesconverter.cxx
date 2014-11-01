@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/seriesconverter.hxx"
 
@@ -30,37 +26,56 @@
 #include <com/sun/star/chart2/XRegressionCurve.hpp>
 #include <com/sun/star/chart2/XRegressionCurveContainer.hpp>
 #include <com/sun/star/chart2/data/XDataSink.hpp>
+#if SUPD == 310
+#include <com/sun/star/chart2/data/XLabeledDataSequence.hpp>
+#else	// SUPD == 310
+#include <com/sun/star/chart2/data/LabeledDataSequence.hpp>
+#endif	// SUPD == 310
+#include <basegfx/numeric/ftools.hxx>
 #include "oox/drawingml/chart/datasourceconverter.hxx"
 #include "oox/drawingml/chart/seriesmodel.hxx"
 #include "oox/drawingml/chart/titleconverter.hxx"
 #include "oox/drawingml/chart/typegroupconverter.hxx"
 #include "oox/drawingml/chart/typegroupmodel.hxx"
 #include "oox/helper/containerhelper.hxx"
+#include <oox/drawingml/lineproperties.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
-
+using namespace com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
-
-// ============================================================================
-
 namespace {
 
+/** nastied-up sgn function - employs some gratuity around 0 - values
+   smaller than 0.33 are clamped to 0
+ */
+int lclSgn( double nVal )
+{
+    const int intVal=nVal*3;
+    return intVal == 0 ? 0 : (intVal < 0 ? -1 : 1);
+}
+
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > lclCreateLabeledDataSequence(
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > lclCreateLabeledDataSequence(
+#endif	// SUPD == 310
         const ConverterRoot& rParent,
         DataSourceModel* pValues, const OUString& rRole,
         TextModel* pTitle = 0 )
 {
     // create data sequence for values
+#if SUPD == 310
+    css::uno::Reference< XDataSequence > xValueSeq;
+#else	// SUPD == 310
     Reference< XDataSequence > xValueSeq;
+#endif	// SUPD == 310
     if( pValues )
     {
         DataSourceConverter aSourceConv( rParent, *pValues );
@@ -68,18 +83,30 @@ Reference< XLabeledDataSequence > lclCreateLabeledDataSequence(
     }
 
     // create data sequence for title
+#if SUPD == 310
+    css::uno::Reference< XDataSequence > xTitleSeq;
+#else	// SUPD == 310
     Reference< XDataSequence > xTitleSeq;
+#endif	// SUPD == 310
     if( pTitle )
     {
         TextConverter aTextConv( rParent, *pTitle );
-        xTitleSeq = aTextConv.createDataSequence( CREATE_OUSTRING( "label" ) );
+        xTitleSeq = aTextConv.createDataSequence( "label" );
     }
 
     // create the labeled data sequence, if values or title are present
+#if SUPD == 310
+    css::uno::Reference< XLabeledDataSequence > xLabeledSeq;
+#else	// SUPD == 310
     Reference< XLabeledDataSequence > xLabeledSeq;
+#endif	// SUPD == 310
     if( xValueSeq.is() || xTitleSeq.is() )
     {
-        xLabeledSeq.set( rParent.createInstance( CREATE_OUSTRING( "com.sun.star.chart2.data.LabeledDataSequence" ) ), UNO_QUERY );
+#if SUPD == 310
+        xLabeledSeq.set( rParent.createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.data.LabeledDataSequence" ) ) ), UNO_QUERY );
+#else	// SUPD == 310
+        xLabeledSeq.set( LabeledDataSequence::create(rParent.getComponentContext()), UNO_QUERY );
+#endif	// SUPD == 310
         if( xLabeledSeq.is() )
         {
             xLabeledSeq->setValues( xValueSeq );
@@ -109,6 +136,13 @@ void lclConvertLabelFormatting( PropertySet& rPropSet, ObjectFormatter& rFormatt
 
     bool bShowValue   = !rDataLabel.mbDeleted && rDataLabel.mobShowVal.get( false );
     bool bShowPercent = !rDataLabel.mbDeleted && rDataLabel.mobShowPercent.get( false ) && (rTypeInfo.meTypeCategory == TYPECATEGORY_PIE);
+    if( bShowValue &&
+        !bShowPercent && rTypeInfo.meTypeCategory == TYPECATEGORY_PIE &&
+        rDataLabel.maNumberFormat.maFormatCode.indexOf('%') >= 0 )
+    {
+        bShowValue = false;
+        bShowPercent = true;
+    }
     bool bShowCateg   = !rDataLabel.mbDeleted && rDataLabel.mobShowCatName.get( false );
     bool bShowSymbol  = !rDataLabel.mbDeleted && rDataLabel.mobShowLegendKey.get( false );
 
@@ -130,7 +164,7 @@ void lclConvertLabelFormatting( PropertySet& rPropSet, ObjectFormatter& rFormatt
 
         // data label separator (do not overwrite series separator, if no explicit point separator is present)
         if( bDataSeriesLabel || rDataLabel.moaSeparator.has() )
-            rPropSet.setProperty( PROP_LabelSeparator, rDataLabel.moaSeparator.get( CREATE_OUSTRING( "; " ) ) );
+            rPropSet.setProperty( PROP_LabelSeparator, rDataLabel.moaSeparator.get( "; " ) );
 
         // data label placement (do not overwrite series placement, if no explicit point placement is present)
         if( bDataSeriesLabel || rDataLabel.monLabelPos.has() )
@@ -154,9 +188,21 @@ void lclConvertLabelFormatting( PropertySet& rPropSet, ObjectFormatter& rFormatt
     }
 }
 
-} // namespace
+void importBorderProperties( PropertySet& rPropSet, Shape& rShape, const GraphicHelper& rGraphicHelper )
+{
+    LineProperties& rLP = rShape.getLineProperties();
+    if (rLP.moLineWidth.has())
+    {
+        sal_Int32 nWidth = convertEmuToHmm(rLP.moLineWidth.get());
+        rPropSet.setProperty(PROP_LabelBorderWidth, uno::makeAny(nWidth));
+        rPropSet.setProperty(PROP_LabelBorderStyle, uno::makeAny(drawing::LineStyle_SOLID));
+    }
+    const Color& aColor = rLP.maLineFill.maFillColor;
+    sal_Int32 nColor = aColor.getColor(rGraphicHelper);
+    rPropSet.setProperty(PROP_LabelBorderColor, uno::makeAny(nColor));
+}
 
-// ============================================================================
+} // namespace
 
 DataLabelConverter::DataLabelConverter( const ConverterRoot& rParent, DataLabelModel& rModel ) :
     ConverterBase< DataLabelModel >( rParent, rModel )
@@ -167,19 +213,49 @@ DataLabelConverter::~DataLabelConverter()
 {
 }
 
+#if SUPD == 310
+void DataLabelConverter::convertFromModel( const css::uno::Reference< XDataSeries >& rxDataSeries, const TypeGroupConverter& rTypeGroup )
+#else	// SUPD == 310
 void DataLabelConverter::convertFromModel( const Reference< XDataSeries >& rxDataSeries, const TypeGroupConverter& rTypeGroup )
+#endif	// SUPD == 310
 {
-    if( rxDataSeries.is() ) try
+    if (!rxDataSeries.is())
+        return;
+
+    try
     {
         PropertySet aPropSet( rxDataSeries->getDataPointByIndex( mrModel.mnIndex ) );
         lclConvertLabelFormatting( aPropSet, getFormatter(), mrModel, rTypeGroup, false );
+        const TypeGroupInfo& rTypeInfo = rTypeGroup.getTypeInfo();
+        bool bIsPie = rTypeInfo.meTypeCategory == TYPECATEGORY_PIE;
+        if( mrModel.mxLayout && !mrModel.mxLayout->mbAutoLayout && !bIsPie )
+        {
+            // bnc#694340 - nasty hack - chart2 cannot individually
+            // place data labels, let's try to find a useful
+            // compromise instead
+            namespace csscd = ::com::sun::star::chart::DataLabelPlacement;
+            const sal_Int32 aPositionsLookupTable[] =
+                {
+                    csscd::TOP_LEFT,    csscd::TOP,    csscd::TOP_RIGHT,
+                    csscd::LEFT,        csscd::CENTER, csscd::RIGHT,
+                    csscd::BOTTOM_LEFT, csscd::BOTTOM, csscd::BOTTOM_RIGHT
+                };
+            const double nMax=std::max(
+                fabs(mrModel.mxLayout->mfX),
+                fabs(mrModel.mxLayout->mfY));
+            const int simplifiedX=lclSgn(mrModel.mxLayout->mfX/nMax);
+            const int simplifiedY=lclSgn(mrModel.mxLayout->mfY/nMax);
+            aPropSet.setProperty( PROP_LabelPlacement,
+                                  aPositionsLookupTable[ simplifiedX+1 + 3*(simplifiedY+1) ] );
+        }
+
+        if (mrModel.mxShapeProp)
+            importBorderProperties(aPropSet, *mrModel.mxShapeProp, getFilter().getGraphicHelper());
     }
     catch( Exception& )
     {
     }
 }
-
-// ============================================================================
 
 DataLabelsConverter::DataLabelsConverter( const ConverterRoot& rParent, DataLabelsModel& rModel ) :
     ConverterBase< DataLabelsModel >( rParent, rModel )
@@ -190,23 +266,32 @@ DataLabelsConverter::~DataLabelsConverter()
 {
 }
 
+#if SUPD == 310
+void DataLabelsConverter::convertFromModel( const css::uno::Reference< XDataSeries >& rxDataSeries, const TypeGroupConverter& rTypeGroup )
+#else	// SUPD == 310
 void DataLabelsConverter::convertFromModel( const Reference< XDataSeries >& rxDataSeries, const TypeGroupConverter& rTypeGroup )
+#endif	// SUPD == 310
 {
     if( !mrModel.mbDeleted )
     {
         PropertySet aPropSet( rxDataSeries );
         lclConvertLabelFormatting( aPropSet, getFormatter(), mrModel, rTypeGroup, true );
+
+        if (mrModel.mxShapeProp)
+            // Import baseline border properties for these data labels.
+            importBorderProperties(aPropSet, *mrModel.mxShapeProp, getFilter().getGraphicHelper());
     }
 
     // data point label settings
     for( DataLabelsModel::DataLabelVector::iterator aIt = mrModel.maPointLabels.begin(), aEnd = mrModel.maPointLabels.end(); aIt != aEnd; ++aIt )
     {
+        if ((*aIt)->maNumberFormat.maFormatCode.isEmpty())
+            (*aIt)->maNumberFormat = mrModel.maNumberFormat;
+
         DataLabelConverter aLabelConv( *this, **aIt );
         aLabelConv.convertFromModel( rxDataSeries, rTypeGroup );
     }
 }
-
-// ============================================================================
 
 ErrorBarConverter::ErrorBarConverter( const ConverterRoot& rParent, ErrorBarModel& rModel ) :
     ConverterBase< ErrorBarModel >( rParent, rModel )
@@ -217,13 +302,21 @@ ErrorBarConverter::~ErrorBarConverter()
 {
 }
 
+#if SUPD == 310
+void ErrorBarConverter::convertFromModel( const css::uno::Reference< XDataSeries >& rxDataSeries )
+#else	// SUPD == 310
 void ErrorBarConverter::convertFromModel( const Reference< XDataSeries >& rxDataSeries )
+#endif	// SUPD == 310
 {
     bool bShowPos = (mrModel.mnTypeId == XML_plus) || (mrModel.mnTypeId == XML_both);
     bool bShowNeg = (mrModel.mnTypeId == XML_minus) || (mrModel.mnTypeId == XML_both);
     if( bShowPos || bShowNeg ) try
     {
-        Reference< XPropertySet > xErrorBar( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.ErrorBar" ) ), UNO_QUERY_THROW );
+#if SUPD == 310
+        css::uno::Reference< XPropertySet > xErrorBar( createInstance( "com.sun.star.chart2.ErrorBar" ), UNO_QUERY_THROW );
+#else	// SUPD == 310
+        Reference< XPropertySet > xErrorBar( createInstance( "com.sun.star.chart2.ErrorBar" ), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         PropertySet aBarProp( xErrorBar );
 
         // plus/minus bars
@@ -239,22 +332,38 @@ void ErrorBarConverter::convertFromModel( const Reference< XDataSeries >& rxData
                 // #i87806# manual error bars
                 aBarProp.setProperty( PROP_ErrorBarStyle, cssc::ErrorBarStyle::FROM_DATA );
                 // attach data sequences to erorr bar
+#if SUPD == 310
+                css::uno::Reference< XDataSink > xDataSink( xErrorBar, UNO_QUERY );
+#else	// SUPD == 310
                 Reference< XDataSink > xDataSink( xErrorBar, UNO_QUERY );
+#endif	// SUPD == 310
                 if( xDataSink.is() )
                 {
                     // create vector of all value sequences
+#if SUPD == 310
+                    ::std::vector< css::uno::Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#else	// SUPD == 310
                     ::std::vector< Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#endif	// SUPD == 310
                     // add positive values
                     if( bShowPos )
                     {
+#if SUPD == 310
+                        css::uno::Reference< XLabeledDataSequence > xValueSeq = createLabeledDataSequence( ErrorBarModel::PLUS );
+#else	// SUPD == 310
                         Reference< XLabeledDataSequence > xValueSeq = createLabeledDataSequence( ErrorBarModel::PLUS );
+#endif	// SUPD == 310
                         if( xValueSeq.is() )
                             aLabeledSeqVec.push_back( xValueSeq );
                     }
                     // add negative values
                     if( bShowNeg )
                     {
+#if SUPD == 310
+                        css::uno::Reference< XLabeledDataSequence > xValueSeq = createLabeledDataSequence( ErrorBarModel::MINUS );
+#else	// SUPD == 310
                         Reference< XLabeledDataSequence > xValueSeq = createLabeledDataSequence( ErrorBarModel::MINUS );
+#endif	// SUPD == 310
                         if( xValueSeq.is() )
                             aLabeledSeqVec.push_back( xValueSeq );
                     }
@@ -284,7 +393,7 @@ void ErrorBarConverter::convertFromModel( const Reference< XDataSeries >& rxData
                 aBarProp.setProperty( PROP_ErrorBarStyle, cssc::ErrorBarStyle::STANDARD_ERROR );
             break;
             default:
-                OSL_ENSURE( false, "ErrorBarConverter::convertFromModel - unknown error bar type" );
+                OSL_FAIL( "ErrorBarConverter::convertFromModel - unknown error bar type" );
                 xErrorBar.clear();
         }
 
@@ -298,19 +407,21 @@ void ErrorBarConverter::convertFromModel( const Reference< XDataSeries >& rxData
             {
                 case XML_x: aSeriesProp.setProperty( PROP_ErrorBarX, xErrorBar );   break;
                 case XML_y: aSeriesProp.setProperty( PROP_ErrorBarY, xErrorBar );   break;
-                default:    OSL_ENSURE( false, "ErrorBarConverter::convertFromModel - invalid error bar direction" );
+                default:    OSL_FAIL( "ErrorBarConverter::convertFromModel - invalid error bar direction" );
             }
         }
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "ErrorBarConverter::convertFromModel - error while creating error bars" );
+        OSL_FAIL( "ErrorBarConverter::convertFromModel - error while creating error bars" );
     }
 }
 
-// private --------------------------------------------------------------------
-
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > ErrorBarConverter::createLabeledDataSequence( ErrorBarModel::SourceType eSourceType )
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > ErrorBarConverter::createLabeledDataSequence( ErrorBarModel::SourceType eSourceType )
+#endif	// SUPD == 310
 {
     OUString aRole;
     switch( eSourceType )
@@ -318,23 +429,21 @@ Reference< XLabeledDataSequence > ErrorBarConverter::createLabeledDataSequence( 
         case ErrorBarModel::PLUS:
             switch( mrModel.mnDirection )
             {
-                case XML_x: aRole = CREATE_OUSTRING( "error-bars-x-positive" ); break;
-                case XML_y: aRole = CREATE_OUSTRING( "error-bars-y-positive" ); break;
+                case XML_x: aRole = "error-bars-x-positive"; break;
+                case XML_y: aRole = "error-bars-y-positive"; break;
             }
         break;
         case ErrorBarModel::MINUS:
             switch( mrModel.mnDirection )
             {
-                case XML_x: aRole = CREATE_OUSTRING( "error-bars-x-negative" ); break;
-                case XML_y: aRole = CREATE_OUSTRING( "error-bars-y-negative" ); break;
+                case XML_x: aRole = "error-bars-x-negative"; break;
+                case XML_y: aRole = "error-bars-y-negative"; break;
             }
         break;
     }
-    OSL_ENSURE( aRole.getLength() > 0, "ErrorBarConverter::createLabeledDataSequence - invalid error bar direction" );
+    OSL_ENSURE( !aRole.isEmpty(), "ErrorBarConverter::createLabeledDataSequence - invalid error bar direction" );
     return lclCreateLabeledDataSequence( *this, mrModel.maSources.get( eSourceType ).get(), aRole );
 }
-
-// ============================================================================
 
 TrendlineLabelConverter::TrendlineLabelConverter( const ConverterRoot& rParent, TrendlineLabelModel& rModel ) :
     ConverterBase< TrendlineLabelModel >( rParent, rModel )
@@ -351,8 +460,6 @@ void TrendlineLabelConverter::convertFromModel( PropertySet& rPropSet )
     getFormatter().convertFormatting( rPropSet, mrModel.mxShapeProp, mrModel.mxTextProp, OBJECTTYPE_TRENDLINELABEL );
 }
 
-// ============================================================================
-
 TrendlineConverter::TrendlineConverter( const ConverterRoot& rParent, TrendlineModel& rModel ) :
     ConverterBase< TrendlineModel >( rParent, rModel )
 {
@@ -362,7 +469,11 @@ TrendlineConverter::~TrendlineConverter()
 {
 }
 
+#if SUPD == 310
+void TrendlineConverter::convertFromModel( const css::uno::Reference< XDataSeries >& rxDataSeries )
+#else	// SUPD == 310
 void TrendlineConverter::convertFromModel( const Reference< XDataSeries >& rxDataSeries )
+#endif	// SUPD == 310
 {
     try
     {
@@ -370,18 +481,52 @@ void TrendlineConverter::convertFromModel( const Reference< XDataSeries >& rxDat
         OUString aServiceName;
         switch( mrModel.mnTypeId )
         {
-            case XML_exp:       aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.ExponentialRegressionCurve" ); break;
-            case XML_linear:    aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.LinearRegressionCurve" );      break;
-            case XML_log:       aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.LogarithmicRegressionCurve" ); break;
-            case XML_movingAvg: /* #i66819# moving average trendlines not supported */                              break;
-            case XML_poly:      /* #i20819# polynomial trendlines not supported */                                  break;
-            case XML_power:     aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.PotentialRegressionCurve" );   break;
-            default:            OSL_ENSURE( false, "TrendlineConverter::convertFromModel - unknown trendline type" );
+            case XML_exp:
+                aServiceName = "com.sun.star.chart2.ExponentialRegressionCurve";
+            break;
+            case XML_linear:
+                aServiceName = "com.sun.star.chart2.LinearRegressionCurve";
+            break;
+            case XML_log:
+                aServiceName = "com.sun.star.chart2.LogarithmicRegressionCurve";
+            break;
+            case XML_movingAvg:
+                aServiceName = "com.sun.star.chart2.MovingAverageRegressionCurve";
+            break;
+            case XML_poly:
+                aServiceName = "com.sun.star.chart2.PolynomialRegressionCurve";
+            break;
+            case XML_power:
+                aServiceName = "com.sun.star.chart2.PotentialRegressionCurve";
+            break;
+            default:
+                OSL_FAIL( "TrendlineConverter::convertFromModel - unknown trendline type" );
         }
-        if( aServiceName.getLength() > 0 )
+        if( !aServiceName.isEmpty() )
         {
+#if SUPD == 310
+            css::uno::Reference< XRegressionCurve > xRegCurve( createInstance( aServiceName ), UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XRegressionCurve > xRegCurve( createInstance( aServiceName ), UNO_QUERY_THROW );
+#endif	// SUPD == 310
             PropertySet aPropSet( xRegCurve );
+
+            // Name
+            aPropSet.setProperty( PROP_CurveName, mrModel.maName );
+            aPropSet.setProperty( PROP_PolynomialDegree, mrModel.mnOrder );
+            aPropSet.setProperty( PROP_MovingAveragePeriod, mrModel.mnPeriod );
+
+            // Intercept
+            bool hasIntercept = mrModel.mfIntercept.has();
+            aPropSet.setProperty( PROP_ForceIntercept, hasIntercept);
+            if (hasIntercept)
+                aPropSet.setProperty( PROP_InterceptValue,  mrModel.mfIntercept.get());
+
+            // Extrapolation
+            if (mrModel.mfForward.has())
+                aPropSet.setProperty( PROP_ExtrapolateForward, mrModel.mfForward.get() );
+            if (mrModel.mfBackward.has())
+                aPropSet.setProperty( PROP_ExtrapolateBackward, mrModel.mfBackward.get() );
 
             // trendline formatting
             getFormatter().convertFrameFormatting( aPropSet, mrModel.mxShapeProp, OBJECTTYPE_TRENDLINE );
@@ -401,17 +546,19 @@ void TrendlineConverter::convertFromModel( const Reference< XDataSeries >& rxDat
             // unsupported: #i5085# manual trendline size
             // unsupported: #i34093# manual crossing point
 
+#if SUPD == 310
+            css::uno::Reference< XRegressionCurveContainer > xRegCurveCont( rxDataSeries, UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XRegressionCurveContainer > xRegCurveCont( rxDataSeries, UNO_QUERY_THROW );
+#endif	// SUPD == 310
             xRegCurveCont->addRegressionCurve( xRegCurve );
         }
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "TrendlineConverter::convertFromModel - error while creating trendline" );
+        OSL_FAIL( "TrendlineConverter::convertFromModel - error while creating trendline" );
     }
 }
-
-// ============================================================================
 
 DataPointConverter::DataPointConverter( const ConverterRoot& rParent, DataPointModel& rModel ) :
     ConverterBase< DataPointModel >( rParent, rModel )
@@ -422,7 +569,11 @@ DataPointConverter::~DataPointConverter()
 {
 }
 
+#if SUPD == 310
+void DataPointConverter::convertFromModel( const css::uno::Reference< XDataSeries >& rxDataSeries,
+#else	// SUPD == 310
 void DataPointConverter::convertFromModel( const Reference< XDataSeries >& rxDataSeries,
+#endif	// SUPD == 310
         const TypeGroupConverter& rTypeGroup, const SeriesModel& rSeries )
 {
     try
@@ -431,7 +582,8 @@ void DataPointConverter::convertFromModel( const Reference< XDataSeries >& rxDat
 
         // data point marker
         if( mrModel.monMarkerSymbol.differsFrom( rSeries.mnMarkerSymbol ) || mrModel.monMarkerSize.differsFrom( rSeries.mnMarkerSize ) )
-            rTypeGroup.convertMarker( aPropSet, mrModel.monMarkerSymbol.get( rSeries.mnMarkerSymbol ), mrModel.monMarkerSize.get( rSeries.mnMarkerSize ) );
+            rTypeGroup.convertMarker( aPropSet, mrModel.monMarkerSymbol.get( rSeries.mnMarkerSymbol ),
+                    mrModel.monMarkerSize.get( rSeries.mnMarkerSize ), mrModel.mxMarkerProp );
 
         // data point pie explosion
         if( mrModel.monExplosion.differsFrom( rSeries.mnExplosion ) )
@@ -451,8 +603,6 @@ void DataPointConverter::convertFromModel( const Reference< XDataSeries >& rxDat
     }
 }
 
-// ============================================================================
-
 SeriesConverter::SeriesConverter( const ConverterRoot& rParent, SeriesModel& rModel ) :
     ConverterBase< SeriesModel >( rParent, rModel )
 {
@@ -462,50 +612,98 @@ SeriesConverter::~SeriesConverter()
 {
 }
 
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > SeriesConverter::createCategorySequence( const OUString& rRole )
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > SeriesConverter::createCategorySequence( const OUString& rRole )
+#endif	// SUPD == 310
 {
-    return createLabeledDataSequence( SeriesModel::CATEGORIES, rRole, false );
+    return createLabeledDataSequence(SeriesModel::CATEGORIES, rRole, false);
 }
 
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > SeriesConverter::createValueSequence( const OUString& rRole )
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > SeriesConverter::createValueSequence( const OUString& rRole )
+#endif	// SUPD == 310
 {
     return createLabeledDataSequence( SeriesModel::VALUES, rRole, true );
 }
 
+#if SUPD == 310
+css::uno::Reference< XDataSeries > SeriesConverter::createDataSeries( const TypeGroupConverter& rTypeGroup, bool bVaryColorsByPoint )
+#else	// SUPD == 310
 Reference< XDataSeries > SeriesConverter::createDataSeries( const TypeGroupConverter& rTypeGroup, bool bVaryColorsByPoint )
+#endif	// SUPD == 310
 {
     const TypeGroupInfo& rTypeInfo = rTypeGroup.getTypeInfo();
 
     // create the data series object
-    Reference< XDataSeries > xDataSeries( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.DataSeries" ) ), UNO_QUERY );
+#if SUPD == 310
+    css::uno::Reference< XDataSeries > xDataSeries( createInstance( "com.sun.star.chart2.DataSeries" ), UNO_QUERY );
+#else	// SUPD == 310
+    Reference< XDataSeries > xDataSeries( createInstance( "com.sun.star.chart2.DataSeries" ), UNO_QUERY );
+#endif	// SUPD == 310
     PropertySet aSeriesProp( xDataSeries );
 
     // attach data and title sequences to series
     sal_Int32 nDataPointCount = 0;
+#if SUPD == 310
+    css::uno::Reference< XDataSink > xDataSink( xDataSeries, UNO_QUERY );
+#else	// SUPD == 310
     Reference< XDataSink > xDataSink( xDataSeries, UNO_QUERY );
+#endif	// SUPD == 310
     if( xDataSink.is() )
     {
         // create vector of all value sequences
+#if SUPD == 310
+        ::std::vector< css::uno::Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#else	// SUPD == 310
         ::std::vector< Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#endif	// SUPD == 310
         // add Y values
-        Reference< XLabeledDataSequence > xYValueSeq = createValueSequence( CREATE_OUSTRING( "values-y" ) );
+#if SUPD == 310
+        css::uno::Reference< XLabeledDataSequence > xYValueSeq = createValueSequence( "values-y" );
+#else	// SUPD == 310
+        Reference< XLabeledDataSequence > xYValueSeq = createValueSequence( "values-y" );
+#endif	// SUPD == 310
         if( xYValueSeq.is() )
         {
             aLabeledSeqVec.push_back( xYValueSeq );
+#if SUPD == 310
+            css::uno::Reference< XDataSequence > xValues = xYValueSeq->getValues();
+#else	// SUPD == 310
             Reference< XDataSequence > xValues = xYValueSeq->getValues();
+#endif	// SUPD == 310
             if( xValues.is() )
                 nDataPointCount = xValues->getData().getLength();
+
+            if (!nDataPointCount)
+                // No values present.  Don't create a data series.
+#if SUPD == 310
+                return css::uno::Reference<XDataSeries>();
+#else	// SUPD == 310
+                return Reference<XDataSeries>();
+#endif	// SUPD == 310
         }
         // add X values of scatter and bubble charts
         if( !rTypeInfo.mbCategoryAxis )
         {
-            Reference< XLabeledDataSequence > xXValueSeq = createCategorySequence( CREATE_OUSTRING( "values-x" ) );
+#if SUPD == 310
+            css::uno::Reference< XLabeledDataSequence > xXValueSeq = createCategorySequence( "values-x" );
+#else	// SUPD == 310
+            Reference< XLabeledDataSequence > xXValueSeq = createCategorySequence( "values-x" );
+#endif	// SUPD == 310
             if( xXValueSeq.is() )
                 aLabeledSeqVec.push_back( xXValueSeq );
             // add size values of bubble charts
             if( rTypeInfo.meTypeId == TYPEID_BUBBLE )
             {
-                Reference< XLabeledDataSequence > xSizeValueSeq = createLabeledDataSequence( SeriesModel::POINTS, CREATE_OUSTRING( "values-size" ), true );
+#if SUPD == 310
+                css::uno::Reference< XLabeledDataSequence > xSizeValueSeq = createLabeledDataSequence( SeriesModel::POINTS, "values-size", true );
+#else	// SUPD == 310
+                Reference< XLabeledDataSequence > xSizeValueSeq = createLabeledDataSequence( SeriesModel::POINTS, "values-size", true );
+#endif	// SUPD == 310
                 if( xSizeValueSeq.is() )
                     aLabeledSeqVec.push_back( xSizeValueSeq );
             }
@@ -530,7 +728,7 @@ Reference< XDataSeries > SeriesConverter::createDataSeries( const TypeGroupConve
     }
 
     // data point markers
-    rTypeGroup.convertMarker( aSeriesProp, mrModel.mnMarkerSymbol, mrModel.mnMarkerSize );
+    rTypeGroup.convertMarker( aSeriesProp, mrModel.mnMarkerSymbol, mrModel.mnMarkerSize, mrModel.mxMarkerProp );
 #if OOX_CHART_SMOOTHED_PER_SERIES
     // #i66858# smoothed series lines
     rTypeGroup.convertLineSmooth( aSeriesProp, mrModel.mbSmooth );
@@ -591,6 +789,13 @@ Reference< XDataSeries > SeriesConverter::createDataSeries( const TypeGroupConve
     ModelRef< DataLabelsModel > xLabels = mrModel.mxLabels.is() ? mrModel.mxLabels : rTypeGroup.getModel().mxLabels;
     if( xLabels.is() )
     {
+        if( xLabels->maNumberFormat.maFormatCode.isEmpty() )
+        {
+            // Use number format code from Value series
+            DataSourceModel* pValues = mrModel.maSources.get( SeriesModel::VALUES ).get();
+            if( pValues )
+                xLabels->maNumberFormat.maFormatCode = pValues->mxDataSeq->maFormatCode;
+        }
         DataLabelsConverter aLabelsConv( *this, *xLabels );
         aLabelsConv.convertFromModel( xDataSeries, rTypeGroup );
     }
@@ -600,7 +805,11 @@ Reference< XDataSeries > SeriesConverter::createDataSeries( const TypeGroupConve
 
 // private --------------------------------------------------------------------
 
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > SeriesConverter::createLabeledDataSequence(
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > SeriesConverter::createLabeledDataSequence(
+#endif	// SUPD == 310
         SeriesModel::SourceType eSourceType, const OUString& rRole, bool bUseTextLabel )
 {
     DataSourceModel* pValues = mrModel.maSources.get( eSourceType ).get();
@@ -608,8 +817,8 @@ Reference< XLabeledDataSequence > SeriesConverter::createLabeledDataSequence(
     return lclCreateLabeledDataSequence( *this, pValues, rRole, pTitle );
 }
 
-// ============================================================================
-
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

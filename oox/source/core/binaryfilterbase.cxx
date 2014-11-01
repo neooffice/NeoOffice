@@ -38,7 +38,11 @@ using ::rtl::OUString;
 
 // ============================================================================
 
+#if SUPD == 310
+BinaryFilterBase::BinaryFilterBase( const css::uno::Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
+#else	// SUPD == 310
 BinaryFilterBase::BinaryFilterBase( const Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
+#endif	// SUPD == 310
     FilterBase( rxContext )
 {
 }
@@ -49,12 +53,20 @@ BinaryFilterBase::~BinaryFilterBase()
 
 // private --------------------------------------------------------------------
 
+#if SUPD == 310
+StorageRef BinaryFilterBase::implCreateStorage( const css::uno::Reference< XInputStream >& rxInStream ) const
+#else	// SUPD == 310
 StorageRef BinaryFilterBase::implCreateStorage( const Reference< XInputStream >& rxInStream ) const
+#endif	// SUPD == 310
 {
     return StorageRef( new ::oox::ole::OleStorage( getComponentContext(), rxInStream, true ) );
 }
 
+#if SUPD == 310
+StorageRef BinaryFilterBase::implCreateStorage( const css::uno::Reference< XStream >& rxOutStream ) const
+#else	// SUPD == 310
 StorageRef BinaryFilterBase::implCreateStorage( const Reference< XStream >& rxOutStream ) const
+#endif	// SUPD == 310
 {
     return StorageRef( new ::oox::ole::OleStorage( getComponentContext(), rxOutStream, true ) );
 }

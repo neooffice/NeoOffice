@@ -1,34 +1,30 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/titleconverter.hxx"
 
-#if SUPD != 310
 #include <com/sun/star/chart/ChartLegendExpansion.hpp>
+#if SUPD != 310
+#include <com/sun/star/chart2/FormattedString.hpp>
 #endif	// SUPD != 310
 #include <com/sun/star/chart2/LegendPosition.hpp>
 #include <com/sun/star/chart2/XDiagram.hpp>
-#include <com/sun/star/chart2/XFormattedString.hpp>
 #include <com/sun/star/chart2/XLegend.hpp>
 #include <com/sun/star/chart2/XTitle.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
@@ -45,18 +41,17 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
+using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 
 using ::oox::core::XmlFilterBase;
-using ::rtl::OUString;
-using namespace ::com::sun::star::drawing;
 
-// ============================================================================
+
 
 TextConverter::TextConverter( const ConverterRoot& rParent, TextModel& rModel ) :
     ConverterBase< TextModel >( rParent, rModel )
@@ -67,9 +62,17 @@ TextConverter::~TextConverter()
 {
 }
 
+#if SUPD == 310
+css::uno::Reference< XDataSequence > TextConverter::createDataSequence( const OUString& rRole )
+#else	// SUPD == 310
 Reference< XDataSequence > TextConverter::createDataSequence( const OUString& rRole )
+#endif	// SUPD == 310
 {
+#if SUPD == 310
+    css::uno::Reference< XDataSequence > xDataSeq;
+#else	// SUPD == 310
     Reference< XDataSequence > xDataSeq;
+#endif	// SUPD == 310
     if( mrModel.mxDataSeq.is() )
     {
         DataSequenceConverter aDataSeqConv( *this, *mrModel.mxDataSeq );
@@ -78,11 +81,19 @@ Reference< XDataSequence > TextConverter::createDataSequence( const OUString& rR
     return xDataSeq;
 }
 
+#if SUPD == 310
+Sequence< css::uno::Reference< XFormattedString > > TextConverter::createStringSequence(
+#else	// SUPD == 310
 Sequence< Reference< XFormattedString > > TextConverter::createStringSequence(
+#endif	// SUPD == 310
         const OUString& rDefaultText, const ModelRef< TextBody >& rxTextProp, ObjectType eObjType )
 {
     OSL_ENSURE( !mrModel.mxDataSeq || !mrModel.mxTextBody, "TextConverter::createStringSequence - linked string and rich text found" );
+#if SUPD == 310
+    ::std::vector< css::uno::Reference< XFormattedString > > aStringVec;
+#else	// SUPD == 310
     ::std::vector< Reference< XFormattedString > > aStringVec;
+#endif	// SUPD == 310
     if( mrModel.mxTextBody.is() )
     {
         // rich-formatted text objects can be created, but currently Chart2 is not able to show them
@@ -95,7 +106,11 @@ Sequence< Reference< XFormattedString > > TextConverter::createStringSequence(
             {
                 const TextRun& rTextRun = **aRIt;
                 bool bAddNewLine = (aRIt + 1 == aREnd) && (aPIt + 1 != aPEnd);
+#if SUPD == 310
+                css::uno::Reference< XFormattedString > xFmtStr = appendFormattedString( aStringVec, rTextRun.getText(), bAddNewLine );
+#else	// SUPD == 310
                 Reference< XFormattedString > xFmtStr = appendFormattedString( aStringVec, rTextRun.getText(), bAddNewLine );
+#endif	// SUPD == 310
                 PropertySet aPropSet( xFmtStr );
                 TextCharacterProperties aRunProps( rParaProps );
                 aRunProps.assignUsed( rTextRun.getTextCharacterProperties() );
@@ -110,13 +125,17 @@ Sequence< Reference< XFormattedString > > TextConverter::createStringSequence(
         if( mrModel.mxDataSeq.is() && !mrModel.mxDataSeq->maData.empty() )
             mrModel.mxDataSeq->maData.begin()->second >>= aString;
         // no linked string -> fall back to default string
-        if( aString.getLength() == 0 )
+        if( aString.isEmpty() )
             aString = rDefaultText;
 
         // create formatted string object
-        if( aString.getLength() > 0 )
+        if( !aString.isEmpty() )
         {
+#if SUPD == 310
+            css::uno::Reference< XFormattedString > xFmtStr = appendFormattedString( aStringVec, aString, false );
+#else	// SUPD == 310
             Reference< XFormattedString > xFmtStr = appendFormattedString( aStringVec, aString, false );
+#endif	// SUPD == 310
             PropertySet aPropSet( xFmtStr );
             getFormatter().convertTextFormatting( aPropSet, rxTextProp, eObjType );
         }
@@ -125,14 +144,27 @@ Sequence< Reference< XFormattedString > > TextConverter::createStringSequence(
     return ContainerHelper::vectorToSequence( aStringVec );
 }
 
+#if SUPD == 310
+css::uno::Reference< XFormattedString > TextConverter::appendFormattedString(
+        ::std::vector< css::uno::Reference< XFormattedString > >& orStringVec, const OUString& rString, bool bAddNewLine ) const
+#else	// SUPD == 310
 Reference< XFormattedString > TextConverter::appendFormattedString(
         ::std::vector< Reference< XFormattedString > >& orStringVec, const OUString& rString, bool bAddNewLine ) const
+#endif	// SUPD == 310
 {
-    Reference< XFormattedString > xFmtStr;
+#if SUPD == 310
+    css::uno::Reference< XFormattedString > xFmtStr;
+#else	// SUPD == 310
+    Reference< XFormattedString2 > xFmtStr;
+#endif	// SUPD == 310
     try
     {
-        xFmtStr.set( ConverterRoot::createInstance( CREATE_OUSTRING( "com.sun.star.chart2.FormattedString" ) ), UNO_QUERY_THROW );
-        xFmtStr->setString( bAddNewLine ? (rString + OUString( sal_Unicode( '\n' ) )) : rString );
+#if SUPD == 310
+        xFmtStr.set( ConverterRoot::createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.FormattedString" ) ) ), UNO_QUERY_THROW );
+#else	// SUPD == 310
+        xFmtStr = FormattedString::create( ConverterRoot::getComponentContext() );
+#endif	// SUPD == 310
+        xFmtStr->setString( bAddNewLine ? (rString + OUString( '\n' )) : rString );
         orStringVec.push_back( xFmtStr );
     }
     catch( Exception& )
@@ -141,7 +173,7 @@ Reference< XFormattedString > TextConverter::appendFormattedString(
     return xFmtStr;
 }
 
-// ============================================================================
+
 
 TitleConverter::TitleConverter( const ConverterRoot& rParent, TitleModel& rModel ) :
     ConverterBase< TitleModel >( rParent, rModel )
@@ -152,18 +184,30 @@ TitleConverter::~TitleConverter()
 {
 }
 
+#if SUPD == 310
+void TitleConverter::convertFromModel( const css::uno::Reference< XTitled >& rxTitled, const OUString& rAutoTitle, ObjectType eObjType, sal_Int32 nMainIdx, sal_Int32 nSubIdx )
+#else	// SUPD == 310
 void TitleConverter::convertFromModel( const Reference< XTitled >& rxTitled, const OUString& rAutoTitle, ObjectType eObjType, sal_Int32 nMainIdx, sal_Int32 nSubIdx )
+#endif	// SUPD == 310
 {
     if( rxTitled.is() )
     {
         // create the formatted strings
         TextModel& rText = mrModel.mxText.getOrCreate();
         TextConverter aTextConv( *this, rText );
+#if SUPD == 310
+        Sequence< css::uno::Reference< XFormattedString > > aStringSeq = aTextConv.createStringSequence( rAutoTitle, mrModel.mxTextProp, eObjType );
+#else	// SUPD == 310
         Sequence< Reference< XFormattedString > > aStringSeq = aTextConv.createStringSequence( rAutoTitle, mrModel.mxTextProp, eObjType );
+#endif	// SUPD == 310
         if( aStringSeq.hasElements() ) try
         {
             // create the title object and set the string data
-            Reference< XTitle > xTitle( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.Title" ) ), UNO_QUERY_THROW );
+#if SUPD == 310
+            css::uno::Reference< XTitle > xTitle( createInstance( "com.sun.star.chart2.Title" ), UNO_QUERY_THROW );
+#else	// SUPD == 310
+            Reference< XTitle > xTitle( createInstance( "com.sun.star.chart2.Title" ), UNO_QUERY_THROW );
+#endif	// SUPD == 310
             xTitle->setText( aStringSeq );
             rxTitled->setTitleObject( xTitle );
 
@@ -185,7 +229,7 @@ void TitleConverter::convertFromModel( const Reference< XTitled >& rxTitled, con
     }
 }
 
-// ============================================================================
+
 
 LegendConverter::LegendConverter( const ConverterRoot& rParent, LegendModel& rModel ) :
     ConverterBase< LegendModel >( rParent, rModel )
@@ -196,17 +240,23 @@ LegendConverter::~LegendConverter()
 {
 }
 
+#if SUPD == 310
+void LegendConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram )
+#else	// SUPD == 310
 void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
+#endif	// SUPD == 310
 {
     if( rxDiagram.is() ) try
     {
-#if SUPD != 310
         namespace cssc = ::com::sun::star::chart;
-#endif	// SUPD != 310
         namespace cssc2 = ::com::sun::star::chart2;
 
         // create the legend
-        Reference< XLegend > xLegend( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.Legend" ) ), UNO_QUERY_THROW );
+#if SUPD == 310
+        css::uno::Reference< XLegend > xLegend( createInstance( "com.sun.star.chart2.Legend" ), UNO_QUERY_THROW );
+#else	// SUPD == 310
+        Reference< XLegend > xLegend( createInstance( "com.sun.star.chart2.Legend" ), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         rxDiagram->setLegend( xLegend );
         PropertySet aPropSet( xLegend );
         aPropSet.setProperty( PROP_Show, true );
@@ -216,68 +266,52 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
 
         // predefined legend position and expansion
         cssc2::LegendPosition eLegendPos = cssc2::LegendPosition_CUSTOM;
-#if SUPD != 310
         cssc::ChartLegendExpansion eLegendExpand = cssc::ChartLegendExpansion_CUSTOM;
-#endif	// SUPD != 310
         RelativePosition eRelPos;
-        bool bTopRight=0; 
+        bool bTopRight=false;
         switch( mrModel.mnPosition )
         {
             case XML_l:
                 eLegendPos = cssc2::LegendPosition_LINE_START;
-#if SUPD != 310
                 eLegendExpand = cssc::ChartLegendExpansion_HIGH;
-#endif	// SUPD != 310
             break;
             case XML_r:
                 eLegendPos = cssc2::LegendPosition_LINE_END;
-#if SUPD != 310
                 eLegendExpand = cssc::ChartLegendExpansion_HIGH;
-#endif	// SUPD != 310
                 break;
             case XML_tr:    // top-right not supported
                 eLegendPos = LegendPosition_CUSTOM;
                 eRelPos.Primary = 1;
                 eRelPos.Secondary =0;
                 eRelPos.Anchor = Alignment_TOP_RIGHT;
-                bTopRight=1;
+                bTopRight=true;
 
             break;
             case XML_t:
                 eLegendPos = cssc2::LegendPosition_PAGE_START;
-#if SUPD != 310
                 eLegendExpand = cssc::ChartLegendExpansion_WIDE;
-#endif	// SUPD != 310
             break;
             case XML_b:
                 eLegendPos = cssc2::LegendPosition_PAGE_END;
-#if SUPD != 310
                 eLegendExpand = cssc::ChartLegendExpansion_WIDE;
-#endif	// SUPD != 310
             break;
         }
         bool bManualLayout=false;
         // manual positioning and size
-        if( mrModel.mxLayout.get() ) 
+        if( mrModel.mxLayout.get() )
         {
             LayoutConverter aLayoutConv( *this, *mrModel.mxLayout );
             // manual size needs ChartLegendExpansion_CUSTOM
-#if SUPD == 310
-            aLayoutConv.convertFromModel( aPropSet );
-#else	// SUPD == 310
             if( aLayoutConv.convertFromModel( aPropSet ) )
                 eLegendExpand = cssc::ChartLegendExpansion_CUSTOM;
-#endif	// SUPD == 310
             bManualLayout = !aLayoutConv.getAutoLayout();
         }
 
         // set position and expansion properties
         aPropSet.setProperty( PROP_AnchorPosition, eLegendPos );
-#if SUPD != 310
         aPropSet.setProperty( PROP_Expansion, eLegendExpand );
-#endif	// SUPD != 310
 
-        if(eLegendPos == LegendPosition_CUSTOM && 1 == bTopRight && bManualLayout==false)
+        if(eLegendPos == LegendPosition_CUSTOM && bTopRight && bManualLayout==false)
             aPropSet.setProperty( PROP_RelativePosition , makeAny(eRelPos));
     }
     catch( Exception& )
@@ -285,8 +319,10 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
     }
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

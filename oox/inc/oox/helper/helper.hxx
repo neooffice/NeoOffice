@@ -1,28 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_HELPER_HELPER_HXX
-#define OOX_HELPER_HELPER_HXX
+#ifndef INCLUDED_OOX_HELPER_HELPER_HXX
+#define INCLUDED_OOX_HELPER_HELPER_HXX
 
 #include <algorithm>
 #include <limits>
@@ -51,19 +47,14 @@ namespace oox {
 #define STATIC_ARRAY_SELECT( array, index, def ) \
     ((static_cast<size_t>(index) < STATIC_ARRAY_SIZE(array)) ? ((array)[static_cast<size_t>(index)]) : (def))
 
-/** Expands to a temporary ::rtl::OString, created from a literal(!) character
+/** Expands to a temporary OString, created from a literal(!) character
     array. */
 #define CREATE_OSTRING( ascii ) \
-    ::rtl::OString( RTL_CONSTASCII_STRINGPARAM( ascii ) )
-
-/** Expands to a temporary ::rtl::OUString, created from a literal(!) ASCII(!)
-    character array. */
-#define CREATE_OUSTRING( ascii ) \
-    ::rtl::OUString::intern( RTL_CONSTASCII_USTRINGPARAM( ascii ) )
+    OString( RTL_CONSTASCII_STRINGPARAM( ascii ) )
 
 /** Convert an OUString to an ASCII C string. Use for debug purposes only. */
 #define OUSTRING_TO_CSTR( str ) \
-    ::rtl::OUStringToOString( str, RTL_TEXTENCODING_ASCII_US ).getStr()
+    OUStringToOString( str, RTL_TEXTENCODING_ASCII_US ).getStr()
 
 // Common constants ===========================================================
 
@@ -87,11 +78,17 @@ const sal_uInt8 WINDOWS_CHARSET_THAI        = 222;
 const sal_uInt8 WINDOWS_CHARSET_EASTERN     = 238;
 const sal_uInt8 WINDOWS_CHARSET_OEM         = 255;
 
-// ----------------------------------------------------------------------------
 
-const sal_Int32 API_RGB_TRANSPARENT         = -1;       /// Transparent color for API calls.
-const sal_Int32 API_RGB_BLACK               = 0x00000;  /// Black color for API calls.
-const sal_Int32 API_RGB_WHITE               = 0xFFFFF;  /// White color for API calls.
+
+const sal_Int32 API_RGB_TRANSPARENT         = -1;       ///< Transparent color for API calls.
+const sal_Int32 API_RGB_BLACK               = 0x000000;  ///< Black color for API calls.
+const sal_Int32 API_RGB_GRAY                = 0x808080;  ///< Gray color for API calls.
+const sal_Int32 API_RGB_WHITE               = 0xFFFFFF;  ///< White color for API calls.
+
+const sal_Int16 API_LINE_SOLID              = 0;
+const sal_Int16 API_LINE_DOTTED             = 1;
+const sal_Int16 API_LINE_DASHED             = 2;
+const sal_Int16 API_FINE_LINE_DASHED        = 14;
 
 const sal_Int16 API_LINE_NONE               = 0;
 const sal_Int16 API_LINE_HAIR               = 2;
@@ -99,14 +96,14 @@ const sal_Int16 API_LINE_THIN               = 35;
 const sal_Int16 API_LINE_MEDIUM             = 88;
 const sal_Int16 API_LINE_THICK              = 141;
 
-const sal_Int16 API_ESCAPE_NONE             = 0;        /// No escapement.
-const sal_Int16 API_ESCAPE_SUPERSCRIPT      = 101;      /// Superscript: raise characters automatically (magic value 101).
-const sal_Int16 API_ESCAPE_SUBSCRIPT        = -101;     /// Subscript: lower characters automatically (magic value -101).
+const sal_Int16 API_ESCAPE_NONE             = 0;        ///< No escapement.
+const sal_Int16 API_ESCAPE_SUPERSCRIPT      = 101;      ///< Superscript: raise characters automatically (magic value 101).
+const sal_Int16 API_ESCAPE_SUBSCRIPT        = -101;     ///< Subscript: lower characters automatically (magic value -101).
 
-const sal_Int8 API_ESCAPEHEIGHT_NONE        = 100;      /// Relative character height if not escaped.
-const sal_Int8 API_ESCAPEHEIGHT_DEFAULT     = 58;       /// Relative character height if escaped.
+const sal_Int8 API_ESCAPEHEIGHT_NONE        = 100;      ///< Relative character height if not escaped.
+const sal_Int8 API_ESCAPEHEIGHT_DEFAULT     = 58;       ///< Relative character height if escaped.
 
-// ============================================================================
+
 
 // Limitate values ------------------------------------------------------------
 
@@ -186,7 +183,7 @@ void insertValue( Type& ornBitField, InsertType nValue, sal_uInt8 nStartBit, sal
     (ornBitField &= ~(nMask << nStartBit)) |= (nNewValue << nStartBit);
 }
 
-// ============================================================================
+
 
 /** Optional value, similar to ::boost::optional<>, with convenience accessors.
  */
@@ -194,30 +191,34 @@ template< typename Type >
 class OptValue
 {
 public:
-    inline explicit     OptValue() : maValue(), mbHasValue( false ) {}
-    inline explicit     OptValue( const Type& rValue ) : maValue( rValue ), mbHasValue( true ) {}
-    inline explicit     OptValue( bool bHasValue, const Type& rValue ) : maValue( rValue ), mbHasValue( bHasValue ) {}
+                 OptValue() : maValue(), mbHasValue( false ) {}
+    explicit     OptValue( const Type& rValue ) : maValue( rValue ), mbHasValue( true ) {}
+    explicit     OptValue( bool bHasValue, const Type& rValue ) : maValue( rValue ), mbHasValue( bHasValue ) {}
 
-    inline bool         has() const { return mbHasValue; }
-    inline bool         operator!() const { return !mbHasValue; }
-    inline bool         differsFrom( const Type& rValue ) const { return mbHasValue && (maValue != rValue); }
+    bool         has() const { return mbHasValue; }
+    bool         operator!() const { return !mbHasValue; }
+    bool         differsFrom( const Type& rValue ) const { return mbHasValue && (maValue != rValue); }
 
-    inline const Type&  get() const { return maValue; }
-    inline const Type&  get( const Type& rDefValue ) const { return mbHasValue ? maValue : rDefValue; }
+    const Type&  get() const { return maValue; }
+    const Type&  get( const Type& rDefValue ) const { return mbHasValue ? maValue : rDefValue; }
 
-    inline void         reset() { mbHasValue = false; }
-    inline void         set( const Type& rValue ) { maValue = rValue; mbHasValue = true; }
-    inline Type&        use() { mbHasValue = true; return maValue; }
+    void         reset() { mbHasValue = false; }
+    void         set( const Type& rValue ) { maValue = rValue; mbHasValue = true; }
+    Type&        use() { mbHasValue = true; return maValue; }
 
-    inline OptValue&    operator=( const Type& rValue ) { set( rValue ); return *this; }
-    inline void         assignIfUsed( const OptValue& rValue ) { if( rValue.mbHasValue ) set( rValue.maValue ); }
+    OptValue&    operator=( const Type& rValue ) { set( rValue ); return *this; }
+    bool         operator==( const OptValue& rValue ) const {
+                             return ( ( mbHasValue == false && rValue.mbHasValue == false ) ||
+                                 ( mbHasValue == rValue.mbHasValue && maValue == rValue.maValue ) );
+                 }
+    void         assignIfUsed( const OptValue& rValue ) { if( rValue.mbHasValue ) set( rValue.maValue ); }
 
 private:
     Type                maValue;
     bool                mbHasValue;
 };
 
-// ============================================================================
+
 
 /** Provides platform independent functions to convert from or to little-endian
     byte order, e.g. for reading data from or writing data to memory or a
@@ -233,29 +234,29 @@ class ByteOrderConverter
 {
 public:
 #ifdef OSL_BIGENDIAN
-    inline static void  convertLittleEndian( sal_Int8& ) {}     // present for usage in templates
-    inline static void  convertLittleEndian( sal_uInt8& ) {}    // present for usage in templates
-    inline static void  convertLittleEndian( sal_Int16& rnValue )  { swap2( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( sal_uInt16& rnValue ) { swap2( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( sal_Int32& rnValue )  { swap4( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( sal_uInt32& rnValue ) { swap4( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( sal_Int64& rnValue )  { swap8( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( sal_uInt64& rnValue ) { swap8( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
-    inline static void  convertLittleEndian( float& rfValue )      { swap4( reinterpret_cast< sal_uInt8* >( &rfValue ) ); }
-    inline static void  convertLittleEndian( double& rfValue )     { swap8( reinterpret_cast< sal_uInt8* >( &rfValue ) ); }
+    static void  convertLittleEndian( sal_Int8& ) {}     // present for usage in templates
+    static void  convertLittleEndian( sal_uInt8& ) {}    // present for usage in templates
+    static void  convertLittleEndian( sal_Int16& rnValue )  { swap2( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( sal_uInt16& rnValue ) { swap2( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( sal_Int32& rnValue )  { swap4( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( sal_uInt32& rnValue ) { swap4( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( sal_Int64& rnValue )  { swap8( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( sal_uInt64& rnValue ) { swap8( reinterpret_cast< sal_uInt8* >( &rnValue ) ); }
+    static void  convertLittleEndian( float& rfValue )      { swap4( reinterpret_cast< sal_uInt8* >( &rfValue ) ); }
+    static void  convertLittleEndian( double& rfValue )     { swap8( reinterpret_cast< sal_uInt8* >( &rfValue ) ); }
 
     template< typename Type >
     inline static void  convertLittleEndianArray( Type* pnArray, size_t nElemCount );
 
-    inline static void  convertLittleEndianArray( sal_Int8*, size_t ) {}
-    inline static void  convertLittleEndianArray( sal_uInt8*, size_t ) {}
+    static void  convertLittleEndianArray( sal_Int8*, size_t ) {}
+    static void  convertLittleEndianArray( sal_uInt8*, size_t ) {}
 
 #else
     template< typename Type >
-    inline static void  convertLittleEndian( Type& ) {}
+    static void  convertLittleEndian( Type& ) {}
 
     template< typename Type >
-    inline static void  convertLittleEndianArray( Type*, size_t ) {}
+    static void  convertLittleEndianArray( Type*, size_t ) {}
 
 #endif
 
@@ -281,7 +282,7 @@ private:
 #endif
 };
 
-// ----------------------------------------------------------------------------
+
 
 template< typename Type >
 inline void ByteOrderConverter::readLittleEndian( Type& ornValue, const void* pSrcBuffer )
@@ -325,8 +326,10 @@ inline void ByteOrderConverter::swap8( sal_uInt8* pnData )
 }
 #endif
 
-// ============================================================================
+
 
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

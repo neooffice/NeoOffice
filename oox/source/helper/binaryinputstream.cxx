@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/binaryinputstream.hxx"
 
@@ -33,16 +29,10 @@
 
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
-
-using ::rtl::OString;
-using ::rtl::OStringBuffer;
-using ::rtl::OStringToOUString;
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
 namespace {
 
@@ -50,20 +40,7 @@ const sal_Int32 INPUTSTREAM_BUFFERSIZE      = 0x8000;
 
 } // namespace
 
-// ============================================================================
 
-OString BinaryInputStream::readNulCharArray()
-{
-    OStringBuffer aBuffer;
-    for( sal_uInt8 nChar = readuInt8(); !mbEof && (nChar > 0); readValue( nChar ) )
-        aBuffer.append( static_cast< sal_Char >( nChar ) );
-    return aBuffer.makeStringAndClear();
-}
-
-OUString BinaryInputStream::readNulCharArrayUC( rtl_TextEncoding eTextEnc )
-{
-    return OStringToOUString( readNulCharArray(), eTextEnc );
-}
 
 OUString BinaryInputStream::readNulUnicodeArray()
 {
@@ -104,7 +81,7 @@ OUString BinaryInputStream::readUnicodeArray( sal_Int32 nChars, bool bAllowNulCh
     sal_Int32 nCharsRead = readArray( aBuffer, nChars );
     if( nCharsRead <= 0 )
         return OUString();
-        
+
     aBuffer.resize( static_cast< size_t >( nCharsRead ) );
     if( !bAllowNulChars )
         ::std::replace( aBuffer.begin(), aBuffer.begin() + nCharsRead, '\0', '?' );
@@ -144,7 +121,7 @@ void BinaryInputStream::copyToStream( BinaryOutputStream& rOutStrm, sal_Int64 nB
     }
 }
 
-// ============================================================================
+
 
 BinaryXInputStream::BinaryXInputStream( const Reference< XInputStream >& rxInStrm, bool bAutoClose ) :
     BinaryStreamBase( Reference< XSeekable >( rxInStrm, UNO_QUERY ).is() ),
@@ -164,13 +141,13 @@ BinaryXInputStream::~BinaryXInputStream()
 void BinaryXInputStream::close()
 {
     OSL_ENSURE( !mbAutoClose || mxInStrm.is(), "BinaryXInputStream::close - invalid call" );
-    if( mbAutoClose && mxInStrm.is() ) try
+    if( mxInStrm.is() ) try
     {
         mxInStrm->closeInput();
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "BinaryXInputStream::close - closing input stream failed" );
+        OSL_FAIL( "BinaryXInputStream::close - closing input stream failed" );
     }
     mxInStrm.clear();
     mbAutoClose = false;
@@ -225,7 +202,7 @@ void BinaryXInputStream::skip( sal_Int32 nBytes, size_t /*nAtomSize*/ )
     }
 }
 
-// ============================================================================
+
 
 SequenceInputStream::SequenceInputStream( const StreamDataSequence& rData ) :
     BinaryStreamBase( true ),
@@ -272,7 +249,7 @@ void SequenceInputStream::skip( sal_Int32 nBytes, size_t /*nAtomSize*/ )
     }
 }
 
-// ============================================================================
+
 
 RelativeInputStream::RelativeInputStream( BinaryInputStream& rInStrm, sal_Int64 nSize ) :
     BinaryStreamBase( rInStrm.isSeekable() ),
@@ -348,6 +325,8 @@ void RelativeInputStream::skip( sal_Int32 nBytes, size_t nAtomSize )
     }
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

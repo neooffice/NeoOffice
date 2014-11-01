@@ -1,31 +1,27 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
+#define INCLUDED_OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
 
-
-#ifndef OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
-#define OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
-
-#include "oox/drawingml/chart/chartcontextbase.hxx"
-#include "oox/drawingml/chart/objectformatter.hxx"
+#include <oox/drawingml/chart/chartcontextbase.hxx>
+#include <oox/drawingml/chart/objectformatter.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace awt { struct Rectangle; }
@@ -33,6 +29,7 @@ namespace com { namespace sun { namespace star {
     namespace chart2 { class XChartDocument; }
     namespace chart2 { class XTitle; }
     namespace drawing { class XShape; }
+    namespace uno { class XComponentContext; }
 } } }
 
 namespace oox { namespace core {
@@ -47,7 +44,7 @@ class ChartConverter;
 struct ChartSpaceModel;
 struct ConverterData;
 
-// ============================================================================
+
 
 const sal_Int32 API_PRIM_AXESSET = 0;
 const sal_Int32 API_SECN_AXESSET = 1;
@@ -56,7 +53,7 @@ const sal_Int32 API_X_AXIS = 0;
 const sal_Int32 API_Y_AXIS = 1;
 const sal_Int32 API_Z_AXIS = 2;
 
-// ============================================================================
+
 
 class ConverterRoot
 {
@@ -71,13 +68,15 @@ public:
 
     /** Creates an instance for the passed service name, using the process service factory. */
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >
-                        createInstance( const ::rtl::OUString& rServiceName ) const;
+                        createInstance( const OUString& rServiceName ) const;
+    ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >
+                        getComponentContext() const;
 
 protected:
     /** Returns the filter object of the imported/exported document. */
     ::oox::core::XmlFilterBase& getFilter() const;
     /** Returns the chart converter. */
-    ChartConverter&     getChartConverter() const;
+    ChartConverter*     getChartConverter() const;
     /** Returns the API chart document model. */
     ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XChartDocument >
                         getChartDocument() const;
@@ -99,7 +98,7 @@ private:
     ::boost::shared_ptr< ConverterData > mxData;
 };
 
-// ============================================================================
+
 
 /** Base class of all converter classes. Holds a reference to a model structure
     of the specified type.
@@ -108,10 +107,10 @@ template< typename ModelType >
 class ConverterBase : public ConverterRoot
 {
 public:
-    inline const ModelType& getModel() const { return mrModel; }
+    const ModelType& getModel() const { return mrModel; }
 
 protected:
-    inline explicit     ConverterBase( const ConverterRoot& rParent, ModelType& rModel ) :
+    explicit            ConverterBase( const ConverterRoot& rParent, ModelType& rModel ) :
                             ConverterRoot( rParent ), mrModel( rModel ) {}
     virtual             ~ConverterBase() {}
 
@@ -119,7 +118,7 @@ protected:
     ModelType&          mrModel;
 };
 
-// ============================================================================
+
 
 /** A layout converter calculates positions and sizes for various chart objects.
  */
@@ -142,13 +141,15 @@ public:
     bool                convertFromModel(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape >& rxShape,
                             double fRotationAngle );
-	bool getAutoLayout(){return mrModel.mbAutoLayout;}
+    bool getAutoLayout(){return mrModel.mbAutoLayout;}
 };
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

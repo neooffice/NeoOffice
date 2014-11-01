@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/propertyset.hxx"
 
@@ -27,18 +23,18 @@
 #include <rtl/strbuf.hxx>
 #include "oox/helper/propertymap.hxx"
 
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
+
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OStringBuffer;
-using ::rtl::OUString;
-using ::rtl::OUStringToOString;
 
-// ============================================================================
 
 void PropertySet::set( const Reference< XPropertySet >& rxPropSet )
 {
@@ -74,30 +70,6 @@ Any PropertySet::getAnyProperty( sal_Int32 nPropId ) const
     return implGetPropertyValue( aValue, PropertyMap::getPropertyName( nPropId ) ) ? aValue : Any();
 }
 
-void PropertySet::getProperties( Sequence< Any >& orValues, const Sequence< OUString >& rPropNames ) const
-{
-    if( mxMultiPropSet.is() ) try
-    {
-        orValues = mxMultiPropSet->getPropertyValues( rPropNames );
-        return;
-    }
-    catch( Exception& )
-    {
-        OSL_ENSURE( false, "PropertySet::getProperties - cannot get all property values - fallback to single mode" );
-    }
-
-    if( mxPropSet.is() )
-    {
-        sal_Int32 nLen = rPropNames.getLength();
-        const OUString* pPropName = rPropNames.getConstArray();
-        const OUString* pPropNameEnd = pPropName + nLen;
-        orValues.realloc( nLen );
-        Any* pValue = orValues.getArray();
-        for( ; pPropName != pPropNameEnd; ++pPropName, ++pValue )
-            implGetPropertyValue( *pValue, *pPropName );
-    }
-}
-
 // Set properties -------------------------------------------------------------
 
 bool PropertySet::setAnyProperty( sal_Int32 nPropId, const Any& rValue )
@@ -117,7 +89,7 @@ void PropertySet::setProperties( const Sequence< OUString >& rPropNames, const S
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "PropertySet::setProperties - cannot set all property values, fallback to single mode" );
+        SAL_WARN( "oox", "PropertySet::setProperties - cannot set all property values, fallback to single mode" );
     }
 
     if( mxPropSet.is() )
@@ -150,10 +122,10 @@ bool PropertySet::implGetPropertyValue( Any& orValue, const OUString& rPropName 
         orValue = mxPropSet->getPropertyValue( rPropName );
         return true;
     }
-    catch( Exception& )
+    catch( Exception& e)
     {
-        OSL_ENSURE( false, OStringBuffer( "PropertySet::implGetPropertyValue - cannot get property \"" ).
-            append( OUStringToOString( rPropName, RTL_TEXTENCODING_ASCII_US ) ).append( '"' ).getStr() );
+        SAL_WARN( "oox", "PropertySet::implGetPropertyValue - cannot get property \"" <<
+                  rPropName << "\" Error: " << e.Message);
     }
     return false;
 }
@@ -165,14 +137,21 @@ bool PropertySet::implSetPropertyValue( const OUString& rPropName, const Any& rV
         mxPropSet->setPropertyValue( rPropName, rValue );
         return true;
     }
-    catch( Exception& )
+    catch( Exception& e)
     {
-        OSL_ENSURE( false, OStringBuffer( "PropertySet::implSetPropertyValue - cannot set property \"" ).
-            append( OUStringToOString( rPropName, RTL_TEXTENCODING_ASCII_US ) ).append( '"' ).getStr() );
+        SAL_WARN( "oox", "PropertySet::implSetPropertyValue - cannot set property \"" <<
+                  rPropName << "\" Error: " << e.Message);
     }
     return false;
 }
 
-// ============================================================================
+#ifdef DBG_UTIL
+void PropertySet::dump()
+{
+    PropertyMap::dump( Reference< XPropertySet >( getXPropertySet(), UNO_QUERY ) );
+}
+#endif
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

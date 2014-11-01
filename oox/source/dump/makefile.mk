@@ -37,12 +37,16 @@ ENABLE_EXCEPTIONS=TRUE
 # --- Files --------------------------------------------------------
 
 SLOFILES =							\
-		$(SLO)$/biffdumper.obj		\
 		$(SLO)$/dffdumper.obj		\
 		$(SLO)$/dumperbase.obj		\
 		$(SLO)$/oledumper.obj		\
-		$(SLO)$/pptxdumper.obj		\
+		$(SLO)$/pptxdumper.obj
+
+.IF "$(UPD)" != "310"
+SLOFILES += \
+		$(SLO)$/biffdumper.obj		\
 		$(SLO)$/xlsbdumper.obj
+.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets -------------------------------------------------------
 

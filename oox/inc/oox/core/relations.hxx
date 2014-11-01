@@ -1,104 +1,111 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_CORE_RELATIONS_HXX
-#define OOX_CORE_RELATIONS_HXX
+#ifndef INCLUDED_OOX_CORE_RELATIONS_HXX
+#define INCLUDED_OOX_CORE_RELATIONS_HXX
 
 #include <map>
 #include <boost/shared_ptr.hpp>
-#include "oox/helper/helper.hxx"
+#include <oox/helper/helper.hxx>
+#include <oox/dllapi.h>
 
 namespace oox {
 namespace core {
 
-// ============================================================================
 
-/** Expands to an OUString containing an 'officeDocument' relation type created
+
+/** Expands to an OUString containing an 'officeDocument' transitional relation type created
     from the passed literal(!) ASCII(!) character array. */
 #define CREATE_OFFICEDOC_RELATION_TYPE( ascii ) \
-    CREATE_OUSTRING( "http://schemas.openxmlformats.org/officeDocument/2006/relationships/" ascii )
+    ( "http://schemas.openxmlformats.org/officeDocument/2006/relationships/" ascii )
+
+/** Expands to an OUString containing an 'officeDocument' strict relation type created
+    from the passed literal(!) ASCII(!) character array. */
+#define CREATE_OFFICEDOC_RELATION_TYPE_STRICT( ascii ) \
+    ( "http://purl.oclc.org/ooxml/officeDocument/relationships/" ascii )
 
 /** Expands to an OUString containing a 'package' relation type created from
     the passed literal(!) ASCII(!) character array. */
 #define CREATE_PACKAGE_RELATION_TYPE( ascii ) \
-    CREATE_OUSTRING( "http://schemas.openxmlformats.org/package/2006/relationships/" ascii )
+    ( "http://schemas.openxmlformats.org/package/2006/relationships/" ascii )
 
 /** Expands to an OUString containing an MS Office specific relation type
     created from the passed literal(!) ASCII(!) character array. */
 #define CREATE_MSOFFICE_RELATION_TYPE( ascii ) \
-    CREATE_OUSTRING( "http://schemas.microsoft.com/office/2006/relationships/" ascii )
+    ( "http://schemas.microsoft.com/office/2006/relationships/" ascii )
 
-// ============================================================================
+
 
 struct Relation
 {
-    ::rtl::OUString     maId;
-    ::rtl::OUString     maType;
-    ::rtl::OUString     maTarget;
+    OUString     maId;
+    OUString     maType;
+    OUString     maTarget;
     bool                mbExternal;
 
-    inline explicit     Relation() : mbExternal( false ) {}
+    Relation() : mbExternal( false ) {}
 };
 
-// ============================================================================
+
 
 class Relations;
 typedef ::boost::shared_ptr< Relations > RelationsRef;
 
-class Relations : public ::std::map< ::rtl::OUString, Relation >
+class OOX_DLLPUBLIC Relations : public ::std::map< OUString, Relation >
 {
 public:
-    explicit            Relations( const ::rtl::OUString& rFragmentPath );
+    explicit            Relations( const OUString& rFragmentPath );
 
     /** Returns the path of the fragment this relations collection is related to. */
-    inline const ::rtl::OUString& getFragmentPath() const { return maFragmentPath; }
+    const OUString& getFragmentPath() const { return maFragmentPath; }
 
     /** Returns the relation with the passed relation identifier. */
-    const Relation*     getRelationFromRelId( const ::rtl::OUString& rId ) const;
+    const Relation*     getRelationFromRelId( const OUString& rId ) const;
     /** Returns the first relation with the passed type. */
-    const Relation*     getRelationFromFirstType( const ::rtl::OUString& rType ) const;
+    const Relation*     getRelationFromFirstType( const OUString& rType ) const;
+    /** Returns the first relation with the passed type. */
+    const Relation*     getRelationFromFirstTypeFromOfficeDoc( const OUString& rType ) const;
     /** Finds all relations associated with the passed type. */
-    RelationsRef        getRelationsFromType( const ::rtl::OUString& rType ) const;
+    RelationsRef        getRelationsFromTypeFromOfficeDoc( const OUString& rType ) const;
 
     /** Returns the external target of the relation with the passed relation identifier. */
-    ::rtl::OUString     getExternalTargetFromRelId( const ::rtl::OUString& rRelId ) const;
-    /** Returns the external target of the first relation with the passed type. */
-    ::rtl::OUString     getExternalTargetFromFirstType( const ::rtl::OUString& rType ) const;
+    OUString     getExternalTargetFromRelId( const OUString& rRelId ) const;
+    /** Returns the internal target of the relation with the passed relation identifier. */
+    OUString     getInternalTargetFromRelId( const OUString& rRelId ) const;
 
     /** Returns the full fragment path for the target of the passed relation. */
-    ::rtl::OUString     getFragmentPathFromRelation( const Relation& rRelation ) const;
+    OUString     getFragmentPathFromRelation( const Relation& rRelation ) const;
     /** Returns the full fragment path for the passed relation identifier. */
-    ::rtl::OUString     getFragmentPathFromRelId( const ::rtl::OUString& rRelId ) const;
+    OUString     getFragmentPathFromRelId( const OUString& rRelId ) const;
     /** Returns the full fragment path for the first relation of the passed type. */
-    ::rtl::OUString     getFragmentPathFromFirstType( const ::rtl::OUString& rType ) const;
+    OUString     getFragmentPathFromFirstType( const OUString& rType ) const;
+    OUString     getFragmentPathFromFirstTypeFromOfficeDoc( const OUString& rType ) const;
 
 private:
-    ::rtl::OUString     maFragmentPath;
+    OUString     maFragmentPath;
 };
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

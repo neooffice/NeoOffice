@@ -1,207 +1,196 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "layoutnodecontext.hxx"
 
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/diagram/diagram.hxx"
 #include "oox/drawingml/shapecontext.hxx"
+#include "oox/drawingml/customshapeproperties.hxx"
 #include "diagramdefinitioncontext.hxx"
+#include "constraintlistcontext.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
-using ::rtl::OUString;
 
 namespace oox { namespace drawingml {
 
 class IfContext
-	: public LayoutNodeContext
+    : public LayoutNodeContext
 {
 public:
-    IfContext( ContextHandler& rParent,
-			   const Reference< XFastAttributeList >& xAttribs,
-			   const LayoutAtomPtr & pNode )
-        : LayoutNodeContext( rParent, xAttribs, pNode )
-		{
-			ConditionAtomPtr pAtom( boost::dynamic_pointer_cast< ConditionAtom >(pNode) );
-			OSL_ENSURE( pAtom, "Must pass a ConditionAtom" );
-
-			pAtom->iterator().loadFromXAttr( xAttribs );
-			pAtom->cond().loadFromXAttr( xAttribs );
-		}
+    IfContext( ContextHandler2Helper& rParent,
+               const AttributeList& rAttribs,
+               const ConditionAtomPtr& pAtom )
+        : LayoutNodeContext( rParent, rAttribs, pAtom )
+    {}
 };
 
 
 
 class AlgorithmContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    AlgorithmContext( ContextHandler& rParent, const Reference< XFastAttributeList >& xAttribs, const LayoutAtomPtr & pNode )
-        : ContextHandler( rParent )
-		, mnRevision( 0 )
-		, mnType( 0 )
-		, mpNode( pNode )
-		{
-			AttributeList aAttribs( xAttribs );
-			mnRevision = aAttribs.getInteger( XML_rev, 0 );
-			mnType = xAttribs->getOptionalValueToken( XML_type, 0 );
-		}
+    AlgorithmContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, const AlgAtomPtr & pNode )
+        : ContextHandler2( rParent )
+        , mnRevision( 0 )
+        , mpNode( pNode )
+        {
+            mnRevision = rAttribs.getInteger( XML_rev, 0 );
+            pNode->setType(rAttribs.getToken(XML_type, 0));
+        }
+
+    virtual ContextHandlerRef
+    onCreateContext( ::sal_Int32 aElement,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElement )
+            {
+                case DGM_TOKEN( param ):
+                {
+                    const sal_Int32 nValTok = rAttribs.getToken( XML_val, 0 );
+                    mpNode->addParam(
+                        rAttribs.getToken( XML_type, 0 ),
+                        nValTok>0 ? nValTok : rAttribs.getInteger( XML_val, 0 ) );
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            return this;
+        }
 
 private:
-	sal_Int32     mnRevision;
-	sal_Int32     mnType;
-	LayoutAtomPtr mpNode;
+    sal_Int32  mnRevision;
+    AlgAtomPtr mpNode;
 };
 
 
 class ChooseContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    ChooseContext( ContextHandler& rParent, const Reference< XFastAttributeList >& xAttribs, const LayoutAtomPtr & pNode )
-        : ContextHandler( rParent )
-		, mbHasElse( false )
-		, mpNode( pNode )
-		{
-			msName = xAttribs->getOptionalValue( XML_name );
-		}
+    ChooseContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, const LayoutAtomPtr & pNode )
+        : ContextHandler2( rParent )
+        , mpNode( pNode )
+        {
+            msName = rAttribs.getString( XML_name ).get();
+        }
 
-	virtual Reference< XFastContextHandler > SAL_CALL
-	createFastChildContext( ::sal_Int32 aElement,
-							const Reference< XFastAttributeList >& xAttribs )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
+    virtual ContextHandlerRef
+    onCreateContext( ::sal_Int32 aElement,
+                     const AttributeList& rAttribs ) SAL_OVERRIDE
+        {
+            switch( aElement )
+            {
+            case DGM_TOKEN( if ):
+            {
+                // CT_When
+                mpConditionNode.reset( new ConditionAtom(rAttribs.getFastAttributeList()) );
+                mpNode->addChild( mpConditionNode );
+                return new IfContext( *this, rAttribs, mpConditionNode );
+            }
+            case DGM_TOKEN( else ):
+                // CT_Otherwise
+                if( mpConditionNode )
+                {
+                    mpConditionNode->readElseBranch();
+                    ContextHandlerRef xRet = new IfContext( *this, rAttribs, mpConditionNode );
+                    mpConditionNode.reset();
+                    return xRet;
+                }
+                else
+                {
+                    OSL_TRACE( "ignoring second else clause" );
+                }
+                break;
+            default:
+                break;
+            }
 
-			switch( aElement )
-			{
-			case XML_if:
-			{
-				// CT_When
-				LayoutAtomPtr pAtom( new ConditionAtom( false ) );
-				mpNode->addChild( pAtom );
-                xRet.set( new IfContext( *this, xAttribs, pAtom ) );
-				break;
-			}
-			case XML_else:
-				// CT_Otherwise
-				if( !mbHasElse )
-				{
-					LayoutAtomPtr pAtom( new ConditionAtom( true ) );
-					mpNode->addChild( pAtom );
-                    xRet.set( new IfContext( *this, xAttribs, pAtom ) );
-					mbHasElse = true;
-				}
-				else
-				{
-					OSL_TRACE( "ignoring second else clause" );
-				}
-				break;
-			default:
-				break;
-			}
-
-			if( !xRet.is() )
-				xRet.set(this);
-
-			return xRet;
-		}
+            return this;
+        }
 private:
-	bool     mbHasElse;
-	OUString msName;
-	LayoutAtomPtr mpNode;
+    OUString msName;
+    LayoutAtomPtr mpNode;
+    ConditionAtomPtr mpConditionNode;
 };
 
 
 
 
 class ForEachContext
-	: public LayoutNodeContext
+    : public LayoutNodeContext
 {
 public:
-    ForEachContext( ContextHandler& rParent, const Reference< XFastAttributeList >& xAttribs, const LayoutAtomPtr & pNode )
-        : LayoutNodeContext( rParent, xAttribs, pNode )
-		{
-			ForEachAtomPtr pAtom( boost::dynamic_pointer_cast< ForEachAtom >(pNode) );
-			OSL_ENSURE( pAtom, "Must pass a ForEachAtom" );
-			xAttribs->getOptionalValue( XML_ref );
-
-			pAtom->iterator().loadFromXAttr( xAttribs );
-		}
+    ForEachContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, const ForEachAtomPtr& pAtom )
+        : LayoutNodeContext( rParent, rAttribs, pAtom )
+        {
+            rAttribs.getString( XML_ref );
+            pAtom->iterator().loadFromXAttr( rAttribs.getFastAttributeList() );
+        }
 };
 
 
 // CT_LayoutVariablePropertySet
 class LayoutVariablePropertySetContext
-    : public ContextHandler
+    : public ContextHandler2
 {
 public:
-    LayoutVariablePropertySetContext( ContextHandler& rParent, LayoutNode::VarMap & aVar )
-        : ContextHandler( rParent )
-		, mVariables( aVar )
-		{
-		}
+    LayoutVariablePropertySetContext( ContextHandler2Helper& rParent, LayoutNode::VarMap & aVar )
+        : ContextHandler2( rParent )
+        , mVariables( aVar )
+        {
+        }
 
-	virtual ~LayoutVariablePropertySetContext()
-		{
-		}
+    virtual ~LayoutVariablePropertySetContext()
+        {
+        }
 
-	virtual Reference< XFastContextHandler > SAL_CALL createFastChildContext( ::sal_Int32 aElement, const Reference< XFastAttributeList >& xAttribs )
-		throw (SAXException, RuntimeException)
-		{
-			Reference< XFastContextHandler > xRet;
-
+    virtual ContextHandlerRef onCreateContext( ::sal_Int32 aElement, const AttributeList& rAttribs )
+        throw (SAXException, RuntimeException) SAL_OVERRIDE
+        {
             sal_Int32 nIdx =  LayoutNodeContext::tagToVarIdx( getBaseToken( aElement ) );
-			if( nIdx != -1 )
-			{
-				mVariables[ nIdx ] = makeAny( xAttribs->getOptionalValue( XML_val ) );
-			}
-			if( !xRet.is() )
-				xRet.set(this);
+            if( nIdx != -1 )
+            {
+                mVariables[ nIdx ] = makeAny( rAttribs.getString( XML_val ).get() );
+            }
 
-			return xRet;
-		}
+            return this;
+        }
 private:
-	LayoutNode::VarMap & mVariables;
+    LayoutNode::VarMap & mVariables;
 };
 
 
 // CT_LayoutNode
-LayoutNodeContext::LayoutNodeContext( ContextHandler& rParent,
-									  const Reference< XFastAttributeList >& xAttribs,
-									  const LayoutAtomPtr &pNode )
-    : ContextHandler( rParent )
-	, mpNode( pNode )
+LayoutNodeContext::LayoutNodeContext( ContextHandler2Helper& rParent,
+                                      const AttributeList& rAttribs,
+                                      const LayoutAtomPtr& pAtom )
+    : ContextHandler2( rParent )
+    , mpNode( pAtom )
 {
-	OSL_ENSURE( pNode, "Node must NOT be NULL" );
-	mpNode->setName( xAttribs->getOptionalValue( XML_name ) );
-	// TODO shall we even bother?
-	// b or t
-//	sal_Int32 nChOrder = xAttributes->getOptionalValueToken( XML_chOrder, XML_b );
-//	OUString sMoveWith = xAttributes->getOptionalValue( XML_moveWith );
-//	OUString sStyleLbl = xAttributes->getOptionalValue( XML_styleLbl );
+    OSL_ENSURE( pAtom, "Node must NOT be NULL" );
+    mpNode->setName( rAttribs.getString( XML_name ).get() );
 }
 
 
@@ -209,144 +198,155 @@ LayoutNodeContext::~LayoutNodeContext()
 {
 }
 
-void SAL_CALL LayoutNodeContext::endFastElement( ::sal_Int32 )
-	throw (SAXException, RuntimeException)
-{
-
-}
-
 /** convert the XML tag to a variable index in the array
- * @param aTag the tag, wihout namespace
+ * @param aTag the tag, without namespace
  * @return the variable index. -1 is an error
  */
 sal_Int32 LayoutNodeContext::tagToVarIdx( sal_Int32 aTag )
 {
-	sal_Int32 nIdx = -1;
-	switch( aTag )
-	{
-	case DGM_TOKEN( animLvl ):
-		nIdx = LayoutNode::VAR_animLvl;
-		break;
-	case DGM_TOKEN( animOne ):
-		nIdx = LayoutNode::VAR_animOne;
-		break;
-	case DGM_TOKEN( bulletEnabled ):
-		nIdx = LayoutNode::VAR_bulletEnabled;
-		break;
-	case DGM_TOKEN( chMax ):
-		nIdx = LayoutNode::VAR_chMax;
-		break;
-	case DGM_TOKEN( chPref ):
-		nIdx = LayoutNode::VAR_chPref;
-		break;
-	case DGM_TOKEN( dir ):
-		nIdx = LayoutNode::VAR_dir;
-		break;
-	case DGM_TOKEN( hierBranch ):
-		nIdx = LayoutNode::VAR_hierBranch;
-		break;
-	case DGM_TOKEN( orgChart ):
-		nIdx = LayoutNode::VAR_orgChart;
-		break;
-	case DGM_TOKEN( resizeHandles ):
-		nIdx = LayoutNode::VAR_resizeHandles;
-		break;
-	default:
-		break;
-	}
-	return nIdx;
+    sal_Int32 nIdx = -1;
+    switch( aTag )
+    {
+    case DGM_TOKEN( animLvl ):
+        nIdx = LayoutNode::VAR_animLvl;
+        break;
+    case DGM_TOKEN( animOne ):
+        nIdx = LayoutNode::VAR_animOne;
+        break;
+    case DGM_TOKEN( bulletEnabled ):
+        nIdx = LayoutNode::VAR_bulletEnabled;
+        break;
+    case DGM_TOKEN( chMax ):
+        nIdx = LayoutNode::VAR_chMax;
+        break;
+    case DGM_TOKEN( chPref ):
+        nIdx = LayoutNode::VAR_chPref;
+        break;
+    case DGM_TOKEN( dir ):
+        nIdx = LayoutNode::VAR_dir;
+        break;
+    case DGM_TOKEN( hierBranch ):
+        nIdx = LayoutNode::VAR_hierBranch;
+        break;
+    case DGM_TOKEN( orgChart ):
+        nIdx = LayoutNode::VAR_orgChart;
+        break;
+    case DGM_TOKEN( resizeHandles ):
+        nIdx = LayoutNode::VAR_resizeHandles;
+        break;
+    default:
+        break;
+    }
+    return nIdx;
 }
 
 
-Reference< XFastContextHandler > SAL_CALL
-LayoutNodeContext::createFastChildContext( ::sal_Int32 aElement,
-												  const Reference< XFastAttributeList >& xAttribs )
-	throw (SAXException, RuntimeException)
+ContextHandlerRef
+LayoutNodeContext::onCreateContext( ::sal_Int32 aElement,
+                                    const AttributeList& rAttribs )
 {
-	Reference< XFastContextHandler > xRet;
+    switch( aElement )
+    {
+    case DGM_TOKEN( layoutNode ):
+    {
+        LayoutNodePtr pNode( new LayoutNode() );
+        mpNode->addChild( pNode );
+        pNode->setChildOrder( rAttribs.getToken( XML_chOrder, XML_b ) );
+        pNode->setMoveWith( rAttribs.getString( XML_moveWith ).get() );
+        pNode->setStyleLabel( rAttribs.getString( XML_styleLbl ).get() );
+        return new LayoutNodeContext( *this, rAttribs, pNode );
+    }
+    case DGM_TOKEN( shape ):
+    {
+        LayoutNodePtr pNode( boost::dynamic_pointer_cast< LayoutNode >( mpNode ) );
+        if( pNode )
+        {
+            ShapePtr pShape;
 
-	switch( aElement )
-	{
-	case DGM_TOKEN( layoutNode ):
-	{
-		LayoutNodePtr pNode( new LayoutNode() );
-		mpNode->addChild( pNode );
-        xRet.set( new LayoutNodeContext( *this, xAttribs, pNode ) );
-		break;
-	}
-	case DGM_TOKEN( shape ):
-	{
-		ShapePtr pShape( new Shape() );
-        xRet.set( new ShapeContext( *this, ShapePtr(), pShape ) );
-		break;
-	}
-	case DGM_TOKEN( extLst ):
-        return xRet;
-	case DGM_TOKEN( alg ):
-	{
-		// CT_Algorithm
-		LayoutAtomPtr pAtom( new AlgAtom );
-		mpNode->addChild( pAtom );
-        xRet.set( new AlgorithmContext( *this, xAttribs, pAtom ) );
-		break;
-	}
-	case DGM_TOKEN( choose ):
-	{
-		// CT_Choose
-		LayoutAtomPtr pAtom( new ChooseAtom );
-		mpNode->addChild( pAtom );
-        xRet.set( new ChooseContext( *this, xAttribs, pAtom ) );
- 		break;
-	}
-	case DGM_TOKEN( forEach ):
-	{
-		// CT_ForEach
-		LayoutAtomPtr pAtom( new ForEachAtom );
-		mpNode->addChild( pAtom );
-        xRet.set( new ForEachContext( *this, xAttribs, pAtom ) );
-		break;
-	}
-	case DGM_TOKEN( constrLst ):
-		// CT_Constraints
-		// TODO
-		break;
-	case DGM_TOKEN( presOf ):
-	{
-		// CT_PresentationOf
-		// TODO
-		xAttribs->getOptionalValue( XML_axis );
-		xAttribs->getOptionalValue( XML_cnt );
-		xAttribs->getOptionalValue( XML_hideLastTrans );
-		xAttribs->getOptionalValue( XML_ptType );
-		xAttribs->getOptionalValue( XML_st );
-		xAttribs->getOptionalValue( XML_step );
-		break;
-	}
-	case DGM_TOKEN( ruleLst ):
-		// CT_Rules
-		// TODO
-		break;
-	case DGM_TOKEN( varLst ):
-	{
-		LayoutNodePtr pNode( boost::dynamic_pointer_cast< LayoutNode >( mpNode ) );
-		if( pNode )
-		{
-            xRet.set( new LayoutVariablePropertySetContext( *this, pNode->variables() ) );
-		}
-		else
-		{
-			OSL_TRACE( "OOX: encountered a varLst in a non layoutNode context" );
-		}
-		break;
-	}
-	default:
-		break;
-	}
-	if( !xRet.is() )
-		xRet.set(this);
+            if( rAttribs.hasAttribute( XML_type ) )
+            {
+                pShape.reset( new Shape("com.sun.star.drawing.CustomShape") );
+                const sal_Int32 nType(rAttribs.getToken( XML_type, XML_obj ));
+                pShape->setSubType( nType );
+                pShape->getCustomShapeProperties()->setShapePresetType( nType );
+            }
+            else
+            {
+                pShape.reset( new Shape("com.sun.star.drawing.GroupShape") );
+            }
 
-	return xRet;
+            pNode->setShape( pShape );
+            return new ShapeContext( *this, ShapePtr(), pShape );
+        }
+        else
+        {
+            OSL_TRACE( "OOX: encountered a shape in a non layoutNode context" );
+        }
+        break;
+    }
+    case DGM_TOKEN( extLst ):
+        return 0;
+    case DGM_TOKEN( alg ):
+    {
+        // CT_Algorithm
+        AlgAtomPtr pAtom( new AlgAtom );
+        mpNode->addChild( pAtom );
+        return new AlgorithmContext( *this, rAttribs, pAtom );
+    }
+    case DGM_TOKEN( choose ):
+    {
+        // CT_Choose
+        LayoutAtomPtr pAtom( new ChooseAtom );
+        mpNode->addChild( pAtom );
+        return new ChooseContext( *this, rAttribs, pAtom );
+    }
+    case DGM_TOKEN( forEach ):
+    {
+        // CT_ForEach
+        ForEachAtomPtr pAtom( new ForEachAtom(rAttribs.getFastAttributeList()) );
+        mpNode->addChild( pAtom );
+        return new ForEachContext( *this, rAttribs, pAtom );
+    }
+    case DGM_TOKEN( constrLst ):
+        // CT_Constraints
+        return new ConstraintListContext( *this, rAttribs, mpNode );
+    case DGM_TOKEN( presOf ):
+    {
+        // CT_PresentationOf
+        // TODO
+        rAttribs.getString( XML_axis );
+        rAttribs.getString( XML_cnt );
+        rAttribs.getString( XML_hideLastTrans );
+        rAttribs.getString( XML_ptType );
+        rAttribs.getString( XML_st );
+        rAttribs.getString( XML_step );
+        break;
+    }
+    case DGM_TOKEN( ruleLst ):
+        // CT_Rules
+        // TODO
+        break;
+    case DGM_TOKEN( varLst ):
+    {
+        LayoutNodePtr pNode( boost::dynamic_pointer_cast< LayoutNode >( mpNode ) );
+        if( pNode )
+        {
+            return new LayoutVariablePropertySetContext( *this, pNode->variables() );
+        }
+        else
+        {
+            OSL_TRACE( "OOX: encountered a varLst in a non layoutNode context" );
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return this;
 }
 
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

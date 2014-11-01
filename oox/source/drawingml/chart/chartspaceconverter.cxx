@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/chartspaceconverter.hxx"
 
@@ -29,15 +25,16 @@
 #include <com/sun/star/chart2/XTitled.hpp>
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/chart/chartconverter.hxx"
 #include "oox/drawingml/chart/chartdrawingfragment.hxx"
 #include "oox/drawingml/chart/chartspacemodel.hxx"
 #include "oox/drawingml/chart/plotareaconverter.hxx"
 #include "oox/drawingml/chart/titleconverter.hxx"
+#include <oox/helper/graphichelper.hxx>
 
-using ::rtl::OUString;
-using ::com::sun::star::awt::Point;
+using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::UNO_QUERY;
@@ -55,7 +52,7 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::chart2;
@@ -64,9 +61,7 @@ using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 ChartSpaceConverter::ChartSpaceConverter( const ConverterRoot& rParent, ChartSpaceModel& rModel ) :
     ConverterBase< ChartSpaceModel >( rParent, rModel )
@@ -77,33 +72,56 @@ ChartSpaceConverter::~ChartSpaceConverter()
 {
 }
 
-void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExternalPage, const Point& rChartPos )
+#if SUPD == 310
+void ChartSpaceConverter::convertFromModel( const css::uno::Reference< XShapes >& rxExternalPage, const awt::Point& rChartPos )
+#else	// SUPD == 310
+void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExternalPage, const awt::Point& rChartPos )
+#endif	// SUPD == 310
 {
+    if( !getChartConverter() )
+        return;
+
     /*  create data provider (virtual function in the ChartConverter class,
         derived converters may create an external data provider) */
-    getChartConverter().createDataProvider( getChartDocument() );
+    getChartConverter()->createDataProvider( getChartDocument() );
 
     // attach number formatter of container document to data receiver
     try
     {
+#if SUPD == 310
+        css::uno::Reference< XDataReceiver > xDataRec( getChartDocument(), UNO_QUERY_THROW );
+        css::uno::Reference< XNumberFormatsSupplier > xNumFmtSupp( getFilter().getModel(), UNO_QUERY_THROW );
+#else	// SUPD == 310
         Reference< XDataReceiver > xDataRec( getChartDocument(), UNO_QUERY_THROW );
         Reference< XNumberFormatsSupplier > xNumFmtSupp( getFilter().getModel(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         xDataRec->attachNumberFormatsSupplier( xNumFmtSupp );
     }
     catch( Exception& )
     {
     }
 
-    // formatting of the chart background
+    // formatting of the chart background.  The default fill style varies with applications.
     PropertySet aBackPropSet( getChartDocument()->getPageBackground() );
-    getFormatter().convertFrameFormatting( aBackPropSet, mrModel.mxShapeProp, OBJECTTYPE_CHARTSPACE );
+    aBackPropSet.setProperty(
+        PROP_FillStyle,
+        uno::makeAny(getFilter().getGraphicHelper().getDefaultChartAreaFillStyle()));
+
+    if( mrModel.mxShapeProp.is() )
+    {
+        getFormatter().convertFrameFormatting( aBackPropSet, mrModel.mxShapeProp, OBJECTTYPE_CHARTSPACE );
+    }
 
     // convert plot area (container of all chart type groups)
     PlotAreaConverter aPlotAreaConv( *this, mrModel.mxPlotArea.getOrCreate() );
     aPlotAreaConv.convertFromModel( mrModel.mxView3D.getOrCreate() );
 
     // plot area converter has created the diagram object
+#if SUPD == 310
+    css::uno::Reference< XDiagram > xDiagram = getChartDocument()->getFirstDiagram();
+#else	// SUPD == 310
     Reference< XDiagram > xDiagram = getChartDocument()->getFirstDiagram();
+#endif	// SUPD == 310
 
     // convert wall and floor formatting in 3D charts
     if( xDiagram.is() && aPlotAreaConv.isWall3dChart() )
@@ -121,11 +139,15 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
         /*  If the title model is missing, but the chart shows exactly one
             series, the series title is shown as chart title. */
         OUString aAutoTitle = aPlotAreaConv.getAutomaticTitle();
-        if( mrModel.mxTitle.is() || (aAutoTitle.getLength() > 0) )
+        if( mrModel.mxTitle.is() || !aAutoTitle.isEmpty() )
         {
-            if( aAutoTitle.getLength() == 0 )
-                aAutoTitle = CREATE_OUSTRING( "Chart Title" );
+            if( aAutoTitle.isEmpty() )
+                aAutoTitle = "Chart Title";
+#if SUPD == 310
+            css::uno::Reference< XTitled > xTitled( getChartDocument(), UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XTitled > xTitled( getChartDocument(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
             TitleConverter aTitleConv( *this, mrModel.mxTitle.getOrCreate() );
             aTitleConv.convertFromModel( xTitled, aAutoTitle, OBJECTTYPE_CHARTTITLE );
         }
@@ -159,7 +181,11 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
     /*  Following all conversions needing the old Chart1 API that involves full
         initialization of the chart view. */
     namespace cssc = ::com::sun::star::chart;
+#if SUPD == 310
+    css::uno::Reference< cssc::XChartDocument > xChart1Doc( getChartDocument(), UNO_QUERY );
+#else	// SUPD == 310
     Reference< cssc::XChartDocument > xChart1Doc( getChartDocument(), UNO_QUERY );
+#endif	// SUPD == 310
     if( xChart1Doc.is() )
     {
         /*  Set the IncludeHiddenCells property via the old API as only this
@@ -176,12 +202,16 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
     }
 
     // embedded drawing shapes
-    if( mrModel.maDrawingPath.getLength() > 0 ) try
+    if( !mrModel.maDrawingPath.isEmpty() ) try
     {
         /*  Get the internal draw page of the chart document, if no external
             drawing page has been passed. */
+#if SUPD == 310
+        css::uno::Reference< XShapes > xShapes;
+#else	// SUPD == 310
         Reference< XShapes > xShapes;
-        Point aShapesOffset( 0, 0 );
+#endif	// SUPD == 310
+        awt::Point aShapesOffset( 0, 0 );
         if( rxExternalPage.is() )
         {
             xShapes = rxExternalPage;
@@ -190,7 +220,11 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
         }
         else
         {
+#if SUPD == 310
+            css::uno::Reference< XDrawPageSupplier > xDrawPageSupp( getChartDocument(), UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XDrawPageSupplier > xDrawPageSupp( getChartDocument(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
             xShapes.set( xDrawPageSupp->getDrawPage(), UNO_QUERY_THROW );
         }
 
@@ -216,10 +250,23 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
         aProps.setProperty( PROP_DisableDataTableDialog , true );
         aProps.setProperty( PROP_DisableComplexChartTypes , true );
     }
+
+    if(!mrModel.maSheetPath.isEmpty() )
+    {
+#if SUPD == 310
+        css::uno::Reference< ::com::sun::star::chart::XChartDocument > xChartDoc( getChartDocument(), UNO_QUERY );
+#else	// SUPD == 310
+        Reference< ::com::sun::star::chart::XChartDocument > xChartDoc( getChartDocument(), UNO_QUERY );
+#endif	// SUPD == 310
+        PropertySet aProps( xChartDoc->getDiagram() );
+        aProps.setProperty( PROP_ExternalData , uno::makeAny(mrModel.maSheetPath) );
+    }
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

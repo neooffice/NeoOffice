@@ -47,8 +47,16 @@ SLOFILES =	\
 		$(SLO)$/vbahelper.obj           \
 		$(SLO)$/vbainputstream.obj      \
 		$(SLO)$/vbamodule.obj           \
-		$(SLO)$/vbaproject.obj          \
+		$(SLO)$/vbaproject.obj
+
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/axbinarywriter.obj \
+		$(SLO)$/axfontdata.obj
+.ELSE		# "$(UPD)" == "310"
+SLOFILES += \
 		$(SLO)$/vbaprojectfilter.obj
+.ENDIF		# "$(UPD)" == "310"
 
 # --- Targets -------------------------------------------------------
 

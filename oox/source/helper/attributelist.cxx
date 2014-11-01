@@ -1,44 +1,39 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/attributelist.hxx"
 
+#include <cassert>
 #include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
+#include <sax/fastattribs.hxx>
 #include "oox/token/tokenmap.hxx"
 
 namespace oox {
 
-// ============================================================================
 
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::xml::sax;
 
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
-// ============================================================================
 
 namespace {
 
@@ -72,7 +67,7 @@ sal_Unicode lclGetXChar( const sal_Unicode*& rpcStr, const sal_Unicode* pcEnd )
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 sal_Int32 AttributeConversion::decodeToken( const OUString& rValue )
 {
@@ -92,11 +87,6 @@ OUString AttributeConversion::decodeXString( const OUString& rValue )
     return aBuffer.makeStringAndClear();
 }
 
-double AttributeConversion::decodeDouble( const OUString& rValue )
-{
-    return rValue.toDouble();
-}
-
 sal_Int32 AttributeConversion::decodeInteger( const OUString& rValue )
 {
     return rValue.toInt32();
@@ -114,25 +104,34 @@ sal_Int64 AttributeConversion::decodeHyper( const OUString& rValue )
 
 sal_Int32 AttributeConversion::decodeIntegerHex( const OUString& rValue )
 {
+#if SUPD == 310
     return rValue.toInt32( 16 );
+#else	// SUPD == 310
+    // It looks like all Office Open XML attributes containing hexadecimal
+    // values are based on xsd:hexBinary and so use an unsigned representation:
+    return static_cast< sal_Int32 >(rValue.toUInt32( 16 ));
+        //TODO: Change this function to return sal_uInt32 and get rid of the
+        // cast, but that will have a ripple effect
+#endif	// SUPD == 310
 }
 
-sal_uInt32 AttributeConversion::decodeUnsignedHex( const OUString& rValue )
-{
-    return getLimitedValue< sal_uInt32, sal_Int64 >( rValue.toInt64( 16 ), 0, SAL_MAX_UINT32 );
-}
 
-sal_Int64 AttributeConversion::decodeHyperHex( const OUString& rValue )
-{
-    return rValue.toInt64( 16 );
-}
-
-// ============================================================================
 
 AttributeList::AttributeList( const Reference< XFastAttributeList >& rxAttribs ) :
-    mxAttribs( rxAttribs )
+    mxAttribs( rxAttribs ),
+    mpAttribList( NULL )
 {
     OSL_ENSURE( mxAttribs.is(), "AttributeList::AttributeList - missing attribute list interface" );
+}
+
+sax_fastparser::FastAttributeList *AttributeList::getAttribList() const
+{
+    if( mpAttribList == NULL )
+    {
+        assert( dynamic_cast< sax_fastparser::FastAttributeList *>( mxAttribs.get() ) != NULL );
+        mpAttribList = static_cast< sax_fastparser::FastAttributeList *>( mxAttribs.get() );
+    }
+    return mpAttribList;
 }
 
 bool AttributeList::hasAttribute( sal_Int32 nAttrToken ) const
@@ -166,55 +165,54 @@ OptValue< OUString > AttributeList::getXString( sal_Int32 nAttrToken ) const
 
 OptValue< double > AttributeList::getDouble( sal_Int32 nAttrToken ) const
 {
-    OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
-    return OptValue< double >( bValid, bValid ? AttributeConversion::decodeDouble( aValue ) : 0.0 );
+    double nValue;
+    bool bValid = getAttribList()->getAsDouble( nAttrToken, nValue );
+    return OptValue< double >( bValid, nValue );
 }
 
 OptValue< sal_Int32 > AttributeList::getInteger( sal_Int32 nAttrToken ) const
 {
-    OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
-    return OptValue< sal_Int32 >( bValid, bValid ? AttributeConversion::decodeInteger( aValue ) : 0 );
+    sal_Int32 nValue;
+    bool bValid = getAttribList()->getAsInteger( nAttrToken, nValue );
+    return OptValue< sal_Int32 >( bValid, nValue );
 }
 
 OptValue< sal_uInt32 > AttributeList::getUnsigned( sal_Int32 nAttrToken ) const
 {
     OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
+    bool bValid = !aValue.isEmpty();
     return OptValue< sal_uInt32 >( bValid, AttributeConversion::decodeUnsigned( aValue ) );
 }
 
 OptValue< sal_Int64 > AttributeList::getHyper( sal_Int32 nAttrToken ) const
 {
     OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
+    bool bValid = !aValue.isEmpty();
     return OptValue< sal_Int64 >( bValid, bValid ? AttributeConversion::decodeHyper( aValue ) : 0 );
 }
 
 OptValue< sal_Int32 > AttributeList::getIntegerHex( sal_Int32 nAttrToken ) const
 {
     OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
+    bool bValid = !aValue.isEmpty();
     return OptValue< sal_Int32 >( bValid, bValid ? AttributeConversion::decodeIntegerHex( aValue ) : 0 );
-}
-
-OptValue< sal_uInt32 > AttributeList::getUnsignedHex( sal_Int32 nAttrToken ) const
-{
-    OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
-    return OptValue< sal_uInt32 >( bValid, bValid ? AttributeConversion::decodeUnsignedHex( aValue ) : 0 );
-}
-
-OptValue< sal_Int64 > AttributeList::getHyperHex( sal_Int32 nAttrToken ) const
-{
-    OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    bool bValid = aValue.getLength() > 0;
-    return OptValue< sal_Int64 >( bValid, bValid ? AttributeConversion::decodeHyperHex( aValue ) : 0 );
 }
 
 OptValue< bool > AttributeList::getBool( sal_Int32 nAttrToken ) const
 {
+    const char *pAttr;
+
+    // catch the common cases as quickly as possible first
+    bool bHasAttr = getAttribList()->getAsChar( nAttrToken, pAttr );
+    if( !bHasAttr )
+        return OptValue< bool >();
+    if( !strcmp( pAttr, "false" ) )
+        return OptValue< bool >( false );
+    if( !strcmp( pAttr, "true" ) )
+        return OptValue< bool >( true );
+
+    // now for all the crazy stuff
+
     // boolean attributes may be "t", "f", "true", "false", "on", "off", "1", or "0"
     switch( getToken( nAttrToken, XML_TOKEN_INVALID ) )
     {
@@ -229,10 +227,10 @@ OptValue< bool > AttributeList::getBool( sal_Int32 nAttrToken ) const
     return OptValue< bool >( onValue.has(), onValue.get() != 0 );
 }
 
-OptValue< DateTime > AttributeList::getDateTime( sal_Int32 nAttrToken ) const
+OptValue< util::DateTime > AttributeList::getDateTime( sal_Int32 nAttrToken ) const
 {
     OUString aValue = mxAttribs->getOptionalValue( nAttrToken );
-    DateTime aDateTime;
+    util::DateTime aDateTime;
     bool bValid = (aValue.getLength() == 19) && (aValue[ 4 ] == '-') && (aValue[ 7 ] == '-') &&
         (aValue[ 10 ] == 'T') && (aValue[ 13 ] == ':') && (aValue[ 16 ] == ':');
     if( bValid )
@@ -244,7 +242,7 @@ OptValue< DateTime > AttributeList::getDateTime( sal_Int32 nAttrToken ) const
         aDateTime.Minutes = static_cast< sal_uInt16 >( aValue.copy( 14, 2 ).toInt32() );
         aDateTime.Seconds = static_cast< sal_uInt16 >( aValue.copy( 17, 2 ).toInt32() );
     }
-    return OptValue< DateTime >( bValid, aDateTime );
+    return OptValue< util::DateTime >( bValid, aDateTime );
 }
 
 // defaulted return values ----------------------------------------------------
@@ -256,6 +254,10 @@ sal_Int32 AttributeList::getToken( sal_Int32 nAttrToken, sal_Int32 nDefault ) co
 
 OUString AttributeList::getString( sal_Int32 nAttrToken, const OUString& rDefault ) const
 {
+    // try to avoid slow exception throw/catch if we can
+    if (rDefault.isEmpty())
+        return mxAttribs->getOptionalValue( nAttrToken );
+
     try
     {
         return mxAttribs->getValue( nAttrToken );
@@ -269,6 +271,16 @@ OUString AttributeList::getString( sal_Int32 nAttrToken, const OUString& rDefaul
 OUString AttributeList::getXString( sal_Int32 nAttrToken, const OUString& rDefault ) const
 {
     return getXString( nAttrToken ).get( rDefault );
+}
+
+const char* AttributeList::getChar( sal_Int32 nAttrToken ) const
+{
+    const char* p = NULL;
+    bool bValid = getAttribList()->getAsChar(nAttrToken, p);
+    if (!bValid)
+        p = NULL;
+
+    return p;
 }
 
 double AttributeList::getDouble( sal_Int32 nAttrToken, double fDefault ) const
@@ -296,26 +308,18 @@ sal_Int32 AttributeList::getIntegerHex( sal_Int32 nAttrToken, sal_Int32 nDefault
     return getIntegerHex( nAttrToken ).get( nDefault );
 }
 
-sal_uInt32 AttributeList::getUnsignedHex( sal_Int32 nAttrToken, sal_uInt32 nDefault ) const
-{
-    return getUnsignedHex( nAttrToken ).get( nDefault );
-}
-
-sal_Int64 AttributeList::getHyperHex( sal_Int32 nAttrToken, sal_Int64 nDefault ) const
-{
-    return getHyperHex( nAttrToken ).get( nDefault );
-}
-
 bool AttributeList::getBool( sal_Int32 nAttrToken, bool bDefault ) const
 {
     return getBool( nAttrToken ).get( bDefault );
 }
 
-DateTime AttributeList::getDateTime( sal_Int32 nAttrToken, const DateTime& rDefault ) const
+util::DateTime AttributeList::getDateTime( sal_Int32 nAttrToken, const util::DateTime& rDefault ) const
 {
     return getDateTime( nAttrToken ).get( rDefault );
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

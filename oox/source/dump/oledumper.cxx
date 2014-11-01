@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/dump/oledumper.hxx"
 
@@ -38,18 +34,12 @@
 namespace oox {
 namespace dump {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OString;
-using ::rtl::OStringToOUString;
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
-// ============================================================================
-// ============================================================================
 
 OUString OleInputObjectBase::dumpAnsiString32( const String& rName )
 {
@@ -69,13 +59,13 @@ sal_Int32 OleInputObjectBase::dumpStdClipboardFormat( const String& rName )
 OUString OleInputObjectBase::dumpAnsiString32OrStdClip( const String& rName )
 {
     sal_Int32 nLen = mxStrm->readInt32();
-    return (nLen < 0) ? OUString::valueOf( dumpStdClipboardFormat( rName ) ) : dumpCharArray( rName, nLen, RTL_TEXTENCODING_MS_1252 );
+    return (nLen < 0) ? OUString::number( dumpStdClipboardFormat( rName ) ) : dumpCharArray( rName, nLen, RTL_TEXTENCODING_MS_1252 );
 }
 
 OUString OleInputObjectBase::dumpUniString32OrStdClip( const String& rName )
 {
     sal_Int32 nLen = mxStrm->readInt32();
-    return (nLen < 0) ? OUString::valueOf( dumpStdClipboardFormat( rName ) ) : dumpUnicodeArray( rName, nLen );
+    return (nLen < 0) ? OUString::number( dumpStdClipboardFormat( rName ) ) : dumpUnicodeArray( rName, nLen );
 }
 
 void OleInputObjectBase::writeOleColorItem( const String& rName, sal_uInt32 nColor )
@@ -91,8 +81,8 @@ sal_uInt32 OleInputObjectBase::dumpOleColor( const String& rName )
     return nOleColor;
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 StdFontObject::StdFontObject( const InputObjectBase& rParent )
 {
@@ -109,7 +99,7 @@ void StdFontObject::implDump()
     dumpCharArray( "name", mxStrm->readuInt8(), RTL_TEXTENCODING_ASCII_US );
 }
 
-// ============================================================================
+
 
 StdPicObject::StdPicObject( const InputObjectBase& rParent )
 {
@@ -123,144 +113,15 @@ void StdPicObject::implDump()
     dumpBinary( "image-data", nSize );
 }
 
-// ============================================================================
 
-namespace {
 
-const sal_uInt32 STDHLINK_HASTARGET         = 0x00000001;   /// Has hyperlink moniker.
-const sal_uInt32 STDHLINK_ABSOLUTE          = 0x00000002;   /// Absolute path.
-const sal_uInt32 STDHLINK_HASLOCATION       = 0x00000008;   /// Has target location.
-const sal_uInt32 STDHLINK_HASDISPLAY        = 0x00000010;   /// Has display string.
-const sal_uInt32 STDHLINK_HASGUID           = 0x00000020;   /// Has identification GUID.
-const sal_uInt32 STDHLINK_HASTIME           = 0x00000040;   /// Has creation time.
-const sal_uInt32 STDHLINK_HASFRAME          = 0x00000080;   /// Has frame.
-const sal_uInt32 STDHLINK_ASSTRING          = 0x00000100;   /// Hyperlink as simple string.
-
-} // namespace
-
-StdHlinkObject::StdHlinkObject( const InputObjectBase& rParent )
-{
-    construct( rParent );
-}
-
-void StdHlinkObject::implDump()
-{
-    dumpDec< sal_uInt32 >( "stream-version" );
-    sal_uInt32 nFlags = dumpHex< sal_uInt32 >( "flags", "STDHLINK-FLAGS" );
-    if( getFlag( nFlags, STDHLINK_HASDISPLAY ) )
-        dumpHyperlinkString( "display", true );
-    if( getFlag( nFlags, STDHLINK_HASFRAME ) )
-        dumpHyperlinkString( "frame", true );
-    if( getFlag( nFlags, STDHLINK_HASTARGET ) )
-    {
-        if( getFlag( nFlags, STDHLINK_ASSTRING ) )
-            dumpHyperlinkString( "filename", true );
-        else if( !dumpGuidAndMoniker() )
-            return;
-    }
-    if( getFlag( nFlags, STDHLINK_HASLOCATION ) )
-        dumpHyperlinkString( "location", true );
-    if( getFlag( nFlags, STDHLINK_HASGUID ) )
-        dumpGuid( "id-guid" );
-    if( getFlag( nFlags, STDHLINK_HASTIME ) )
-        dumpFileTime( "creation-time" );
-}
-
-OUString StdHlinkObject::dumpHyperlinkString( const String& rName, bool bUnicode )
-{
-    return bUnicode ? dumpUniString32( rName ) : dumpAnsiString32( rName );
-}
-
-bool StdHlinkObject::dumpGuidAndMoniker()
-{
-    bool bValidMoniker = true;
-    OUString aGuid = cfg().getStringOption( dumpGuid( "moniker" ), OUString() );
-    IndentGuard aIndGuard( mxOut );
-    if( aGuid.equalsAscii( "URLMoniker" ) )
-        dumpUrlMoniker();
-    else if( aGuid.equalsAscii( "FileMoniker" ) )
-        dumpFileMoniker();
-    else if( aGuid.equalsAscii( "ItemMoniker" ) )
-        dumpItemMoniker();
-    else if( aGuid.equalsAscii( "AntiMoniker" ) )
-        dumpAntiMoniker();
-    else if( aGuid.equalsAscii( "CompositeMoniker" ) )
-        dumpCompositeMoniker();
-    else
-        bValidMoniker = false;
-    return bValidMoniker;
-}
-
-void StdHlinkObject::dumpUrlMoniker()
-{
-    sal_Int32 nBytes = dumpDec< sal_Int32 >( "url-bytes" );
-    sal_Int64 nEndPos = mxStrm->tell() + ::std::max< sal_Int32 >( nBytes, 0 );
-    dumpNullUnicodeArray( "url" );
-    if( mxStrm->tell() + 24 == nEndPos )
-    {
-        dumpGuid( "implementation-id" );
-        dumpDec< sal_uInt32 >( "version" );
-        dumpHex< sal_uInt32 >( "flags", "STDHLINK-URL-FLAGS" );
-    }
-    dumpRemainingTo( nEndPos );
-}
-
-void StdHlinkObject::dumpFileMoniker()
-{
-    dumpDec< sal_Int16 >( "up-levels" );
-    dumpHyperlinkString( "ansi-filename", false );
-    dumpDec< sal_Int16 >( "server-path-len" );
-    dumpHex< sal_uInt16 >( "version" );
-    dumpUnused( 20 );
-    sal_Int32 nBytes = dumpDec< sal_Int32 >( "total-bytes" );
-    sal_Int64 nEndPos = mxStrm->tell() + ::std::max< sal_Int32 >( nBytes, 0 );
-    if( nBytes > 0 )
-    {
-        sal_Int32 nFileBytes = dumpDec< sal_Int32 >( "uni-filename-bytes" );
-        dumpDec< sal_uInt16 >( "key-value" );
-        dumpUnicodeArray( "unicode-filename", nFileBytes / 2 );
-    }
-    dumpRemainingTo( nEndPos );
-}
-
-void StdHlinkObject::dumpItemMoniker()
-{
-    sal_Int32 nBytes = dumpDec< sal_Int32 >( "delimiter-bytes" );
-    sal_Int64 nEndPos = mxStrm->tell() + ::std::max< sal_Int32 >( nBytes, 0 );
-    dumpNullCharArray( "ansi-delimiter", RTL_TEXTENCODING_MS_1252 );
-    if( mxStrm->tell() < nEndPos )
-        dumpUnicodeArray( "unicode-delimiter", (nEndPos - mxStrm->tell()) / 2 );
-    mxStrm->seek( nEndPos );
-
-    nBytes = dumpDec< sal_Int32 >( "item-bytes" );
-    nEndPos = mxStrm->tell() + ::std::max< sal_Int32 >( nBytes, 0 );
-    dumpNullCharArray( "ansi-item", RTL_TEXTENCODING_MS_1252 );
-    if( mxStrm->tell() < nEndPos )
-        dumpUnicodeArray( "unicode-item", (nEndPos - mxStrm->tell()) / 2 );
-    mxStrm->seek( nEndPos );
-}
-
-void StdHlinkObject::dumpAntiMoniker()
-{
-    dumpDec< sal_Int32 >( "count" );
-}
-
-void StdHlinkObject::dumpCompositeMoniker()
-{
-    sal_Int32 nCount = dumpDec< sal_Int32 >( "moniker-count" );
-    for( sal_Int32 nIndex = 0; !mxStrm->isEof() && (nIndex < nCount); ++nIndex )
-        dumpGuidAndMoniker();
-}
-
-// ============================================================================
-// ============================================================================
 
 OleStreamObject::OleStreamObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName )
 {
     construct( rParent, rxStrm, rSysFileName );
 }
 
-// ============================================================================
+
 
 OleCompObjObject::OleCompObjObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName ) :
     OleStreamObject( rParent, rxStrm, rSysFileName )
@@ -293,8 +154,8 @@ void OleCompObjObject::implDump()
     dumpRemainingStream();
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 namespace {
 
@@ -334,7 +195,7 @@ const sal_uInt32 AX_STRING_COMPRESSED   = 0x80000000;
 
 } // namespace
 
-// ============================================================================
+
 
 OlePropertyStreamObject::OlePropertyStreamObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName )
 {
@@ -382,9 +243,9 @@ void OlePropertyStreamObject::dumpSection( const OUString& rGuid, sal_uInt32 nSt
     // property ID names
     mxPropIds = cfg().createNameList< ConstList >( "OLEPROP-IDS" );
     OUString aGuidName = cfg().getStringOption( rGuid, OUString() );
-    if( aGuidName.equalsAscii( "GlobalDocProp" ) )
+    if ( aGuidName == "GlobalDocProp" )
         mxPropIds->includeList( cfg().getNameList( "OLEPROP-GLOBALIDS" ) );
-    else if( aGuidName.equalsAscii( "BuiltinDocProp" ) )
+    else if ( aGuidName == "BuiltinDocProp" )
         mxPropIds->includeList( cfg().getNameList( "OLEPROP-BUILTINIDS" ) );
     else
         mxPropIds->includeList( cfg().getNameList( "OLEPROP-BASEIDS" ) );
@@ -567,7 +428,7 @@ void OlePropertyStreamObject::dumpBlob( sal_Int32 nPropId, const String& rName )
     if( nSize > 0 )
     {
         OUString aPropName = mxPropIds->getName( cfg(), nPropId );
-        if( aPropName == CREATE_OUSTRING( "'_PID_HLINKS'" ) )
+        if( aPropName == "'_PID_HLINKS'" )
             dumpHlinks( nSize );
         else
             dumpBinary( rName, nSize );
@@ -654,7 +515,7 @@ void OlePropertyStreamObject::writePropertyHeader( sal_Int32 nPropId, sal_uInt32
     writeDecItem( "id", nPropId, mxPropIds );
 }
 
-// ============================================================================
+
 
 OleStorageObject::OleStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath )
 {
@@ -666,23 +527,18 @@ void OleStorageObject::construct( const ObjectBase& rParent, const StorageRef& r
     StorageObjectBase::construct( rParent, rxStrg, rSysPath );
 }
 
-void OleStorageObject::construct( const ObjectBase& rParent )
-{
-    StorageObjectBase::construct( rParent );
-}
-
 void OleStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, const OUString& /*rStrgPath*/, const OUString& rStrmName, const OUString& rSysFileName )
 {
-    if( rStrmName.equalsAscii( "\001CompObj" ) )
+    if ( rStrmName == "\001CompObj" )
         OleCompObjObject( *this, rxStrm, rSysFileName ).dump();
-    else if( rStrmName.equalsAscii( "\005SummaryInformation" ) || rStrmName.equalsAscii( "\005DocumentSummaryInformation" ) )
+    else if( rStrmName ==  "\005SummaryInformation"  || rStrmName == "\005DocumentSummaryInformation" )
         OlePropertyStreamObject( *this, rxStrm, rSysFileName ).dump();
     else
         BinaryStreamObject( *this, rxStrm, rSysFileName ).dump();
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 ComCtlObjectBase::ComCtlObjectBase( const InputObjectBase& rParent,
         sal_uInt32 nDataId5, sal_uInt32 nDataId6, sal_uInt16 nVersion, bool bCommonPart, bool bComplexPart ) :
@@ -774,7 +630,7 @@ bool ComCtlObjectBase::dumpComCtlComplex()
             writeEmptyItem( "font" );
             IndentGuard aIndGuard2( mxOut );
             OUString aClassName = cfg().getStringOption( dumpGuid(), OUString() );
-            if( aClassName.equalsAscii( "StdFont" ) )
+            if ( aClassName == "StdFont" )
                 StdFontObject( *this ).dump();
         }
         if( !mxStrm->isEof() && (nFlags & 0x02) )
@@ -782,7 +638,7 @@ bool ComCtlObjectBase::dumpComCtlComplex()
             writeEmptyItem( "mouse-icon" );
             IndentGuard aIndGuard2( mxOut );
             OUString aClassName = cfg().getStringOption( dumpGuid(), OUString() );
-            if( aClassName.equalsAscii( "StdPic" ) )
+            if ( aClassName == "StdPic" )
                 StdPicObject( *this ).dump();
         }
         return !mxStrm->isEof();
@@ -790,7 +646,7 @@ bool ComCtlObjectBase::dumpComCtlComplex()
     return false;
 }
 
-// ============================================================================
+
 
 ComCtlScrollBarObject::ComCtlScrollBarObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, SAL_MAX_UINT32, 0x99470A83, nVersion, true, true )
@@ -807,7 +663,7 @@ void ComCtlScrollBarObject::implDumpProperties()
     dumpDec< sal_Int32 >( "value" );
 }
 
-// ============================================================================
+
 
 ComCtlProgressBarObject::ComCtlProgressBarObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E84, 0x97AB8A01, nVersion, true, true )
@@ -825,7 +681,7 @@ void ComCtlProgressBarObject::implDumpProperties()
     }
 }
 
-// ============================================================================
+
 
 ComCtlSliderObject::ComCtlSliderObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E86, 0x0A2BAE11, nVersion, true, true )
@@ -850,7 +706,7 @@ void ComCtlSliderObject::implDumpProperties()
         dumpBool< sal_Int32 >( "tooltip-below" );
 }
 
-// ============================================================================
+
 
 ComCtlUpDownObject::ComCtlUpDownObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xFF3626A0, 0xFF3626A0, nVersion, false, false )
@@ -872,7 +728,7 @@ void ComCtlUpDownObject::implDumpProperties()
     dumpUnknown( 4 );
 }
 
-// ============================================================================
+
 
 ComCtlImageListObject::ComCtlImageListObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E80, 0xE6E17E80, nVersion, true, false )
@@ -918,7 +774,7 @@ void ComCtlImageListObject::implDumpCommonTrailing()
     }
 }
 
-// ============================================================================
+
 
 ComCtlTabStripObject::ComCtlTabStripObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E8A, 0xD12A7AC1, nVersion, true, true )
@@ -959,7 +815,7 @@ void ComCtlTabStripObject::implDumpCommonExtra( sal_Int64 /*nEndPos*/ )
     }
 }
 
-// ============================================================================
+
 
 ComCtlTreeViewObject::ComCtlTreeViewObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E8E, 0x6AC13CB1, nVersion, true, true ),
@@ -986,7 +842,7 @@ void ComCtlTreeViewObject::implDumpCommonExtra( sal_Int64 /*nEndPos*/ )
     dumpUniString32( "path-separator" );
 }
 
-// ============================================================================
+
 
 ComCtlStatusBarObject::ComCtlStatusBarObject( const InputObjectBase& rParent, sal_uInt16 nVersion ) :
     ComCtlObjectBase( rParent, 0xE6E17E88, SAL_MAX_UINT32, nVersion, true, true )
@@ -1035,20 +891,13 @@ void ComCtlStatusBarObject::implDumpCommonTrailing()
     }
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 void AxPropertyObjectBase::construct( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, const String& rPropNameList, bool b64BitPropFlags )
 {
     OleInputObjectBase::construct( rParent, rxStrm, rSysFileName );
-    constructAxPropObj( rPropNameList, b64BitPropFlags );
-}
-
-void AxPropertyObjectBase::construct( const OutputObjectBase& rParent,
-        const BinaryInputStreamRef& rxStrm, const String& rPropNameList, bool b64BitPropFlags )
-{
-    OleInputObjectBase::construct( rParent, rxStrm );
     constructAxPropObj( rPropNameList, b64BitPropFlags );
 }
 
@@ -1336,11 +1185,11 @@ void AxPropertyObjectBase::dumpLargeProperties()
             {
                 IndentGuard aIndGuard2( mxOut );
                 OUString aClassName = cfg().getStringOption( dumpGuid(), OUString() );
-                if( aClassName.equalsAscii( "StdFont" ) )
+                if ( aClassName == "StdFont" )
                     StdFontObject( *this ).dump();
-                else if( aClassName.equalsAscii( "StdPic" ) )
+                else if ( aClassName == "StdPic" )
                     StdPicObject( *this ).dump();
-                else if( aClassName.equalsAscii( "CFontNew" ) )
+                else if ( aClassName == "CFontNew" )
                     AxCFontNewObject( *this ).dump();
                 else
                     ensureValid( false );
@@ -1349,7 +1198,7 @@ void AxPropertyObjectBase::dumpLargeProperties()
     }
 }
 
-// ============================================================================
+
 
 AxCFontNewObject::AxCFontNewObject( const InputObjectBase& rParent )
 {
@@ -1368,7 +1217,7 @@ void AxCFontNewObject::implDumpShortProperties()
     dumpDecProperty< sal_uInt16 >( 400, "FONT-WEIGHT" );
 }
 
-// ============================================================================
+
 
 AxColumnInfoObject::AxColumnInfoObject( const InputObjectBase& rParent )
 {
@@ -1380,7 +1229,7 @@ void AxColumnInfoObject::implDumpShortProperties()
     dumpDecProperty< sal_Int32 >( -1, "CONV-HMM-TO-CM" );
 }
 
-// ============================================================================
+
 
 AxCommandButtonObject::AxCommandButtonObject( const InputObjectBase& rParent )
 {
@@ -1407,7 +1256,7 @@ void AxCommandButtonObject::implDumpExtended()
     dumpEmbeddedFont();
 }
 
-// ============================================================================
+
 
 AxMorphControlObject::AxMorphControlObject( const InputObjectBase& rParent )
 {
@@ -1471,7 +1320,7 @@ void AxMorphControlObject::dumpColumnInfos()
     }
 }
 
-// ============================================================================
+
 
 AxLabelObject::AxLabelObject( const InputObjectBase& rParent )
 {
@@ -1500,7 +1349,7 @@ void AxLabelObject::implDumpExtended()
     dumpEmbeddedFont();
 }
 
-// ============================================================================
+
 
 AxImageObject::AxImageObject( const InputObjectBase& rParent )
 {
@@ -1526,7 +1375,7 @@ void AxImageObject::implDumpShortProperties()
     dumpStreamProperty();
 }
 
-// ============================================================================
+
 
 AxScrollBarObject::AxScrollBarObject( const InputObjectBase& rParent )
 {
@@ -1554,7 +1403,7 @@ void AxScrollBarObject::implDumpShortProperties()
     dumpStreamProperty();
 }
 
-// ============================================================================
+
 
 AxSpinButtonObject::AxSpinButtonObject( const InputObjectBase& rParent )
 {
@@ -1580,7 +1429,7 @@ void AxSpinButtonObject::implDumpShortProperties()
     dumpMousePtrProperty();
 }
 
-// ============================================================================
+
 
 AxTabStripObject::AxTabStripObject( const InputObjectBase& rParent )
 {
@@ -1629,8 +1478,8 @@ void AxTabStripObject::implDumpExtended()
     }
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 FormControlStreamObject::FormControlStreamObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, const OUString* pProgId )
 {
@@ -1649,57 +1498,57 @@ void FormControlStreamObject::implDump()
     if( mbReadGuid )
         maProgId = cfg().getStringOption( dumpGuid(), OUString() );
 
-    if( (maProgId.getLength() > 0) && !mxStrm->isEof() )
+    if( !maProgId.isEmpty() && !mxStrm->isEof() )
     {
-        if( maProgId.equalsAscii( "Forms.CommandButton.1" ) )
+        if ( maProgId == "Forms.CommandButton.1" )
             AxCommandButtonObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.TextBox.1" ) ||
-                 maProgId.equalsAscii( "Forms.ListBox.1" ) ||
-                 maProgId.equalsAscii( "Forms.ComboBox.1" ) ||
-                 maProgId.equalsAscii( "Forms.CheckBox.1" ) ||
-                 maProgId.equalsAscii( "Forms.OptionButton.1" ) ||
-                 maProgId.equalsAscii( "Forms.ToggleButton.1" ) ||
-                 maProgId.equalsAscii( "RefEdit.Ctrl" ) )
+        else if( maProgId ==  "Forms.TextBox.1" ||
+                 maProgId ==  "Forms.ListBox.1" ||
+                 maProgId ==  "Forms.ComboBox.1" ||
+                 maProgId ==  "Forms.CheckBox.1" ||
+                 maProgId ==  "Forms.OptionButton.1" ||
+                 maProgId ==  "Forms.ToggleButton.1" ||
+                 maProgId ==  "RefEdit.Ctrl" )
             AxMorphControlObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.Label.1" ) )
+        else if ( maProgId == "Forms.Label.1" )
             AxLabelObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.Image.1" ) )
+        else if ( maProgId == "Forms.Image.1" )
             AxImageObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.ScrollBar.1" ) )
+        else if ( maProgId == "Forms.ScrollBar.1" )
             AxScrollBarObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.SpinButton.1" ) )
+        else if ( maProgId == "Forms.SpinButton.1" )
             AxSpinButtonObject( *this ).dump();
-        else if( maProgId.equalsAscii( "Forms.TabStrip.1" ) )
+        else if ( maProgId == "Forms.TabStrip.1" )
             AxTabStripObject( *this ).dump();
-        else if( maProgId.equalsAscii( "MSComCtl2.FlatScrollBar.2" ) )
+        else if ( maProgId == "MSComCtl2.FlatScrollBar.2" )
             ComCtlScrollBarObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.ProgCtrl.1" ) )
+        else if ( maProgId == "COMCTL.ProgCtrl.1" )
             ComCtlProgressBarObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComctlLib.ProgCtrl.2" ) )
+        else if ( maProgId == "MSComctlLib.ProgCtrl.2" )
             ComCtlProgressBarObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.Slider.1" ) )
+        else if ( maProgId == "COMCTL.Slider.1" )
             ComCtlSliderObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComctlLib.Slider.2" ) )
+        else if ( maProgId == "MSComctlLib.Slider.2" )
             ComCtlSliderObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "ComCtl2.UpDown.1" ) )
+        else if ( maProgId == "ComCtl2.UpDown.1" )
             ComCtlUpDownObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComCtl2.UpDown.2" ) )
+        else if ( maProgId == "MSComCtl2.UpDown.2" )
             ComCtlUpDownObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.ImageListCtrl.1" ) )
+        else if ( maProgId == "COMCTL.ImageListCtrl.1" )
             ComCtlImageListObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComctlLib.ImageListCtrl.2" ) )
+        else if ( maProgId == "MSComctlLib.ImageListCtrl.2" )
             ComCtlImageListObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.TabStrip.1" ) )
+        else if ( maProgId == "COMCTL.TabStrip.1" )
             ComCtlTabStripObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComctlLib.TabStrip.2" ) )
+        else if ( maProgId == "MSComctlLib.TabStrip.2" )
             ComCtlTabStripObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.TreeCtrl.1" ) )
+        else if ( maProgId == "COMCTL.TreeCtrl.1" )
             ComCtlTreeViewObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "MSComctlLib.TreeCtrl.2" ) )
+        else if ( maProgId == "MSComctlLib.TreeCtrl.2" )
             ComCtlTreeViewObject( *this, 6 ).dump();
-        else if( maProgId.equalsAscii( "COMCTL.SBarCtrl.1" ) )
+        else if ( maProgId == "COMCTL.SBarCtrl.1" )
             ComCtlStatusBarObject( *this, 5 ).dump();
-        else if( maProgId.equalsAscii( "StdPic" ) )
+        else if ( maProgId == "StdPic" )
             StdPicObject( *this ).dump();
     }
     dumpRemainingStream();
@@ -1712,8 +1561,8 @@ void FormControlStreamObject::constructFormCtrlStrmObj( const OUString* pProgId 
         maProgId = *pProgId;
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 VbaFormClassInfoObject::VbaFormClassInfoObject( const InputObjectBase& rParent, VbaFormSharedData& rFormData ) :
     mrFormData( rFormData )
@@ -1741,7 +1590,7 @@ void VbaFormClassInfoObject::implDumpShortProperties()
     dumpDecProperty< sal_uInt16 >( 0 );
 }
 
-// ============================================================================
+
 
 namespace {
 
@@ -1752,7 +1601,7 @@ const sal_uInt16 VBA_FORMSITE_CLASSTABLEMASK    = 0x7FFF;
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 VbaFormSiteObject::VbaFormSiteObject( const InputObjectBase& rParent, VbaFormSharedData& rFormData ) :
     mrFormData( rFormData )
@@ -1797,7 +1646,7 @@ void VbaFormSiteObject::implDumpShortProperties()
     mrFormData.maSiteInfos.push_back( aSiteInfo );
 }
 
-// ============================================================================
+
 
 VbaFormDesignExtObject::VbaFormDesignExtObject( const InputObjectBase& rParent )
 {
@@ -1813,7 +1662,7 @@ void VbaFormDesignExtObject::implDumpShortProperties()
     dumpDecProperty< sal_Int8 >( 0, "VBA-FORMDESIGNEXT-DBLCLICKCTRLMODE" );
 }
 
-// ============================================================================
+
 
 namespace {
 
@@ -1825,7 +1674,7 @@ const sal_uInt8 AX_FORM_SITECOUNTTYPE_MASK      = 0x7F;
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 VbaFStreamObject::VbaFStreamObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, VbaFormSharedData& rFormData ) :
     mrFormData( rFormData )
@@ -1949,7 +1798,7 @@ void VbaFStreamObject::dumpDesignExtender()
     }
 }
 
-// ============================================================================
+
 
 VbaOStreamObject::VbaOStreamObject( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, VbaFormSharedData& rFormData ) :
@@ -1975,7 +1824,7 @@ void VbaOStreamObject::implDump()
     dumpRemainingStream();
 }
 
-// ============================================================================
+
 
 VbaPageObject::VbaPageObject( const InputObjectBase& rParent )
 {
@@ -1989,7 +1838,7 @@ void VbaPageObject::implDumpShortProperties()
     dumpDecProperty< sal_uInt32 >( 0, "AX-CONV-MS" );
 }
 
-// ============================================================================
+
 
 VbaMultiPageObject::VbaMultiPageObject( const InputObjectBase& rParent )
 {
@@ -2016,7 +1865,7 @@ void VbaMultiPageObject::implDumpExtended()
     }
 }
 
-// ============================================================================
+
 
 VbaXStreamObject::VbaXStreamObject( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, VbaFormSharedData& rFormData ) :
@@ -2044,7 +1893,7 @@ void VbaXStreamObject::implDump()
     dumpRemainingStream();
 }
 
-// ============================================================================
+
 
 VbaContainerStorageObject::VbaContainerStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath ) :
     OleStorageObject( rParent, rxStrg, rSysPath )
@@ -2054,11 +1903,11 @@ VbaContainerStorageObject::VbaContainerStorageObject( const ObjectBase& rParent,
 
 void VbaContainerStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, const OUString& rStrgPath, const OUString& rStrmName, const OUString& rSysFileName )
 {
-    if( rStrmName.equalsAscii( "f" ) )
+    if ( rStrmName == "f" )
         VbaFStreamObject( *this, rxStrm, rSysFileName, maFormData ).dump();
-    else if( rStrmName.equalsAscii( "o" ) )
+    else if ( rStrmName == "o" )
         VbaOStreamObject( *this, rxStrm, rSysFileName, maFormData ).dump();
-    else if( rStrmName.equalsAscii( "x" ) )
+    else if ( rStrmName == "x" )
         VbaXStreamObject( *this, rxStrm, rSysFileName, maFormData ).dump();
     else
         OleStorageObject::implDumpStream( rxStrm, rStrgPath, rStrmName, rSysFileName );
@@ -2080,7 +1929,7 @@ bool VbaContainerStorageObject::isFormStorage( const OUString& rStrgPath ) const
         if( (aId.getLength() == 2) && (aId[ 0 ] == '0') )
             aId = aId.copy( 1 );
         sal_Int32 nId = aId.toInt32();
-        if( (nId > 0) && (OUString::valueOf( nId ) == aId) )
+        if( (nId > 0) && (OUString::number( nId ) == aId) )
             for( VbaFormSiteInfoVector::const_iterator aIt = maFormData.maSiteInfos.begin(), aEnd = maFormData.maSiteInfos.end(); aIt != aEnd; ++aIt )
                 if( aIt->mnId == nId )
                     return true;
@@ -2088,15 +1937,15 @@ bool VbaContainerStorageObject::isFormStorage( const OUString& rStrgPath ) const
     return false;
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 VbaSharedData::VbaSharedData() :
     meTextEnc( RTL_TEXTENCODING_MS_1252 )
 {
 }
 
-bool VbaSharedData::isModuleStream( const ::rtl::OUString& rStrmName ) const
+bool VbaSharedData::isModuleStream( const OUString& rStrmName ) const
 {
     return maStrmOffsets.count( rStrmName ) > 0;
 }
@@ -2107,7 +1956,7 @@ sal_Int32 VbaSharedData::getStreamOffset( const OUString& rStrmName ) const
     return (aIt == maStrmOffsets.end()) ? 0 : aIt->second;
 }
 
-// ============================================================================
+
 
 VbaDirStreamObject::VbaDirStreamObject( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName, VbaSharedData& rVbaData ) :
@@ -2186,7 +2035,7 @@ void VbaDirStreamObject::implDumpRecordBody()
             dumpByteString( "description" );
         break;
         case 0x002B:
-            if( maCurrStream.getLength() > 0 )
+            if( !maCurrStream.isEmpty() )
                 mrVbaData.maStrmOffsets[ maCurrStream ] = mnCurrOffset;
             maCurrStream = OUString();
             mnCurrOffset = 0;
@@ -2246,7 +2095,7 @@ OUString VbaDirStreamObject::dumpByteStringWithLength( const String& rName )
     return dumpCharArray( rName, mxStrm->readInt32(), mrVbaData.meTextEnc );
 }
 
-// ============================================================================
+
 
 VbaModuleStreamObject::VbaModuleStreamObject(
         const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm,
@@ -2267,7 +2116,7 @@ void VbaModuleStreamObject::implDump()
     TextLineStreamObject( *this, xVbaStrm, mrVbaData.meTextEnc ).dump();
 }
 
-// ============================================================================
+
 
 VbaStorageObject::VbaStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath, VbaSharedData& rVbaData ) :
     OleStorageObject( rParent, rxStrg, rSysPath ),
@@ -2278,7 +2127,7 @@ VbaStorageObject::VbaStorageObject( const ObjectBase& rParent, const StorageRef&
 
 void VbaStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, const OUString& rStrgPath, const OUString& rStrmName, const OUString& rSysFileName )
 {
-    if( (rStrgPath.getLength() == 0) && rStrmName.equalsAscii( "dir" ) )
+    if( rStrgPath.isEmpty() && rStrmName == "dir" )
         VbaDirStreamObject( *this, rxStrm, rSysFileName, mrVbaData ).dump();
     else if( mrVbaData.isModuleStream( rStrmName ) )
         VbaModuleStreamObject( *this, rxStrm, rSysFileName, mrVbaData, mrVbaData.getStreamOffset( rStrmName ) ).dump();
@@ -2286,7 +2135,7 @@ void VbaStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, 
         OleStorageObject::implDumpStream( rxStrm, rStrgPath, rStrmName, rSysFileName );
 }
 
-// ============================================================================
+
 
 VbaFormStorageObject::VbaFormStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath, VbaSharedData& rVbaData ) :
     VbaContainerStorageObject( rParent, rxStrg, rSysPath ),
@@ -2296,13 +2145,13 @@ VbaFormStorageObject::VbaFormStorageObject( const ObjectBase& rParent, const Sto
 
 void VbaFormStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, const OUString& rStrgPath, const OUString& rStrmName, const OUString& rSysFileName )
 {
-    if( rStrmName.equalsAscii( "\003VBFrame" ) )
+    if ( rStrmName == "\003VBFrame" )
         TextLineStreamObject( *this, rxStrm, mrVbaData.meTextEnc, rSysFileName ).dump();
     else
         VbaContainerStorageObject::implDumpStream( rxStrm, rStrgPath, rStrmName, rSysFileName );
 }
 
-// ============================================================================
+
 
 VbaProjectStorageObject::VbaProjectStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath ) :
     OleStorageObject( rParent, rxStrg, rSysPath )
@@ -2312,7 +2161,7 @@ VbaProjectStorageObject::VbaProjectStorageObject( const ObjectBase& rParent, con
 
 void VbaProjectStorageObject::implDumpStream( const Reference< XInputStream >& rxStrm, const OUString& rStrgPath, const OUString& rStrmName, const OUString& rSysFileName )
 {
-    if( (rStrgPath.getLength() == 0) && rStrmName.equalsAscii( "PROJECT" ) )
+    if( rStrgPath.isEmpty() && rStrmName == "PROJECT" )
         TextLineStreamObject( *this, rxStrm, maVbaData.meTextEnc, rSysFileName ).dump();
     else
         OleStorageObject::implDumpStream( rxStrm, rStrgPath, rStrmName, rSysFileName );
@@ -2320,14 +2169,14 @@ void VbaProjectStorageObject::implDumpStream( const Reference< XInputStream >& r
 
 void VbaProjectStorageObject::implDumpStorage( const StorageRef& rxStrg, const OUString& rStrgPath, const OUString& rSysPath )
 {
-    if( rStrgPath.equalsAscii( "VBA" ) )
+    if ( rStrgPath == "VBA" )
         VbaStorageObject( *this, rxStrg, rSysPath, maVbaData ).dump();
     else
         VbaFormStorageObject( *this, rxStrg, rSysPath, maVbaData ).dump();
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 ActiveXStorageObject::ActiveXStorageObject( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath ) :
     VbaContainerStorageObject( rParent, rxStrg, rSysPath )
@@ -2339,10 +2188,12 @@ void ActiveXStorageObject::implDumpBaseStream( const BinaryInputStreamRef& rxStr
     FormControlStreamObject( *this, rxStrm, rSysFileName ).dump();
 }
 
-// ============================================================================
-// ============================================================================
+
+
 
 } // namespace dump
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

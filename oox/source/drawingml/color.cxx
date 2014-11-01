@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/color.hxx"
 #include <algorithm>
@@ -30,12 +26,14 @@
 #include "oox/token/namespaces.hxx"
 #include "oox/token/tokens.hxx"
 
-using ::rtl::OUString;
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
+
 
 namespace {
 
@@ -50,7 +48,7 @@ struct PresetColorsPool
     explicit            PresetColorsPool();
 };
 
-// ----------------------------------------------------------------------------
+
 
 PresetColorsPool::PresetColorsPool() :
     maDmlColors( static_cast< size_t >( XML_TOKEN_COUNT ), API_RGB_TRANSPARENT ),
@@ -149,16 +147,16 @@ PresetColorsPool::PresetColorsPool() :
         maVmlColors[ static_cast< size_t >( pnEntry[ 0 ] ) ] = pnEntry[ 1 ];
 }
 
-// ----------------------------------------------------------------------------
+
 
 struct StaticPresetColorsPool : public ::rtl::Static< PresetColorsPool, StaticPresetColorsPool > {};
 
-// ----------------------------------------------------------------------------
+
 
 const double DEC_GAMMA          = 2.3;
 const double INC_GAMMA          = 1.0 / DEC_GAMMA;
 
-// ----------------------------------------------------------------------------
+
 
 inline void lclRgbToRgbComponents( sal_Int32& ornR, sal_Int32& ornG, sal_Int32& ornB, sal_Int32 nRgb )
 {
@@ -208,7 +206,7 @@ void lclOffValue( sal_Int32& ornValue, sal_Int32 nOff, sal_Int32 nMax = MAX_PERC
 
 } // namespace
 
-// ============================================================================
+
 
 Color::Color() :
     meMode( COLOR_UNUSED ),
@@ -223,7 +221,7 @@ Color::~Color()
 {
 }
 
-/*static*/ sal_Int32 Color::getDmlPresetColor( sal_Int32 nToken, sal_Int32 nDefaultRgb )
+sal_Int32 Color::getDmlPresetColor( sal_Int32 nToken, sal_Int32 nDefaultRgb )
 {
     /*  Do not pass nDefaultRgb to ContainerHelper::getVectorElement(), to be
         able to catch the existing vector entries without corresponding XML
@@ -232,7 +230,7 @@ Color::~Color()
     return (nRgbValue >= 0) ? nRgbValue : nDefaultRgb;
 }
 
-/*static*/ sal_Int32 Color::getVmlPresetColor( sal_Int32 nToken, sal_Int32 nDefaultRgb )
+sal_Int32 Color::getVmlPresetColor( sal_Int32 nToken, sal_Int32 nDefaultRgb )
 {
     /*  Do not pass nDefaultRgb to ContainerHelper::getVectorElement(), to be
         able to catch the existing vector entries without corresponding XML
@@ -318,6 +316,10 @@ void Color::addTransformation( sal_Int32 nElement, sal_Int32 nValue )
         case XML_alphaOff:  lclOffValue( mnAlpha, nValue ); break;
         default:            maTransforms.push_back( Transformation( nToken, nValue ) );
     }
+    sal_Int32 nSize = maInteropTransformations.getLength();
+    maInteropTransformations.realloc(nSize + 1);
+    maInteropTransformations[nSize].Name = getColorTransformationName( nToken );
+    maInteropTransformations[nSize].Value = ::com::sun::star::uno::Any( nValue );
 }
 
 void Color::addChartTintTransformation( double fTint )
@@ -338,7 +340,113 @@ void Color::addExcelTintTransformation( double fTint )
 void Color::clearTransformations()
 {
     maTransforms.clear();
+    maInteropTransformations.realloc(0);
     clearTransparence();
+}
+
+::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue > Color::getTransformations() const
+{
+    return maInteropTransformations;
+}
+
+OUString Color::getColorTransformationName( sal_Int32 nElement )
+{
+    switch( nElement )
+    {
+        case XML_red:       return OUString( "red" );
+        case XML_redMod:    return OUString( "redMod" );
+        case XML_redOff:    return OUString( "redOff" );
+        case XML_green:     return OUString( "green" );
+        case XML_greenMod:  return OUString( "greenMod" );
+        case XML_greenOff:  return OUString( "greenOff" );
+        case XML_blue:      return OUString( "blue" );
+        case XML_blueMod:   return OUString( "blueMod" );
+        case XML_blueOff:   return OUString( "blueOff" );
+        case XML_alpha:     return OUString( "alpha" );
+        case XML_alphaMod:  return OUString( "alphaMod" );
+        case XML_alphaOff:  return OUString( "alphaOff" );
+        case XML_hue:       return OUString( "hue" );
+        case XML_hueMod:    return OUString( "hueMod" );
+        case XML_hueOff:    return OUString( "hueOff" );
+        case XML_sat:       return OUString( "sat" );
+        case XML_satMod:    return OUString( "satMod" );
+        case XML_satOff:    return OUString( "satOff" );
+        case XML_lum:       return OUString( "lum" );
+        case XML_lumMod:    return OUString( "lumMod" );
+        case XML_lumOff:    return OUString( "lumOff" );
+        case XML_shade:     return OUString( "shade" );
+        case XML_tint:      return OUString( "tint" );
+        case XML_gray:      return OUString( "gray" );
+        case XML_comp:      return OUString( "comp" );
+        case XML_inv:       return OUString( "inv" );
+        case XML_gamma:     return OUString( "gamma" );
+        case XML_invGamma:  return OUString( "invGamma" );
+    }
+    SAL_WARN( "oox.drawingml", "Color::getColorTransformationName - unexpected transformation type" );
+    return OUString();
+}
+
+sal_Int32 Color::getColorTransformationToken( const OUString& sName )
+{
+    if( sName == "red" )
+        return XML_red;
+    else if( sName == "redMod" )
+        return XML_redMod;
+    else if( sName == "redOff" )
+        return XML_redOff;
+    else if( sName == "green" )
+        return XML_green;
+    else if( sName == "greenMod" )
+        return XML_greenMod;
+    else if( sName == "greenOff" )
+        return XML_greenOff;
+    else if( sName == "blue" )
+        return XML_blue;
+    else if( sName == "blueMod" )
+        return XML_blueMod;
+    else if( sName == "blueOff" )
+        return XML_blueOff;
+    else if( sName == "alpha" )
+        return XML_alpha;
+    else if( sName == "alphaMod" )
+        return XML_alphaMod;
+    else if( sName == "alphaOff" )
+        return XML_alphaOff;
+    else if( sName == "hue" )
+        return XML_hue;
+    else if( sName == "hueMod" )
+        return XML_hueMod;
+    else if( sName == "hueOff" )
+        return XML_hueOff;
+    else if( sName == "sat" )
+        return XML_sat;
+    else if( sName == "satMod" )
+        return XML_satMod;
+    else if( sName == "satOff" )
+        return XML_satOff;
+    else if( sName == "lum" )
+        return XML_lum;
+    else if( sName == "lumMod" )
+        return XML_lumMod;
+    else if( sName == "lumOff" )
+        return XML_lumOff;
+    else if( sName == "shade" )
+        return XML_shade;
+    else if( sName == "tint" )
+        return XML_tint;
+    else if( sName == "gray" )
+        return XML_gray;
+    else if( sName == "comp" )
+        return XML_comp;
+    else if( sName == "inv" )
+        return XML_inv;
+    else if( sName == "gamma" )
+        return XML_gamma;
+    else if( sName == "invGamma" )
+        return XML_invGamma;
+
+    SAL_WARN( "oox.drawingml", "Color::getColorTransformationToken - unexpected transformation type" );
+    return XML_TOKEN_INVALID;
 }
 
 void Color::clearTransparence()
@@ -377,6 +485,7 @@ sal_Int32 Color::getColor( const GraphicHelper& rGraphicHelper, sal_Int32 nPhClr
     {
         for( TransformVec::const_iterator aIt = maTransforms.begin(), aEnd = maTransforms.end(); aIt != aEnd; ++aIt )
         {
+        OSL_ASSERT((aIt->mnToken & sal_Int32(0xFFFF0000))==0);
             switch( aIt->mnToken )
             {
                 case XML_red:       toCrgb(); lclSetValue( mnC1, aIt->mnValue );    break;
@@ -587,7 +696,7 @@ void Color::toRgb() const
         }
         break;
         default:
-            OSL_ENSURE( false, "Color::toRgb - unexpected color mode" );
+            OSL_FAIL( "Color::toRgb - unexpected color mode" );
     }
 }
 
@@ -608,7 +717,7 @@ void Color::toCrgb() const
             // nothing to do
         break;
         default:
-            OSL_ENSURE( false, "Color::toCrgb - unexpected color mode" );
+            OSL_FAIL( "Color::toCrgb - unexpected color mode" );
     }
 }
 
@@ -629,12 +738,22 @@ void Color::toHsl() const
             double fMax = ::std::max( ::std::max( fR, fG ), fB );
             double fD = fMax - fMin;
 
+            using ::rtl::math::approxEqual;
+
             // hue: 0deg = red, 120deg = green, 240deg = blue
             if( fD == 0.0 )         // black/gray/white
                 mnC1 = 0;
-            else if( fMax == fR )   // magenta...red...yellow
+#if SUPD == 310
+            else if( approxEqual(fMax, fR) )   // magenta...red...yellow
+#else	// SUPD == 310
+            else if( approxEqual(fMax, fR, 64) )   // magenta...red...yellow
+#endif	// SUPD == 310
                 mnC1 = static_cast< sal_Int32 >( ((fG - fB) / fD * 60.0 + 360.0) * PER_DEGREE + 0.5 ) % MAX_DEGREE;
-            else if( fMax == fG )   // yellow...green...cyan
+#if SUPD == 310
+            else if( approxEqual(fMax, fG) )   // yellow...green...cyan
+#else	// SUPD == 310
+            else if( approxEqual(fMax, fG, 64) )   // yellow...green...cyan
+#endif	// SUPD == 310
                 mnC1 = static_cast< sal_Int32 >( ((fB - fR) / fD * 60.0 + 120.0) * PER_DEGREE + 0.5 );
             else                    // cyan...blue...magenta
                 mnC1 = static_cast< sal_Int32 >( ((fR - fG) / fD * 60.0 + 240.0) * PER_DEGREE + 0.5 );
@@ -655,12 +774,13 @@ void Color::toHsl() const
             // nothing to do
         break;
         default:
-            OSL_ENSURE( false, "Color::toHsl - unexpected color mode" );
+            OSL_FAIL( "Color::toHsl - unexpected color mode" );
     }
 }
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

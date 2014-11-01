@@ -1,36 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_CHART_SERIESCONTEXT_HXX
+#define INCLUDED_OOX_DRAWINGML_CHART_SERIESCONTEXT_HXX
 
-
-#ifndef OOX_DRAWINGML_CHART_SERIESCONTEXT_HXX
-#define OOX_DRAWINGML_CHART_SERIESCONTEXT_HXX
-
-#include "oox/drawingml/chart/chartcontextbase.hxx"
+#include <oox/drawingml/chart/chartcontextbase.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 struct DataLabelModel;
 
@@ -42,11 +38,11 @@ public:
     explicit            DataLabelContext( ::oox::core::ContextHandler2Helper& rParent, DataLabelModel& rModel );
     virtual             ~DataLabelContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
-    virtual void        onCharacters( const ::rtl::OUString& rChars );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
+    virtual void        onCharacters( const OUString& rChars ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct DataLabelsModel;
 
@@ -58,11 +54,11 @@ public:
     explicit            DataLabelsContext( ::oox::core::ContextHandler2Helper& rParent, DataLabelsModel& rModel );
     virtual             ~DataLabelsContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
-    virtual void        onCharacters( const ::rtl::OUString& rChars );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
+    virtual void        onCharacters( const OUString& rChars ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct PictureOptionsModel;
 
@@ -74,10 +70,10 @@ public:
     explicit            PictureOptionsContext( ::oox::core::ContextHandler2Helper& rParent, PictureOptionsModel& rModel );
     virtual             ~PictureOptionsContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct ErrorBarModel;
 
@@ -89,10 +85,10 @@ public:
     explicit            ErrorBarContext( ::oox::core::ContextHandler2Helper& rParent, ErrorBarModel& rModel );
     virtual             ~ErrorBarContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct TrendlineLabelModel;
 
@@ -104,10 +100,10 @@ public:
     explicit            TrendlineLabelContext( ::oox::core::ContextHandler2Helper& rParent, TrendlineLabelModel& rModel );
     virtual             ~TrendlineLabelContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct TrendlineModel;
 
@@ -119,11 +115,11 @@ public:
     explicit            TrendlineContext( ::oox::core::ContextHandler2Helper& rParent, TrendlineModel& rModel );
     virtual             ~TrendlineContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
-    virtual void        onCharacters( const ::rtl::OUString& rChars );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
+    virtual void        onCharacters( const OUString& rChars ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct DataPointModel;
 
@@ -135,10 +131,10 @@ public:
     explicit            DataPointContext( ::oox::core::ContextHandler2Helper& rParent, DataPointModel& rModel );
     virtual             ~DataPointContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct SeriesModel;
 
@@ -150,10 +146,10 @@ public:
     explicit            SeriesContextBase( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~SeriesContextBase();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for area chart types (c:ser element).
  */
@@ -163,10 +159,10 @@ public:
     explicit            AreaSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~AreaSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for bar chart types (c:ser element).
  */
@@ -176,10 +172,10 @@ public:
     explicit            BarSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~BarSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for bubble chart types (c:ser element).
  */
@@ -189,10 +185,10 @@ public:
     explicit            BubbleSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~BubbleSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for line and stock chart types (c:ser
     element).
@@ -203,10 +199,10 @@ public:
     explicit            LineSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~LineSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for pie and doughnut chart types (c:ser
     element).
@@ -217,10 +213,10 @@ public:
     explicit            PieSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~PieSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for radar chart types (c:ser element).
  */
@@ -230,10 +226,10 @@ public:
     explicit            RadarSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~RadarSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for scatter chart types (c:ser element).
  */
@@ -243,10 +239,10 @@ public:
     explicit            ScatterSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~ScatterSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for a data series context for scatter chart types (c:ser element).
  */
@@ -256,13 +252,15 @@ public:
     explicit            SurfaceSeriesContext( ::oox::core::ContextHandler2Helper& rParent, SeriesModel& rModel );
     virtual             ~SurfaceSeriesContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

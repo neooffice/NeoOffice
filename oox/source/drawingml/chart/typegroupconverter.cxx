@@ -1,29 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/typegroupconverter.hxx"
 
 #include <com/sun/star/chart/DataLabelPlacement.hpp>
+#if SUPD != 310
+#include <com/sun/star/chart2/CartesianCoordinateSystem2d.hpp>
+#include <com/sun/star/chart2/CartesianCoordinateSystem3d.hpp>
+#include <com/sun/star/chart2/PolarCoordinateSystem2d.hpp>
+#include <com/sun/star/chart2/PolarCoordinateSystem3d.hpp>
+#endif	// SUPD != 310
 #include <com/sun/star/chart2/CurveStyle.hpp>
 #include <com/sun/star/chart2/DataPointGeometry3D.hpp>
 #include <com/sun/star/chart2/StackingDirection.hpp>
@@ -42,16 +44,14 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -102,7 +102,7 @@ const TypeGroupInfo& lclGetTypeInfoFromTypeId( TypeId eTypeId )
 
 } // namespace
 
-// ============================================================================
+
 
 UpDownBarsConverter::UpDownBarsConverter( const ConverterRoot& rParent, UpDownBarsModel& rModel ) :
     ConverterBase< UpDownBarsModel >( rParent, rModel )
@@ -113,12 +113,20 @@ UpDownBarsConverter::~UpDownBarsConverter()
 {
 }
 
+#if SUPD == 310
+void UpDownBarsConverter::convertFromModel( const css::uno::Reference< XChartType >& rxChartType )
+#else	// SUPD == 310
 void UpDownBarsConverter::convertFromModel( const Reference< XChartType >& rxChartType )
+#endif	// SUPD == 310
 {
     PropertySet aTypeProp( rxChartType );
 
     // upbar format
+#if SUPD == 310
+    css::uno::Reference< XPropertySet > xWhitePropSet;
+#else	// SUPD == 310
     Reference< XPropertySet > xWhitePropSet;
+#endif	// SUPD == 310
     if( aTypeProp.getProperty( xWhitePropSet, PROP_WhiteDay ) )
     {
         PropertySet aPropSet( xWhitePropSet );
@@ -126,7 +134,11 @@ void UpDownBarsConverter::convertFromModel( const Reference< XChartType >& rxCha
     }
 
     // downbar format
+#if SUPD == 310
+    css::uno::Reference< XPropertySet > xBlackPropSet;
+#else	// SUPD == 310
     Reference< XPropertySet > xBlackPropSet;
+#endif	// SUPD == 310
     if( aTypeProp.getProperty( xBlackPropSet, PROP_BlackDay ) )
     {
         PropertySet aPropSet( xBlackPropSet );
@@ -134,7 +146,7 @@ void UpDownBarsConverter::convertFromModel( const Reference< XChartType >& rxCha
     }
 }
 
-// ============================================================================
+
 
 TypeGroupConverter::TypeGroupConverter( const ConverterRoot& rParent, TypeGroupModel& rModel ) :
     ConverterBase< TypeGroupModel >( rParent, rModel ),
@@ -160,7 +172,7 @@ TypeGroupConverter::TypeGroupConverter( const ConverterRoot& rParent, TypeGroupM
         case C_TOKEN( stockChart ):     ENSURE_AXESCOUNT( 2, 2 ); eTypeId = TYPEID_STOCK;     mb3dChart = false;  break;
         case C_TOKEN( surface3DChart ): ENSURE_AXESCOUNT( 3, 3 ); eTypeId = TYPEID_SURFACE;   mb3dChart = true;   break;
         case C_TOKEN( surfaceChart ):   ENSURE_AXESCOUNT( 2, 3 ); eTypeId = TYPEID_SURFACE;   mb3dChart = true;   break;    // 3D bar chart from all surface charts
-        default:    OSL_ENSURE( false, "TypeGroupConverter::TypeGroupConverter - unknown chart type" );
+        default:    OSL_FAIL( "TypeGroupConverter::TypeGroupConverter - unknown chart type" );
 #undef ENSURE_AXESCOUNT
     }
 
@@ -242,27 +254,51 @@ OUString TypeGroupConverter::getSingleSeriesTitle() const
     return aSeriesTitle;
 }
 
+#if SUPD == 310
+css::uno::Reference< XCoordinateSystem > TypeGroupConverter::createCoordinateSystem()
+#else	// SUPD == 310
 Reference< XCoordinateSystem > TypeGroupConverter::createCoordinateSystem()
+#endif	// SUPD == 310
 {
+    // create the coordinate system object
+#if SUPD == 310
     // find service name for coordinate system
     OUString aServiceName;
     if( maTypeInfo.mbPolarCoordSystem )
     {
         if( mb3dChart )
-            aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.PolarCoordinateSystem3d" );
+            aServiceName = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.PolarCoordinateSystem3d" ) );
         else
-            aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.PolarCoordinateSystem2d" );
+            aServiceName = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.PolarCoordinateSystem2d" ) );
     }
     else
     {
         if( mb3dChart )
-            aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.CartesianCoordinateSystem3d" );
+            aServiceName = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.CartesianCoordinateSystem3d" ) );
         else
-            aServiceName = CREATE_OUSTRING( "com.sun.star.chart2.CartesianCoordinateSystem2d" );
+            aServiceName = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.chart2.CartesianCoordinateSystem2d" ) );
     }
 
     // create the coordinate system object
-    Reference< XCoordinateSystem > xCoordSystem( createInstance( aServiceName ), UNO_QUERY );
+    css::uno::Reference< XCoordinateSystem > xCoordSystem( createInstance( aServiceName ), UNO_QUERY );
+#else	// SUPD == 310
+    Reference< css::uno::XComponentContext > xContext = getComponentContext();
+    Reference< XCoordinateSystem > xCoordSystem;
+    if( maTypeInfo.mbPolarCoordSystem )
+    {
+        if( mb3dChart )
+            xCoordSystem = css::chart2::PolarCoordinateSystem3d::create(xContext);
+        else
+            xCoordSystem = css::chart2::PolarCoordinateSystem2d::create(xContext);
+    }
+    else
+    {
+        if( mb3dChart )
+            xCoordSystem = css::chart2::CartesianCoordinateSystem3d::create(xContext);
+        else
+            xCoordSystem = css::chart2::CartesianCoordinateSystem2d::create(xContext);
+    }
+#endif	// SUPD == 310
 
     // swap X and Y axis
     if( maTypeInfo.mbSwappedAxesSet )
@@ -274,9 +310,18 @@ Reference< XCoordinateSystem > TypeGroupConverter::createCoordinateSystem()
     return xCoordSystem;
 }
 
+#if SUPD == 310
+css::uno::Reference< XLabeledDataSequence > TypeGroupConverter::createCategorySequence()
+#else	// SUPD == 310
 Reference< XLabeledDataSequence > TypeGroupConverter::createCategorySequence()
+#endif	// SUPD == 310
 {
+    sal_Int32 nMaxValues = 0;
+#if SUPD == 310
+    css::uno::Reference< XLabeledDataSequence > xLabeledSeq;
+#else	// SUPD == 310
     Reference< XLabeledDataSequence > xLabeledSeq;
+#endif	// SUPD == 310
     /*  Find first existing category sequence. The bahaviour of Excel 2007 is
         different to Excel 2003, which always used the category sequence of the
         first series, even if it was empty. */
@@ -285,21 +330,48 @@ Reference< XLabeledDataSequence > TypeGroupConverter::createCategorySequence()
         if( (*aIt)->maSources.has( SeriesModel::CATEGORIES ) )
         {
             SeriesConverter aSeriesConv( *this, **aIt );
-            xLabeledSeq = aSeriesConv.createCategorySequence( CREATE_OUSTRING( "categories" ) );
+            xLabeledSeq = aSeriesConv.createCategorySequence( "categories" );
         }
+        else if( nMaxValues <= 0 && (*aIt)->maSources.has( SeriesModel::VALUES ) )
+        {
+            DataSourceModel *pValues = (*aIt)->maSources.get( SeriesModel::VALUES ).get();
+            if( pValues->mxDataSeq.is() )
+                nMaxValues = pValues->mxDataSeq.get()->maData.size();
+        }
+    }
+    /* n#839727 Create Category Sequence when none are found */
+    if( !xLabeledSeq.is() && mrModel.maSeries.size() > 0 ) {
+        if( nMaxValues < 0 )
+            nMaxValues = 2;
+        SeriesModel &aModel = mrModel.maSeries.create();
+        DataSourceModel &aSrc = aModel.maSources.create( SeriesModel::CATEGORIES );
+        DataSequenceModel &aSeq = aSrc.mxDataSeq.create();
+        for( sal_Int32 i = 0; i < nMaxValues; i++ )
+            aSeq.maData[ i ] <<= OUString::number( i + 1 );
+        SeriesConverter aSeriesConv( *this,  aModel );
+        xLabeledSeq = aSeriesConv.createCategorySequence( "categories" );
     }
     return xLabeledSeq;
 }
 
+#if SUPD == 310
+void TypeGroupConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram,
+        const css::uno::Reference< XCoordinateSystem >& rxCoordSystem,
+#else	// SUPD == 310
 void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagram,
         const Reference< XCoordinateSystem >& rxCoordSystem,
+#endif	// SUPD == 310
         sal_Int32 nAxesSetIdx, bool bSupportsVaryColorsByPoint )
 {
     try
     {
         // create the chart type object
         OUString aService = OUString::createFromAscii( maTypeInfo.mpcServiceName );
+#if SUPD == 310
+        css::uno::Reference< XChartType > xChartType( createInstance( aService ), UNO_QUERY_THROW );
+#else	// SUPD == 310
         Reference< XChartType > xChartType( createInstance( aService ), UNO_QUERY_THROW );
+#endif	// SUPD == 310
 
         // additional properties
         PropertySet aDiaProp( rxDiagram );
@@ -352,12 +424,21 @@ void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
         if( maTypeInfo.meTypeId == TYPEID_STOCK )
         {
             // create the data series object
-            Reference< XDataSeries > xDataSeries( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.DataSeries" ) ), UNO_QUERY );
+#if SUPD == 310
+            css::uno::Reference< XDataSeries > xDataSeries( createInstance( "com.sun.star.chart2.DataSeries" ), UNO_QUERY );
+            css::uno::Reference< XDataSink > xDataSink( xDataSeries, UNO_QUERY );
+#else	// SUPD == 310
+            Reference< XDataSeries > xDataSeries( createInstance( "com.sun.star.chart2.DataSeries" ), UNO_QUERY );
             Reference< XDataSink > xDataSink( xDataSeries, UNO_QUERY );
+#endif	// SUPD == 310
             if( xDataSink.is() )
             {
                 // create a list of data sequences from all series
+#if SUPD == 310
+                ::std::vector< css::uno::Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#else	// SUPD == 310
                 ::std::vector< Reference< XLabeledDataSequence > > aLabeledSeqVec;
+#endif	// SUPD == 310
                 OSL_ENSURE( aSeries.size() >= 3, "TypeGroupConverter::convertFromModel - too few stock chart series" );
                 int nRoleIdx = (aSeries.size() == 3) ? 1 : 0;
                 for( SeriesConvVector::iterator aIt = aSeries.begin(), aEnd = aSeries.end(); (nRoleIdx < 4) && (aIt != aEnd); ++nRoleIdx, ++aIt )
@@ -366,12 +447,16 @@ void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
                     OUString aRole;
                     switch( nRoleIdx )
                     {
-                        case 0: aRole = CREATE_OUSTRING( "values-first" );  break;
-                        case 1: aRole = CREATE_OUSTRING( "values-max" );    break;
-                        case 2: aRole = CREATE_OUSTRING( "values-min" );    break;
-                        case 3: aRole = CREATE_OUSTRING( "values-last" );   break;
+                        case 0: aRole = "values-first";  break;
+                        case 1: aRole = "values-max";    break;
+                        case 2: aRole = "values-min";    break;
+                        case 3: aRole = "values-last";   break;
                     }
+#if SUPD == 310
+                    css::uno::Reference< XLabeledDataSequence > xDataSeq = (*aIt)->createValueSequence( aRole );
+#else	// SUPD == 310
                     Reference< XLabeledDataSequence > xDataSeq = (*aIt)->createValueSequence( aRole );
+#endif	// SUPD == 310
                     if( xDataSeq.is() )
                         aLabeledSeqVec.push_back( xDataSeq );
                 }
@@ -407,7 +492,11 @@ void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
             for( SeriesConvVector::iterator aIt = aSeries.begin(), aEnd = aSeries.end(); aIt != aEnd; ++aIt )
             {
                 SeriesConverter& rSeriesConv = **aIt;
+#if SUPD == 310
+                css::uno::Reference< XDataSeries > xDataSeries = rSeriesConv.createDataSeries( *this, bVaryColorsByPoint );
+#else	// SUPD == 310
                 Reference< XDataSeries > xDataSeries = rSeriesConv.createDataSeries( *this, bVaryColorsByPoint );
+#endif	// SUPD == 310
                 insertDataSeries( xChartType, xDataSeries, nAxesSetIdx );
 
                 /*  Excel does not use the value of the c:smooth element of the
@@ -424,7 +513,11 @@ void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
         }
 
         // add chart type object to coordinate system
+#if SUPD == 310
+        css::uno::Reference< XChartTypeContainer > xChartTypeCont( rxCoordSystem, UNO_QUERY_THROW );
+#else	// SUPD == 310
         Reference< XChartTypeContainer > xChartTypeCont( rxCoordSystem, UNO_QUERY_THROW );
+#endif	// SUPD == 310
         xChartTypeCont->addChartType( xChartType );
 
         // set existence of bar connector lines at diagram (only in stacked 2D bar charts)
@@ -433,11 +526,12 @@ void TypeGroupConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "TypeGroupConverter::convertFromModel - cannot add chart type" );
+        OSL_FAIL( "TypeGroupConverter::convertFromModel - cannot add chart type" );
     }
 }
 
-void TypeGroupConverter::convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSymbol, sal_Int32 nOoxSize ) const
+void TypeGroupConverter::convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSymbol, sal_Int32 nOoxSize,
+       ModelRef< Shape > xShapeProps ) const
 {
     if( !isSeriesFrameFormat() )
     {
@@ -464,6 +558,12 @@ void TypeGroupConverter::convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSym
         // symbol size (points in OOXML, 1/100 mm in Chart2)
         sal_Int32 nSize = static_cast< sal_Int32 >( nOoxSize * (2540.0 / 72.0) + 0.5 );
         aSymbol.Size.Width = aSymbol.Size.Height = nSize;
+
+        if(xShapeProps.is())
+        {
+            Color aFillColor = xShapeProps->getFillProperties().maFillColor;
+            aSymbol.FillColor = aFillColor.getColor(getFilter().getGraphicHelper());
+        }
 
         // set the property
         rPropSet.setProperty( PROP_Symbol, aSymbol );
@@ -495,7 +595,7 @@ void TypeGroupConverter::convertBarGeometry( PropertySet& rPropSet, sal_Int32 nO
             case XML_cylinder:      nGeom3d = cssc::DataPointGeometry3D::CYLINDER;  break;
             case XML_pyramid:       nGeom3d = cssc::DataPointGeometry3D::PYRAMID;   break;
             case XML_pyramidToMax:  nGeom3d = cssc::DataPointGeometry3D::PYRAMID;   break;
-            default:                OSL_ENSURE( false, "TypeGroupConverter::convertBarGeometry - unknown 3D bar shape type" );
+            default:                OSL_FAIL( "TypeGroupConverter::convertBarGeometry - unknown 3D bar shape type" );
         }
         rPropSet.setProperty( PROP_Geometry3D, nGeom3d );
     }
@@ -523,7 +623,11 @@ void TypeGroupConverter::convertPieExplosion( PropertySet& rPropSet, sal_Int32 n
 
 // private --------------------------------------------------------------------
 
+#if SUPD == 310
+void TypeGroupConverter::insertDataSeries( const css::uno::Reference< XChartType >& rxChartType, const css::uno::Reference< XDataSeries >& rxSeries, sal_Int32 nAxesSetIdx )
+#else	// SUPD == 310
 void TypeGroupConverter::insertDataSeries( const Reference< XChartType >& rxChartType, const Reference< XDataSeries >& rxSeries, sal_Int32 nAxesSetIdx )
+#endif	// SUPD == 310
 {
     if( rxSeries.is() )
     {
@@ -545,18 +649,24 @@ void TypeGroupConverter::insertDataSeries( const Reference< XChartType >& rxChar
         // insert series into container
         try
         {
+#if SUPD == 310
+            css::uno::Reference< XDataSeriesContainer > xSeriesCont( rxChartType, UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XDataSeriesContainer > xSeriesCont( rxChartType, UNO_QUERY_THROW );
+#endif	// SUPD == 310
             xSeriesCont->addDataSeries( rxSeries );
         }
         catch( Exception& )
         {
-            OSL_ENSURE( false, "TypeGroupConverter::insertDataSeries - cannot add data series" );
+            OSL_FAIL( "TypeGroupConverter::insertDataSeries - cannot add data series" );
         }
     }
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

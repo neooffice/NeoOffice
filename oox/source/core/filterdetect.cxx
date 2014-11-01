@@ -1,59 +1,67 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/core/filterdetect.hxx"
 
+#include <com/sun/star/io/TempFile.hpp>
 #include <com/sun/star/io/XStream.hpp>
 #include <comphelper/docpasswordhelper.hxx>
+#if SUPD == 310
 #include <comphelper/mediadescriptor.hxx>
-#include <openssl/evp.h>
-#include <rtl/digest.h>
+#else	// SUPD == 310
+#include <unotools/mediadescriptor.hxx>
+#include <cppuhelper/supportsservice.hxx>
+#endif	// SUPD == 310
+
 #include "oox/core/fastparser.hxx"
 #include "oox/helper/attributelist.hxx"
-#include "oox/helper/binaryinputstream.hxx"
-#include "oox/helper/binaryoutputstream.hxx"
 #include "oox/helper/zipstorage.hxx"
 #include "oox/ole/olestorage.hxx"
 
+#include "oox/crypto/DocumentDecryption.hxx"
+
+#include <com/sun/star/uri/UriReferenceFactory.hpp>
+
+#include <services.hxx>
+
 namespace oox {
 namespace core {
-
-// ============================================================================
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
+using namespace ::com::sun::star::uri;
 
-using ::comphelper::MediaDescriptor;
-using ::comphelper::SequenceAsHashMap;
-using ::rtl::OUString;
+#if SUPD == 310
+using comphelper::MediaDescriptor;
+#else	// SUPD == 310
+using utl::MediaDescriptor;
+#endif	// SUPD == 310
+using comphelper::SequenceAsHashMap;
+using comphelper::IDocPasswordVerifier;
+using comphelper::DocPasswordVerifierResult;
 
-// ============================================================================
-
-FilterDetectDocHandler::FilterDetectDocHandler( OUString& rFilterName ) :
-    mrFilterName( rFilterName )
+FilterDetectDocHandler::FilterDetectDocHandler( const  Reference< XComponentContext >& rxContext, OUString& rFilterName ) :
+    mrFilterName( rFilterName ),
+    mxContext( rxContext )
 {
     maContextStack.reserve( 2 );
 }
@@ -63,23 +71,39 @@ FilterDetectDocHandler::~FilterDetectDocHandler()
 }
 
 void SAL_CALL FilterDetectDocHandler::startDocument()
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
 void SAL_CALL FilterDetectDocHandler::endDocument()
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
 void SAL_CALL FilterDetectDocHandler::setDocumentLocator( const Reference<XLocator>& /*xLocator*/ )
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
 void SAL_CALL FilterDetectDocHandler::startFastElement(
         sal_Int32 nElement, const Reference< XFastAttributeList >& rAttribs )
+#if SUPD == 310
     throw (SAXException,RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException,RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     AttributeList aAttribs( rAttribs );
     switch ( nElement )
@@ -109,37 +133,61 @@ void SAL_CALL FilterDetectDocHandler::startFastElement(
 
 void SAL_CALL FilterDetectDocHandler::startUnknownElement(
     const OUString& /*Namespace*/, const OUString& /*Name*/, const Reference<XFastAttributeList>& /*Attribs*/ )
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
 void SAL_CALL FilterDetectDocHandler::endFastElement( sal_Int32 /*nElement*/ )
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     maContextStack.pop_back();
 }
 
 void SAL_CALL FilterDetectDocHandler::endUnknownElement(
+#if SUPD == 310
     const OUString& /*Namespace*/, const OUString& /*Name*/ ) throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    const OUString& /*Namespace*/, const OUString& /*Name*/ ) throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
 Reference<XFastContextHandler> SAL_CALL FilterDetectDocHandler::createFastChildContext(
     sal_Int32 /*Element*/, const Reference<XFastAttributeList>& /*Attribs*/ )
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return this;
 }
 
 Reference<XFastContextHandler> SAL_CALL FilterDetectDocHandler::createUnknownChildContext(
     const OUString& /*Namespace*/, const OUString& /*Name*/, const Reference<XFastAttributeList>& /*Attribs*/)
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return this;
 }
 
 void SAL_CALL FilterDetectDocHandler::characters( const OUString& /*aChars*/ )
+#if SUPD == 310
     throw (SAXException, RuntimeException)
+#else	// SUPD == 310
+    throw (SAXException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
 }
 
@@ -157,38 +205,60 @@ void SAL_CALL FilterDetectDocHandler::processingInstruction(
 void FilterDetectDocHandler::parseRelationship( const AttributeList& rAttribs )
 {
     OUString aType = rAttribs.getString( XML_Type, OUString() );
-    if( aType.equalsAscii( "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" ) )
-        maTargetPath = OUString( sal_Unicode( '/' ) ) + rAttribs.getString( XML_Target, OUString() );
+    if ( aType == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" // OOXML Transitional
+            || aType == "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" ) //OOXML strict
+    {
+        Reference<XUriReferenceFactory> xFactory = UriReferenceFactory::create( mxContext );
+        try
+        {
+             // use '/' to representent the root of the zip package ( and provide a 'file' scheme to
+             // keep the XUriReference implementation happy )
+             Reference< XUriReference > xBase = xFactory->parse( OUString("file:///") );
+
+             Reference< XUriReference > xPart = xFactory->parse(  rAttribs.getString( XML_Target, OUString() ) );
+             Reference< XUriReference > xAbs = xFactory->makeAbsolute(  xBase, xPart, sal_True, RelativeUriExcessParentSegments_RETAIN );
+
+             if ( xAbs.is() )
+                 maTargetPath = xAbs->getPath();
+        }
+        catch( const Exception& )
+        {
+        }
+    }
 }
 
 OUString FilterDetectDocHandler::getFilterNameFromContentType( const OUString& rContentType ) const
 {
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-word.document.macroEnabled.main+xml" ) )
-        return CREATE_OUSTRING( "writer_MS_Word_2007" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" ) ||
+        rContentType.equalsAscii("application/vnd.ms-word.document.macroEnabled.main+xml" ) )
+        return OUString( "writer_MS_Word_2007" );
 
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-word.template.macroEnabledTemplate.main+xml" ) )
-        return CREATE_OUSTRING( "writer_MS_Word_2007_Template" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-word.template.macroEnabledTemplate.main+xml") )
+        return OUString( "writer_MS_Word_2007_Template" );
 
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-excel.sheet.macroEnabled.main+xml" ) )
-        return CREATE_OUSTRING( "MS Excel 2007 XML" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-excel.sheet.macroEnabled.main+xml") )
+        return OUString( "MS Excel 2007 XML" );
 
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-excel.template.macroEnabled.main+xml" ) )
-        return CREATE_OUSTRING( "MS Excel 2007 XML Template" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-excel.template.macroEnabled.main+xml") )
+        return OUString( "MS Excel 2007 XML Template" );
 
-    if( rContentType.equalsAscii( "application/vnd.ms-excel.sheet.binary.macroEnabled.main" ) )
-        return CREATE_OUSTRING( "MS Excel 2007 Binary" );
+    if ( rContentType == "application/vnd.ms-excel.sheet.binary.macroEnabled.main" )
+        return OUString( "MS Excel 2007 Binary" );
 
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-powerpoint.presentation.macroEnabled.main+xml" ) )
-        return CREATE_OUSTRING( "MS PowerPoint 2007 XML" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-powerpoint.presentation.macroEnabled.main+xml") )
+        return OUString( "MS PowerPoint 2007 XML" );
 
-    if( rContentType.equalsAscii( "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml" ) ||
-        rContentType.equalsAscii( "application/vnd.ms-powerpoint.template.macroEnabled.main+xml" ) )
-        return CREATE_OUSTRING( "MS PowerPoint 2007 XML Template" );
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.presentationml.slideshow.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-powerpoint.slideshow.macroEnabled.main+xml") )
+        return OUString( "MS PowerPoint 2007 XML AutoPlay" );
+
+    if( rContentType.equalsAscii("application/vnd.openxmlformats-officedocument.presentationml.template.main+xml") ||
+        rContentType.equalsAscii("application/vnd.ms-powerpoint.template.macroEnabled.main+xml") )
+        return OUString( "MS PowerPoint 2007 XML Template" );
 
     return OUString();
 }
@@ -196,7 +266,7 @@ OUString FilterDetectDocHandler::getFilterNameFromContentType( const OUString& r
 void FilterDetectDocHandler::parseContentTypesDefault( const AttributeList& rAttribs )
 {
     // only if no overridden part name found
-    if( mrFilterName.getLength() == 0 )
+    if( mrFilterName.isEmpty() )
     {
         // check if target path ends with extension
         OUString aExtension = rAttribs.getString( XML_Extension, OUString() );
@@ -212,20 +282,18 @@ void FilterDetectDocHandler::parseContentTypesOverride( const AttributeList& rAt
         mrFilterName = getFilterNameFromContentType( rAttribs.getString( XML_ContentType, OUString() ) );
 }
 
-// ============================================================================
-
 /* Helper for XServiceInfo */
 Sequence< OUString > FilterDetect_getSupportedServiceNames()
 {
     Sequence< OUString > aServiceNames( 1 );
-    aServiceNames[ 0 ] = CREATE_OUSTRING( "com.sun.star.frame.ExtendedTypeDetection" );
+    aServiceNames[ 0 ] = "com.sun.star.frame.ExtendedTypeDetection";
     return aServiceNames;
 }
 
 /* Helper for XServiceInfo */
 OUString FilterDetect_getImplementationName()
 {
-    return CREATE_OUSTRING( "com.sun.star.comp.oox.FormatDetector" );
+    return OUString( "com.sun.star.comp.oox.FormatDetector" );
 }
 
 /* Helper for registry */
@@ -233,8 +301,6 @@ Reference< XInterface > SAL_CALL FilterDetect_createInstance( const Reference< X
 {
     return static_cast< ::cppu::OWeakObject* >( new FilterDetect( rxContext ) );
 }
-
-// ----------------------------------------------------------------------------
 
 FilterDetect::FilterDetect( const Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
     mxContext( rxContext, UNO_SET_THROW )
@@ -245,25 +311,8 @@ FilterDetect::~FilterDetect()
 {
 }
 
-/* =========================================================================== */
-/*  Kudos to Caolan McNamara who provided the core decryption implementations. */
-/* =========================================================================== */
-
-namespace {
-
-const sal_uInt32 ENCRYPTINFO_CRYPTOAPI      = 0x00000004;
-const sal_uInt32 ENCRYPTINFO_DOCPROPS       = 0x00000008;
-const sal_uInt32 ENCRYPTINFO_EXTERNAL       = 0x00000010;
-const sal_uInt32 ENCRYPTINFO_AES            = 0x00000020;
-
-const sal_uInt32 ENCRYPT_ALGO_AES128        = 0x0000660E;
-const sal_uInt32 ENCRYPT_ALGO_AES192        = 0x0000660F;
-const sal_uInt32 ENCRYPT_ALGO_AES256        = 0x00006610;
-const sal_uInt32 ENCRYPT_ALGO_RC4           = 0x00006801;
-
-const sal_uInt32 ENCRYPT_HASH_SHA1          = 0x00008004;
-
-// ----------------------------------------------------------------------------
+namespace
+{
 
 bool lclIsZipPackage( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStrm )
 {
@@ -271,378 +320,181 @@ bool lclIsZipPackage( const Reference< XComponentContext >& rxContext, const Ref
     return aZipStorage.isStorage();
 }
 
-// ----------------------------------------------------------------------------
-
-struct PackageEncryptionInfo
-{
-    sal_uInt8           mpnSalt[ 16 ];
-    sal_uInt8           mpnEncrVerifier[ 16 ];
-    sal_uInt8           mpnEncrVerifierHash[ 32 ];
-    sal_uInt32          mnFlags;
-    sal_uInt32          mnAlgorithmId;
-    sal_uInt32          mnAlgorithmIdHash;
-    sal_uInt32          mnKeySize;
-    sal_uInt32          mnSaltSize;
-    sal_uInt32          mnVerifierHashSize;
-};
-
-bool lclReadEncryptionInfo( PackageEncryptionInfo& rEncrInfo, BinaryInputStream& rStrm )
-{
-    rStrm.skip( 4 );
-    rStrm >> rEncrInfo.mnFlags;
-    if( getFlag( rEncrInfo.mnFlags, ENCRYPTINFO_EXTERNAL ) )
-        return false;
-
-    sal_uInt32 nHeaderSize, nRepeatedFlags;
-    rStrm >> nHeaderSize >> nRepeatedFlags;
-    if( (nHeaderSize < 20) || (nRepeatedFlags != rEncrInfo.mnFlags) )
-        return false;
-
-    rStrm.skip( 4 );
-    rStrm >> rEncrInfo.mnAlgorithmId >> rEncrInfo.mnAlgorithmIdHash >> rEncrInfo.mnKeySize;
-    rStrm.skip( nHeaderSize - 20 );
-    rStrm >> rEncrInfo.mnSaltSize;
-    if( rEncrInfo.mnSaltSize != 16 )
-        return false;
-
-    rStrm.readMemory( rEncrInfo.mpnSalt, 16 );
-    rStrm.readMemory( rEncrInfo.mpnEncrVerifier, 16 );
-    rStrm >> rEncrInfo.mnVerifierHashSize;
-    rStrm.readMemory( rEncrInfo.mpnEncrVerifierHash, 32 );
-    return !rStrm.isEof();
-}
-
-// ----------------------------------------------------------------------------
-
-void lclDeriveKey( const sal_uInt8* pnHash, sal_uInt32 nHashLen, sal_uInt8* pnKeyDerived, sal_uInt32 nRequiredKeyLen )
-{
-    sal_uInt8 pnBuffer[ 64 ];
-    memset( pnBuffer, 0x36, sizeof( pnBuffer ) );
-    for( sal_uInt32 i = 0; i < nHashLen; ++i )
-        pnBuffer[ i ] ^= pnHash[ i ];
-
-    rtlDigest aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-    rtlDigestError aError = rtl_digest_update( aDigest, pnBuffer, sizeof( pnBuffer ) );
-    sal_uInt8 pnX1[ RTL_DIGEST_LENGTH_SHA1 ];
-    aError = rtl_digest_get( aDigest, pnX1, RTL_DIGEST_LENGTH_SHA1 );
-    rtl_digest_destroy( aDigest );
-
-    memset( pnBuffer, 0x5C, sizeof( pnBuffer ) );
-    for( sal_uInt32 i = 0; i < nHashLen; ++i )
-        pnBuffer[ i ] ^= pnHash[ i ];
-
-    aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-    aError = rtl_digest_update( aDigest, pnBuffer, sizeof( pnBuffer ) );
-    sal_uInt8 pnX2[ RTL_DIGEST_LENGTH_SHA1 ];
-    aError = rtl_digest_get( aDigest, pnX2, RTL_DIGEST_LENGTH_SHA1 );
-    rtl_digest_destroy( aDigest );
-
-    if( nRequiredKeyLen > RTL_DIGEST_LENGTH_SHA1 )
-    {
-        memcpy( pnKeyDerived + RTL_DIGEST_LENGTH_SHA1, pnX2, nRequiredKeyLen - RTL_DIGEST_LENGTH_SHA1 );
-        nRequiredKeyLen = RTL_DIGEST_LENGTH_SHA1;
-    }
-    memcpy( pnKeyDerived, pnX1, nRequiredKeyLen );
-}
-
-// ----------------------------------------------------------------------------
-
-bool lclCheckEncryptionData( const sal_uInt8* pnKey, sal_uInt32 nKeySize, const sal_uInt8* pnVerifier, sal_uInt32 nVerifierSize, const sal_uInt8* pnVerifierHash, sal_uInt32 nVerifierHashSize )
-{
-    bool bResult = false;
-
-    // the only currently supported algorithm needs key size 128
-    if ( nKeySize == 16 && nVerifierSize == 16 && nVerifierHashSize == 32 )
-    {
-        // check password
-        EVP_CIPHER_CTX aes_ctx;
-        EVP_CIPHER_CTX_init( &aes_ctx );
-        EVP_DecryptInit_ex( &aes_ctx, EVP_aes_128_ecb(), 0, pnKey, 0 );
-        EVP_CIPHER_CTX_set_padding( &aes_ctx, 0 );
-        int nOutLen = 0;
-        sal_uInt8 pnTmpVerifier[ 16 ];
-        (void) memset( pnTmpVerifier, 0, sizeof(pnTmpVerifier) );
-
-        /*int*/ EVP_DecryptUpdate( &aes_ctx, pnTmpVerifier, &nOutLen, pnVerifier, nVerifierSize );
-        EVP_CIPHER_CTX_cleanup( &aes_ctx );
-
-        EVP_CIPHER_CTX_init( &aes_ctx );
-        EVP_DecryptInit_ex( &aes_ctx, EVP_aes_128_ecb(), 0, pnKey, 0 );
-        EVP_CIPHER_CTX_set_padding( &aes_ctx, 0 );
-        sal_uInt8 pnTmpVerifierHash[ 32 ];
-        (void) memset( pnTmpVerifierHash, 0, sizeof(pnTmpVerifierHash) );
-
-        /*int*/ EVP_DecryptUpdate( &aes_ctx, pnTmpVerifierHash, &nOutLen, pnVerifierHash, nVerifierHashSize );
-        EVP_CIPHER_CTX_cleanup( &aes_ctx );
-
-        rtlDigest aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-        rtlDigestError aError = rtl_digest_update( aDigest, pnTmpVerifier, sizeof( pnTmpVerifier ) );
-        sal_uInt8 pnSha1Hash[ RTL_DIGEST_LENGTH_SHA1 ];
-        aError = rtl_digest_get( aDigest, pnSha1Hash, RTL_DIGEST_LENGTH_SHA1 );
-        rtl_digest_destroy( aDigest );
-
-        bResult = ( memcmp( pnSha1Hash, pnTmpVerifierHash, RTL_DIGEST_LENGTH_SHA1 ) == 0 );
-    }
-
-    return bResult;
-}
-
-// ----------------------------------------------------------------------------
-
-Sequence< NamedValue > lclGenerateEncryptionKey( const PackageEncryptionInfo& rEncrInfo, const OUString& rPassword, sal_uInt8* pnKey, sal_uInt32 nRequiredKeyLen )
-{
-    size_t nBufferSize = rEncrInfo.mnSaltSize + 2 * rPassword.getLength();
-    sal_uInt8* pnBuffer = new sal_uInt8[ nBufferSize ];
-    memcpy( pnBuffer, rEncrInfo.mpnSalt, rEncrInfo.mnSaltSize );
-
-    sal_uInt8* pnPasswordLoc = pnBuffer + rEncrInfo.mnSaltSize;
-    const sal_Unicode* pStr = rPassword.getStr();
-    for( sal_Int32 i = 0, nLen = rPassword.getLength(); i < nLen; ++i, ++pStr, pnPasswordLoc += 2 )
-        ByteOrderConverter::writeLittleEndian( pnPasswordLoc, static_cast< sal_uInt16 >( *pStr ) );
-
-    rtlDigest aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-    rtlDigestError aError = rtl_digest_update( aDigest, pnBuffer, nBufferSize );
-    delete[] pnBuffer;
-
-    size_t nHashSize = RTL_DIGEST_LENGTH_SHA1 + 4;
-    sal_uInt8* pnHash = new sal_uInt8[ nHashSize ];
-    aError = rtl_digest_get( aDigest, pnHash + 4, RTL_DIGEST_LENGTH_SHA1 );
-    rtl_digest_destroy( aDigest );
-
-    for( sal_uInt32 i = 0; i < 50000; ++i )
-    {
-        ByteOrderConverter::writeLittleEndian( pnHash, i );
-        aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-        aError = rtl_digest_update( aDigest, pnHash, nHashSize );
-        aError = rtl_digest_get( aDigest, pnHash + 4, RTL_DIGEST_LENGTH_SHA1 );
-        rtl_digest_destroy( aDigest );
-    }
-
-    memmove( pnHash, pnHash + 4, RTL_DIGEST_LENGTH_SHA1 );
-    memset( pnHash + RTL_DIGEST_LENGTH_SHA1, 0, 4 );
-    aDigest = rtl_digest_create( rtl_Digest_AlgorithmSHA1 );
-    aError = rtl_digest_update( aDigest, pnHash, nHashSize );
-    aError = rtl_digest_get( aDigest, pnHash, RTL_DIGEST_LENGTH_SHA1 );
-    rtl_digest_destroy( aDigest );
-
-    lclDeriveKey( pnHash, RTL_DIGEST_LENGTH_SHA1, pnKey, nRequiredKeyLen );
-    delete[] pnHash;
-
-    Sequence< NamedValue > aResult;
-    if( lclCheckEncryptionData( pnKey, nRequiredKeyLen, rEncrInfo.mpnEncrVerifier, sizeof( rEncrInfo.mpnEncrVerifier ), rEncrInfo.mpnEncrVerifierHash, sizeof( rEncrInfo.mpnEncrVerifierHash ) ) )
-    {
-        SequenceAsHashMap aEncryptionData;
-        aEncryptionData[ CREATE_OUSTRING( "AES128EncryptionKey" ) ] <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( pnKey ), nRequiredKeyLen );
-        aEncryptionData[ CREATE_OUSTRING( "AES128EncryptionSalt" ) ] <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( rEncrInfo.mpnSalt ), rEncrInfo.mnSaltSize );
-        aEncryptionData[ CREATE_OUSTRING( "AES128EncryptionVerifier" ) ] <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( rEncrInfo.mpnEncrVerifier ), sizeof( rEncrInfo.mpnEncrVerifier ) );
-        aEncryptionData[ CREATE_OUSTRING( "AES128EncryptionVerifierHash" ) ] <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( rEncrInfo.mpnEncrVerifierHash ), sizeof( rEncrInfo.mpnEncrVerifierHash ) );
-        aResult = aEncryptionData.getAsConstNamedValueList();
-    }
-
-    return aResult;
-}
-
-// the password verifier ------------------------------------------------------
-
-class PasswordVerifier : public ::comphelper::IDocPasswordVerifier
+class PasswordVerifier : public IDocPasswordVerifier
 {
 public:
-    explicit            PasswordVerifier( const PackageEncryptionInfo& rEncryptInfo );
+    explicit PasswordVerifier( DocumentDecryption& aDecryptor );
 
-    virtual ::comphelper::DocPasswordVerifierResult
-                        verifyPassword( const OUString& rPassword, Sequence< NamedValue >& o_rEncryptionData );
-    virtual ::comphelper::DocPasswordVerifierResult
-                        verifyEncryptionData( const Sequence< NamedValue >& rEncryptionData );
+    virtual DocPasswordVerifierResult verifyPassword( const OUString& rPassword, Sequence<NamedValue>& rEncryptionData ) SAL_OVERRIDE;
 
-    inline const sal_uInt8* getKey() const { return &maKey.front(); }
-
+    virtual DocPasswordVerifierResult verifyEncryptionData( const Sequence<NamedValue>& rEncryptionData ) SAL_OVERRIDE;
 private:
-    const PackageEncryptionInfo& mrEncryptInfo;
-    ::std::vector< sal_uInt8 > maKey;
+    DocumentDecryption& mDecryptor;
 };
 
-PasswordVerifier::PasswordVerifier( const PackageEncryptionInfo& rEncryptInfo ) :
-    mrEncryptInfo( rEncryptInfo ),
-    maKey( static_cast< size_t >( rEncryptInfo.mnKeySize / 8 ), 0 )
+PasswordVerifier::PasswordVerifier( DocumentDecryption& aDecryptor ) :
+    mDecryptor(aDecryptor)
+{}
+
+comphelper::DocPasswordVerifierResult PasswordVerifier::verifyPassword( const OUString& rPassword, Sequence<NamedValue>& rEncryptionData )
 {
+    if(mDecryptor.generateEncryptionKey(rPassword))
+        rEncryptionData = mDecryptor.createEncryptionData(rPassword);
+
+    return rEncryptionData.hasElements() ? comphelper::DocPasswordVerifierResult_OK : comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
 }
 
-::comphelper::DocPasswordVerifierResult PasswordVerifier::verifyPassword( const OUString& rPassword, Sequence< NamedValue >& o_rEncryptionData )
+comphelper::DocPasswordVerifierResult PasswordVerifier::verifyEncryptionData( const Sequence<NamedValue>& rEncryptionData )
 {
-    // verifies the password and writes the related decryption key into maKey
-    o_rEncryptionData = lclGenerateEncryptionKey( mrEncryptInfo, rPassword, &maKey.front(), maKey.size() );
-    return o_rEncryptionData.hasElements() ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
-}
-
-::comphelper::DocPasswordVerifierResult PasswordVerifier::verifyEncryptionData( const Sequence< NamedValue >& rEncryptionData )
-{
-    SequenceAsHashMap aHashData( rEncryptionData );
-    Sequence< sal_Int8 > aKey = aHashData.getUnpackedValueOrDefault( CREATE_OUSTRING( "AES128EncryptionKey" ), Sequence< sal_Int8 >() );
-    Sequence< sal_Int8 > aVerifier = aHashData.getUnpackedValueOrDefault( CREATE_OUSTRING( "AES128EncryptionVerifier" ), Sequence< sal_Int8 >() );
-    Sequence< sal_Int8 > aVerifierHash = aHashData.getUnpackedValueOrDefault( CREATE_OUSTRING( "AES128EncryptionVerifierHash" ), Sequence< sal_Int8 >() );
-
-    bool bResult = lclCheckEncryptionData(
-        reinterpret_cast< const sal_uInt8* >( aKey.getConstArray() ), aKey.getLength(),
-        reinterpret_cast< const sal_uInt8* >( aVerifier.getConstArray() ), aVerifier.getLength(),
-        reinterpret_cast< const sal_uInt8* >( aVerifierHash.getConstArray() ), aVerifierHash.getLength() );
-
-    return bResult ? ::comphelper::DocPasswordVerifierResult_OK : ::comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    comphelper::DocPasswordVerifierResult aResult = comphelper::DocPasswordVerifierResult_WRONG_PASSWORD;
+    if (DocumentDecryption::checkEncryptionData(rEncryptionData))
+        aResult = comphelper::DocPasswordVerifierResult_OK;
+    return aResult;
 }
 
 } // namespace
 
-// ----------------------------------------------------------------------------
 
-Reference< XInputStream > FilterDetect::extractUnencryptedPackage( MediaDescriptor& rMediaDesc ) const
+Reference< XInputStream > FilterDetect::extractUnencryptedPackage( MediaDescriptor& rMediaDescriptor ) const
 {
     // try the plain input stream
-    Reference< XInputStream > xInStrm( rMediaDesc[ MediaDescriptor::PROP_INPUTSTREAM() ], UNO_QUERY );
-    if( !xInStrm.is() || lclIsZipPackage( mxContext, xInStrm ) )
-        return xInStrm;
+    Reference<XInputStream> xInputStream( rMediaDescriptor[ MediaDescriptor::PROP_INPUTSTREAM() ], UNO_QUERY );
+    if( !xInputStream.is() || lclIsZipPackage( mxContext, xInputStream ) )
+        return xInputStream;
 
     // check if a temporary file is passed in the 'ComponentData' property
-    Reference< XStream > xDecrypted( rMediaDesc.getComponentDataEntry( CREATE_OUSTRING( "DecryptedPackage" ) ), UNO_QUERY );
+    Reference<XStream> xDecrypted( rMediaDescriptor.getComponentDataEntry( "DecryptedPackage" ), UNO_QUERY );
     if( xDecrypted.is() )
     {
-        Reference< XInputStream > xDecrInStrm = xDecrypted->getInputStream();
-        if( lclIsZipPackage( mxContext, xDecrInStrm ) )
-            return xDecrInStrm;
+        Reference<XInputStream> xDecryptedInputStream = xDecrypted->getInputStream();
+        if( lclIsZipPackage( mxContext, xDecryptedInputStream ) )
+            return xDecryptedInputStream;
     }
 
     // try to decrypt an encrypted OLE package
-    ::oox::ole::OleStorage aOleStorage( mxContext, xInStrm, false );
-    if( aOleStorage.isStorage() ) try
+    oox::ole::OleStorage aOleStorage( mxContext, xInputStream, false );
+    if( aOleStorage.isStorage() )
     {
-        // open the required input streams in the encrypted package
-        Reference< XInputStream > xEncryptionInfo( aOleStorage.openInputStream( CREATE_OUSTRING( "EncryptionInfo" ) ), UNO_SET_THROW );
-        Reference< XInputStream > xEncryptedPackage( aOleStorage.openInputStream( CREATE_OUSTRING( "EncryptedPackage" ) ), UNO_SET_THROW );
-
-        // read the encryption info stream
-        PackageEncryptionInfo aEncryptInfo;
-        BinaryXInputStream aInfoStrm( xEncryptionInfo, true );
-        bool bValidInfo = lclReadEncryptionInfo( aEncryptInfo, aInfoStrm );
-
-        // check flags and agorithm IDs, requiered are AES128 and SHA-1
-        bool bImplemented = bValidInfo &&
-            getFlag( aEncryptInfo.mnFlags, ENCRYPTINFO_CRYPTOAPI ) &&
-            getFlag( aEncryptInfo.mnFlags, ENCRYPTINFO_AES ) &&
-            // algorithm ID 0 defaults to AES128 too, if ENCRYPTINFO_AES flag is set
-            ((aEncryptInfo.mnAlgorithmId == 0) || (aEncryptInfo.mnAlgorithmId == ENCRYPT_ALGO_AES128)) &&
-            // hash algorithm ID 0 defaults to SHA-1 too
-            ((aEncryptInfo.mnAlgorithmIdHash == 0) || (aEncryptInfo.mnAlgorithmIdHash == ENCRYPT_HASH_SHA1)) &&
-            (aEncryptInfo.mnVerifierHashSize == 20);
-
-        if( bImplemented )
+        try
         {
-            /*  "VelvetSweatshop" is the built-in default encryption
-                password used by MS Excel for the "workbook protection"
-                feature with password. Try this first before prompting the
-                user for a password. */
-            ::std::vector< OUString > aDefaultPasswords;
-            aDefaultPasswords.push_back( CREATE_OUSTRING( "VelvetSweatshop" ) );
+            DocumentDecryption aDecryptor(aOleStorage, mxContext);
 
-            /*  Use the comphelper password helper to request a password.
-                This helper returns either with the correct password
-                (according to the verifier), or with an empty string if
-                user has cancelled the password input dialog. */
-            PasswordVerifier aVerifier( aEncryptInfo );
-            Sequence< NamedValue > aEncryptionData = ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
-                aVerifier, rMediaDesc, ::comphelper::DocPasswordRequestType_MS, &aDefaultPasswords );
-
-            if( aEncryptionData.getLength() == 0 )
+            if( aDecryptor.readEncryptionInfo() )
             {
-                rMediaDesc[ MediaDescriptor::PROP_ABORTED() ] <<= true;
-            }
-            else
-            {
-                // create temporary file for unencrypted package
-                Reference< XMultiServiceFactory > xFactory( mxContext->getServiceManager(), UNO_QUERY_THROW );
-                Reference< XStream > xTempFile( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.io.TempFile" ) ), UNO_QUERY_THROW );
-                Reference< XOutputStream > xDecryptedPackage( xTempFile->getOutputStream(), UNO_SET_THROW );
-                BinaryXOutputStream aDecryptedPackage( xDecryptedPackage, true );
-                BinaryXInputStream aEncryptedPackage( xEncryptedPackage, true );
+                /*  "VelvetSweatshop" is the built-in default encryption
+                    password used by MS Excel for the "workbook protection"
+                    feature with password. Try this first before prompting the
+                    user for a password. */
+                std::vector<OUString> aDefaultPasswords;
+                aDefaultPasswords.push_back("VelvetSweatshop");
 
-                EVP_CIPHER_CTX aes_ctx;
-                EVP_CIPHER_CTX_init( &aes_ctx );
-                EVP_DecryptInit_ex( &aes_ctx, EVP_aes_128_ecb(), 0, aVerifier.getKey(), 0 );
-                EVP_CIPHER_CTX_set_padding( &aes_ctx, 0 );
+                /*  Use the comphelper password helper to request a password.
+                    This helper returns either with the correct password
+                    (according to the verifier), or with an empty string if
+                    user has cancelled the password input dialog. */
+                PasswordVerifier aVerifier( aDecryptor );
+                Sequence<NamedValue> aEncryptionData;
+#if SUPD == 310
+                aEncryptionData = ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
+#else	// SUPD == 310
+                aEncryptionData = rMediaDescriptor.requestAndVerifyDocPassword(
+#endif	// SUPD == 310
+                                                aVerifier,
+#if SUPD == 310
+                                                rMediaDescriptor,
+#endif	// SUPD == 310
+                                                comphelper::DocPasswordRequestType_MS,
+                                                &aDefaultPasswords );
 
-                sal_uInt8 pnInBuffer[ 1024 ];
-                sal_uInt8 pnOutBuffer[ 1024 ];
-                sal_Int32 nInLen;
-                int nOutLen;
-                aEncryptedPackage.skip( 8 ); // decrypted size
-                while( (nInLen = aEncryptedPackage.readMemory( pnInBuffer, sizeof( pnInBuffer ) )) > 0 )
+                if( aEncryptionData.getLength() == 0 )
                 {
-                    EVP_DecryptUpdate( &aes_ctx, pnOutBuffer, &nOutLen, pnInBuffer, nInLen );
-                    aDecryptedPackage.writeMemory( pnOutBuffer, nOutLen );
+                    rMediaDescriptor[ MediaDescriptor::PROP_ABORTED() ] <<= true;
                 }
-                EVP_DecryptFinal_ex( &aes_ctx, pnOutBuffer, &nOutLen );
-                aDecryptedPackage.writeMemory( pnOutBuffer, nOutLen );
+                else
+                {
+                    // create temporary file for unencrypted package
+                    Reference<XStream> xTempFile( TempFile::create(mxContext), UNO_QUERY_THROW );
+                    aDecryptor.decrypt( xTempFile );
 
-                EVP_CIPHER_CTX_cleanup( &aes_ctx );
-                xDecryptedPackage->flush();
-                aDecryptedPackage.seekToStart();
+                    // store temp file in media descriptor to keep it alive
+                    rMediaDescriptor.setComponentDataEntry( "DecryptedPackage", Any( xTempFile ) );
 
-                // store temp file in media descriptor to keep it alive
-                rMediaDesc.setComponentDataEntry( CREATE_OUSTRING( "DecryptedPackage" ), Any( xTempFile ) );
-
-                Reference< XInputStream > xDecrInStrm = xTempFile->getInputStream();
-                if( lclIsZipPackage( mxContext, xDecrInStrm ) )
-                    return xDecrInStrm;
+                    Reference<XInputStream> xDecryptedInputStream = xTempFile->getInputStream();
+                    if( lclIsZipPackage( mxContext, xDecryptedInputStream ) )
+                        return xDecryptedInputStream;
+                }
             }
         }
+        catch( const Exception& )
+        {
+        }
     }
-    catch( Exception& )
-    {
-    }
-
-    return Reference< XInputStream >();
+    return Reference<XInputStream>();
 }
 
 // com.sun.star.lang.XServiceInfo interface -----------------------------------
 
+#if SUPD == 310
 OUString SAL_CALL FilterDetect::getImplementationName() throw( RuntimeException )
+#else	// SUPD == 310
+OUString SAL_CALL FilterDetect::getImplementationName() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return FilterDetect_getImplementationName();
 }
 
+#if SUPD == 310
 sal_Bool SAL_CALL FilterDetect::supportsService( const OUString& rServiceName ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Bool SAL_CALL FilterDetect::supportsService( const OUString& rServiceName ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
+#if SUPD == 310
     const Sequence< OUString > aServices = FilterDetect_getSupportedServiceNames();
     const OUString* pArray = aServices.getConstArray();
     const OUString* pArrayEnd = pArray + aServices.getLength();
     return ::std::find( pArray, pArrayEnd, rServiceName ) != pArrayEnd;
+#else	// SUPD == 310
+    return cppu::supportsService(this, rServiceName);
+#endif	// SUPD == 310
 }
 
+#if SUPD == 310
 Sequence< OUString > SAL_CALL FilterDetect::getSupportedServiceNames() throw( RuntimeException )
+#else	// SUPD == 310
+Sequence< OUString > SAL_CALL FilterDetect::getSupportedServiceNames() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return FilterDetect_getSupportedServiceNames();
 }
 
 // com.sun.star.document.XExtendedFilterDetection interface -------------------
 
+#if SUPD == 310
 OUString SAL_CALL FilterDetect::detect( Sequence< PropertyValue >& rMediaDescSeq ) throw( RuntimeException )
+#else	// SUPD == 310
+OUString SAL_CALL FilterDetect::detect( Sequence< PropertyValue >& rMediaDescSeq ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     OUString aFilterName;
-    MediaDescriptor aMediaDesc( rMediaDescSeq );
+    MediaDescriptor aMediaDescriptor( rMediaDescSeq );
 
-    /*  Check that the user has not choosen to abort detection, e.g. by hitting
+    /*  Check that the user has not chosen to abort detection, e.g. by hitting
         'Cancel' in the password input dialog. This may happen because this
         filter detection is used by different filters. */
-    bool bAborted = aMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_ABORTED(), false );
+    bool bAborted = aMediaDescriptor.getUnpackedValueOrDefault( MediaDescriptor::PROP_ABORTED(), false );
     if( !bAborted ) try
     {
-        aMediaDesc.addInputStream();
+        aMediaDescriptor.addInputStream();
 
         /*  Get the unencrypted input stream. This may include creation of a
             temporary file that contains the decrypted package. This temporary
             file will be stored in the 'ComponentData' property of the media
             descriptor. */
-        Reference< XInputStream > xInStrm( extractUnencryptedPackage( aMediaDesc ), UNO_SET_THROW );
+        Reference< XInputStream > xInputStream( extractUnencryptedPackage( aMediaDescriptor ), UNO_SET_THROW );
 
         // stream must be a ZIP package
-        ZipStorage aZipStorage( mxContext, xInStrm );
+        ZipStorage aZipStorage( mxContext, xInputStream );
         if( aZipStorage.isStorage() )
         {
             // create the fast parser, register the XML namespaces, set document handler
@@ -650,24 +502,26 @@ OUString SAL_CALL FilterDetect::detect( Sequence< PropertyValue >& rMediaDescSeq
             aParser.registerNamespace( NMSP_packageRel );
             aParser.registerNamespace( NMSP_officeRel );
             aParser.registerNamespace( NMSP_packageContentTypes );
-            aParser.setDocumentHandler( new FilterDetectDocHandler( aFilterName ) );
+            aParser.setDocumentHandler( new FilterDetectDocHandler( mxContext, aFilterName ) );
 
             /*  Parse '_rels/.rels' to get the target path and '[Content_Types].xml'
                 to determine the content type of the part at the target path. */
-            aParser.parseStream( aZipStorage, CREATE_OUSTRING( "_rels/.rels" ) );
-            aParser.parseStream( aZipStorage, CREATE_OUSTRING( "[Content_Types].xml" ) );
+            aParser.parseStream( aZipStorage, "_rels/.rels" );
+            aParser.parseStream( aZipStorage, "[Content_Types].xml" );
         }
     }
-    catch( Exception& )
+    catch( const Exception& )
     {
     }
 
     // write back changed media descriptor members
-    aMediaDesc >> rMediaDescSeq;
+    aMediaDescriptor >> rMediaDescSeq;
     return aFilterName;
 }
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

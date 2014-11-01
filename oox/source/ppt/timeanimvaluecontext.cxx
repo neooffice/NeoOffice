@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "timeanimvaluecontext.hxx"
 
@@ -31,64 +27,63 @@ using namespace ::com::sun::star::xml::sax;
 
 namespace oox { namespace ppt {
 
-    TimeAnimValueListContext::TimeAnimValueListContext( ContextHandler& rParent,
+    TimeAnimValueListContext::TimeAnimValueListContext( FragmentHandler2& rParent,
+#if SUPD == 310
+                const css::uno::Reference< XFastAttributeList >& /*xAttribs*/,
+#else	// SUPD == 310
                 const Reference< XFastAttributeList >& /*xAttribs*/,
+#endif	// SUPD == 310
                 TimeAnimationValueList & aTavList )
-        : ContextHandler( rParent )
-			, maTavList( aTavList )
-			, mbInValue( false )
-	{
-	}
+        : FragmentHandler2( rParent )
+            , maTavList( aTavList )
+            , mbInValue( false )
+    {
+    }
 
 
-	TimeAnimValueListContext::~TimeAnimValueListContext( )
-	{
-	}
+    TimeAnimValueListContext::~TimeAnimValueListContext( )
+    {
+    }
 
 
-	void SAL_CALL TimeAnimValueListContext::endFastElement( sal_Int32 aElement )
-		throw ( SAXException, RuntimeException)
-	{
-		if( aElement == PPT_TOKEN( tav ) )
-		{
-			mbInValue = false;
-		}
-	}
+    void TimeAnimValueListContext::onEndElement()
+    {
+        if( isCurrentElement( PPT_TOKEN( tav ) ) )
+        {
+            mbInValue = false;
+        }
+    }
 
 
-	Reference< XFastContextHandler > SAL_CALL TimeAnimValueListContext::createFastChildContext( ::sal_Int32 aElementToken,
-																																															const Reference< XFastAttributeList >& xAttribs )
-		throw ( SAXException, RuntimeException )
-	{
-		Reference< XFastContextHandler > xRet;
+    ::oox::core::ContextHandlerRef TimeAnimValueListContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
+    {
 
-		switch ( aElementToken )
-		{
-		case PPT_TOKEN( tav ):
-		{
-			mbInValue = true;
-			TimeAnimationValue val;
-			val.msFormula = xAttribs->getOptionalValue( XML_fmla );
-			val.msTime =  xAttribs->getOptionalValue( XML_tm );
-			maTavList.push_back( val );
-			break;
-		}
-		case PPT_TOKEN( val ):
-			if( mbInValue )
-			{
-				// CT_TLAnimVariant
-                xRet.set( new AnimVariantContext( *this, aElementToken, maTavList.back().maValue ) );
-			}
-			break;
-		default:
-			break;
-		}
+        switch ( aElementToken )
+        {
+        case PPT_TOKEN( tav ):
+        {
+            mbInValue = true;
+            TimeAnimationValue val;
+            val.msFormula = rAttribs.getString( XML_fmla, OUString() );
+            val.msTime =  rAttribs.getString( XML_tm, OUString() );
+            maTavList.push_back( val );
+            return this;
+        }
+        case PPT_TOKEN( val ):
+            if( mbInValue )
+            {
+                // CT_TLAnimVariant
+                return new AnimVariantContext( *this, aElementToken, maTavList.back().maValue );
+            }
+            break;
+        default:
+            break;
+        }
 
-		if( !xRet.is() )
-			xRet.set( this );
-
-		return xRet;
-	}
+        return this;
+    }
 
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

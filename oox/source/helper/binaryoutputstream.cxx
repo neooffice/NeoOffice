@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/binaryoutputstream.hxx"
 
@@ -30,7 +26,7 @@
 
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
@@ -41,7 +37,7 @@ const sal_Int32 OUTPUTSTREAM_BUFFERSIZE     = 0x8000;
 
 } // namespace
 
-// ============================================================================
+
 
 BinaryXOutputStream::BinaryXOutputStream( const Reference< XOutputStream >& rxOutStrm, bool bAutoClose ) :
     BinaryStreamBase( Reference< XSeekable >( rxOutStrm, UNO_QUERY ).is() ),
@@ -64,12 +60,12 @@ void BinaryXOutputStream::close()
     if( mxOutStrm.is() ) try
     {
         mxOutStrm->flush();
-        if( mbAutoClose )
+        if ( mbAutoClose )
             mxOutStrm->closeOutput();
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "BinaryXOutputStream::close - closing output stream failed" );
+        OSL_FAIL( "BinaryXOutputStream::close - closing output stream failed" );
     }
     mxOutStrm.clear();
     mbAutoClose = false;
@@ -84,7 +80,7 @@ void BinaryXOutputStream::writeData( const StreamDataSequence& rData, size_t /*n
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "BinaryXOutputStream::writeData - stream read error" );
+        OSL_FAIL( "BinaryXOutputStream::writeData - stream read error" );
     }
 }
 
@@ -106,7 +102,42 @@ void BinaryXOutputStream::writeMemory( const void* pMem, sal_Int32 nBytes, size_
     }
 }
 
-// ============================================================================
+void
+BinaryOutputStream::writeCharArrayUC( const OUString& rString, rtl_TextEncoding eTextEnc, bool bAllowNulChars )
+{
+    OString sBuf( OUStringToOString( rString, eTextEnc ) );
+    if( !bAllowNulChars )
+        sBuf = sBuf.replace( '\0', '?' );
+    writeMemory( static_cast< const void* >( sBuf.getStr() ), sBuf.getLength() );
+}
+
+void
+BinaryOutputStream::writeUnicodeArray( const OUString& rString, bool bAllowNulChars )
+{
+    OUString sBuf( rString );
+    if( !bAllowNulChars )
+        sBuf = sBuf.replace( '\0', '?' );
+#ifdef OSL_BIGENDIAN
+    // need a non-const buffer for swapping byte order
+    sal_Unicode notConst[sBuf.getLength()];
+    memcpy( notConst, sBuf.getStr(), sizeof(sal_Unicode)*sBuf.getLength() );
+    writeArray( notConst, sBuf.getLength() );
+#else
+    writeArray( sBuf.getStr(), sBuf.getLength() );
+#endif
+}
+
+void
+BinaryOutputStream::writeCompressedUnicodeArray( const OUString& rString, bool bCompressed, bool bAllowNulChars )
+{
+    if ( bCompressed )
+         // ISO-8859-1 maps all byte values 0xHH to the same Unicode code point U+00HH
+        writeCharArrayUC( rString, RTL_TEXTENCODING_ISO_8859_1, bAllowNulChars );
+    else
+        writeUnicodeArray( rString, bAllowNulChars );
+}
+
+
 
 SequenceOutputStream::SequenceOutputStream( StreamDataSequence& rData ) :
     BinaryStreamBase( true ),
@@ -131,7 +162,8 @@ void SequenceOutputStream::writeMemory( const void* pMem, sal_Int32 nBytes, size
     }
 }
 
-// ============================================================================
+
 
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

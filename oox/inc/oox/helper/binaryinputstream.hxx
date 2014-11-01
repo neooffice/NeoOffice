@@ -1,32 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_HELPER_BINARYINPUTSTREAM_HXX
-#define OOX_HELPER_BINARYINPUTSTREAM_HXX
+#ifndef INCLUDED_OOX_HELPER_BINARYINPUTSTREAM_HXX
+#define INCLUDED_OOX_HELPER_BINARYINPUTSTREAM_HXX
 
 #include <vector>
 #include <com/sun/star/io/XInputStream.hpp>
-#include "oox/helper/binarystreambase.hxx"
+#include <oox/helper/binarystreambase.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace io { class XInputStream; }
@@ -36,13 +32,13 @@ namespace oox {
 
 class BinaryOutputStream;
 
-// ============================================================================
+
 
 /** Interface for binary input stream classes.
 
     The binary data in the stream is assumed to be in little-endian format.
  */
-class BinaryInputStream : public virtual BinaryStreamBase
+class OOX_DLLPUBLIC BinaryInputStream : public virtual BinaryStreamBase
 {
 public:
     /** Derived classes implement reading nBytes bytes to the passed sequence.
@@ -88,22 +84,22 @@ public:
         All data types supported by the ByteOrderConverter class can be used.
      */
     template< typename Type >
-    inline Type         readValue() { Type nValue; readValue( nValue ); return nValue; }
+    Type         readValue() { Type nValue; readValue( nValue ); return nValue; }
 
     /** Stream operator for all data types supported by the readValue() function. */
     template< typename Type >
-    inline BinaryInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
+    BinaryInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
 
-    inline sal_Int8     readInt8() { return readValue< sal_Int8 >(); }
-    inline sal_uInt8    readuInt8() { return readValue< sal_uInt8 >(); }
-    inline sal_Int16    readInt16() { return readValue< sal_Int16 >(); }
-    inline sal_uInt16   readuInt16() { return readValue< sal_uInt16 >(); }
-    inline sal_Int32    readInt32() { return readValue< sal_Int32 >(); }
-    inline sal_uInt32   readuInt32() { return readValue< sal_uInt32 >(); }
-    inline sal_Int64    readInt64() { return readValue< sal_Int64 >(); }
-    inline sal_uInt64   readuInt64() { return readValue< sal_uInt64 >(); }
-    inline float        readFloat() { return readValue< float >(); }
-    inline double       readDouble() { return readValue< double >(); }
+    sal_Int8     readInt8() { return readValue< sal_Int8 >(); }
+    sal_uInt8    readuInt8() { return readValue< sal_uInt8 >(); }
+    sal_Int16    readInt16() { return readValue< sal_Int16 >(); }
+    sal_uInt16   readuInt16() { return readValue< sal_uInt16 >(); }
+    sal_Int32    readInt32() { return readValue< sal_Int32 >(); }
+    sal_uInt32   readuInt32() { return readValue< sal_uInt32 >(); }
+    sal_Int64    readInt64() { return readValue< sal_Int64 >(); }
+    sal_uInt64   readuInt64() { return readValue< sal_uInt64 >(); }
+    float        readFloat() { return readValue< float >(); }
+    double       readDouble() { return readValue< double >(); }
 
     /** Reads a (preallocated!) C array of values from the stream.
 
@@ -159,20 +155,9 @@ public:
     template< typename Type >
     void                skipArray( sal_Int32 nElemCount );
 
-    /** Reads a NUL-terminated byte character array and returns the string.
-     */
-    ::rtl::OString      readNulCharArray();
-
-    /** Reads a NUL-terminated byte character array and returns a Unicode string.
-
-        @param eTextEnc
-            The text encoding used to create the Unicode string.
-     */
-    ::rtl::OUString     readNulCharArrayUC( rtl_TextEncoding eTextEnc );
-
     /** Reads a NUL-terminated Unicode character array and returns the string.
      */
-    ::rtl::OUString     readNulUnicodeArray();
+    OUString     readNulUnicodeArray();
 
     /** Reads a byte character array and returns the string.
 
@@ -183,7 +168,7 @@ public:
             True = NUL characters are inserted into the imported string.
             False = NUL characters are replaced by question marks (default).
      */
-    ::rtl::OString      readCharArray( sal_Int32 nChars, bool bAllowNulChars = false );
+    OString      readCharArray( sal_Int32 nChars, bool bAllowNulChars = false );
 
     /** Reads a byte character array and returns a Unicode string.
 
@@ -197,7 +182,7 @@ public:
             True = NUL characters are inserted into the imported string.
             False = NUL characters are replaced by question marks (default).
      */
-    ::rtl::OUString     readCharArrayUC( sal_Int32 nChars, rtl_TextEncoding eTextEnc, bool bAllowNulChars = false );
+    OUString     readCharArrayUC( sal_Int32 nChars, rtl_TextEncoding eTextEnc, bool bAllowNulChars = false );
 
     /** Reads a Unicode character array and returns the string.
 
@@ -208,7 +193,7 @@ public:
             True = NUL characters are inserted into the imported string.
             False = NUL characters are replaced by question marks (default).
      */
-    ::rtl::OUString     readUnicodeArray( sal_Int32 nChars, bool bAllowNulChars = false );
+    OUString     readUnicodeArray( sal_Int32 nChars, bool bAllowNulChars = false );
 
     /** Reads a Unicode character array (may be compressed) and returns the
         string.
@@ -224,7 +209,7 @@ public:
             True = NUL characters are inserted into the imported string.
             False = NUL characters are replaced by question marks (default).
      */
-    ::rtl::OUString     readCompressedUnicodeArray( sal_Int32 nChars, bool bCompressed, bool bAllowNulChars = false );
+    OUString     readCompressedUnicodeArray( sal_Int32 nChars, bool bCompressed, bool bAllowNulChars = false );
 
     /** Copies nBytes bytes from the current position to the passed output stream.
      */
@@ -233,12 +218,12 @@ public:
 protected:
     /** This dummy default c'tor will never call the c'tor of the virtual base
         class BinaryStreamBase as this class cannot be instanciated directly. */
-    inline explicit     BinaryInputStream() : BinaryStreamBase( false ) {}
+    BinaryInputStream() : BinaryStreamBase( false ) {}
 };
 
 typedef ::boost::shared_ptr< BinaryInputStream > BinaryInputStreamRef;
 
-// ----------------------------------------------------------------------------
+
 
 template< typename Type >
 void BinaryInputStream::readValue( Type& ornValue )
@@ -281,13 +266,13 @@ void BinaryInputStream::skipArray( sal_Int32 nElemCount )
     skip( nSkipSize, sizeof( Type ) );
 }
 
-// ============================================================================
+
 
 /** Wraps a UNO input stream and provides convenient access functions.
 
     The binary data in the stream is assumed to be in little-endian format.
  */
-class BinaryXInputStream : public BinaryXSeekableStream, public BinaryInputStream
+class OOX_DLLPUBLIC BinaryXInputStream : public BinaryXSeekableStream, public BinaryInputStream
 {
 public:
     /** Constructs the wrapper object for the passed input stream.
@@ -308,38 +293,38 @@ public:
 
     /** Closes the input stream. Does also close the wrapped UNO input stream
         if bAutoClose has been set to true in the constructor. */
-    virtual void        close();
+    virtual void        close() SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the passed sequence.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the (existing) buffer opMem.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Seeks the stream forward by the passed number of bytes. This works for
         non-seekable streams too. */
-    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Stream operator for all data types supported by the readValue() function. */
     template< typename Type >
-    inline BinaryXInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
+    BinaryXInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
 
 private:
-    StreamDataSequence  maBuffer;       /// Data buffer used in readMemory() function.
+    StreamDataSequence  maBuffer;       ///< Data buffer used in readMemory() function.
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream >
-                        mxInStrm;       /// Reference to the input stream.
-    bool                mbAutoClose;    /// True = automatically close stream on destruction.
+                        mxInStrm;       ///< Reference to the input stream.
+    bool                mbAutoClose;    ///< True = automatically close stream on destruction.
 };
 
-// ============================================================================
+
 
 /** Wraps a StreamDataSequence and provides convenient access functions.
 
     The binary data in the stream is assumed to be in little-endian format.
  */
-class SequenceInputStream : public SequenceSeekableStream, public BinaryInputStream
+class OOX_DLLPUBLIC SequenceInputStream : public SequenceSeekableStream, public BinaryInputStream
 {
 public:
     /** Constructs the wrapper object for the passed data sequence.
@@ -353,27 +338,27 @@ public:
 
     /** Reads nBytes bytes to the passed sequence.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the (existing) buffer opMem.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Seeks the stream forward by the passed number of bytes. This works for
         non-seekable streams too. */
-    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Stream operator for all data types supported by the readValue() function. */
     template< typename Type >
-    inline SequenceInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
+    SequenceInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
 
 private:
     /** Returns the number of bytes available in the sequence for the passed byte count. */
-    inline sal_Int32    getMaxBytes( sal_Int32 nBytes ) const
+    sal_Int32    getMaxBytes( sal_Int32 nBytes ) const
                             { return getLimitedValue< sal_Int32, sal_Int32 >( nBytes, 0, mpData->getLength() - mnPos ); }
 };
 
-// ============================================================================
+
 
 /** Wraps a BinaryInputStream and provides access to a specific part of the
     stream data.
@@ -402,39 +387,39 @@ public:
 
     /** Returns the size of the data block in the wrapped stream offered by
         this wrapper. */
-    virtual sal_Int64   size() const;
+    virtual sal_Int64   size() const SAL_OVERRIDE;
 
     /** Returns the current relative stream position. */
-    virtual sal_Int64   tell() const;
+    virtual sal_Int64   tell() const SAL_OVERRIDE;
 
     /** Seeks the stream to the passed relative position, if the wrapped stream
         is seekable. */
-    virtual void        seek( sal_Int64 nPos );
+    virtual void        seek( sal_Int64 nPos ) SAL_OVERRIDE;
 
     /** Closes the input stream but not the wrapped stream. */
-    virtual void        close();
+    virtual void        close() SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the passed sequence. Does not read out of the
         data block whose size has been specified on construction.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the (existing) buffer opMem. Does not read out of
         the data block whose size has been specified on construction.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Seeks the stream forward by the passed number of bytes. This works for
         non-seekable streams too. Does not seek out of the data block. */
-    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Stream operator for all data types supported by the readValue() function. */
     template< typename Type >
-    inline RelativeInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
+    RelativeInputStream& operator>>( Type& ornValue ) { readValue( ornValue ); return *this; }
 
 private:
     /** Returns the number of bytes available in the sequence for the passed byte count. */
-    inline sal_Int32    getMaxBytes( sal_Int32 nBytes ) const
+    sal_Int32    getMaxBytes( sal_Int32 nBytes ) const
                             { return getLimitedValue< sal_Int32, sal_Int64 >( nBytes, 0, mnSize - mnRelPos ); }
 
 private:
@@ -444,8 +429,10 @@ private:
     sal_Int64           mnSize;
 };
 
-// ============================================================================
+
 
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

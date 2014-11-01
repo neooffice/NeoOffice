@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/modelobjecthelper.hxx"
 
@@ -33,16 +29,14 @@
 
 namespace oox {
 
-// ============================================================================
 
-using namespace ::com::sun::star::awt;
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 ObjectContainer::ObjectContainer( const Reference< XMultiServiceFactory >& rxModelFactory, const OUString& rServiceName ) :
     mxModelFactory( rxModelFactory ),
@@ -64,14 +58,8 @@ bool ObjectContainer::hasObject( const OUString& rObjName ) const
 
 Any ObjectContainer::getObject( const OUString& rObjName ) const
 {
-    createContainer();
-    if( mxContainer.is() ) try
-    {
+    if( hasObject( rObjName ) )
         return mxContainer->getByName( rObjName );
-    }
-    catch( Exception& )
-    {
-    }
     return Any();
 }
 
@@ -81,7 +69,7 @@ OUString ObjectContainer::insertObject( const OUString& rObjName, const Any& rOb
     if( mxContainer.is() )
     {
         if( bInsertByUnusedName )
-            return ContainerHelper::insertByUnusedName( mxContainer, rObjName + OUString::valueOf( ++mnIndex ), ' ', rObj );
+            return ContainerHelper::insertByUnusedName( mxContainer, rObjName + OUString::number( ++mnIndex ), ' ', rObj );
         if( ContainerHelper::insertByName( mxContainer, rObjName, rObj ) )
             return rObjName;
     }
@@ -101,16 +89,18 @@ void ObjectContainer::createContainer() const
     OSL_ENSURE( mxContainer.is(), "ObjectContainer::createContainer - container not found" );
 }
 
-// ============================================================================
+
 
 ModelObjectHelper::ModelObjectHelper( const Reference< XMultiServiceFactory >& rxModelFactory ) :
-    maMarkerContainer(    rxModelFactory, CREATE_OUSTRING( "com.sun.star.drawing.MarkerTable" ) ),
-    maDashContainer(      rxModelFactory, CREATE_OUSTRING( "com.sun.star.drawing.DashTable" ) ),
-    maGradientContainer(  rxModelFactory, CREATE_OUSTRING( "com.sun.star.drawing.GradientTable" ) ),
-    maBitmapUrlContainer( rxModelFactory, CREATE_OUSTRING( "com.sun.star.drawing.BitmapTable" ) ),
-    maDashNameBase(      CREATE_OUSTRING( "msLineDash " ) ),
-    maGradientNameBase(  CREATE_OUSTRING( "msFillGradient " ) ),
-    maBitmapUrlNameBase( CREATE_OUSTRING( "msFillBitmap " ) )
+    maMarkerContainer(    rxModelFactory, "com.sun.star.drawing.MarkerTable" ),
+    maDashContainer(      rxModelFactory, "com.sun.star.drawing.DashTable" ),
+    maGradientContainer(  rxModelFactory, "com.sun.star.drawing.GradientTable" ),
+    maTransGradContainer(  rxModelFactory, "com.sun.star.drawing.TransparencyGradientTable" ),
+    maBitmapUrlContainer( rxModelFactory, "com.sun.star.drawing.BitmapTable" ),
+    maDashNameBase(      "msLineDash " ),
+    maGradientNameBase(  "msFillGradient " ),
+    maTransGradNameBase( "msTransGradient " ),
+    maBitmapUrlNameBase( "msFillBitmap " )
 {
 }
 
@@ -123,7 +113,7 @@ bool ModelObjectHelper::insertLineMarker( const OUString& rMarkerName, const Pol
 {
     OSL_ENSURE( rMarker.Coordinates.hasElements(), "ModelObjectHelper::insertLineMarker - line marker without coordinates" );
     if( rMarker.Coordinates.hasElements() )
-        return maMarkerContainer.insertObject( rMarkerName, Any( rMarker ), false ).getLength() > 0;
+        return !maMarkerContainer.insertObject( rMarkerName, Any( rMarker ), false ).isEmpty();
     return false;
 }
 
@@ -132,18 +122,33 @@ OUString ModelObjectHelper::insertLineDash( const LineDash& rDash )
     return maDashContainer.insertObject( maDashNameBase, Any( rDash ), true );
 }
 
-OUString ModelObjectHelper::insertFillGradient( const Gradient& rGradient )
+OUString ModelObjectHelper::insertFillGradient( const awt::Gradient& rGradient )
 {
     return maGradientContainer.insertObject( maGradientNameBase, Any( rGradient ), true );
 }
 
+OUString ModelObjectHelper::insertTransGrandient( const awt::Gradient& rGradient )
+{
+    return maTransGradContainer.insertObject( maTransGradNameBase, Any( rGradient ), true );
+}
+
 OUString ModelObjectHelper::insertFillBitmapUrl( const OUString& rGraphicUrl )
 {
-    if( rGraphicUrl.getLength() > 0 )
+    if( !rGraphicUrl.isEmpty() )
         return maBitmapUrlContainer.insertObject( maBitmapUrlNameBase, Any( rGraphicUrl ), true );
     return OUString();
 }
 
-// ============================================================================
+OUString ModelObjectHelper::getFillBitmapUrl( const OUString &rGraphicName )
+{
+    Any aAny = maBitmapUrlContainer.getObject( rGraphicName );
+    if( aAny.hasValue() )
+        return aAny.get<OUString>();
+    return OUString();
+}
+
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

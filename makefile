@@ -360,7 +360,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_reportdesign_patch \
 	build.neo_sal_patch \
 	build.neo_salhelper_patch \
-	build.neo_sax_patch build.neo_oox_patch \
+	build.neo_sax_patch \
 	build.neo_sc_patch \
 	build.neo_sd_patch \
 	build.neo_sdext_patch \
@@ -368,10 +368,9 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_sot_patch \
 	build.neo_store_patch \
 	build.neo_svtools_patch \
-	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_tools_patch \
-	build.neo_vcl_patch \
+	build.neo_vcl_patch build.neo_svx_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
@@ -380,7 +379,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_vos_patch \
 	build.neo_libwpd_patch build.neo_writerperfect_patch \
 	build.neo_writerfilter_patch \
-	build.neo_xmloff_patch
+	build.neo_xmloff_patch build.neo_oox_patch
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
@@ -575,9 +574,19 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 3/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_tango.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_tango.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
+	mkdir -p "$(INSTALL_HOME)/package/Contents/share/filter"
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in oox-drawingml-adj-names vmlexport-shape-types ; do cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/$$i" "share/filter/$$i" ; done'
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/comphelper/$(UOUTPUTDIR)/ucr/csstask.db"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart2.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart2data.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssdrawing.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssgraphic.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssoffice.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssscriptvba.db"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csssheet.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csstable.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssxmldom.db"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/sax/$(UOUTPUTDIR)/ucr/cssutil.db"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/sax/$(UOUTPUTDIR)/ucr/cssxmlsax.db"
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libAppleRemote$(DLLSUFFIX).dylib'
@@ -752,9 +761,11 @@ else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/comphelper/$(UOUTPUTDIR)/lib/libcomphelp4gcc3.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/libi18npaper$(DLLSUFFIX).dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/libsax$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/sax.uno.dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/comphelper/$(UOUTPUTDIR)/lib/libcomphelp4gcc3.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/libi18npaper$(DLLSUFFIX).dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/libsax$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/sax.uno.dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/tools/$(UOUTPUTDIR)/lib/libtl$(DLLSUFFIX).dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/xmloff/$(UOUTPUTDIR)/lib/libxo$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/salhelper/$(UOUTPUTDIR)/lib/libuno_salhelpergcc3.dylib.3" "basis-link/ure-link/lib"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(PRODUCT_BUILD_VERSION)#$(PRODUCT_VERSION)#g' > "Info.plist"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/filter"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in oox-drawingml-adj-names vmlexport-shape-types ; do cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/$$i" "share/filter/$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program" ; cp "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/basis-link/program/offapi.rdb" .
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program" ; cp "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/basis-link/program/services.rdb" .
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "etc/bootstraprc"

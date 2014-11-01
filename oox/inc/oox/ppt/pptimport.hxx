@@ -1,86 +1,96 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_PPT_PPTIMPORT_HXX
+#define INCLUDED_OOX_PPT_PPTIMPORT_HXX
 
-
-#ifndef OOX_POWERPOINT_POWERPOINTIMPORT_HXX
-#define OOX_POWERPOINT_POWERPOINTIMPORT_HXX
-
-#include "oox/core/xmlfilterbase.hxx"
+#include <oox/core/xmlfilterbase.hxx>
 
 #include <com/sun/star/animations/XAnimationNode.hpp>
 #include <oox/drawingml/theme.hxx>
-#include "oox/ppt/presentationfragmenthandler.hxx"
-#include "oox/ppt/slidepersist.hxx"
+#include <oox/ppt/presentationfragmenthandler.hxx>
+#include <oox/ppt/slidepersist.hxx>
 #include <vector>
 #include <map>
 
 namespace oox { namespace ppt {
 
-// ---------------------------------------------------------------------
+
 
 class PowerPointImport : public oox::core::XmlFilterBase
 {
 public:
 
-	PowerPointImport( const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext >& rxContext )
+    PowerPointImport( const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext >& rxContext )
         throw( ::com::sun::star::uno::RuntimeException );
-	virtual ~PowerPointImport();
+    virtual ~PowerPointImport();
 
     // from FilterBase
-    virtual bool importDocument() throw();
-    virtual bool exportDocument() throw();
+    virtual bool importDocument() throw() SAL_OVERRIDE;
+    virtual bool exportDocument() throw() SAL_OVERRIDE;
 
-    virtual const ::oox::drawingml::Theme* getCurrentTheme() const;
-    virtual ::oox::vml::Drawing* getVmlDrawing();
-	virtual const oox::drawingml::table::TableStyleListPtr getTableStyles();
-    virtual ::oox::drawingml::chart::ChartConverter& getChartConverter();
+    virtual const ::oox::drawingml::Theme* getCurrentTheme() const SAL_OVERRIDE;
+    virtual ::oox::vml::Drawing* getVmlDrawing() SAL_OVERRIDE;
+    virtual const oox::drawingml::table::TableStyleListPtr getTableStyles() SAL_OVERRIDE;
+    virtual ::oox::drawingml::chart::ChartConverter* getChartConverter() SAL_OVERRIDE;
 
-	void													setActualSlidePersist( SlidePersistPtr pActualSlidePersist ){ mpActualSlidePersist = pActualSlidePersist; };
-	std::map< rtl::OUString, oox::drawingml::ThemePtr >&	getThemes(){ return maThemes; };
-	std::vector< SlidePersistPtr >&							getDrawPages(){ return maDrawPages; };
-	std::vector< SlidePersistPtr >&							getMasterPages(){ return maMasterPages; };
-	std::vector< SlidePersistPtr >&							getNotesPages(){ return maNotesPages; };
+    SlidePersistPtr                                         getActualSlidePersist() const { return mpActualSlidePersist; };
+    void                                                    setActualSlidePersist( SlidePersistPtr pActualSlidePersist ){ mpActualSlidePersist = pActualSlidePersist; };
+    std::map< OUString, oox::drawingml::ThemePtr >&    getThemes(){ return maThemes; };
+    std::vector< SlidePersistPtr >&                         getDrawPages(){ return maDrawPages; };
+    std::vector< SlidePersistPtr >&                         getMasterPages(){ return maMasterPages; };
+    std::vector< SlidePersistPtr >&                         getNotesPages(){ return maNotesPages; };
+
+    virtual sal_Bool SAL_CALL filter( const ::com::sun::star::uno::Sequence<   ::com::sun::star::beans::PropertyValue >& rDescriptor )
+#if SUPD == 310
+        throw( ::com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
     sal_Int32 getSchemeColor( sal_Int32 nToken ) const;
 
-private:
-    virtual GraphicHelper* implCreateGraphicHelper() const;
-    virtual ::oox::ole::VbaProject* implCreateVbaProject() const;
-    virtual ::rtl::OUString implGetImplementationName() const;
+#if OSL_DEBUG_LEVEL > 0
+    static XmlFilterBase* mpDebugFilterBase;
+#endif
 
 private:
-	rtl::OUString										maTableStyleListPath;
-	oox::drawingml::table::TableStyleListPtr			mpTableStyleList;
+    virtual GraphicHelper* implCreateGraphicHelper() const SAL_OVERRIDE;
+    virtual ::oox::ole::VbaProject* implCreateVbaProject() const SAL_OVERRIDE;
+    virtual OUString implGetImplementationName() const SAL_OVERRIDE;
 
-	SlidePersistPtr										mpActualSlidePersist;
-	std::map< rtl::OUString, oox::drawingml::ThemePtr > maThemes;
+private:
+    OUString                                       maTableStyleListPath;
+    oox::drawingml::table::TableStyleListPtr            mpTableStyleList;
 
-	std::vector< SlidePersistPtr > maDrawPages;
-	std::vector< SlidePersistPtr > maMasterPages;
-	std::vector< SlidePersistPtr > maNotesPages;
+    SlidePersistPtr                                     mpActualSlidePersist;
+    std::map< OUString, oox::drawingml::ThemePtr > maThemes;
+
+    std::vector< SlidePersistPtr > maDrawPages;
+    std::vector< SlidePersistPtr > maMasterPages;
+    std::vector< SlidePersistPtr > maNotesPages;
 
     ::boost::shared_ptr< ::oox::drawingml::chart::ChartConverter > mxChartConv;
 };
 
 } }
 
-#endif // OOX_POWERPOINT_POWERPOINTIMPORT_HXX
+#endif // INCLUDED_OOX_PPT_PPTIMPORT_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

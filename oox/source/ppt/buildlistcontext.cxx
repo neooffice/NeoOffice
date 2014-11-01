@@ -1,108 +1,88 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "buildlistcontext.hxx"
 #include <rtl/ustring.hxx>
 #include "oox/helper/attributelist.hxx"
 
-
-using namespace ::oox::core;
-using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::xml::sax;
-using ::rtl::OUString;
-
 namespace oox { namespace ppt {
 
-    BuildListContext::BuildListContext( ContextHandler& rParent,
-                const Reference< XFastAttributeList >& /*xAttribs*/,
-                TimeNodePtrList & aTimeNodeList)
-        : ContextHandler( rParent )
-		, maTimeNodeList( aTimeNodeList )
-		, mbInBldGraphic( false )
-		,	mbBuildAsOne( false )
-	{
-	}
+    BuildListContext::BuildListContext( FragmentHandler2& rParent )
+        : FragmentHandler2( rParent )
+        , mbInBldGraphic( false )
+        ,   mbBuildAsOne( false )
+    {
+    }
 
-	BuildListContext::~BuildListContext( )
-	{
-	}
+    BuildListContext::~BuildListContext( )
+    {
+    }
 
-	void SAL_CALL BuildListContext::endFastElement( sal_Int32 aElement ) throw ( SAXException, RuntimeException)
-	{
-		switch( aElement )
-		{
-		case PPT_TOKEN( bldGraphic ):
-			mbInBldGraphic = false;
-			break;
-		default:
-			break;
-		}
-	}
+    void BuildListContext::onEndElement()
+    {
+        switch( getCurrentElement() )
+        {
+        case PPT_TOKEN( bldGraphic ):
+            mbInBldGraphic = false;
+            break;
+        default:
+            break;
+        }
+    }
 
-	Reference< XFastContextHandler > SAL_CALL BuildListContext::createFastChildContext( ::sal_Int32 aElementToken,
-																																										 const Reference< XFastAttributeList >& xAttribs )
-		throw ( SAXException, RuntimeException )
-	{
-		Reference< XFastContextHandler > xRet;
-
-		switch( aElementToken )
-		{
-		case PPT_TOKEN( bldAsOne ):
-			if( mbInBldGraphic )
-			{
-				mbBuildAsOne = true;
-			}
-			break;
-		case PPT_TOKEN( bldSub ):
-			if( mbInBldGraphic )
-			{
-			}
-			break;
-		case PPT_TOKEN( bldGraphic ):
-		{
-			mbInBldGraphic = true;
-			AttributeList attribs( xAttribs );
-			OUString sShapeId = xAttribs->getOptionalValue( XML_spid );
+    ::oox::core::ContextHandlerRef BuildListContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& /*rAttribs*/ )
+    {
+        switch( aElementToken )
+        {
+        case PPT_TOKEN( bldAsOne ):
+            if( mbInBldGraphic )
+            {
+                mbBuildAsOne = true;
+            }
+            return this;
+        case PPT_TOKEN( bldSub ):
+            if( mbInBldGraphic )
+            {
+            }
+            return this;
+        case PPT_TOKEN( bldGraphic ):
+        {
+            mbInBldGraphic = true;
+//          OUString sShapeId = rAttribs.getString( XML_spid, OUString() );
 // TODO
-//		bool uiExpand = attribs.getBool( XML_uiExpand, true );
-				/* this is unsigned */
-//		sal_uInt32 nGroupId =  attribs.getUnsignedInteger( XML_grpId, 0 );
-			break;
-		}
-		case A_TOKEN( bldDgm ):
-		case A_TOKEN( bldOleChart ):
-		case A_TOKEN( bldP ):
+//      bool uiExpand = rAttribs.getBool( XML_uiExpand, true );
+                /* this is unsigned */
+//      sal_uInt32 nGroupId =  rAttribs.getUnsignedInteger( XML_grpId, 0 );
+        return this;
+        }
+        case A_TOKEN( bldDgm ):
+        case A_TOKEN( bldOleChart ):
+        case A_TOKEN( bldP ):
+            return this;
+        default:
+            break;
+        }
 
-			break;
-		default:
-			break;
-		}
-
-		if( !xRet.is() )
-			xRet.set(this);
-
-		return xRet;
-	}
+        return this;
+    }
 
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

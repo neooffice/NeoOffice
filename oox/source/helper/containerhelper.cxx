@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/containerhelper.hxx"
 
@@ -32,34 +28,34 @@
 
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 
-// ============================================================================
 
 namespace {
 
 struct ValueRangeComp
 {
-    inline bool         operator()( const ValueRange& rRange, sal_Int32 nValue ) const { return rRange.mnLast < nValue; }
+    inline bool operator()( const ValueRange& rLHS, const ValueRange& rRHS ) const
+    {
+        return rLHS.mnLast < rRHS.mnFirst;
+    }
 };
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 void ValueRangeSet::insert( const ValueRange& rRange )
 {
     // find the first range that contains or follows the starting point of the passed range
     ValueRangeVector::iterator aBeg = maRanges.begin();
     ValueRangeVector::iterator aEnd = maRanges.end();
-    ValueRangeVector::iterator aIt = ::std::lower_bound( aBeg, aEnd, rRange.mnFirst, ValueRangeComp() );
+    ValueRangeVector::iterator aIt = ::std::lower_bound( aBeg, aEnd, rRange, ValueRangeComp() );
     // nothing to do if found range contains passed range
     if( (aIt != aEnd) && aIt->contains( rRange ) ) return;
     // check if previous range can be used to merge with the passed range
@@ -84,65 +80,7 @@ void ValueRangeSet::insert( const ValueRange& rRange )
     }
 }
 
-ValueRangeVector ValueRangeSet::getIntersection( const ValueRange& rRange ) const
-{
-    ValueRangeVector aRanges;
-    // find the range that contains nFirst or the first range that follows nFirst
-    ValueRangeVector::const_iterator aIt = ::std::lower_bound( maRanges.begin(), maRanges.end(), rRange.mnFirst, ValueRangeComp() );
-    for( ValueRangeVector::const_iterator aEnd = maRanges.end(); (aIt != aEnd) && (aIt->mnFirst <= rRange.mnLast); ++aIt )
-        aRanges.push_back( ValueRange( ::std::max( aIt->mnFirst, rRange.mnFirst ), ::std::min( aIt->mnLast, rRange.mnLast ) ) );
-    return aRanges;
-}
 
-// ============================================================================
-
-Reference< XIndexContainer > ContainerHelper::createIndexContainer( const Reference< XComponentContext >& rxContext )
-{
-    Reference< XIndexContainer > xContainer;
-    if( rxContext.is() ) try
-    {
-        Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
-        xContainer.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.document.IndexedPropertyValues" ) ), UNO_QUERY_THROW );
-    }
-    catch( Exception& )
-    {
-    }
-    OSL_ENSURE( xContainer.is(), "ContainerHelper::createIndexContainer - cannot create container" );
-    return xContainer;
-}
-
-bool ContainerHelper::insertByIndex(
-        const Reference< XIndexContainer >& rxIndexContainer,
-        sal_Int32 nIndex, const Any& rObject )
-{
-    OSL_ENSURE( rxIndexContainer.is(), "ContainerHelper::insertByIndex - missing XIndexContainer interface" );
-    bool bRet = false;
-    try
-    {
-        rxIndexContainer->insertByIndex( nIndex, rObject );
-        bRet = true;
-    }
-    catch( Exception& )
-    {
-    }
-    OSL_ENSURE( bRet, "ContainerHelper::insertByIndex - cannot insert object" );
-    return bRet;
-}
-
-Reference< XNameContainer > ContainerHelper::createNameContainer( const Reference< XComponentContext >& rxContext )
-{
-    Reference< XNameContainer > xContainer;
-    if( rxContext.is() ) try
-    {
-        Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
-        xContainer.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.document.NamedPropertyValues" ) ), UNO_QUERY_THROW );
-    }
-    catch( Exception& )
-    {
-    }
-    OSL_ENSURE( xContainer.is(), "ContainerHelper::createNameContainer - cannot create container" );
-    return xContainer;
-}
 
 OUString ContainerHelper::getUnusedName(
         const Reference< XNameAccess >& rxNameAccess, const OUString& rSuggestedName,
@@ -186,8 +124,13 @@ OUString ContainerHelper::insertByUnusedName(
     OSL_ENSURE( rxNameContainer.is(), "ContainerHelper::insertByUnusedName - missing XNameContainer interface" );
 
     // find an unused name
+#if SUPD == 310
+    // find an unused name
     Reference< XNameAccess > xNameAccess( rxNameContainer, UNO_QUERY );
     OUString aNewName = getUnusedName( xNameAccess, rSuggestedName, cSeparator );
+#else	// SUPD == 310
+    OUString aNewName = getUnusedName( rxNameContainer, rSuggestedName, cSeparator );
+#endif	// SUPD == 310
 
     // rename existing object
     if( bRenameOldExisting && rxNameContainer->hasByName( rSuggestedName ) )
@@ -201,7 +144,7 @@ OUString ContainerHelper::insertByUnusedName(
         }
         catch( Exception& )
         {
-            OSL_ENSURE( false, "ContainerHelper::insertByUnusedName - cannot rename old object" );
+            OSL_FAIL( "ContainerHelper::insertByUnusedName - cannot rename old object" );
         }
     }
 
@@ -210,6 +153,8 @@ OUString ContainerHelper::insertByUnusedName(
     return aNewName;
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

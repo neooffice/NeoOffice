@@ -41,11 +41,22 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 .IF "$(L10N_framework)"==""
+
 .IF "$(UPD)" == "310"
-# Link to modified libcomphelp
-SOLARLIB:=-L$(PRJ)$/..$/comphelper$/$(INPATH)$/lib $(SOLARLIB)
-SOLARLIBDIR:=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib -L$(SOLARLIBDIR)
+PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/tools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/xmloff$/$(INPATH)$/lib
+
+# Link to modified libcomphelp, libsax, libtl, and libxo
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"
+
 # --- Allgemein ----------------------------------------------------
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib
@@ -55,7 +66,6 @@ LIB1FILES=	\
     $(SLB)$/core.lib\
     $(SLB)$/ole.lib\
     $(SLB)$/ppt.lib\
-    $(SLB)$/xls.lib\
     $(SLB)$/vml.lib\
     $(SLB)$/drawingml.lib\
     $(SLB)$/diagram.lib\
@@ -64,6 +74,16 @@ LIB1FILES=	\
     $(SLB)$/shape.lib\
     $(SLB)$/dump.lib\
     $(SLB)$/docprop.lib
+
+.IF "$(UPD)" == "310"
+LIB1FILES+= \
+    $(SLB)$/crypto.lib \
+    $(SLB)$/export.lib \
+    $(SLB)$/mathml.lib
+.ELSE		# "$(UPD)" == "310"
+LIB1FILES+= \
+    $(SLB)$/xls.lib
+.ENDIF		# "$(UPD)" == "310"
 
 # --- Shared-Library -----------------------------------------------
 
@@ -94,6 +114,19 @@ SHL1STDLIBS+= $(OPENSSLLIB)
 SHL1STDLIBS+= $(OPENSSLLIBST)
 .ENDIF
 .ENDIF # WNT
+
+.IF "$(UPD)" == "310"
+SHL1STDLIBS += \
+		$(GOODIESLIB) \
+		$(SOTLIB) \
+		$(SVTOOLLIB) \
+		$(SVXCORELIB) \
+		$(SVXMSFILTERLIB) \
+		$(TOOLSLIB) \
+		$(UNOTOOLSLIB) \
+		$(VCLLIB) \
+		$(XMLOFFLIB)
+.ENDIF		# "$(UPD)" == "310"
 
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 SHL1LIBS=   $(LIB1TARGET)

@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/axisconverter.hxx"
 
@@ -31,6 +27,8 @@
 #include <com/sun/star/chart/TimeUnit.hpp>
 #include <com/sun/star/chart2/AxisType.hpp>
 #include <com/sun/star/chart2/TickmarkStyle.hpp>
+#include <com/sun/star/chart2/LinearScaling.hpp>
+#include <com/sun/star/chart2/LogarithmicScaling.hpp>
 #include <com/sun/star/chart2/XAxis.hpp>
 #include <com/sun/star/chart2/XCoordinateSystem.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
@@ -38,20 +36,24 @@
 #include "oox/drawingml/chart/titleconverter.hxx"
 #include "oox/drawingml/chart/typegroupconverter.hxx"
 #include "oox/drawingml/lineproperties.hxx"
+#include "comphelper/processfactory.hxx"
+
+#if SUPD == 310
+#include <com/sun/star/chart2/AxisType2.hpp>
+#include <com/sun/star/chart2/ScaleData2.hpp>
+#endif	// SUPD == 310
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -110,9 +112,29 @@ sal_Int32 lclGetTickMark( sal_Int32 nToken )
     return NONE;
 }
 
+/**
+ * The groups is of percent type only when all of its members are of percent
+ * type.
+ */
+bool isPercent( const RefVector<TypeGroupConverter>& rTypeGroups )
+{
+    if (rTypeGroups.empty())
+        return false;
+
+    RefVector<TypeGroupConverter>::const_iterator it = rTypeGroups.begin(), itEnd = rTypeGroups.end();
+    for (; it != itEnd; ++it)
+    {
+        TypeGroupConverter& rConv = **it;
+        if (!rConv.isPercent())
+            return false;
+    }
+
+    return true;
+}
+
 } // namespace
 
-// ============================================================================
+
 
 AxisConverter::AxisConverter( const ConverterRoot& rParent, AxisModel& rModel ) :
     ConverterBase< AxisModel >( rParent, rModel )
@@ -123,20 +145,32 @@ AxisConverter::~AxisConverter()
 {
 }
 
-void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCoordSystem,
-        TypeGroupConverter& rTypeGroup, const AxisModel* pCrossingAxis, sal_Int32 nAxesSetIdx, sal_Int32 nAxisIdx )
+void AxisConverter::convertFromModel(
+#if SUPD == 310
+    const css::uno::Reference< XCoordinateSystem >& rxCoordSystem,
+#else	// SUPD == 310
+    const Reference< XCoordinateSystem >& rxCoordSystem,
+#endif	// SUPD == 310
+    RefVector<TypeGroupConverter>& rTypeGroups, const AxisModel* pCrossingAxis, sal_Int32 nAxesSetIdx, sal_Int32 nAxisIdx )
 {
+    if (rTypeGroups.empty())
+        return;
+
+#if SUPD == 310
+    css::uno::Reference< XAxis > xAxis;
+#else	// SUPD == 310
     Reference< XAxis > xAxis;
+#endif	// SUPD == 310
     try
     {
         namespace cssc = ::com::sun::star::chart;
         namespace cssc2 = ::com::sun::star::chart2;
 
-        const TypeGroupInfo& rTypeInfo = rTypeGroup.getTypeInfo();
+        const TypeGroupInfo& rTypeInfo = rTypeGroups.front()->getTypeInfo();
         ObjectFormatter& rFormatter = getFormatter();
 
         // create the axis object (always)
-        xAxis.set( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.Axis" ) ), UNO_QUERY_THROW );
+        xAxis.set( createInstance( "com.sun.star.chart2.Axis" ), UNO_QUERY_THROW );
         PropertySet aAxisProp( xAxis );
         // #i58688# axis enabled
         aAxisProp.setProperty( PROP_Show, !mrModel.mbDeleted );
@@ -166,7 +200,11 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
             rFormatter.convertFrameFormatting( aGridProp, mrModel.mxMajorGridLines, OBJECTTYPE_MAJORGRIDLINE );
 
         // sub grid
+#if SUPD == 310
+        Sequence< css::uno::Reference< XPropertySet > > aSubGridPropSeq = xAxis->getSubGridProperties();
+#else	// SUPD == 310
         Sequence< Reference< XPropertySet > > aSubGridPropSeq = xAxis->getSubGridProperties();
+#endif	// SUPD == 310
         if( aSubGridPropSeq.hasElements() )
         {
             PropertySet aSubGridProp( aSubGridPropSeq[ 0 ] );
@@ -186,17 +224,25 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
                 {
                     OSL_ENSURE( (mrModel.mnTypeId == C_TOKEN( catAx )) || (mrModel.mnTypeId == C_TOKEN( dateAx )),
                         "AxisConverter::convertFromModel - unexpected axis model type (must: c:catAx or c:dateAx)" );
-#if SUPD == 310
-                    aScaleData.AxisType = cssc2::AxisType::CATEGORY;
-#else	// SUPD == 310
                     bool bDateAxis = mrModel.mnTypeId == C_TOKEN( dateAx );
                     /*  Chart2 requires axis type CATEGORY for automatic
                         category/date axis (even if it is a date axis
                         currently). */
+#if SUPD == 310
+                    if ( ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
+                    {
+                        aScaleData.AxisType = (bDateAxis && !mrModel.mbAuto) ? cssc2::AxisType2::DATE : cssc2::AxisType::CATEGORY;
+                        ((com::sun::star::chart2::ScaleData2&)aScaleData).AutoDateAxis = mrModel.mbAuto;
+                    }
+                    else
+                    {
+                        aScaleData.AxisType = cssc2::AxisType::CATEGORY;
+                    }
+#else	// SUPD == 310
                     aScaleData.AxisType = (bDateAxis && !mrModel.mbAuto) ? cssc2::AxisType::DATE : cssc2::AxisType::CATEGORY;
                     aScaleData.AutoDateAxis = mrModel.mbAuto;
 #endif	// SUPD == 310
-                    aScaleData.Categories = rTypeGroup.createCategorySequence();
+                    aScaleData.Categories = rTypeGroups.front()->createCategorySequence();
                 }
                 else
                 {
@@ -206,11 +252,11 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
             break;
             case API_Y_AXIS:
                 OSL_ENSURE( mrModel.mnTypeId == C_TOKEN( valAx ), "AxisConverter::convertFromModel - unexpected axis model type (must: c:valAx)" );
-                aScaleData.AxisType = rTypeGroup.isPercent() ? cssc2::AxisType::PERCENT : cssc2::AxisType::REALNUMBER;
+                aScaleData.AxisType = isPercent(rTypeGroups) ? cssc2::AxisType::PERCENT : cssc2::AxisType::REALNUMBER;
             break;
             case API_Z_AXIS:
                 OSL_ENSURE( mrModel.mnTypeId == C_TOKEN( serAx ), "AxisConverter::convertFromModel - unexpected axis model type (must: c:serAx)" );
-                OSL_ENSURE( rTypeGroup.isDeep3dChart(), "AxisConverter::convertFromModel - series axis not supported by this chart type" );
+                OSL_ENSURE( rTypeGroups.front()->isDeep3dChart(), "AxisConverter::convertFromModel - series axis not supported by this chart type" );
                 aScaleData.AxisType = cssc2::AxisType::SERIES;
             break;
         }
@@ -221,9 +267,11 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
         {
             case cssc2::AxisType::CATEGORY:
             case cssc2::AxisType::SERIES:
-#if SUPD != 310
+#if SUPD == 310
+            case cssc2::AxisType2::DATE:
+#else	// SUPD == 310
             case cssc2::AxisType::DATE:
-#endif	// SUPD != 310
+#endif	// SUPD == 310
             {
                 /*  Determine date axis type from XML type identifier, and not
                     via aScaleData.AxisType, as this value sticks to CATEGORY
@@ -231,12 +279,23 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
                 if( mrModel.mnTypeId == C_TOKEN( dateAx ) )
                 {
                     // scaling algorithm
-                    aScaleData.Scaling.set( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.LinearScaling" ) ), UNO_QUERY );
+                    aScaleData.Scaling = LinearScaling::create( comphelper::getProcessComponentContext() );
                     // min/max
                     lclSetValueOrClearAny( aScaleData.Minimum, mrModel.mofMin );
                     lclSetValueOrClearAny( aScaleData.Maximum, mrModel.mofMax );
                     // major/minor increment
-#if SUPD != 310
+#if SUPD == 310
+                    if ( ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
+                    {
+                        lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
+                        lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
+                        // base time unit
+                        if( mrModel.monBaseTimeUnit.has() )
+                            ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
+                        else
+                            ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution.clear();
+                    }
+#else	// SUPD == 310
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
                     // base time unit
@@ -244,7 +303,7 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
                         aScaleData.TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
                     else
                         aScaleData.TimeIncrement.TimeResolution.clear();
-#endif	// SUPD != 310
+#endif	// SUPD == 310
                 }
                 else
                 {
@@ -263,10 +322,10 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
             {
                 // scaling algorithm
                 bool bLogScale = lclIsLogarithmicScale( mrModel );
-                OUString aScalingService = bLogScale ?
-                    CREATE_OUSTRING( "com.sun.star.chart2.LogarithmicScaling" ) :
-                    CREATE_OUSTRING( "com.sun.star.chart2.LinearScaling" );
-                aScaleData.Scaling.set( createInstance( aScalingService ), UNO_QUERY );
+                if( bLogScale )
+                    aScaleData.Scaling = LogarithmicScaling::create( comphelper::getProcessComponentContext() );
+                else
+                    aScaleData.Scaling = LinearScaling::create( comphelper::getProcessComponentContext() );
                 // min/max
                 lclSetValueOrClearAny( aScaleData.Minimum, mrModel.mofMin );
                 lclSetValueOrClearAny( aScaleData.Maximum, mrModel.mofMax );
@@ -295,7 +354,7 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
             }
             break;
             default:
-                OSL_ENSURE( false, "AxisConverter::convertFromModel - unknown axis type" );
+                OSL_FAIL( "AxisConverter::convertFromModel - unknown axis type" );
         }
 
         /*  Do not set a value to the Origin member anymore (already done via
@@ -318,7 +377,7 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
         // number format ------------------------------------------------------
 
         if( (aScaleData.AxisType == cssc2::AxisType::REALNUMBER) || (aScaleData.AxisType == cssc2::AxisType::PERCENT) )
-            getFormatter().convertNumberFormat( aAxisProp, mrModel.maNumberFormat );
+            getFormatter().convertNumberFormat(aAxisProp, mrModel.maNumberFormat, false);
 
         // position of crossing axis ------------------------------------------
 
@@ -328,9 +387,10 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
         {
             case XML_min:       eAxisPos = cssc::ChartAxisPosition_START;   break;
             case XML_max:       eAxisPos = cssc::ChartAxisPosition_END;     break;
-            case XML_autoZero:  eAxisPos = cssc::ChartAxisPosition_VALUE;   break;
+            case XML_autoZero:  eAxisPos = cssc::ChartAxisPosition_ZERO;   break;
         }
-        aAxisProp.setProperty( PROP_CrossoverPosition, eAxisPos );
+        if( !mrModel.mbAuto )
+            aAxisProp.setProperty( PROP_CrossoverPosition, eAxisPos );
 
         // calculate automatic origin depending on scaling mode of crossing axis
         bool bCrossingLogScale = pCrossingAxis && lclIsLogarithmicScale( *pCrossingAxis );
@@ -340,12 +400,20 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
         // axis title ---------------------------------------------------------
 
         // in radar charts, title objects may exist, but are not shown
-        if( mrModel.mxTitle.is() && (rTypeGroup.getTypeInfo().meTypeCategory != TYPECATEGORY_RADAR) )
+        if( mrModel.mxTitle.is() && (rTypeGroups.front()->getTypeInfo().meTypeCategory != TYPECATEGORY_RADAR) )
         {
+#if SUPD == 310
+            css::uno::Reference< XTitled > xTitled( xAxis, UNO_QUERY_THROW );
+#else	// SUPD == 310
             Reference< XTitled > xTitled( xAxis, UNO_QUERY_THROW );
+#endif	// SUPD == 310
             TitleConverter aTitleConv( *this, *mrModel.mxTitle );
-            aTitleConv.convertFromModel( xTitled, CREATE_OUSTRING( "Axis Title" ), OBJECTTYPE_AXISTITLE, nAxesSetIdx, nAxisIdx );
+            aTitleConv.convertFromModel( xTitled, "Axis Title", OBJECTTYPE_AXISTITLE, nAxesSetIdx, nAxisIdx );
         }
+
+        // axis data unit label -----------------------------------------------
+        AxisDispUnitsConverter axisDispUnitsConverter (*this, mrModel.mxDispUnits.getOrCreate());
+        axisDispUnitsConverter.convertFromModel(xAxis);
     }
     catch( Exception& )
     {
@@ -358,12 +426,38 @@ void AxisConverter::convertFromModel( const Reference< XCoordinateSystem >& rxCo
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "AxisConverter::convertFromModel - cannot insert axis into coordinate system" );
+        OSL_FAIL( "AxisConverter::convertFromModel - cannot insert axis into coordinate system" );
     }
 }
 
-// ============================================================================
+
+
+AxisDispUnitsConverter::AxisDispUnitsConverter( const ConverterRoot& rParent, AxisDispUnitsModel& rModel ) :
+    ConverterBase< AxisDispUnitsModel >( rParent, rModel )
+{
+}
+
+AxisDispUnitsConverter::~AxisDispUnitsConverter()
+{
+}
+
+#if SUPD == 310
+void AxisDispUnitsConverter::convertFromModel( const css::uno::Reference< XAxis >& rxAxis )
+#else	// SUPD == 310
+void AxisDispUnitsConverter::convertFromModel( const Reference< XAxis >& rxAxis )
+#endif	// SUPD == 310
+{
+    PropertySet aPropSet( rxAxis );
+    if (!(mrModel.mnBuiltInUnit).isEmpty() )
+    {
+        aPropSet.setProperty(PROP_DisplayUnits, true);
+        aPropSet.setProperty( PROP_BuiltInUnit, mrModel.mnBuiltInUnit );
+    }
+}
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

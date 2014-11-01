@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/core/relations.hxx"
 
@@ -28,13 +24,6 @@
 
 namespace oox {
 namespace core {
-
-// ============================================================================
-
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
-
-// ============================================================================
 
 namespace {
 
@@ -45,13 +34,23 @@ OUString lclRemoveFileName( const OUString& rPath )
 
 OUString lclAppendFileName( const OUString& rPath, const OUString& rFileName )
 {
-    return (rPath.getLength() == 0) ? rFileName :
-        OUStringBuffer( rPath ).append( sal_Unicode( '/' ) ).append( rFileName ).makeStringAndClear();
+    return rPath.isEmpty() ? rFileName :
+        OUStringBuffer( rPath ).append( '/' ).append( rFileName ).makeStringAndClear();
 }
 
-} // namespace
+OUString createOfficeDocRelationTypeTransitional(const OUString& rType)
+{
+    static const OUString aTransitionalBase("http://schemas.openxmlformats.org/officeDocument/2006/relationships/");
+    return aTransitionalBase + rType;
+}
 
-// ============================================================================
+OUString createOfficeDocRelationTypeStrict(const OUString& rType)
+{
+    static const OUString aStrictBase("http://purl.oclc.org/ooxml/officeDocument/relationships/");
+    return aStrictBase + rType;
+}
+
+}
 
 Relations::Relations( const OUString& rFragmentPath ) :
     maFragmentPath( rFragmentPath )
@@ -72,11 +71,12 @@ const Relation* Relations::getRelationFromFirstType( const OUString& rType ) con
     return 0;
 }
 
-RelationsRef Relations::getRelationsFromType( const OUString& rType ) const
+RelationsRef Relations::getRelationsFromTypeFromOfficeDoc( const OUString& rType ) const
 {
     RelationsRef xRelations( new Relations( maFragmentPath ) );
     for( const_iterator aIt = begin(), aEnd = end(); aIt != aEnd; ++aIt )
-        if( aIt->second.maType.equalsIgnoreAsciiCase( rType ) )
+        if( aIt->second.maType.equalsIgnoreAsciiCase( createOfficeDocRelationTypeTransitional(rType) ) ||
+                aIt->second.maType.equalsIgnoreAsciiCase( createOfficeDocRelationTypeStrict(rType) ))
             (*xRelations)[ aIt->first ] = aIt->second;
     return xRelations;
 }
@@ -87,16 +87,16 @@ OUString Relations::getExternalTargetFromRelId( const OUString& rRelId ) const
     return (pRelation && pRelation->mbExternal) ? pRelation->maTarget : OUString();
 }
 
-OUString Relations::getExternalTargetFromFirstType( const OUString& rType ) const
+OUString Relations::getInternalTargetFromRelId( const OUString& rRelId ) const
 {
-    const Relation* pRelation = getRelationFromFirstType( rType );
-    return (pRelation && pRelation->mbExternal) ? pRelation->maTarget : OUString();
+    const Relation* pRelation = getRelationFromRelId( rRelId );
+    return (pRelation && !pRelation->mbExternal) ? pRelation->maTarget : OUString();
 }
 
 OUString Relations::getFragmentPathFromRelation( const Relation& rRelation ) const
 {
     // no target, no fragment path
-    if( rRelation.mbExternal || (rRelation.maTarget.getLength() == 0) )
+    if( rRelation.mbExternal || rRelation.maTarget.isEmpty() )
         return OUString();
 
     // absolute target: return it without leading slash (#i100978)
@@ -104,7 +104,7 @@ OUString Relations::getFragmentPathFromRelation( const Relation& rRelation ) con
         return rRelation.maTarget.copy( 1 );
 
     // empty fragment path: return target
-    if( maFragmentPath.getLength() == 0 )
+    if( maFragmentPath.isEmpty() )
         return rRelation.maTarget;
 
     // resolve relative target path according to base path
@@ -138,7 +138,19 @@ OUString Relations::getFragmentPathFromFirstType( const OUString& rType ) const
     return pRelation ? getFragmentPathFromRelation( *pRelation ) : OUString();
 }
 
-// ============================================================================
+OUString Relations::getFragmentPathFromFirstTypeFromOfficeDoc( const OUString& rType ) const
+{
+    OUString aTransitionalType(createOfficeDocRelationTypeTransitional(rType));
+    const Relation* pRelation = getRelationFromFirstType( aTransitionalType );
+    if(!pRelation)
+    {
+        OUString aStrictType = createOfficeDocRelationTypeStrict(rType);
+        pRelation = getRelationFromFirstType( aStrictType );
+    }
+    return pRelation ? getFragmentPathFromRelation( *pRelation ) : OUString();
+}
 
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

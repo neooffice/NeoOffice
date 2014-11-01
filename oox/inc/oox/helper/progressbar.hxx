@@ -1,33 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_HELPER_PROGRESSBAR_HXX
-#define OOX_HELPER_PROGRESSBAR_HXX
+#ifndef INCLUDED_OOX_HELPER_PROGRESSBAR_HXX
+#define INCLUDED_OOX_HELPER_PROGRESSBAR_HXX
 
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/uno/Reference.hxx>
+#include <oox/dllapi.h>
 
-namespace rtl { class OUString; }
 
 namespace com { namespace sun { namespace star {
     namespace task { class XStatusIndicator; }
@@ -39,7 +35,7 @@ namespace oox {
 
 /** Interface for progress bar classes.
  */
-class IProgressBar
+class OOX_DLLPUBLIC IProgressBar
 {
 public:
     virtual             ~IProgressBar();
@@ -62,7 +58,7 @@ public:
 
 typedef ::boost::shared_ptr< IProgressBar > IProgressBarRef;
 
-// ----------------------------------------------------------------------------
+
 
 class ISegmentProgressBar;
 typedef ::boost::shared_ptr< ISegmentProgressBar > ISegmentProgressBarRef;
@@ -70,7 +66,7 @@ typedef ::boost::shared_ptr< ISegmentProgressBar > ISegmentProgressBarRef;
 /** Interface for a segment in a progress bar, that is able to create sub
     segments from itself.
  */
-class ISegmentProgressBar : public IProgressBar
+class OOX_DLLPUBLIC ISegmentProgressBar : public IProgressBar
 {
 public:
     virtual             ~ISegmentProgressBar();
@@ -82,24 +78,24 @@ public:
     virtual ISegmentProgressBarRef createSegment( double fLength ) = 0;
 };
 
-// ============================================================================
-// ============================================================================
+
+
 
 /** A simple progress bar.
  */
-class ProgressBar : public IProgressBar
+class OOX_DLLPUBLIC ProgressBar : public IProgressBar
 {
 public:
     explicit            ProgressBar(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::task::XStatusIndicator >& rxIndicator,
-                            const ::rtl::OUString& rText );
+                            const OUString& rText );
 
     virtual             ~ProgressBar();
 
     /** Returns the current position of the progress bar. */
-    virtual double      getPosition() const;
+    virtual double      getPosition() const SAL_OVERRIDE;
     /** Sets the current position of the progress bar. */
-    virtual void        setPosition( double fPosition );
+    virtual void        setPosition( double fPosition ) SAL_OVERRIDE;
 
 private:
     ::com::sun::star::uno::Reference< ::com::sun::star::task::XStatusIndicator >
@@ -107,34 +103,36 @@ private:
     double              mfPosition;
 };
 
-// ============================================================================
+
 
 /** A progress bar containing several independent segments.
  */
-class SegmentProgressBar : public ISegmentProgressBar
+class OOX_DLLPUBLIC SegmentProgressBar : public ISegmentProgressBar
 {
 public:
     explicit            SegmentProgressBar(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::task::XStatusIndicator >& rxIndicator,
-                            const ::rtl::OUString& rText );
+                            const OUString& rText );
 
     /** Returns the current position of the progress bar segment. */
-    virtual double      getPosition() const;
+    virtual double      getPosition() const SAL_OVERRIDE;
     /** Sets the current position of the progress bar segment. */
-    virtual void        setPosition( double fPosition );
+    virtual void        setPosition( double fPosition ) SAL_OVERRIDE;
 
     /** Returns the length that is still free for creating sub segments. */
-    virtual double      getFreeLength() const;
+    virtual double      getFreeLength() const SAL_OVERRIDE;
     /** Adds a new segment with the specified length. */
-    virtual ISegmentProgressBarRef createSegment( double fLength );
+    virtual ISegmentProgressBarRef createSegment( double fLength ) SAL_OVERRIDE;
 
 private:
     ProgressBar         maProgress;
     double              mfFreeStart;
 };
 
-// ============================================================================
+
 
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

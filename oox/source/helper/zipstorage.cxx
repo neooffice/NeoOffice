@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/helper/zipstorage.hxx"
 
@@ -33,9 +29,13 @@
 #include <comphelper/storagehelper.hxx>
 #include "oox/helper/helper.hxx"
 
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif SUPD == 310
+
 namespace oox {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::embed;
@@ -43,9 +43,7 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 ZipStorage::ZipStorage( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStream ) :
     StorageBase( rxInStream, false )
@@ -66,17 +64,21 @@ ZipStorage::ZipStorage( const Reference< XComponentContext >& rxContext, const R
             TODO: #i105410# switch to 'OFOPXMLFormat' and use its
             implementation of relations handling.
          */
+#if SUPD == 310
         Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         mxStorage = ::comphelper::OStorageHelper::GetStorageOfFormatFromInputStream(
 #if SUPD == 310
             ZIP_STORAGE_FORMAT_STRING, rxInStream, xFactory );
 #else	// SUPD == 310
-            ZIP_STORAGE_FORMAT_STRING, rxInStream, xFactory,
-            sal_False );    // DEV300_m80: Was sal_True, but DOCX and others did not load
+            ZIP_STORAGE_FORMAT_STRING, rxInStream, rxContext,
+            false );    // DEV300_m80: Was sal_True, but DOCX and others did not load
 #endif	// SUPD == 310
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_WARN("oox.storage", "ZipStorage::ZipStorage "
+                "exception opening input storage: " << e.Message);
     }
 }
 
@@ -87,18 +89,21 @@ ZipStorage::ZipStorage( const Reference< XComponentContext >& rxContext, const R
     // create base storage object
     if( rxContext.is() ) try
     {
+#if SUPD == 310
         Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         const sal_Int32 nOpenMode = ElementModes::READWRITE | ElementModes::TRUNCATE;
         mxStorage = ::comphelper::OStorageHelper::GetStorageOfFormatFromStream(
 #if SUPD == 310
             OFOPXML_STORAGE_FORMAT_STRING, rxStream, nOpenMode, xFactory );
 #else	// SUPD == 310
-            OFOPXML_STORAGE_FORMAT_STRING, rxStream, nOpenMode, xFactory, sal_True );
+            OFOPXML_STORAGE_FORMAT_STRING, rxStream, nOpenMode, rxContext, true );
 #endif	// SUPD == 310
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
-        OSL_ENSURE( false, "ZipStorage::ZipStorage - cannot open output storage" );
+        SAL_WARN("oox.storage", "ZipStorage::ZipStorage "
+                "exception opening output storage: " << e.Message);
     }
 }
 
@@ -106,7 +111,8 @@ ZipStorage::ZipStorage( const ZipStorage& rParentStorage, const Reference< XStor
     StorageBase( rParentStorage, rElementName, rParentStorage.isReadOnly() ),
     mxStorage( rxStorage )
 {
-    OSL_ENSURE( mxStorage.is(), "ZipStorage::ZipStorage - missing storage" );
+    SAL_WARN_IF(!mxStorage.is(), "oox.storage", "ZipStorage::ZipStorage "
+            " - missing storage" );
 }
 
 ZipStorage::~ZipStorage()
@@ -132,8 +138,9 @@ void ZipStorage::implGetElementNames( ::std::vector< OUString >& orElementNames 
         if( aNames.getLength() > 0 )
             orElementNames.insert( orElementNames.end(), aNames.getConstArray(), aNames.getConstArray() + aNames.getLength() );
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_INFO("oox.storage", "getElementNames: exception: " << e.Message);
     }
 }
 
@@ -152,8 +159,9 @@ StorageRef ZipStorage::implOpenSubStorage( const OUString& rElementName, bool bC
     {
         bMissing = true;
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_INFO("oox.storage", "openStorageElement: exception: " << e.Message);
     }
 
     if( bMissing && bCreateMissing ) try
@@ -161,8 +169,9 @@ StorageRef ZipStorage::implOpenSubStorage( const OUString& rElementName, bool bC
         xSubXStorage = mxStorage->openStorageElement(
             rElementName, ::com::sun::star::embed::ElementModes::READWRITE );
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_INFO("oox.storage", "openStorageElement: exception: " << e.Message);
     }
 
     StorageRef xSubStorage;
@@ -178,8 +187,9 @@ Reference< XInputStream > ZipStorage::implOpenInputStream( const OUString& rElem
     {
         xInStream.set( mxStorage->openStreamElement( rElementName, ::com::sun::star::embed::ElementModes::READ ), UNO_QUERY );
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_INFO("oox.storage", "openStreamElement: exception: " << e.Message);
     }
     return xInStream;
 }
@@ -191,8 +201,9 @@ Reference< XOutputStream > ZipStorage::implOpenOutputStream( const OUString& rEl
     {
         xOutStream.set( mxStorage->openStreamElement( rElementName, ::com::sun::star::embed::ElementModes::READWRITE ), UNO_QUERY );
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_INFO("oox.storage", "openStreamElement: exception: " << e.Message);
     }
     return xOutStream;
 }
@@ -203,11 +214,14 @@ void ZipStorage::implCommit() const
     {
         Reference< XTransactedObject >( mxStorage, UNO_QUERY_THROW )->commit();
     }
-    catch( Exception& )
+    catch (Exception const& e)
     {
+        SAL_WARN("oox.storage", "commit: exception: " << e.Message);
     }
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

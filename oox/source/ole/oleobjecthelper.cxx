@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/oleobjecthelper.hxx"
 
@@ -36,18 +32,16 @@
 namespace oox {
 namespace ole {
 
-// ============================================================================
 
-using namespace ::com::sun::star::awt;
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 OleObjectInfo::OleObjectInfo() :
     mbLinked( false ),
@@ -56,17 +50,17 @@ OleObjectInfo::OleObjectInfo() :
 {
 }
 
-// ============================================================================
+
 
 OleObjectHelper::OleObjectHelper( const Reference< XMultiServiceFactory >& rxModelFactory ) :
-    maEmbeddedObjScheme( CREATE_OUSTRING( "vnd.sun.star.EmbeddedObject:" ) ),
+    maEmbeddedObjScheme( "vnd.sun.star.EmbeddedObject:" ),
     mnObjectId( 100 )
 {
     if( rxModelFactory.is() ) try
     {
-        mxResolver.set( rxModelFactory->createInstance( CREATE_OUSTRING( "com.sun.star.document.ImportEmbeddedObjectResolver" ) ), UNO_QUERY );
+        mxResolver.set( rxModelFactory->createInstance( "com.sun.star.document.ImportEmbeddedObjectResolver" ), UNO_QUERY );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -78,21 +72,21 @@ OleObjectHelper::~OleObjectHelper()
         Reference< XComponent > xResolverComp( mxResolver, UNO_QUERY_THROW );
         xResolverComp->dispose();
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
 
-bool OleObjectHelper::importOleObject( PropertyMap& rPropMap, const OleObjectInfo& rOleObject, const Size& rObjSize )
+bool OleObjectHelper::importOleObject( PropertyMap& rPropMap, const OleObjectInfo& rOleObject, const awt::Size& rObjSize )
 {
     bool bRet = false;
 
     if( rOleObject.mbLinked )
     {
         // linked OLE object - set target URL
-        if( rOleObject.maTargetLink.getLength() > 0 )
+        if( !rOleObject.maTargetLink.isEmpty() )
         {
-            rPropMap[ PROP_LinkURL ] <<= rOleObject.maTargetLink;
+            rPropMap.setProperty( PROP_LinkURL, rOleObject.maTargetLink);
             bRet = true;
         }
     }
@@ -101,7 +95,7 @@ bool OleObjectHelper::importOleObject( PropertyMap& rPropMap, const OleObjectInf
         // embedded OLE object - import the embedded data
         if( rOleObject.maEmbeddedData.hasElements() && mxResolver.is() ) try
         {
-            OUString aObjectId = CREATE_OUSTRING( "Obj" ) + OUString::valueOf( mnObjectId++ );
+            OUString aObjectId = "Obj" + OUString::number( mnObjectId++ );
 
             Reference< XNameAccess > xResolverNA( mxResolver, UNO_QUERY_THROW );
             Reference< XOutputStream > xOutStrm( xResolverNA->getByName( aObjectId ), UNO_QUERY_THROW );
@@ -111,26 +105,28 @@ bool OleObjectHelper::importOleObject( PropertyMap& rPropMap, const OleObjectInf
             OUString aUrl = mxResolver->resolveEmbeddedObjectURL( aObjectId );
             OSL_ENSURE( aUrl.match( maEmbeddedObjScheme ), "OleObjectHelper::importOleObject - unexpected URL scheme" );
             OUString aPersistName = aUrl.copy( maEmbeddedObjScheme.getLength() );
-            if( aPersistName.getLength() > 0 )
+            if( !aPersistName.isEmpty() )
             {
-                rPropMap[ PROP_PersistName ] <<= aPersistName;
+                rPropMap.setProperty( PROP_PersistName, aPersistName);
                 bRet = true;
             }
         }
-        catch( Exception& )
+        catch(const Exception& )
         {
         }
     }
 
     if( bRet )
     {
-        rPropMap[ PROP_Aspect ] <<= (rOleObject.mbShowAsIcon ? Aspects::MSOLE_ICON : Aspects::MSOLE_CONTENT);
-        rPropMap[ PROP_VisualArea ] <<= Rectangle( 0, 0, rObjSize.Width, rObjSize.Height );
+        rPropMap.setProperty( PROP_Aspect, (rOleObject.mbShowAsIcon ? Aspects::MSOLE_ICON : Aspects::MSOLE_CONTENT));
+        rPropMap.setProperty( PROP_VisualArea, awt::Rectangle( 0, 0, rObjSize.Width, rObjSize.Height ));
     }
     return bRet;
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

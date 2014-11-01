@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/core/binarycodec.hxx"
 
@@ -35,7 +31,7 @@ using namespace ::com::sun::star;
 namespace oox {
 namespace core {
 
-// ============================================================================
+
 
 namespace {
 
@@ -110,16 +106,16 @@ sal_uInt16 lclGetHash( const sal_uInt8* pnPassData, sal_Int32 nBufferSize )
 
 } // namespace
 
-// ============================================================================
 
-/*static*/ sal_uInt16 CodecHelper::getPasswordHash( const AttributeList& rAttribs, sal_Int32 nElement )
+
+sal_uInt16 CodecHelper::getPasswordHash( const AttributeList& rAttribs, sal_Int32 nElement )
 {
     sal_Int32 nPasswordHash = rAttribs.getIntegerHex( nElement, 0 );
     OSL_ENSURE( (0 <= nPasswordHash) && (nPasswordHash <= SAL_MAX_UINT16), "CodecHelper::getPasswordHash - invalid password hash" );
     return static_cast< sal_uInt16 >( ((0 <= nPasswordHash) && (nPasswordHash <= SAL_MAX_UINT16)) ? nPasswordHash : 0 );
 }
 
-// ============================================================================
+
 
 BinaryCodec_XOR::BinaryCodec_XOR( CodecType eCodecType ) :
     meCodecType( eCodecType ),
@@ -180,21 +176,21 @@ void BinaryCodec_XOR::initKey( const sal_uInt8 pnPassData[ 16 ] )
 
 bool BinaryCodec_XOR::initCodec( const uno::Sequence< beans::NamedValue >& aData )
 {
-    bool bResult = sal_False;
+    bool bResult = false;
 
     ::comphelper::SequenceAsHashMap aHashData( aData );
-    uno::Sequence< sal_Int8 > aKey = aHashData.getUnpackedValueOrDefault( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95EncryptionKey" ) ), uno::Sequence< sal_Int8 >() );
+    uno::Sequence< sal_Int8 > aKey = aHashData.getUnpackedValueOrDefault("XOR95EncryptionKey", uno::Sequence< sal_Int8 >() );
 
     if ( aKey.getLength() == 16 )
     {
         (void)memcpy( mpnKey, aKey.getConstArray(), 16 );
-        bResult = sal_True;
+        bResult = true;
 
-        mnBaseKey = (sal_uInt16)aHashData.getUnpackedValueOrDefault( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95BaseKey" ) ), (sal_Int16)0 );
-        mnHash = (sal_uInt16)aHashData.getUnpackedValueOrDefault( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95PasswordHash" ) ), (sal_Int16)0 );
+        mnBaseKey = (sal_uInt16)aHashData.getUnpackedValueOrDefault("XOR95BaseKey", (sal_Int16)0 );
+        mnHash = (sal_uInt16)aHashData.getUnpackedValueOrDefault("XOR95PasswordHash", (sal_Int16)0 );
     }
     else
-        OSL_ENSURE( sal_False, "Unexpected key size!\n" );
+        OSL_FAIL( "Unexpected key size!\n" );
 
     return bResult;
 }
@@ -202,9 +198,9 @@ bool BinaryCodec_XOR::initCodec( const uno::Sequence< beans::NamedValue >& aData
 uno::Sequence< beans::NamedValue > BinaryCodec_XOR::getEncryptionData()
 {
     ::comphelper::SequenceAsHashMap aHashData;
-    aHashData[ ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95EncryptionKey" ) ) ] <<= uno::Sequence<sal_Int8>( (sal_Int8*)mpnKey, 16 );
-    aHashData[ ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95BaseKey" ) ) ] <<= (sal_Int16)mnBaseKey;
-    aHashData[ ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "XOR95PasswordHash" ) ) ] <<= (sal_Int16)mnHash;
+    aHashData[ OUString("XOR95EncryptionKey") ] <<= uno::Sequence<sal_Int8>( (sal_Int8*)mpnKey, 16 );
+    aHashData[ OUString("XOR95BaseKey") ] <<= (sal_Int16)mnBaseKey;
+    aHashData[ OUString("XOR95PasswordHash") ] <<= (sal_Int16)mnHash;
 
     return aHashData.getAsConstNamedValueList();
 }
@@ -263,7 +259,7 @@ bool BinaryCodec_XOR::skip( sal_Int32 nBytes )
     return true;
 }
 
-// ============================================================================
+
 
 BinaryCodec_RCF::BinaryCodec_RCF()
 {
@@ -287,25 +283,25 @@ BinaryCodec_RCF::~BinaryCodec_RCF()
 
 bool BinaryCodec_RCF::initCodec( const uno::Sequence< beans::NamedValue >& aData )
 {
-    bool bResult = sal_False;
+    bool bResult = false;
 
     ::comphelper::SequenceAsHashMap aHashData( aData );
-    uno::Sequence< sal_Int8 > aKey = aHashData.getUnpackedValueOrDefault( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "STD97EncryptionKey" ) ), uno::Sequence< sal_Int8 >() );
+    uno::Sequence< sal_Int8 > aKey = aHashData.getUnpackedValueOrDefault("STD97EncryptionKey", uno::Sequence< sal_Int8 >() );
 
     if ( aKey.getLength() == RTL_DIGEST_LENGTH_MD5 )
     {
         (void)memcpy( mpnDigestValue, aKey.getConstArray(), RTL_DIGEST_LENGTH_MD5 );
-        uno::Sequence< sal_Int8 > aUniqueID = aHashData.getUnpackedValueOrDefault( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "STD97UniqueID" ) ), uno::Sequence< sal_Int8 >() );
+        uno::Sequence< sal_Int8 > aUniqueID = aHashData.getUnpackedValueOrDefault("STD97UniqueID", uno::Sequence< sal_Int8 >() );
         if ( aUniqueID.getLength() == 16 )
         {
             (void)memcpy( mpnUnique, aUniqueID.getConstArray(), 16 );
-            bResult = sal_False;
+            bResult = false;
         }
         else
-            OSL_ENSURE( sal_False, "Unexpected document ID!\n" );
+            OSL_FAIL( "Unexpected document ID!\n" );
     }
     else
-        OSL_ENSURE( sal_False, "Unexpected key size!\n" );
+        OSL_FAIL( "Unexpected key size!\n" );
 
     return bResult;
 }
@@ -313,8 +309,8 @@ bool BinaryCodec_RCF::initCodec( const uno::Sequence< beans::NamedValue >& aData
 uno::Sequence< beans::NamedValue > BinaryCodec_RCF::getEncryptionData()
 {
     ::comphelper::SequenceAsHashMap aHashData;
-    aHashData[ ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "STD97EncryptionKey" ) ) ] <<= uno::Sequence< sal_Int8 >( (sal_Int8*)mpnDigestValue, RTL_DIGEST_LENGTH_MD5 );
-    aHashData[ ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "STD97UniqueID" ) ) ] <<= uno::Sequence< sal_Int8 >( (sal_Int8*)mpnUnique, 16 );
+    aHashData[ OUString("STD97EncryptionKey") ] <<= uno::Sequence< sal_Int8 >( (sal_Int8*)mpnDigestValue, RTL_DIGEST_LENGTH_MD5 );
+    aHashData[ OUString("STD97UniqueID") ] <<= uno::Sequence< sal_Int8 >( (sal_Int8*)mpnUnique, 16 );
 
     return aHashData.getAsConstNamedValueList();
 }
@@ -417,7 +413,9 @@ bool BinaryCodec_RCF::skip( sal_Int32 nBytes )
     return bResult;
 }
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

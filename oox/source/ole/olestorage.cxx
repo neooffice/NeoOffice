@@ -1,31 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/olestorage.hxx"
 
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
+#include <com/sun/star/io/TempFile.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
@@ -41,7 +38,7 @@
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
@@ -50,14 +47,12 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
 typedef ::cppu::WeakImplHelper2< XSeekable, XOutputStream > OleOutputStreamBase;
-    
+
 /** Implementation of an OLE storage output stream that inserts itself into the
     storage when it is closed.
  */
@@ -70,13 +65,23 @@ public:
                             const OUString& rElementName );
     virtual             ~OleOutputStream();
 
-    virtual void SAL_CALL seek( sal_Int64 nPos ) throw( IllegalArgumentException, IOException, RuntimeException );
-    virtual sal_Int64 SAL_CALL getPosition() throw( IOException, RuntimeException );
-    virtual sal_Int64 SAL_CALL getLength() throw( IOException, RuntimeException );
+#if SUPD == 310
+    virtual void SAL_CALL seek( sal_Int64 nPos ) throw( IllegalArgumentException, IOException, RuntimeException ) SAL_OVERRIDE;
+    virtual sal_Int64 SAL_CALL getPosition() throw( IOException, RuntimeException ) SAL_OVERRIDE;
+    virtual sal_Int64 SAL_CALL getLength() throw( IOException, RuntimeException ) SAL_OVERRIDE;
 
-    virtual void SAL_CALL writeBytes( const Sequence< sal_Int8 >& rData ) throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException );
-    virtual void SAL_CALL flush() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException );
-    virtual void SAL_CALL closeOutput() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException );
+    virtual void SAL_CALL writeBytes( const Sequence< sal_Int8 >& rData ) throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException ) SAL_OVERRIDE;
+    virtual void SAL_CALL flush() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException ) SAL_OVERRIDE;
+    virtual void SAL_CALL closeOutput() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual void SAL_CALL seek( sal_Int64 nPos ) throw( IllegalArgumentException, IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual sal_Int64 SAL_CALL getPosition() throw( IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual sal_Int64 SAL_CALL getLength() throw( IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+
+    virtual void SAL_CALL writeBytes( const Sequence< sal_Int8 >& rData ) throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL flush() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL closeOutput() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
 private:
     void                ensureSeekable() const throw( IOException );
@@ -90,7 +95,7 @@ private:
     OUString            maElementName;
 };
 
-// ----------------------------------------------------------------------------
+
 
 OleOutputStream::OleOutputStream( const Reference< XComponentContext >& rxContext,
         const Reference< XNameContainer >& rxStorage, const OUString& rElementName ) :
@@ -99,12 +104,11 @@ OleOutputStream::OleOutputStream( const Reference< XComponentContext >& rxContex
 {
     try
     {
-        Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
-        mxTempFile.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.io.TempFile" ) ), UNO_QUERY_THROW );
+        mxTempFile.set( TempFile::create(rxContext), UNO_QUERY_THROW );
         mxOutStrm = mxTempFile->getOutputStream();
         mxSeekable.set( mxOutStrm, UNO_QUERY );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -113,37 +117,61 @@ OleOutputStream::~OleOutputStream()
 {
 }
 
+#if SUPD == 310
 void SAL_CALL OleOutputStream::seek( sal_Int64 nPos ) throw( IllegalArgumentException, IOException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL OleOutputStream::seek( sal_Int64 nPos ) throw( IllegalArgumentException, IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureSeekable();
     mxSeekable->seek( nPos );
 }
 
+#if SUPD == 310
 sal_Int64 SAL_CALL OleOutputStream::getPosition() throw( IOException, RuntimeException )
+#else	// SUPD == 310
+sal_Int64 SAL_CALL OleOutputStream::getPosition() throw( IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureSeekable();
     return mxSeekable->getPosition();
 }
 
+#if SUPD == 310
 sal_Int64 SAL_CALL OleOutputStream::getLength() throw( IOException, RuntimeException )
+#else	// SUPD == 310
+sal_Int64 SAL_CALL OleOutputStream::getLength() throw( IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureSeekable();
     return mxSeekable->getLength();
 }
 
+#if SUPD == 310
 void SAL_CALL OleOutputStream::writeBytes( const Sequence< sal_Int8 >& rData ) throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL OleOutputStream::writeBytes( const Sequence< sal_Int8 >& rData ) throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureConnected();
     mxOutStrm->writeBytes( rData );
 }
 
+#if SUPD == 310
 void SAL_CALL OleOutputStream::flush() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL OleOutputStream::flush() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureConnected();
     mxOutStrm->flush();
 }
 
+#if SUPD == 310
 void SAL_CALL OleOutputStream::closeOutput() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL OleOutputStream::closeOutput() throw( NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     ensureConnected();
     ensureSeekable();
@@ -175,7 +203,7 @@ void OleOutputStream::ensureConnected() const throw( NotConnectedException )
 
 } // namespace
 
-// ============================================================================
+
 
 OleStorage::OleStorage( const Reference< XComponentContext >& rxContext,
         const Reference< XInputStream >& rxInStream, bool bBaseStreamAccess ) :
@@ -220,7 +248,7 @@ OleStorage::~OleStorage()
 {
 }
 
-// ----------------------------------------------------------------------------
+
 
 void OleStorage::initStorage( const Reference< XInputStream >& rxInStream )
 {
@@ -228,8 +256,7 @@ void OleStorage::initStorage( const Reference< XInputStream >& rxInStream )
     Reference< XInputStream > xInStrm = rxInStream;
     if( !Reference< XSeekable >( xInStrm, UNO_QUERY ).is() ) try
     {
-        Reference< XMultiServiceFactory > xFactory( mxContext->getServiceManager(), UNO_QUERY_THROW );
-        Reference< XStream > xTempFile( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.io.TempFile" ) ), UNO_QUERY_THROW );
+        Reference< XStream > xTempFile( TempFile::create(mxContext), UNO_QUERY_THROW );
         {
             Reference< XOutputStream > xOutStrm( xTempFile->getOutputStream(), UNO_SET_THROW );
             /*  Pass false to both binary stream objects to keep the UNO
@@ -241,9 +268,9 @@ void OleStorage::initStorage( const Reference< XInputStream >& rxInStream )
         } // scope closes output stream of tempfile
         xInStrm = xTempFile->getInputStream();
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
-        OSL_ENSURE( false, "OleStorage::initStorage - cannot create temporary copy of input stream" );
+        OSL_FAIL( "OleStorage::initStorage - cannot create temporary copy of input stream" );
     }
 
     // create base storage object
@@ -253,10 +280,9 @@ void OleStorage::initStorage( const Reference< XInputStream >& rxInStream )
         Sequence< Any > aArgs( 2 );
         aArgs[ 0 ] <<= xInStrm;
         aArgs[ 1 ] <<= true;        // true = do not create a copy of the input stream
-        mxStorage.set( xFactory->createInstanceWithArguments(
-            CREATE_OUSTRING( "com.sun.star.embed.OLESimpleStorage" ), aArgs ), UNO_QUERY_THROW );
+        mxStorage.set( xFactory->createInstanceWithArguments("com.sun.star.embed.OLESimpleStorage", aArgs ), UNO_QUERY_THROW );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -270,10 +296,9 @@ void OleStorage::initStorage( const Reference< XStream >& rxOutStream )
         Sequence< Any > aArgs( 2 );
         aArgs[ 0 ] <<= rxOutStream;
         aArgs[ 1 ] <<= true;        // true = do not create a copy of the stream
-        mxStorage.set( xFactory->createInstanceWithArguments(
-            CREATE_OUSTRING( "com.sun.star.embed.OLESimpleStorage" ), aArgs ), UNO_QUERY_THROW );
+        mxStorage.set( xFactory->createInstanceWithArguments("com.sun.star.embed.OLESimpleStorage", aArgs ), UNO_QUERY_THROW );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -290,7 +315,7 @@ bool OleStorage::implIsStorage() const
         mxStorage->hasElements();
         return true;
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
     return false;
@@ -298,7 +323,7 @@ bool OleStorage::implIsStorage() const
 
 Reference< XStorage > OleStorage::implGetXStorage() const
 {
-    OSL_ENSURE( false, "OleStorage::getXStorage - not implemented" );
+    OSL_FAIL( "OleStorage::getXStorage - not implemented" );
     return Reference< XStorage >();
 }
 
@@ -311,7 +336,7 @@ void OleStorage::implGetElementNames( ::std::vector< OUString >& orElementNames 
         if( aNames.getLength() > 0 )
             orElementNames.insert( orElementNames.end(), aNames.getConstArray(), aNames.getConstArray() + aNames.getLength() );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -319,14 +344,14 @@ void OleStorage::implGetElementNames( ::std::vector< OUString >& orElementNames 
 StorageRef OleStorage::implOpenSubStorage( const OUString& rElementName, bool bCreateMissing )
 {
     StorageRef xSubStorage;
-    if( mxStorage.is() && (rElementName.getLength() > 0) )
+    if( mxStorage.is() && !rElementName.isEmpty() )
     {
         try
         {
             Reference< XNameContainer > xSubElements( mxStorage->getByName( rElementName ), UNO_QUERY_THROW );
             xSubStorage.reset( new OleStorage( *this, xSubElements, rElementName, true ) );
         }
-        catch( Exception& )
+        catch(const Exception& )
         {
         }
 
@@ -339,8 +364,7 @@ StorageRef OleStorage::implOpenSubStorage( const OUString& rElementName, bool bC
         if( !isReadOnly() && (bCreateMissing || xSubStorage.get()) ) try
         {
             // create new storage based on a temp file
-            Reference< XMultiServiceFactory > xFactory( mxContext->getServiceManager(), UNO_QUERY_THROW );
-            Reference< XStream > xTempFile( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.io.TempFile" ) ), UNO_QUERY_THROW );
+            Reference< XStream > xTempFile( TempFile::create(mxContext), UNO_QUERY_THROW );
             StorageRef xTempStorage( new OleStorage( *this, xTempFile, rElementName ) );
             // copy existing substorage into temp storage
             if( xSubStorage.get() )
@@ -348,7 +372,7 @@ StorageRef OleStorage::implOpenSubStorage( const OUString& rElementName, bool bC
             // return the temp storage to caller
             xSubStorage = xTempStorage;
         }
-        catch( Exception& )
+        catch(const Exception& )
         {
         }
     }
@@ -362,7 +386,7 @@ Reference< XInputStream > OleStorage::implOpenInputStream( const OUString& rElem
     {
         xInStream.set( mxStorage->getByName( rElementName ), UNO_QUERY );
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
     return xInStream;
@@ -371,7 +395,7 @@ Reference< XInputStream > OleStorage::implOpenInputStream( const OUString& rElem
 Reference< XOutputStream > OleStorage::implOpenOutputStream( const OUString& rElementName )
 {
     Reference< XOutputStream > xOutStream;
-    if( mxStorage.is() && (rElementName.getLength() > 0) )
+    if( mxStorage.is() && !rElementName.isEmpty() )
         xOutStream.set( new OleOutputStream( mxContext, mxStorage, rElementName ) );
     return xOutStream;
 }
@@ -395,12 +419,14 @@ void OleStorage::implCommit() const
             // this requires another commit(), which will be performed by the parent storage
         }
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

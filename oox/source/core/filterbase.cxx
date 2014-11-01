@@ -1,37 +1,44 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#include <sal/config.h>
 
-
-#include "oox/core/filterbase.hxx"
-
-#include <set>
+#include <boost/noncopyable.hpp>
+#include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
+#include <com/sun/star/task/XStatusIndicator.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include <comphelper/docpasswordhelper.hxx>
+#if SUPD == 310
 #include <comphelper/mediadescriptor.hxx>
+#else	// SUPD == 310
+#include <cppuhelper/supportsservice.hxx>
+#include <unotools/mediadescriptor.hxx>
+#endif	// SUPD == 310
 #include <osl/mutex.hxx>
 #include <rtl/instance.hxx>
 #include <rtl/uri.hxx>
+#include <set>
+
+#include "oox/core/filterbase.hxx"
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/binaryoutputstream.hxx"
 #include "oox/helper/graphichelper.hxx"
@@ -42,23 +49,24 @@
 namespace oox {
 namespace core {
 
-// ============================================================================
-
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::graphic;
+using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::uno;
 
+using ::com::sun::star::container::XNameAccess;
+#if SUPD == 310
 using ::comphelper::MediaDescriptor;
+#else	// SUPD == 310
+using utl::MediaDescriptor;
+#endif	// SUPD == 310
 using ::comphelper::SequenceAsHashMap;
 using ::oox::ole::OleObjectHelper;
 using ::oox::ole::VbaProject;
-using ::rtl::OUString;
-
-// ============================================================================
 
 namespace {
 
@@ -70,10 +78,8 @@ struct UrlPool
 
 struct StaticUrlPool : public ::rtl::Static< UrlPool, StaticUrlPool > {};
 
-// ----------------------------------------------------------------------------
-
 /** This guard prevents recursive loading/saving of the same document. */
-class DocumentOpenedGuard
+class DocumentOpenedGuard: private boost::noncopyable
 {
 public:
     explicit            DocumentOpenedGuard( const OUString& rUrl );
@@ -82,9 +88,6 @@ public:
     inline bool         isValid() const { return mbValid; }
 
 private:
-                        DocumentOpenedGuard( const DocumentOpenedGuard& );
-    DocumentOpenedGuard& operator=( const DocumentOpenedGuard& );
-
     OUString            maUrl;
     bool                mbValid;
 };
@@ -93,8 +96,8 @@ DocumentOpenedGuard::DocumentOpenedGuard( const OUString& rUrl )
 {
     UrlPool& rUrlPool = StaticUrlPool::get();
     ::osl::MutexGuard aGuard( rUrlPool.maMutex );
-    mbValid = (rUrl.getLength() == 0) || (rUrlPool.maUrls.count( rUrl ) == 0);
-    if( mbValid && (rUrl.getLength() > 0) )
+    mbValid = rUrl.isEmpty() || (rUrlPool.maUrls.count( rUrl ) == 0);
+    if( mbValid && !rUrl.isEmpty() )
     {
         rUrlPool.maUrls.insert( rUrl );
         maUrl = rUrl;
@@ -105,13 +108,11 @@ DocumentOpenedGuard::~DocumentOpenedGuard()
 {
     UrlPool& rUrlPool = StaticUrlPool::get();
     ::osl::MutexGuard aGuard( rUrlPool.maMutex );
-    if( maUrl.getLength() > 0 )
+    if( !maUrl.isEmpty() )
         rUrlPool.maUrls.erase( maUrl );
 }
 
 } // namespace
-
-// ============================================================================
 
 /** Specifies whether this filter is an import or export filter. */
 enum FilterDirection
@@ -120,8 +121,6 @@ enum FilterDirection
     FILTERDIRECTION_IMPORT,
     FILTERDIRECTION_EXPORT
 };
-
-// ----------------------------------------------------------------------------
 
 struct FilterBaseImpl
 {
@@ -132,9 +131,11 @@ struct FilterBaseImpl
 
     FilterDirection     meDirection;
     SequenceAsHashMap   maArguments;
+    SequenceAsHashMap   maFilterData;
     MediaDescriptor     maMediaDesc;
     OUString            maFileUrl;
     StorageRef          mxStorage;
+    OoxmlVersion        meVersion;
 
     GraphicHelperRef    mxGraphicHelper;        /// Graphic and graphic object handling.
     ModelObjHelperRef   mxModelObjHelper;       /// Tables to create new named drawing objects.
@@ -143,7 +144,6 @@ struct FilterBaseImpl
 
     Reference< XComponentContext >      mxComponentContext;
     Reference< XMultiComponentFactory > mxComponentFactory;
-    Reference< XMultiServiceFactory >   mxServiceFactory;
     Reference< XModel >                 mxModel;
     Reference< XMultiServiceFactory >   mxModelFactory;
     Reference< XFrame >                 mxTargetFrame;
@@ -151,22 +151,20 @@ struct FilterBaseImpl
     Reference< XStream >                mxOutStream;
     Reference< XStatusIndicator >       mxStatusIndicator;
     Reference< XInteractionHandler >    mxInteractionHandler;
+    Reference< XShape >                 mxParentShape;
 
     explicit            FilterBaseImpl( const Reference< XComponentContext >& rxContext ) throw( RuntimeException );
 
     void                setDocumentModel( const Reference< XComponent >& rxComponent ) throw( IllegalArgumentException );
 
     void                initializeFilter();
-    void                finalizeFilter();
 };
-
-// ----------------------------------------------------------------------------
 
 FilterBaseImpl::FilterBaseImpl( const Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
     meDirection( FILTERDIRECTION_UNKNOWN ),
+    meVersion( ECMA_DIALECT ),
     mxComponentContext( rxContext, UNO_SET_THROW ),
-    mxComponentFactory( rxContext->getServiceManager(), UNO_SET_THROW ),
-    mxServiceFactory( rxContext->getServiceManager(), UNO_QUERY_THROW )
+    mxComponentFactory( rxContext->getServiceManager(), UNO_SET_THROW )
 {
 }
 
@@ -195,22 +193,6 @@ void FilterBaseImpl::initializeFilter()
     }
 }
 
-void FilterBaseImpl::finalizeFilter()
-{
-    try
-    {
-        // write the descriptor back to the document model (adds the passwords)
-        mxModel->attachResource( maFileUrl, maMediaDesc.getAsConstPropertyValueList() );
-        // unlock the model controllers
-        mxModel->unlockControllers();
-    }
-    catch( Exception& )
-    {
-    }
-}
-
-// ============================================================================
-
 FilterBase::FilterBase( const Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
     mxImpl( new FilterBaseImpl( rxContext ) )
 {
@@ -230,27 +212,14 @@ bool FilterBase::isExportFilter() const
     return mxImpl->meDirection == FILTERDIRECTION_EXPORT;
 }
 
-// ----------------------------------------------------------------------------
-
-Any FilterBase::getArgument( const OUString& rArgName ) const
+OoxmlVersion FilterBase::getVersion() const
 {
-    SequenceAsHashMap::const_iterator aIt = mxImpl->maArguments.find( rArgName );
-    return (aIt == mxImpl->maArguments.end()) ? Any() : aIt->second;
+    return mxImpl->meVersion;
 }
 
 const Reference< XComponentContext >& FilterBase::getComponentContext() const
 {
     return mxImpl->mxComponentContext;
-}
-
-const Reference< XMultiComponentFactory >& FilterBase::getComponentFactory() const
-{
-    return mxImpl->mxComponentFactory;
-}
-
-const Reference< XMultiServiceFactory >& FilterBase::getServiceFactory() const
-{
-    return mxImpl->mxServiceFactory;
 }
 
 const Reference< XModel >& FilterBase::getModel() const
@@ -268,19 +237,24 @@ const Reference< XFrame >& FilterBase::getTargetFrame() const
     return mxImpl->mxTargetFrame;
 }
 
+const Reference< XShape >& FilterBase::getParentShape() const
+{
+    return mxImpl->mxParentShape;
+}
+
 const Reference< XStatusIndicator >& FilterBase::getStatusIndicator() const
 {
     return mxImpl->mxStatusIndicator;
 }
 
-const Reference< XInteractionHandler >& FilterBase::getInteractionHandler() const
-{
-    return mxImpl->mxInteractionHandler;
-}
-
 MediaDescriptor& FilterBase::getMediaDescriptor() const
 {
     return mxImpl->maMediaDesc;
+}
+
+SequenceAsHashMap& FilterBase::getFilterData() const
+{
+    return mxImpl->maFilterData;
 }
 
 const OUString& FilterBase::getFileUrl() const
@@ -305,15 +279,15 @@ OUString FilterBase::getAbsoluteUrl( const OUString& rUrl ) const
 {
     // handle some special cases before calling ::rtl::Uri::convertRelToAbs()
 
-    const OUString aFileSchema = CREATE_OUSTRING( "file:" );
-    const OUString aFilePrefix = CREATE_OUSTRING( "file:///" );
+    const OUString aFileSchema = "file:";
+    const OUString aFilePrefix = "file:///";
     const sal_Int32 nFilePrefixLen = aFilePrefix.getLength();
-    const OUString aUncPrefix = CREATE_OUSTRING( "//" );
+    const OUString aUncPrefix = "//";
 
     /*  (1) convert all backslashes to slashes, and check that passed URL is
         not empty. */
     OUString aUrl = rUrl.replace( '\\', '/' );
-    if( aUrl.getLength() == 0 )
+    if( aUrl.isEmpty() )
         return aUrl;
 
     /*  (2) add 'file:///' to absolute Windows paths, e.g. convert
@@ -338,7 +312,11 @@ OUString FilterBase::getAbsoluteUrl( const OUString& rUrl ) const
     /*  (5) handle URLs relative to current drive, e.g. the URL '/path1/file1'
         relative to the base URL 'file:///C:/path2/file2' does not result in
         the expected 'file:///C:/path1/file1', but in 'file:///path1/file1'. */
+#if SUPD == 310
     if( (aUrl.getLength() >= 1) && (aUrl[ 0 ] == '/') &&
+#else	// SUPD == 310
+    if( aUrl.startsWith("/") &&
+#endif	// SUPD == 310
         mxImpl->maFileUrl.match( aFilePrefix ) &&
         lclIsDosDrive( mxImpl->maFileUrl, nFilePrefixLen ) )
     {
@@ -360,11 +338,6 @@ StorageRef FilterBase::getStorage() const
     return mxImpl->mxStorage;
 }
 
-StorageRef FilterBase::openSubStorage( const OUString& rStorageName, bool bCreateMissing ) const
-{
-    return mxImpl->mxStorage->openSubStorage( rStorageName, bCreateMissing );
-}
-
 Reference< XInputStream > FilterBase::openInputStream( const OUString& rStreamName ) const
 {
     return mxImpl->mxStorage->openInputStream( rStreamName );
@@ -380,7 +353,7 @@ void FilterBase::commitStorage() const
     mxImpl->mxStorage->commit();
 }
 
-// helpers --------------------------------------------------------------------
+// helpers
 
 GraphicHelper& FilterBase::getGraphicHelper() const
 {
@@ -410,18 +383,10 @@ VbaProject& FilterBase::getVbaProject() const
     return *mxImpl->mxVbaProject;
 }
 
-Sequence< NamedValue > FilterBase::requestEncryptionData( ::comphelper::IDocPasswordVerifier& rVerifier ) const
-{
-    ::std::vector< OUString > aDefaultPasswords;
-    aDefaultPasswords.push_back( CREATE_OUSTRING( "VelvetSweatshop" ) );
-    return ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
-        rVerifier, mxImpl->maMediaDesc, ::comphelper::DocPasswordRequestType_MS, &aDefaultPasswords );
-}
-
 bool FilterBase::importBinaryData( StreamDataSequence& orDataSeq, const OUString& rStreamName )
 {
-    OSL_ENSURE( rStreamName.getLength() > 0, "FilterBase::importBinaryData - empty stream name" );
-    if( rStreamName.getLength() == 0 )
+    OSL_ENSURE( !rStreamName.isEmpty(), "FilterBase::importBinaryData - empty stream name" );
+    if( rStreamName.isEmpty() )
         return false;
 
     // try to open the stream (this may fail - do not assert)
@@ -435,31 +400,51 @@ bool FilterBase::importBinaryData( StreamDataSequence& orDataSeq, const OUString
     return true;
 }
 
-// com.sun.star.lang.XServiceInfo interface -----------------------------------
+// com.sun.star.lang.XServiceInfo interface
 
+#if SUPD == 310
 OUString SAL_CALL FilterBase::getImplementationName() throw( RuntimeException )
+#else	// SUPD == 310
+OUString SAL_CALL FilterBase::getImplementationName() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return implGetImplementationName();
 }
 
+#if SUPD == 310
 sal_Bool SAL_CALL FilterBase::supportsService( const OUString& rServiceName ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Bool SAL_CALL FilterBase::supportsService( const OUString& rServiceName ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
+#if SUPD == 310
     return
-        (rServiceName == CREATE_OUSTRING( "com.sun.star.document.ImportFilter" )) ||
-        (rServiceName == CREATE_OUSTRING( "com.sun.star.document.ExportFilter" ));
+        (rServiceName == OUString(RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.ImportFilter" ))) ||
+        (rServiceName == OUString(RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.ExportFilter" )));
+#else	// SUPD == 310
+    return cppu::supportsService(this, rServiceName);
+#endif	// SUPD == 310
 }
 
+#if SUPD == 310
 Sequence< OUString > SAL_CALL FilterBase::getSupportedServiceNames() throw( RuntimeException )
+#else	// SUPD == 310
+Sequence< OUString > SAL_CALL FilterBase::getSupportedServiceNames() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     Sequence< OUString > aServiceNames( 2 );
-    aServiceNames[ 0 ] = CREATE_OUSTRING( "com.sun.star.document.ImportFilter" );
-    aServiceNames[ 1 ] = CREATE_OUSTRING( "com.sun.star.document.ExportFilter" );
+    aServiceNames[ 0 ] = "com.sun.star.document.ImportFilter";
+    aServiceNames[ 1 ] = "com.sun.star.document.ExportFilter";
     return aServiceNames;
 }
 
-// com.sun.star.lang.XInitialization interface --------------------------------
+// com.sun.star.lang.XInitialization interface
 
+#if SUPD == 310
 void SAL_CALL FilterBase::initialize( const Sequence< Any >& rArgs ) throw( Exception, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL FilterBase::initialize( const Sequence< Any >& rArgs ) throw( Exception, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     if( rArgs.getLength() >= 2 ) try
     {
@@ -470,33 +455,45 @@ void SAL_CALL FilterBase::initialize( const Sequence< Any >& rArgs ) throw( Exce
     }
 }
 
-// com.sun.star.document.XImporter interface ----------------------------------
+// com.sun.star.document.XImporter interface
 
+#if SUPD == 310
 void SAL_CALL FilterBase::setTargetDocument( const Reference< XComponent >& rxDocument ) throw( IllegalArgumentException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL FilterBase::setTargetDocument( const Reference< XComponent >& rxDocument ) throw( IllegalArgumentException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     mxImpl->setDocumentModel( rxDocument );
     mxImpl->meDirection = FILTERDIRECTION_IMPORT;
 }
 
-// com.sun.star.document.XExporter interface ----------------------------------
+// com.sun.star.document.XExporter interface
 
+#if SUPD == 310
 void SAL_CALL FilterBase::setSourceDocument( const Reference< XComponent >& rxDocument ) throw( IllegalArgumentException, RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL FilterBase::setSourceDocument( const Reference< XComponent >& rxDocument ) throw( IllegalArgumentException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     mxImpl->setDocumentModel( rxDocument );
     mxImpl->meDirection = FILTERDIRECTION_EXPORT;
 }
 
-// com.sun.star.document.XFilter interface ------------------------------------
+// com.sun.star.document.XFilter interface
 
+#if SUPD == 310
 sal_Bool SAL_CALL FilterBase::filter( const Sequence< PropertyValue >& rMediaDescSeq ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Bool SAL_CALL FilterBase::filter( const Sequence< PropertyValue >& rMediaDescSeq ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     if( !mxImpl->mxModel.is() || !mxImpl->mxModelFactory.is() || (mxImpl->meDirection == FILTERDIRECTION_UNKNOWN) )
         throw RuntimeException();
-        
-    sal_Bool bRet = sal_False;
+
+    bool bRet = false;
     setMediaDescriptor( rMediaDescSeq );
     DocumentOpenedGuard aOpenedGuard( mxImpl->maFileUrl );
-    if( aOpenedGuard.isValid() || !mxImpl->maFileUrl.getLength() )
+    if( aOpenedGuard.isValid() || mxImpl->maFileUrl.isEmpty() )
     {
         mxImpl->initializeFilter();
         switch( mxImpl->meDirection )
@@ -514,20 +511,24 @@ sal_Bool SAL_CALL FilterBase::filter( const Sequence< PropertyValue >& rMediaDes
                 if( mxImpl->mxOutStream.is() )
                 {
                     mxImpl->mxStorage = implCreateStorage( mxImpl->mxOutStream );
-                    bRet = mxImpl->mxStorage.get() && exportDocument();
+                    bRet = mxImpl->mxStorage.get() && exportDocument() && implFinalizeExport( getMediaDescriptor() );
                 }
             break;
         }
-        mxImpl->finalizeFilter();
+        mxImpl->mxModel->unlockControllers();
     }
     return bRet;
 }
 
+#if SUPD == 310
 void SAL_CALL FilterBase::cancel() throw( RuntimeException )
+#else	// SUPD == 310
+void SAL_CALL FilterBase::cancel() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
 }
 
-// protected ------------------------------------------------------------------
+// protected
 
 Reference< XInputStream > FilterBase::implGetInputStream( MediaDescriptor& rMediaDesc ) const
 {
@@ -539,7 +540,17 @@ Reference< XStream > FilterBase::implGetOutputStream( MediaDescriptor& rMediaDes
     return rMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_STREAMFOROUTPUT(), Reference< XStream >() );
 }
 
-// private --------------------------------------------------------------------
+bool FilterBase::implFinalizeExport( MediaDescriptor& /*rMediaDescriptor*/ )
+{
+    return true;
+}
+
+Reference< XStream > FilterBase::getMainDocumentStream( ) const
+{
+    return mxImpl->mxOutStream;
+}
+
+// private
 
 void FilterBase::setMediaDescriptor( const Sequence< PropertyValue >& rMediaDescSeq )
 {
@@ -548,7 +559,7 @@ void FilterBase::setMediaDescriptor( const Sequence< PropertyValue >& rMediaDesc
     switch( mxImpl->meDirection )
     {
         case FILTERDIRECTION_UNKNOWN:
-            OSL_ENSURE( false, "FilterBase::setMediaDescriptor - invalid filter direction" );
+            OSL_FAIL( "FilterBase::setMediaDescriptor - invalid filter direction" );
         break;
         case FILTERDIRECTION_IMPORT:
             mxImpl->maMediaDesc.addInputStream();
@@ -565,6 +576,27 @@ void FilterBase::setMediaDescriptor( const Sequence< PropertyValue >& rMediaDesc
     mxImpl->mxTargetFrame = mxImpl->maMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_FRAME(), Reference< XFrame >() );
     mxImpl->mxStatusIndicator = mxImpl->maMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_STATUSINDICATOR(), Reference< XStatusIndicator >() );
     mxImpl->mxInteractionHandler = mxImpl->maMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_INTERACTIONHANDLER(), Reference< XInteractionHandler >() );
+    mxImpl->mxParentShape = mxImpl->maMediaDesc.getUnpackedValueOrDefault( "ParentShape", mxImpl->mxParentShape );
+    mxImpl->maFilterData = mxImpl->maMediaDesc.getUnpackedValueOrDefault( "FilterData", Sequence< PropertyValue >() );
+
+    // Check for ISO OOXML
+    OUString sFilterName = mxImpl->maMediaDesc.getUnpackedValueOrDefault( "FilterName", OUString() );
+    try
+    {
+        Reference<XMultiServiceFactory> xFactory(getComponentContext()->getServiceManager(), UNO_QUERY_THROW);
+        Reference<XNameAccess> xFilters(xFactory->createInstance("com.sun.star.document.FilterFactory" ), UNO_QUERY_THROW );
+        Any aValues = xFilters->getByName( sFilterName );
+        Sequence<PropertyValue > aPropSeq;
+        aValues >>= aPropSeq;
+        SequenceAsHashMap aProps( aPropSeq );
+
+        sal_Int32 nVersion = aProps.getUnpackedValueOrDefault( "FileFormatVersion", sal_Int32( 0 ) );
+        mxImpl->meVersion = OoxmlVersion( nVersion );
+    }
+    catch ( const Exception& )
+    {
+        // Not ISO OOXML
+    }
 }
 
 GraphicHelper* FilterBase::implCreateGraphicHelper() const
@@ -573,7 +605,7 @@ GraphicHelper* FilterBase::implCreateGraphicHelper() const
     return new GraphicHelper( mxImpl->mxComponentContext, mxImpl->mxTargetFrame, mxImpl->mxStorage );
 }
 
-// ============================================================================
-
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

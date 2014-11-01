@@ -1,52 +1,47 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/core/fasttokenhandler.hxx"
 
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include "oox/helper/helper.hxx"
 #include "oox/token/tokenmap.hxx"
+#if SUPD != 310
+#include <cppuhelper/supportsservice.hxx>
+#endif	// SUPD != 310
+
+#include <services.hxx>
 
 namespace oox {
 namespace core {
 
-// ============================================================================
-
 using namespace ::com::sun::star::uno;
-
-using ::rtl::OUString;
-
-// ============================================================================
 
 OUString SAL_CALL FastTokenHandler_getImplementationName()
 {
-    return CREATE_OUSTRING( "com.sun.star.comp.oox.core.FastTokenHandler" );
+    return OUString( "com.sun.star.comp.oox.core.FastTokenHandler" );
 }
 
 Sequence< OUString > SAL_CALL FastTokenHandler_getSupportedServiceNames()
 {
     Sequence< OUString > aServiceNames( 1 );
-    aServiceNames[ 0 ] = CREATE_OUSTRING( "com.sun.star.xml.sax.FastTokenHandler" );
+    aServiceNames[ 0 ] = "com.sun.star.xml.sax.FastTokenHandler";
     return aServiceNames;
 }
 
@@ -54,8 +49,6 @@ Reference< XInterface > SAL_CALL FastTokenHandler_createInstance( const Referenc
 {
     return static_cast< ::cppu::OWeakObject* >( new FastTokenHandler );
 }
-
-// ============================================================================
 
 FastTokenHandler::FastTokenHandler() :
     mrTokenMap( StaticTokenMap::get() )
@@ -67,49 +60,86 @@ FastTokenHandler::~FastTokenHandler()
 }
 
 // XServiceInfo
-
+#if SUPD == 310
 OUString SAL_CALL FastTokenHandler::getImplementationName() throw (RuntimeException)
+#else	// SUPD == 310
+OUString SAL_CALL FastTokenHandler::getImplementationName() throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return FastTokenHandler_getImplementationName();
 }
 
+#if SUPD == 310
 sal_Bool SAL_CALL FastTokenHandler::supportsService( const OUString& rServiceName ) throw (RuntimeException)
+#else	// SUPD == 310
+sal_Bool SAL_CALL FastTokenHandler::supportsService( const OUString& rServiceName ) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
+#if SUPD == 310
     Sequence< OUString > aServiceNames = FastTokenHandler_getSupportedServiceNames();
     for( sal_Int32 nIndex = 0, nLength = aServiceNames.getLength(); nIndex < nLength; ++nIndex )
         if( aServiceNames[ nIndex ] == rServiceName )
             return sal_True;
     return sal_False;
+#else	// SUPD == 310
+    return cppu::supportsService(this, rServiceName);
+#endif	// SUPD == 310
 }
 
+#if SUPD == 310
 Sequence< OUString > SAL_CALL FastTokenHandler::getSupportedServiceNames() throw (RuntimeException)
+#else	// SUPD == 310
+Sequence< OUString > SAL_CALL FastTokenHandler::getSupportedServiceNames() throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return FastTokenHandler_getSupportedServiceNames();
 }
 
 // XFastTokenHandler
-
+#if SUPD == 310
 sal_Int32 FastTokenHandler::getToken( const OUString& rIdentifier ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Int32 FastTokenHandler::getToken( const OUString& rIdentifier ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return mrTokenMap.getTokenFromUnicode( rIdentifier );
 }
 
+#if SUPD == 310
 OUString FastTokenHandler::getIdentifier( sal_Int32 nToken ) throw( RuntimeException )
+#else	// SUPD == 310
+OUString FastTokenHandler::getIdentifier( sal_Int32 nToken ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return mrTokenMap.getUnicodeTokenName( nToken );
 }
 
+#if SUPD == 310
 Sequence< sal_Int8 > FastTokenHandler::getUTF8Identifier( sal_Int32 nToken ) throw( RuntimeException )
+#else	// SUPD == 310
+Sequence< sal_Int8 > FastTokenHandler::getUTF8Identifier( sal_Int32 nToken ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return mrTokenMap.getUtf8TokenName( nToken );
 }
 
+#if SUPD == 310
 sal_Int32 FastTokenHandler::getTokenFromUTF8( const Sequence< sal_Int8 >& rIdentifier ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Int32 FastTokenHandler::getTokenFromUTF8( const Sequence< sal_Int8 >& rIdentifier ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return mrTokenMap.getTokenFromUtf8( rIdentifier );
 }
 
-// ============================================================================
+sal_Int32 FastTokenHandler::getTokenDirect( const char *pToken, sal_Int32 nLength ) const
+{
+    return mrTokenMap.getTokenFromUTF8( pToken, nLength );
+}
+
+
 
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,36 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_CHART_TYPEGROUPCONTEXT_HXX
+#define INCLUDED_OOX_DRAWINGML_CHART_TYPEGROUPCONTEXT_HXX
 
-
-#ifndef OOX_DRAWINGML_CHART_TYPEGROUPCONTEXT_HXX
-#define OOX_DRAWINGML_CHART_TYPEGROUPCONTEXT_HXX
-
-#include "oox/drawingml/chart/chartcontextbase.hxx"
+#include <oox/drawingml/chart/chartcontextbase.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 struct UpDownBarsModel;
 
@@ -42,15 +38,15 @@ public:
     explicit            UpDownBarsContext( ::oox::core::ContextHandler2Helper& rParent, UpDownBarsModel& rModel );
     virtual             ~UpDownBarsContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 struct TypeGroupModel;
 typedef ContextBase< TypeGroupModel > TypeGroupContextBase;
 
-// ============================================================================
+
 
 /** Handler for area type group contexts (c:area3DChart, c:areaChart elements).
  */
@@ -60,10 +56,10 @@ public:
     explicit            AreaTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~AreaTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for bar type group contexts (c:bar3DChart, c:barChart elements).
  */
@@ -73,10 +69,10 @@ public:
     explicit            BarTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~BarTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for bubble type group context (c:bubbleChart element).
  */
@@ -86,10 +82,10 @@ public:
     explicit            BubbleTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~BubbleTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for line type group contexts (c:line3DChart, c:lineChart,
     c:stockChart elements).
@@ -100,10 +96,10 @@ public:
     explicit            LineTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~LineTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for pie type group contexts (c:doughnutChart, c:ofPieChart,
     c:pie3DChart, c:pieChart elements).
@@ -114,10 +110,10 @@ public:
     explicit            PieTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~PieTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for radar type group context (c:radarChart element).
  */
@@ -127,10 +123,10 @@ public:
     explicit            RadarTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~RadarTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for scatter type group context (c:scatterChart element).
  */
@@ -140,10 +136,10 @@ public:
     explicit            ScatterTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~ScatterTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 /** Handler for surface type group contexts (c:surface3DChart, c:surfaceChart
     elements).
@@ -154,13 +150,15 @@ public:
     explicit            SurfaceTypeGroupContext( ::oox::core::ContextHandler2Helper& rParent, TypeGroupModel& rModel );
     virtual             ~SurfaceTypeGroupContext();
 
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
+    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

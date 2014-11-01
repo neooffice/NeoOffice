@@ -1,27 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "ooxmldocpropimport.hxx"
+#include "services.hxx"
 
 #include <vector>
 #include <com/sun/star/embed/ElementModes.hpp>
@@ -34,10 +31,12 @@
 #include "oox/helper/helper.hxx"
 #include "docprophandler.hxx"
 
+#if SUPD != 310
+#include <cppuhelper/supportsservice.hxx>
+#endif	// SUPD != 310
+
 namespace oox {
 namespace docprop {
-
-// ============================================================================
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::document;
@@ -47,32 +46,26 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 
-using ::rtl::OUString;
-
-// ============================================================================
-
 OUString SAL_CALL DocumentPropertiesImport_getImplementationName()
 {
 #if SUPD == 310
-    return CREATE_OUSTRING( "com.sun.star.comp.oox.docprop.OOXMLDocumentPropertiesImporter" );
+    return OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.oox.docprop.OOXMLDocumentPropertiesImporter" ) );
 #else	// SUPD == 310
-    return CREATE_OUSTRING( "com.sun.star.comp.oox.docprop.DocumentPropertiesImporter" );
+    return OUString( "com.sun.star.comp.oox.docprop.DocumentPropertiesImporter" );
 #endif	// SUPD == 310
 }
 
 Sequence< OUString > SAL_CALL DocumentPropertiesImport_getSupportedServiceNames()
 {
     Sequence< OUString > aServices( 1 );
-    aServices[ 0 ] = CREATE_OUSTRING( "com.sun.star.document.OOXMLDocumentPropertiesImporter" );
+    aServices[ 0 ] = "com.sun.star.document.OOXMLDocumentPropertiesImporter";
     return aServices;
 }
 
-Reference< XInterface > SAL_CALL DocumentPropertiesImport_createInstance( const Reference< XComponentContext >& rxContext ) SAL_THROW((Exception))
+Reference< XInterface > SAL_CALL DocumentPropertiesImport_createInstance( const Reference< XComponentContext >& rxContext ) throw(Exception)
 {
     return static_cast< ::cppu::OWeakObject* >( new DocumentPropertiesImport( rxContext ) );
 }
-
-// ============================================================================
 
 namespace {
 
@@ -91,7 +84,7 @@ Sequence< InputSource > lclGetRelatedStreams( const Reference< XStorage >& rxSto
         for( sal_Int32 nEntryIndex = 0, nEntryLength = rEntries.getLength(); nEntryIndex < nEntryLength; ++nEntryIndex )
         {
             const StringPair& rEntry = rEntries[ nEntryIndex ];
-            if( rEntry.First.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "Target" ) ) )
+            if ( rEntry.First == "Target" )
             {
                 Reference< XExtendedStorageStream > xExtStream(
                     xHierarchy->openStreamElementByHierarchicalName( rEntry.Second, ElementModes::READ ), UNO_QUERY_THROW );
@@ -112,39 +105,56 @@ Sequence< InputSource > lclGetRelatedStreams( const Reference< XStorage >& rxSto
 
 } // namespace
 
-// ============================================================================
-
 DocumentPropertiesImport::DocumentPropertiesImport( const Reference< XComponentContext >& rxContext ) :
     mxContext( rxContext )
 {
 }
 
 // XServiceInfo
-
+#if SUPD == 310
 OUString SAL_CALL DocumentPropertiesImport::getImplementationName() throw (RuntimeException)
+#else	// SUPD == 310
+OUString SAL_CALL DocumentPropertiesImport::getImplementationName() throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return DocumentPropertiesImport_getImplementationName();
 }
 
+#if SUPD == 310
 sal_Bool SAL_CALL DocumentPropertiesImport::supportsService( const OUString& rServiceName ) throw (RuntimeException)
+#else	// SUPD == 310
+sal_Bool SAL_CALL DocumentPropertiesImport::supportsService( const OUString& rServiceName ) throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
+#if SUPD == 310
     Sequence< OUString > aServiceNames = DocumentPropertiesImport_getSupportedServiceNames();
     for( sal_Int32 nIndex = 0, nLength = aServiceNames.getLength(); nIndex < nLength; ++nIndex )
         if( aServiceNames[ nIndex ] == rServiceName )
             return sal_True;
     return sal_False;
+#else	// SUPD == 310
+    return cppu::supportsService(this, rServiceName);
+#endif	// SUPD == 310
 }
 
+#if SUPD == 310
 Sequence< OUString > SAL_CALL DocumentPropertiesImport::getSupportedServiceNames() throw (RuntimeException)
+#else	// SUPD == 310
+Sequence< OUString > SAL_CALL DocumentPropertiesImport::getSupportedServiceNames() throw (RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return DocumentPropertiesImport_getSupportedServiceNames();
 }
 
 // XOOXMLDocumentPropertiesImporter
-
 void SAL_CALL DocumentPropertiesImport::importProperties(
-        const Reference< XStorage >& rxSource, const Reference< XDocumentProperties >& rxDocumentProperties )
+#if SUPD == 310
+        const css::uno::Reference< XStorage >& rxSource, const css::uno::Reference< XDocumentProperties >& rxDocumentProperties )
         throw (RuntimeException, IllegalArgumentException, SAXException, Exception)
+#else	// SUPD == 310
+        const Reference< XStorage >& rxSource, const Reference< XDocumentProperties >& rxDocumentProperties )
+        throw (RuntimeException, IllegalArgumentException, SAXException, Exception, std::exception)
+#endif	// SUPD == 310
 {
     if( !mxContext.is() )
         throw RuntimeException();
@@ -153,17 +163,26 @@ void SAL_CALL DocumentPropertiesImport::importProperties(
         throw IllegalArgumentException();
 
     Sequence< InputSource > aCoreStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE( "metadata/core-properties" ) );
+    // OOXML strict
+    if( !aCoreStreams.hasElements() )
+        aCoreStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE_STRICT( "metadata/core-properties" ) );
     // MS Office seems to have a bug, so we have to do similar handling
     if( !aCoreStreams.hasElements() )
         aCoreStreams = lclGetRelatedStreams( rxSource, CREATE_PACKAGE_RELATION_TYPE( "metadata/core-properties" ) );
 
     Sequence< InputSource > aExtStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE( "extended-properties" ) );
+    // OOXML strict
+    if( !aExtStreams.hasElements() )
+        aExtStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE_STRICT( "extended-properties" ) );
     Sequence< InputSource > aCustomStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE( "custom-properties" ) );
+    // OOXML strict
+    if( !aCustomStreams.hasElements() )
+        aCustomStreams = lclGetRelatedStreams( rxSource, CREATE_OFFICEDOC_RELATION_TYPE_STRICT( "custom-properties" ) );
 
     if( aCoreStreams.hasElements() || aExtStreams.hasElements() || aCustomStreams.hasElements() )
     {
         if( aCoreStreams.getLength() > 1 )
-            throw IOException( CREATE_OUSTRING( "Unexpected core properties stream!" ), Reference< XInterface >() );
+            throw IOException( "Unexpected core properties stream!", Reference< XInterface >() );
 
         ::oox::core::FastParser aParser( mxContext );
         aParser.registerNamespace( NMSP_packageMetaCorePr );
@@ -183,7 +202,9 @@ void SAL_CALL DocumentPropertiesImport::importProperties(
     }
 }
 
-// ============================================================================
+
 
 } // namespace docprop
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

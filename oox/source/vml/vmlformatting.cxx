@@ -1,28 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 #include "oox/vml/vmlformatting.hxx"
 
+#include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/drawing/EnhancedCustomShapeTextPathMode.hpp>
+#include <com/sun/star/table/ShadowFormat.hpp>
+#include <com/sun/star/text/XTextRange.hpp>
 #include <rtl/strbuf.hxx>
 #include "oox/drawingml/color.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
@@ -35,8 +35,9 @@
 namespace oox {
 namespace vml {
 
-// ============================================================================
 
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::geometry;
 
 using ::oox::drawingml::Color;
@@ -44,10 +45,12 @@ using ::oox::drawingml::FillProperties;
 using ::oox::drawingml::LineArrowProperties;
 using ::oox::drawingml::LineProperties;
 using ::oox::drawingml::ShapePropertyMap;
-using ::rtl::OStringBuffer;
-using ::rtl::OUString;
+using ::com::sun::star::awt::Point;
+using ::com::sun::star::drawing::PolygonFlags;
+using ::com::sun::star::drawing::PolygonFlags_NORMAL;
+using ::com::sun::star::drawing::PolygonFlags_CONTROL;
 
-// ============================================================================
+
 
 namespace {
 
@@ -61,9 +64,9 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
 
 } // namespace
 
-// ----------------------------------------------------------------------------
 
-/*static*/ bool ConversionHelper::separatePair( OUString& orValue1, OUString& orValue2,
+
+bool ConversionHelper::separatePair( OUString& orValue1, OUString& orValue2,
         const OUString& rValue, sal_Unicode cSep )
 {
     sal_Int32 nSepPos = rValue.indexOf( cSep );
@@ -76,19 +79,19 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
     {
         orValue1 = rValue.trim();
     }
-    return (orValue1.getLength() > 0) && (orValue2.getLength() > 0);
+    return !orValue1.isEmpty() && !orValue2.isEmpty();
 }
 
-/*static*/ bool ConversionHelper::decodeBool( const OUString& rValue )
+bool ConversionHelper::decodeBool( const OUString& rValue )
 {
     sal_Int32 nToken = AttributeConversion::decodeToken( rValue );
     // anything else than 't' or 'true' is considered to be false, as specified
     return (nToken == XML_t) || (nToken == XML_true);
 }
 
-/*static*/ double ConversionHelper::decodePercent( const OUString& rValue, double fDefValue )
+double ConversionHelper::decodePercent( const OUString& rValue, double fDefValue )
 {
-    if( rValue.getLength() == 0 )
+    if( rValue.isEmpty() )
         return fDefValue;
 
     double fValue = 0.0;
@@ -102,21 +105,24 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
     if( (nEndPos + 1 == rValue.getLength()) && (rValue[ nEndPos ] == '%') )
         return fValue / 100.0;
 
-    OSL_ENSURE( false, "ConversionHelper::decodePercent - unknown measure unit" );
+    if( (nEndPos + 1 == rValue.getLength()) && (rValue[ nEndPos ] == 'f') )
+        return fValue / 65536.0;
+
+    OSL_FAIL( "ConversionHelper::decodePercent - unknown measure unit" );
     return fDefValue;
 }
 
-/*static*/ sal_Int64 ConversionHelper::decodeMeasureToEmu( const GraphicHelper& rGraphicHelper,
+sal_Int64 ConversionHelper::decodeMeasureToEmu( const GraphicHelper& rGraphicHelper,
         const OUString& rValue, sal_Int32 nRefValue, bool bPixelX, bool bDefaultAsPixel )
 {
     // default for missing values is 0
-    if( rValue.getLength() == 0 )
+    if( rValue.isEmpty() )
         return 0;
 
     // TODO: according to spec, value may contain "auto"
-    if( rValue.equalsAscii( "auto" ) )
+    if ( rValue == "auto" )
     {
-        OSL_ENSURE( false, "ConversionHelper::decodeMeasureToEmu - special value 'auto' must be handled by caller" );
+        OSL_FAIL( "ConversionHelper::decodeMeasureToEmu - special value 'auto' must be handled by caller" );
         return nRefValue;
     }
 
@@ -127,12 +133,11 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
         return 0;
 
     // process trailing unit, convert to EMU
-    static const OUString saPx = CREATE_OUSTRING( "px" );
     OUString aUnit;
     if( (0 < nEndPos) && (nEndPos < rValue.getLength()) )
         aUnit = rValue.copy( nEndPos );
     else if( bDefaultAsPixel )
-        aUnit = saPx;
+        aUnit = "px";
     // else default is EMU
 
     if( aUnit.getLength() == 2 )
@@ -145,7 +150,7 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
             fValue *= 360000.0;
         else if( (cChar1 == 'm') && (cChar2 == 'm') )   // 1 mm = 36,000 EMU
             fValue *= 36000.0;
-        else if( (cChar1 == 'p') && (cChar2 == 't') )   // 1 point = 1/72 inch = 12,700 MEU
+        else if( (cChar1 == 'p') && (cChar2 == 't') )   // 1 point = 1/72 inch = 12,700 EMU
             fValue *= 12700.0;
         else if( (cChar1 == 'p') && (cChar2 == 'c') )   // 1 pica = 1/6 inch = 152,400 EMU
             fValue *= 152400.0;
@@ -159,26 +164,26 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
     {
         fValue *= nRefValue / 100.0;
     }
-    else if( bDefaultAsPixel || (aUnit.getLength() > 0) )   // default as EMU and no unit -> do nothing
+    else if( bDefaultAsPixel || !aUnit.isEmpty() )   // default as EMU and no unit -> do nothing
     {
-        OSL_ENSURE( false, "ConversionHelper::decodeMeasureToEmu - unknown measure unit" );
+        OSL_FAIL( "ConversionHelper::decodeMeasureToEmu - unknown measure unit" );
         fValue = nRefValue;
     }
     return static_cast< sal_Int64 >( fValue + 0.5 );
 }
 
-/*static*/ sal_Int32 ConversionHelper::decodeMeasureToHmm( const GraphicHelper& rGraphicHelper,
+sal_Int32 ConversionHelper::decodeMeasureToHmm( const GraphicHelper& rGraphicHelper,
         const OUString& rValue, sal_Int32 nRefValue, bool bPixelX, bool bDefaultAsPixel )
 {
     return ::oox::drawingml::convertEmuToHmm( decodeMeasureToEmu( rGraphicHelper, rValue, nRefValue, bPixelX, bDefaultAsPixel ) );
 }
 
-/*static*/ Color ConversionHelper::decodeColor( const GraphicHelper& rGraphicHelper,
+Color ConversionHelper::decodeColor( const GraphicHelper& rGraphicHelper,
         const OptValue< OUString >& roVmlColor, const OptValue< double >& roVmlOpacity,
         sal_Int32 nDefaultRgb, sal_Int32 nPrimaryRgb )
 {
     Color aDmlColor;
-    
+
     // convert opacity
     const sal_Int32 DML_FULL_OPAQUE = ::oox::drawingml::MAX_PERCENT;
     double fOpacity = roVmlOpacity.get( 1.0 );
@@ -200,16 +205,26 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
     // RGB colors in the format '#RRGGBB'
     if( (aColorName.getLength() == 7) && (aColorName[ 0 ] == '#') )
     {
+#if SUPD == 310
         aDmlColor.setSrgbClr( aColorName.copy( 1 ).toInt32( 16 ) );
+#else	// SUPD == 310
+        aDmlColor.setSrgbClr( aColorName.copy( 1 ).toUInt32( 16 ) );
+#endif	// SUPD == 310
         return aDmlColor;
     }
 
     // RGB colors in the format '#RGB'
     if( (aColorName.getLength() == 4) && (aColorName[ 0 ] == '#') )
     {
+#if SUPD == 310
         sal_Int32 nR = aColorName.copy( 1, 1 ).toInt32( 16 ) * 0x11;
         sal_Int32 nG = aColorName.copy( 2, 1 ).toInt32( 16 ) * 0x11;
         sal_Int32 nB = aColorName.copy( 3, 1 ).toInt32( 16 ) * 0x11;
+#else	// SUPD == 310
+        sal_Int32 nR = aColorName.copy( 1, 1 ).toUInt32( 16 ) * 0x11;
+        sal_Int32 nG = aColorName.copy( 2, 1 ).toUInt32( 16 ) * 0x11;
+        sal_Int32 nB = aColorName.copy( 3, 1 ).toUInt32( 16 ) * 0x11;
+#endif	// SUPD == 310
         aDmlColor.setSrgbClr( (nR << 16) | (nG << 8) | nB );
         return aDmlColor;
     }
@@ -243,7 +258,7 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
             sal_Int32 nModToken = XML_TOKEN_INVALID;
             switch( AttributeConversion::decodeToken( aColorIndex.copy( 0, nOpenParen ) ) )
             {
-                case XML_darken:    nModToken = XML_shade;
+                case XML_darken:    nModToken = XML_shade;break;
                 case XML_lighten:   nModToken = XML_tint;
             }
             sal_Int32 nValue = aColorIndex.copy( nOpenParen + 1, nCloseParen - nOpenParen - 1 ).toInt32();
@@ -259,13 +274,240 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
         }
     }
 
-    OSL_ENSURE( false, OStringBuffer( "ConversionHelper::decodeColor - invalid VML color name '" ).
+    OSL_FAIL( OStringBuffer( "lclGetColor - invalid VML color name '" ).
         append( OUStringToOString( roVmlColor.get(), RTL_TEXTENCODING_ASCII_US ) ).append( '\'' ).getStr() );
     aDmlColor.setSrgbClr( nDefaultRgb );
     return aDmlColor;
 }
 
-// ============================================================================
+void ConversionHelper::decodeVmlPath( ::std::vector< ::std::vector< Point > >& rPointLists, ::std::vector< ::std::vector< PolygonFlags > >& rFlagLists, const OUString& rPath )
+{
+    ::std::vector< sal_Int32 > aCoordList;
+    Point aCurrentPoint;
+    sal_Int32 nTokenStart = 0;
+    sal_Int32 nTokenLen = 0;
+    sal_Int32 nParamCount = 0;
+    bool bCommand = false;
+    enum VML_State { START, MOVE_REL, MOVE_ABS, BEZIER_REL, BEZIER_ABS,
+                     LINE_REL, LINE_ABS, CLOSE, END, UNSUPPORTED };
+    VML_State state = START;
+
+    rPointLists.push_back( ::std::vector< Point>() );
+    rFlagLists.push_back( ::std::vector< PolygonFlags >() );
+
+    for ( sal_Int32 i = 0; i < rPath.getLength(); i++ )
+    {
+        // Keep track of current integer token
+        if ( ( rPath[ i ] >= '0' && rPath[ i ] <= '9' ) || rPath[ i ] == '-' )
+            nTokenLen++;
+        else if ( rPath[ i ] != ' ' )
+        {
+            // Store coordinate from current token
+            if ( state != START && state != UNSUPPORTED )
+            {
+                if ( nTokenLen > 0 )
+                    aCoordList.push_back( rPath.copy( nTokenStart, nTokenLen ).toInt32() );
+                else
+                    aCoordList.push_back( 0 );
+                nTokenLen = 0;
+            }
+
+            if (rPath[ i ] == ',' )
+            {
+                nParamCount--;
+            }
+
+            // Upon finding the next command code, deal with stored
+            // coordinates for previous command and reset parameters counter if needed.
+            // See http://www.w3.org/TR/NOTE-VML#_Toc416858382 for params count reference
+            if ( rPath[ i ] != ',' || nParamCount == 0 )
+            {
+                switch ( state )
+                {
+                case MOVE_REL: // 2* params -> param count reset
+                    if ( rPointLists.size() > 0 && rPointLists.back().size() > 0 )
+                    {
+                        rPointLists.push_back( ::std::vector< Point >() );
+                        rFlagLists.push_back( ::std::vector< PolygonFlags >() );
+                    }
+                    rPointLists.back().push_back( Point( aCoordList[ 0 ], aCoordList[ 1 ] ) );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    nParamCount = 2;
+                    break;
+
+                case MOVE_ABS: // 2 params -> no param count reset
+                    if ( rPointLists.size() > 0 && rPointLists.back().size() > 0 )
+                    {
+                        rPointLists.push_back( ::std::vector< Point >() );
+                        rFlagLists.push_back( ::std::vector< PolygonFlags >() );
+                    }
+                    rPointLists.back().push_back( Point( (aCoordList[ 0 ]), (aCoordList.size() > 1 ? aCoordList[ 1 ] : 0) ) );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    break;
+
+                case BEZIER_REL: // 6* params -> param count reset
+                    rPointLists.back().push_back( Point( aCurrentPoint.X + aCoordList[ 0 ],
+                                            aCurrentPoint.Y + aCoordList[ 1 ] ) );
+                    rPointLists.back().push_back( Point( aCurrentPoint.X + aCoordList[ 2 ],
+                                            aCurrentPoint.Y + aCoordList[ 3 ] ) );
+                    rPointLists.back().push_back( Point( aCurrentPoint.X + aCoordList[ 4 ],
+                                            aCurrentPoint.Y + aCoordList[ 5 ] ) );
+                    rFlagLists.back().push_back( PolygonFlags_CONTROL );
+                    rFlagLists.back().push_back( PolygonFlags_CONTROL );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    nParamCount = 6;
+                    break;
+
+                case BEZIER_ABS: // 6* params -> param count reset
+                    rPointLists.back().push_back( Point( aCoordList[ 0 ], aCoordList[ 1 ] ) );
+                    rPointLists.back().push_back( Point( aCoordList[ 2 ], aCoordList[ 3 ] ) );
+                    rPointLists.back().push_back( Point( aCoordList[ 4 ], aCoordList[ 5 ] ) );
+                    rFlagLists.back().push_back( PolygonFlags_CONTROL );
+                    rFlagLists.back().push_back( PolygonFlags_CONTROL );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    nParamCount = 6;
+                    break;
+
+                case LINE_REL: // 2* params -> param count reset
+                    rPointLists.back().push_back( Point( aCurrentPoint.X + aCoordList[ 0 ],
+                                            aCurrentPoint.Y + aCoordList[ 1 ] ) );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    nParamCount = 2;
+                    break;
+
+                case LINE_ABS: // 2* params -> param count reset
+                    rPointLists.back().push_back( Point( aCoordList[ 0 ], (aCoordList.size() > 1 ? aCoordList[ 1 ] : 0) ) );
+                    rFlagLists.back().push_back( PolygonFlags_NORMAL );
+                    aCurrentPoint = rPointLists.back().back();
+                    nParamCount = 2;
+                    break;
+
+                case CLOSE: // 0 param
+                    rPointLists.back().push_back( rPointLists.back()[ 0 ] );
+                    rFlagLists.back().push_back( rFlagLists.back()[ 0 ] );
+                    aCurrentPoint = rPointLists.back().back();
+                    break;
+
+                case END: // 0 param
+                    rPointLists.push_back( ::std::vector< Point >() );
+                    rFlagLists.push_back( ::std::vector< PolygonFlags >() );
+                    break;
+
+                case START:
+                case UNSUPPORTED:
+                    break;
+                }
+
+                aCoordList.clear();
+            }
+
+            // Allow two-char commands to peek ahead to the next character
+            char nextChar = '\0';
+            if (i+1 < rPath.getLength())
+                nextChar = rPath[i+1];
+
+            // Move to relevant state upon finding a command
+            bCommand = true;
+            switch ( rPath[ i ] )
+            {
+            // Single-character commands
+            case 't': // rmoveto
+                state = MOVE_REL; nParamCount = 2; break;
+            case 'm': // moveto
+                state = MOVE_ABS; nParamCount = 2; break;
+            case 'v': // rcurveto
+                state = BEZIER_REL; nParamCount = 6; break;
+            case 'c': // curveto
+                state = BEZIER_ABS; nParamCount = 6; break;
+            case 'r': // rlineto
+                state = LINE_REL; nParamCount = 2; break;
+            case 'l': // lineto
+                state = LINE_ABS; nParamCount = 2; break;
+            case 'x': // close
+                state = CLOSE; break;
+            case 'e': // end
+                state = END; break;
+
+            // Two-character commands
+            case 'n':
+            {
+                switch ( nextChar )
+                {
+                case 'f': // nf - nofill
+                case 's': // ns - nostroke
+                    state = UNSUPPORTED; i++; break;
+                }
+                break;
+            }
+            case 'a': // Elliptical curves
+            {
+                switch ( nextChar )
+                {
+                case 'e': // ae - angleellipseto
+                case 'l': // al - angleellipse
+                    state = UNSUPPORTED; i++; break;
+                case 't': // at - arcto
+                case 'r': // ar - arc
+                    state = UNSUPPORTED; i++; break;
+                }
+                break;
+            }
+            case 'w': // Clockwise elliptical arcs
+            {
+                switch ( nextChar )
+                {
+                case 'a': // wa - clockwisearcto
+                case 'r': // wr - clockwisearc
+                    state = UNSUPPORTED; i++; break;
+                }
+                break;
+            }
+            case 'q':
+            {
+                switch ( nextChar )
+                {
+                case 'x': // qx - ellipticalquadrantx
+                case 'y': // qy - ellipticalquadranty
+                    state = UNSUPPORTED; i++; break;
+                case 'b': // qb - quadraticbezier
+                    state = UNSUPPORTED; i++; break;
+                }
+                break;
+            }
+            case 'h': // behaviour extensions
+            {
+                switch ( nextChar )
+                {
+                case 'a': // ha - AutoLine
+                case 'b': // hb - AutoCurve
+                case 'c': // hc - CornerLine
+                case 'd': // hd - CornerCurve
+                case 'e': // he - SmoothLine
+                case 'f': // hf - SmoothCurve
+                case 'g': // hg - SymmetricLine
+                case 'h': // hh - SymmetricCurve
+                case 'i': // hi - Freeform
+                    state = UNSUPPORTED; i++; break;
+                }
+                break;
+            }
+            default:
+                bCommand = false;
+                break;
+            }
+
+            if (bCommand) nTokenLen = 0;
+            nTokenStart = i+1;
+        }
+    }
+}
+
+
 
 namespace {
 
@@ -388,7 +630,7 @@ sal_Int32 lclGetDmlLineJoint( const OptValue< sal_Int32 >& roJoinStyle )
 
 } // namespace
 
-// ============================================================================
+
 
 void StrokeArrowModel::assignUsed( const StrokeArrowModel& rSource )
 {
@@ -397,7 +639,7 @@ void StrokeArrowModel::assignUsed( const StrokeArrowModel& rSource )
     moArrowLength.assignIfUsed( rSource.moArrowLength );
 }
 
-// ============================================================================
+
 
 void StrokeModel::assignUsed( const StrokeModel& rSource )
 {
@@ -439,7 +681,7 @@ void StrokeModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper
     aLineProps.pushToPropMap( rPropMap, rGraphicHelper );
 }
 
-// ============================================================================
+
 
 void FillModel::assignUsed( const FillModel& rSource )
 {
@@ -508,7 +750,7 @@ void FillModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper& 
                             gradient. BUT: For angles >= 180 deg., the
                             behaviour is reversed. This means that in this case
                             a focus of 0% swaps the gradient. */
-                        if( ((fFocus < -0.75) || (fFocus > 0.75)) == (nVmlAngle < 180) )
+                        if( fFocus < -0.5 || fFocus > 0.5 )
                             (nVmlAngle += 180) %= 360;
                         // set the start and stop colors
                         aFillProps.maGradientProps.maGradientStops[ 0.0 ] = aColor1;
@@ -547,7 +789,7 @@ void FillModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper& 
             case XML_tile:
             case XML_frame:
             {
-                if( moBitmapPath.has() && moBitmapPath.get().getLength() > 0 )
+                if( moBitmapPath.has() && !moBitmapPath.get().isEmpty() )
                 {
                     aFillProps.maBlipProps.mxGraphic = rGraphicHelper.importEmbeddedGraphic( moBitmapPath.get() );
                     if( aFillProps.maBlipProps.mxGraphic.is() )
@@ -559,7 +801,7 @@ void FillModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper& 
                 }
             }
             // run-through to XML_solid in case of missing bitmap path intended!
-            
+
             case XML_solid:
             default:
             {
@@ -577,7 +819,91 @@ void FillModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper& 
     aFillProps.pushToPropMap( rPropMap, rGraphicHelper );
 }
 
-// ============================================================================
+
+
+ShadowModel::ShadowModel()
+        : mbHasShadow(false)
+{
+}
+
+void ShadowModel::pushToPropMap(ShapePropertyMap& rPropMap, const GraphicHelper& rGraphicHelper) const
+{
+    if (!mbHasShadow || (moShadowOn.has() && !moShadowOn.get()))
+        return;
+
+    drawingml::Color aColor = ConversionHelper::decodeColor(rGraphicHelper, moColor, moOpacity, API_RGB_GRAY);
+    // nOffset* is in mm100, default value is 35 twips, see DffPropertyReader::ApplyAttributes() in msfilter.
+    sal_Int32 nOffsetX = 62, nOffsetY = 62;
+    if (moOffset.has())
+    {
+        OUString aOffsetX, aOffsetY;
+        ConversionHelper::separatePair(aOffsetX, aOffsetY, moOffset.get(), ',');
+        if (!aOffsetX.isEmpty())
+            nOffsetX = ConversionHelper::decodeMeasureToHmm(rGraphicHelper, aOffsetX, 0, false, false );
+        if (!aOffsetY.isEmpty())
+            nOffsetY = ConversionHelper::decodeMeasureToHmm(rGraphicHelper, aOffsetY, 0, false, false );
+    }
+
+    table::ShadowFormat aFormat;
+    aFormat.Color = aColor.getColor(rGraphicHelper);
+    aFormat.Location = table::ShadowLocation_BOTTOM_RIGHT;
+    // The width of the shadow is the average of the x and y values, see SwWW8ImplReader::MatchSdrItemsIntoFlySet().
+    aFormat.ShadowWidth = ((nOffsetX + nOffsetY) / 2);
+    rPropMap.setProperty(PROP_ShadowFormat, uno::makeAny(aFormat));
+}
+
+TextpathModel::TextpathModel()
+{
+}
+
+beans::PropertyValue lcl_createTextpathProps()
+{
+    uno::Sequence<beans::PropertyValue> aTextpathPropSeq(4);
+    aTextpathPropSeq[0].Name = "TextPath";
+    aTextpathPropSeq[0].Value <<= sal_True;
+    aTextpathPropSeq[1].Name = "TextPathMode";
+    aTextpathPropSeq[1].Value <<= drawing::EnhancedCustomShapeTextPathMode_SHAPE;
+    aTextpathPropSeq[2].Name = "ScaleX";
+    aTextpathPropSeq[2].Value <<= sal_False;
+    aTextpathPropSeq[3].Name = "SameLetterHeights";
+    aTextpathPropSeq[3].Value <<= sal_False;
+
+    beans::PropertyValue aRet;
+    aRet.Name = "TextPath";
+    aRet.Value <<= aTextpathPropSeq;
+    return aRet;
+}
+
+void TextpathModel::pushToPropMap(ShapePropertyMap& rPropMap, uno::Reference<drawing::XShape> xShape) const
+{
+    if (moString.has())
+    {
+        uno::Reference<text::XTextRange> xTextRange(xShape, uno::UNO_QUERY);
+        xTextRange->setString(moString.get());
+
+        uno::Reference<beans::XPropertySet> xPropertySet(xShape, uno::UNO_QUERY);
+        uno::Sequence<beans::PropertyValue> aGeomPropSeq = xPropertySet->getPropertyValue("CustomShapeGeometry").get< uno::Sequence<beans::PropertyValue> >();
+        bool bFound = false;
+        for (int i = 0; i < aGeomPropSeq.getLength(); ++i)
+        {
+            beans::PropertyValue& rProp = aGeomPropSeq[i];
+            if (rProp.Name == "TextPath")
+            {
+                bFound = true;
+                rProp = lcl_createTextpathProps();
+            }
+        }
+        if (!bFound)
+        {
+            sal_Int32 nSize = aGeomPropSeq.getLength();
+            aGeomPropSeq.realloc(nSize+1);
+            aGeomPropSeq[nSize] = lcl_createTextpathProps();
+        }
+        rPropMap.setAnyProperty(PROP_CustomShapeGeometry, uno::makeAny(aGeomPropSeq));
+    }
+}
 
 } // namespace vml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

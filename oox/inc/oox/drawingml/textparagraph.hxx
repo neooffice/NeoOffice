@@ -1,36 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_DRAWINGML_TEXTPARAGRAPH_HXX
-#define OOX_DRAWINGML_TEXTPARAGRAPH_HXX
+#ifndef INCLUDED_OOX_DRAWINGML_TEXTPARAGRAPH_HXX
+#define INCLUDED_OOX_DRAWINGML_TEXTPARAGRAPH_HXX
 
 #include <com/sun/star/text/XTextCursor.hpp>
 #include <com/sun/star/text/XText.hpp>
 
-#include "oox/core/xmlfilterbase.hxx"
-#include "oox/drawingml/textrun.hxx"
-#include "oox/drawingml/textliststyle.hxx"
-#include "oox/drawingml/textparagraphproperties.hxx"
+#include <oox/core/xmlfilterbase.hxx>
+#include <oox/drawingml/textrun.hxx>
+#include <oox/drawingml/textliststyle.hxx>
+#include <oox/drawingml/textparagraphproperties.hxx>
 
 namespace oox { namespace drawingml {
 
@@ -42,17 +38,15 @@ public:
     TextParagraph();
     ~TextParagraph();
 
-    inline TextRunVector&       getRuns() { return maRuns; }
-    inline const TextRunVector& getRuns() const { return maRuns; }
-    inline void                 addRun( const TextRunPtr & pRun ) { maRuns.push_back( pRun ); }
+    TextRunVector&       getRuns() { return maRuns; }
+    const TextRunVector& getRuns() const { return maRuns; }
+    void                 addRun( const TextRunPtr & pRun ) { maRuns.push_back( pRun ); }
 
-    inline TextParagraphProperties&         getProperties() { return maProperties; }
-    inline const TextParagraphProperties&   getProperties() const { return maProperties; }
+    TextParagraphProperties&         getProperties() { return maProperties; }
+    const TextParagraphProperties&   getProperties() const { return maProperties; }
 
-    inline TextCharacterProperties&         getEndProperties() { return maEndProperties; }
-    inline const TextCharacterProperties&   getEndProperties() const { return maEndProperties; }
-
-    //inline void                        setProperties( TextParagraphPropertiesPtr pProps ) { mpProperties = pProps; }
+    TextCharacterProperties&         getEndProperties() { return maEndProperties; }
+    const TextCharacterProperties&   getEndProperties() const { return maEndProperties; }
 
     void                        insertAt(
                                     const ::oox::core::XmlFilterBase& rFilterBase,
@@ -60,7 +54,8 @@ public:
                                     const ::com::sun::star::uno::Reference < ::com::sun::star::text::XTextCursor > &xAt,
                                     const TextCharacterProperties& rTextStyleProperties,
                                     const TextListStyle& rTextListStyle,
-                                    bool bFirst = false ) const;
+                                    bool bFirst = false,
+                                    float nDefaultCharHeight = 0) const;
 
 private:
     TextParagraphProperties     maProperties;
@@ -72,4 +67,6 @@ typedef boost::shared_ptr< TextParagraph > TextParagraphPtr;
 
 } }
 
-#endif  //  OOX_DRAWINGML_TEXTPARAGRAPH_HXX
+#endif // INCLUDED_OOX_DRAWINGML_TEXTPARAGRAPH_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

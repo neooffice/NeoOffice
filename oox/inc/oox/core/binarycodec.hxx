@@ -1,43 +1,40 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_CORE_BINARYCODEC_HXX
-#define OOX_CORE_BINARYCODEC_HXX
+#ifndef INCLUDED_OOX_CORE_BINARYCODEC_HXX
+#define INCLUDED_OOX_CORE_BINARYCODEC_HXX
 
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/beans/NamedValue.hpp>
 
 #include <rtl/cipher.h>
 #include <rtl/digest.h>
+#include <oox/dllapi.h>
 
 namespace oox { class AttributeList; }
 
 namespace oox {
 namespace core {
 
-// ============================================================================
 
-class CodecHelper
+
+class OOX_DLLPUBLIC CodecHelper
 {
 public:
     /** Returns the password hash if it is in the required 16-bit limit. */
@@ -48,21 +45,21 @@ private:
                         ~CodecHelper();
 };
 
-// ============================================================================
+
 
 /** Encodes and decodes data from/to protected MS Office documents.
 
     Implements a simple XOR encoding/decoding algorithm used in MS Office
     versions up to MSO 95.
  */
-class BinaryCodec_XOR
+class OOX_DLLPUBLIC BinaryCodec_XOR
 {
 public:
     /** Enumerates codec types supported by this XOR codec implementation. */
     enum CodecType
     {
-        CODEC_WORD,     /// MS Word XOR codec.
-        CODEC_EXCEL     /// MS Excel XOR codec.
+        CODEC_WORD,     ///< MS Word XOR codec.
+        CODEC_EXCEL     ///< MS Excel XOR codec.
     };
 
 public:
@@ -141,7 +138,7 @@ public:
             this size.
 
         @return
-            True = decoding was successful (no error occured).
+            True = decoding was successful (no error occurred).
     */
     bool                decode(
                             sal_uInt8* pnDestData,
@@ -161,19 +158,19 @@ public:
             Number of bytes to be skipped (cipher "seeks" forward).
 
         @return
-            True = skip was successful (no error occured).
+            True = skip was successful (no error occurred).
      */
     bool                skip( sal_Int32 nBytes );
 
 private:
-    CodecType           meCodecType;        /// Codec type.
-    sal_uInt8           mpnKey[ 16 ];       /// Encryption key.
-    sal_Int32           mnOffset;           /// Key offset.
-    sal_uInt16          mnBaseKey;          /// Base key from password.
-    sal_uInt16          mnHash;             /// Hash value from password.
+    CodecType           meCodecType;        ///< Codec type.
+    sal_uInt8           mpnKey[ 16 ];       ///< Encryption key.
+    sal_Int32           mnOffset;           ///< Key offset.
+    sal_uInt16          mnBaseKey;          ///< Base key from password.
+    sal_uInt16          mnHash;             ///< Hash value from password.
 };
 
-// ============================================================================
+
 
 /** Encodes and decodes data from protected MSO 97+ documents.
 
@@ -181,7 +178,7 @@ private:
     Implementation is based on the wvDecrypt package by Caolan McNamara:
     http://www.csn.ul.ie/~caolan/docs/wvDecrypt.html
  */
-class BinaryCodec_RCF
+class OOX_DLLPUBLIC BinaryCodec_RCF
 {
 public:
     /** Default constructor.
@@ -274,7 +271,7 @@ public:
             this size.
 
         @return
-            True = decoding was successful (no error occured).
+            True = decoding was successful (no error occurred).
     */
     bool                decode(
                             sal_uInt8* pnDestData,
@@ -294,7 +291,7 @@ public:
             Number of bytes to be skipped (cipher "seeks" forward).
 
         @return
-            True = skip was successful (no error occured).
+            True = skip was successful (no error occurred).
      */
     bool                skip( sal_Int32 nBytes );
 
@@ -309,9 +306,11 @@ private:
     sal_uInt8           mpnUnique[16];
 };
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,29 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/vml/vmlinputstream.hxx"
 
+#if SUPD == 310
 #include <com/sun/star/io/XTextInputStream.hpp>
+#else	// SUPD == 310
+#include <com/sun/star/io/XTextInputStream2.hpp>
+#endif	// SUPD == 310
 #include <map>
 #include <string.h>
 #include <rtl/strbuf.hxx>
@@ -33,15 +33,12 @@
 namespace oox {
 namespace vml {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OString;
-using ::rtl::OStringBuffer;
 
-// ============================================================================
 
 namespace {
 
@@ -84,12 +81,12 @@ inline void lclAppendToBuffer( OStringBuffer& rBuffer, const sal_Char* pcBeg, co
     rBuffer.append( pcBeg, static_cast< sal_Int32 >( pcEnd - pcBeg ) );
 }
 
-// ----------------------------------------------------------------------------
+
 
 void lclProcessAttribs( OStringBuffer& rBuffer, const sal_Char* pcBeg, const sal_Char* pcEnd )
 {
     /*  Map attribute names to char-pointer of all attributes. This map is used
-        to find multiple occurences of attributes with the same name. The
+        to find multiple occurrences of attributes with the same name. The
         mapped pointers are used as map key in the next map below. */
     typedef ::std::map< OString, const sal_Char* > AttributeNameMap;
     AttributeNameMap aAttributeNames;
@@ -105,11 +102,11 @@ void lclProcessAttribs( OStringBuffer& rBuffer, const sal_Char* pcBeg, const sal
     {
         // pcNameBeg points to begin of attribute name, find equality sign
         const sal_Char* pcEqualSign = lclFindCharacter( pcNameBeg, pcEnd, '=' );
-        if( (bOk = pcEqualSign < pcEnd) == true )
+        if ((bOk = (pcEqualSign < pcEnd)) == true)
         {
             // find end of attribute name (ignore whitespace between name and equality sign)
             const sal_Char* pcNameEnd = lclTrimWhiteSpaceFromEnd( pcNameBeg, pcEqualSign );
-            if( (bOk = pcNameBeg < pcNameEnd) == true )
+            if( (bOk = (pcNameBeg < pcNameEnd)) == true )
             {
                 // find begin of attribute value (must be single or double quote)
                 const sal_Char* pcValueBeg = lclFindNonWhiteSpace( pcEqualSign + 1, pcEnd );
@@ -117,7 +114,7 @@ void lclProcessAttribs( OStringBuffer& rBuffer, const sal_Char* pcBeg, const sal
                 {
                     // find end of attribute value (matching quote character)
                     const sal_Char* pcValueEnd = lclFindCharacter( pcValueBeg + 1, pcEnd, *pcValueBeg );
-                    if( (bOk = pcValueEnd < pcEnd) == true )
+                    if( (bOk = (pcValueEnd < pcEnd)) == true )
                     {
                         ++pcValueEnd;
                         OString aAttribName( pcNameBeg, static_cast< sal_Int32 >( pcNameEnd - pcNameBeg ) );
@@ -140,7 +137,7 @@ void lclProcessAttribs( OStringBuffer& rBuffer, const sal_Char* pcBeg, const sal
         }
     }
 
-    // if no error has occured, build the resulting attribute list
+    // if no error has occurred, build the resulting attribute list
     if( bOk )
         for( AttributeDataMap::iterator aIt = aAttributes.begin(), aEnd = aAttributes.end(); aIt != aEnd; ++aIt )
             rBuffer.append( ' ' ).append( aIt->second );
@@ -155,7 +152,7 @@ void lclProcessElement( OStringBuffer& rBuffer, const OString& rElement )
     sal_Int32 nElementLen = rElement.getLength();
     if( nElementLen == 0 )
         return;
-        
+
     const sal_Char* pcOpen = rElement.getStr();
     const sal_Char* pcClose = pcOpen + nElementLen - 1;
 
@@ -226,7 +223,7 @@ bool lclProcessCharacters( OStringBuffer& rBuffer, const OString& rChars )
         literally and must not be stipped away here. Example: The element
             <font>abc </font>
         contains the three letters a, b, and c, followed by a space character.
-        
+
         Consecutive space characters, or a leading single space character, are
         stored in a <span> element. If there are N space characters (N > 1),
         then the <span> element contains exactly (N-1) NBSP (non-breaking
@@ -262,7 +259,7 @@ bool lclProcessCharacters( OStringBuffer& rBuffer, const OString& rChars )
 
 } // namespace
 
-// ============================================================================
+
 
 InputStream::InputStream( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStrm ) :
     // use single-byte ISO-8859-1 encoding which maps all byte characters to the first 256 Unicode characters
@@ -273,6 +270,8 @@ InputStream::InputStream( const Reference< XComponentContext >& rxContext, const
     maClosingCData( CREATE_OSTRING( "]]>" ) ),
     mnBufferPos( 0 )
 {
+    if (!mxTextStrm.is())
+        throw IOException();
     maOpeningBracket[ 0 ] = '<';
     maClosingBracket[ 0 ] = '>';
 }
@@ -282,7 +281,11 @@ InputStream::~InputStream()
 }
 
 sal_Int32 SAL_CALL InputStream::readBytes( Sequence< sal_Int8 >& rData, sal_Int32 nBytesToRead )
+#if SUPD == 310
         throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException)
+#else	// SUPD == 310
+        throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     if( nBytesToRead < 0 )
         throw IOException();
@@ -308,13 +311,21 @@ sal_Int32 SAL_CALL InputStream::readBytes( Sequence< sal_Int8 >& rData, sal_Int3
 }
 
 sal_Int32 SAL_CALL InputStream::readSomeBytes( Sequence< sal_Int8 >& rData, sal_Int32 nMaxBytesToRead )
+#if SUPD == 310
         throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException)
+#else	// SUPD == 310
+        throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     return readBytes( rData, nMaxBytesToRead );
 }
 
 void SAL_CALL InputStream::skipBytes( sal_Int32 nBytesToSkip )
+#if SUPD == 310
         throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException)
+#else	// SUPD == 310
+        throw (NotConnectedException, BufferSizeExceededException, IOException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     if( nBytesToSkip < 0 )
         throw IOException();
@@ -328,13 +339,21 @@ void SAL_CALL InputStream::skipBytes( sal_Int32 nBytesToSkip )
     }
 }
 
+#if SUPD == 310
 sal_Int32 SAL_CALL InputStream::available() throw (NotConnectedException, IOException, RuntimeException)
+#else	// SUPD == 310
+sal_Int32 SAL_CALL InputStream::available() throw (NotConnectedException, IOException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     updateBuffer();
     return maBuffer.getLength() - mnBufferPos;
 }
 
+#if SUPD == 310
 void SAL_CALL InputStream::closeInput() throw (NotConnectedException, IOException, RuntimeException)
+#else	// SUPD == 310
+void SAL_CALL InputStream::closeInput() throw (NotConnectedException, IOException, RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     mxTextStrm->closeInput();
 }
@@ -362,7 +381,11 @@ void InputStream::updateBuffer() throw (IOException, RuntimeException)
             if( aElement.match( maOpeningCData ) )
             {
                 // search the end tag ']]>'
+#if SUPD == 310
                 while( ((aElement.getLength() < maClosingCData.getLength()) || !aElement.match( maClosingCData, aElement.getLength() - maClosingCData.getLength() )) && !mxTextStrm->isEOF() )
+#else	// SUPD == 310
+                while( ((aElement.getLength() < maClosingCData.getLength()) || !aElement.endsWith( maClosingCData )) && !mxTextStrm->isEOF() )
+#endif	// SUPD == 310
                     aElement += readToElementEnd();
                 // copy the entire CDATA part
                 aBuffer.append( aElement );
@@ -387,11 +410,13 @@ OString InputStream::readToElementBegin() throw (IOException, RuntimeException)
 OString InputStream::readToElementEnd() throw (IOException, RuntimeException)
 {
     OString aText = OUStringToOString( mxTextStrm->readString( maClosingBracket, sal_False ), RTL_TEXTENCODING_ISO_8859_1 );
-    OSL_ENSURE( (aText.getLength() > 0) && (aText[ aText.getLength() - 1 ] == '>'), "InputStream::readToElementEnd - missing closing bracket of XML element" );
+    OSL_ENSURE( aText.endsWith(">"), "InputStream::readToElementEnd - missing closing bracket of XML element" );
     return aText;
 }
 
-// ============================================================================
+
 
 } // namespace vml
 } // namespave oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

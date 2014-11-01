@@ -36,5 +36,27 @@ VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
 LOCALIDLFILES=TRUE
-INCLOCAL += -I$(PRJ)$/..$/comphelper/inc -I$(PRJ)$/..$/sax$/$(INPATH)$/inc/$/cssxmlsax -I$(INCCOM)$/csschart -I$(INCCOM)$/csssheet
+INCLOCAL+= \
+	-I$(PRJ)$/..$/comphelper/inc \
+	-I$(PRJ)$/..$/sal/inc \
+	-I$(PRJ)$/..$/sax/inc \
+	-I$(PRJ)$/..$/sax$/$(INPATH)$/inc/$/cssutil \
+	-I$(PRJ)$/..$/sax$/$(INPATH)$/inc/$/cssxmlsax \
+	-I$(PRJ)$/..$/svtools/inc \
+	-I$(PRJ)$/..$/svx/inc \
+	-I$(PRJ)$/..$/tools/inc \
+	-I$(PRJ)$/..$/unotools/inc \
+	-I$(PRJ)$/..$/vcl/inc \
+	-I$(PRJ)$/..$/xmloff/inc \
+	-I$(INCCOM)$/csschart \
+	-I$(INCCOM)$/csschart2 \
+	-I$(INCCOM)$/csschart2data \
+	-I$(INCCOM)$/cssdrawing \
+	-I$(INCCOM)$/cssgraphic \
+	-I$(INCCOM)$/cssoffice \
+	-I$(INCCOM)$/cssscriptvba \
+	-I$(INCCOM)$/csssheet \
+	-I$(INCCOM)$/csstable \
+	-I$(INCCOM)$/cssxmldom \
+	-I$(PRJ)$/..$/include
 .ENDIF		# "$(UPD)" == "310"

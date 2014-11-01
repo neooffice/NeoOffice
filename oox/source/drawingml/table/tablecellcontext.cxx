@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <osl/diagnose.h>
 
@@ -31,92 +27,76 @@
 
 using namespace ::oox::core;
 using namespace ::com::sun::star;
-using ::rtl::OUString;
 
 namespace oox { namespace drawingml { namespace table {
 
-TableCellContext::TableCellContext( ContextHandler& rParent, const uno::Reference< xml::sax::XFastAttributeList >& xAttribs, TableCell& rTableCell )
-: ContextHandler( rParent )
+TableCellContext::TableCellContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, TableCell& rTableCell )
+: ContextHandler2( rParent )
 , mrTableCell( rTableCell )
 {
-	if ( xAttribs->hasAttribute( XML_rowSpan ) )
-		mrTableCell.setRowSpan( xAttribs->getOptionalValue( XML_rowSpan ).toInt32() );
-	if ( xAttribs->hasAttribute( XML_gridSpan ) )
-		mrTableCell.setGridSpan( xAttribs->getOptionalValue( XML_gridSpan ).toInt32() );
+    if ( rAttribs.hasAttribute( XML_rowSpan ) )
+        mrTableCell.setRowSpan( rAttribs.getString( XML_rowSpan ).get().toInt32() );
+    if ( rAttribs.hasAttribute( XML_gridSpan ) )
+        mrTableCell.setGridSpan( rAttribs.getString( XML_gridSpan ).get().toInt32() );
 
-	AttributeList aAttribs( xAttribs );
-	mrTableCell.sethMerge( aAttribs.getBool( XML_hMerge, sal_False ) );
-	mrTableCell.setvMerge( aAttribs.getBool( XML_vMerge, sal_False ) );
+    mrTableCell.sethMerge( rAttribs.getBool( XML_hMerge, false ) );
+    mrTableCell.setvMerge( rAttribs.getBool( XML_vMerge, false ) );
 }
 
 TableCellContext::~TableCellContext()
 {
 }
 
-uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
-TableCellContext::createFastChildContext( ::sal_Int32 aElementToken, const uno::Reference< xml::sax::XFastAttributeList >& xAttribs )
-	throw ( xml::sax::SAXException, uno::RuntimeException)
+ContextHandlerRef
+TableCellContext::onCreateContext( ::sal_Int32 aElementToken, const AttributeList& rAttribs )
 {
-	uno::Reference< xml::sax::XFastContextHandler > xRet;
+    switch( aElementToken )
+    {
+    case A_TOKEN( txBody ):     // CT_TextBody
+        {
+            oox::drawingml::TextBodyPtr xTextBody( new oox::drawingml::TextBody );
+            mrTableCell.setTextBody( xTextBody );
+            return new oox::drawingml::TextBodyContext( *this, *xTextBody );
+        }
 
-	switch( aElementToken )
-	{
-	case A_TOKEN( txBody ):		// CT_TextBody
-		{
-	        oox::drawingml::TextBodyPtr xTextBody( new oox::drawingml::TextBody );
-		    mrTableCell.setTextBody( xTextBody );
-			xRet = new oox::drawingml::TextBodyContext( *this, *xTextBody );
-		}
-		break;
+    case A_TOKEN( tcPr ):       // CT_TableCellProperties
+        {
+            mrTableCell.setLeftMargin( rAttribs.getInteger( XML_marL, 91440 ) );
+            mrTableCell.setRightMargin( rAttribs.getInteger( XML_marR, 91440 ) );
+            mrTableCell.setTopMargin( rAttribs.getInteger( XML_marT, 45720 ) );
+            mrTableCell.setBottomMargin( rAttribs.getInteger( XML_marB, 45720 ) );
+            mrTableCell.setVertToken( rAttribs.getToken( XML_vert, XML_horz ) );                  // ST_TextVerticalType
+            mrTableCell.setAnchorToken( rAttribs.getToken( XML_anchor, XML_t ) );                 // ST_TextAnchoringType
+            mrTableCell.setAnchorCtr( rAttribs.getBool( XML_anchorCtr, false ) );
+            mrTableCell.setHorzOverflowToken( rAttribs.getToken( XML_horzOverflow, XML_clip ) );  // ST_TextHorzOverflowType
+        }
+        break;
+        case A_TOKEN( lnL ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesLeft );
+        case A_TOKEN( lnR ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesRight );
+        case A_TOKEN( lnT ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesTop );
+        case A_TOKEN( lnB ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesBottom );
+        case A_TOKEN( lnTlToBr ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesTopLeftToBottomRight );
+        case A_TOKEN( lnBlToTr ):
+                return new oox::drawingml::LinePropertiesContext( *this, rAttribs, mrTableCell.maLinePropertiesBottomLeftToTopRight );
+        case A_TOKEN( cell3D ): // CT_Cell3D
+        break;
 
-	case A_TOKEN( tcPr ):		// CT_TableCellProperties
-		{
-			AttributeList aAttribs( xAttribs );
-			mrTableCell.setLeftMargin( aAttribs.getInteger( XML_marL, 91440 ) );
-			mrTableCell.setRightMargin( aAttribs.getInteger( XML_marR, 91440 ) );
-			mrTableCell.setTopMargin( aAttribs.getInteger( XML_marT, 45720 ) );
-			mrTableCell.setBottomMargin( aAttribs.getInteger( XML_marB, 45720 ) );
-			mrTableCell.setVertToken( xAttribs->getOptionalValueToken( XML_vert, XML_horz ) );					// ST_TextVerticalType
-			mrTableCell.setAnchorToken( xAttribs->getOptionalValueToken( XML_anchor, XML_t ) );					// ST_TextAnchoringType
-			mrTableCell.setAnchorCtr( aAttribs.getBool( XML_anchorCtr, sal_False ) );
-			mrTableCell.setHorzOverflowToken( xAttribs->getOptionalValueToken( XML_horzOverflow, XML_clip ) );	// ST_TextHorzOverflowType
-		}
-		break;
-		case A_TOKEN( lnL ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesLeft ) );
-			break;
-		case A_TOKEN( lnR ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesRight ) );
-			break;
-		case A_TOKEN( lnT ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesTop ) );
-			break;
-		case A_TOKEN( lnB ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesBottom ) );
-			break;
-		case A_TOKEN( lnTlToBr ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesTopLeftToBottomRight ) );
-			break;
-		case A_TOKEN( lnBlToTr ):
-				xRet.set( new oox::drawingml::LinePropertiesContext( *this, xAttribs, mrTableCell.maLinePropertiesBottomLeftToTopRight ) );
-			break;
-		case A_TOKEN( cell3D ):	// CT_Cell3D
-		break;
+    case A_TOKEN( extLst ):     // CT_OfficeArtExtensionList
+    break;
 
-	case A_TOKEN( extLst ):		// CT_OfficeArtExtensionList
-	break;
+    default:
+        return FillPropertiesContext::createFillContext( *this, aElementToken, rAttribs, mrTableCell.maFillProperties );
 
-	default:
-        xRet.set( FillPropertiesContext::createFillContext( *this, aElementToken, xAttribs, mrTableCell.maFillProperties ) );
-	break;
+    }
 
-	}
-	if ( !xRet.is() )
-	{
-        uno::Reference< XFastContextHandler > xTmp( this );
-		xRet.set( xTmp );
-	}
-	return xRet;
+    return this;
 }
 
 } } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

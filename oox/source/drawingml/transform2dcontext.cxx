@@ -1,76 +1,121 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/transform2dcontext.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/shape.hxx"
+#include "oox/drawingml/textbody.hxx"
 
-using ::com::sun::star::awt::Point;
-using ::com::sun::star::awt::Size;
+using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::xml::sax::SAXException;
 using ::com::sun::star::xml::sax::XFastAttributeList;
 using ::com::sun::star::xml::sax::XFastContextHandler;
-using ::oox::core::ContextHandler;
+using ::oox::core::ContextHandlerRef;
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
-
 /** context to import a CT_Transform2D */
-Transform2DContext::Transform2DContext( ContextHandler& rParent, const Reference< XFastAttributeList >& xAttribs, Shape& rShape ) throw()
-: ContextHandler( rParent )
+Transform2DContext::Transform2DContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, Shape& rShape, bool btxXfrm ) throw()
+: ContextHandler2( rParent )
 , mrShape( rShape )
+, mbtxXfrm ( btxXfrm )
 {
-    AttributeList aAttributeList( xAttribs );
-	mrShape.setRotation( aAttributeList.getInteger( XML_rot, 0 ) );	// 60000ths of a degree Positive angles are clockwise; negative angles are counter-clockwise
-	mrShape.setFlip( aAttributeList.getBool( XML_flipH, sal_False ), aAttributeList.getBool( XML_flipV, sal_False ) );
+    if( !btxXfrm )
+    {
+        mrShape.setRotation( rAttribs.getInteger( XML_rot, 0 ) ); // 60000ths of a degree Positive angles are clockwise; negative angles are counter-clockwise
+        mrShape.setFlip( rAttribs.getBool( XML_flipH, false ), rAttribs.getBool( XML_flipV, false ) );
+    }
+    else
+    {
+        if( rAttribs.hasAttribute( XML_rot ) )
+            mrShape.getTextBody()->getTextProperties().moRotation = -rAttribs.getInteger( XML_rot ).get();
+    }
 }
 
-Reference< XFastContextHandler > Transform2DContext::createFastChildContext( sal_Int32 aElementToken, const Reference< XFastAttributeList >& xAttribs ) throw (SAXException, RuntimeException)
+ContextHandlerRef Transform2DContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
 {
-	switch( aElementToken )
-	{
-	case A_TOKEN( off ):		// horz/vert translation
-		mrShape.setPosition( Point( xAttribs->getOptionalValue( XML_x ).toInt32(), xAttribs->getOptionalValue( XML_y ).toInt32() ) );
-		break;
-	case A_TOKEN( ext ):		// horz/vert size
-		mrShape.setSize( Size( xAttribs->getOptionalValue( XML_cx ).toInt32(), xAttribs->getOptionalValue( XML_cy ).toInt32() ) );
-		break;
-/* todo: what to do?
-	case A_TOKEN( chOff ):	// horz/vert translation of children
-	case A_TOKEN( chExt ):	// horz/vert size of children
-		break;
-*/
-	}
+    if( mbtxXfrm )
+    {
+        // Workaround: only for rectangles
+        const sal_Int32 nType = mrShape.getCustomShapeProperties()->getShapePresetType();
+        if( nType == XML_rect || nType == XML_roundRect )
+        {
+            switch( aElementToken )
+            {
+                case A_TOKEN( off ):
+                    {
+                        const OUString sXValue = rAttribs.getString( XML_x ).get();
+                        const OUString sYValue = rAttribs.getString( XML_y ).get();
+                        if( !sXValue.isEmpty() && nType == XML_rect )
+                            mrShape.getTextBody()->getTextProperties().moTextOffLeft = GetCoordinate( sXValue.toInt32() - mrShape.getPosition().X );
+                        if( !sYValue.isEmpty() )
+                            mrShape.getTextBody()->getTextProperties().moTextOffUpper = GetCoordinate( sYValue.toInt32() - mrShape.getPosition().Y );
+                    }
+                    break;
+                case A_TOKEN( ext ):
+                    {
+                        const OUString sXValue = rAttribs.getString( XML_cx ).get();
+                        const OUString sYValue = rAttribs.getString( XML_cy ).get();
+
+                        if( !sXValue.isEmpty() && nType == XML_rect )
+                        {
+                            mrShape.getTextBody()->getTextProperties().moTextOffRight = GetCoordinate(mrShape.getSize().Width - sXValue.toInt32());
+                            if( mrShape.getTextBody()->getTextProperties().moTextOffLeft )
+                               *mrShape.getTextBody()->getTextProperties().moTextOffRight -=  *mrShape.getTextBody()->getTextProperties().moTextOffLeft;
+                        }
+                        if( !sYValue.isEmpty() )
+                        {
+                            mrShape.getTextBody()->getTextProperties().moTextOffLower = GetCoordinate(mrShape.getSize().Height - sYValue.toInt32());
+                            if( mrShape.getTextBody()->getTextProperties().moTextOffUpper )
+                               *mrShape.getTextBody()->getTextProperties().moTextOffLower -=  *mrShape.getTextBody()->getTextProperties().moTextOffUpper;
+
+                        }
+                    }
+                    break;
+            }
+        }
+        return 0;
+    }
+
+    switch( aElementToken )
+    {
+    case A_TOKEN( off ):        // horz/vert translation
+        mrShape.setPosition( awt::Point( rAttribs.getString( XML_x ).get().toInt32(), rAttribs.getString( XML_y ).get().toInt32() ) );
+        break;
+    case A_TOKEN( ext ):        // horz/vert size
+        mrShape.setSize( awt::Size( rAttribs.getString( XML_cx ).get().toInt32(), rAttribs.getString( XML_cy ).get().toInt32() ) );
+        break;
+    case A_TOKEN( chOff ):  // horz/vert translation of children
+        mrShape.setChildPosition( awt::Point( rAttribs.getString( XML_x ).get().toInt32(), rAttribs.getString( XML_y ).get().toInt32() ) );
+        break;
+    case A_TOKEN( chExt ):  // horz/vert size of children
+        mrShape.setChildSize( awt::Size( rAttribs.getString( XML_cx ).get().toInt32(), rAttribs.getString( XML_cy ).get().toInt32() ) );
+        break;
+    }
 
     return 0;
 }
 
-// ============================================================================
-
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

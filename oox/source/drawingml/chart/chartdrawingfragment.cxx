@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/chartdrawingfragment.hxx"
 
@@ -33,16 +29,14 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
 
-using namespace ::com::sun::star::awt;
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 using namespace ::oox::core;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 ShapeAnchor::ShapeAnchor( bool bRelSize ) :
     mbRelSize( bRelSize )
@@ -69,13 +63,13 @@ void ShapeAnchor::setPos( sal_Int32 nElement, sal_Int32 nParentContext, const OU
             pAnchorPos = &maTo;
         break;
         default:
-            OSL_ENSURE( false, "ShapeAnchor::setPos - unexpected parent element" );
+            OSL_FAIL( "ShapeAnchor::setPos - unexpected parent element" );
     }
     if( pAnchorPos ) switch( nElement )
     {
         case CDR_TOKEN( x ):    pAnchorPos->mfX = rValue.toDouble();    break;
         case CDR_TOKEN( y ):    pAnchorPos->mfY = rValue.toDouble();    break;
-        default:    OSL_ENSURE( false, "ShapeAnchor::setPos - unexpected element" );
+        default:    OSL_FAIL( "ShapeAnchor::setPos - unexpected element" );
     }
 }
 
@@ -115,11 +109,15 @@ EmuRectangle ShapeAnchor::calcAnchorRectEmu( const EmuRectangle& rChartRect ) co
 
     return aAnchorRect;
 }
-// ============================================================================
+
 
 ChartDrawingFragment::ChartDrawingFragment( XmlFilterBase& rFilter,
+#if SUPD == 310
+        const OUString& rFragmentPath, const css::uno::Reference< XShapes >& rxDrawPage,
+#else	// SUPD == 310
         const OUString& rFragmentPath, const Reference< XShapes >& rxDrawPage,
-        const Size& rChartSize, const Point& rShapesOffset, bool bOleSupport ) :
+#endif	// SUPD == 310
+        const awt::Size& rChartSize, const awt::Point& rShapesOffset, bool bOleSupport ) :
     FragmentHandler2( rFilter, rFragmentPath ),
     mxDrawPage( rxDrawPage ),
     mbOleSupport( bOleSupport )
@@ -215,12 +213,13 @@ void ChartDrawingFragment::onEndElement()
             if( (aShapeRectEmu.X >= 0) && (aShapeRectEmu.Y >= 0) && (aShapeRectEmu.Width >= 0) && (aShapeRectEmu.Height >= 0) )
             {
                 // TODO: DrawingML implementation expects 32-bit coordinates for EMU rectangles (change that to EmuRectangle)
-                Rectangle aShapeRectEmu32(
+                awt::Rectangle aShapeRectEmu32(
                     getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.X, 0, SAL_MAX_INT32 ),
                     getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Y, 0, SAL_MAX_INT32 ),
                     getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Width, 0, SAL_MAX_INT32 ),
                     getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Height, 0, SAL_MAX_INT32 ) );
-                mxShape->addShape( getFilter(), getFilter().getCurrentTheme(), mxDrawPage, &aShapeRectEmu32 );
+                basegfx::B2DHomMatrix aMatrix;
+                mxShape->addShape( getFilter(), getFilter().getCurrentTheme(), mxDrawPage, aMatrix, mxShape->getFillProperties(), &aShapeRectEmu32 );
             }
         }
         mxShape.reset();
@@ -228,8 +227,10 @@ void ChartDrawingFragment::onEndElement()
     }
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

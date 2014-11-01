@@ -1,43 +1,40 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_CORE_CONTEXTHANDLER2_HXX
-#define OOX_CORE_CONTEXTHANDLER2_HXX
+#ifndef INCLUDED_OOX_CORE_CONTEXTHANDLER2_HXX
+#define INCLUDED_OOX_CORE_CONTEXTHANDLER2_HXX
 
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include "oox/helper/attributelist.hxx"
-#include "oox/helper/binaryinputstream.hxx"
-#include "oox/core/contexthandler.hxx"
+#include <oox/helper/attributelist.hxx>
+#include <oox/helper/binaryinputstream.hxx>
+#include <oox/core/contexthandler.hxx>
+#include <oox/dllapi.h>
 
 namespace oox {
 namespace core {
 
-// ============================================================================
+
 
 const sal_Int32 XML_ROOT_CONTEXT    = SAL_MAX_INT32;
 
-// ============================================================================
+
 
 struct ElementInfo;
 
@@ -64,7 +61,7 @@ struct ElementInfo;
     and implEndRecord() functions of this helper. Again, this is implemented
     already in the classes ContextHandler2 and FragmentHandler2.
  */
-class ContextHandler2Helper
+class OOX_DLLPUBLIC ContextHandler2Helper
 {
 public:
     explicit            ContextHandler2Helper( bool bEnableTrimSpace );
@@ -102,11 +99,11 @@ public:
         characters() function (such as encoded characters which are passed in
         separate calls to the characters() function), and passes the
         concatenated and trimmed string.
-        
+
         The current element identifier can be accessed with getCurrentElement()
         or isCurrentElement(). Used by OOXML import only.
      */
-    virtual void        onCharacters( const ::rtl::OUString& rChars ) = 0;
+    virtual void        onCharacters( const OUString& rChars ) = 0;
 
     /** Will be called when the current element is about to be left.
 
@@ -139,17 +136,20 @@ public:
 
     // helpers ----------------------------------------------------------------
 
-    /** Returns the identifier of the currently processed element. */
+    /** Returns the identifier of the currently processed element. Ignores MCE elements in stack */
     sal_Int32           getCurrentElement() const;
+
+    /** Returns the identifier of the currently processed element - Including MCE root elements */
+    sal_Int32           getCurrentElementWithMce() const;
 
     /** Returns true, if nElement contains the identifier of the currently
         processed element. */
-    inline bool         isCurrentElement( sal_Int32 nElement ) const
+    bool         isCurrentElement( sal_Int32 nElement ) const
                             { return getCurrentElement() == nElement; }
 
     /** Returns true, if either nElement1 or nElement2 contain the identifier
         of the currently processed element. */
-    inline bool         isCurrentElement( sal_Int32 nElement1, sal_Int32 nElement2 ) const
+    bool         isCurrentElement( sal_Int32 nElement1, sal_Int32 nElement2 ) const
                             { return isCurrentElement( nElement1 ) || isCurrentElement( nElement2 ); }
 
     /** Returns the identifier of the specified parent element. */
@@ -157,7 +157,7 @@ public:
 
     /** Returns true, if nElement contains the identifier of the specified
         parent element. */
-    inline sal_Int32    isParentElement( sal_Int32 nElement, sal_Int32 nCountBack = 1 ) const
+    bool isParentElement( sal_Int32 nElement, sal_Int32 nCountBack = 1 ) const
                             { return getParentElement( nCountBack ) == nElement; }
 
     /** Returns true, if the element currently processed is the root element of
@@ -179,7 +179,7 @@ protected:
                             const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& rxAttribs );
 
     /** Must be called from characters() in derived classes. */
-    void                implCharacters( const ::rtl::OUString& rChars );
+    void                implCharacters( const OUString& rChars );
 
     /** Must be called from endFastElement() in derived classes. */
     void                implEndElement( sal_Int32 nElement );
@@ -204,22 +204,24 @@ private:
     typedef ::std::vector< ElementInfo >        ContextStack;
     typedef ::boost::shared_ptr< ContextStack > ContextStackRef;
 
-    ContextStackRef     mxContextStack;     /// Stack of all processed elements.
-    size_t              mnRootStackSize;    /// Stack size on construction time.
-    bool                mbEnableTrimSpace;  /// True = trim whitespace in characters().
+    ContextStackRef     mxContextStack;     ///< Stack of all processed elements.
+    size_t              mnRootStackSize;    ///< Stack size on construction time.
+
+protected:
+    bool                mbEnableTrimSpace;  ///< True = trim whitespace in characters().
 };
 
-// ============================================================================
 
-class ContextHandler2 : public ContextHandler, public ContextHandler2Helper
+
+class OOX_DLLPUBLIC ContextHandler2 : public ContextHandler, public ContextHandler2Helper
 {
 public:
     explicit            ContextHandler2( ContextHandler2Helper& rParent );
     virtual             ~ContextHandler2();
 
     // resolve ambiguity from base classes
-    virtual void SAL_CALL acquire() throw() { ContextHandler::acquire(); }
-    virtual void SAL_CALL release() throw() { ContextHandler::release(); }
+    virtual void SAL_CALL acquire() throw() SAL_OVERRIDE { ContextHandler::acquire(); }
+    virtual void SAL_CALL release() throw() SAL_OVERRIDE { ContextHandler::release(); }
 
     // com.sun.star.xml.sax.XFastContextHandler interface ---------------------
 
@@ -228,43 +230,61 @@ public:
                             sal_Int32 nElement,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& rxAttribs )
                             throw(  ::com::sun::star::xml::sax::SAXException,
-                                    ::com::sun::star::uno::RuntimeException );
+#if SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException ) SAL_FINAL SAL_OVERRIDE;
+#else	// SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException, std::exception ) SAL_FINAL SAL_OVERRIDE;
+#endif	// SUPD == 310
 
     virtual void SAL_CALL startFastElement(
                             sal_Int32 nElement,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& rxAttribs )
                             throw(  ::com::sun::star::xml::sax::SAXException,
-                                    ::com::sun::star::uno::RuntimeException );
+#if SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException ) SAL_FINAL SAL_OVERRIDE;
+#else	// SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException, std::exception ) SAL_FINAL SAL_OVERRIDE;
+#endif	// SUPD == 310
 
-    virtual void SAL_CALL characters( const ::rtl::OUString& rChars )
+    virtual void SAL_CALL characters( const OUString& rChars )
                             throw(  ::com::sun::star::xml::sax::SAXException,
-                                    ::com::sun::star::uno::RuntimeException );
+#if SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException ) SAL_FINAL SAL_OVERRIDE;
+#else	// SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException, std::exception ) SAL_FINAL SAL_OVERRIDE;
+#endif	// SUPD == 310
 
     virtual void SAL_CALL endFastElement( sal_Int32 nElement )
                             throw(  ::com::sun::star::xml::sax::SAXException,
-                                    ::com::sun::star::uno::RuntimeException );
+#if SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException ) SAL_FINAL SAL_OVERRIDE;
+#else	// SUPD == 310
+                                    ::com::sun::star::uno::RuntimeException, std::exception ) SAL_FINAL SAL_OVERRIDE;
+#endif	// SUPD == 310
 
     // oox.core.ContextHandler interface --------------------------------------
 
-    virtual ContextHandlerRef createRecordContext( sal_Int32 nRecId, SequenceInputStream& rStrm );
-    virtual void        startRecord( sal_Int32 nRecId, SequenceInputStream& rStrm );
-    virtual void        endRecord( sal_Int32 nRecId );
+    virtual ContextHandlerRef createRecordContext( sal_Int32 nRecId, SequenceInputStream& rStrm ) SAL_OVERRIDE;
+    virtual void        startRecord( sal_Int32 nRecId, SequenceInputStream& rStrm ) SAL_OVERRIDE;
+    virtual void        endRecord( sal_Int32 nRecId ) SAL_OVERRIDE;
 
     // oox.core.ContextHandler2Helper interface -------------------------------
 
-    virtual ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs );
-    virtual void        onStartElement( const AttributeList& rAttribs );
-    virtual void        onCharacters( const ::rtl::OUString& rChars );
-    virtual void        onEndElement();
+    virtual ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
+    virtual void        onStartElement( const AttributeList& rAttribs ) SAL_OVERRIDE;
+    virtual void        onCharacters( const OUString& rChars ) SAL_OVERRIDE;
+    virtual void        onEndElement() SAL_OVERRIDE;
 
-    virtual ContextHandlerRef onCreateRecordContext( sal_Int32 nRecId, SequenceInputStream& rStrm );
-    virtual void        onStartRecord( SequenceInputStream& rStrm );
-    virtual void        onEndRecord();
+    virtual ContextHandlerRef onCreateRecordContext( sal_Int32 nRecId, SequenceInputStream& rStrm ) SAL_OVERRIDE;
+    virtual void        onStartRecord( SequenceInputStream& rStrm ) SAL_OVERRIDE;
+    virtual void        onEndRecord() SAL_OVERRIDE;
 };
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

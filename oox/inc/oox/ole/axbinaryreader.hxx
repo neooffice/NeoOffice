@@ -1,37 +1,34 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_OLE_AXBINARYREADER_HXX
-#define OOX_OLE_AXBINARYREADER_HXX
+#ifndef INCLUDED_OOX_OLE_AXBINARYREADER_HXX
+#define INCLUDED_OOX_OLE_AXBINARYREADER_HXX
 
 #include <utility>
-#include "oox/helper/binaryinputstream.hxx"
-#include "oox/helper/refvector.hxx"
+#include <oox/helper/binaryinputstream.hxx>
+#include <oox/helper/refvector.hxx>
+#include <oox/ole/axfontdata.hxx>
 
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 /** A wrapper for a binary input stream that supports aligned read operations.
 
@@ -39,7 +36,7 @@ namespace ole {
     seeking operations (tell, seekTo, align) are performed relative to the
     position of the wrapped stream at construction time of this wrapper. It is
     possible to construct this wrapper with an unseekable input stream without
-    loosing any functionality.
+    losing any functionality.
  */
 class AxAlignedInputStream : public BinaryInputStream
 {
@@ -48,93 +45,51 @@ public:
 
     /** Returns the size of the data this stream represents, if the wrapped
         stream supports the size() operation. */
-    virtual sal_Int64   size() const;
+    virtual sal_Int64   size() const SAL_OVERRIDE;
     /** Return the current relative stream position (relative to position of
         the wrapped stream at construction time). */
-    virtual sal_Int64   tell() const;
+    virtual sal_Int64   tell() const SAL_OVERRIDE;
     /** Seeks the stream to the passed relative position, if it is behind the
         current position. */
-    virtual void        seek( sal_Int64 nPos );
+    virtual void        seek( sal_Int64 nPos ) SAL_OVERRIDE;
     /** Closes the input stream but not the wrapped stream. */
-    virtual void        close();
+    virtual void        close() SAL_OVERRIDE;
 
     /** Reads nBytes bytes to the passed sequence.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readData( StreamDataSequence& orData, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
     /** Reads nBytes bytes to the (existing) buffer opMem.
         @return  Number of bytes really read. */
-    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual sal_Int32   readMemory( void* opMem, sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
     /** Seeks the stream forward by the passed number of bytes. */
-    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 );
+    virtual void        skip( sal_Int32 nBytes, size_t nAtomSize = 1 ) SAL_OVERRIDE;
 
     /** Aligns the stream to a multiple of the passed size (relative to the
         position of the wrapped stream at construction time). */
     void                align( size_t nSize );
 
-    /** Aligns the stream according to the passed type and reads an atomar value. */
+    /** Aligns the stream according to the passed type and reads a value. */
     template< typename Type >
-    inline Type         readAligned() { align( sizeof( Type ) ); return readValue< Type >(); }
+    Type                readAligned() { align( sizeof( Type ) ); return readValue< Type >(); }
     /** Aligns the stream according to the passed type and skips the size of the type. */
     template< typename Type >
-    inline void         skipAligned() { align( sizeof( Type ) ); skip( sizeof( Type ) ); }
+    void                skipAligned() { align( sizeof( Type ) ); skip( sizeof( Type ) ); }
 
 private:
-    BinaryInputStream*  mpInStrm;           /// The wrapped input stream.
-    sal_Int64           mnStrmPos;          /// Tracks relative position in the stream.
-    sal_Int64           mnStrmSize;         /// Size of the wrapped stream data.
+    BinaryInputStream*  mpInStrm;           ///< The wrapped input stream.
+    sal_Int64           mnStrmPos;          ///< Tracks relative position in the stream.
+    sal_Int64           mnStrmSize;         ///< Size of the wrapped stream data.
 };
 
-// ============================================================================
+
 
 /** A pair of integer values as a property. */
 typedef ::std::pair< sal_Int32, sal_Int32 > AxPairData;
 
 /** An array of string values as a property. */
-typedef ::std::vector< ::rtl::OUString > AxStringArray;
+typedef ::std::vector< OUString > AxArrayString;
 
-// ============================================================================
 
-const sal_Char* const AX_GUID_CFONT         = "{AFC20920-DA4E-11CE-B943-00AA006887B4}";
-
-const sal_uInt32 AX_FONTDATA_BOLD           = 0x00000001;
-const sal_uInt32 AX_FONTDATA_ITALIC         = 0x00000002;
-const sal_uInt32 AX_FONTDATA_UNDERLINE      = 0x00000004;
-const sal_uInt32 AX_FONTDATA_STRIKEOUT      = 0x00000008;
-const sal_uInt32 AX_FONTDATA_DISABLED       = 0x00002000;
-const sal_uInt32 AX_FONTDATA_AUTOCOLOR      = 0x40000000;
-
-const sal_Int32 AX_FONTDATA_LEFT            = 1;
-const sal_Int32 AX_FONTDATA_RIGHT           = 2;
-const sal_Int32 AX_FONTDATA_CENTER          = 3;
-
-/** All entries of a font property. */
-struct AxFontData
-{
-    ::rtl::OUString     maFontName;         /// Name of the used font.
-    sal_uInt32          mnFontEffects;      /// Font effect flags.
-    sal_Int32           mnFontHeight;       /// Height of the font (not really twips, see code).
-    sal_Int32           mnFontCharSet;      /// Windows character set of the font.
-    sal_Int32           mnHorAlign;         /// Horizontal text alignment.
-    bool                mbDblUnderline;     /// True = double underline style (legacy VML drawing controls only).
-
-    explicit            AxFontData();
-
-    /** Converts the internal representation of the font height to points. */
-    sal_Int16           getHeightPoints() const;
-    /** Converts the passed font height from points to the internal representation. */
-    void                setHeightPoints( sal_Int16 nPoints );
-    
-    /** Reads the font data settings from the passed input stream. */
-    bool                importBinaryModel( BinaryInputStream& rInStrm );
-    /** Reads the font data settings from the passed input stream that contains
-        an OLE StdFont structure. */
-    bool                importStdFont( BinaryInputStream& rInStrm );
-    /** Reads the font data settings from the passed input stream depending on
-        the GUID preceding the actual font data. */
-    bool                importGuidAndFont( BinaryInputStream& rInStrm );
-};
-
-// ============================================================================
 
 /** Import helper to read simple and complex ActiveX form control properties
     from a binary input stream. */
@@ -146,7 +101,7 @@ public:
     /** Reads the next integer property value from the stream, if the
         respective flag in the property mask is set. */
     template< typename StreamType, typename DataType >
-    inline void         readIntProperty( DataType& ornValue )
+    void         readIntProperty( DataType& ornValue )
                             { if( startNextProperty() ) ornValue = maInStrm.readAligned< StreamType >(); }
     /** Reads the next boolean property value from the stream, if the
         respective flag in the property mask is set. */
@@ -156,13 +111,13 @@ public:
     void                readPairProperty( AxPairData& orPairData );
     /** Reads the next string property from the stream, if the respective flag
         in the property mask is set. */
-    void                readStringProperty( ::rtl::OUString& orValue );
-    /** Reads a string array property from the stream, if the respective flag
-        in the property mask is set. */
-    void                readStringArrayProperty( AxStringArray& orArray );
+    void                readStringProperty( OUString& orValue );
+    /** Reads ArrayString, an array of fmString ( compressed or uncompressed )
+        is read from the stream and inserted into rStrings */
+    void                readArrayStringProperty( std::vector< OUString >& rStrings );
     /** Reads the next GUID property from the stream, if the respective flag
         in the property mask is set. The GUID will be enclosed in braces. */
-    void                readGuidProperty( ::rtl::OUString& orGuid );
+    void                readGuidProperty( OUString& orGuid );
     /** Reads the next font property from the stream, if the respective flag in
         the property mask is set. */
     void                readFontProperty( AxFontData& orFontData );
@@ -173,31 +128,31 @@ public:
     /** Skips the next integer property value in the stream, if the respective
         flag in the property mask is set. */
     template< typename StreamType >
-    inline void         skipIntProperty() { if( startNextProperty() ) maInStrm.skipAligned< StreamType >(); }
+    void                skipIntProperty() { if( startNextProperty() ) maInStrm.skipAligned< StreamType >(); }
     /** Skips the next boolean property value in the stream, if the respective
         flag in the property mask is set. */
-    inline void         skipBoolProperty() { startNextProperty(); }
+    void                skipBoolProperty() { startNextProperty(); }
     /** Skips the next pair property in the stream, if the respective flag in
         the property mask is set. */
     void                skipPairProperty() { readPairProperty( maDummyPairData ); }
     /** Skips the next string property in the stream, if the respective flag in
         the property mask is set. */
-    inline void         skipStringProperty() { readStringProperty( maDummyString ); }
-    /** Skips the next string array property in the stream, if the respective
-        flag in the property mask is set. */
-    inline void         skipStringArrayProperty() { readStringArrayProperty( maDummyStringArray ); }
+    void                skipStringProperty() { readStringProperty( maDummyString ); }
+    /** Skips the next ArrayString property in the stream, if the respective flag in
+        the property mask is set. */
+    void                skipArrayStringProperty() { readArrayStringProperty( maDummyArrayString ); }
     /** Skips the next GUID property in the stream, if the respective flag in
         the property mask is set. */
-    inline void         skipGuidProperty() { readGuidProperty( maDummyString ); }
+    void                skipGuidProperty() { readGuidProperty( maDummyString ); }
     /** Skips the next font property in the stream, if the respective flag in
         the property mask is set. */
-    inline void         skipFontProperty() { readFontProperty( maDummyFontData ); }
+    void                skipFontProperty() { readFontProperty( maDummyFontData ); }
     /** Skips the next picture property in the stream, if the respective flag
         in the property mask is set. */
-    inline void         skipPictureProperty() { readPictureProperty( maDummyPicData ); }
+    void                skipPictureProperty() { readPictureProperty( maDummyPicData ); }
     /** Has to be called for undefined properties. If the respective flag in
         the mask is set, the property import cannot be finished successfully. */
-    inline void         skipUndefinedProperty() { ensureValid( !startNextProperty() ); }
+    void                skipUndefinedProperty() { ensureValid( !startNextProperty() ); }
 
     /** Final processing, reads contents of all complex properties. */
     bool                finalizeImport();
@@ -219,40 +174,40 @@ private:
     {
         AxPairData&         mrPairData;
 
-        inline explicit     PairProperty( AxPairData& rPairData ) :
+        explicit            PairProperty( AxPairData& rPairData ) :
                                 mrPairData( rPairData ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     /** Complex property for a string value. */
     struct StringProperty : public ComplexProperty
     {
-        ::rtl::OUString&    mrValue;
+        OUString&    mrValue;
         sal_uInt32          mnSize;
 
-        inline explicit     StringProperty( ::rtl::OUString& rValue, sal_uInt32 nSize ) :
+        explicit            StringProperty( OUString& rValue, sal_uInt32 nSize ) :
                                 mrValue( rValue ), mnSize( nSize ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     /** Complex property for an array of strings. */
-    struct StringArrayProperty : public ComplexProperty
+    struct ArrayStringProperty : public ComplexProperty
     {
-        AxStringArray&      mrArray;
+        AxArrayString&      mrArray;
         sal_uInt32          mnSize;
-        inline explicit     StringArrayProperty( AxStringArray& rArray, sal_uInt32 nSize ) :
+        explicit            ArrayStringProperty( AxArrayString& rArray, sal_uInt32 nSize ) :
                                 mrArray( rArray ), mnSize( nSize ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     /** Complex property for a GUID value. */
     struct GuidProperty : public ComplexProperty
     {
-        ::rtl::OUString&    mrGuid;
+        OUString&    mrGuid;
 
-        inline explicit     GuidProperty( ::rtl::OUString& rGuid ) :
+        explicit            GuidProperty( OUString& rGuid ) :
                                 mrGuid( rGuid ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     /** Stream property for a font structure. */
@@ -260,9 +215,9 @@ private:
     {
         AxFontData&         mrFontData;
 
-        inline explicit     FontProperty( AxFontData& rFontData ) :
+        explicit            FontProperty( AxFontData& rFontData ) :
                                 mrFontData( rFontData ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     /** Stream property for a picture or mouse icon. */
@@ -270,31 +225,33 @@ private:
     {
         StreamDataSequence& mrPicData;
 
-        inline explicit     PictureProperty( StreamDataSequence& rPicData ) :
+        explicit            PictureProperty( StreamDataSequence& rPicData ) :
                                 mrPicData( rPicData ) {}
-        virtual bool        readProperty( AxAlignedInputStream& rInStrm );
+        virtual bool        readProperty( AxAlignedInputStream& rInStrm ) SAL_OVERRIDE;
     };
 
     typedef RefVector< ComplexProperty > ComplexPropVector;
 
 private:
-    AxAlignedInputStream maInStrm;          /// The input stream to read from.
-    ComplexPropVector   maLargeProps;       /// Stores info for all used large properties.
-    ComplexPropVector   maStreamProps;      /// Stores info for all used stream data properties.
-    AxPairData          maDummyPairData;    /// Dummy pair for unsupported properties.
-    AxFontData          maDummyFontData;    /// Dummy font for unsupported properties.
-    StreamDataSequence  maDummyPicData;     /// Dummy picture for unsupported properties.
-    ::rtl::OUString     maDummyString;      /// Dummy string for unsupported properties.
-    AxStringArray       maDummyStringArray; /// Dummy string array for unsupported properties.
-    sal_Int64           mnPropFlags;        /// Flags specifying existing properties.
-    sal_Int64           mnNextProp;         /// Next property to read.
-    sal_Int64           mnPropsEnd;         /// End position of simple/large properties.
-    bool                mbValid;            /// True = stream still valid.
+    AxAlignedInputStream maInStrm;          ///< The input stream to read from.
+    ComplexPropVector   maLargeProps;       ///< Stores info for all used large properties.
+    ComplexPropVector   maStreamProps;      ///< Stores info for all used stream data properties.
+    AxPairData          maDummyPairData;    ///< Dummy pair for unsupported properties.
+    AxFontData          maDummyFontData;    ///< Dummy font for unsupported properties.
+    StreamDataSequence  maDummyPicData;     ///< Dummy picture for unsupported properties.
+    OUString     maDummyString;      ///< Dummy string for unsupported properties.
+    AxArrayString maDummyArrayString; ///< Dummy strings for unsupported ArrayString properties.
+    sal_Int64           mnPropFlags;        ///< Flags specifying existing properties.
+    sal_Int64           mnNextProp;         ///< Next property to read.
+    sal_Int64           mnPropsEnd;         ///< End position of simple/large properties.
+    bool                mbValid;            ///< True = stream still valid.
 };
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

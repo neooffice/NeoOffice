@@ -1,34 +1,38 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/vbamodule.hxx"
-
+#if SUPD != 310
+#include <boost/unordered_map.hpp>
+#endif	 // SUPD != 310
 #include <com/sun/star/container/XNameContainer.hpp>
+#include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/script/ModuleInfo.hpp>
 #include <com/sun/star/script/ModuleType.hpp>
-#if SUPD != 310
 #include <com/sun/star/script/vba/XVBAModuleInfo.hpp>
-#endif	// SUPD != 310
+#include <com/sun/star/awt/KeyEvent.hpp>
+#include <cppuhelper/implbase1.hxx>
+#if SUPD == 310
+#include <svx/msvbahelper.hxx>
+#else	// SUPD == 310
+#include <filter/msfilter/msvbahelper.hxx>
+#endif	 // SUPD == 310
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/storagebase.hxx"
 #include "oox/helper/textinputstream.hxx"
@@ -38,32 +42,26 @@
 namespace oox {
 namespace ole {
 
-// ============================================================================
 
-using namespace ::com::sun::star::container;
-using namespace ::com::sun::star::frame;
+
 using namespace ::com::sun::star::lang;
-using namespace ::com::sun::star::script;
-#if SUPD != 310
 using namespace ::com::sun::star::script::vba;
-#endif	// SUPD != 310
 using namespace ::com::sun::star::uno;
+using namespace ::com::sun::star;
 
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
+using ::com::sun::star::awt::KeyEvent;
 
-// ============================================================================
-
-VbaModule::VbaModule( const Reference< XComponentContext >& rxContext, const Reference< XModel >& rxDocModel,
-        const OUString& rName, rtl_TextEncoding eTextEnc, bool bExecutable ) :
+VbaModule::VbaModule( const Reference< XComponentContext >& rxContext,
+                      const Reference< frame::XModel >& rxDocModel,
+                      const OUString& rName, rtl_TextEncoding eTextEnc, bool bExecutable ) :
     mxContext( rxContext ),
     mxDocModel( rxDocModel ),
     maName( rName ),
     meTextEnc( eTextEnc ),
 #if SUPD == 310
-    mnType( ModuleType::Unknown ),
+    mnType( script::ModuleType::Unknown ),
 #else	// SUPD == 310
-    mnType( ModuleType::UNKNOWN ),
+    mnType( script::ModuleType::UNKNOWN ),
 #endif	// SUPD == 310
     mnOffset( SAL_MAX_UINT32 ),
     mbReadOnly( false ),
@@ -84,13 +82,16 @@ void VbaModule::importDirRecords( BinaryInputStream& rDirStrm )
         {
 #define OOX_ENSURE_RECORDSIZE( cond ) OSL_ENSURE( cond, "VbaModule::importDirRecords - invalid record size" )
             case VBA_ID_MODULENAME:
-                OSL_ENSURE( false, "VbaModule::importDirRecords - unexpected MODULENAME record" );
+                OSL_FAIL( "VbaModule::importDirRecords - unexpected MODULENAME record" );
                 maName = aRecStrm.readCharArrayUC( nRecSize, meTextEnc );
             break;
             case VBA_ID_MODULENAMEUNICODE:
             break;
             case VBA_ID_MODULESTREAMNAME:
                 maStreamName = aRecStrm.readCharArrayUC( nRecSize, meTextEnc );
+                // Actually the stream name seems the best name to use
+                // the VBA_ID_MODULENAME name can sometimes be the wrong case
+                maName = maStreamName;
             break;
             case VBA_ID_MODULESTREAMNAMEUNICODE:
             break;
@@ -111,20 +112,22 @@ void VbaModule::importDirRecords( BinaryInputStream& rDirStrm )
             break;
             case VBA_ID_MODULETYPEPROCEDURAL:
                 OOX_ENSURE_RECORDSIZE( nRecSize == 0 );
-                OSL_ENSURE( mnType == ModuleType::UNKNOWN, "VbaModule::importDirRecords - multiple module type records" );
 #if SUPD == 310
-                mnType = ModuleType::Normal;
+                OSL_ENSURE( mnType == script::ModuleType::Unknown, "VbaModule::importDirRecords - multiple module type records" );
+                mnType = script::ModuleType::Normal;
 #else	// SUPD == 310
-                mnType = ModuleType::NORMAL;
+                OSL_ENSURE( mnType == script::ModuleType::UNKNOWN, "VbaModule::importDirRecords - multiple module type records" );
+                mnType = script::ModuleType::NORMAL;
 #endif	// SUPD == 310
             break;
             case VBA_ID_MODULETYPEDOCUMENT:
                 OOX_ENSURE_RECORDSIZE( nRecSize == 0 );
-                OSL_ENSURE( mnType == ModuleType::UNKNOWN, "VbaModule::importDirRecords - multiple module type records" );
 #if SUPD == 310
-                mnType = ModuleType::Document;
+                OSL_ENSURE( mnType == script::ModuleType::Unknown, "VbaModule::importDirRecords - multiple module type records" );
+                mnType = script::ModuleType::Document;
 #else	// SUPD == 310
-                mnType = ModuleType::DOCUMENT;
+                OSL_ENSURE( mnType == script::ModuleType::UNKNOWN, "VbaModule::importDirRecords - multiple module type records" );
+                mnType = script::ModuleType::DOCUMENT;
 #endif	// SUPD == 310
             break;
             case VBA_ID_MODULEREADONLY:
@@ -136,34 +139,39 @@ void VbaModule::importDirRecords( BinaryInputStream& rDirStrm )
                 mbPrivate = true;
             break;
             default:
-                OSL_ENSURE( false, "VbaModule::importDirRecords - unknown module record" );
+                OSL_FAIL( "VbaModule::importDirRecords - unknown module record" );
 #undef OOX_ENSURE_RECORDSIZE
         }
     }
-    OSL_ENSURE( maName.getLength() > 0, "VbaModule::importDirRecords - missing module name" );
-    OSL_ENSURE( maStreamName.getLength() > 0, "VbaModule::importDirRecords - missing module stream name" );
-    OSL_ENSURE( mnType != ModuleType::UNKNOWN, "VbaModule::importDirRecords - missing module type" );
+    OSL_ENSURE( !maName.isEmpty(), "VbaModule::importDirRecords - missing module name" );
+    OSL_ENSURE( !maStreamName.isEmpty(), "VbaModule::importDirRecords - missing module stream name" );
+#if SUPD == 310
+    OSL_ENSURE( mnType != script::ModuleType::Unknown, "VbaModule::importDirRecords - missing module type" );
+#else	// SUPD == 310
+    OSL_ENSURE( mnType != script::ModuleType::UNKNOWN, "VbaModule::importDirRecords - missing module type" );
+#endif	// SUPD == 310
     OSL_ENSURE( mnOffset < SAL_MAX_UINT32, "VbaModule::importDirRecords - missing module stream offset" );
 }
 
-void VbaModule::createAndImportModule( StorageBase& rVbaStrg, const Reference< XNameContainer >& rxBasicLib,
-        const Reference< XNameAccess >& rxDocObjectNA ) const
+void VbaModule::createAndImportModule( StorageBase& rVbaStrg,
+                                       const Reference< container::XNameContainer >& rxBasicLib,
+                                       const Reference< container::XNameAccess >& rxDocObjectNA ) const
 {
     OUString aVBASourceCode = readSourceCode( rVbaStrg );
     createModule( aVBASourceCode, rxBasicLib, rxDocObjectNA );
 }
 
-void VbaModule::createEmptyModule( const Reference< XNameContainer >& rxBasicLib, const Reference< XNameAccess >& rxDocObjectNA ) const
+void VbaModule::createEmptyModule( const Reference< container::XNameContainer >& rxBasicLib,
+                                   const Reference< container::XNameAccess >& rxDocObjectNA ) const
 {
     createModule( OUString(), rxBasicLib, rxDocObjectNA );
 }
 
-// private --------------------------------------------------------------------
-
 OUString VbaModule::readSourceCode( StorageBase& rVbaStrg ) const
 {
     OUStringBuffer aSourceCode;
-    if( (maStreamName.getLength() > 0) && (mnOffset != SAL_MAX_UINT32) )
+    const static OUString sUnmatchedRemovedTag( "Rem removed unmatched Sub/End: " );
+    if( !maStreamName.isEmpty() && (mnOffset != SAL_MAX_UINT32) )
     {
         BinaryXInputStream aInStrm( rVbaStrg.openInputStream( maStreamName ), true );
         OSL_ENSURE( !aInStrm.isEof(), "VbaModule::readSourceCode - cannot open module stream" );
@@ -176,15 +184,96 @@ OUString VbaModule::readSourceCode( StorageBase& rVbaStrg ) const
             VbaInputStream aVbaStrm( aInStrm );
             // load the source code line-by-line, with some more processing
             TextInputStream aVbaTextStrm( mxContext, aVbaStrm, meTextEnc );
+
+            struct ProcedurePair
+            {
+                bool bInProcedure;
+                sal_uInt32 nPos;
+                ProcedurePair() : bInProcedure( false ), nPos( 0 ) {};
+            } procInfo;
+
             while( !aVbaTextStrm.isEof() )
             {
                 OUString aCodeLine = aVbaTextStrm.readLine();
-                if( !aCodeLine.matchAsciiL( RTL_CONSTASCII_STRINGPARAM( "Attribute " ) ) )
+                if( aCodeLine.match( "Attribute " ) )
                 {
+                    // attribute
+                    int index = aCodeLine.indexOf( ".VB_ProcData.VB_Invoke_Func = " );
+                    if ( index != -1 )
+                    {
+                        // format is
+                        //    'Attribute Procedure.VB_ProcData.VB_Invoke_Func = "*\n14"'
+                        //    where 'Procedure' is the procedure name and '*' is the shortcut key
+                        // note: his is only relevant for Excel, seems that
+                        // word doesn't store the shortcut in the module
+                        // attributes
+                        int nSpaceIndex = aCodeLine.indexOf(' ');
+                        OUString sProc = aCodeLine.copy( nSpaceIndex + 1, index - nSpaceIndex - 1);
+                        // for Excel short cut key seems limited to cntrl+'a-z, A-Z'
+                        OUString sKey = aCodeLine.copy( aCodeLine.lastIndexOf("= ") + 3, 1 );
+                        // only alpha key valid for key shortcut, however the api will accept other keys
+                        if ( !isalpha( (char)sKey[ 0 ] ) )
+                        {
+                            // cntrl modifier is explicit ( but could be cntrl+shift ), parseKeyEvent
+                            // will handle and uppercase letter appropriately
+                            OUString sApiKey = "^";
+                            sApiKey += sKey;
+                            try
+                            {
+                                KeyEvent aKeyEvent = ooo::vba::parseKeyEvent( sApiKey );
+                                ooo::vba::applyShortCutKeyBinding( mxDocModel, aKeyEvent, sProc );
+                            }
+                            catch (const Exception&)
+                            {
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Hack here to weed out any unmatched End Sub / Sub Foo statements.
+                    // The behaviour of the vba ide practically guarantees the case and
+                    // spacing of Sub statement(s). However, indentation can be arbitrary hence
+                    // the trim.
+                    OUString trimLine( aCodeLine.trim() );
+                    if ( mbExecutable && (
+                      trimLine.match("Sub ")         ||
+                      trimLine.match("Public Sub ")  ||
+                      trimLine.match("Private Sub ") ||
+                      trimLine.match("Static Sub ") ) )
+                    {
+                        // this should never happen, basic doesn't support nested procedures
+                        // first Sub Foo must be bogus
+                        if ( procInfo.bInProcedure )
+                        {
+                            // comment out the line
+                            aSourceCode.insert( procInfo.nPos, sUnmatchedRemovedTag );
+                            // mark location of this Sub
+                            procInfo.nPos = aSourceCode.getLength();
+                        }
+                        else
+                        {
+                            procInfo.bInProcedure = true;
+                            procInfo.nPos = aSourceCode.getLength();
+                        }
+                    }
+                    else if ( mbExecutable && aCodeLine.trim().match("End Sub") )
+                    {
+                        // un-matched End Sub
+                        if ( !procInfo.bInProcedure )
+                        {
+                            aSourceCode.append( sUnmatchedRemovedTag );
+                        }
+                        else
+                        {
+                            procInfo.bInProcedure = false;
+                            procInfo.nPos = 0;
+                        }
+                    }
                     // normal source code line
                     if( !mbExecutable )
-                        aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "Rem " ) );
-                    aSourceCode.append( aCodeLine ).append( sal_Unicode( '\n' ) );
+                        aSourceCode.appendAscii( "Rem " );
+                    aSourceCode.append( aCodeLine ).append( '\n' );
                 }
             }
         }
@@ -193,75 +282,76 @@ OUString VbaModule::readSourceCode( StorageBase& rVbaStrg ) const
 }
 
 void VbaModule::createModule( const OUString& rVBASourceCode,
-        const Reference< XNameContainer >& rxBasicLib, const Reference< XNameAccess >& rxDocObjectNA ) const
+                              const Reference< container::XNameContainer >& rxBasicLib,
+                              const Reference< container::XNameAccess >& rxDocObjectNA ) const
 {
-    if( maName.getLength() == 0 )
+    if( maName.isEmpty() )
         return;
 
     // prepare the Basic module
-    ModuleInfo aModuleInfo;
+    script::ModuleInfo aModuleInfo;
     aModuleInfo.ModuleType = mnType;
     OUStringBuffer aSourceCode;
-    aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "Rem Attribute VBA_ModuleType=" ) );
+    aSourceCode.appendAscii( "Rem Attribute VBA_ModuleType=" );
     switch( mnType )
     {
 #if SUPD == 310
-        case ModuleType::Normal:
+        case script::ModuleType::Normal:
 #else	// SUPD == 310
-        case ModuleType::NORMAL:
+        case script::ModuleType::NORMAL:
 #endif	// SUPD == 310
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "VBAModule" ) );
+            aSourceCode.appendAscii( "VBAModule" );
         break;
 #if SUPD == 310
-        case ModuleType::Class:
+        case script::ModuleType::Class:
 #else	// SUPD == 310
-        case ModuleType::CLASS:
+        case script::ModuleType::CLASS:
 #endif	// SUPD == 310
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "VBAClassModule" ) );
+            aSourceCode.appendAscii( "VBAClassModule" );
         break;
 #if SUPD == 310
-        case ModuleType::Form:
+        case script::ModuleType::Form:
 #else	// SUPD == 310
-        case ModuleType::FORM:
+        case script::ModuleType::FORM:
 #endif	// SUPD == 310
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "VBAFormModule" ) );
+            aSourceCode.appendAscii( "VBAFormModule" );
             // hack from old filter, document Basic should know the XModel, but it doesn't
             aModuleInfo.ModuleObject.set( mxDocModel, UNO_QUERY );
         break;
 #if SUPD == 310
-        case ModuleType::Document:
+        case script::ModuleType::Document:
 #else	// SUPD == 310
-        case ModuleType::DOCUMENT:
+        case script::ModuleType::DOCUMENT:
 #endif	// SUPD == 310
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "VBADocumentModule" ) );
+            aSourceCode.appendAscii( "VBADocumentModule" );
             // get the VBA implementation object associated to the document module
             if( rxDocObjectNA.is() ) try
             {
                 aModuleInfo.ModuleObject.set( rxDocObjectNA->getByName( maName ), UNO_QUERY );
             }
-            catch( Exception& )
+            catch (const Exception&)
             {
             }
         break;
         default:
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "VBAUnknown" ) );
+            aSourceCode.appendAscii( "VBAUnknown" );
     }
-    aSourceCode.append( sal_Unicode( '\n' ) );
+    aSourceCode.append( '\n' );
     if( mbExecutable )
     {
-        aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "Option VBASupport 1\n" ) );
+        aSourceCode.appendAscii( "Option VBASupport 1\n" );
 #if SUPD == 310
-        if( mnType == ModuleType::Class )
+        if( mnType == script::ModuleType::Class )
 #else	// SUPD == 310
-        if( mnType == ModuleType::CLASS )
+        if( mnType == script::ModuleType::CLASS )
 #endif	// SUPD == 310
-            aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "Option ClassModule\n" ) );
+            aSourceCode.appendAscii( "Option ClassModule\n" );
     }
     else
     {
         // add a subroutine named after the module itself
-        aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "Sub " ) ).
-            append( maName.replace( ' ', '_' ) ).append( sal_Unicode( '\n' ) );
+        aSourceCode.appendAscii( "Sub " ).
+            append( maName.replace( ' ', '_' ) ).append( '\n' );
     }
 
     // append passed VBA source code
@@ -269,32 +359,32 @@ void VbaModule::createModule( const OUString& rVBASourceCode,
 
     // close the subroutine named after the module
     if( !mbExecutable )
-        aSourceCode.appendAscii( RTL_CONSTASCII_STRINGPARAM( "End Sub\n" ) );
+        aSourceCode.appendAscii( "End Sub\n" );
 
-#if SUPD != 310
     // insert extended module info
     try
     {
         Reference< XVBAModuleInfo > xVBAModuleInfo( rxBasicLib, UNO_QUERY_THROW );
         xVBAModuleInfo->insertModuleInfo( maName, aModuleInfo );
     }
-    catch( Exception& )
+    catch (const Exception&)
     {
     }
-#endif	// SUPD != 310
 
     // insert the module into the passed Basic library
     try
     {
         rxBasicLib->insertByName( maName, Any( aSourceCode.makeStringAndClear() ) );
     }
-    catch( Exception& )
+    catch (const Exception&)
     {
-        OSL_ENSURE( false, "VbaModule::createModule - cannot insert module into library" );
+        OSL_FAIL( "VbaModule::createModule - cannot insert module into library" );
     }
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

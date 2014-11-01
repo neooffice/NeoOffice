@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/core/recordparser.hxx"
 
@@ -32,16 +28,15 @@
 namespace oox {
 namespace core {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 
-using ::rtl::OUString;
 
-// ============================================================================
+
 
 namespace prv {
 
@@ -55,16 +50,23 @@ public:
 
     // com.sun.star.sax.XLocator interface
 
-    virtual sal_Int32 SAL_CALL getColumnNumber() throw( RuntimeException );
-    virtual sal_Int32 SAL_CALL getLineNumber() throw( RuntimeException );
-    virtual OUString SAL_CALL getPublicId() throw( RuntimeException );
-    virtual OUString SAL_CALL getSystemId() throw( RuntimeException );
+#if SUPD == 310
+    virtual sal_Int32 SAL_CALL getColumnNumber() throw( RuntimeException ) SAL_OVERRIDE;
+    virtual sal_Int32 SAL_CALL getLineNumber() throw( RuntimeException ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getPublicId() throw( RuntimeException ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getSystemId() throw( RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual sal_Int32 SAL_CALL getColumnNumber() throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual sal_Int32 SAL_CALL getLineNumber() throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getPublicId() throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getSystemId() throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
 private:
     RecordParser*           mpParser;
 };
 
-// ----------------------------------------------------------------------------
+
 
 void Locator::dispose()
 {
@@ -77,29 +79,45 @@ void Locator::checkDispose() throw( RuntimeException )
         throw DisposedException();
 }
 
+#if SUPD == 310
 sal_Int32 SAL_CALL Locator::getColumnNumber() throw( RuntimeException )
+#else	// SUPD == 310
+sal_Int32 SAL_CALL Locator::getColumnNumber() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return -1;
 }
 
+#if SUPD == 310
 sal_Int32 SAL_CALL Locator::getLineNumber() throw( RuntimeException )
+#else	// SUPD == 310
+sal_Int32 SAL_CALL Locator::getLineNumber() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     return -1;
 }
 
+#if SUPD == 310
 OUString SAL_CALL Locator::getPublicId() throw( RuntimeException )
+#else	// SUPD == 310
+OUString SAL_CALL Locator::getPublicId() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     checkDispose();
     return mpParser->getInputSource().maPublicId;
 }
 
+#if SUPD == 310
 OUString SAL_CALL Locator::getSystemId() throw( RuntimeException )
+#else	// SUPD == 310
+OUString SAL_CALL Locator::getSystemId() throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
     checkDispose();
     return mpParser->getInputSource().maSystemId;
 }
 
-// ============================================================================
+
 
 class ContextStack
 {
@@ -123,7 +141,7 @@ private:
     ContextInfoVec      maStack;
 };
 
-// ----------------------------------------------------------------------------
+
 
 ContextStack::ContextStack( FragmentHandlerRef xHandler ) :
     mxHandler( xHandler )
@@ -168,7 +186,7 @@ void ContextStack::popContext()
 
 } // namespace prv
 
-// ============================================================================
+
 
 namespace {
 
@@ -218,7 +236,7 @@ bool lclReadNextRecord( sal_Int32& ornRecId, StreamDataSequence& orData, BinaryI
 
 } // namespace
 
-// ============================================================================
+
 
 RecordParser::RecordParser()
 {
@@ -258,7 +276,11 @@ void RecordParser::parseStream( const RecordInputSource& rInputSource ) throw( S
         throw SAXException();
 
     // start the document
+#if SUPD == 310
+    css::uno::Reference< XLocator > xLocator( mxLocator.get() );
+#else	// SUPD == 310
     Reference< XLocator > xLocator( mxLocator.get() );
+#endif	// SUPD == 310
     mxHandler->setDocumentLocator( xLocator );
     mxHandler->startDocument();
 
@@ -340,7 +362,9 @@ const RecordInfo* RecordParser::getEndRecordInfo( sal_Int32 nRecId ) const
     return (aIt == maEndMap.end()) ? 0 : &aIt->second;
 }
 
-// ============================================================================
+
 
 } // namespace core
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

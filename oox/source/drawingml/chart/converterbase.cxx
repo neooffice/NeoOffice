@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/converterbase.hxx"
 
@@ -28,25 +24,27 @@
 #include <com/sun/star/chart/XAxisZSupplier.hpp>
 #include <com/sun/star/chart/XChartDocument.hpp>
 #include <com/sun/star/chart/XSecondAxisTitleSupplier.hpp>
+#include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/RelativePosition.hpp>
 #include <com/sun/star/chart2/RelativeSize.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <tools/solar.h>    // for F_PI180
+#include "basegfx/numeric/ftools.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/theme.hxx"
+#include <comphelper/processfactory.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 namespace cssc = ::com::sun::star::chart;
 
-using namespace ::com::sun::star::awt;
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::frame;
@@ -54,9 +52,8 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
 using ::oox::core::XmlFilterBase;
-using ::rtl::OUString;
 
-// ============================================================================
+
 
 namespace {
 
@@ -66,32 +63,50 @@ struct TitleKey : public ::std::pair< ObjectType, ::std::pair< sal_Int32, sal_In
                             { first = eObjType; second.first = nMainIdx; second.second = nSubIdx; }
 };
 
-// ----------------------------------------------------------------------------
+
 
 /** A helper structure to store all data related to title objects. Needed for
     the conversion of manual title positions that needs the old Chart1 API.
  */
 struct TitleLayoutInfo
 {
+#if SUPD == 310
+    typedef css::uno::Reference< XShape > (*GetShapeFunc)( const css::uno::Reference< cssc::XChartDocument >& );
+
+    css::uno::Reference< XTitle > mxTitle;        /// The API title object.
+#else	// SUPD == 310
     typedef Reference< XShape > (*GetShapeFunc)( const Reference< cssc::XChartDocument >& );
-    
+
     Reference< XTitle > mxTitle;        /// The API title object.
+#endif	// SUPD == 310
     ModelRef< LayoutModel > mxLayout;   /// The layout model, if existing.
     GetShapeFunc        mpGetShape;     /// Helper function to receive the title shape.
-    
+
     inline explicit     TitleLayoutInfo() : mpGetShape( 0 ) {}
 
     void                convertTitlePos(
                             ConverterRoot& rRoot,
+#if SUPD == 310
+                            const css::uno::Reference< cssc::XChartDocument >& rxChart1Doc );
+#else	// SUPD == 310
                             const Reference< cssc::XChartDocument >& rxChart1Doc );
+#endif	// SUPD == 310
 };
 
+#if SUPD == 310
+void TitleLayoutInfo::convertTitlePos( ConverterRoot& rRoot, const css::uno::Reference< cssc::XChartDocument >& rxChart1Doc )
+#else	// SUPD == 310
 void TitleLayoutInfo::convertTitlePos( ConverterRoot& rRoot, const Reference< cssc::XChartDocument >& rxChart1Doc )
+#endif	// SUPD == 310
 {
     if( mxTitle.is() && mpGetShape ) try
     {
         // try to get the title shape
-        Reference< XShape > xTitleShape( mpGetShape( rxChart1Doc ), UNO_SET_THROW );
+#if SUPD == 310
+        css::uno::Reference< XShape > xTitleShape = mpGetShape( rxChart1Doc );
+#else	// SUPD == 310
+        Reference< XShape > xTitleShape = mpGetShape( rxChart1Doc );
+#endif	// SUPD == 310
         // get title rotation angle, needed for correction of position of top-left edge
         double fAngle = 0.0;
         PropertySet aTitleProp( mxTitle );
@@ -106,7 +121,7 @@ void TitleLayoutInfo::convertTitlePos( ConverterRoot& rRoot, const Reference< cs
     }
 }
 
-// ----------------------------------------------------------------------------
+
 
 /*  The following local functions implement getting the XShape interface of all
     supported title objects (chart and axes). This needs some effort due to the
@@ -114,6 +129,22 @@ void TitleLayoutInfo::convertTitlePos( ConverterRoot& rRoot, const Reference< cs
 
 /** A code fragment that returns a shape object from the passed shape supplier
     using the specified interface function. Checks a boolean property first. */
+#if SUPD == 310
+#define OOX_FRAGMENT_GETTITLESHAPE( shape_supplier, supplier_func, property_name ) \
+    PropertySet aPropSet( shape_supplier ); \
+    if( shape_supplier.is() && aPropSet.getBoolProperty( PROP_##property_name ) ) \
+        return shape_supplier->supplier_func(); \
+    return css::uno::Reference< XShape >(); \
+
+/** Implements a function returning the drawing shape of an axis title, if
+    existing, using the specified API interface and its function. */
+#define OOX_DEFINEFUNC_GETAXISTITLESHAPE( func_name, interface_type, supplier_func, property_name ) \
+css::uno::Reference< XShape > func_name( const css::uno::Reference< cssc::XChartDocument >& rxChart1Doc ) \
+{ \
+    css::uno::Reference< cssc::interface_type > xAxisSupp( rxChart1Doc->getDiagram(), UNO_QUERY ); \
+    OOX_FRAGMENT_GETTITLESHAPE( xAxisSupp, supplier_func, property_name ) \
+}
+#else	// SUPD == 310
 #define OOX_FRAGMENT_GETTITLESHAPE( shape_supplier, supplier_func, property_name ) \
     PropertySet aPropSet( shape_supplier ); \
     if( shape_supplier.is() && aPropSet.getBoolProperty( PROP_##property_name ) ) \
@@ -128,9 +159,14 @@ Reference< XShape > func_name( const Reference< cssc::XChartDocument >& rxChart1
     Reference< cssc::interface_type > xAxisSupp( rxChart1Doc->getDiagram(), UNO_QUERY ); \
     OOX_FRAGMENT_GETTITLESHAPE( xAxisSupp, supplier_func, property_name ) \
 }
+#endif	// SUPD == 310
 
 /** Returns the drawing shape of the main title, if existing. */
+#if SUPD == 310
+css::uno::Reference< XShape > lclGetMainTitleShape( const css::uno::Reference< cssc::XChartDocument >& rxChart1Doc )
+#else	// SUPD == 310
 Reference< XShape > lclGetMainTitleShape( const Reference< cssc::XChartDocument >& rxChart1Doc )
+#endif	// SUPD == 310
 {
     OOX_FRAGMENT_GETTITLESHAPE( rxChart1Doc, getTitle, HasMainTitle )
 }
@@ -146,36 +182,48 @@ OOX_DEFINEFUNC_GETAXISTITLESHAPE( lclGetSecYAxisTitleShape, XSecondAxisTitleSupp
 
 } // namespace
 
-// ============================================================================
+
 
 struct ConverterData
 {
     typedef ::std::map< TitleKey, TitleLayoutInfo > TitleMap;
-    
+
     ObjectFormatter     maFormatter;
     TitleMap            maTitles;
     XmlFilterBase&      mrFilter;
     ChartConverter&     mrConverter;
+#if SUPD == 310
+    css::uno::Reference< XChartDocument > mxDoc;
+#else	// SUPD == 310
     Reference< XChartDocument > mxDoc;
-    Size                maSize;
+#endif	// SUPD == 310
+    awt::Size                maSize;
 
     explicit            ConverterData(
                             XmlFilterBase& rFilter,
                             ChartConverter& rChartConverter,
                             const ChartSpaceModel& rChartModel,
+#if SUPD == 310
+                            const css::uno::Reference< XChartDocument >& rxChartDoc,
+#else	// SUPD == 310
                             const Reference< XChartDocument >& rxChartDoc,
-                            const Size& rChartSize );
+#endif	// SUPD == 310
+                            const awt::Size& rChartSize );
                         ~ConverterData();
 };
 
-// ----------------------------------------------------------------------------
+
 
 ConverterData::ConverterData(
         XmlFilterBase& rFilter,
         ChartConverter& rChartConverter,
         const ChartSpaceModel& rChartModel,
+#if SUPD == 310
+        const css::uno::Reference< XChartDocument >& rxChartDoc,
+#else	// SUPD == 310
         const Reference< XChartDocument >& rxChartDoc,
-        const Size& rChartSize ) :
+#endif	// SUPD == 310
+        const awt::Size& rChartSize ) :
     maFormatter( rFilter, rxChartDoc, rChartModel ),
     mrFilter( rFilter ),
     mrConverter( rChartConverter ),
@@ -186,8 +234,7 @@ ConverterData::ConverterData(
     // lock the model to suppress internal updates during conversion
     try
     {
-        Reference< XModel > xModel( mxDoc, UNO_QUERY_THROW );
-        xModel->lockControllers();
+        mxDoc->lockControllers();
     }
     catch( Exception& )
     {
@@ -207,22 +254,25 @@ ConverterData::~ConverterData()
     // unlock the model
     try
     {
-        Reference< XModel > xModel( mxDoc, UNO_QUERY_THROW );
-        xModel->unlockControllers();
+        mxDoc->unlockControllers();
     }
     catch( Exception& )
     {
     }
 }
 
-// ============================================================================
+
 
 ConverterRoot::ConverterRoot(
         XmlFilterBase& rFilter,
         ChartConverter& rChartConverter,
         const ChartSpaceModel& rChartModel,
+#if SUPD == 310
+        const css::uno::Reference< XChartDocument >& rxChartDoc,
+#else	// SUPD == 310
         const Reference< XChartDocument >& rxChartDoc,
-        const Size& rChartSize ) :
+#endif	// SUPD == 310
+        const awt::Size& rChartSize ) :
     mxData( new ConverterData( rFilter, rChartConverter, rChartModel, rxChartDoc, rChartSize ) )
 {
 }
@@ -231,12 +281,26 @@ ConverterRoot::~ConverterRoot()
 {
 }
 
+#if SUPD == 310
+css::uno::Reference< XInterface > ConverterRoot::createInstance( const OUString& rServiceName ) const
+#else	// SUPD == 310
 Reference< XInterface > ConverterRoot::createInstance( const OUString& rServiceName ) const
+#endif	// SUPD == 310
 {
+#if SUPD == 310
+    css::uno::Reference< XInterface > xInt;
+#else	// SUPD == 310
     Reference< XInterface > xInt;
+#endif	// SUPD == 310
     try
     {
-        xInt = mxData->mrFilter.getServiceFactory()->createInstance( rServiceName );
+#if SUPD == 310
+        css::uno::Reference<XMultiServiceFactory> xMSF = css::uno::Reference<XMultiServiceFactory>(getComponentContext()->getServiceManager(), uno::UNO_QUERY_THROW);
+#else	// SUPD == 310
+        Reference<XMultiServiceFactory> xMSF = Reference<XMultiServiceFactory>(getComponentContext()->getServiceManager(), uno::UNO_QUERY_THROW);
+#endif	// SUPD == 310
+
+        xInt = xMSF->createInstance( rServiceName );
     }
     catch( Exception& )
     {
@@ -245,22 +309,35 @@ Reference< XInterface > ConverterRoot::createInstance( const OUString& rServiceN
     return xInt;
 }
 
+#if SUPD == 310
+css::uno::Reference< XComponentContext > ConverterRoot::getComponentContext() const
+#else	// SUPD == 310
+Reference< XComponentContext > ConverterRoot::getComponentContext() const
+#endif	// SUPD == 310
+{
+    return mxData->mrFilter.getComponentContext();
+}
+
 XmlFilterBase& ConverterRoot::getFilter() const
 {
     return mxData->mrFilter;
 }
 
-ChartConverter& ConverterRoot::getChartConverter() const
+ChartConverter* ConverterRoot::getChartConverter() const
 {
-    return mxData->mrConverter;
+    return &mxData->mrConverter;
 }
 
+#if SUPD == 310
+css::uno::Reference< XChartDocument > ConverterRoot::getChartDocument() const
+#else	// SUPD == 310
 Reference< XChartDocument > ConverterRoot::getChartDocument() const
+#endif	// SUPD == 310
 {
     return mxData->mxDoc;
 }
 
-const Size& ConverterRoot::getChartSize() const
+const awt::Size& ConverterRoot::getChartSize() const
 {
     return mxData->maSize;
 }
@@ -270,7 +347,11 @@ ObjectFormatter& ConverterRoot::getFormatter() const
     return mxData->maFormatter;
 }
 
+#if SUPD == 310
+void ConverterRoot::registerTitleLayout( const css::uno::Reference< XTitle >& rxTitle,
+#else	// SUPD == 310
 void ConverterRoot::registerTitleLayout( const Reference< XTitle >& rxTitle,
+#endif	// SUPD == 310
         const ModelRef< LayoutModel >& rxLayout, ObjectType eObjType, sal_Int32 nMainIdx, sal_Int32 nSubIdx )
 {
     OSL_ENSURE( rxTitle.is(), "ConverterRoot::registerTitleLayout - missing title object" );
@@ -284,7 +365,11 @@ void ConverterRoot::convertTitlePositions()
 {
     try
     {
+#if SUPD == 310
+        css::uno::Reference< cssc::XChartDocument > xChart1Doc( mxData->mxDoc, UNO_QUERY_THROW );
+#else	// SUPD == 310
         Reference< cssc::XChartDocument > xChart1Doc( mxData->mxDoc, UNO_QUERY_THROW );
+#endif	// SUPD == 310
         for( ConverterData::TitleMap::iterator aIt = mxData->maTitles.begin(), aEnd = mxData->maTitles.end(); aIt != aEnd; ++aIt )
             aIt->second.convertTitlePos( *this, xChart1Doc );
     }
@@ -293,7 +378,7 @@ void ConverterRoot::convertTitlePositions()
     }
 }
 
-// ============================================================================
+
 
 namespace {
 
@@ -305,11 +390,11 @@ sal_Int32 lclCalcPosition( sal_Int32 nChartSize, double fPos, sal_Int32 nPosMode
         case XML_edge:      // absolute start position as factor of chart size
             return getLimitedValue< sal_Int32, double >( nChartSize * fPos + 0.5, 0, nChartSize );
         case XML_factor:    // position relative to object default position
-            OSL_ENSURE( false, "lclCalcPosition - relative positioning not supported" );
+            OSL_FAIL( "lclCalcPosition - relative positioning not supported" );
             return -1;
     };
 
-    OSL_ENSURE( false, "lclCalcPosition - unknown positioning mode" );
+    OSL_FAIL( "lclCalcPosition - unknown positioning mode" );
     return -1;
 }
 
@@ -325,7 +410,7 @@ sal_Int32 lclCalcSize( sal_Int32 nPos, sal_Int32 nChartSize, double fSize, sal_I
             return nValue - nPos + 1;
     };
 
-    OSL_ENSURE( false, "lclCalcSize - unknown size mode" );
+    OSL_FAIL( "lclCalcSize - unknown size mode" );
     return -1;
 }
 
@@ -348,7 +433,7 @@ double lclCalcRelSize( double fPos, double fSize, sal_Int32 nSizeMode )
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 LayoutConverter::LayoutConverter( const ConverterRoot& rParent, LayoutModel& rModel ) :
     ConverterBase< LayoutModel >( rParent, rModel )
@@ -359,11 +444,11 @@ LayoutConverter::~LayoutConverter()
 {
 }
 
-bool LayoutConverter::calcAbsRectangle( Rectangle& orRect ) const
+bool LayoutConverter::calcAbsRectangle( awt::Rectangle& orRect ) const
 {
     if( !mrModel.mbAutoLayout )
     {
-        const Size& rChartSize = getChartSize();
+        const awt::Size& rChartSize = getChartSize();
         orRect.X = lclCalcPosition( rChartSize.Width,  mrModel.mfX, mrModel.mnXMode );
         orRect.Y = lclCalcPosition( rChartSize.Height, mrModel.mfY, mrModel.mnYMode );
         if( (orRect.X >= 0) && (orRect.Y >= 0) )
@@ -400,18 +485,22 @@ bool LayoutConverter::convertFromModel( PropertySet& rPropSet )
     return false;
 }
 
+#if SUPD == 310
+bool LayoutConverter::convertFromModel( const css::uno::Reference< XShape >& rxShape, double fRotationAngle )
+#else	// SUPD == 310
 bool LayoutConverter::convertFromModel( const Reference< XShape >& rxShape, double fRotationAngle )
+#endif	// SUPD == 310
 {
     if( !mrModel.mbAutoLayout )
     {
-        const Size& rChartSize = getChartSize();
-        Point aShapePos(
+        const awt::Size& rChartSize = getChartSize();
+        awt::Point aShapePos(
             lclCalcPosition( rChartSize.Width,  mrModel.mfX, mrModel.mnXMode ),
             lclCalcPosition( rChartSize.Height, mrModel.mfY, mrModel.mnYMode ) );
         if( (aShapePos.X >= 0) && (aShapePos.Y >= 0) )
         {
             // the call to XShape.getSize() may recalc the chart view
-            Size aShapeSize = rxShape->getSize();
+            awt::Size aShapeSize = rxShape->getSize();
             // rotated shapes need special handling...
             double fSin = fabs( sin( fRotationAngle * F_PI180 ) );
             // add part of height to X direction, if title is rotated down
@@ -428,8 +517,10 @@ bool LayoutConverter::convertFromModel( const Reference< XShape >& rxShape, doub
     return false;
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

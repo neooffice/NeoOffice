@@ -40,6 +40,14 @@ SLOFILES =	\
 		$(SLO)$/ShapeContextHandler.obj \
 		$(SLO)$/ShapeFilterBase.obj
 
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/LockedCanvasContext.obj \
+		$(SLO)$/ShapeDrawingFragmentHandler.obj \
+		$(SLO)$/WpgContext.obj \
+		$(SLO)$/WpsContext.obj
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk

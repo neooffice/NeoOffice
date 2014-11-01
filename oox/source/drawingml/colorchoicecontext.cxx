@@ -1,26 +1,23 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
+#include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/colorchoicecontext.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/color.hxx"
@@ -35,58 +32,60 @@ using ::oox::core::ContextHandler;
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
 
-ColorValueContext::ColorValueContext( ContextHandler& rParent, Color& rColor ) :
-    ContextHandler( rParent ),
+
+ColorValueContext::ColorValueContext( ContextHandler2Helper& rParent, Color& rColor ) :
+    ContextHandler2( rParent ),
     mrColor( rColor )
 {
 }
 
-void ColorValueContext::startFastElement( sal_Int32 nElement, const Reference< XFastAttributeList >& rxAttribs )
-	throw (SAXException, RuntimeException)
+void ColorValueContext::onStartElement( const AttributeList& rAttribs )
 {
-    AttributeList aAttribs( rxAttribs );
-    switch( nElement )
+    switch( getCurrentElement() )
     {
         case A_TOKEN( scrgbClr ):
             mrColor.setScrgbClr(
-                aAttribs.getInteger( XML_r, 0 ),
-                aAttribs.getInteger( XML_g, 0 ),
-                aAttribs.getInteger( XML_b, 0 ) );
+                rAttribs.getInteger( XML_r, 0 ),
+                rAttribs.getInteger( XML_g, 0 ),
+                rAttribs.getInteger( XML_b, 0 ) );
         break;
 
         case A_TOKEN( srgbClr ):
-            mrColor.setSrgbClr( aAttribs.getIntegerHex( XML_val, 0 ) );
+            mrColor.setSrgbClr( rAttribs.getIntegerHex( XML_val, 0 ) );
         break;
 
         case A_TOKEN( hslClr ):
             mrColor.setHslClr(
-                aAttribs.getInteger( XML_hue, 0 ),
-                aAttribs.getInteger( XML_sat, 0 ),
-                aAttribs.getInteger( XML_lum, 0 ) );
+                rAttribs.getInteger( XML_hue, 0 ),
+                rAttribs.getInteger( XML_sat, 0 ),
+                rAttribs.getInteger( XML_lum, 0 ) );
         break;
 
         case A_TOKEN( sysClr ):
             mrColor.setSysClr(
-                aAttribs.getToken( XML_val, XML_TOKEN_INVALID ),
-                aAttribs.getIntegerHex( XML_lastClr, -1 ) );
+                rAttribs.getToken( XML_val, XML_TOKEN_INVALID ),
+                rAttribs.getIntegerHex( XML_lastClr, -1 ) );
         break;
 
         case A_TOKEN( schemeClr ):
-            mrColor.setSchemeClr( aAttribs.getToken( XML_val, XML_TOKEN_INVALID ) );
+        {
+            mrColor.setSchemeClr( rAttribs.getToken( XML_val, XML_TOKEN_INVALID ) );
+            oox::OptValue<rtl::OUString> sSchemeName = rAttribs.getString( XML_val );
+            if( sSchemeName.has() )
+                mrColor.setSchemeName( sSchemeName.use() );
+        }
         break;
 
         case A_TOKEN( prstClr ):
-            mrColor.setPrstClr( aAttribs.getToken( XML_val, XML_TOKEN_INVALID ) );
-		break;
+            mrColor.setPrstClr( rAttribs.getToken( XML_val, XML_TOKEN_INVALID ) );
+        break;
     }
 }
 
-Reference< XFastContextHandler > ColorValueContext::createFastChildContext(
-        sal_Int32 nElement, const Reference< XFastAttributeList >& rxAttribs ) throw (SAXException, RuntimeException)
+::oox::core::ContextHandlerRef ColorValueContext::onCreateContext(
+        sal_Int32 nElement, const AttributeList& rAttribs )
 {
-    AttributeList aAttribs( rxAttribs );
     switch( nElement )
     {
         case A_TOKEN( alpha ):
@@ -112,8 +111,22 @@ Reference< XFastContextHandler > ColorValueContext::createFastChildContext(
         case A_TOKEN( satOff ):
         case A_TOKEN( shade ):
         case A_TOKEN( tint ):
-            mrColor.addTransformation( nElement, aAttribs.getInteger( XML_val, 0 ) );
-		break;
+        {
+            OUString aValue = rAttribs.getString( XML_val, OUString() );
+            sal_Int32 nVal = 0;
+#if SUPD == 310
+            if (aValue.getLength() && aValue.lastIndexOf('%') == aValue.getLength() - 1)
+#else	// SUPD == 310
+            if (aValue.endsWith("%"))
+#endif	// SUPD == 310
+            {
+                nVal = aValue.toDouble() * PER_PERCENT;
+            }
+            else
+                nVal = rAttribs.getInteger(XML_val, 0);
+            mrColor.addTransformation( nElement, nVal );
+        }
+        break;
         case A_TOKEN( comp ):
         case A_TOKEN( gamma ):
         case A_TOKEN( gray ):
@@ -121,20 +134,20 @@ Reference< XFastContextHandler > ColorValueContext::createFastChildContext(
         case A_TOKEN( invGamma ):
             mrColor.addTransformation( nElement );
         break;
-	}
+    }
     return 0;
 }
 
-// ============================================================================
 
-ColorContext::ColorContext( ContextHandler& rParent, Color& rColor ) :
-    ContextHandler( rParent ),
+
+ColorContext::ColorContext( ContextHandler2Helper& rParent, Color& rColor ) :
+    ContextHandler2( rParent ),
     mrColor( rColor )
 {
 }
 
-Reference< XFastContextHandler > ColorContext::createFastChildContext(
-        sal_Int32 nElement, const Reference< XFastAttributeList >& ) throw (SAXException, RuntimeException)
+::oox::core::ContextHandlerRef ColorContext::onCreateContext(
+        sal_Int32 nElement, const AttributeList& )
 {
     switch( nElement )
     {
@@ -149,8 +162,9 @@ Reference< XFastContextHandler > ColorContext::createFastChildContext(
     return 0;
 }
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

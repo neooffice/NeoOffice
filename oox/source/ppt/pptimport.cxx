@@ -1,26 +1,25 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#include <sal/config.h>
 
-
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include "oox/ppt/pptimport.hxx"
 #include "oox/drawingml/chart/chartconverter.hxx"
 #include "oox/dump/pptxdumper.hxx"
@@ -28,45 +27,60 @@
 #include "oox/helper/graphichelper.hxx"
 #include "oox/ole/vbaproject.hxx"
 
-using ::rtl::OUString;
+#include <services.hxx>
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 using namespace oox::core;
 
+using ::com::sun::star::beans::PropertyValue;
+using ::com::sun::star::lang::XComponent;
+
 namespace oox { namespace ppt {
 
-OUString SAL_CALL PowerPointImport_getImplementationName() throw()
+OUString SAL_CALL PowerPointImport_getImplementationName()
 {
 #if SUPD == 310
-    return CREATE_OUSTRING( "com.sun.star.comp.Impress.oox.PowerPointImport" );
+    return OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.Impress.oox.PowerPointImport" ) );
 #else	// SUPD == 310
-    return CREATE_OUSTRING( "com.sun.star.comp.oox.ppt.PowerPointImport" );
+    return OUString( "com.sun.star.comp.oox.ppt.PowerPointImport" );
 #endif	// SUPD == 310
 }
 
-uno::Sequence< OUString > SAL_CALL PowerPointImport_getSupportedServiceNames() throw()
+uno::Sequence< OUString > SAL_CALL PowerPointImport_getSupportedServiceNames()
 {
-#if SUPD == 310
-    Sequence< OUString > aSeq( 1 );
-    aSeq[ 0 ] = CREATE_OUSTRING( "com.sun.star.comp.ooxpptx" );
-#else	// SUPD == 310
     Sequence< OUString > aSeq( 2 );
-    aSeq[ 0 ] = CREATE_OUSTRING( "com.sun.star.document.ImportFilter" );
-    aSeq[ 1 ] = CREATE_OUSTRING( "com.sun.star.document.ExportFilter" );
-#endif	// SUPD == 310
+    aSeq[ 0 ] = "com.sun.star.document.ImportFilter";
+    aSeq[ 1 ] = "com.sun.star.document.ExportFilter";
     return aSeq;
 }
 
+#if SUPD == 310
+uno::Reference< uno::XInterface > SAL_CALL PowerPointImport_createInstance( const css::uno::Reference< XComponentContext >& rxContext ) throw( Exception )
+#else	// SUPD == 310
 uno::Reference< uno::XInterface > SAL_CALL PowerPointImport_createInstance( const Reference< XComponentContext >& rxContext ) throw( Exception )
+#endif	// SUPD == 310
 {
     return static_cast< ::cppu::OWeakObject* >( new PowerPointImport( rxContext ) );
 }
 
+#if OSL_DEBUG_LEVEL > 0
+XmlFilterBase* PowerPointImport::mpDebugFilterBase = NULL;
+#endif
+
+#if SUPD == 310
+PowerPointImport::PowerPointImport( const css::uno::Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
+#else	// SUPD == 310
 PowerPointImport::PowerPointImport( const Reference< XComponentContext >& rxContext ) throw( RuntimeException ) :
+#endif	// SUPD == 310
     XmlFilterBase( rxContext ),
     mxChartConv( new ::oox::drawingml::chart::ChartConverter )
+
 {
+#if OSL_DEBUG_LEVEL > 0
+    mpDebugFilterBase = this;
+#endif
 }
 
 PowerPointImport::~PowerPointImport()
@@ -80,9 +94,11 @@ bool PowerPointImport::importDocument() throw()
         file:///<path-to-oox-module>/source/dump/pptxdumper.ini. */
     OOX_DUMP_FILE( ::oox::dump::pptx::Dumper );
 
-    OUString aFragmentPath = getFragmentPathFromFirstType( CREATE_OFFICEDOC_RELATION_TYPE( "officeDocument" ) );
-	FragmentHandlerRef xPresentationFragmentHandler( new PresentationFragmentHandler( *this, aFragmentPath ) );
-    maTableStyleListPath = xPresentationFragmentHandler->getFragmentPathFromFirstType( CREATE_OFFICEDOC_RELATION_TYPE( "tableStyles" ) );
+    importDocumentProperties();
+
+    OUString aFragmentPath = getFragmentPathFromFirstTypeFromOfficeDoc( "officeDocument" );
+    FragmentHandlerRef xPresentationFragmentHandler( new PresentationFragmentHandler( *this, aFragmentPath ) );
+    maTableStyleListPath = xPresentationFragmentHandler->getFragmentPathFromFirstTypeFromOfficeDoc( "tableStyles" );
     return importFragment( xPresentationFragmentHandler );
 
 
@@ -90,51 +106,87 @@ bool PowerPointImport::importDocument() throw()
 
 bool PowerPointImport::exportDocument() throw()
 {
-	return false;
+    return false;
 }
 
 sal_Int32 PowerPointImport::getSchemeColor( sal_Int32 nToken ) const
 {
-	sal_Int32 nColor = 0;
-	if ( mpActualSlidePersist )
-	{
-		sal_Bool bColorMapped = sal_False;
-		oox::drawingml::ClrMapPtr pClrMapPtr( mpActualSlidePersist->getClrMap() );
-		if ( pClrMapPtr )
+    sal_Int32 nColor = 0;
+    if ( mpActualSlidePersist )
+    {
+        bool bColorMapped = false;
+        oox::drawingml::ClrMapPtr pClrMapPtr( mpActualSlidePersist->getClrMap() );
+        if ( pClrMapPtr )
             bColorMapped = pClrMapPtr->getColorMap( nToken );
 
-		if ( !bColorMapped )	// try masterpage mapping
-		{
-			SlidePersistPtr pMasterPersist = mpActualSlidePersist->getMasterPersist();
-			if ( pMasterPersist )
-			{
-				pClrMapPtr = pMasterPersist->getClrMap();
-				if ( pClrMapPtr )
+        if ( !bColorMapped )    // try masterpage mapping
+        {
+            SlidePersistPtr pMasterPersist = mpActualSlidePersist->getMasterPersist();
+            if ( pMasterPersist )
+            {
+                pClrMapPtr = pMasterPersist->getClrMap();
+                if ( pClrMapPtr )
                     bColorMapped = pClrMapPtr->getColorMap( nToken );
-			}
-		}
-		oox::drawingml::ClrSchemePtr pClrSchemePtr( mpActualSlidePersist->getClrScheme() );
-		if ( pClrSchemePtr )
+            }
+        }
+        oox::drawingml::ClrSchemePtr pClrSchemePtr( mpActualSlidePersist->getClrScheme() );
+        if ( pClrSchemePtr )
             pClrSchemePtr->getColor( nToken, nColor );
-		else
-		{
+        else
+        {
             ::oox::drawingml::ThemePtr pTheme = mpActualSlidePersist->getTheme();
-			if( pTheme )
-			{
+            if( pTheme )
+            {
                 pTheme->getClrScheme().getColor( nToken, nColor );
-			}
-			else
-			{
-				OSL_TRACE("OOX: PowerPointImport::mpThemePtr is NULL");
-			}
-		}
-	}
-	return nColor;
+            }
+            else
+            {
+                OSL_TRACE("OOX: PowerPointImport::mpThemePtr is NULL");
+            }
+        }
+    }
+    return nColor;
 }
 
 const ::oox::drawingml::Theme* PowerPointImport::getCurrentTheme() const
 {
     return mpActualSlidePersist ? mpActualSlidePersist->getTheme().get() : 0;
+}
+
+#if SUPD == 310
+sal_Bool SAL_CALL PowerPointImport::filter( const Sequence< PropertyValue >& rDescriptor ) throw( RuntimeException )
+#else	// SUPD == 310
+sal_Bool SAL_CALL PowerPointImport::filter( const Sequence< PropertyValue >& rDescriptor ) throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
+{
+    if( XmlFilterBase::filter( rDescriptor ) )
+        return true;
+
+    if( isExportFilter() ) {
+#if SUPD == 310
+        css::uno::Reference< XExporter > xExporter( css::uno::Reference<css::lang::XMultiServiceFactory>(getComponentContext()->getServiceManager(), UNO_QUERY_THROW)->createInstance( "com.sun.star.comp.Impress.oox.PowerPointExport" ), UNO_QUERY );;
+#else	// SUPD == 310
+        Reference< XExporter > xExporter( Reference<css::lang::XMultiServiceFactory>(getComponentContext()->getServiceManager(), UNO_QUERY_THROW)->createInstance( "com.sun.star.comp.Impress.oox.PowerPointExport" ), UNO_QUERY );;
+#endif	// SUPD == 310
+
+        if( xExporter.is() ) {
+#if SUPD == 310
+            css::uno::Reference< XComponent > xDocument( getModel(), UNO_QUERY );
+            css::uno::Reference< XFilter > xFilter( xExporter, UNO_QUERY );
+#else	// SUPD == 310
+            Reference< XComponent > xDocument( getModel(), UNO_QUERY );
+            Reference< XFilter > xFilter( xExporter, UNO_QUERY );
+#endif	// SUPD == 310
+
+            if( xFilter.is() ) {
+                xExporter->setSourceDocument( xDocument );
+                if( xFilter->filter( rDescriptor ) )
+                    return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 ::oox::vml::Drawing* PowerPointImport::getVmlDrawing()
@@ -144,18 +196,18 @@ const ::oox::drawingml::Theme* PowerPointImport::getCurrentTheme() const
 
 const oox::drawingml::table::TableStyleListPtr PowerPointImport::getTableStyles()
 {
-	if ( !mpTableStyleList && maTableStyleListPath.getLength() )
-	{
-		mpTableStyleList = oox::drawingml::table::TableStyleListPtr( new oox::drawingml::table::TableStyleList() );
-		importFragment( new oox::drawingml::table::TableStyleListFragmentHandler(
-			*this, maTableStyleListPath, *mpTableStyleList ) );
-	}
-	return mpTableStyleList;;
+    if ( !mpTableStyleList && !maTableStyleListPath.isEmpty() )
+    {
+        mpTableStyleList = oox::drawingml::table::TableStyleListPtr( new oox::drawingml::table::TableStyleList() );
+        importFragment( new oox::drawingml::table::TableStyleListFragmentHandler(
+            *this, maTableStyleListPath, *mpTableStyleList ) );
+    }
+    return mpTableStyleList;
 }
 
-::oox::drawingml::chart::ChartConverter& PowerPointImport::getChartConverter()
+::oox::drawingml::chart::ChartConverter* PowerPointImport::getChartConverter()
 {
-    return *mxChartConv;
+    return mxChartConv.get();
 }
 
 namespace {
@@ -164,7 +216,8 @@ class PptGraphicHelper : public GraphicHelper
 {
 public:
     explicit            PptGraphicHelper( const PowerPointImport& rFilter );
-    virtual sal_Int32   getSchemeColor( sal_Int32 nToken ) const;
+    virtual sal_Int32   getSchemeColor( sal_Int32 nToken ) const SAL_OVERRIDE;
+    virtual drawing::FillStyle getDefaultChartAreaFillStyle() const SAL_OVERRIDE;
 private:
     const PowerPointImport& mrFilter;
 };
@@ -180,6 +233,11 @@ sal_Int32 PptGraphicHelper::getSchemeColor( sal_Int32 nToken ) const
     return mrFilter.getSchemeColor( nToken );
 }
 
+drawing::FillStyle PptGraphicHelper::getDefaultChartAreaFillStyle() const
+{
+    return drawing::FillStyle_NONE;
+}
+
 } // namespace
 
 GraphicHelper* PowerPointImport::implCreateGraphicHelper() const
@@ -189,7 +247,7 @@ GraphicHelper* PowerPointImport::implCreateGraphicHelper() const
 
 ::oox::ole::VbaProject* PowerPointImport::implCreateVbaProject() const
 {
-    return new ::oox::ole::VbaProject( getComponentContext(), getModel(), CREATE_OUSTRING( "Impress" ) );
+    return new ::oox::ole::VbaProject( getComponentContext(), getModel(), "Impress" );
 }
 
 OUString PowerPointImport::implGetImplementationName() const
@@ -198,3 +256,5 @@ OUString PowerPointImport::implGetImplementationName() const
 }
 
 }}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

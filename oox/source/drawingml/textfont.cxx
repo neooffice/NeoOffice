@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/textfont.hxx"
 #include <com/sun/star/awt/FontFamily.hpp>
@@ -28,13 +24,12 @@
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/attributelist.hxx"
 
-using ::rtl::OUString;
 using ::oox::core::XmlFilterBase;
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
+
 
 namespace {
 
@@ -54,7 +49,7 @@ sal_Int16 lclGetFontFamily( sal_Int32 nOoxValue )
 
 } // namespace
 
-// ============================================================================
+
 
 TextFont::TextFont() :
     mnPitch( 0 ),
@@ -70,13 +65,21 @@ void TextFont::setAttributes( const AttributeList& rAttribs )
     mnCharset  = rAttribs.getInteger( XML_charset, WINDOWS_CHARSET_DEFAULT );
 }
 
+void TextFont::setAttributes( const OUString& sFontName )
+{
+    maTypeface = sFontName;
+    maPanose = OUString();
+    mnPitch = 0;
+    mnCharset = WINDOWS_CHARSET_DEFAULT;
+}
+
 void TextFont::assignIfUsed( const TextFont& rTextFont )
 {
-    if( rTextFont.maTypeface.getLength() > 0 )
+    if( !rTextFont.maTypeface.isEmpty() )
         *this = rTextFont;
 }
 
-bool TextFont::getFontData( OUString& rFontName, sal_Int16 rnFontPitch, sal_Int16& rnFontFamily, const XmlFilterBase& rFilter ) const
+bool TextFont::getFontData( OUString& rFontName, sal_Int16& rnFontPitch, sal_Int16& rnFontFamily, const XmlFilterBase& rFilter ) const
 {
     if( const Theme* pTheme = rFilter.getCurrentTheme() )
         if( const TextFont* pFont = pTheme->resolveFont( maTypeface ) )
@@ -84,16 +87,17 @@ bool TextFont::getFontData( OUString& rFontName, sal_Int16 rnFontPitch, sal_Int1
     return implGetFontData( rFontName, rnFontPitch, rnFontFamily );
 }
 
-bool TextFont::implGetFontData( OUString& rFontName, sal_Int16 rnFontPitch, sal_Int16& rnFontFamily ) const
+bool TextFont::implGetFontData( OUString& rFontName, sal_Int16& rnFontPitch, sal_Int16& rnFontFamily ) const
 {
     rFontName = maTypeface;
     rnFontPitch = lclGetFontPitch( extractValue< sal_Int16 >( mnPitch, 0, 4 ) );
     rnFontFamily = lclGetFontFamily( extractValue< sal_Int16 >( mnPitch, 4, 4 ) );
-    return rFontName.getLength() > 0;
+    return !rFontName.isEmpty();
 }
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

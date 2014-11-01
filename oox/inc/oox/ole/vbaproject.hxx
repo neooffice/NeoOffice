@@ -1,34 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_OLE_VBAPROJECT_HXX
-#define OOX_OLE_VBAPROJECT_HXX
+#ifndef INCLUDED_OOX_OLE_VBAPROJECT_HXX
+#define INCLUDED_OOX_OLE_VBAPROJECT_HXX
 
 #include <map>
 #include <com/sun/star/uno/XInterface.hpp>
-#include "oox/helper/refvector.hxx"
-#include "oox/helper/storagebase.hxx"
-#include "oox/dllapi.h"
+#include <oox/helper/refvector.hxx>
+#include <oox/helper/storagebase.hxx>
+#include <oox/dllapi.h>
+#include <oox/ole/vbamodule.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace container { class XNameContainer; }
@@ -44,14 +41,14 @@ namespace oox { class GraphicHelper; }
 namespace oox {
 namespace ole {
 
-// ============================================================================
+
 
 class OOX_DLLPUBLIC VbaFilterConfig
 {
 public:
     explicit            VbaFilterConfig(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& rxContext,
-                            const ::rtl::OUString& rConfigCompName );
+                            const OUString& rConfigCompName );
                         ~VbaFilterConfig();
 
     /** Returns true, if the VBA source code and forms should be imported. */
@@ -66,7 +63,7 @@ private:
                         mxConfigAccess;
 };
 
-// ============================================================================
+
 
 /** Base class for objects that attach a amcro to a specific action.
 
@@ -85,10 +82,10 @@ private:
     store all information needed to finally attach the macro to the action,
     once the VBA project has been imported.
  */
-class VbaMacroAttacherBase
+class OOX_DLLPUBLIC VbaMacroAttacherBase
 {
 public:
-    explicit            VbaMacroAttacherBase( const ::rtl::OUString& rMacroName );
+    explicit            VbaMacroAttacherBase( const OUString& rMacroName );
     virtual             ~VbaMacroAttacherBase();
 
     /** Resolves the internal macro name to the related macro URL, and attaches
@@ -99,15 +96,15 @@ public:
 private:
     /** Called after the VBA project has been imported. Derived classes will
         attach the passed script to the object represented by this instance. */
-    virtual void        attachMacro( const ::rtl::OUString& rScriptUrl ) = 0;
+    virtual void        attachMacro( const OUString& rScriptUrl ) = 0;
 
 private:
-    ::rtl::OUString     maMacroName;
+    OUString     maMacroName;
 };
 
 typedef ::boost::shared_ptr< VbaMacroAttacherBase > VbaMacroAttacherRef;
 
-// ============================================================================
+
 
 class OOX_DLLPUBLIC VbaProject : public VbaFilterConfig
 {
@@ -115,7 +112,7 @@ public:
     explicit            VbaProject(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& rxContext,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& rxDocModel,
-                            const ::rtl::OUString& rConfigCompName );
+                            const OUString& rConfigCompName );
     virtual             ~VbaProject();
 
     /** Imports the entire VBA project from the passed storage.
@@ -127,24 +124,30 @@ public:
                             const GraphicHelper& rGraphicHelper,
                             bool bDefaultColorBgr = true );
 
-    /** Registers a macro atatcher object. For details, see description of the
+    bool                importVbaProject(
+                            StorageBase& rVbaPrjStrg );
+
+    /** Reads vba module related information from the project streams */
+    void                readVbaModules( StorageBase& rVbaPrjStrg );
+    /** Imports (and creates) vba modules and user forms from the vba project records previously read.
+      Note: ( expects that readVbaModules was already called ) */
+    void                importModulesAndForms( StorageBase& rVbaPrjStrg, const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr = true );
+    /** Registers a macro attacher object. For details, see description of the
         VbaMacroAttacherBase class. */
     void                registerMacroAttacher( const VbaMacroAttacherRef& rxAttacher );
 
     /** Returns true, if the document contains at least one code module. */
     bool                hasModules() const;
-    /** Returns true, if the document contains the specified code module. */
-    bool                hasModule( const ::rtl::OUString& rModuleName ) const;
 
     /** Returns true, if the document contains at least one dialog. */
     bool                hasDialogs() const;
-    /** Returns true, if the document contains the specified dialog. */
-    bool                hasDialog( const ::rtl::OUString& rDialogName ) const;
+
+    void                setOleOverridesSink( ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >&  rxOleOverridesSink ){ mxOleOverridesSink = rxOleOverridesSink; }
 
 protected:
     /** Registers a dummy module that will be created when the VBA project is
         imported. */
-    void                addDummyModule( const ::rtl::OUString& rName, sal_Int32 nType );
+    void                addDummyModule( const OUString& rName, sal_Int32 nType );
 
     /** Called when the import process of the VBA project has been started. */
     virtual void        prepareImport();
@@ -176,30 +179,37 @@ private:
 
     /** Attaches VBA macros to objects registered via registerMacroAttacher(). */
     void                attachMacros();
-    
+
     /** Copies the entire VBA project storage to the passed document model. */
     void                copyStorage( StorageBase& rVbaPrjStrg );
 
 private:
     typedef RefVector< VbaMacroAttacherBase >           MacroAttacherVector;
-    typedef ::std::map< ::rtl::OUString, sal_Int32 >    DummyModuleMap;
+    typedef ::std::map< OUString, sal_Int32 >    DummyModuleMap;
 
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >
-                        mxContext;          /// Component context with service manager.
+                        mxContext;          ///< Component context with service manager.
     ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >
-                        mxDocModel;         /// Document model used to import/export the VBA project.
+                        mxDocModel;         ///< Document model used to import/export the VBA project.
     ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >
-                        mxBasicLib;         /// The Basic library of the document used for import.
+                        mxBasicLib;         ///< The Basic library of the document used for import.
     ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >
-                        mxDialogLib;        /// The dialog library of the document used for import.
-    MacroAttacherVector maMacroAttachers;   /// Objects that want to attach a VBA macro to an action.
-    DummyModuleMap      maDummyModules;     /// Additional empty modules created on import.
-    ::rtl::OUString     maPrjName;          /// Name of the VBA project.
+                        mxDialogLib;        ///< The dialog library of the document used for import.
+    MacroAttacherVector maMacroAttachers;   ///< Objects that want to attach a VBA macro to an action.
+    DummyModuleMap      maDummyModules;     ///< Additional empty modules created on import.
+    OUString     maPrjName;          ///< Name of the VBA project.
+    ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >
+                        mxOleOverridesSink;
+    typedef RefMap< rtl::OUString, VbaModule > VbaModuleMap;
+    VbaModuleMap maModules;
+    VbaModuleMap maModulesByStrm;
 };
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

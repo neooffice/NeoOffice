@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/dump/dffdumper.hxx"
 
@@ -28,11 +24,8 @@
 namespace oox {
 namespace dump {
 
-// ============================================================================
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -50,25 +43,12 @@ const sal_uInt16 DFF_ID_SPGR                = 0xF009;   /// Shape group.
 const sal_uInt16 DFF_ID_SPLITMENUCOLORS     = 0xF11E;   /// Current toolbar colors.
 
 const sal_uInt16 DFF_OPT_IDMASK             = 0x3FFF;
-const sal_uInt16 DFF_OPT_PICTURE            = 0x4000;
 const sal_uInt16 DFF_OPT_COMPLEX            = 0x8000;
 const sal_uInt16 DFF_OPT_FLAGSMASK          = 0x003F;
 
 } // namespace
 
-// ============================================================================
 
-void DffStreamObject::construct( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName )
-{
-    SequenceRecordObjectBase::construct( rParent, rxStrm, rSysFileName, "DFF-RECORD-NAMES" );
-    constructDffObj();
-}
-
-void DffStreamObject::construct( const OutputObjectBase& rParent, const BinaryInputStreamRef& rxStrm )
-{
-    SequenceRecordObjectBase::construct( rParent, rxStrm, "DFF-RECORD-NAMES" );
-    constructDffObj();
-}
 
 bool DffStreamObject::implReadRecordHeader( BinaryInputStream& rBaseStrm, sal_Int64& ornRecId, sal_Int64& ornRecSize )
 {
@@ -178,25 +158,9 @@ void DffStreamObject::implDumpClientAnchor()
 {
 }
 
-void DffStreamObject::constructDffObj()
-{
-    mnInstVer = 0;
-    mnRealSize = 0;
-    if( SequenceRecordObjectBase::implIsValid() )
-    {
-        maSimpleProps.insertFormats( cfg().getNameList( "DFFOPT-SIMPLE-PROPERTIES" ) );
-        maComplexProps.insertFormats( cfg().getNameList( "DFFOPT-COMPLEX-PROPERTIES" ) );
-    }
-}
-
 sal_uInt32 DffStreamObject::dumpDffSimpleColor( const String& rName )
 {
     return dumpHex< sal_uInt32 >( rName, "DFF-SIMPLE-COLOR" );
-}
-
-sal_uInt32 DffStreamObject::dumpDffColor( const String& rName )
-{
-    return dumpHex< sal_uInt32 >( rName, "DFF-COLOR" );
 }
 
 namespace {
@@ -239,13 +203,13 @@ void DffStreamObject::dumpDffOpt()
             {
                 const ItemFormat& rItemFmt = aIt->second;
                 aName = rItemFmt.maItemName;
-                if( rItemFmt.maListName.equalsAscii( "binary" ) )
+                if ( rItemFmt.maListName == "binary" )
                     eType = PROPTYPE_BINARY;
-                else if( rItemFmt.maListName.equalsAscii( "string" ) )
+                else if ( rItemFmt.maListName == "string" )
                     eType = PROPTYPE_STRING;
-                else if( rItemFmt.maListName.equalsAscii( "blip" ) )
+                else if ( rItemFmt.maListName == "blip" )
                     eType = PROPTYPE_BLIP;
-                else if( rItemFmt.maListName.equalsAscii( "colorarray" ) )
+                else if ( rItemFmt.maListName == "colorarray" )
                     eType = PROPTYPE_COLORARRAY;
             }
             aPropInfos.push_back( PropInfo( aName( "property-data" ), eType, nBaseId, nValue ) );
@@ -312,9 +276,11 @@ sal_uInt16 DffStreamObject::dumpDffOptPropHeader()
     return dumpHex< sal_uInt16 >( "id", "DFFOPT-PROPERTY-ID" );
 }
 
-// ============================================================================
+
 
 } // namespace dump
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

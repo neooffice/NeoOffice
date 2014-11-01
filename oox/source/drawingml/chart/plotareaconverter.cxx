@@ -1,32 +1,26 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/plotareaconverter.hxx"
 
 #include <com/sun/star/chart/XChartDocument.hpp>
-#if SUPD != 310
 #include <com/sun/star/chart/XDiagramPositioning.hpp>
-#endif	// SUPD != 310
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/XCoordinateSystemContainer.hpp>
 #include <com/sun/star/chart2/XDiagram.hpp>
@@ -41,15 +35,13 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
 
-using namespace ::com::sun::star::awt;
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -67,7 +59,7 @@ struct AxesSetModel
     inline              ~AxesSetModel() {}
 };
 
-// ============================================================================
+
 
 /** Axes set converter. This is a helper class for the plot area converter. */
 class AxesSetConverter : public ConverterBase< AxesSetModel >
@@ -79,13 +71,17 @@ public:
     /** Converts the axes set model to a chart2 diagram. Returns an automatic
         chart title from a single series title, if possible. */
     void                convertFromModel(
+#if SUPD == 310
+                            const css::uno::Reference< XDiagram >& rxDiagram,
+#else	// SUPD == 310
                             const Reference< XDiagram >& rxDiagram,
+#endif	// SUPD == 310
                             View3DModel& rView3DModel,
                             sal_Int32 nAxesSetIdx,
                             bool bSupportsVaryColorsByPoint );
 
     /** Returns the automatic chart title if the axes set contains only one series. */
-    inline const ::rtl::OUString& getAutomaticTitle() const { return maAutoTitle; }
+    inline const OUString& getAutomaticTitle() const { return maAutoTitle; }
     /** Returns true, if the chart is three-dimensional. */
     inline bool         is3dChart() const { return mb3dChart; }
     /** Returns true, if chart type supports wall and floor format in 3D mode. */
@@ -94,13 +90,13 @@ public:
     inline bool         isPieChart() const { return mbPieChart; }
 
 private:
-    ::rtl::OUString     maAutoTitle;
+    OUString     maAutoTitle;
     bool                mb3dChart;
     bool                mbWall3dChart;
     bool                mbPieChart;
 };
 
-// ----------------------------------------------------------------------------
+
 
 AxesSetConverter::AxesSetConverter( const ConverterRoot& rParent, AxesSetModel& rModel ) :
     ConverterBase< AxesSetModel >( rParent, rModel ),
@@ -122,7 +118,11 @@ ModelRef< AxisModel > lclGetOrCreateAxis( const AxesSetModel::AxisMap& rFromAxes
     return xAxis;
 }
 
+#if SUPD == 310
+void AxesSetConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram,
+#else	// SUPD == 310
 void AxesSetConverter::convertFromModel( const Reference< XDiagram >& rxDiagram,
+#endif	// SUPD == 310
         View3DModel& rView3DModel, sal_Int32 nAxesSetIdx, bool bSupportsVaryColorsByPoint )
 {
     // create type group converter objects for all type groups
@@ -144,9 +144,15 @@ void AxesSetConverter::convertFromModel( const Reference< XDiagram >& rxDiagram,
         /*  Create a coordinate system. For now, all type groups from all axes sets
             have to be inserted into one coordinate system. Later, chart2 should
             support using one coordinate system for each axes set. */
+#if SUPD == 310
+        css::uno::Reference< XCoordinateSystem > xCoordSystem;
+        css::uno::Reference< XCoordinateSystemContainer > xCoordSystemCont( rxDiagram, UNO_QUERY_THROW );
+        Sequence< css::uno::Reference< XCoordinateSystem > > aCoordSystems = xCoordSystemCont->getCoordinateSystems();
+#else	// SUPD == 310
         Reference< XCoordinateSystem > xCoordSystem;
         Reference< XCoordinateSystemContainer > xCoordSystemCont( rxDiagram, UNO_QUERY_THROW );
         Sequence< Reference< XCoordinateSystem > > aCoordSystems = xCoordSystemCont->getCoordinateSystems();
+#endif	// SUPD == 310
         if( aCoordSystems.hasElements() )
         {
             OSL_ENSURE( aCoordSystems.getLength() == 1, "AxesSetConverter::convertFromModel - too many coordinate systems" );
@@ -179,15 +185,15 @@ void AxesSetConverter::convertFromModel( const Reference< XDiagram >& rxDiagram,
             ModelRef< AxisModel > xYAxis = lclGetOrCreateAxis( mrModel.maAxes, API_Y_AXIS, C_TOKEN( valAx ) );
 
             AxisConverter aXAxisConv( *this, *xXAxis );
-            aXAxisConv.convertFromModel( xCoordSystem, rFirstTypeGroup, xYAxis.get(), nAxesSetIdx, API_X_AXIS );
+            aXAxisConv.convertFromModel( xCoordSystem, aTypeGroups, xYAxis.get(), nAxesSetIdx, API_X_AXIS );
             AxisConverter aYAxisConv( *this, *xYAxis );
-            aYAxisConv.convertFromModel( xCoordSystem, rFirstTypeGroup, xXAxis.get(), nAxesSetIdx, API_Y_AXIS );
+            aYAxisConv.convertFromModel( xCoordSystem, aTypeGroups, xXAxis.get(), nAxesSetIdx, API_Y_AXIS );
 
             if( rFirstTypeGroup.isDeep3dChart() )
             {
                 ModelRef< AxisModel > xZAxis = lclGetOrCreateAxis( mrModel.maAxes, API_Z_AXIS, C_TOKEN( serAx ) );
                 AxisConverter aZAxisConv( *this, *xZAxis );
-                aZAxisConv.convertFromModel( xCoordSystem, rFirstTypeGroup, 0, nAxesSetIdx, API_Z_AXIS );
+                aZAxisConv.convertFromModel( xCoordSystem, aTypeGroups, 0, nAxesSetIdx, API_Z_AXIS );
             }
 
             // convert all chart type groups, this converts all series data and formatting
@@ -202,7 +208,7 @@ void AxesSetConverter::convertFromModel( const Reference< XDiagram >& rxDiagram,
 
 } // namespace
 
-// ============================================================================
+
 
 View3DConverter::View3DConverter( const ConverterRoot& rParent, View3DModel& rModel ) :
     ConverterBase< View3DModel >( rParent, rModel )
@@ -213,7 +219,11 @@ View3DConverter::~View3DConverter()
 {
 }
 
+#if SUPD == 310
+void View3DConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram, TypeGroupConverter& rTypeGroup )
+#else	// SUPD == 310
 void View3DConverter::convertFromModel( const Reference< XDiagram >& rxDiagram, TypeGroupConverter& rTypeGroup )
+#endif	// SUPD == 310
 {
     namespace cssd = ::com::sun::star::drawing;
     PropertySet aPropSet( rxDiagram );
@@ -263,10 +273,10 @@ void View3DConverter::convertFromModel( const Reference< XDiagram >& rxDiagram, 
     cssd::ProjectionMode eProjMode = bParallel ? cssd::ProjectionMode_PARALLEL : cssd::ProjectionMode_PERSPECTIVE;
 
     // set rotation properties
+    aPropSet.setProperty( PROP_RightAngledAxes, bRightAngled );
     aPropSet.setProperty( PROP_RotationVertical, nRotationY );
     aPropSet.setProperty( PROP_RotationHorizontal, nRotationX );
     aPropSet.setProperty( PROP_Perspective, nPerspective );
-    aPropSet.setProperty( PROP_RightAngledAxes, bRightAngled );
     aPropSet.setProperty( PROP_D3DScenePerspective, eProjMode );
 
     // set light settings
@@ -278,7 +288,7 @@ void View3DConverter::convertFromModel( const Reference< XDiagram >& rxDiagram, 
     aPropSet.setProperty( PROP_D3DSceneLightDirection2, cssd::Direction3D( 0.2, 0.4, 1.0 ) );
 }
 
-// ============================================================================
+
 
 WallFloorConverter::WallFloorConverter( const ConverterRoot& rParent, WallFloorModel& rModel ) :
     ConverterBase< WallFloorModel >( rParent, rModel )
@@ -289,7 +299,11 @@ WallFloorConverter::~WallFloorConverter()
 {
 }
 
+#if SUPD == 310
+void WallFloorConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram, ObjectType eObjType )
+#else	// SUPD == 310
 void WallFloorConverter::convertFromModel( const Reference< XDiagram >& rxDiagram, ObjectType eObjType )
+#endif	// SUPD == 310
 {
     if( rxDiagram.is() )
     {
@@ -298,14 +312,40 @@ void WallFloorConverter::convertFromModel( const Reference< XDiagram >& rxDiagra
         {
             case OBJECTTYPE_FLOOR:  aPropSet.set( rxDiagram->getFloor() );  break;
             case OBJECTTYPE_WALL:   aPropSet.set( rxDiagram->getWall() );   break;
-            default:                OSL_ENSURE( false, "WallFloorConverter::convertFromModel - invalid object type" );
+            default:                OSL_FAIL( "WallFloorConverter::convertFromModel - invalid object type" );
         }
         if( aPropSet.is() )
             getFormatter().convertFrameFormatting( aPropSet, mrModel.mxShapeProp, mrModel.mxPicOptions.getOrCreate(), eObjType );
     }
 }
 
-// ============================================================================
+
+
+DataTableConverter::DataTableConverter( const ConverterRoot& rParent, DataTableModel& rModel ) :
+        ConverterBase< DataTableModel >( rParent, rModel )
+{
+}
+
+DataTableConverter::~DataTableConverter()
+{
+}
+
+#if SUPD == 310
+void DataTableConverter::convertFromModel( const css::uno::Reference< XDiagram >& rxDiagram )
+#else	// SUPD == 310
+void DataTableConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
+#endif	// SUPD == 310
+{
+    PropertySet aPropSet( rxDiagram );
+    if (mrModel.mbShowHBorder)
+        aPropSet.setProperty( PROP_DataTableHBorder, mrModel.mbShowHBorder );
+    if (mrModel.mbShowVBorder)
+        aPropSet.setProperty( PROP_DataTableVBorder, mrModel.mbShowVBorder);
+    if (mrModel.mbShowOutline)
+        aPropSet.setProperty( PROP_DataTableOutline, mrModel.mbShowOutline );
+}
+
+
 
 PlotAreaConverter::PlotAreaConverter( const ConverterRoot& rParent, PlotAreaModel& rModel ) :
     ConverterBase< PlotAreaModel >( rParent, rModel ),
@@ -323,10 +363,14 @@ void PlotAreaConverter::convertFromModel( View3DModel& rView3DModel )
 {
     /*  Create the diagram object and attach it to the chart document. One
         diagram is used to carry all coordinate systems and data series. */
+#if SUPD == 310
+    css::uno::Reference< XDiagram > xDiagram;
+#else	// SUPD == 310
     Reference< XDiagram > xDiagram;
+#endif	// SUPD == 310
     try
     {
-        xDiagram.set( createInstance( CREATE_OUSTRING( "com.sun.star.chart2.Diagram" ) ), UNO_QUERY_THROW );
+        xDiagram.set( createInstance( "com.sun.star.chart2.Diagram" ), UNO_QUERY_THROW );
         getChartDocument()->setFirstDiagram( xDiagram );
     }
     catch( Exception& )
@@ -341,7 +385,7 @@ void PlotAreaConverter::convertFromModel( View3DModel& rView3DModel )
         PlotAreaModel::AxisVector::value_type xAxis = *aAIt;
         OSL_ENSURE( xAxis->mnAxisId >= 0, "PlotAreaConverter::convertFromModel - invalid axis identifier" );
         OSL_ENSURE( !aAxisMap.has( xAxis->mnAxisId ), "PlotAreaConverter::convertFromModel - axis identifiers not unique" );
-        if( xAxis->mnAxisId >= 0 )
+        if( xAxis->mnAxisId != -1 )
             aAxisMap[ xAxis->mnAxisId ] = xAxis;
     }
 
@@ -406,6 +450,8 @@ void PlotAreaConverter::convertFromModel( View3DModel& rView3DModel )
         }
     }
 
+    DataTableConverter dataTableConverter (*this, mrModel.mxDataTable.getOrCreate());
+    dataTableConverter.convertFromModel(xDiagram);
     // plot area formatting
     if( xDiagram.is() && !mb3dChart )
     {
@@ -418,13 +464,17 @@ void PlotAreaConverter::convertPositionFromModel()
 {
     LayoutModel& rLayout = mrModel.mxLayout.getOrCreate();
     LayoutConverter aLayoutConv( *this, rLayout );
-    Rectangle aDiagramRect;
+    awt::Rectangle aDiagramRect;
     if( aLayoutConv.calcAbsRectangle( aDiagramRect ) ) try
     {
         namespace cssc = ::com::sun::star::chart;
+#if SUPD == 310
+        css::uno::Reference< cssc::XChartDocument > xChart1Doc( getChartDocument(), UNO_QUERY_THROW );
+        css::uno::Reference< cssc::XDiagramPositioning > xPositioning( xChart1Doc->getDiagram(), UNO_QUERY_THROW );
+#else	// SUPD == 310
         Reference< cssc::XChartDocument > xChart1Doc( getChartDocument(), UNO_QUERY_THROW );
-#if SUPD != 310
         Reference< cssc::XDiagramPositioning > xPositioning( xChart1Doc->getDiagram(), UNO_QUERY_THROW );
+#endif	// SUPD == 310
         // for pie charts, always set inner plot area size to exclude the data labels as Excel does
         sal_Int32 nTarget = (mbPieChart && (rLayout.mnTarget == XML_outer)) ? XML_inner : rLayout.mnTarget;
         switch( nTarget )
@@ -436,17 +486,18 @@ void PlotAreaConverter::convertPositionFromModel()
                 xPositioning->setDiagramPositionIncludingAxes( aDiagramRect );
             break;
             default:
-                OSL_ENSURE( false, "PlotAreaConverter::convertPositionFromModel - unknown positioning target" );
+                OSL_FAIL( "PlotAreaConverter::convertPositionFromModel - unknown positioning target" );
         }
-#endif	// SUPD != 310
     }
     catch( Exception& )
     {
     }
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

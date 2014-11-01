@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/typegroupcontext.hxx"
 
@@ -30,12 +26,8 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
-
 using ::oox::core::ContextHandler2Helper;
 using ::oox::core::ContextHandlerRef;
-
-// ============================================================================
 
 UpDownBarsContext::UpDownBarsContext( ContextHandler2Helper& rParent, UpDownBarsModel& rModel ) :
     ContextBase< UpDownBarsModel >( rParent, rModel )
@@ -65,8 +57,6 @@ ContextHandlerRef UpDownBarsContext::onCreateContext( sal_Int32 nElement, const 
     }
     return 0;
 }
-
-// ============================================================================
 
 AreaTypeGroupContext::AreaTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
@@ -103,8 +93,6 @@ ContextHandlerRef AreaTypeGroupContext::onCreateContext( sal_Int32 nElement, con
     }
     return 0;
 }
-
-// ============================================================================
 
 BarTypeGroupContext::BarTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
@@ -155,8 +143,6 @@ ContextHandlerRef BarTypeGroupContext::onCreateContext( sal_Int32 nElement, cons
     return 0;
 }
 
-// ============================================================================
-
 BubbleTypeGroupContext::BubbleTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
 {
@@ -199,8 +185,6 @@ ContextHandlerRef BubbleTypeGroupContext::onCreateContext( sal_Int32 nElement, c
     return 0;
 }
 
-// ============================================================================
-
 LineTypeGroupContext::LineTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
 {
@@ -236,8 +220,9 @@ ContextHandlerRef LineTypeGroupContext::onCreateContext( sal_Int32 nElement, con
         case C_TOKEN( ser ):
             return new LineSeriesContext( *this, mrModel.maSeries.create() );
         case C_TOKEN( smooth ):
-            // default is 'false', not 'true' as specified
-            mrModel.mbSmooth = rAttribs.getBool( XML_val, false );
+            // TODO: fix for MSO 2007 behavior
+            // MSO 2007 writes false by default and not true
+            mrModel.mbSmooth = rAttribs.getBool( XML_val, true );
             return 0;
         case C_TOKEN( upDownBars ):
             return new UpDownBarsContext( *this, mrModel.mxUpDownBars.create() );
@@ -248,8 +233,6 @@ ContextHandlerRef LineTypeGroupContext::onCreateContext( sal_Int32 nElement, con
     }
     return 0;
 }
-
-// ============================================================================
 
 PieTypeGroupContext::PieTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
@@ -299,8 +282,6 @@ ContextHandlerRef PieTypeGroupContext::onCreateContext( sal_Int32 nElement, cons
     return 0;
 }
 
-// ============================================================================
-
 RadarTypeGroupContext::RadarTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
 {
@@ -331,8 +312,6 @@ ContextHandlerRef RadarTypeGroupContext::onCreateContext( sal_Int32 nElement, co
     }
     return 0;
 }
-
-// ============================================================================
 
 ScatterTypeGroupContext::ScatterTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
@@ -365,8 +344,6 @@ ContextHandlerRef ScatterTypeGroupContext::onCreateContext( sal_Int32 nElement, 
     return 0;
 }
 
-// ============================================================================
-
 SurfaceTypeGroupContext::SurfaceTypeGroupContext( ContextHandler2Helper& rParent, TypeGroupModel& rModel ) :
     TypeGroupContextBase( rParent, rModel )
 {
@@ -393,8 +370,8 @@ ContextHandlerRef SurfaceTypeGroupContext::onCreateContext( sal_Int32 nElement, 
     return 0;
 }
 
-// ============================================================================
-
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

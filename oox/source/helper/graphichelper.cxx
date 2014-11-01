@@ -1,26 +1,23 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
+#include <com/sun/star/container/XNameContainer.hpp>
 #include "oox/helper/graphichelper.hxx"
 
 #include <com/sun/star/awt/Point.hpp>
@@ -28,20 +25,33 @@
 #include <com/sun/star/awt/XDevice.hpp>
 #include <com/sun/star/awt/XUnitConversion.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#if SUPD != 310
+#include <com/sun/star/frame/Desktop.hpp>
+#endif	// SUPD != 310
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/graphic/GraphicObject.hpp>
+#if SUPD != 310
+#include <com/sun/star/graphic/GraphicProvider.hpp>
+#endif	// SUPD != 310
 #include <com/sun/star/graphic/XGraphicProvider.hpp>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <comphelper/seqstream.hxx>
+#if SUPD == 310
+#include <svtools/wmf.hxx>
+#else	// SUPD == 310
+#include <vcl/wmf.hxx>
+#endif	// SUPD == 310
 #include "oox/helper/containerhelper.hxx"
 #include "oox/helper/propertyset.hxx"
+#include "oox/token/properties.hxx"
 #include "oox/token/tokens.hxx"
 
 namespace oox {
 
-// ============================================================================
 
-using namespace ::com::sun::star::awt;
+
+
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::graphic;
@@ -49,9 +59,7 @@ using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -62,18 +70,24 @@ inline sal_Int32 lclConvertScreenPixelToHmm( double fPixel, double fPixelPerHmm 
 
 } // namespace
 
-// ============================================================================
+
 
 GraphicHelper::GraphicHelper( const Reference< XComponentContext >& rxContext, const Reference< XFrame >& rxTargetFrame, const StorageRef& rxStorage ) :
     mxContext( rxContext ),
     mxStorage( rxStorage ),
-    maGraphicObjScheme( CREATE_OUSTRING( "vnd.sun.star.GraphicObject:" ) )
+    maGraphicObjScheme( "vnd.sun.star.GraphicObject:" )
 {
     OSL_ENSURE( mxContext.is(), "GraphicHelper::GraphicHelper - missing component context" );
+#if SUPD == 310
     Reference< XMultiServiceFactory > xFactory( mxContext->getServiceManager(), UNO_QUERY );
     OSL_ENSURE( xFactory.is(), "GraphicHelper::GraphicHelper - missing service factory" );
-    if( xFactory.is() )
-        mxGraphicProvider.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.graphic.GraphicProvider" ) ), UNO_QUERY );
+#endif	// SUPD == 310
+    if( mxContext.is() )
+#if SUPD == 310
+        mxGraphicProvider.set( xFactory->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.graphic.GraphicProvider" ) ) ), UNO_QUERY );
+#else	// SUPD == 310
+        mxGraphicProvider.set( graphic::GraphicProvider::create( mxContext ) );
+#endif	// SUPD == 310
 
     //! TODO: get colors from system
     maSystemPalette[ XML_3dDkShadow ]               = 0x716F64;
@@ -110,9 +124,13 @@ GraphicHelper::GraphicHelper( const Reference< XComponentContext >& rxContext, c
     // if no target frame has been passed (e.g. OLE objects), try to fallback to the active frame
     // TODO: we need some mechanism to keep and pass the parent frame
     Reference< XFrame > xFrame = rxTargetFrame;
-    if( !xFrame.is() && xFactory.is() ) try
+    if( !xFrame.is() && mxContext.is() ) try
     {
-        Reference< XFramesSupplier > xFramesSupp( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.frame.Desktop" ) ), UNO_QUERY_THROW );
+#if SUPD == 310
+        Reference< XFramesSupplier > xFramesSupp( xFactory->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY_THROW );
+#else	// SUPD == 310
+        Reference< XDesktop2 > xFramesSupp = Desktop::create( mxContext );
+#endif	// SUPD == 310
         xFrame = xFramesSupp->getActiveFrame();
     }
     catch( Exception& )
@@ -124,14 +142,14 @@ GraphicHelper::GraphicHelper( const Reference< XComponentContext >& rxContext, c
     maDeviceInfo.PixelPerMeterX = maDeviceInfo.PixelPerMeterY = 3500.0; // some default just in case
     if( xFrame.is() ) try
     {
-        Reference< XDevice > xDevice( xFrame->getContainerWindow(), UNO_QUERY_THROW );
+        Reference< awt::XDevice > xDevice( xFrame->getContainerWindow(), UNO_QUERY_THROW );
         mxUnitConversion.set( xDevice, UNO_QUERY );
         OSL_ENSURE( mxUnitConversion.is(), "GraphicHelper::GraphicHelper - cannot get unit converter" );
         maDeviceInfo = xDevice->getInfo();
     }
     catch( Exception& )
     {
-        OSL_ENSURE( false, "GraphicHelper::GraphicHelper - cannot get output device info" );
+        OSL_FAIL( "GraphicHelper::GraphicHelper - cannot get output device info" );
     }
     mfPixelPerHmmX = maDeviceInfo.PixelPerMeterX / 100000.0;
     mfPixelPerHmmY = maDeviceInfo.PixelPerMeterY / 100000.0;
@@ -150,19 +168,24 @@ sal_Int32 GraphicHelper::getSystemColor( sal_Int32 nToken, sal_Int32 nDefaultRgb
 
 sal_Int32 GraphicHelper::getSchemeColor( sal_Int32 /*nToken*/ ) const
 {
-    OSL_ENSURE( false, "GraphicHelper::getSchemeColor - scheme colors not implemented" );
+    OSL_FAIL( "GraphicHelper::getSchemeColor - scheme colors not implemented" );
     return API_RGB_TRANSPARENT;
 }
 
 sal_Int32 GraphicHelper::getPaletteColor( sal_Int32 /*nPaletteIdx*/ ) const
 {
-    OSL_ENSURE( false, "GraphicHelper::getPaletteColor - palette colors not implemented" );
+    OSL_FAIL( "GraphicHelper::getPaletteColor - palette colors not implemented" );
     return API_RGB_TRANSPARENT;
+}
+
+drawing::FillStyle GraphicHelper::getDefaultChartAreaFillStyle() const
+{
+    return drawing::FillStyle_SOLID;
 }
 
 // Device info and device dependent unit conversion ---------------------------
 
-const DeviceInfo& GraphicHelper::getDeviceInfo() const
+const awt::DeviceInfo& GraphicHelper::getDeviceInfo() const
 {
     return maDeviceInfo;
 }
@@ -177,14 +200,9 @@ sal_Int32 GraphicHelper::convertScreenPixelYToHmm( double fPixelY ) const
     return lclConvertScreenPixelToHmm( fPixelY, mfPixelPerHmmY );
 }
 
-Point GraphicHelper::convertScreenPixelToHmm( const Point& rPixel ) const
+awt::Size GraphicHelper::convertScreenPixelToHmm( const awt::Size& rPixel ) const
 {
-    return Point( convertScreenPixelXToHmm( rPixel.X ), convertScreenPixelYToHmm( rPixel.Y ) );
-}
-
-Size GraphicHelper::convertScreenPixelToHmm( const Size& rPixel ) const
-{
-    return Size( convertScreenPixelXToHmm( rPixel.Width ), convertScreenPixelYToHmm( rPixel.Height ) );
+    return awt::Size( convertScreenPixelXToHmm( rPixel.Width ), convertScreenPixelYToHmm( rPixel.Height ) );
 }
 
 double GraphicHelper::convertHmmToScreenPixelX( sal_Int32 nHmmX ) const
@@ -197,82 +215,72 @@ double GraphicHelper::convertHmmToScreenPixelY( sal_Int32 nHmmY ) const
     return nHmmY * mfPixelPerHmmY;
 }
 
-Point GraphicHelper::convertHmmToScreenPixel( const Point& rHmm ) const
+awt::Point GraphicHelper::convertHmmToScreenPixel( const awt::Point& rHmm ) const
 {
-    return Point(
+    return awt::Point(
         static_cast< sal_Int32 >( convertHmmToScreenPixelX( rHmm.X ) + 0.5 ),
         static_cast< sal_Int32 >( convertHmmToScreenPixelY( rHmm.Y ) + 0.5 ) );
 }
 
-Size GraphicHelper::convertHmmToScreenPixel( const Size& rHmm ) const
+awt::Size GraphicHelper::convertHmmToScreenPixel( const awt::Size& rHmm ) const
 {
-    return Size(
+    return awt::Size(
         static_cast< sal_Int32 >( convertHmmToScreenPixelX( rHmm.Width ) + 0.5 ),
         static_cast< sal_Int32 >( convertHmmToScreenPixelY( rHmm.Height ) + 0.5 ) );
 }
 
-Point GraphicHelper::convertAppFontToHmm( const Point& rAppFont ) const
+awt::Point GraphicHelper::convertHmmToAppFont( const awt::Point& rHmm ) const
 {
     if( mxUnitConversion.is() ) try
     {
-        Point aPixel = mxUnitConversion->convertPointToPixel( rAppFont, ::com::sun::star::util::MeasureUnit::APPFONT );
-        return convertScreenPixelToHmm( aPixel );
-    }
-    catch( Exception& )
-    {
-    }
-    return Point( 0, 0 );
-}
-
-Size GraphicHelper::convertAppFontToHmm( const Size& rAppFont ) const
-{
-    if( mxUnitConversion.is() ) try
-    {
-        Size aPixel = mxUnitConversion->convertSizeToPixel( rAppFont, ::com::sun::star::util::MeasureUnit::APPFONT );
-        return convertScreenPixelToHmm( aPixel );
-    }
-    catch( Exception& )
-    {
-    }
-    return Size( 0, 0 );
-}
-
-Point GraphicHelper::convertHmmToAppFont( const Point& rHmm ) const
-{
-    if( mxUnitConversion.is() ) try
-    {
-        Point aPixel = convertHmmToScreenPixel( rHmm );
+        awt::Point aPixel = convertHmmToScreenPixel( rHmm );
         return mxUnitConversion->convertPointToLogic( aPixel, ::com::sun::star::util::MeasureUnit::APPFONT );
     }
     catch( Exception& )
     {
     }
-    return Point( 0, 0 );
+    return awt::Point( 0, 0 );
 }
 
-Size GraphicHelper::convertHmmToAppFont( const Size& rHmm ) const
+awt::Size GraphicHelper::convertHmmToAppFont( const awt::Size& rHmm ) const
 {
     if( mxUnitConversion.is() ) try
     {
-        Size aPixel = convertHmmToScreenPixel( rHmm );
+        awt::Size aPixel = convertHmmToScreenPixel( rHmm );
         return mxUnitConversion->convertSizeToLogic( aPixel, ::com::sun::star::util::MeasureUnit::APPFONT );
     }
     catch( Exception& )
     {
     }
-    return Size( 0, 0 );
+    return awt::Size( 0, 0 );
 }
 
 // Graphics and graphic objects  ----------------------------------------------
 
-Reference< XGraphic > GraphicHelper::importGraphic( const Reference< XInputStream >& rxInStrm ) const
+Reference< XGraphic > GraphicHelper::importGraphic( const Reference< XInputStream >& rxInStrm,
+        const WMF_EXTERNALHEADER* pExtHeader ) const
 {
     Reference< XGraphic > xGraphic;
     if( rxInStrm.is() && mxGraphicProvider.is() ) try
     {
         Sequence< PropertyValue > aArgs( 1 );
-        aArgs[ 0 ].Name = CREATE_OUSTRING( "InputStream" );
+        aArgs[ 0 ].Name = "InputStream";
         aArgs[ 0 ].Value <<= rxInStrm;
+
+        if ( pExtHeader && pExtHeader->mapMode > 0 )
+        {
+            aArgs.realloc( aArgs.getLength() + 1 );
+            Sequence< PropertyValue > aFilterData( 3 );
+            aFilterData[ 0 ].Name = "ExternalWidth";
+            aFilterData[ 0 ].Value <<= pExtHeader->xExt;
+            aFilterData[ 1 ].Name = "ExternalHeight";
+            aFilterData[ 1 ].Value <<= pExtHeader->yExt;
+            aFilterData[ 2 ].Name = "ExternalMapMode";
+            aFilterData[ 2 ].Value <<= pExtHeader->mapMode;
+            aArgs[ 1 ].Name = "FilterData";
+            aArgs[ 1 ].Value <<= aFilterData;
+        }
+
         xGraphic = mxGraphicProvider->queryGraphic( aArgs );
     }
     catch( Exception& )
@@ -292,16 +300,16 @@ Reference< XGraphic > GraphicHelper::importGraphic( const StreamDataSequence& rG
     return xGraphic;
 }
 
-Reference< XGraphic > GraphicHelper::importEmbeddedGraphic( const OUString& rStreamName ) const
+Reference< XGraphic > GraphicHelper::importEmbeddedGraphic( const OUString& rStreamName, const WMF_EXTERNALHEADER* pExtHeader ) const
 {
     Reference< XGraphic > xGraphic;
-    OSL_ENSURE( rStreamName.getLength() > 0, "GraphicHelper::importEmbeddedGraphic - empty stream name" );
-    if( rStreamName.getLength() > 0 )
+    OSL_ENSURE( !rStreamName.isEmpty(), "GraphicHelper::importEmbeddedGraphic - empty stream name" );
+    if( !rStreamName.isEmpty() )
     {
         EmbeddedGraphicMap::const_iterator aIt = maEmbeddedGraphics.find( rStreamName );
         if( aIt == maEmbeddedGraphics.end() )
         {
-            xGraphic = importGraphic( mxStorage->openInputStream( rStreamName ) );
+            xGraphic = importGraphic(mxStorage->openInputStream(rStreamName), pExtHeader);
             if( xGraphic.is() )
                 maEmbeddedGraphics[ rStreamName ] = xGraphic;
         }
@@ -316,7 +324,7 @@ OUString GraphicHelper::createGraphicObject( const Reference< XGraphic >& rxGrap
     OUString aGraphicObjUrl;
     if( mxContext.is() && rxGraphic.is() ) try
     {
-        Reference< XGraphicObject > xGraphicObj( GraphicObject::create( mxContext ), UNO_SET_THROW );
+        Reference< XGraphicObject > xGraphicObj( graphic::GraphicObject::create( mxContext ), UNO_SET_THROW );
         xGraphicObj->setGraphic( rxGraphic );
         maGraphicObjects.push_back( xGraphicObj );
         aGraphicObjUrl = maGraphicObjScheme + xGraphicObj->getUniqueID();
@@ -327,9 +335,10 @@ OUString GraphicHelper::createGraphicObject( const Reference< XGraphic >& rxGrap
     return aGraphicObjUrl;
 }
 
-OUString GraphicHelper::importGraphicObject( const Reference< XInputStream >& rxInStrm ) const
+OUString GraphicHelper::importGraphicObject( const Reference< XInputStream >& rxInStrm,
+        const WMF_EXTERNALHEADER* pExtHeader ) const
 {
-    return createGraphicObject( importGraphic( rxInStrm ) );
+    return createGraphicObject( importGraphic( rxInStrm, pExtHeader ) );
 }
 
 OUString GraphicHelper::importGraphicObject( const StreamDataSequence& rGraphicData ) const
@@ -343,19 +352,21 @@ OUString GraphicHelper::importEmbeddedGraphicObject( const OUString& rStreamName
     return xGraphic.is() ? createGraphicObject( xGraphic ) : OUString();
 }
 
-Size GraphicHelper::getOriginalSize( const Reference< XGraphic >& xGraphic ) const
+awt::Size GraphicHelper::getOriginalSize( const Reference< XGraphic >& xGraphic ) const
 {
-    Size aSizeHmm;
+    awt::Size aSizeHmm;
     PropertySet aPropSet( xGraphic );
     if( aPropSet.getProperty( aSizeHmm, PROP_Size100thMM ) && (aSizeHmm.Width == 0) && (aSizeHmm.Height == 0) )     // MAPMODE_PIXEL used?
     {
-        Size aSizePixel( 0, 0 );
+        awt::Size aSizePixel( 0, 0 );
         if( aPropSet.getProperty( aSizePixel, PROP_SizePixel ) )
             aSizeHmm = convertScreenPixelToHmm( aSizePixel );
     }
     return aSizeHmm;
 }
 
-// ============================================================================
+
 
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -51,6 +51,11 @@ SLOFILES =	\
 		$(SLO)$/textinputstream.obj		    \
 		$(SLO)$/zipstorage.obj
 
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/grabbagstack.obj
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk

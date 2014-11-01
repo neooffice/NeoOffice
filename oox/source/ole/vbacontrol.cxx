@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/ole/vbacontrol.hxx"
 
@@ -40,11 +36,12 @@
 #include "oox/helper/storagebase.hxx"
 #include "oox/helper/textinputstream.hxx"
 #include "oox/ole/vbahelper.hxx"
+#if SUPD != 310
+#include <boost/unordered_map.hpp>
+#endif	// SUPD != 310
 
 namespace oox {
 namespace ole {
-
-// ============================================================================
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::container;
@@ -52,11 +49,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
-
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
-
-// ============================================================================
 
 namespace {
 
@@ -81,15 +73,13 @@ const sal_uInt16 VBA_SITE_UNKNOWN               = 0x7FFF;
 
 const sal_uInt32 VBA_SITE_TABSTOP               = 0x00000001;
 const sal_uInt32 VBA_SITE_VISIBLE               = 0x00000002;
-const sal_uInt32 VBA_SITE_DEFAULTBUTTON         = 0x00000004;
-const sal_uInt32 VBA_SITE_CANCELBUTTON          = 0x00000008;
 const sal_uInt32 VBA_SITE_OSTREAM               = 0x00000010;
 const sal_uInt32 VBA_SITE_DEFFLAGS              = 0x00000033;
 
 const sal_uInt8 VBA_SITEINFO_COUNT              = 0x80;
 const sal_uInt8 VBA_SITEINFO_MASK               = 0x7F;
 
-// ----------------------------------------------------------------------------
+
 
 /** Collects names of all controls in a user form or container control. Allows
     to generate unused names for dummy controls separating option groups.
@@ -112,7 +102,7 @@ private:
 };
 
 VbaControlNamesSet::VbaControlNamesSet() :
-    maDummyBaseName( CREATE_OUSTRING( "DummyGroupSep" ) ),
+    maDummyBaseName( "DummyGroupSep" ),
     mnIndex( 0 )
 {
 }
@@ -120,7 +110,7 @@ VbaControlNamesSet::VbaControlNamesSet() :
 void VbaControlNamesSet::insertName( const VbaFormControl& rControl )
 {
     OUString aName = rControl.getControlName();
-    if( aName.getLength() > 0 )
+    if( !aName.isEmpty() )
         maCtrlNames.insert( aName );
 }
 
@@ -136,7 +126,7 @@ OUString VbaControlNamesSet::generateDummyName()
     return aCtrlName;
 }
 
-// ----------------------------------------------------------------------------
+
 
 /** Functor that inserts the name of a control into a VbaControlNamesSet. */
 struct VbaControlNameInserter
@@ -147,7 +137,7 @@ public:
     inline void         operator()( const VbaFormControl& rControl ) { mrCtrlNames.insertName( rControl ); }
 };
 
-// ----------------------------------------------------------------------------
+
 
 /** A dummy invisible form control (fixed label without text) that is used to
     separate two groups of option buttons.
@@ -162,16 +152,16 @@ VbaDummyFormControl::VbaDummyFormControl( const OUString& rName )
 {
     mxSiteModel.reset( new VbaSiteModel );
     mxSiteModel->importProperty( XML_Name, rName );
-    mxSiteModel->importProperty( XML_VariousPropertyBits, OUString( sal_Unicode( '0' ) ) );
+    mxSiteModel->importProperty( XML_VariousPropertyBits, OUString( '0' ) );
 
     mxCtrlModel.reset( new AxLabelModel );
     mxCtrlModel->setAwtModelMode();
-    mxCtrlModel->importProperty( XML_Size, CREATE_OUSTRING( "10;10" ) );
+    mxCtrlModel->importProperty( XML_Size, "10;10" );
 }
 
 } // namespace
 
-// ============================================================================
+
 
 VbaSiteModel::VbaSiteModel() :
     maPos( 0, 0 ),
@@ -226,11 +216,6 @@ void VbaSiteModel::moveRelative( const AxPairData& rDistance )
     maPos.second += rDistance.second;
 }
 
-bool VbaSiteModel::isVisible() const
-{
-    return getFlag( mnFlags, VBA_SITE_VISIBLE );
-}
-
 bool VbaSiteModel::isContainer() const
 {
     return !getFlag( mnFlags, VBA_SITE_OSTREAM );
@@ -246,9 +231,9 @@ OUString VbaSiteModel::getSubStorageName() const
     if( mnId >= 0 )
     {
         OUStringBuffer aBuffer;
-        aBuffer.append( sal_Unicode( 'i' ) );
+        aBuffer.append( 'i' );
         if( mnId < 10 )
-            aBuffer.append( sal_Unicode( '0' ) );
+            aBuffer.append( '0' );
         aBuffer.append( mnId );
         return aBuffer.makeStringAndClear();
     }
@@ -273,13 +258,16 @@ ControlModelRef VbaSiteModel::createControlModel( const AxClassTable& rClassTabl
             case VBA_SITE_TEXTBOX:          xCtrlModel.reset( new AxTextBoxModel );         break;
             case VBA_SITE_LISTBOX:          xCtrlModel.reset( new AxListBoxModel );         break;
             case VBA_SITE_COMBOBOX:         xCtrlModel.reset( new AxComboBoxModel );        break;
-            case VBA_SITE_SPINBUTTON:       /*xCtrlModel.reset( new AxSpinButtonModel );*/  break;  // not supported (?)
+            case VBA_SITE_SPINBUTTON:       xCtrlModel.reset( new AxSpinButtonModel );      break;
             case VBA_SITE_SCROLLBAR:        xCtrlModel.reset( new AxScrollBarModel );       break;
-            case VBA_SITE_TABSTRIP:                                                         break;  // not supported
+            case VBA_SITE_TABSTRIP:         xCtrlModel.reset( new AxTabStripModel );
+            break;
             case VBA_SITE_FRAME:            xCtrlModel.reset( new AxFrameModel );           break;
-            case VBA_SITE_MULTIPAGE:                                                        break;  // not supported
-            case VBA_SITE_FORM:                                                             break;  // not supported
-            default:    OSL_ENSURE( false, "VbaSiteModel::createControlModel - unknown type index" );
+            case VBA_SITE_MULTIPAGE:        xCtrlModel.reset( new AxMultiPageModel );
+            break;
+            case VBA_SITE_FORM:             xCtrlModel.reset( new AxPageModel );
+            break;
+            default:    OSL_FAIL( "VbaSiteModel::createControlModel - unknown type index" );
         }
     }
     else
@@ -288,11 +276,11 @@ ControlModelRef VbaSiteModel::createControlModel( const AxClassTable& rClassTabl
         OSL_ENSURE( pGuid, "VbaSiteModel::createControlModel - invalid class table index" );
         if( pGuid )
         {
-            if( pGuid->equalsAscii( COMCTL_GUID_SCROLLBAR_60 ) )
+            if( *pGuid == COMCTL_GUID_SCROLLBAR_60 )
                 xCtrlModel.reset( new ComCtlScrollBarModel( 6 ) );
-            else if( pGuid->equalsAscii( COMCTL_GUID_PROGRESSBAR_50 ) )
+            else if( *pGuid == COMCTL_GUID_PROGRESSBAR_50 )
                 xCtrlModel.reset( new ComCtlProgressBarModel( 5 ) );
-            else if( pGuid->equalsAscii( COMCTL_GUID_PROGRESSBAR_60 ) )
+            else if( *pGuid == COMCTL_GUID_PROGRESSBAR_60 )
                 xCtrlModel.reset( new ComCtlProgressBarModel( 6 ) );
         }
     }
@@ -332,12 +320,7 @@ void VbaSiteModel::convertProperties( PropertyMap& rPropMap,
     }
 }
 
-void VbaSiteModel::bindToSources( const Reference< XControlModel >& rxCtrlModel, const ControlConverter& rConv ) const
-{
-    rConv.bindToSources( rxCtrlModel, maControlSource, maRowSource );
-}
 
-// ============================================================================
 
 VbaFormControl::VbaFormControl()
 {
@@ -372,11 +355,6 @@ OUString VbaFormControl::getControlName() const
     return mxSiteModel.get() ? mxSiteModel->getName() : OUString();
 }
 
-sal_Int32 VbaFormControl::getControlId() const
-{
-    return mxSiteModel.get() ? mxSiteModel->getId() : -1;
-}
-
 void VbaFormControl::createAndConvert( sal_Int32 nCtrlIndex,
         const Reference< XNameContainer >& rxParentNC, const ControlConverter& rConv ) const
 {
@@ -396,7 +374,7 @@ void VbaFormControl::createAndConvert( sal_Int32 nCtrlIndex,
             ContainerHelper::insertByName( rxParentNC, rCtrlName, Any( xCtrlModel ) );
         }
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
@@ -419,7 +397,7 @@ void VbaFormControl::importStorage( StorageBase& rStrg, const AxClassTable& rCla
     {
         /*  Open the 'f' stream containing the model of this control and a list
             of site models for all child controls. */
-        BinaryXInputStream aFStrm( rStrg.openInputStream( CREATE_OUSTRING( "f" ) ), true );
+        BinaryXInputStream aFStrm( rStrg.openInputStream( "f" ), true );
         OSL_ENSURE( !aFStrm.isEof(), "VbaFormControl::importStorage - missing 'f' stream" );
 
         /*  Read the properties of this container control and the class table
@@ -431,18 +409,73 @@ void VbaFormControl::importStorage( StorageBase& rStrg, const AxClassTable& rCla
                 maControls vector). Ignore failure of importSiteModels() but
                 try to import as much controls as possible. */
             importEmbeddedSiteModels( aFStrm );
-
             /*  Open the 'o' stream containing models of embedded simple
                 controls. Stream may be empty or missing, if this control
                 contains no controls or only container controls. */
-            BinaryXInputStream aOStrm( rStrg.openInputStream( CREATE_OUSTRING( "o" ) ), true );
+            BinaryXInputStream aOStrm( rStrg.openInputStream( "o" ), true );
 
             /*  Iterate over all embedded controls, import model from 'o'
                 stream (for embedded simple controls) or from the substorage
                 (for embedded container controls). */
             maControls.forEachMem( &VbaFormControl::importModelOrStorage,
                 ::boost::ref( aOStrm ), ::boost::ref( rStrg ), ::boost::cref( maClassTable ) );
-                
+
+            // Special handling for multi-page which has non-standard
+            // containment and additionally needs to re-order Page children
+            if ( pContainerModel->getControlType() == API_CONTROL_MULTIPAGE )
+            {
+                AxMultiPageModel* pMultiPage = dynamic_cast< AxMultiPageModel* >( pContainerModel );
+                if ( pMultiPage )
+                {
+                    BinaryXInputStream aXStrm( rStrg.openInputStream( "x" ), true );
+                    pMultiPage->importPageAndMultiPageProperties( aXStrm, maControls.size() );
+                }
+#if SUPD == 310
+                typedef std::map< sal_uInt32, ::boost::shared_ptr< VbaFormControl > > IdToPageMap;
+#else	// SUPD == 310
+                typedef boost::unordered_map< sal_uInt32, ::boost::shared_ptr< VbaFormControl > > IdToPageMap;
+#endif	// SUPD == 310
+                IdToPageMap idToPage;
+                VbaFormControlVector::iterator it = maControls.begin();
+                VbaFormControlVector::iterator it_end = maControls.end();
+                typedef std::vector< sal_uInt32 > UInt32Array;
+                AxArrayString sCaptions;
+
+                for ( ; it != it_end; ++it )
+                {
+                    if ( (*it)->mxCtrlModel->getControlType() == API_CONTROL_PAGE )
+                    {
+                        VbaSiteModelRef xPageSiteRef = (*it)->mxSiteModel;
+                        if ( xPageSiteRef.get() )
+                            idToPage[ xPageSiteRef->getId() ] = (*it);
+                    }
+                    else
+                    {
+                        AxTabStripModel* pTabStrip = static_cast<AxTabStripModel*> ( (*it)->mxCtrlModel.get() );
+                        sCaptions = pTabStrip->maItems;
+                        pMultiPage->mnActiveTab = pTabStrip->mnListIndex;
+                        pMultiPage->mnTabStyle = pTabStrip->mnTabStyle;
+                    }
+                }
+                // apply caption/titles to pages
+                UInt32Array::iterator itCtrlId = pMultiPage->mnIDs.begin();
+                UInt32Array::iterator itCtrlId_end = pMultiPage->mnIDs.end();
+                AxArrayString::iterator itCaption = sCaptions.begin();
+
+                maControls.clear();
+                // need to sort the controls according to the order of the ids
+                for ( sal_Int32 index = 1 ; ( sCaptions.size() == idToPage.size() ) && itCtrlId != itCtrlId_end; ++itCtrlId, ++itCaption, ++index )
+                {
+                    IdToPageMap::iterator iter = idToPage.find( *itCtrlId );
+                    if ( iter != idToPage.end() )
+                    {
+                        AxPageModel* pPage = static_cast<AxPageModel*> ( iter->second->mxCtrlModel.get() );
+
+                        pPage->importProperty( XML_Caption, *itCaption );
+                        maControls.push_back( iter->second );
+                    }
+                }
+            }
             /*  Reorder the controls (sorts all option buttons of an option
                 group together), and move all children of all embedded frames
                 (group boxes) to this control (UNO group boxes cannot contain
@@ -458,12 +491,13 @@ bool VbaFormControl::convertProperties( const Reference< XControlModel >& rxCtrl
     if( rxCtrlModel.is() && mxSiteModel.get() && mxCtrlModel.get() )
     {
         const OUString& rCtrlName = mxSiteModel->getName();
-        OSL_ENSURE( rCtrlName.getLength() > 0, "VbaFormControl::convertProperties - control without name" );
-        if( rCtrlName.getLength() > 0 )
+        OSL_ENSURE( !rCtrlName.isEmpty(), "VbaFormControl::convertProperties - control without name" );
+        if( !rCtrlName.isEmpty() )
         {
             // convert all properties
             PropertyMap aPropMap;
             mxSiteModel->convertProperties( aPropMap, rConv, mxCtrlModel->getControlType(), nCtrlIndex );
+            rConv.bindToSources( rxCtrlModel, mxSiteModel->getControlSource(), mxSiteModel->getRowSource() );
             mxCtrlModel->convertProperties( aPropMap, rConv );
             mxCtrlModel->convertSize( aPropMap, rConv );
             PropertySet aPropSet( rxCtrlModel );
@@ -478,9 +512,9 @@ bool VbaFormControl::convertProperties( const Reference< XControlModel >& rxCtrl
                 maControls.forEachMemWithIndex( &VbaFormControl::createAndConvert,
                     ::boost::cref( xCtrlModelNC ), ::boost::cref( rConv ) );
             }
-            catch( Exception& )
+            catch(const Exception& )
             {
-                OSL_ENSURE( false, "VbaFormControl::convertProperties - cannot get control container interface" );
+                OSL_FAIL( "VbaFormControl::convertProperties - cannot get control container interface" );
             }
 
             return true;
@@ -560,7 +594,7 @@ void VbaFormControl::finalizeEmbeddedControls()
         2)  Move all children of all embedded frames (group boxes) to this
             control (UNO group boxes cannot contain other controls).
      */
-                
+
     // first, sort all controls by original tab index
     ::std::sort( maControls.begin(), maControls.end(), &compareByTabIndex );
 
@@ -686,7 +720,7 @@ void VbaFormControl::moveEmbeddedToAbsoluteParent()
     }
 }
 
-/*static*/ bool VbaFormControl::compareByTabIndex( const VbaFormControlRef& rxLeft, const VbaFormControlRef& rxRight )
+bool VbaFormControl::compareByTabIndex( const VbaFormControlRef& rxLeft, const VbaFormControlRef& rxRight )
 {
     // sort controls without model to the end
     sal_Int32 nLeftTabIndex = rxLeft->mxSiteModel.get() ? rxLeft->mxSiteModel->getTabIndex() : SAL_MAX_INT32;
@@ -694,7 +728,7 @@ void VbaFormControl::moveEmbeddedToAbsoluteParent()
     return nLeftTabIndex < nRightTabIndex;
 }
 
-// ============================================================================
+
 
 namespace {
 
@@ -741,14 +775,14 @@ bool lclEatKeyword( OUString& rCodeLine, const OUString& rKeyword )
     {
         rCodeLine = rCodeLine.copy( rKeyword.getLength() );
         // success, if code line ends after keyword, or if whitespace follows
-        return (rCodeLine.getLength() == 0) || lclEatWhitespace( rCodeLine );
+        return rCodeLine.isEmpty() || lclEatWhitespace( rCodeLine );
     }
     return false;
 }
 
 } // namespace
 
-// ----------------------------------------------------------------------------
+
 
 VbaUserForm::VbaUserForm( const Reference< XComponentContext >& rxContext,
         const Reference< XModel >& rxDocModel, const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr ) :
@@ -761,21 +795,21 @@ VbaUserForm::VbaUserForm( const Reference< XComponentContext >& rxContext,
 }
 
 void VbaUserForm::importForm( const Reference< XNameContainer >& rxDialogLib,
-        StorageBase& rVbaFormStrg, const OUString& rModuleName, rtl_TextEncoding eTextEnc )
+                           StorageBase& rVbaFormStrg, const OUString& rModuleName, rtl_TextEncoding eTextEnc )
 {
     OSL_ENSURE( rxDialogLib.is(), "VbaUserForm::importForm - missing dialog library" );
     if( !mxContext.is() || !mxDocModel.is() || !rxDialogLib.is() )
         return;
 
     // check that the '03VBFrame' stream exists, this is required for forms
-    BinaryXInputStream aInStrm( rVbaFormStrg.openInputStream( CREATE_OUSTRING( "\003VBFrame" ) ), true );
+    BinaryXInputStream aInStrm( rVbaFormStrg.openInputStream( "\003VBFrame" ), true );
     OSL_ENSURE( !aInStrm.isEof(), "VbaUserForm::importForm - missing \\003VBFrame stream" );
     if( aInStrm.isEof() )
         return;
 
     // scan for the line 'Begin {GUID} <FormName>'
     TextInputStream aFrameTextStrm( mxContext, aInStrm, eTextEnc );
-    const OUString aBegin = CREATE_OUSTRING( "Begin" );
+    const OUString aBegin = "Begin";
     OUString aLine;
     bool bBeginFound = false;
     while( !bBeginFound && !aFrameTextStrm.isEof() )
@@ -784,16 +818,16 @@ void VbaUserForm::importForm( const Reference< XNameContainer >& rxDialogLib,
         bBeginFound = lclEatKeyword( aLine, aBegin );
     }
     // check for the specific GUID that represents VBA forms
-    if( !bBeginFound || !lclEatKeyword( aLine, CREATE_OUSTRING( "{C62A69F0-16DC-11CE-9E98-00AA00574A4F}" ) ) )
+    if( !bBeginFound || !lclEatKeyword( aLine, "{C62A69F0-16DC-11CE-9E98-00AA00574A4F}" ) )
         return;
 
     // remaining line is the form name
     OUString aFormName = aLine.trim();
-    OSL_ENSURE( aFormName.getLength() > 0, "VbaUserForm::importForm - missing form name" );
+    OSL_ENSURE( !aFormName.isEmpty(), "VbaUserForm::importForm - missing form name" );
     OSL_ENSURE( rModuleName.equalsIgnoreAsciiCase( aFormName ), "VbaUserForm::importFrameStream - form and module name mismatch" );
-    if( aFormName.getLength() == 0 )
+    if( aFormName.isEmpty() )
         aFormName = rModuleName;
-    if( aFormName.getLength() == 0 )
+    if( aFormName.isEmpty() )
         return;
     mxSiteModel.reset( new VbaSiteModel );
     mxSiteModel->importProperty( XML_Name, aFormName );
@@ -805,12 +839,12 @@ void VbaUserForm::importForm( const Reference< XNameContainer >& rxDialogLib,
     while( !bExitLoop && !aFrameTextStrm.isEof() )
     {
         aLine = aFrameTextStrm.readLine().trim();
-        bExitLoop = aLine.equalsIgnoreAsciiCaseAsciiL( RTL_CONSTASCII_STRINGPARAM( "End" ) );
+        bExitLoop = aLine.equalsIgnoreAsciiCase( "End" );
         if( !bExitLoop && VbaHelper::extractKeyValue( aKey, aValue, aLine ) )
         {
-            if( aKey.equalsIgnoreAsciiCaseAsciiL( RTL_CONSTASCII_STRINGPARAM( "Caption" ) ) )
+            if( aKey.equalsIgnoreAsciiCase( "Caption" ) )
                 mxCtrlModel->importProperty( XML_Caption, lclGetQuotedString( aValue ) );
-            else if( aKey.equalsIgnoreAsciiCaseAsciiL( RTL_CONSTASCII_STRINGPARAM( "Tag" ) ) )
+            else if( aKey.equalsIgnoreAsciiCase( "Tag" ) )
                 mxSiteModel->importProperty( XML_Tag, lclGetQuotedString( aValue ) );
         }
     }
@@ -830,21 +864,19 @@ void VbaUserForm::importForm( const Reference< XNameContainer >& rxDialogLib,
         if( convertProperties( xDialogModel, maConverter, 0 ) )
         {
             // export the dialog to XML and insert it into the dialog library
-#if SUPD == 310
             Reference< XInputStreamProvider > xDialogSource( ::xmlscript::exportDialogModel( xDialogNC, mxContext, mxDocModel ), UNO_SET_THROW );
-#else	// SUPD == 310
-            Reference< XInputStreamProvider > xDialogSource( ::xmlscript::exportDialogModel( xDialogNC, mxContext ), UNO_SET_THROW );
-#endif	// SUPD == 310
             OSL_ENSURE( !rxDialogLib->hasByName( aFormName ), "VbaUserForm::importForm - multiple dialogs with equal name" );
             ContainerHelper::insertByName( rxDialogLib, aFormName, Any( xDialogSource ) );
         }
     }
-    catch( Exception& )
+    catch(const Exception& )
     {
     }
 }
 
-// ============================================================================
+
 
 } // namespace ole
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

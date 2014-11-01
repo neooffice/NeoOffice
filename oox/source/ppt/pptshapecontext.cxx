@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <com/sun/star/xml/sax/FastToken.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
@@ -38,8 +34,12 @@
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/customshapegeometry.hxx"
 #include "oox/drawingml/textbodycontext.hxx"
+#include "oox/drawingml/transform2dcontext.hxx"
 
-using rtl::OUString;
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
+
 using namespace oox::core;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -51,167 +51,140 @@ using namespace ::com::sun::star::xml::sax;
 namespace oox { namespace ppt {
 
 // CT_Shape
-PPTShapeContext::PPTShapeContext( ContextHandler& rParent, const SlidePersistPtr pSlidePersistPtr, oox::drawingml::ShapePtr pMasterShapePtr, oox::drawingml::ShapePtr pShapePtr )
+PPTShapeContext::PPTShapeContext( ContextHandler2Helper& rParent, const SlidePersistPtr pSlidePersistPtr, oox::drawingml::ShapePtr pMasterShapePtr, oox::drawingml::ShapePtr pShapePtr )
 : oox::drawingml::ShapeContext( rParent, pMasterShapePtr, pShapePtr )
 , mpSlidePersistPtr( pSlidePersistPtr )
 {
 }
 
-oox::drawingml::ShapePtr findPlaceholder( const sal_Int32 nMasterPlaceholder, sal_Int32 nSubTypeIndex, std::vector< oox::drawingml::ShapePtr >& rShapes )
+ContextHandlerRef PPTShapeContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
 {
-	oox::drawingml::ShapePtr aShapePtr;
-	std::vector< oox::drawingml::ShapePtr >::reverse_iterator aRevIter( rShapes.rbegin() );
-	while( aRevIter != rShapes.rend() )
-	{
-		if ( (*aRevIter)->getSubType() == nMasterPlaceholder )
-		{
-			if ( ( nSubTypeIndex == -1 ) || ( nSubTypeIndex == (*aRevIter)->getSubTypeIndex() ) )
-			{
-				aShapePtr = *aRevIter;
-				break;
-			}
-		}
-        std::vector< oox::drawingml::ShapePtr >& rChildren = (*aRevIter)->getChildren();
-        aShapePtr = findPlaceholder( nMasterPlaceholder, nSubTypeIndex, rChildren );
-		if ( aShapePtr.get() )
-			break;
-		aRevIter++;
-	}
-	return aShapePtr;
-}
+    if( getNamespace( aElementToken ) == NMSP_dsp )
+        aElementToken = NMSP_ppt | getBaseToken( aElementToken );
 
-// if nFirstPlaceholder can't be found, it will be searched for nSecondPlaceholder
-oox::drawingml::ShapePtr findPlaceholder( sal_Int32 nFirstPlaceholder, sal_Int32 nSecondPlaceholder,
-	sal_Int32 nSubTypeIndex, std::vector< oox::drawingml::ShapePtr >& rShapes )
-{
-	oox::drawingml::ShapePtr pPlaceholder = findPlaceholder( nFirstPlaceholder, nSubTypeIndex, rShapes );
-	return !nSecondPlaceholder || pPlaceholder.get() ? pPlaceholder : findPlaceholder( nSecondPlaceholder, nSubTypeIndex, rShapes );
-}
+    switch( aElementToken )
+    {
+        // nvSpPr CT_ShapeNonVisual begin
+        //  case PPT_TOKEN( drElemPr ):
+        //      break;
+        case PPT_TOKEN( cNvPr ):
+        {
+            mpShapePtr->setHidden( rAttribs.getBool( XML_hidden, false ) );
+            mpShapePtr->setId( rAttribs.getString( XML_id ).get() );
+            mpShapePtr->setName( rAttribs.getString( XML_name ).get() );
+            break;
+        }
+        case PPT_TOKEN( ph ):
+        {
+            sal_Int32 nSubType( rAttribs.getToken( XML_type, XML_obj ) );
+            mpShapePtr->setSubType( nSubType );
+            if( rAttribs.hasAttribute( XML_idx ) )
+                mpShapePtr->setSubTypeIndex( rAttribs.getString( XML_idx ).get().toInt32() );
+            if ( nSubType )
+            {
+                PPTShape* pPPTShapePtr = dynamic_cast< PPTShape* >( mpShapePtr.get() );
+                if ( pPPTShapePtr )
+                {
+                    oox::ppt::ShapeLocation eShapeLocation = pPPTShapePtr->getShapeLocation();
+                    if ( ( eShapeLocation == Slide ) || ( eShapeLocation == Layout ) )
+                    {
+                        // inheriting properties from placeholder objects by cloning shape
+                        sal_Int32 nFirstPlaceholder = 0;
+                        sal_Int32 nSecondPlaceholder = 0;
+                        switch( nSubType )
+                        {
+                            case XML_ctrTitle :     // slide/layout
+                                  nFirstPlaceholder = XML_ctrTitle;
+                                  nSecondPlaceholder = XML_title;
+                              break;
 
-Reference< XFastContextHandler > PPTShapeContext::createFastChildContext( sal_Int32 aElementToken, const Reference< XFastAttributeList >& xAttribs ) throw (SAXException, RuntimeException)
-{
-	Reference< XFastContextHandler > xRet;
+                              case XML_subTitle :       // slide/layout
+                                  nFirstPlaceholder = XML_subTitle;
+                                  nSecondPlaceholder = XML_body;
+                              break;
 
-	switch( aElementToken )
-	{
-		// nvSpPr CT_ShapeNonVisual begin
-		//	case PPT_TOKEN( drElemPr ):
-		//		break;
-		case PPT_TOKEN( cNvPr ):
-		{
-			AttributeList aAttribs( xAttribs );
-			mpShapePtr->setHidden( aAttribs.getBool( XML_hidden, false ) );
-			mpShapePtr->setId( xAttribs->getOptionalValue( XML_id ) );
-			mpShapePtr->setName( xAttribs->getOptionalValue( XML_name ) );
-			break;
-		}
-		case PPT_TOKEN( ph ):
-		{
-			sal_Int32 nSubType( xAttribs->getOptionalValueToken( XML_type, XML_obj ) );
-			mpShapePtr->setSubType( nSubType );
-			mpShapePtr->setSubTypeIndex( xAttribs->getOptionalValue( XML_idx ).toInt32() );
-			if ( nSubType )
-			{
-				PPTShape* pPPTShapePtr = dynamic_cast< PPTShape* >( mpShapePtr.get() );
-				if ( pPPTShapePtr )
-				{
-					oox::ppt::ShapeLocation eShapeLocation = pPPTShapePtr->getShapeLocation();
-					if ( ( eShapeLocation == Slide ) || ( eShapeLocation == Layout ) )
-					{
-						// inheriting properties from placeholder objects by cloning shape
-						sal_Int32 nFirstPlaceholder = 0;
-						sal_Int32 nSecondPlaceholder = 0;
-						switch( nSubType )
-						{
-							case XML_ctrTitle :		// slide/layout
-	  							nFirstPlaceholder = XML_ctrTitle;
-  								nSecondPlaceholder = XML_title;
-  							break;
+                             case XML_obj :         // slide/layout
+                                  nFirstPlaceholder = XML_obj;
+                                  nSecondPlaceholder = XML_body;
+                              break;
 
-	  						case XML_subTitle :		// slide/layout
-	  							nFirstPlaceholder = XML_subTitle;
-	  							nSecondPlaceholder = XML_title;
-  							break;
+                            case XML_dt :           // slide/layout/master/notes/notesmaster/handoutmaster
+                              case XML_sldNum :     // slide/layout/master/notes/notesmaster/handoutmaster
+                              case XML_ftr :            // slide/layout/master/notes/notesmaster/handoutmaster
+                              case XML_hdr :            // notes/notesmaster/handoutmaster
+                              case XML_body :           // slide/layout/master/notes/notesmaster
+                              case XML_title :      // slide/layout/master/
+                              case XML_chart :      // slide/layout
+                              case XML_tbl :            // slide/layout
+                              case XML_clipArt :        // slide/layout
+                              case XML_dgm :            // slide/layout
+                              case XML_media :      // slide/layout
+                              case XML_sldImg :     // notes/notesmaster
+                              case XML_pic :            // slide/layout
+                                  nFirstPlaceholder = nSubType;
+                              default:
+                                  break;
+                        }
+                          if ( nFirstPlaceholder )
+                          {
+                              oox::drawingml::ShapePtr pPlaceholder;
+                              if ( eShapeLocation == Layout )       // for layout objects the referenced object can be found within the same shape tree
+                              {
+                                  pPlaceholder = PPTShape::findPlaceholder( nFirstPlaceholder, nSecondPlaceholder,
+                                          pPPTShapePtr->getSubTypeIndex(), mpSlidePersistPtr->getShapes()->getChildren(), true );
+                              }
+                              else if ( eShapeLocation == Slide )   // normal slide shapes have to search within the corresponding master tree for referenced objects
+                              {
+                                  SlidePersistPtr pMasterPersist( mpSlidePersistPtr->getMasterPersist() );
+                                  if ( pMasterPersist.get() )
+                                  {
+                                      pPlaceholder = PPTShape::findPlaceholder( nFirstPlaceholder, nSecondPlaceholder,
+                                              pPPTShapePtr->getSubTypeIndex(), pMasterPersist->getShapes()->getChildren() );
+                                  }
+                              }
+                              if ( pPlaceholder.get() )
+                              {
+                                  SAL_INFO("oox.ppt","shape " << mpShapePtr->getId() <<
+                                          " will get shape reference " << pPlaceholder->getId() << " applied");
+                                  mpShapePtr->applyShapeReference( *pPlaceholder.get() );
+                                  PPTShape* pPPTShape = dynamic_cast< PPTShape* >( pPlaceholder.get() );
+                                  if ( pPPTShape )
+                                      pPPTShape->setReferenced( true );
+                                  pPPTShapePtr->setPlaceholder( pPlaceholder );
+                              }
+                          }
+                    }
+                  }
 
-	 						case XML_obj :			// slide/layout
-	  							nFirstPlaceholder = XML_obj;
-	  							nSecondPlaceholder = XML_body;
-  							break;
+              }
+              break;
+        }
 
-							case XML_dt :			// slide/layout/master/notes/notesmaster/handoutmaster
-	  						case XML_sldNum :		// slide/layout/master/notes/notesmaster/handoutmaster
-	  						case XML_ftr :			// slide/layout/master/notes/notesmaster/handoutmaster
-	  						case XML_hdr :			// notes/notesmaster/handoutmaster
-	  						case XML_body :			// slide/layout/master/notes/notesmaster
-	  						case XML_title :		// slide/layout/master/
-	  						case XML_chart :		// slide/layout
-	  						case XML_tbl :			// slide/layout
-	  						case XML_clipArt :		// slide/layout
-	  						case XML_dgm :			// slide/layout
-	  						case XML_media :		// slide/layout
-	  						case XML_sldImg :		// notes/notesmaster
-	  						case XML_pic :			// slide/layout
-	  							nFirstPlaceholder = nSubType;
-	  						default:
-	  							break;
-						}
-  						if ( nFirstPlaceholder )
-  						{
-  							oox::drawingml::ShapePtr pPlaceholder;
-  							if ( eShapeLocation == Layout )		// for layout objects the referenced object can be found within the same shape tree
-								pPlaceholder = findPlaceholder( nFirstPlaceholder, nSecondPlaceholder, -1, mpSlidePersistPtr->getShapes()->getChildren() );
-  							else if ( eShapeLocation == Slide )	// normal slide shapes have to search within the corresponding master tree for referenced objects
-  							{
-  								SlidePersistPtr pMasterPersist( mpSlidePersistPtr->getMasterPersist() );
-  								if ( pMasterPersist.get() )
-								{
-									if ( mpSlidePersistPtr->isNotesPage() )
-										pPlaceholder = findPlaceholder( nFirstPlaceholder, nSecondPlaceholder, -1, pMasterPersist->getShapes()->getChildren() );
-									else
-										pPlaceholder = findPlaceholder( nFirstPlaceholder, nSecondPlaceholder,
-										pPPTShapePtr->getSubTypeIndex(), pMasterPersist->getShapes()->getChildren() );
-								}
-  							}
-  							if ( pPlaceholder.get() )
-  							{
-  								mpShapePtr->applyShapeReference( *pPlaceholder.get() );
-  								PPTShape* pPPTShape = dynamic_cast< PPTShape* >( pPlaceholder.get() );
-  								if ( pPPTShape )
-  									pPPTShape->setReferenced( sal_True );
-  							}
-  						}
-					}
-  				}
+        // nvSpPr CT_ShapeNonVisual end
 
-  			}
-	  		break;
-		}
+        case PPT_TOKEN( spPr ):
+            return new PPTShapePropertiesContext( *this, *mpShapePtr );
 
-		// nvSpPr CT_ShapeNonVisual end
+        case PPT_TOKEN( style ):
+            return new oox::drawingml::ShapeStyleContext( *this, *mpShapePtr );
 
-		case PPT_TOKEN( spPr ):
-			xRet = new PPTShapePropertiesContext( *this, *mpShapePtr );
-			break;
+        case PPT_TOKEN( txBody ):
+        {
+            oox::drawingml::TextBodyPtr xTextBody( new oox::drawingml::TextBody( mpShapePtr->getTextBody() ) );
+            xTextBody->getTextProperties().maPropertyMap.setProperty( PROP_FontIndependentLineSpacing, true );
+            mpShapePtr->setTextBody( xTextBody );
+            return new oox::drawingml::TextBodyContext( *this, *xTextBody );
+        }
+        case PPT_TOKEN( txXfrm ):
+        {
+            return new oox::drawingml::Transform2DContext( *this, rAttribs, *mpShapePtr, true );
+        }
+    }
 
-		case PPT_TOKEN( style ):
-			xRet = new oox::drawingml::ShapeStyleContext( *this, *mpShapePtr );
-			break;
-
-		case PPT_TOKEN( txBody ):
-		{
-			oox::drawingml::TextBodyPtr xTextBody( new oox::drawingml::TextBody );
-			xTextBody->getTextProperties().maPropertyMap[ PROP_FontIndependentLineSpacing ] <<= static_cast< sal_Bool >( sal_True );
-			mpShapePtr->setTextBody( xTextBody );
-			xRet = new oox::drawingml::TextBodyContext( *this, *xTextBody );
-			break;
-		}
-	}
-
-	if( !xRet.is() )
-		xRet.set( this );
-
-	return xRet;
+    return this;
 }
 
 
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

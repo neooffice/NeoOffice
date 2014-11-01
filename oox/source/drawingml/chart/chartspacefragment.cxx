@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/chart/chartspacefragment.hxx"
 
@@ -33,16 +29,15 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-// ============================================================================
+
 
 using namespace ::oox::core;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 ChartSpaceFragment::ChartSpaceFragment( XmlFilterBase& rFilter, const OUString& rFragmentPath, ChartSpaceModel& rModel ) :
-    FragmentBase< ChartSpaceModel >( rFilter, rFragmentPath, rModel )
+    FragmentBase< ChartSpaceModel >( rFilter, rFragmentPath, rModel ),
+    mpFilterBase(rFilter)
 {
 }
 
@@ -80,6 +75,9 @@ ContextHandlerRef ChartSpaceFragment::onCreateContext( sal_Int32 nElement, const
                 case C_TOKEN( pivotSource ):
                     mrModel.mbPivotChart = true;
                     return 0;
+                case C_TOKEN (externalData):
+                    mrModel.maSheetPath = getFragmentPathFromRelId(rAttribs.getString(R_TOKEN(id),OUString()));
+                    return 0;
             }
         break;
 
@@ -87,8 +85,7 @@ ContextHandlerRef ChartSpaceFragment::onCreateContext( sal_Int32 nElement, const
             switch( nElement )
             {
                 case C_TOKEN( autoTitleDeleted ):
-                    // default is 'false', not 'true' as specified
-                    mrModel.mbAutoTitleDel = rAttribs.getBool( XML_val, false );
+                    mrModel.mbAutoTitleDel = rAttribs.getBool( XML_val, true );
                     return 0;
                 case C_TOKEN( backWall ):
                     return new WallFloorContext( *this, mrModel.mxBackWall.create() );
@@ -121,8 +118,10 @@ ContextHandlerRef ChartSpaceFragment::onCreateContext( sal_Int32 nElement, const
     return 0;
 }
 
-// ============================================================================
+
 
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

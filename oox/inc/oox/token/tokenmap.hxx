@@ -1,37 +1,37 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_TOKEN_TOKENMAP_HXX
-#define OOX_TOKEN_TOKENMAP_HXX
+#ifndef INCLUDED_OOX_TOKEN_TOKENMAP_HXX
+#define INCLUDED_OOX_TOKEN_TOKENMAP_HXX
 
 #include <vector>
 #include <rtl/instance.hxx>
 #include <rtl/ustring.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
+#if SUPD == 310
+#include <oox/dllapi.h>
+#endif	// SUPD == 310
+
 namespace oox {
 
-// ============================================================================
+
 
 class TokenMap
 {
@@ -40,10 +40,10 @@ public:
                         ~TokenMap();
 
     /** Returns the Unicode name of the passed token identifier. */
-    ::rtl::OUString     getUnicodeTokenName( sal_Int32 nToken ) const;
+    OUString     getUnicodeTokenName( sal_Int32 nToken ) const;
 
     /** Returns the token identifier for the passed Unicode token name. */
-    sal_Int32           getTokenFromUnicode( const ::rtl::OUString& rUnicodeName ) const;
+    sal_Int32           getTokenFromUnicode( const OUString& rUnicodeName ) const;
 
     /** Returns the UTF8 name of the passed token identifier as byte sequence. */
     ::com::sun::star::uno::Sequence< sal_Int8 >
@@ -51,26 +51,48 @@ public:
 
     /** Returns the token identifier for the passed UTF8 token name. */
     sal_Int32           getTokenFromUtf8(
-                            const ::com::sun::star::uno::Sequence< sal_Int8 >& rUtf8Name ) const;
+                            const ::com::sun::star::uno::Sequence< sal_Int8 >& rUtf8Name ) const
+    {
+        return getTokenFromUTF8( reinterpret_cast< const char * >(
+                                rUtf8Name.getConstArray() ),
+                             rUtf8Name.getLength() );
+    }
+
+    /** Returns the token identifier for a UTF8 string passed in pToken */
+    sal_Int32 getTokenFromUTF8( const char *pToken, sal_Int32 nLength ) const
+    {
+        // 50% of OOXML tokens are primarily 1 lower-case character, a-z
+        if( nLength == 1)
+        {
+            sal_Char c = pToken[0];
+            if (c >= 'a' && c <= 'z')
+                return mnAlphaTokens[ c - 'a' ];
+        }
+        return getTokenPerfectHash( pToken, nLength );
+    }
 
 private:
+    sal_Int32 getTokenPerfectHash( const char *pToken, sal_Int32 nLength ) const;
+
     struct TokenName
     {
-        ::rtl::OUString maUniName;
+        OUString maUniName;
         ::com::sun::star::uno::Sequence< sal_Int8 > maUtf8Name;
     };
     typedef ::std::vector< TokenName > TokenNameVector;
 
     TokenNameVector     maTokenNames;
+    sal_Int32           mnAlphaTokens[26];
 };
 
-// ============================================================================
+
 
 struct StaticTokenMap : public ::rtl::Static< TokenMap, StaticTokenMap > {};
 
-// ============================================================================
+
 
 } // namespace oox
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

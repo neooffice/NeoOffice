@@ -1,44 +1,43 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef OOX_DRAWINGML_COLOR_HXX
-#define OOX_DRAWINGML_COLOR_HXX
+#ifndef INCLUDED_OOX_DRAWINGML_COLOR_HXX
+#define INCLUDED_OOX_DRAWINGML_COLOR_HXX
 
 #include <vector>
 #include <boost/shared_ptr.hpp>
+#include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/uno/Sequence.hxx>
 #include <sal/types.h>
 #include <rtl/instance.hxx>
 #include <rtl/ustring.hxx>
-#include "oox/helper/helper.hxx"
+#include <oox/helper/helper.hxx>
+#include <oox/dllapi.h>
 
 namespace oox { class GraphicHelper; }
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
 
-class Color
+
+class OOX_DLLPUBLIC Color
 {
 public:
                         Color();
@@ -61,6 +60,8 @@ public:
     void                setPrstClr( sal_Int32 nToken );
     /** Sets a scheme color from the a:schemeClr element. */
     void                setSchemeClr( sal_Int32 nToken );
+    /** Sets the scheme name from the a:schemeClr element for interoperability purposes */
+    void                setSchemeName( const OUString& sSchemeName ) { msSchemeName = sSchemeName; }
     /** Sets a system color from the a:sysClr element. */
     void                setSysClr( sal_Int32 nToken, sal_Int32 nLastRgb );
     /** Sets a palette color index. */
@@ -78,7 +79,7 @@ public:
     void                clearTransparence();
 
     /** Overwrites this color with the passed color, if it is used. */
-    inline void         assignIfUsed( const Color& rColor ) { if( rColor.isUsed() ) *this = rColor; }
+    void                assignIfUsed( const Color& rColor ) { if( rColor.isUsed() ) *this = rColor; }
 
     /** Returns true, if the color is initialized. */
     bool                isUsed() const { return meMode != COLOR_UNUSED; }
@@ -92,6 +93,16 @@ public:
     bool                hasTransparency() const;
     /** Returns the transparency of the color (0 = opaque, 100 = full transparent). */
     sal_Int16           getTransparency() const;
+
+    /** Returns the scheme name from the a:schemeClr element for interoperability purposes */
+    OUString            getSchemeName() const { return msSchemeName; }
+    /** Returns the unaltered list of transformations for interoperability purposes */
+    ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue > getTransformations() const;
+
+    /** Translates between color transformation tokens and their names */
+    static OUString     getColorTransformationName( sal_Int32 nElement );
+    /** Translates between color transformation token names and the corresponding token */
+    static sal_Int32    getColorTransformationToken( const OUString& sName );
 
 private:
     /** Internal helper for getColor(). */
@@ -133,14 +144,19 @@ private:
     mutable sal_Int32   mnC2;           /// Green, green%, saturation, or system default RGB.
     mutable sal_Int32   mnC3;           /// Blue, blue%, or luminance.
     sal_Int32           mnAlpha;        /// Alpha value (color opacity).
+
+    OUString            msSchemeName;   /// Scheme name from the a:schemeClr element for interoperability purposes
+    ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >
+                        maInteropTransformations;   /// Unaltered list of transformations for interoperability purposes
 };
 
 typedef boost::shared_ptr< Color > ColorPtr;
 
-// ============================================================================
+
 
 } // namespace drawingml
 } // namespace oox
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/vml/vmlshapecontainer.hxx"
 
@@ -29,15 +25,13 @@
 namespace oox {
 namespace vml {
 
-// ============================================================================
+
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 
-using ::rtl::OUString;
 
-// ============================================================================
 
 namespace {
 
@@ -47,10 +41,10 @@ void lclMapShapesById( RefMap< OUString, ShapeType >& orMap, const RefVector< Sh
     for( typename RefVector< ShapeType >::const_iterator aIt = rVector.begin(), aEnd = rVector.end(); aIt != aEnd; ++aIt )
     {
         const OUString& rShapeId = (*aIt)->getShapeId();
-        OSL_ENSURE( rShapeId.getLength() > 0, "lclMapShapesById - missing shape identifier" );
-        if( rShapeId.getLength() > 0 )
+        OSL_ENSURE( !rShapeId.isEmpty(), "lclMapShapesById - missing shape identifier" );
+        if( !rShapeId.isEmpty() )
         {
-            OSL_ENSURE( orMap.find( rShapeId ) == orMap.end(), "lclMapShapesById - shape identifier already used" );
+            OSL_ENSURE( orMap.find( rShapeId ) == orMap.end(), "lclMapShapesById - shape identifier already used " );
             orMap[ rShapeId ] = *aIt;
         }
     }
@@ -58,7 +52,7 @@ void lclMapShapesById( RefMap< OUString, ShapeType >& orMap, const RefVector< Sh
 
 } // namespace
 
-// ============================================================================
+
 
 ShapeContainer::ShapeContainer( Drawing& rDrawing ) :
     mrDrawing( rDrawing )
@@ -113,11 +107,26 @@ const ShapeBase* ShapeContainer::getShapeById( const OUString& rShapeId, bool bD
    return 0;
 }
 
-const ShapeBase* ShapeContainer::getFirstShape() const
+boost::shared_ptr< ShapeBase > ShapeContainer::takeLastShape()
 {
-    OSL_ENSURE( mrDrawing.getType() == VMLDRAWING_WORD, "ShapeContainer::getFirstShape - illegal call, Word filter only" );
-    OSL_ENSURE( maShapes.size() == 1, "ShapeContainer::getFirstShape - single shape expected" );
-    return maShapes.get( 0 ).get();
+    OSL_ENSURE( mrDrawing.getType() == VMLDRAWING_WORD, "ShapeContainer::takeLastShape - illegal call, Word filter only" );
+    assert( !markStack.empty());
+    if( markStack.top() >= maShapes.size())
+        return boost::shared_ptr< ShapeBase >();
+    boost::shared_ptr< ShapeBase > ret = maShapes.back();
+    maShapes.pop_back();
+    return ret;
+}
+
+void ShapeContainer::pushMark()
+{
+    markStack.push( maShapes.size());
+}
+
+void ShapeContainer::popMark()
+{
+    assert( !markStack.empty());
+    markStack.pop();
 }
 
 void ShapeContainer::convertAndInsert( const Reference< XShapes >& rxShapes, const ShapeParentAnchor* pParentAnchor ) const
@@ -126,7 +135,9 @@ void ShapeContainer::convertAndInsert( const Reference< XShapes >& rxShapes, con
         (*aIt)->convertAndInsert( rxShapes, pParentAnchor );
 }
 
-// ============================================================================
+
 
 } // namespace vml
 } // namespace oox
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

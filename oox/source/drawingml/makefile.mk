@@ -83,6 +83,17 @@ SLOFILES =	\
 		$(SLO)$/themefragmenthandler.obj\
 		$(SLO)$/transform2dcontext.obj
 
+.IF "$(UPD)" == "310"
+SLOFILES += \
+		$(SLO)$/ThemeOverrideFragmentHandler.obj \
+		$(SLO)$/customshapepresetdata.obj \
+		$(SLO)$/effectproperties.obj \
+		$(SLO)$/effectpropertiescontext.obj \
+		$(SLO)$/scene3dcontext.obj \
+		$(SLO)$/shape3dproperties.obj \
+		$(SLO)$/texteffectscontext.obj
+.ENDIF		# "$(UPD)" != "310"
+
 # --- Targets -------------------------------------------------------
 
 .INCLUDE :  target.mk

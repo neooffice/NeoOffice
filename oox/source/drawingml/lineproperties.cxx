@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "oox/drawingml/lineproperties.hxx"
 #include <vector>
@@ -38,20 +34,18 @@
 #include "oox/helper/graphichelper.hxx"
 #include "oox/token/tokens.hxx"
 
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::drawing;
 
-using ::rtl::OUString;
-using ::rtl::OUStringBuffer;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::awt::Point;
 using ::com::sun::star::container::XNameContainer;
 
 namespace oox {
 namespace drawingml {
 
-// ============================================================================
+
 
 namespace {
 
@@ -88,7 +82,7 @@ void lclConvertPresetDash( LineDash& orLineDash, sal_Int32 nPresetDash )
         case XML_sysDashDotDot: lclSetDashData( orLineDash, 2, 1, 1, 3, 1 );    break;
 
         default:
-            OSL_ENSURE( false, "lclConvertPresetDash - unsupported preset dash" );
+            OSL_FAIL( "lclConvertPresetDash - unsupported preset dash" );
             lclSetDashData( orLineDash, 0, 0, 1, 4, 3 );
     }
 }
@@ -102,7 +96,7 @@ void lclConvertCustomDash( LineDash& orLineDash, const LineProperties::DashStopV
 {
     if( rCustomDash.empty() )
     {
-        OSL_ENSURE( false, "lclConvertCustomDash - unexpected empty custom dash" );
+        OSL_FAIL( "lclConvertCustomDash - unexpected empty custom dash" );
         lclSetDashData( orLineDash, 0, 0, 1, 4, 3 );
         return;
     }
@@ -113,19 +107,26 @@ void lclConvertCustomDash( LineDash& orLineDash, const LineProperties::DashStopV
     sal_Int16 nDashes = 0;
     sal_Int32 nDashLen = 0;
     sal_Int32 nDistance = 0;
+    sal_Int32 nConvertedLen = 0;
+    sal_Int32 nConvertedDistance = 0;
     for( LineProperties::DashStopVector::const_iterator aIt = rCustomDash.begin(), aEnd = rCustomDash.end(); aIt != aEnd; ++aIt )
     {
-        if( aIt->first <= 2 )
+        // Get from "1000th of percent" ==> percent ==> multiplier
+        nConvertedLen      = aIt->first  / 1000 / 100;
+        nConvertedDistance = aIt->second / 1000 / 100;
+
+        // Check if it is a dot (100% = dot)
+        if( nConvertedLen == 1 )
         {
             ++nDots;
-            nDotLen += aIt->first;
+            nDotLen += nConvertedLen;
         }
         else
         {
             ++nDashes;
-            nDashLen += aIt->first;
+            nDashLen += nConvertedLen;
         }
-        nDistance += aIt->second;
+        nDistance += nConvertedDistance;
     }
     orLineDash.DotLen = (nDots > 0) ? ::std::max< sal_Int32 >( nDotLen / nDots, 1 ) : 0;
     orLineDash.Dots = nDots;
@@ -136,6 +137,7 @@ void lclConvertCustomDash( LineDash& orLineDash, const LineProperties::DashStopV
 
 DashStyle lclGetDashStyle( sal_Int32 nToken )
 {
+    OSL_ASSERT((nToken & sal_Int32(0xFFFF0000))==0);
     switch( nToken )
     {
         case XML_rnd:   return DashStyle_ROUNDRELATIVE;
@@ -147,6 +149,7 @@ DashStyle lclGetDashStyle( sal_Int32 nToken )
 
 LineJoint lclGetLineJoint( sal_Int32 nToken )
 {
+    OSL_ASSERT((nToken & sal_Int32(0xFFFF0000))==0);
     switch( nToken )
     {
         case XML_round: return LineJoint_ROUND;
@@ -162,6 +165,7 @@ const sal_Int32 OOX_ARROWSIZE_LARGE     = 2;
 
 sal_Int32 lclGetArrowSize( sal_Int32 nToken )
 {
+    OSL_ASSERT((nToken & sal_Int32(0xFFFF0000))==0);
     switch( nToken )
     {
         case XML_sm:    return OOX_ARROWSIZE_SMALL;
@@ -171,7 +175,7 @@ sal_Int32 lclGetArrowSize( sal_Int32 nToken )
     return OOX_ARROWSIZE_MEDIUM;
 }
 
-// ----------------------------------------------------------------------------
+
 
 void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
         const LineArrowProperties& rArrowProps, sal_Int32 nLineWidth, bool bLineEnd )
@@ -184,34 +188,39 @@ void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
     sal_Int32 nMarkerWidth = 0;
     bool bMarkerCenter = false;
     sal_Int32 nArrowType = rArrowProps.moArrowType.get( XML_none );
+    OSL_ASSERT((nArrowType & sal_Int32(0xFFFF0000))==0);
     switch( nArrowType )
     {
         case XML_triangle:
-            aBuffer.append( CREATE_OUSTRING( "msArrowEnd" ) );
+            aBuffer.append( "msArrowEnd" );
         break;
         case XML_arrow:
-            aBuffer.append( CREATE_OUSTRING( "msArrowOpenEnd" ) );
+            aBuffer.append( "msArrowOpenEnd" );
         break;
         case XML_stealth:
-            aBuffer.append( CREATE_OUSTRING( "msArrowStealthEnd" ) );
+            aBuffer.append( "msArrowStealthEnd" );
         break;
         case XML_diamond:
-            aBuffer.append( CREATE_OUSTRING( "msArrowDiamondEnd" ) );
+            aBuffer.append( "msArrowDiamondEnd" );
             bMarkerCenter = true;
         break;
         case XML_oval:
-            aBuffer.append( CREATE_OUSTRING( "msArrowOvalEnd" ) );
+            aBuffer.append( "msArrowOvalEnd" );
             bMarkerCenter = true;
         break;
     }
 
-    if( aBuffer.getLength() > 0 )
+#if SUPD == 310
+    if( aBuffer.getLength() )
+#else	// SUPD == 310
+    if( !aBuffer.isEmpty() )
+#endif	// SUPD == 310
     {
         sal_Int32 nLength = lclGetArrowSize( rArrowProps.moArrowLength.get( XML_med ) );
         sal_Int32 nWidth  = lclGetArrowSize( rArrowProps.moArrowWidth.get( XML_med ) );
 
         sal_Int32 nNameIndex = nWidth * 3 + nLength + 1;
-        aBuffer.append( sal_Unicode( ' ' ) ).append( nNameIndex );
+        aBuffer.append( ' ' ).append( nNameIndex );
         OUString aMarkerName = aBuffer.makeStringAndClear();
 
         bool bIsArrow = nArrowType == XML_arrow;
@@ -240,9 +249,10 @@ void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
         if( !rPropMap.hasNamedLineMarkerInTable( aMarkerName ) )
         {
 // pass X and Y as percentage to OOX_ARROW_POINT
-#define OOX_ARROW_POINT( x, y ) Point( static_cast< sal_Int32 >( fArrowWidth * x ), static_cast< sal_Int32 >( fArrowLength * y ) )
+#define OOX_ARROW_POINT( x, y ) awt::Point( static_cast< sal_Int32 >( fArrowWidth * x ), static_cast< sal_Int32 >( fArrowLength * y ) )
 
-            ::std::vector< Point > aPoints;
+            ::std::vector< awt::Point > aPoints;
+            OSL_ASSERT((rArrowProps.moArrowType.get() & sal_Int32(0xFFFF0000))==0);
             switch( rArrowProps.moArrowType.get() )
             {
                 case XML_triangle:
@@ -317,7 +327,7 @@ void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
     }
 
     // push the properties (filled aNamedMarker.Name indicates valid marker)
-    if( aNamedMarker.Name.getLength() > 0 )
+    if( !aNamedMarker.Name.isEmpty() )
     {
         if( bLineEnd )
         {
@@ -336,7 +346,7 @@ void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
 
 } // namespace
 
-// ============================================================================
+
 
 void LineArrowProperties::assignUsed( const LineArrowProperties& rSourceProps )
 {
@@ -345,7 +355,7 @@ void LineArrowProperties::assignUsed( const LineArrowProperties& rSourceProps )
     moArrowLength.assignIfUsed( rSourceProps.moArrowLength );
 }
 
-// ============================================================================
+
 
 void LineProperties::assignUsed( const LineProperties& rSourceProps )
 {
@@ -368,19 +378,19 @@ void LineProperties::pushToPropMap( ShapePropertyMap& rPropMap,
     if( maLineFill.moFillType.has() )
     {
         // line style (our core only supports none and solid)
-        LineStyle eLineStyle = (maLineFill.moFillType.get() == XML_noFill) ? LineStyle_NONE : LineStyle_SOLID;
-        
+        drawing::LineStyle eLineStyle = (maLineFill.moFillType.get() == XML_noFill) ? drawing::LineStyle_NONE : drawing::LineStyle_SOLID;
+
         // convert line width from EMUs to 1/100mm
-        sal_Int32 nLineWidth = convertEmuToHmm( moLineWidth.get( 0 ) );
+        sal_Int32 nLineWidth = getLineWidth();
 
         // create line dash from preset dash token (not for invisible line)
-        if( (eLineStyle != LineStyle_NONE) && (moPresetDash.differsFrom( XML_solid ) || (!moPresetDash && !maCustomDash.empty())) )
+        if( (eLineStyle != drawing::LineStyle_NONE) && (moPresetDash.differsFrom( XML_solid ) || !maCustomDash.empty()) )
         {
             LineDash aLineDash;
             aLineDash.Style = lclGetDashStyle( moLineCap.get( XML_rnd ) );
 
             // convert preset dash or custom dash
-            if( moPresetDash.has() )
+            if( moPresetDash.differsFrom( XML_solid ) )
                 lclConvertPresetDash( aLineDash, moPresetDash.get() );
             else
                 lclConvertCustomDash( aLineDash, maCustomDash );
@@ -392,7 +402,7 @@ void LineProperties::pushToPropMap( ShapePropertyMap& rPropMap,
             aLineDash.Distance *= nBaseLineWidth;
 
             if( rPropMap.setProperty( SHAPEPROP_LineDash, aLineDash ) )
-                eLineStyle = LineStyle_DASH;
+                eLineStyle = drawing::LineStyle_DASH;
         }
 
         // set final line style property
@@ -420,8 +430,32 @@ void LineProperties::pushToPropMap( ShapePropertyMap& rPropMap,
     }
 }
 
-// ============================================================================
+drawing::LineStyle LineProperties::getLineStyle() const
+{
+    // rules to calculate the line style inferred from the code in LineProperties::pushToPropMap
+    return (maLineFill.moFillType.get() == XML_noFill) ?
+            drawing::LineStyle_NONE :
+            (moPresetDash.differsFrom( XML_solid ) || (!moPresetDash && !maCustomDash.empty())) ?
+                    drawing::LineStyle_DASH :
+                    drawing::LineStyle_SOLID;
+}
+
+drawing::LineJoint LineProperties::getLineJoint() const
+{
+    if( moLineJoint.has() )
+        return lclGetLineJoint( moLineJoint.get() );
+
+    return drawing::LineJoint_NONE;
+}
+
+sal_Int32 LineProperties::getLineWidth() const
+{
+    return convertEmuToHmm( moLineWidth.get( 0 ) );
+}
+
+
 
 } // namespace drawingml
 } // namespace oox
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

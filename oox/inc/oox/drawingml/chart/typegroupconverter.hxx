@@ -1,30 +1,26 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_OOX_DRAWINGML_CHART_TYPEGROUPCONVERTER_HXX
+#define INCLUDED_OOX_DRAWINGML_CHART_TYPEGROUPCONVERTER_HXX
 
-
-#ifndef OOX_DRAWINGML_CHART_TYPEGROUPCONVERTER_HXX
-#define OOX_DRAWINGML_CHART_TYPEGROUPCONVERTER_HXX
-
-#include "oox/drawingml/chart/converterbase.hxx"
+#include <oox/drawingml/chart/converterbase.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace chart2 { class XChartType; }
@@ -37,8 +33,6 @@ namespace com { namespace sun { namespace star {
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-// ============================================================================
 
 /** Enumerates different chart types. */
 enum TypeId
@@ -59,8 +53,6 @@ enum TypeId
     TYPEID_UNKNOWN                  /// Default for unknown chart types.
 };
 
-// ----------------------------------------------------------------------------
-
 /** Enumerates different categories of similar chart types. */
 enum TypeCategory
 {
@@ -72,8 +64,6 @@ enum TypeCategory
     TYPECATEGORY_SURFACE            /// Surface charts.
 };
 
-// ----------------------------------------------------------------------------
-
 /** Enumerates modes for varying point colors in a series. */
 enum VarPointMode
 {
@@ -81,8 +71,6 @@ enum VarPointMode
     VARPOINTMODE_SINGLE,            /// Only supported, if type group contains only one series.
     VARPOINTMODE_MULTI              /// Supported for multiple series in a chart type group.
 };
-
-// ============================================================================
 
 /** Contains info for a chart type related to the OpenOffice.org chart module. */
 struct TypeGroupInfo
@@ -105,8 +93,6 @@ struct TypeGroupInfo
     bool                mbPictureOptions;       /// True = bitmaps support options from c:pictureOptions.
 };
 
-// ============================================================================
-
 struct UpDownBarsModel;
 
 class UpDownBarsConverter : public ConverterBase< UpDownBarsModel >
@@ -120,8 +106,6 @@ public:
                             const ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XChartType >& rxChartType );
 };
 
-// ============================================================================
-
 struct TypeGroupModel;
 struct View3DModel;
 
@@ -132,7 +116,7 @@ public:
     virtual             ~TypeGroupConverter();
 
     /** Returns the type info struct that describes this chart type group. */
-    inline const TypeGroupInfo& getTypeInfo() const { return maTypeInfo; }
+    const TypeGroupInfo& getTypeInfo() const { return maTypeInfo; }
 
     /** Returns true, if the series in this chart type group are stacked on each other (no percentage). */
     bool                isStacked() const;
@@ -153,7 +137,7 @@ public:
     /** Returns true, if this chart type has to reverse its series order. */
     bool                isReverseSeries() const;
     /** Returns series title, if the chart type group contains only one single series. */
-    ::rtl::OUString     getSingleSeriesTitle() const;
+    OUString     getSingleSeriesTitle() const;
 
     /** Creates a coordinate system according to the contained chart type. */
     ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XCoordinateSystem >
@@ -169,7 +153,8 @@ public:
                             sal_Int32 nAxesSetIdx, bool bSupportsVaryColorsByPoint );
 
     /** Sets the passed OOXML marker style at the passed property set. */
-    void                convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSymbol, sal_Int32 nOoxSize ) const;
+    void                convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSymbol, sal_Int32 nOoxSize,
+            ModelRef< Shape > xShapeProps ) const;
     /** Sets the passed OOXML line smoothing at the passed property set. */
     void                convertLineSmooth( PropertySet& rPropSet, bool bOoxSmooth ) const;
     /** Sets the passed OOXML bar 3D geometry at the passed property set. */
@@ -191,10 +176,10 @@ private:
     bool                mb3dChart;          /// True = type is a 3D chart type.
 };
 
-// ============================================================================
-
 } // namespace chart
 } // namespace drawingml
 } // namespace oox
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
