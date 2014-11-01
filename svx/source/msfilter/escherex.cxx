@@ -1,6 +1,7 @@
 /*************************************************************************
  *
  * Copyright 2008 by Sun Microsystems, Inc.
+ * Portions of this file are part of the LibreOffice project.
  *
  * $RCSfile$
  * $Revision$
@@ -23,7 +24,7 @@
  * for a copy of the GPLv3 License.
  *
  * Modified March 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ * GPL only under modification term 2 of the LGPL and term 3.3 of the MPL.
  *
  ************************************************************************/
 
@@ -4489,6 +4490,15 @@ void EscherEx::InsertPersistOffset( UINT32 nKey, UINT32 nOffset )
 {
 	PtInsert( ESCHER_Persist_PrivateEntry | nKey, nOffset );
 }
+
+#if SUPD == 310
+
+void EscherEx::SetEditAs( const OUString& rEditAs )
+{
+    mEditAs = rEditAs;
+}
+
+#endif	// SUPD == 310
 
 // ---------------------------------------------------------------------------------------------
 
