@@ -1562,6 +1562,11 @@ public:
         return match( str );
     }
 
+    bool startsWithIgnoreAsciiCase( OUString const & str ) const
+    {
+        return matchIgnoreAsciiCase( str );
+    }
+
     bool endsWith( OUString const & str ) const
     {
         return ( getLength() >= str.getLength() && match( str, getLength() - str.getLength() ) );
