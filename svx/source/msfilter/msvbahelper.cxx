@@ -26,6 +26,14 @@
  * <http://www.openoffice.org/license.html>
  * for a copy of the LGPLv3 License.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 #include <svx/msvbahelper.hxx>
