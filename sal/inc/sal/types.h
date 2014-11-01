@@ -390,11 +390,13 @@ enum __sal_NoAcquire
 
 namespace com { namespace sun { namespace star { } } }
 
+#if SUPD != 310
 /** short-circuit extra-verbose API namespaces
 
  @since LibreOffice 4.0
 */
 namespace css = ::com::sun::star;
+#endif	// SUPD != 310
 
 /** C++11 "= delete" feature.
 
