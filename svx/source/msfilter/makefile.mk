@@ -41,7 +41,9 @@ AUTOSEG=true
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
 .IF "$(UPD)" == "310"
-INCLOCAL += -I$(PRJ)$/..$/sal/inc
+INCLOCAL += \
+	-I$(PRJ)$/..$/sal/inc \
+	-I$(PRJ)$/..$/vcl/inc
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
@@ -81,6 +83,10 @@ EXCEPTIONSFILES= \
 	$(SLO)$/msfiltertracer.obj\
 	$(SLO)$/mstoolbar.obj\
 	$(SLO)$/msvbahelper.obj\
+
+.IF "$(UPD)" == "310"
+SLOFILES += $(SLO)$/util.obj
+.ENDIF		# "$(UPD)" == "310"
 
 .INCLUDE :  target.mk
 
