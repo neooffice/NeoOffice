@@ -21,7 +21,146 @@
 
 #include <services.hxx>
 
+#if SUPD == 310
+#include <string.h>
+#include <com/sun/star/registry/XRegistryKey.hpp>
+#endif	// SUPD == 310
+
 using namespace ::com::sun::star::uno;
+
+#if SUPD == 310
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+OOX_DLLPUBLIC void SAL_CALL component_getImplementationEnvironment( const sal_Char ** ppEnvTypeName, uno_Environment ** )
+{
+	*ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
+}
+
+void SAL_CALL writeInfo( css::registry::XRegistryKey * pRegistryKey, const OUString& rImplementationName, const css::uno::Sequence< OUString >& rServices )
+{
+	css::uno::Reference< css::registry::XRegistryKey > xNewKey(
+		pRegistryKey->createKey(
+            OUString( sal_Unicode( '/' ) ) + rImplementationName + OUString(RTL_CONSTASCII_USTRINGPARAM( "/UNO/SERVICES") ) ) );
+
+	for( sal_Int32 i = 0; i < rServices.getLength(); i++ )
+		xNewKey->createKey( rServices.getConstArray()[i]);
+}
+
+#define WRITEINFO(className)\
+	writeInfo( pKey, className##_getImplementationName(), className##_getSupportedServiceNames() )
+
+OOX_DLLPUBLIC sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKey )
+{
+	if( pRegistryKey )
+	{
+		try
+		{
+			css::registry::XRegistryKey *pKey = reinterpret_cast< css::registry::XRegistryKey * >( pRegistryKey );
+
+#if SUPD == 310
+            WRITEINFO( ::oox::core::FastTokenHandler );
+            WRITEINFO( ::oox::core::FilterDetect );
+            WRITEINFO( ::oox::docprop::DocumentPropertiesImport );
+            WRITEINFO( ::oox::ppt::PowerPointImport );
+            WRITEINFO( ::oox::ppt::QuickDiagrammingImport );
+            WRITEINFO( ::oox::ppt::QuickDiagrammingLayout );
+            WRITEINFO( ::oox::shape::ShapeContextHandler );
+#else	// SUPD == 310
+            WRITEINFO( ::oox::core::FilterDetect );
+			WRITEINFO( ::oox::ppt::PowerPointImport );
+			WRITEINFO( ::oox::ppt::QuickDiagrammingImport );
+			WRITEINFO( ::oox::ppt::QuickDiagrammingLayout );
+            WRITEINFO( ::oox::xls::BiffDetector );
+            WRITEINFO( ::oox::xls::ExcelFilter );
+            WRITEINFO( ::oox::xls::ExcelBiffFilter );
+            WRITEINFO( ::oox::shape::ShapeContextHandler );
+            WRITEINFO( ::oox::shape::FastTokenHandlerService );
+            WRITEINFO( ::oox::docprop::OOXMLDocPropImportImpl );
+#endif	// SUPD == 310
+		}
+		catch (css::registry::InvalidRegistryException &)
+		{
+			OSL_ENSURE( sal_False, "### InvalidRegistryException!" );
+		}
+	}
+    return sal_True;
+}
+
+#define SINGLEFACTORY(classname)\
+		if( classname##_getImplementationName().equalsAsciiL( pImplName, nImplNameLen ) )\
+		{\
+			xFactory = ::cppu::createSingleFactory( xMSF,\
+				classname##_getImplementationName(),\
+				classname##_createInstance,\
+				classname##_getSupportedServiceNames() );\
+		}
+
+#define SINGLEFACTORY2(classname)\
+		if( classname##_getImplementationName().equalsAsciiL( pImplName, nImplNameLen ) )\
+		{\
+			xCompFactory = ::cppu::createSingleComponentFactory(\
+				classname##_createInstance,\
+				classname##_getImplementationName(),\
+				classname##_getSupportedServiceNames() );\
+		}
+
+OOX_DLLPUBLIC void * SAL_CALL component_getFactory( const sal_Char * pImplName, void * pServiceManager, void * )
+{
+	void * pRet = 0;
+	if( pServiceManager )
+	{
+		css::uno::Reference< css::lang::XMultiServiceFactory > xMSF( reinterpret_cast< css::lang::XMultiServiceFactory * >( pServiceManager ) );
+
+		css::uno::Reference< css::lang::XSingleServiceFactory > xFactory;
+		css::uno::Reference< css::lang::XSingleComponentFactory > xCompFactory;
+
+		const sal_Int32 nImplNameLen = strlen( pImplName );
+
+		// impress oasis import
+#if SUPD == 310
+        SINGLEFACTORY2( ::oox::core::FastTokenHandler )
+        else SINGLEFACTORY2( ::oox::core::FilterDetect )
+        else SINGLEFACTORY2( ::oox::docprop::DocumentPropertiesImport )
+        else SINGLEFACTORY2( ::oox::ppt::PowerPointImport )
+        else SINGLEFACTORY2( ::oox::ppt::QuickDiagrammingImport )
+        else SINGLEFACTORY2( ::oox::ppt::QuickDiagrammingLayout )
+        else SINGLEFACTORY2( ::oox::shape::ShapeContextHandler )
+#else	// SUPD == 310
+        SINGLEFACTORY( ::oox::core::FilterDetect )
+        else SINGLEFACTORY( oox::ppt::PowerPointImport )
+        else SINGLEFACTORY( oox::ppt::QuickDiagrammingImport )
+        else SINGLEFACTORY( oox::ppt::QuickDiagrammingLayout )
+        else SINGLEFACTORY( ::oox::xls::BiffDetector )
+        else SINGLEFACTORY( ::oox::xls::ExcelFilter )
+        else SINGLEFACTORY( ::oox::xls::ExcelBiffFilter )
+        else SINGLEFACTORY( ::oox::shape::ShapeContextHandler)
+        else SINGLEFACTORY( ::oox::shape::FastTokenHandlerService)
+        else SINGLEFACTORY2( ::oox::docprop::OOXMLDocPropImportImpl )
+#endif	// SUPD == 310
+
+		if( xFactory.is())
+		{
+			xFactory->acquire();
+			pRet = xFactory.get();
+		}
+        else if ( xCompFactory.is() )
+        {
+            xCompFactory->acquire();
+            pRet = xCompFactory.get();
+        }
+	}
+	return pRet;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#else	// SUPD == 310
 
 namespace {
 
@@ -53,5 +192,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT void* SAL_CALL oox_component_getFactory( const c
 {
     return ::cppu::component_getFactoryHelper( pImplName, pServiceManager, pRegistryKey, spServices );
 }
+
+#endif	// SUPD == 310
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
