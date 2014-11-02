@@ -34,7 +34,7 @@
 #include <sax/fastsaxdllapi.h>
 
 #define SERIALIZER_IMPLEMENTATION_NAME	"com.sun.star.comp.extensions.xml.sax.FastSerializer"
-#define SERIALIZER_SERVICE_NAME		"com.sun.star.xml.sax.FastSerial"
+#define SERIALIZER_SERVICE_NAME		"com.sun.star.xml.sax.FastSerializer"
 
 #endif	// SUPD == 310
 
