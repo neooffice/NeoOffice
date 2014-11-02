@@ -35,14 +35,26 @@ using namespace ::com::sun::star::uno;
 
 OUString SAL_CALL FastTokenHandler_getImplementationName()
 {
+#if SUPD == 310
+    return ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+        "com.sun.star.comp.oox.FastTokenHandlerService"));
+#else	// SUPD == 310
     return OUString( "com.sun.star.comp.oox.core.FastTokenHandler" );
+#endif	// SUPD == 310
 }
 
 Sequence< OUString > SAL_CALL FastTokenHandler_getSupportedServiceNames()
 {
+#if SUPD == 310
+    css::uno::Sequence< ::rtl::OUString > s(1);
+    s[0] = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+        "com.sun.star.xml.sax.FastTokenHandler"));
+    return s;
+#else	// SUPD == 310
     Sequence< OUString > aServiceNames( 1 );
     aServiceNames[ 0 ] = "com.sun.star.xml.sax.FastTokenHandler";
     return aServiceNames;
+#endif	// SUPD == 310
 }
 
 Reference< XInterface > SAL_CALL FastTokenHandler_createInstance( const Reference< XComponentContext >& /*rxContext*/ ) throw (Exception)
