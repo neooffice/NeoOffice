@@ -100,6 +100,6 @@ DEFLIB1NAME=    $(TARGET)
 .IF "$(UPD)" == "310"
 ALLTAR: $(SLO)$/fastparser.obj
 
-$(SLO)$/fastparser.obj:
+$(SLO)$/fastparser.obj: ../fastparser/fastparser.cxx
 	cd ../fastparser && dmake $(MFLAGS) $(MAKEFILE) $@
 .ENDIF		# "$(UPD)" == "310"
