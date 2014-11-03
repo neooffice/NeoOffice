@@ -378,8 +378,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_uui_patch \
 	build.neo_vos_patch \
 	build.neo_libwpd_patch build.neo_writerperfect_patch \
-	build.neo_writerfilter_patch \
-	build.neo_xmloff_patch build.neo_oox_patch
+	build.neo_xmloff_patch build.neo_oox_patch build.neo_writerfilter_patch
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
