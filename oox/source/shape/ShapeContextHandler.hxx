@@ -22,7 +22,11 @@
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/implbase2.hxx>
+#if SUPD == 310
+#include <com/sun/star/xml/sax/XFastShapeContextHandler2.hpp>
+#else	// SUPD == 310
 #include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
+#endif	// SUPD == 310
 #include "oox/drawingml/graphicshapecontext.hxx"
 #include "oox/drawingml/shape.hxx"
 #include "oox/drawingml/theme.hxx"
@@ -46,7 +50,11 @@ public:
 };
 
 class ShapeContextHandler:
+#if SUPD == 310
+    public ::cppu::WeakImplHelper2< css::xml::sax::XFastShapeContextHandler2,
+#else	// SUPD == 310
     public ::cppu::WeakImplHelper2< css::xml::sax::XFastShapeContextHandler,
+#endif	// SUPD == 310
                                     css::lang::XServiceInfo >
 {
 public:
