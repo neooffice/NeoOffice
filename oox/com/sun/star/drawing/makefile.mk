@@ -49,11 +49,13 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 
 IDLFILES= \
 	EnhancedCustomShapeAdjustmentValue2.idl \
-	EnhancedCustomShapeSegmentCommand2.idl
+	EnhancedCustomShapeSegmentCommand2.idl \
+	ShadingPattern.idl
 
 UNOTYPES= \
 	com.sun.star.drawing.EnhancedCustomShapeAdjustmentValue2 \
-	com.sun.star.drawing.EnhancedCustomShapeSegmentCommand2
+	com.sun.star.drawing.EnhancedCustomShapeSegmentCommand2 \
+	com.sun.star.drawing.ShadingPattern
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
