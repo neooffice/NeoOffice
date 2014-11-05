@@ -37,8 +37,8 @@ VISIBILITY_HIDDEN=TRUE
 .IF "$(UPD)" == "310"
 LOCALIDLFILES=TRUE
 INCLOCAL += \
+	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
+	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/comphelper/inc \
-	-I$(PRJ)$/..$/sal/inc \
-	-I$(INCCOM)$/cssutil \
-	-I$(INCCOM)$/cssxmlsax
+	-I$(PRJ)$/..$/sal/inc
 .ENDIF		# "$(UPD)" == "310"

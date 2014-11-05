@@ -38,25 +38,25 @@ VISIBILITY_HIDDEN=TRUE
 LOCALIDLFILES=TRUE
 INCLOCAL+= \
 	-I$(PRJ)$/..$/comphelper/inc \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2 \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2data \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssdrawing \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssgraphic \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssoffice \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssscriptvba \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csssheet \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmldom \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal/inc \
 	-I$(PRJ)$/..$/sax/inc \
-	-I$(PRJ)$/..$/sax$/$(INPATH)$/inc$/cssutil \
-	-I$(PRJ)$/..$/sax$/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/svtools/inc \
 	-I$(PRJ)$/..$/svx/inc \
 	-I$(PRJ)$/..$/tools/inc \
 	-I$(PRJ)$/..$/unotools/inc \
 	-I$(PRJ)$/..$/vcl/inc \
 	-I$(PRJ)$/..$/xmloff/inc \
-	-I$(INCCOM)$/csschart \
-	-I$(INCCOM)$/csschart2 \
-	-I$(INCCOM)$/csschart2data \
-	-I$(INCCOM)$/cssdrawing \
-	-I$(INCCOM)$/cssgraphic \
-	-I$(INCCOM)$/cssoffice \
-	-I$(INCCOM)$/cssscriptvba \
-	-I$(INCCOM)$/csssheet \
-	-I$(INCCOM)$/csstable \
-	-I$(INCCOM)$/cssxmldom \
 	-I$(PRJ)$/..$/include
 .ENDIF		# "$(UPD)" == "310"

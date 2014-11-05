@@ -50,10 +50,10 @@ CFLAGS+=-DSYSTEM_EXPAT
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
+	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
+	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal/inc \
-	-I$(PRJ)$/..$/salhelper/inc \
-	-I$(INCCOM)$/cssutil \
-	-I$(INCCOM)$/cssxmlsax
+	-I$(PRJ)$/..$/salhelper/inc
 
 PREPENDLIBS=$(PRJ)$/..$/expat$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib

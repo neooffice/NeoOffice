@@ -39,5 +39,5 @@ VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
 LOCALIDLFILES=TRUE
-INCLOCAL += -I$(INCCOM)$/csstask
+INCLOCAL += -I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstask
 .ENDIF		# "$(UPD)" == "310"
