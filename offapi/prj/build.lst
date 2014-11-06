@@ -9,6 +9,7 @@ oa	offapi\com\sun\star\script\vba		nmake   -   all oa_cssscriptvba NULL
 oa	offapi\com\sun\star\sheet			nmake   -   all oa_csssheet NULL
 oa	offapi\com\sun\star\table			nmake   -   all oa_csstable NULL
 oa	offapi\com\sun\star\task			nmake	-	all oa_csstask NULL
+oa	offapi\com\sun\star\text			nmake	-	all oa_csstext NULL
 oa	offapi\com\sun\star\util			nmake	-	all oa_cssutil NULL
 oa	offapi\com\sun\star\xml\dom			nmake   -   all oa_cssxmldom NULL
 oa	offapi\com\sun\star\xml\sax			nmake	-	all oa_cssxmlsax NULL
