@@ -343,6 +343,26 @@ typedef struct _sal_Sequence
 #pragma pack(pop)
 #endif
 
+#if SUPD == 310
+
+/** Wrap C++ const_cast, reinterpret_cast and static_cast expressions in
+    macros to keep code portable to old compilers (since most compilers still
+    lack RTTI support, dynamic_cast is not included here).
+ */
+#ifdef __cplusplus
+#if defined SAL_W32 || defined SOLARIS || defined LINUX || defined MACOSX || defined FREEBSD || defined NETBSD || defined AIX || defined OS2
+#define SAL_CONST_CAST(type, expr) (const_cast< type >(expr))
+#define SAL_REINTERPRET_CAST(type, expr) (reinterpret_cast< type >(expr))
+#define SAL_STATIC_CAST(type, expr) (static_cast< type >(expr))
+#else /* SAL_W32, SOLARIS, LINUX */
+#define SAL_CONST_CAST(type, expr) ((type) (expr))
+#define SAL_REINTERPRET_CAST(type, expr) ((type) (expr))
+#define SAL_STATIC_CAST(type, expr) ((type) (expr))
+#endif /* SAL_W32, SOLARIS, LINUX */
+#endif /* __cplusplus */
+
+#endif	// SUPD == 310
+
 #if defined __cplusplus
 
 /** Exception specification documentation.
