@@ -35,7 +35,6 @@ CDEFS += -DSAX_DLLIMPLEMENTATION
 VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
-LOCALIDLFILES=TRUE
 INCLOCAL += \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
