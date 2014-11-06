@@ -49,11 +49,13 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 
 IDLFILES= \
 	XParagraphAppend2.idl \
-	XTextContentAppend2.idl
+	XTextContentAppend2.idl \
+	XTextPortionAppend2.idl
 
 UNOTYPES= \
 	com.sun.star.text.XParagraphAppend2 \
-	com.sun.star.text.XTextContentAppend2
+	com.sun.star.text.XTextContentAppend2 \
+	com.sun.star.text.XTextPortionAppend2
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
