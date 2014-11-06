@@ -35,7 +35,6 @@ CDEFS += -DOOX_DLLIMPLEMENTATION
 VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
-LOCALIDLFILES=TRUE
 INCLOCAL+= \
 	-I$(PRJ)$/..$/comphelper/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart \
