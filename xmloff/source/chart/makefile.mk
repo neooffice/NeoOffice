@@ -40,7 +40,7 @@ ENABLE_EXCEPTIONS	= TRUE
 .INCLUDE: $(PRJ)$/util$/makefile.pmk
 
 .IF "$(UPD)" == "310"
-INCLOCAL+=-I$(PRJ)$/..$/sal/inc
+INCLOCAL+=-I$(PRJ)$/..$/sal$/inc
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
