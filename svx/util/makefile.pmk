@@ -42,3 +42,9 @@ CFLAGS+=-DENABLE_GTK
 .ENDIF
 
 VISIBILITY_HIDDEN=TRUE
+
+.IF "$(UPD)" == "310"
+INCLOCAL += \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
+	-I$(PRJ)$/..$/sal$/inc
+.ENDIF		# "$(UPD)" == "310"

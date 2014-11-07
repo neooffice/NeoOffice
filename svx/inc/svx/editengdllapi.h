@@ -29,6 +29,25 @@
 #endif
 #define EDITENG_DLLPRIVATE SAL_DLLPRIVATE
 
+#if SUPD == 310
+
+namespace rtl
+{
+	class OString;
+	class OStringBuffer;
+	class OUString;
+	class OUStringBuffer;
+	class OUStringHash;
+}
+
+using rtl::OString;
+using rtl::OStringBuffer;
+using rtl::OUString;
+using rtl::OUStringBuffer;
+using rtl::OUStringHash;
+
+#endif	// SUPD == 310
+
 #endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
