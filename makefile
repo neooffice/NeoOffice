@@ -329,6 +329,7 @@ build.neo_patches: build.ooo-build_all \
 	build.remotecontrol_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
+	build.neo_offapi_patch \
 	build.neo_avmedia_patch \
 	build.neo_basic_patch \
 	build.neo_canvas_patch \
@@ -575,19 +576,7 @@ endif
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/filter"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in oox-drawingml-adj-names vmlexport-shape-types ; do cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/$$i" "share/filter/$$i" ; done'
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/comphelper/$(UOUTPUTDIR)/ucr/csstask.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart2.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csschart2data.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssdrawing.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssgraphic.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssoffice.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssscriptvba.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csssheet.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/csstable.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/oox/$(UOUTPUTDIR)/ucr/cssxmldom.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/sax/$(UOUTPUTDIR)/ucr/cssutil.db"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regmerge offapi.rdb / "$(PWD)/sax/$(UOUTPUTDIR)/ucr/cssxmlsax.db"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; sh -e -c 'for i in `find "$(PWD)/offapi/$(UOUTPUTDIR)/ucr" -name "css*.db"` ; do regmerge offapi.rdb / "$$i" ; done'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libAppleRemote$(DLLSUFFIX).dylib'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libMacOSXSpell$(DLLSUFFIX).dylib'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libavmediaQuickTime$(DLLSUFFIX).dylib'
@@ -759,7 +748,7 @@ else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/comphelper/$(UOUTPUTDIR)/lib/libcomphelp4gcc3.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/libi18npaper$(DLLSUFFIX).dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/libsax$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/sax.uno.dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/tools/$(UOUTPUTDIR)/lib/libtl$(DLLSUFFIX).dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/xmloff/$(UOUTPUTDIR)/lib/libxo$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/comphelper/$(UOUTPUTDIR)/lib/libcomphelp4gcc3.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/libi18npaper$(DLLSUFFIX).dylib" "$(PWD)/oox/$(UOUTPUTDIR)/lib/liboox$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/fastsax.uno.dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/libsax$(DLLSUFFIX).dylib" "$(PWD)/sax/$(UOUTPUTDIR)/lib/sax.uno.dylib" "$(PWD)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxcore$(DLLSUFFIX).dylib" "$(PWD)/svx/$(UOUTPUTDIR)/lib/libsvxmsfilter$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/tools/$(UOUTPUTDIR)/lib/libtl$(DLLSUFFIX).dylib" "$(PWD)/writerfilter/$(UOUTPUTDIR)/lib/libwriterfilter$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "$(PWD)/xmloff/$(UOUTPUTDIR)/lib/libxo$(DLLSUFFIX).dylib" "basis-link/program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/salhelper/$(UOUTPUTDIR)/lib/libuno_salhelpergcc3.dylib.3" "basis-link/ure-link/lib"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(PRODUCT_BUILD_VERSION)#$(PRODUCT_VERSION)#g' > "Info.plist"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/filter"
