@@ -81,11 +81,10 @@ GraphicHelper::GraphicHelper( const Reference< XComponentContext >& rxContext, c
 #if SUPD == 310
     Reference< XMultiServiceFactory > xFactory( mxContext->getServiceManager(), UNO_QUERY );
     OSL_ENSURE( xFactory.is(), "GraphicHelper::GraphicHelper - missing service factory" );
-#endif	// SUPD == 310
-    if( mxContext.is() )
-#if SUPD == 310
+    if( xFactory.is() )
         mxGraphicProvider.set( xFactory->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.graphic.GraphicProvider" ) ) ), UNO_QUERY );
 #else	// SUPD == 310
+    if( mxContext.is() )
         mxGraphicProvider.set( graphic::GraphicProvider::create( mxContext ) );
 #endif	// SUPD == 310
 
