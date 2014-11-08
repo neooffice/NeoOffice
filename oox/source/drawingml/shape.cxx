@@ -40,10 +40,10 @@
 #include "oox/helper/modelobjecthelper.hxx"
 
 #include <tools/gen.hxx>
+#include <tools/mapunit.hxx>
 #if SUPD == 310
 #include <svx/unoprnms.hxx>
 #else	// SUPD == 310
-#include <tools/mapunit.hxx>
 #include <editeng/unoprnms.hxx>
 #endif	// SUPD == 310
 #include <com/sun/star/awt/Size.hpp>
