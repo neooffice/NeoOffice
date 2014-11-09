@@ -49,7 +49,22 @@ static const struct ::cppu::ImplementationEntry s_component_entries [] =
     { 0, 0, 0, 0, 0, 0 } // terminate with NULL
 };
 
+#if SUPD == 310
+
+void SAL_CALL component_getImplementationEnvironment(const sal_Char ** ppEnvTypeName, uno_Environment ** /*ppEnv*/ )
+{
+    *ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
+}
+
+sal_Bool SAL_CALL component_writeInfo( ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
+{
+    return ::cppu::component_writeInfoHelper( xMgr, xRegistry, s_component_entries );
+}
+
+void * SAL_CALL component_getFactory(sal_Char const * implName, ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
+#else	// SUPD == 310
 SAL_DLLPUBLIC_EXPORT void * SAL_CALL writerfilter_component_getFactory(sal_Char const * implName, ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
+#endif	// SUPD == 310
 {
     return ::cppu::component_getFactoryHelper(implName, xMgr, xRegistry, s_component_entries );
 }
