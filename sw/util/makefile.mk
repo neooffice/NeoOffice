@@ -40,6 +40,15 @@ USE_DEFFILE=TRUE
 
 .INCLUDE :  settings.mk
 
+.IF "$(UPD)" == "310"
+PREPENDLIBS=$(PRJ)$/..$/svx$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Allgemein -----------------------------------------------------------
 
 .IF "$(OS)"=="IRIX"
