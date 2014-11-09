@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <rtl/ustrbuf.hxx>
 #include <resourcemodel/LoggedResources.hxx>
@@ -28,9 +24,10 @@
 namespace writerfilter
 {
 
+#ifdef DEBUG_LOGGING
 // class: LoggedResourcesHelper
 
-LoggedResourcesHelper::LoggedResourcesHelper(TagLogger::Pointer_t pLogger, const string & sPrefix)
+LoggedResourcesHelper::LoggedResourcesHelper(TagLogger::Pointer_t pLogger, const std::string & sPrefix)
 : mpLogger(pLogger), msPrefix(sPrefix)
 {
 }
@@ -39,45 +36,50 @@ LoggedResourcesHelper::~LoggedResourcesHelper()
 {
 }
 
-void LoggedResourcesHelper::startElement(const string & sElement)
+void LoggedResourcesHelper::startElement(const std::string & sElement)
 {
     mpLogger->startElement(msPrefix + "." + sElement);
 }
 
-void LoggedResourcesHelper::endElement(const string & sElement)
+void LoggedResourcesHelper::endElement(const std::string & /*sElement*/)
 {
-    mpLogger->endElement(msPrefix + "." + sElement);
+    mpLogger->endElement();
 }
 
-void LoggedResourcesHelper::chars(const ::rtl::OUString & rChars)
-{
-    mpLogger->chars(rChars);
-}
-
-void LoggedResourcesHelper::chars(const string & rChars)
+void LoggedResourcesHelper::chars(const OUString & rChars)
 {
     mpLogger->chars(rChars);
 }
 
-void LoggedResourcesHelper::attribute(const string & rName, const string & rValue)
+void LoggedResourcesHelper::chars(const std::string & rChars)
+{
+    mpLogger->chars(rChars);
+}
+
+void LoggedResourcesHelper::attribute(const std::string & rName, const std::string & rValue)
 {
     mpLogger->attribute(rName, rValue);
 }
 
-void LoggedResourcesHelper::attribute(const string & rName, sal_uInt32 nValue)
+void LoggedResourcesHelper::attribute(const std::string & rName, sal_uInt32 nValue)
 {
     mpLogger->attribute(rName, nValue);
 }
 
-void LoggedResourcesHelper::setPrefix(const string & rPrefix)
-{
-    msPrefix = rPrefix;
-}
+#endif
 
 // class: LoggedStream
 
-LoggedStream::LoggedStream(TagLogger::Pointer_t pLogger, const string & sPrefix)
-: mHelper(pLogger, sPrefix)
+LoggedStream::LoggedStream(
+#ifdef DEBUG_LOGGING
+    TagLogger::Pointer_t pLogger,
+    const std::string & sPrefix
+) : mHelper(pLogger, sPrefix)
+#else
+    TagLogger::Pointer_t,
+    const std::string&
+)
+#endif
 {
 }
 
@@ -145,7 +147,7 @@ void LoggedStream::startShape( ::com::sun::star::uno::Reference< ::com::sun::sta
 #ifdef DEBUG_LOGGING
     mHelper.startElement("shape");
 #endif
-    
+
     lcl_startShape(xShape);
 }
 
@@ -155,7 +157,7 @@ void LoggedStream::endShape()
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("shape");
-#endif    
+#endif
 }
 
 void LoggedStream::text(const sal_uInt8 * data, size_t len)
@@ -163,18 +165,18 @@ void LoggedStream::text(const sal_uInt8 * data, size_t len)
 #ifdef DEBUG_LOGGING
     mHelper.startElement("text");
 
-    ::rtl::OUString sText( (const sal_Char*) data, len, RTL_TEXTENCODING_MS_1252 );
+    OUString sText( (const sal_Char*) data, len, RTL_TEXTENCODING_MS_1252 );
 
     mHelper.startElement("data");
     mHelper.chars(sText);
     mHelper.endElement("data");
 #endif
-    
+
     lcl_text(data, len);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("text");
-#endif    
+#endif
 }
 
 void LoggedStream::utext(const sal_uInt8 * data, size_t len)
@@ -183,21 +185,35 @@ void LoggedStream::utext(const sal_uInt8 * data, size_t len)
     mHelper.startElement("utext");
     mHelper.startElement("data");
 
-    ::rtl::OUString sText;
-    ::rtl::OUStringBuffer aBuffer = ::rtl::OUStringBuffer(len);
+    OUString sText;
+    OUStringBuffer aBuffer = OUStringBuffer(len);
     aBuffer.append( (const sal_Unicode *) data, len);
     sText = aBuffer.makeStringAndClear();
-    
+
     mHelper.chars(sText);
 
     mHelper.endElement("data");
 #endif
-    
+
     lcl_utext(data, len);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("utext");
-#endif    
+#endif
+}
+
+void LoggedStream::positivePercentage(const OUString& rText)
+{
+#ifdef DEBUG_LOGGING
+    mHelper.startElement("positivePercentage");
+    mHelper.chars(rText);
+#endif
+
+    lcl_positivePercentage(rText);
+
+#ifdef DEBUG_LOGGING
+    mHelper.endElement("positivePercentage");
+#endif
 }
 
 void LoggedStream::props(writerfilter::Reference<Properties>::Pointer_t ref)
@@ -205,12 +221,12 @@ void LoggedStream::props(writerfilter::Reference<Properties>::Pointer_t ref)
 #ifdef DEBUG_LOGGING
     mHelper.startElement("props");
 #endif
-    
+
     lcl_props(ref);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("props");
-#endif    
+#endif
 }
 
 void LoggedStream::table(Id name, writerfilter::Reference<Table>::Pointer_t ref)
@@ -219,12 +235,12 @@ void LoggedStream::table(Id name, writerfilter::Reference<Table>::Pointer_t ref)
     mHelper.startElement("table");
     mHelper.attribute("name", (*QNameToString::Instance())(name));
 #endif
-    
+
     lcl_table(name, ref);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("table");
-#endif    
+#endif
 }
 
 void LoggedStream::substream(Id name, writerfilter::Reference<Stream>::Pointer_t ref)
@@ -233,31 +249,39 @@ void LoggedStream::substream(Id name, writerfilter::Reference<Stream>::Pointer_t
     mHelper.startElement("substream");
     mHelper.attribute("name", (*QNameToString::Instance())(name));
 #endif
-    
+
     lcl_substream(name, ref);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("substream");
-#endif    
+#endif
 }
 
-void LoggedStream::info(const string & _info)
+void LoggedStream::info(const std::string & _info)
 {
 #ifdef DEBUG_LOGGING
     mHelper.startElement("info");
     mHelper.attribute("text", _info);
 #endif
-    
+
     lcl_info(_info);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("info");
-#endif    
+#endif
 }
 
 // class LoggedProperties
-LoggedProperties::LoggedProperties(TagLogger::Pointer_t pLogger, const string & sPrefix)
-: mHelper(pLogger, sPrefix)
+LoggedProperties::LoggedProperties(
+#ifdef DEBUG_LOGGING
+    TagLogger::Pointer_t pLogger,
+    const std::string & sPrefix
+) : mHelper(pLogger, sPrefix)
+#else
+    TagLogger::Pointer_t,
+    const std::string&
+)
+#endif
 {
 }
 
@@ -277,23 +301,31 @@ void LoggedProperties::attribute(Id name, Value & val)
     lcl_attribute(name, val);
 }
 
-void LoggedProperties::sprm(Sprm & _sprm)
+void LoggedProperties::sprm(Sprm & rSprm)
 {
 #ifdef DEBUG_LOGGING
     mHelper.startElement("sprm");
-    mHelper.attribute("name", (*QNameToString::Instance())(_sprm.getId()));
-    mHelper.chars(sprm.toString());
+    mHelper.attribute("name", (*QNameToString::Instance())(rSprm.getId()));
+    mHelper.chars(rSprm.toString());
 #endif
 
-    lcl_sprm(_sprm);
+    lcl_sprm(rSprm);
 
 #ifdef DEBUG_LOGGING
     mHelper.endElement("sprm");
 #endif
 }
 
-LoggedTable::LoggedTable(TagLogger::Pointer_t pLogger, const string & sPrefix)
-: mHelper(pLogger, sPrefix)
+LoggedTable::LoggedTable(
+#ifdef DEBUG_LOGGING
+    TagLogger::Pointer_t pLogger,
+    const std::string & sPrefix
+) : mHelper(pLogger, sPrefix)
+#else
+    TagLogger::Pointer_t,
+    const std::string&
+)
+#endif
 {
 }
 
@@ -316,3 +348,5 @@ void LoggedTable::entry(int pos, writerfilter::Reference<Properties>::Pointer_t 
 }
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

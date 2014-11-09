@@ -1,33 +1,29 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-#ifndef INCLUDE_OOXML_PARSER_STATE_HXX
-#define INCLUDE_OOXML_PARSER_STATE_HXX
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
 
 #include <stack>
-#include <ooxml/OOXMLDocument.hxx>
+#include "OOXMLDocumentImpl.hxx"
 #include "OOXMLPropertySetImpl.hxx"
 
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
 #include <resourcemodel/TagLogger.hxx>
 #include <resourcemodel/XPathLogger.hxx>
 #endif
@@ -35,8 +31,6 @@
 namespace writerfilter {
 namespace ooxml
 {
-
-using ::std::stack;
 
 class OOXMLParserState
 {
@@ -47,13 +41,18 @@ class OOXMLParserState
     bool mbForwardEvents;
     unsigned int mnContexts;
     unsigned int mnHandle;
-    OOXMLDocument * mpDocument;
-    rtl::OUString msTarget;
+    OOXMLDocumentImpl* mpDocument;
+    OUString msTarget;
     OOXMLPropertySet::Pointer_t mpCharacterProps;
-    stack<OOXMLPropertySet::Pointer_t> mCellProps;
-    stack<OOXMLPropertySet::Pointer_t> mRowProps;
-    stack<OOXMLPropertySet::Pointer_t> mTableProps;
-#ifdef DEBUG
+    std::stack<OOXMLPropertySet::Pointer_t> mCellProps;
+    std::stack<OOXMLPropertySet::Pointer_t> mRowProps;
+    std::stack<OOXMLPropertySet::Pointer_t> mTableProps;
+    bool inTxbxContent;
+    // these 4 save when inTxbxContent
+    bool savedInParagraphGroup;
+    bool savedInCharacterGroup;
+    bool savedLastParagraphInSection;
+#if OSL_DEBUG_LEVEL > 1
     XPathLogger m_xPathLogger;
 #endif
 
@@ -65,7 +64,7 @@ public:
 
     bool isInSectionGroup() const;
     void setInSectionGroup(bool bInSectionGroup);
-    
+
     void setLastParagraphInSection(bool bLastParagraphInSection);
     bool isLastParagraphInSection() const;
 
@@ -77,14 +76,17 @@ public:
 
     void setForwardEvents(bool bForwardEvents);
     bool isForwardEvents() const;
-    
-    const string getHandle() const;
+
+    const std::string getHandle() const;
     void setHandle();
 
-    void setDocument(OOXMLDocument * pDocument);
-    OOXMLDocument * getDocument() const;
+    void setDocument(OOXMLDocumentImpl* pDocument);
+    OOXMLDocumentImpl* getDocument() const;
 
-    const rtl::OUString & getTarget() const;
+    void setXNoteId(const sal_Int32 rId);
+    sal_Int32 getXNoteId() const;
+
+    const OUString & getTarget() const;
 
     void resolveCharacterProperties(Stream & rStream);
     void setCharacterProperties(OOXMLPropertySet::Pointer_t pProps);
@@ -97,14 +99,15 @@ public:
 
     void startTable();
     void endTable();
-    
+
     void incContextCount();
 
-#ifdef DEBUG
+    void startTxbxContent();
+    void endTxbxContent();
+
+#if OSL_DEBUG_LEVEL > 1
 public:
-    unsigned int getContextCount() const;
-    string toString() const;
-    XMLTag::Pointer_t toTag() const;
+    void dumpXml( const TagLogger::Pointer_t& pLogger );
     XPathLogger & getXPathLogger();
 #endif
 
@@ -112,4 +115,6 @@ public:
 
 }}
 
-#endif // INCLUDE_OOXML_PARSER_STATE_HXX
+#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

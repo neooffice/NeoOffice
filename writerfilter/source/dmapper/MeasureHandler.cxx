@@ -1,28 +1,23 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 #include <MeasureHandler.hxx>
 #include <PropertyMap.hxx>
-#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
 #include <ooxml/resourceids.hxx>
 #include <com/sun/star/text/SizeType.hpp>
@@ -33,77 +28,85 @@ namespace dmapper {
 
 using namespace ::com::sun::star;
 
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 MeasureHandler::MeasureHandler() :
 LoggedProperties(dmapper_logger, "MeasureHandler"),
 m_nMeasureValue( 0 ),
 m_nUnit( -1 ),
-m_nRowHeightSizeType( text::SizeType::MIN ) 
+m_nRowHeightSizeType( text::SizeType::MIN )
 {
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 MeasureHandler::~MeasureHandler()
 {
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 void MeasureHandler::lcl_attribute(Id rName, Value & rVal)
 {
     sal_Int32 nIntValue = rVal.getInt();
     (void)rName;
-    /* WRITERFILTERSTATUS: table: MeasureHandler_attributedata */
     switch( rName )
     {
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
-        case NS_rtf::LN_unit:
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_TblWidth_type:// = 90668;
-            //can be: NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct, 
-            //        NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto; 
+        {
+            //can be: NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct,
+            //        NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto;
             m_nUnit = nIntValue;
+
+            if (!m_aInteropGrabBagName.isEmpty())
+            {
+                beans::PropertyValue aValue;
+                aValue.Name = "type";
+                switch (nIntValue)
+                {
+                    case NS_ooxml::LN_Value_ST_TblWidth_nil: aValue.Value = uno::makeAny(OUString("nil")); break;
+                    case NS_ooxml::LN_Value_ST_TblWidth_pct: aValue.Value = uno::makeAny(OUString("pct")); break;
+                    case NS_ooxml::LN_Value_ST_TblWidth_dxa: aValue.Value = uno::makeAny(OUString("dxa")); break;
+                    case NS_ooxml::LN_Value_ST_TblWidth_auto: aValue.Value = uno::makeAny(OUString("auto")); break;
+                }
+                m_aInteropGrabBag.push_back(aValue);
+            }
+        }
         break;
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_Height_hRule: // 90666;
-        {    
-            ::rtl::OUString sHeightType = rVal.getString();
-            if( sHeightType.equalsAscii( "exact" ) )
+        {
+            OUString sHeightType = rVal.getString();
+            if ( sHeightType == "exact" )
                 m_nRowHeightSizeType = text::SizeType::FIX;
         }
         break;
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
-        case NS_rtf::LN_trleft: 
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
-        case NS_rtf::LN_preferredWidth:
         case NS_ooxml::LN_CT_TblWidth_w:// = 90667;
             m_nMeasureValue = nIntValue;
+            if (!m_aInteropGrabBagName.isEmpty())
+            {
+                beans::PropertyValue aValue;
+                aValue.Name = "w";
+                aValue.Value = uno::makeAny(nIntValue);
+                m_aInteropGrabBag.push_back(aValue);
+            }
         break;
-        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_Height_val: // 90665 -- a string value
         {
             m_nUnit = NS_ooxml::LN_Value_ST_TblWidth_dxa;
-            ::rtl::OUString sHeight = rVal.getString();
+            OUString sHeight = rVal.getString();
             m_nMeasureValue = sHeight.toInt32();
-        }        
+        }
         break;
         default:
-            OSL_ENSURE( false, "unknown attribute");
+            OSL_FAIL( "unknown attribute");
     }
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 void MeasureHandler::lcl_sprm(Sprm & rSprm)
 {
     (void)rSprm;
 }
-/*-- 24.04.2007 09:09:01---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+
 sal_Int32 MeasureHandler::getMeasureValue() const
 {
     sal_Int32 nRet = 0;
@@ -111,20 +114,36 @@ sal_Int32 MeasureHandler::getMeasureValue() const
     {
         // TODO m_nUnit 3 - twip, other values unknown :-(
         if( m_nUnit == 3 || sal::static_int_cast<Id>(m_nUnit) == NS_ooxml::LN_Value_ST_TblWidth_dxa)
+        {
             nRet = ConversionHelper::convertTwipToMM100( m_nMeasureValue );
-        //todo: handle additional width types:    
-        //NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct, 
-        //NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto; 
+        }
+        //todo: handle additional width types:
+        //NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct,
+        //NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto;
     }
     return nRet;
 }
-/*-- 18.06.2007 10:24:26---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
-bool MeasureHandler::isAutoWidth() const 
+void MeasureHandler::enableInteropGrabBag(const OUString& aName)
 {
-    return sal::static_int_cast<Id>(m_nUnit) == NS_ooxml::LN_Value_ST_TblWidth_auto;
+    m_aInteropGrabBagName = aName;
+}
+
+beans::PropertyValue MeasureHandler::getInteropGrabBag()
+{
+    beans::PropertyValue aRet;
+    aRet.Name = m_aInteropGrabBagName;
+
+    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
+    beans::PropertyValue* pSeq = aSeq.getArray();
+    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
+        *pSeq++ = *i;
+
+    aRet.Value = uno::makeAny(aSeq);
+    return aRet;
 }
 
 } //namespace dmapper
 } //namespace writerfilter
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

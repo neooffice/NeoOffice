@@ -1,162 +1,173 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 #include <BorderHandler.hxx>
+#include <TDefTableHandler.hxx>
 #include <PropertyMap.hxx>
-#include <resourcemodel/QNameToString.hxx>
-#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
-#include <com/sun/star/table/BorderLine.hpp>
+#include <com/sun/star/table/BorderLine2.hpp>
 #include <ooxml/resourceids.hxx>
 #include <dmapperLoggers.hxx>
+#if SUPD == 310
+#include <svx/util.hxx>
+#else	// SUPD == 310
+#include <filter/msfilter/util.hxx>
+#endif	// SUPD == 310
 
 namespace writerfilter {
 
 namespace dmapper {
 
 using namespace ::com::sun::star;
-//using namespace ::std;
 
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 BorderHandler::BorderHandler( bool bOOXML ) :
 LoggedProperties(dmapper_logger, "BorderHandler"),
 m_nCurrentBorderPosition( BORDER_TOP ),
-m_nLineWidth(0),
+m_nLineWidth(15), // Word default, in twips
 m_nLineType(0),
 m_nLineColor(0),
 m_nLineDistance(0),
+m_bShadow(false),
 m_bOOXML( bOOXML )
 {
     const int nBorderCount(BORDER_COUNT);
     std::fill_n(m_aFilledLines, nBorderCount, false);
-    std::fill_n(m_aBorderLines, nBorderCount, table::BorderLine());
+    std::fill_n(m_aBorderLines, nBorderCount, table::BorderLine2());
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 BorderHandler::~BorderHandler()
 {
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 void BorderHandler::lcl_attribute(Id rName, Value & rVal)
 {
     sal_Int32 nIntValue = rVal.getInt();
-    /* WRITERFILTERSTATUS: table: BorderHandler_attributedata */
     switch( rName )
     {
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
-        case NS_rtf::LN_rgbrc:
-        {
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
-            if( pProperties.get())
-            {
-                pProperties->resolve(*this);
-                ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,  
-                                                                                m_aBorderLines[m_nCurrentBorderPosition], m_bOOXML );
-                OSL_ENSURE(m_nCurrentBorderPosition < BORDER_COUNT, "too many border values");
-                ++m_nCurrentBorderPosition;
-            }
-        }
-        break;
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
-        case NS_rtf::LN_DPTLINEWIDTH: // 0x2871
+        case NS_ooxml::LN_CT_Border_sz:
             //  width of a single line in 1/8 pt, max of 32 pt -> twip * 5 / 2.
-            m_nLineWidth = ConversionHelper::convertTwipToMM100( nIntValue * 5 / 2 );
+            m_nLineWidth = nIntValue * 5 / 2;
+            appendGrabBag("sz", OUString::number(nIntValue));
         break;
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
-        case NS_rtf::LN_BRCTYPE:    // 0x2872
+        case NS_ooxml::LN_CT_Border_val:
             m_nLineType = nIntValue;
+            appendGrabBag("val", TDefTableHandler::getBorderTypeString(nIntValue));
         break;
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_Border_color:
-        case NS_rtf::LN_ICO:        // 0x2873
             m_nLineColor = nIntValue;
+            appendGrabBag("color", OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8));
         break;
-        /* WRITERFILTERSTATUS: done: 100, planned: 0, spent: 0 */
-        case NS_rtf::LN_DPTSPACE:   // border distance in points
+        case NS_ooxml::LN_CT_Border_space: // border distance in points
             m_nLineDistance = ConversionHelper::convertTwipToMM100( nIntValue * 20 );
+            appendGrabBag("space", OUString::number(nIntValue));
         break;
-        case NS_rtf::LN_FSHADOW:    // 0x2875
-            //if 1 then line has shadow - unsupported
-        case NS_rtf::LN_FFRAME:     // 0x2876
-        case NS_rtf::LN_UNUSED2_15: // 0x2877
-            // ignored
+        case NS_ooxml::LN_CT_Border_shadow:
+            m_bShadow = nIntValue;
         break;
-        case NS_ooxml::LN_CT_Border_themeTint: break;
-        case NS_ooxml::LN_CT_Border_themeColor: break;
+        case NS_ooxml::LN_CT_Border_frame:
+        case NS_ooxml::LN_CT_Border_themeTint:
+            appendGrabBag("themeTint", OUString::number(nIntValue, 16));
+            break;
+        case NS_ooxml::LN_CT_Border_themeColor:
+            appendGrabBag("themeColor", TDefTableHandler::getThemeColorTypeString(nIntValue));
+            break;
         default:
-            OSL_ENSURE( false, "unknown attribute");
+            OSL_FAIL( "unknown attribute");
     }
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 void BorderHandler::lcl_sprm(Sprm & rSprm)
 {
-    /* WRITERFILTERSTATUS: table: BorderHandler_sprm */
+    BorderPosition pos = BORDER_COUNT; // invalid pos
+    bool rtl = false; // TODO detect
+    OUString aBorderPos;
     switch( rSprm.getId())
     {
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_TblBorders_top:
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            pos = BORDER_TOP;
+            aBorderPos = "top";
+            break;
+        case NS_ooxml::LN_CT_TblBorders_start:
+            pos = rtl ? BORDER_RIGHT : BORDER_LEFT;
+            aBorderPos = "start";
+            break;
         case NS_ooxml::LN_CT_TblBorders_left:
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
-        case NS_ooxml::LN_CT_TblBorders_bottom: 
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            pos = BORDER_LEFT;
+            aBorderPos = "left";
+            break;
+        case NS_ooxml::LN_CT_TblBorders_bottom:
+            pos = BORDER_BOTTOM;
+            aBorderPos = "bottom";
+            break;
+        case NS_ooxml::LN_CT_TblBorders_end:
+            pos = rtl ? BORDER_LEFT : BORDER_RIGHT;
+            aBorderPos = "end";
+            break;
         case NS_ooxml::LN_CT_TblBorders_right:
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            pos = BORDER_RIGHT;
+            aBorderPos = "right";
+            break;
         case NS_ooxml::LN_CT_TblBorders_insideH:
-        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            pos = BORDER_HORIZONTAL;
+            aBorderPos = "insideH";
+            break;
         case NS_ooxml::LN_CT_TblBorders_insideV:
-        {    
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
-                pProperties->resolve(*this);
-            ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,  
-                                   m_aBorderLines[rSprm.getId() - NS_ooxml::LN_CT_TblBorders_top], m_bOOXML );
-
-            m_aFilledLines[ rSprm.getId( ) - NS_ooxml::LN_CT_TblBorders_top] = true;
+            pos = BORDER_VERTICAL;
+            aBorderPos = "insideV";
+            break;
+        default:
+            break;
+    }
+    if( pos != BORDER_COUNT )
+    {
+        writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+        if( pProperties.get())
+        {
+            std::vector<beans::PropertyValue> aSavedGrabBag;
+            if (!m_aInteropGrabBagName.isEmpty())
+            {
+                aSavedGrabBag = m_aInteropGrabBag;
+                m_aInteropGrabBag.clear();
+            }
+            pProperties->resolve(*this);
+            if (!m_aInteropGrabBagName.isEmpty())
+            {
+                aSavedGrabBag.push_back(getInteropGrabBag(aBorderPos));
+                m_aInteropGrabBag = aSavedGrabBag;
+            }
         }
-        break;
-        default:;
-    }                                  
+        ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,
+                               m_aBorderLines[ pos ], m_bOOXML );
+        m_aFilledLines[ pos ] = true;
+    }
 }
-/*-- 24.04.2007 09:09:01---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 PropertyMapPtr  BorderHandler::getProperties()
 {
-    static const PropertyIds aPropNames[BORDER_COUNT] = 
+    static const PropertyIds aPropNames[BORDER_COUNT] =
     {
         PROP_TOP_BORDER,
         PROP_LEFT_BORDER,
         PROP_BOTTOM_BORDER,
         PROP_RIGHT_BORDER,
         META_PROP_HORIZONTAL_BORDER,
-        META_PROP_VERTICAL_BORDER 
+        META_PROP_VERTICAL_BORDER
     };
     PropertyMapPtr pPropertyMap(new PropertyMap);
     // don't fill in default properties
@@ -165,21 +176,58 @@ PropertyMapPtr  BorderHandler::getProperties()
         for( sal_Int32 nProp = 0; nProp < BORDER_COUNT; ++nProp)
         {
             if ( m_aFilledLines[nProp] ) {
-                pPropertyMap->Insert( aPropNames[nProp], false, uno::makeAny( m_aBorderLines[nProp] ) );
+                pPropertyMap->Insert( aPropNames[nProp], uno::makeAny( m_aBorderLines[nProp] ) );
             }
         }
     }
     return pPropertyMap;
 }
-/*-- 14.11.2007 12:42:52---------------------------------------------------
+/*-------------------------------------------------------------------------
     used only in OOXML import
   -----------------------------------------------------------------------*/
-table::BorderLine BorderHandler::getBorderLine()
+table::BorderLine2 BorderHandler::getBorderLine()
 {
-    table::BorderLine aBorderLine;
+    table::BorderLine2 aBorderLine;
     ConversionHelper::MakeBorderLine( m_nLineWidth, m_nLineType, m_nLineColor, aBorderLine, m_bOOXML );
     return aBorderLine;
 }
 
+bool BorderHandler::getShadow()
+{
+    return m_bShadow;
+}
+
+void BorderHandler::enableInteropGrabBag(const OUString& aName)
+{
+    m_aInteropGrabBagName = aName;
+}
+
+beans::PropertyValue BorderHandler::getInteropGrabBag(const OUString& aName)
+{
+    beans::PropertyValue aRet;
+    if (aName.isEmpty())
+        aRet.Name = m_aInteropGrabBagName;
+    else
+        aRet.Name = aName;
+
+    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
+    beans::PropertyValue* pSeq = aSeq.getArray();
+    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
+        *pSeq++ = *i;
+
+    aRet.Value = uno::makeAny(aSeq);
+    return aRet;
+}
+
+void BorderHandler::appendGrabBag(const OUString& aKey, const OUString& aValue)
+{
+    beans::PropertyValue aProperty;
+    aProperty.Name = aKey;
+    aProperty.Value = uno::makeAny(aValue);
+    m_aInteropGrabBag.push_back(aProperty);
+}
+
 } //namespace dmapper
 } //namespace writerfilter
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

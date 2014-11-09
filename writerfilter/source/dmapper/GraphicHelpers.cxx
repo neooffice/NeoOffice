@@ -1,24 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 #include "ConversionHelper.hxx"
 #include "GraphicHelpers.hxx"
 
@@ -32,6 +29,11 @@
 #include "dmapperLoggers.hxx"
 
 #include <iostream>
+
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
+
 using namespace std;
 
 namespace writerfilter {
@@ -39,12 +41,29 @@ namespace dmapper {
 
 using namespace com::sun::star;
 
-PositionHandler::PositionHandler( ) :
+int PositionHandler::savedPositionOffsetV = 0;
+int PositionHandler::savedPositionOffsetH = 0;
+int PositionHandler::savedAlignV = text::VertOrientation::NONE;
+int PositionHandler::savedAlignH = text::HoriOrientation::NONE;
+
+PositionHandler::PositionHandler( bool vertical ) :
 LoggedProperties(dmapper_logger, "PositionHandler")
 {
-    m_nOrient = text::VertOrientation::NONE;
     m_nRelation = text::RelOrientation::FRAME;
-    m_nPosition = 0;
+    if( vertical )
+    {
+        m_nPosition = savedPositionOffsetV;
+        m_nOrient = savedAlignV;
+        savedPositionOffsetV = 0;
+        savedAlignV = text::VertOrientation::NONE;
+    }
+    else
+    {
+        m_nPosition = savedPositionOffsetH;
+        m_nOrient = savedAlignH;
+        savedPositionOffsetH = 0;
+        savedAlignH = text::HoriOrientation::NONE;
+    }
 }
 
 PositionHandler::~PositionHandler( )
@@ -59,7 +78,7 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
         case NS_ooxml::LN_CT_PosV_relativeFrom:
             {
                 // TODO There are some other unhandled values
-                static Id pVertRelValues[] =
+                static const Id pVertRelValues[] =
                 {
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromV_margin,
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromV_page,
@@ -67,14 +86,14 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromV_line
                 };
 
-                static sal_Int16 pVertRelations[] = 
+                static const sal_Int16 pVertRelations[] =
                 {
                     text::RelOrientation::PAGE_PRINT_AREA,
                     text::RelOrientation::PAGE_FRAME,
                     text::RelOrientation::FRAME,
                     text::RelOrientation::TEXT_LINE
                 };
-                
+
                 for ( int i = 0; i < 4; i++ )
                 {
                     if ( pVertRelValues[i] == sal_uInt32( nIntValue ) )
@@ -85,7 +104,7 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
         case NS_ooxml::LN_CT_PosH_relativeFrom:
             {
                 // TODO There are some other unhandled values
-                static Id pHoriRelValues[] =
+                static const Id pHoriRelValues[] =
                 {
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_margin,
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_page,
@@ -93,14 +112,14 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
                     NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_character
                 };
 
-                static sal_Int16 pHoriRelations[] = 
+                static const sal_Int16 pHoriRelations[] =
                 {
                     text::RelOrientation::PAGE_PRINT_AREA,
                     text::RelOrientation::PAGE_FRAME,
                     text::RelOrientation::FRAME,
                     text::RelOrientation::CHAR,
                 };
-                
+
                 for ( int i = 0; i < 4; i++ )
                 {
                     if ( pHoriRelValues[i] == sal_uInt32( nIntValue ) )
@@ -116,76 +135,75 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
     }
 }
 
-void PositionHandler::lcl_sprm( Sprm& rSprm )
+void PositionHandler::lcl_sprm( Sprm& )
 {
-    Value::Pointer_t pValue = rSprm.getValue();
-    sal_Int32 nIntValue = pValue->getInt();
-    
-    switch ( rSprm.getId( ) )
-    {
-        case NS_ooxml::LN_CT_PosV_align:
-            {
-                static Id pVertValues[] = 
-                {
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignV_top,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignV_bottom,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignV_center,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignV_inside,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignV_outside
-                };
+}
 
-                static sal_Int16 pVertOrients[] =
-                {
-                    text::VertOrientation::TOP,
-                    text::VertOrientation::BOTTOM,
-                    text::VertOrientation::CENTER,
-                    text::VertOrientation::NONE,
-                    text::VertOrientation::NONE
-                };
-
-                for ( int i = 0; i < 5; i++ )
-                {
-                    if ( pVertValues[i] == sal_uInt32( nIntValue ) )
-                        m_nOrient = pVertOrients[i];
-                }
-            }
-            break;
-        case NS_ooxml::LN_CT_PosH_align:
-            {
-                static Id pHoriValues[] = 
-                {
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignH_left,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignH_right,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignH_center,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignH_inside,
-                    NS_ooxml::LN_Value_wordprocessingDrawing_ST_AlignH_outside
-                };
-
-                static sal_Int16 pHoriOrients[] =
-                {
-                    text::HoriOrientation::LEFT,
-                    text::HoriOrientation::RIGHT,
-                    text::HoriOrientation::CENTER,
-                    text::HoriOrientation::INSIDE,
-                    text::HoriOrientation::OUTSIDE
-                };
-
-                for ( int i = 0; i < 5; i++ )
-                {
-                    if ( pHoriValues[i] == sal_uInt32( nIntValue ) )
-                        m_nOrient = pHoriOrients[i];
-                }
-            }
-            break;
-        case NS_ooxml::LN_CT_PosH_posOffset:
-        case NS_ooxml::LN_CT_PosV_posOffset:
-            m_nPosition = ConversionHelper::convertEMUToMM100( nIntValue );
-        default:
-#ifdef DEBUG_DOMAINMAPPER
-            dmapper_logger->element("unhandled");
-#endif
-            break;
+sal_Int16 PositionHandler::orientation() const
+{
+    if( m_nRelation == text::RelOrientation::TEXT_LINE )
+    { // It appears that to 'line of text' alignment is backwards to other alignments,
+      // 'top' meaning putting on top of the line instead of having top at the line.
+        if( m_nOrient == text::VertOrientation::TOP )
+            return text::VertOrientation::BOTTOM;
+        else if( m_nOrient == text::VertOrientation::BOTTOM )
+            return text::VertOrientation::TOP;
     }
+    return m_nOrient;
+}
+
+sal_Int16 PositionHandler::relation() const
+{
+    return m_nRelation;
+}
+
+sal_Int32 PositionHandler::position() const
+{
+    return m_nPosition;
+}
+
+void PositionHandler::setPositionOffset(const OUString & sText, bool vertical)
+{
+    if( vertical )
+        savedPositionOffsetV = ConversionHelper::convertEMUToMM100( sText.toInt32());
+    else
+        savedPositionOffsetH = ConversionHelper::convertEMUToMM100( sText.toInt32());
+}
+
+int PositionHandler::getPositionOffset(bool vertical)
+{
+    if (vertical)
+        return savedPositionOffsetV;
+    else
+        return savedPositionOffsetH;
+}
+
+void PositionHandler::setAlignH(const OUString & sText)
+{
+    if( sText == "left")
+        savedAlignH = text::HoriOrientation::LEFT;
+    else if( sText == "right" )
+        savedAlignH = text::HoriOrientation::RIGHT;
+    else if( sText == "center" )
+        savedAlignH = text::HoriOrientation::CENTER;
+    else if( sText == "inside" )
+        savedAlignH = text::HoriOrientation::INSIDE;
+    else if( sText == "outside" )
+        savedAlignH = text::HoriOrientation::OUTSIDE;
+}
+
+void PositionHandler::setAlignV(const OUString & sText)
+{
+    if( sText == "top" )
+        savedAlignV = text::VertOrientation::TOP;
+    else if( sText == "bottom" )
+        savedAlignV = text::VertOrientation::BOTTOM;
+    else if( sText == "center" )
+        savedAlignV = text::VertOrientation::CENTER;
+    else if( sText == "inside" )
+        savedAlignV = text::VertOrientation::NONE;
+    else if( sText == "outside" )
+        savedAlignV = text::VertOrientation::NONE;
 }
 
 WrapHandler::WrapHandler( ) :
@@ -208,7 +226,7 @@ void WrapHandler::lcl_attribute( Id aName, Value& rVal )
             break;
         case NS_ooxml::LN_CT_Wrap_side:
             m_nSide = sal_Int32( rVal.getInt( ) );
-            break; 
+            break;
         default:;
     }
 }
@@ -219,12 +237,16 @@ void WrapHandler::lcl_sprm( Sprm& )
 
 sal_Int32 WrapHandler::getWrapMode( )
 {
-    sal_Int32 nMode = com::sun::star::text::WrapTextMode_NONE;
+    // The wrap values do not map directly to our wrap mode,
+    // e.g. none in .docx actually means through in LO.
+    sal_Int32 nMode = com::sun::star::text::WrapTextMode_THROUGHT;
 
     switch ( m_nType )
     {
         case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_square:
+        // through and tight are somewhat complicated, approximate
         case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_tight:
+        case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_through:
             {
                 switch ( m_nSide )
                 {
@@ -239,16 +261,63 @@ sal_Int32 WrapHandler::getWrapMode( )
                 }
             }
             break;
-        case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_through:
-            nMode = com::sun::star::text::WrapTextMode_THROUGHT;
-            break;
         case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_topAndBottom:
+            nMode = com::sun::star::text::WrapTextMode_NONE;
+            break;
         case NS_ooxml::LN_Value_vml_wordprocessingDrawing_ST_WrapType_none:
         default:
-            nMode = com::sun::star::text::WrapTextMode_NONE;
+            nMode = com::sun::star::text::WrapTextMode_THROUGHT;
     }
 
     return nMode;
 }
 
+
+void GraphicZOrderHelper::addItem( uno::Reference< beans::XPropertySet > props, sal_Int32 relativeHeight )
+{
+    items[ relativeHeight ] = props;
+}
+
+// The relativeHeight value in .docx is an arbitrary number, where only the relative ordering matters.
+// But in Writer, the z-order is index in 0..(numitems-1) range, so whenever a new item needs to be
+// added in the proper z-order, it is necessary to find the proper index.
+sal_Int32 GraphicZOrderHelper::findZOrder( sal_Int32 relativeHeight, bool bOldStyle )
+{
+    Items::const_iterator it = items.begin();
+    while( it != items.end())
+    {
+        // std::map is iterated sorted by key
+
+        // Old-style ordering differs in what should happen when there is already an item with the same z-order:
+        // we belong under it in case of new-style, but we belong below it in case of old-style.
+        bool bCond = bOldStyle ? (it->first > relativeHeight) : (it->first >= relativeHeight);
+
+        if( bCond )
+            break; // this is the first one higher, we belong right before it
+        else
+            ++it;
+    }
+    if( it == items.end()) // we're topmost
+    {
+        if( items.empty())
+            return 0;
+        sal_Int32 itemZOrder(0);
+        --it;
+        if( it->second->getPropertyValue(PropertyNameSupplier::GetPropertyNameSupplier()
+            .GetName( PROP_Z_ORDER )) >>= itemZOrder )
+            return itemZOrder + 1; // after the topmost
+    }
+    else
+    {
+        sal_Int32 itemZOrder(0);
+        if( it->second->getPropertyValue(PropertyNameSupplier::GetPropertyNameSupplier()
+            .GetName( PROP_Z_ORDER )) >>= itemZOrder )
+            return itemZOrder; // before the item
+    }
+    SAL_WARN( "writerfilter", "findZOrder() didn't find item z-order" );
+    return 0; // this should not(?) happen
+}
+
 } }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

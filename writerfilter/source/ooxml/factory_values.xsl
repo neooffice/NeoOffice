@@ -1,25 +1,22 @@
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- ***********************************************************-->
-<xsl:stylesheet 
-    version="1.0" 
+<!--
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+-->
+<xsl:stylesheet
+    version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" 
     xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" 
@@ -57,22 +54,23 @@
   <!--
       Generates constant declarations for attribute values.
   -->
-  <xsl:template name="valueconstantdecls">
-    <xsl:text>
-extern rtl::OUString 
-    </xsl:text>
-    <xsl:call-template name="valuestringname">
-      <xsl:with-param name="string"></xsl:with-param>
-    </xsl:call-template>
-    <xsl:text>;</xsl:text>    
-    <xsl:for-each select="//rng:value[generate-id(key('value-with-content', text())[1]) = generate-id(.)]">
-      <xsl:text>
-extern rtl::OUString </xsl:text>
+  <xsl:template name="valueconstants">
+      <xsl:text>#define </xsl:text>
       <xsl:call-template name="valuestringname">
-        <xsl:with-param name="string" select="."/>
+	  <xsl:with-param name="string"></xsl:with-param>
       </xsl:call-template>
-      <xsl:text>;</xsl:text>
-    </xsl:for-each>
+      <xsl:text> ""
+</xsl:text>
+      <xsl:for-each select="//rng:value[generate-id(key('value-with-content', text())[1]) = generate-id(.)]">
+	  <xsl:text>#define </xsl:text>
+	  <xsl:call-template name="valuestringname">
+	      <xsl:with-param name="string" select="."/>
+	  </xsl:call-template>
+	  <xsl:text> "</xsl:text>
+	  <xsl:value-of select="."/>
+	  <xsl:text>"
+</xsl:text>
+      </xsl:for-each>
   </xsl:template>
 
   <xsl:template match="/">
@@ -80,7 +78,7 @@ extern rtl::OUString </xsl:text>
 #ifndef INCLUDED_FACTORY_VALUES</xsl:text>
 #include &lt;rtl/ustring.hxx&gt;
 
-<xsl:call-template name="valueconstantdecls"/>
+<xsl:call-template name="valueconstants"/>
 <xsl:text>
 #endif // INCLUDED_FACTORY_VALUES&#xa;</xsl:text>
   </xsl:template>

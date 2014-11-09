@@ -1,25 +1,22 @@
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- ***********************************************************-->
-<xsl:stylesheet 
-    version="1.0" 
+<!--
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+-->
+<xsl:stylesheet
+    version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" 
     xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" 
@@ -168,6 +165,12 @@ OOXMLFactory_ns::Pointer_t </xsl:text>
   </xsl:for-each>
   <xsl:for-each select=".//rng:data[@type='int']">
     <xsl:text>Integer</xsl:text>
+  </xsl:for-each>
+  <xsl:for-each select=".//rng:data[@type='integer']">
+    <xsl:text>Integer</xsl:text>
+  </xsl:for-each>
+  <xsl:for-each select=".//rng:data[@type='string']">
+    <xsl:text>String</xsl:text>
   </xsl:for-each>
 </xsl:template>
 
@@ -446,7 +449,8 @@ CreateElementMapPointer </xsl:text>
             @action='handleComment' or 
             @action='handlePicture' or 
             @action='handleBreak' or 
-            @action='handleOLE'">
+            @action='handleOLE' or
+            @action='handleFontRel'">
             <xsl:text>
     dynamic_cast&lt;OOXMLFastContextHandlerProperties*&gt;(pHandler)-&gt;</xsl:text>
             <xsl:value-of select="@action"/>
@@ -471,6 +475,10 @@ CreateElementMapPointer </xsl:text>
     dynamic_cast&lt;OOXMLFastContextHandlerTextTableRow*&gt;(pHandler)-&gt;</xsl:text>
             <xsl:value-of select="@action"/>
             <xsl:text>();</xsl:text>
+        </xsl:when>
+        <xsl:when test="@action='handleGridBefore'">
+            <xsl:text>
+    dynamic_cast&lt;OOXMLFastContextHandlerTextTableRow*&gt;(pHandler)-&gt;handleGridBefore();</xsl:text>
         </xsl:when>
         <xsl:when test="@action='sendProperty' or @action='handleHyperlink'">
             <xsl:text>
@@ -509,25 +517,27 @@ CreateElementMapPointer </xsl:text>
         <xsl:when test="@action='text'">
     pHandler-&gt;text(sText);
         </xsl:when>
+        <xsl:when test="@action='positionOffset'">
+    pHandler-&gt;positionOffset(sText);
+        </xsl:when>
+        <xsl:when test="@action='positivePercentage'">
+    pHandler-&gt;positivePercentage(sText);
+        </xsl:when>
+        <xsl:when test="@action='alignH'">
+    pHandler-&gt;alignH(sText);
+        </xsl:when>
+        <xsl:when test="@action='alignV'">
+    pHandler-&gt;alignV(sText);
+        </xsl:when>
         <xsl:when test="@action='newProperty'">
           <xsl:text>
     OOXMLFastHelper&lt;OOXMLIntegerValue&gt;::newProperty(pHandler, </xsl:text>
     <xsl:call-template name="idtoqname">
       <xsl:with-param name="id" select="@tokenid"/>
     </xsl:call-template>
-    <xsl:text>, ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("</xsl:text>
+    <xsl:text>, "</xsl:text>
     <xsl:value-of select="@value"/>
-    <xsl:text>")));</xsl:text>
-        </xsl:when>
-        <xsl:when test="@action='mark'">
-          <xsl:text>
-    OOXMLFastHelper&lt;OOXMLIntegerValue&gt;::mark(pHandler, </xsl:text>
-    <xsl:call-template name="idtoqname">
-      <xsl:with-param name="id" select="@sendtokenid"/>
-    </xsl:call-template>
-    <xsl:text>, ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("</xsl:text>
-    <xsl:value-of select="@value"/>
-    <xsl:text>")));</xsl:text>
+    <xsl:text>");</xsl:text>
         </xsl:when>
         <xsl:when test="@action='tokenproperty'">
           <xsl:text>
@@ -597,7 +607,7 @@ CreateElementMapPointer </xsl:text>
     <xsl:text> pHandler</xsl:text>
   </xsl:if>
   <xsl:if test="$action='characters'">
-    <xsl:text>, const ::rtl::OUString &amp;</xsl:text>
+    <xsl:text>, const OUString &amp;</xsl:text>
     <xsl:if test="contains($switchblock1, 'sText') or contains($switchblock2, 'sText')">
       <xsl:text> sText</xsl:text>
     </xsl:if>
@@ -616,7 +626,6 @@ CreateElementMapPointer </xsl:text>
     <xsl:text>    }&#xa;</xsl:text>
   </xsl:if>
   <xsl:if test="string-length($switchblock2) > 0">
-    <xsl:text>    OOXMLFastContextHandlerValue * pValueHandler = dynamic_cast&lt;OOXMLFastContextHandlerValue *&gt;(pHandler);&#xa;</xsl:text>
     <xsl:text>    switch (nDefine)&#xa;</xsl:text>
     <xsl:text>    {&#xa;</xsl:text>
     <xsl:value-of select="$switchblock2"/>
@@ -671,6 +680,7 @@ CreateElementMapPointer </xsl:text>
 
 <xsl:template name="factorygetdefinename">
     <xsl:text>
+#ifdef DEBUG_FACTORY
 string </xsl:text>
     <xsl:call-template name="factoryclassname"/>
     <xsl:text>::getDefineName(Id nId) const
@@ -694,6 +704,7 @@ string </xsl:text>
     
     return (*pMap)[nId];
 }
+#endif
     
 </xsl:template>
 
@@ -893,15 +904,17 @@ string </xsl:text>
   <xsl:template match="/">
     <xsl:variable name="ns" select="substring-before(substring-after($file, 'OOXMLFactory_'), '.cxx')"/>
     <xsl:text>
-#include "doctok/sprmids.hxx"
-#include "doctok/resourceids.hxx"
 #include "ooxml/resourceids.hxx"
 #include "OOXMLFactory_values.hxx"
 #include "OOXMLFactory_</xsl:text>
     <xsl:value-of select="$ns"/>
     <xsl:text>.hxx"
-#include "OOXMLFastHelper.hxx"
+#include "ooxml/OOXMLFastHelper.hxx"
     
+#ifdef _MSC_VER
+#pragma warning(disable:4065) // switch statement contains 'default' but no 'case' labels
+#endif
+
 namespace writerfilter {
 namespace ooxml {
 

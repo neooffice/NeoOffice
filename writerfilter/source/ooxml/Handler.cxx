@@ -1,32 +1,27 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <ooxml/resourceids.hxx>
-#include <resourcemodel/QNameToString.hxx>
 #include "Handler.hxx"
 
 namespace writerfilter {
-namespace ooxml 
+namespace ooxml
 {
 
 /*
@@ -46,7 +41,7 @@ void OOXMLFootnoteHandler::attribute(Id name, Value & val)
     switch (name)
     {
     case NS_ooxml::LN_CT_FtnEdnRef_id:
-        mpFastContext->resolveFootnote(val.getInt());
+        mpFastContext->resolveFootnote(sal_Int32(val.getInt()));
         break;
     default:
         break;
@@ -74,7 +69,7 @@ void OOXMLEndnoteHandler::attribute(Id name, Value & val)
     switch (name)
     {
     case NS_ooxml::LN_CT_FtnEdnRef_id:
-        mpFastContext->resolveEndnote(val.getInt());
+        mpFastContext->resolveEndnote(sal_Int32(val.getInt()));
         break;
     default:
         break;
@@ -90,7 +85,7 @@ void OOXMLEndnoteHandler::sprm(Sprm & /*sprm*/)
 */
 OOXMLCommentHandler::OOXMLCommentHandler(OOXMLFastContextHandler * pContext)
 : mpFastContext(pContext)
-{    
+{
 }
 
 OOXMLCommentHandler::~OOXMLCommentHandler()
@@ -113,12 +108,12 @@ void OOXMLCommentHandler::sprm(Sprm & /*sprm*/)
 {
 }
 
-/* 
+/*
    class OOXMLOLEHandler
 */
 OOXMLOLEHandler::OOXMLOLEHandler(OOXMLFastContextHandler * pContext)
 : mpFastContext(pContext)
-{    
+{
 }
 
 OOXMLOLEHandler::~OOXMLOLEHandler()
@@ -130,7 +125,7 @@ void OOXMLOLEHandler::attribute(Id name, Value & val)
     switch (name)
     {
     case NS_ooxml::LN_CT_OLEObject_r_id:
-        mpFastContext->resolveOLE(val.getString());
+        mpFastContext->resolveData(val.getString());
         break;
     default:
         ;
@@ -138,6 +133,31 @@ void OOXMLOLEHandler::attribute(Id name, Value & val)
 }
 
 void OOXMLOLEHandler::sprm(Sprm & /*sprm*/)
+{
+}
+
+OOXMLEmbeddedFontHandler::OOXMLEmbeddedFontHandler(OOXMLFastContextHandler * pContext)
+: mpFastContext(pContext)
+{
+}
+
+OOXMLEmbeddedFontHandler::~OOXMLEmbeddedFontHandler()
+{
+}
+
+void OOXMLEmbeddedFontHandler::attribute(Id name, Value & val)
+{
+    switch (name)
+    {
+    case NS_ooxml::LN_CT_Rel_id:
+        mpFastContext->resolveData(val.getString());
+        break;
+    default:
+        break;
+    }
+}
+
+void OOXMLEmbeddedFontHandler::sprm(Sprm & /*sprm*/)
 {
 }
 
@@ -208,9 +228,8 @@ void OOXMLHeaderHandler::sprm(Sprm & /*sprm*/)
 /*
   class OOXMLBreakHandler
  */
-OOXMLBreakHandler::OOXMLBreakHandler(Stream &rStream, 
-                                     OOXMLFastContextHandler * pContext)
-: mpFastContext(pContext), mnType(0), mnClear(0), 
+OOXMLBreakHandler::OOXMLBreakHandler(Stream &rStream)
+: mnType(0), mnClear(0),
   mrStream(rStream)
 {
 }
@@ -242,8 +261,8 @@ void OOXMLBreakHandler::attribute(Id name, Value & val)
         mnType = val.getInt();
         break;
     case NS_ooxml::LN_CT_Br_clear:
-    	mnClear = val.getInt();
-    	break;
+        mnClear = val.getInt();
+        break;
     default:
         break;
     }
@@ -258,7 +277,7 @@ void OOXMLBreakHandler::sprm(Sprm & /*sprm*/)
  */
 OOXMLPictureHandler::OOXMLPictureHandler(OOXMLFastContextHandler * pContext)
 : mpFastContext(pContext)
-{    
+{
 }
 
 OOXMLPictureHandler::~OOXMLPictureHandler()
@@ -268,7 +287,7 @@ OOXMLPictureHandler::~OOXMLPictureHandler()
 void OOXMLPictureHandler::attribute(Id name, Value & val)
 {
     if (name == NS_ooxml::LN_AG_Blob_r_embed)
-        mpFastContext->resolvePicture(val.getString());            
+        mpFastContext->resolvePicture(val.getString());
     else
     {
         writerfilter::Reference<Properties>::Pointer_t pProps
@@ -293,18 +312,18 @@ void OOXMLPictureHandler::sprm(Sprm & rSprm)
 
 OOXMLHyperlinkHandler::OOXMLHyperlinkHandler(OOXMLFastContextHandler * pContext)
 : mpFastContext(pContext)
-{    
+{
 }
 
 OOXMLHyperlinkHandler::~OOXMLHyperlinkHandler()
 {
-    ::rtl::OUString sReturn(RTL_CONSTASCII_USTRINGPARAM(" HYPERLINK \""));
-    
+    OUString sReturn(" HYPERLINK \"");
+
     sReturn += mURL;
-    sReturn += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("\""));
+    sReturn += "\"";
     sReturn += mFieldCode;
 
-    mpFastContext->characters(sReturn);
+    mpFastContext->text(sReturn);
 }
 
 void OOXMLHyperlinkHandler::attribute(Id name, Value & val)
@@ -312,23 +331,23 @@ void OOXMLHyperlinkHandler::attribute(Id name, Value & val)
     switch (name)
     {
     case NS_ooxml::LN_CT_Hyperlink_tgtFrame:
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(" \\t \""));
+        mFieldCode += " \\t \"";
         mFieldCode += val.getString();
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("\""));
+        mFieldCode += "\"";
         break;
     case NS_ooxml::LN_CT_Hyperlink_tooltip:
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(" \\o \""));
+        mFieldCode += " \\o \"";
         mFieldCode += val.getString();
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("\""));
+        mFieldCode += "\"";
         break;
     case NS_ooxml::LN_CT_Hyperlink_docLocation:
         break;
     case NS_ooxml::LN_CT_Hyperlink_history:
         break;
     case NS_ooxml::LN_CT_Hyperlink_anchor:
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(" \\l \""));
+        mFieldCode += " \\l \"";
         mFieldCode += val.getString();
-        mFieldCode += ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("\""));
+        mFieldCode += "\"";
         break;
     case NS_ooxml::LN_CT_Hyperlink_r_id:
         mURL = mpFastContext->getTargetForId(val.getString());
@@ -341,4 +360,7 @@ void OOXMLHyperlinkHandler::attribute(Id name, Value & val)
 void OOXMLHyperlinkHandler::sprm(Sprm & /*rSprm*/)
 {
 }
+
 }}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <com/sun/star/drawing/PointSequence.hpp>
 
@@ -33,6 +29,7 @@
 namespace writerfilter {
 
 using resourcemodel::resolveSprmProps;
+using namespace com::sun::star;
 
 namespace dmapper {
 
@@ -40,33 +37,33 @@ WrapPolygon::WrapPolygon()
 {
 }
 
-WrapPolygon::~WrapPolygon() 
+WrapPolygon::~WrapPolygon()
 {
 }
 
-void WrapPolygon::addPoint(const awt::Point & rPoint) 
-{ 
-    mPoints.push_back(rPoint); 
+void WrapPolygon::addPoint(const awt::Point & rPoint)
+{
+    mPoints.push_back(rPoint);
 }
 
 WrapPolygon::Points_t::const_iterator WrapPolygon::begin() const
-{ 
-    return mPoints.begin(); 
+{
+    return mPoints.begin();
 }
 
 WrapPolygon::Points_t::const_iterator WrapPolygon::end() const
-{ 
-    return mPoints.end(); 
+{
+    return mPoints.end();
 }
 
 WrapPolygon::Points_t::iterator WrapPolygon::begin()
-{ 
-    return mPoints.begin(); 
+{
+    return mPoints.begin();
 }
 
 WrapPolygon::Points_t::iterator WrapPolygon::end()
-{ 
-    return mPoints.end(); 
+{
+    return mPoints.end();
 }
 
 size_t WrapPolygon::size() const
@@ -85,13 +82,13 @@ WrapPolygon::Pointer_t WrapPolygon::move(const awt::Point & rPoint)
     {
         awt::Point aPoint(aIt->X + rPoint.X, aIt->Y + rPoint.Y);
         pResult->addPoint(aPoint);
-        aIt++;
+        ++aIt;
     }
 
     return pResult;
 }
 
-WrapPolygon::Pointer_t WrapPolygon::scale(const Fraction & rFractionX, const Fraction & rFractionY)
+WrapPolygon::Pointer_t WrapPolygon::scale(const resourcemodel::Fraction & rFractionX, const resourcemodel::Fraction & rFractionY)
 {
     WrapPolygon::Pointer_t pResult(new WrapPolygon);
 
@@ -100,32 +97,32 @@ WrapPolygon::Pointer_t WrapPolygon::scale(const Fraction & rFractionX, const Fra
 
     while (aIt != aItEnd)
     {
-        awt::Point aPoint(Fraction(aIt->X) * rFractionX, Fraction(aIt->Y) * rFractionY);
+        awt::Point aPoint(resourcemodel::Fraction(aIt->X) * rFractionX, resourcemodel::Fraction(aIt->Y) * rFractionY);
         pResult->addPoint(aPoint);
-        aIt++;
+        ++aIt;
     }
 
     return pResult;
 }
 
-WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygon(const awt::Size & rSrcSize, const awt::Size & rDstSize)
+WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygon(const awt::Size & rSrcSize)
 {
     WrapPolygon::Pointer_t pResult;
 
     const sal_uInt32 nWrap100Percent = 21600;
 
-    Fraction aMove(nWrap100Percent, rSrcSize.Width);
-    aMove = aMove * Fraction(15, 1);
+    resourcemodel::Fraction aMove(nWrap100Percent, rSrcSize.Width);
+    aMove = aMove * resourcemodel::Fraction(15, 1);
     awt::Point aMovePoint(aMove, 0);
     pResult = move(aMovePoint);
-    
-    Fraction aScaleX(nWrap100Percent, Fraction(nWrap100Percent) + aMove);
-    Fraction aScaleY(nWrap100Percent, Fraction(nWrap100Percent) - aMove);
+
+    resourcemodel::Fraction aScaleX(nWrap100Percent, resourcemodel::Fraction(nWrap100Percent) + aMove);
+    resourcemodel::Fraction aScaleY(nWrap100Percent, resourcemodel::Fraction(nWrap100Percent) - aMove);
     pResult = pResult->scale(aScaleX, aScaleY);
 
-    Fraction aScaleDestX(rDstSize.Width, nWrap100Percent);
-    Fraction aScaleDestY(rDstSize.Height, nWrap100Percent);
-    pResult = pResult->scale(aScaleDestX, aScaleDestY);
+    resourcemodel::Fraction aScaleSrcX(rSrcSize.Width, nWrap100Percent);
+    resourcemodel::Fraction aScaleSrcY(rSrcSize.Height, nWrap100Percent);
+    pResult = pResult->scale(aScaleSrcX, aScaleSrcY);
 
     return pResult;
 }
@@ -141,18 +138,20 @@ drawing::PointSequenceSequence WrapPolygon::getPointSequenceSequence() const
     Points_t::const_iterator aItEnd = end();
 
     while (aIt != aItEnd)
-    {        
+    {
         (*pPolygon)[n] = *aIt;
         ++n;
-        aIt++;
+        ++aIt;
     }
 
     return aPolyPolygon;
 }
 
 WrapPolygonHandler::WrapPolygonHandler()
-: LoggedProperties(dmapper_logger, "WrapPolygonHandler")
-, mpPolygon(new WrapPolygon)
+    : LoggedProperties(dmapper_logger, "WrapPolygonHandler")
+    , mpPolygon(new WrapPolygon)
+    , mnX(0)
+    , mnY(0)
 {
 }
 
@@ -167,11 +166,9 @@ void WrapPolygonHandler::lcl_attribute(Id Name, Value & val)
     switch(Name)
     {
     case NS_ooxml::LN_CT_Point2D_x:
-        /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
         mnX = nIntValue;
         break;
     case NS_ooxml::LN_CT_Point2D_y:
-        /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
         mnY = nIntValue;
         break;
     default:
@@ -188,10 +185,9 @@ void WrapPolygonHandler::lcl_sprm(Sprm & _sprm)
     {
     case NS_ooxml::LN_CT_WrapPath_lineTo:
     case NS_ooxml::LN_CT_WrapPath_start:
-        /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
         {
             resolveSprmProps(*this, _sprm);
-            
+
             awt::Point aPoint(mnX, mnY);
             mpPolygon->addPoint(aPoint);
         }
@@ -210,3 +206,5 @@ WrapPolygon::Pointer_t WrapPolygonHandler::getPolygon()
 }
 
 }}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

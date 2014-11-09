@@ -1,214 +1,243 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 #include <CellColorHandler.hxx>
 #include <PropertyMap.hxx>
-#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
+#include <TDefTableHandler.hxx>
 #include <ooxml/resourceids.hxx>
+#include <com/sun/star/drawing/ShadingPattern.hpp>
+#include <sal/macros.h>
+#if SUPD == 310
+#include <svx/util.hxx>
+#else	// SUPD == 310
+#include <filter/msfilter/util.hxx>
+#endif	// SUPD == 310
 #include "dmapperLoggers.hxx"
-
-#define OOXML_COLOR_AUTO 0x0a //todo: AutoColor needs symbol
 
 namespace writerfilter {
 namespace dmapper {
 
 using namespace ::com::sun::star;
-using namespace ::writerfilter;
-//using namespace ::std;
 
-/*-- 24.04.2007 09:06:35---------------------------------------------------
-
-  -----------------------------------------------------------------------*/
 CellColorHandler::CellColorHandler() :
 LoggedProperties(dmapper_logger, "CellColorHandler"),
-m_nShadowType( 0 ),
+m_nShadingPattern( drawing::ShadingPattern::CLEAR ),
 m_nColor( 0xffffffff ),
 m_nFillColor( 0xffffffff ),
-m_bParagraph( false )
+    m_OutputFormat( Form )
 {
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 CellColorHandler::~CellColorHandler()
 {
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
+// ST_Shd strings are converted to integers by the tokenizer, store strings in
+// the InteropGrabBag
+uno::Any lcl_ConvertShd(sal_Int32 nIntValue)
+{
+    OUString aRet;
+    // This should be in sync with the ST_Shd list in ooxml's model.xml.
+    switch (nIntValue)
+    {
+        case 0: aRet = "clear"; break;
+        case 1: aRet = "solid"; break;
+        case 2: aRet = "pct5"; break;
+        case 3: aRet = "pct10"; break;
+        case 4: aRet = "pct20"; break;
+        case 5: aRet = "pct25"; break;
+        case 6: aRet = "pct30"; break;
+        case 7: aRet = "pct40"; break;
+        case 8: aRet = "pct50"; break;
+        case 9: aRet = "pct60"; break;
+        case 10: aRet = "pct70"; break;
+        case 11: aRet = "pct75"; break;
+        case 12: aRet = "pct80"; break;
+        case 13: aRet = "pct90"; break;
+        case 14: aRet = "horzStripe"; break;
+        case 15: aRet = "vertStripe"; break;
+        case 17: aRet = "reverseDiagStripe"; break;
+        case 16: aRet = "diagStripe"; break;
+        case 18: aRet = "horzCross"; break;
+        case 19: aRet = "diagCross"; break;
+        case 20: aRet = "thinHorzStripe"; break;
+        case 21: aRet = "thinVertStripe"; break;
+        case 23: aRet = "thinReverseDiagStripe"; break;
+        case 22: aRet = "thinDiagStripe"; break;
+        case 24: aRet = "thinHorzCross"; break;
+        case 25: aRet = "thinDiagCross"; break;
+        case 37: aRet = "pct12"; break;
+        case 38: aRet = "pct15"; break;
+        case 43: aRet = "pct35"; break;
+        case 44: aRet = "pct37"; break;
+        case 46: aRet = "pct45"; break;
+        case 49: aRet = "pct55"; break;
+        case 51: aRet = "pct62"; break;
+        case 52: aRet = "pct65"; break;
+        case 57: aRet = "pct85"; break;
+        case 58: aRet = "pct87"; break;
+        case 60: aRet = "pct95"; break;
+        case 65535: aRet = "nil"; break;
+    }
+    return uno::makeAny(aRet);
+}
+
 void CellColorHandler::lcl_attribute(Id rName, Value & rVal)
 {
     sal_Int32 nIntValue = rVal.getInt();
-    (void)nIntValue;
-    (void)rName;
-    /* WRITERFILTERSTATUS: table: CellColor_attributedata */
     switch( rName )
     {
-        case NS_rtf::LN_cellTopColor:
-            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
-        case NS_rtf::LN_cellLeftColor:
-            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
-        case NS_rtf::LN_cellBottomColor:
-            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
-        case NS_rtf::LN_cellRightColor:
-            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
-            // nIntValue contains the color, directly
-        break;
         case NS_ooxml::LN_CT_Shd_val:
-            /* WRITERFILTERSTATUS: done: 50, planned: 0, spent: 0 */        
         {
+            createGrabBag("val", lcl_ConvertShd(nIntValue));
             //might be clear, pct5...90, some hatch types
             //TODO: The values need symbolic names!
-            m_nShadowType = nIntValue; //clear == 0, solid: 1, pct5: 2, pct50:8, pct95: x3c, horzStripe:0x0e, thinVertStripe: 0x15
+            m_nShadingPattern = nIntValue; //clear == 0, solid: 1, pct5: 2, pct50:8, pct95: x3c, horzStripe:0x0e, thinVertStripe: 0x15
         }
         break;
         case NS_ooxml::LN_CT_Shd_fill:
-            /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
+            createGrabBag("fill", uno::makeAny(OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8)));
             if( nIntValue == OOXML_COLOR_AUTO )
                 nIntValue = 0xffffff; //fill color auto means white
             m_nFillColor = nIntValue;
         break;
         case NS_ooxml::LN_CT_Shd_color:
-            /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
+            createGrabBag("color", uno::makeAny(OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8)));
             if( nIntValue == OOXML_COLOR_AUTO )
                 nIntValue = 0; //shading color auto means black
             //color of the shading
             m_nColor = nIntValue;
         break;
-//        case NS_rtf::LN_rgbrc:
-//        {
-//            writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
-//            if( pProperties.get())
-//            {
-//                pProperties->resolve(*this);
-//                //
-//            }
-//        }
-//        break;
         case NS_ooxml::LN_CT_Shd_themeFill:
-        case NS_ooxml::LN_CT_Shd_themeFillTint:
+            createGrabBag("themeFill", uno::makeAny(TDefTableHandler::getThemeColorTypeString(nIntValue)));
+        break;
         case NS_ooxml::LN_CT_Shd_themeFillShade:
-            // ignored
+            createGrabBag("themeFillShade", uno::makeAny(OUString::number(nIntValue, 16)));
+        break;
+        case NS_ooxml::LN_CT_Shd_themeFillTint:
+            createGrabBag("themeFillTint", uno::makeAny(OUString::number(nIntValue, 16)));
+            break;
+        case NS_ooxml::LN_CT_Shd_themeColor:
+            createGrabBag("themeColor", uno::makeAny(TDefTableHandler::getThemeColorTypeString(nIntValue)));
+        break;
+        case NS_ooxml::LN_CT_Shd_themeShade:
+            createGrabBag("themeShade", uno::makeAny(OUString::number(nIntValue, 16)));
+        break;
+        case NS_ooxml::LN_CT_Shd_themeTint:
+            createGrabBag("themeTint", uno::makeAny(OUString::number(nIntValue, 16)));
             break;
         default:
-            OSL_ENSURE( false, "unknown attribute");
+            OSL_FAIL( "unknown attribute");
     }
 }
-/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 void CellColorHandler::lcl_sprm(Sprm & rSprm)
 {
     (void)rSprm;
 }
-/*-- 24.04.2007 09:09:01---------------------------------------------------
 
-  -----------------------------------------------------------------------*/
 TablePropertyMapPtr  CellColorHandler::getProperties()
 {
     TablePropertyMapPtr pPropertyMap(new TablePropertyMap);
-//code from binary word filter 
+
+    // Code from binary word filter (the values are out of 1000)
     static const sal_Int32 eMSGrayScale[] =
     {
-        // Nul-Brush
-           0,   // 0
+        // Clear-Brush
+           0,   // 0    clear
         // Solid-Brush
-        1000,   // 1
-        // percent values
-          50,   // 2
-         100,   // 3
-         200,   // 4
-         250,   // 5
-         300,   // 6
-         400,   // 7
-         500,   // 8
-         600,   // 9
-         700,   // 10
-         750,   // 11
-         800,   // 12
-         900,   // 13
-         333, // 14 Dark Horizontal
-         333, // 15 Dark Vertical
-         333, // 16 Dark Forward Diagonal
-         333, // 17 Dark Backward Diagonal
-         333, // 18 Dark Cross
-         333, // 19 Dark Diagonal Cross
-         333, // 20 Horizontal
-         333, // 21 Vertical
-         333, // 22 Forward Diagonal
-         333, // 23 Backward Diagonal
-         333, // 24 Cross
-         333, // 25 Diagonal Cross
-         // some undefined values
-         500, // 26
-         500, // 27
-         500, // 28
-         500, // 29
-         500, // 30
-         500, // 31
-         500, // 32
-         500, // 33
-         500, // 34
-         // different shading types
-          25,   // 35
-          75,   // 36
-         125,   // 37
-         150,   // 38
-         175,   // 39
-         225,   // 40
-         275,   // 41
-         325,   // 42
-         350,   // 43
-         375,   // 44
-         425,   // 45
-         450,   // 46
-         475,   // 47
-         525,   // 48
-         550,   // 49
-         575,   // 50
-         625,   // 51
-         650,   // 52
-         675,   // 53
-         725,   // 54
-         775,   // 55
-         825,   // 56
-         850,   // 57
-         875,   // 58
-         925,   // 59
-         950,   // 60
-         975,   // 61
-         // und zu guter Letzt:
-         970
+        1000,   // 1    solid
+        // Percent values
+          50,   // 2    pct5
+         100,   // 3    pct10
+         200,   // 4    pct20
+         250,   // 5    pct25
+         300,   // 6    pct30
+         400,   // 7    pct40
+         500,   // 8    pct50
+         600,   // 9    pct60
+         700,   // 10   pct70
+         750,   // 11   pct75
+         800,   // 12   pct80
+         900,   // 13   pct90
+        // Special cases
+         333,   // 14   Dark Horizontal
+         333,   // 15   Dark Vertical
+         333,   // 16   Dark Forward Diagonal
+         333,   // 17   Dark Backward Diagonal
+         333,   // 18   Dark Cross
+         333,   // 19   Dark Diagonal Cross
+         333,   // 20   Horizontal
+         333,   // 21   Vertical
+         333,   // 22   Forward Diagonal
+         333,   // 23   Backward Diagonal
+         333,   // 24   Cross
+         333,   // 25   Diagonal Cross
+        // Undefined values in DOC spec-sheet
+         500,   // 26
+         500,   // 27
+         500,   // 28
+         500,   // 29
+         500,   // 30
+         500,   // 31
+         500,   // 32
+         500,   // 33
+         500,   // 34
+        // Different shading types
+          25,   // 35   [available in DOC, not available in DOCX]
+          75,   // 36   [available in DOC, not available in DOCX]
+         125,   // 37   pct12
+         150,   // 38   pct15
+         175,   // 39   [available in DOC, not available in DOCX]
+         225,   // 40   [available in DOC, not available in DOCX]
+         275,   // 41   [available in DOC, not available in DOCX]
+         325,   // 42   [available in DOC, not available in DOCX]
+         350,   // 43   pct35
+         375,   // 44   pct37
+         425,   // 45   [available in DOC, not available in DOCX]
+         450,   // 46   pct45
+         475,   // 47   [available in DOC, not available in DOCX]
+         525,   // 48   [available in DOC, not available in DOCX]
+         550,   // 49   pct55
+         575,   // 50   [available in DOC, not available in DOCX]
+         625,   // 51   pct62
+         650,   // 52   pct65
+         675,   // 53   [available in DOC, not available in DOCX]
+         725,   // 54   [available in DOC, not available in DOCX]
+         775,   // 55   [available in DOC, not available in DOCX]
+         825,   // 56   [available in DOC, not available in DOCX]
+         850,   // 57   pct85
+         875,   // 58   pct87
+         925,   // 59   [available in DOC, not available in DOCX]
+         950,   // 60   pct95
+         975    // 61   [available in DOC, not available in DOCX]
     };// 62
-    if( m_nShadowType >= (sal_Int32)(sizeof( eMSGrayScale ) / sizeof ( eMSGrayScale[ 0 ] )) )
-        m_nShadowType = 0;
 
-    sal_Int32 nWW8BrushStyle = eMSGrayScale[m_nShadowType];
+    if( m_nShadingPattern >= (sal_Int32)SAL_N_ELEMENTS( eMSGrayScale ) )
+        m_nShadingPattern = 0;
+
+    sal_Int32 nWW8BrushStyle = eMSGrayScale[m_nShadingPattern];
     sal_Int32 nApplyColor = 0;
     if( !nWW8BrushStyle )
     {
-        // Null-Brush
-            nApplyColor = m_nFillColor;
+        // Clear-Brush
+        nApplyColor = m_nFillColor;
     }
     else
     {
@@ -224,10 +253,132 @@ TablePropertyMapPtr  CellColorHandler::getProperties()
 
         nApplyColor = ( (nRed/1000) << 0x10 ) + ((nGreen/1000) << 8) + nBlue/1000;
     }
-        
-    pPropertyMap->Insert( m_bParagraph ? PROP_PARA_BACK_COLOR : PROP_BACK_COLOR, false,
-                            uno::makeAny( nApplyColor ));
+
+    // Check if it is a 'Character'
+    if (m_OutputFormat == Character)
+    {
+        static sal_Int32 aWWShadingPatterns[ ] =
+        {
+            drawing::ShadingPattern::CLEAR,
+            drawing::ShadingPattern::SOLID,
+            drawing::ShadingPattern::PCT5,
+            drawing::ShadingPattern::PCT10,
+            drawing::ShadingPattern::PCT20,
+            drawing::ShadingPattern::PCT25,
+            drawing::ShadingPattern::PCT30,
+            drawing::ShadingPattern::PCT40,
+            drawing::ShadingPattern::PCT50,
+            drawing::ShadingPattern::PCT60,
+            drawing::ShadingPattern::PCT70,
+            drawing::ShadingPattern::PCT75,
+            drawing::ShadingPattern::PCT80,
+            drawing::ShadingPattern::PCT90,
+            drawing::ShadingPattern::HORZ_STRIPE,
+            drawing::ShadingPattern::VERT_STRIPE,
+            drawing::ShadingPattern::REVERSE_DIAG_STRIPE,
+            drawing::ShadingPattern::DIAG_STRIPE,
+            drawing::ShadingPattern::HORZ_CROSS,
+            drawing::ShadingPattern::DIAG_CROSS,
+            drawing::ShadingPattern::THIN_HORZ_STRIPE,
+            drawing::ShadingPattern::THIN_VERT_STRIPE,
+            drawing::ShadingPattern::THIN_REVERSE_DIAG_STRIPE,
+            drawing::ShadingPattern::THIN_DIAG_STRIPE,
+            drawing::ShadingPattern::THIN_HORZ_CROSS,
+            drawing::ShadingPattern::THIN_DIAG_CROSS,
+            drawing::ShadingPattern::UNUSED_1,
+            drawing::ShadingPattern::UNUSED_2,
+            drawing::ShadingPattern::UNUSED_3,
+            drawing::ShadingPattern::UNUSED_4,
+            drawing::ShadingPattern::UNUSED_5,
+            drawing::ShadingPattern::UNUSED_6,
+            drawing::ShadingPattern::UNUSED_7,
+            drawing::ShadingPattern::UNUSED_8,
+            drawing::ShadingPattern::UNUSED_9,
+            drawing::ShadingPattern::PCT2,
+            drawing::ShadingPattern::PCT7,
+            drawing::ShadingPattern::PCT12,
+            drawing::ShadingPattern::PCT15,
+            drawing::ShadingPattern::PCT17,
+            drawing::ShadingPattern::PCT22,
+            drawing::ShadingPattern::PCT27,
+            drawing::ShadingPattern::PCT32,
+            drawing::ShadingPattern::PCT35,
+            drawing::ShadingPattern::PCT37,
+            drawing::ShadingPattern::PCT42,
+            drawing::ShadingPattern::PCT45,
+            drawing::ShadingPattern::PCT47,
+            drawing::ShadingPattern::PCT52,
+            drawing::ShadingPattern::PCT55,
+            drawing::ShadingPattern::PCT57,
+            drawing::ShadingPattern::PCT62,
+            drawing::ShadingPattern::PCT65,
+            drawing::ShadingPattern::PCT67,
+            drawing::ShadingPattern::PCT72,
+            drawing::ShadingPattern::PCT77,
+            drawing::ShadingPattern::PCT82,
+            drawing::ShadingPattern::PCT85,
+            drawing::ShadingPattern::PCT87,
+            drawing::ShadingPattern::PCT92,
+            drawing::ShadingPattern::PCT95,
+            drawing::ShadingPattern::PCT97
+        };
+
+        // Write the shading pattern property
+        pPropertyMap->Insert(PROP_CHAR_SHADING_VALUE, uno::makeAny( aWWShadingPatterns[m_nShadingPattern] ));
+    }
+
+    pPropertyMap->Insert( m_OutputFormat == Form ? PROP_BACK_COLOR
+                        : m_OutputFormat == Paragraph ? PROP_PARA_BACK_COLOR
+                        : PROP_CHAR_BACK_COLOR, uno::makeAny( nApplyColor ));
+
+    createGrabBag("originalColor", uno::makeAny( OStringToOUString(
+            msfilter::util::ConvertColor( nApplyColor, true ), RTL_TEXTENCODING_UTF8 )));
+
     return pPropertyMap;
 }
+
+void CellColorHandler::createGrabBag(const OUString& aName, uno::Any aAny)
+{
+    if (m_aInteropGrabBagName.isEmpty())
+        return;
+
+    beans::PropertyValue aValue;
+    aValue.Name = aName;
+    aValue.Value = aAny;
+    m_aInteropGrabBag.push_back(aValue);
+}
+
+void CellColorHandler::enableInteropGrabBag(const OUString& aName)
+{
+    m_aInteropGrabBagName = aName;
+}
+
+beans::PropertyValue CellColorHandler::getInteropGrabBag()
+{
+    beans::PropertyValue aRet;
+    aRet.Name = m_aInteropGrabBagName;
+
+    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
+    beans::PropertyValue* pSeq = aSeq.getArray();
+    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
+        *pSeq++ = *i;
+
+    aRet.Value = uno::makeAny(aSeq);
+    return aRet;
+}
+
+void CellColorHandler::disableInteropGrabBag()
+{
+    m_aInteropGrabBagName = "";
+    m_aInteropGrabBag.clear();
+}
+
+bool CellColorHandler::isInteropGrabBagEnabled()
+{
+    return !(m_aInteropGrabBagName.isEmpty());
+}
+
 } //namespace dmapper
 } //namespace writerfilter
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,31 +1,39 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <iostream>
 #include <string.h>
 #include <ooxml/resourceids.hxx>
 #include "OOXMLFastTokenHandler.hxx"
+
+#if defined __clang__
+#if __has_warning("-Wdeprecated-register")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-register"
+#endif
+#endif
 #include "gperffasttoken.hxx"
+#if defined __clang__
+#if __has_warning("-Wdeprecated-register")
+#pragma GCC diagnostic pop
+#endif
+#endif
 
 namespace writerfilter {
 namespace ooxml
@@ -34,27 +42,31 @@ namespace ooxml
 using namespace ::std;
 
 OOXMLFastTokenHandler::OOXMLFastTokenHandler
-(css::uno::Reference< css::uno::XComponentContext > const & context) 
+(css::uno::Reference< css::uno::XComponentContext > const & context)
 : m_xContext(context)
 {}
 
 // ::com::sun::star::xml::sax::XFastTokenHandler:
-::sal_Int32 SAL_CALL OOXMLFastTokenHandler::getToken(const ::rtl::OUString & Identifier) 
+::sal_Int32 SAL_CALL OOXMLFastTokenHandler::getToken(const OUString & Identifier)
+#if SUPD == 310
     throw (css::uno::RuntimeException)
-{        
+#else	// SUPD == 310
+    throw (css::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
+{
     ::sal_Int32 nResult = OOXML_FAST_TOKENS_END;
 
     struct tokenmap::token * pToken =
         tokenmap::Perfect_Hash::in_word_set
-        (OUStringToOString(Identifier, RTL_TEXTENCODING_ASCII_US).getStr(), 
+        (OUStringToOString(Identifier, RTL_TEXTENCODING_ASCII_US).getStr(),
          Identifier.getLength());
 
     if (pToken != NULL)
         nResult = pToken->nToken;
 
 #ifdef DEBUG_TOKEN
-    clog << "getToken: " 
-         << OUStringToOString(Identifier, RTL_TEXTENCODING_ASCII_US).getStr() 
+    clog << "getToken: "
+         << OUStringToOString(Identifier, RTL_TEXTENCODING_ASCII_US).getStr()
          << ", " << nResult
          << endl;
 #endif
@@ -62,61 +74,38 @@ OOXMLFastTokenHandler::OOXMLFastTokenHandler
     return nResult;
 }
 
-::rtl::OUString SAL_CALL OOXMLFastTokenHandler::getIdentifier(::sal_Int32 Token) 
+OUString SAL_CALL OOXMLFastTokenHandler::getIdentifier(::sal_Int32)
+#if SUPD == 310
     throw (css::uno::RuntimeException)
+#else	// SUPD == 310
+    throw (css::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-    ::rtl::OUString sResult;
-
-#if 0
-    //FIXME this is broken: tokenmap::wordlist is not indexed by Token!
-    if ( Token >= 0 || Token < OOXML_FAST_TOKENS_END )
-    {
-        static ::rtl::OUString aTokens[OOXML_FAST_TOKENS_END];
-        
-        if (aTokens[Token].getLength() == 0)
-            aTokens[Token] = ::rtl::OUString::createFromAscii
-                (tokenmap::wordlist[Token].name);
-    }
-#else
-    (void) Token;
-#endif
-
-    return sResult;
+    // we use a Boost tokenmap, but tokenmaps cannot be indexed by an integer
+    for (;;) { std::abort(); } // avoid "must return a value" warnings
 }
 
-css::uno::Sequence< ::sal_Int8 > SAL_CALL OOXMLFastTokenHandler::getUTF8Identifier(::sal_Int32 Token) 
+css::uno::Sequence< ::sal_Int8 > SAL_CALL OOXMLFastTokenHandler::getUTF8Identifier(::sal_Int32)
+#if SUPD == 310
     throw (css::uno::RuntimeException)
+#else	// SUPD == 310
+    throw (css::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-#if 0
-	if ( Token < 0  || Token >= OOXML_FAST_TOKENS_END )
-#endif
-		return css::uno::Sequence< ::sal_Int8 >();
-		
-#if 0
-    //FIXME this is broken: tokenmap::wordlist is not indexed by Token!
-	return css::uno::Sequence< ::sal_Int8 >(reinterpret_cast< const sal_Int8 *>(tokenmap::wordlist[Token].name), strlen(tokenmap::wordlist[Token].name));
-#else
-    (void) Token;
-#endif
+    // we use a Boost tokenmap, but tokenmaps cannot be indexed by an integer
+    for (;;) { std::abort(); } // avoid "must return a value" warnings
 }
 
-::sal_Int32 SAL_CALL OOXMLFastTokenHandler::getTokenFromUTF8
-(const css::uno::Sequence< ::sal_Int8 > & Identifier) throw (css::uno::RuntimeException)
+sal_Int32 OOXMLFastTokenHandler::getTokenDirect( const char *pStr, sal_Int32 nLength ) const
 {
-    ::sal_Int32 nResult = OOXML_FAST_TOKENS_END;
-    
     struct tokenmap::token * pToken =
-        tokenmap::Perfect_Hash::in_word_set
-        (reinterpret_cast<const char *>(Identifier.getConstArray()), 
-         Identifier.getLength());
+        tokenmap::Perfect_Hash::in_word_set( pStr, nLength );
 
-    if (pToken != NULL)
-        nResult = pToken->nToken;
+    sal_Int32 nResult = pToken != NULL ? pToken->nToken : OOXML_FAST_TOKENS_END;
 
 #ifdef DEBUG_TOKEN
-    clog << "getTokenFromUTF8: " 
-         << string(reinterpret_cast<const char *>
-                   (Identifier.getConstArray()), Identifier.getLength())
+    clog << "getTokenFromUTF8: "
+         << string(pStr, nLength)
          << ", " << nResult
          << (pToken == NULL ? ", failed" : "") << endl;
 #endif
@@ -124,4 +113,18 @@ css::uno::Sequence< ::sal_Int8 > SAL_CALL OOXMLFastTokenHandler::getUTF8Identifi
     return nResult;
 }
 
+::sal_Int32 SAL_CALL OOXMLFastTokenHandler::getTokenFromUTF8
+#if SUPD == 310
+(const css::uno::Sequence< ::sal_Int8 > & Identifier) throw (css::uno::RuntimeException)
+#else	// SUPD == 310
+(const css::uno::Sequence< ::sal_Int8 > & Identifier) throw (css::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
+{
+    return getTokenDirect(reinterpret_cast<const char *>
+                          (Identifier.getConstArray()),
+                          Identifier.getLength());
+}
+
 }}
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

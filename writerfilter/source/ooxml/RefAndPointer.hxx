@@ -1,28 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef INCLUDED_REF_AND_POINTER_HXX
-#define INCLUDED_REF_AND_POINTER_HXX
+#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_REFANDPOINTER_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_OOXML_REFANDPOINTER_HXX
 
 #include <iostream>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
@@ -30,56 +26,45 @@
 namespace writerfilter {
 namespace ooxml
 {
-using namespace ::com::sun::star;
-using namespace ::std;
 
 template <class Interface, class ChildClass>
 class RefAndPointer
 {
     mutable ChildClass * mpHandler;
-    mutable uno::Reference<Interface> mRef;
+    mutable css::uno::Reference<Interface> mRef;
 
 public:
     RefAndPointer()
     : mpHandler(NULL)
     {
-#ifdef DEBUG_MEMORY
-        clog << "MEMORY:" << mpHandler->getInstanceNumber() << ":RefAndPointer"
-             << endl;
-#endif
     }
 
     RefAndPointer(ChildClass * pHandler)
     : mpHandler(pHandler), mRef(pHandler)
     {
 #ifdef DEBUG_MEMORY
-        clog << "MEMORY:" << mpHandler->getInstanceNumber() << ":RefAndPointer"
-             << endl;
+        std::clog << "MEMORY:" << mpHandler->getInstanceNumber() << ":RefAndPointer"
+             << std::endl;
 #endif
     }
 
-    RefAndPointer(uno::Reference<Interface> xRef)
+    RefAndPointer(css::uno::Reference<Interface> xRef)
     : mRef(xRef)
     {
-#if 0
-        uno::Reference<lang::XUnoTunnel> xTunnel( xRef, uno::UNO_QUERY);
-        
-        if (xTunnel.is())
-            mpHandler = reinterpret_cast<ChildClass *>(xTunnel->getSomething(ChildClass::getUnoTunnelId()));
-#else
         mpHandler = dynamic_cast<ChildClass *>(xRef.get());
-#endif
+#ifdef DEBUG_MEMORY
         if (mpHandler != NULL)
-            clog << "MEMORY:" << mpHandler->getInstanceNumber() 
-                 << ":RefAndPointer" << endl;
+            std::clog << "MEMORY:" << mpHandler->getInstanceNumber()
+                 << ":RefAndPointer" << std::endl;
+#endif
     }
-    
-    virtual ~RefAndPointer() 
+
+    virtual ~RefAndPointer()
     {
 #ifdef DEBUG_MEMORY
         if (mpHandler != NULL)
-            clog << "MEMORY:" << mpHandler->getInstanceNumber() 
-                 << ":~RefAndPointer" << endl;
+            std::clog << "MEMORY:" << mpHandler->getInstanceNumber()
+                 << ":~RefAndPointer" << std::endl;
 #endif
     }
 
@@ -89,14 +74,14 @@ public:
         mRef = pHandler;
     }
 
-    void set(uno::Reference<Interface> xHandler)
+    void set(css::uno::Reference<Interface> xHandler)
     {
         mpHandler = dynamic_cast<ChildClass*>(xHandler.get());
         mRef = xHandler;
     }
 
     ChildClass * getPointer() const { return mpHandler; }
-    const uno::Reference<Interface> getRef() const { return mRef; }
+    const css::uno::Reference<Interface> getRef() const { return mRef; }
 
     RefAndPointer & operator=
     (const RefAndPointer & rSrc)
@@ -109,7 +94,9 @@ public:
     bool is() { return getRef().is(); }
 
     operator ChildClass* () { return getPointer(); }
-    operator uno::Reference<Interface> () { return getRef(); }
+    operator css::uno::Reference<Interface> () { return getRef(); }
 };
 }}
-#endif // INCLUDED_REF_AND_POINTER_HXX
+#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_REFANDPOINTER_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

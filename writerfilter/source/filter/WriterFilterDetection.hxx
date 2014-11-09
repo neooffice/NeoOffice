@@ -1,35 +1,35 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef _WRITERFILTER_DETECTION_HXX
-#define _WRITERFILTER_DETECTION_HXX
+#ifndef INCLUDED_WRITERFILTER_SOURCE_FILTER_WRITERFILTERDETECTION_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_FILTER_WRITERFILTERDETECTION_HXX
 
 #include <com/sun/star/document/XExtendedFilterDetection.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <cppuhelper/implbase2.hxx>
-#include <WriterFilterDllApi.hxx>
 
-class WRITERFILTER_DLLPUBLIC WriterFilterDetection : public cppu::WeakImplHelper2
+#if SUPD == 310
+#include <WriterFilterDllApi.hxx>
+#endif	// SUPD == 310
+
+/// File format detection service for DOC (unused) / DOCX.
+class WriterFilterDetection : public cppu::WeakImplHelper2
 <
     com::sun::star::document::XExtendedFilterDetection,
     com::sun::star::lang::XServiceInfo
@@ -42,25 +42,41 @@ public:
     virtual ~WriterFilterDetection();
 
     //XExtendedFilterDetection
-    virtual ::rtl::OUString SAL_CALL detect( com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >& Descriptor )
-        throw( com::sun::star::uno::RuntimeException );
+    virtual OUString SAL_CALL detect( com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >& Descriptor )
+#if SUPD == 310
+        throw( com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
     // XServiceInfo
-    virtual ::rtl::OUString SAL_CALL getImplementationName(  )
-        throw (::com::sun::star::uno::RuntimeException);
-    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName )
-        throw (::com::sun::star::uno::RuntimeException);
-    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames()
-        throw (::com::sun::star::uno::RuntimeException);
+    virtual OUString SAL_CALL getImplementationName(  )
+#if SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName )
+#if SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames()
+#if SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
 };
 
-::rtl::OUString WriterFilterDetection_getImplementationName()
+OUString WriterFilterDetection_getImplementationName()
     throw ( ::com::sun::star::uno::RuntimeException );
 
-sal_Bool SAL_CALL WriterFilterDetection_supportsService( const ::rtl::OUString& ServiceName )
+bool SAL_CALL WriterFilterDetection_supportsService( const OUString& ServiceName )
     throw ( ::com::sun::star::uno::RuntimeException );
 
-::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL WriterFilterDetection_getSupportedServiceNames(  )
+::com::sun::star::uno::Sequence< OUString > SAL_CALL WriterFilterDetection_getSupportedServiceNames(  )
     throw ( ::com::sun::star::uno::RuntimeException );
 
 ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL WriterFilterDetection_createInstance(
@@ -70,3 +86,4 @@ sal_Bool SAL_CALL WriterFilterDetection_supportsService( const ::rtl::OUString& 
 
 #endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

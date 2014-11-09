@@ -1,37 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- ***********************************************************-->
+<!--
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+-->
 <model xmlns:rng="http://relaxng.org/ns/structure/1.0">
   <namespace-alias name="http://www.w3.org/XML/1998/namespace" alias="xml" id="xml"/>
   <namespace-alias name="http://schemas.openxmlformats.org/officeDocument/2006/relationships" alias="relationships" id="officeRel"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/officeDocument/relationships" alias="relationships" id="officeRel"/>
   <namespace-alias name="urn:schemas-microsoft-com:office:office" alias="office" id="vmlOffice"/>
   <namespace-alias name="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" alias="theme" id="officeRelTheme"/>
   <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" alias="wordprocessingDrawing" id="dmlWordDr"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing" alias="wordprocessingDrawing" id="dmlWordDr"/>
   <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/main" alias="drawingml" id="dml"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/main" alias="drawingml" id="dml"/>
   <namespace-alias name="urn:schemas-microsoft-com:vml" alias="vml" id="vml"/>
   <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/picture" alias="picture" id="dmlPicture"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/picture" alias="picture" id="dmlPicture"/>
+  <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/diagram" alias="diagram" id="dmlDiagram"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/diagram" alias="diagram" id="dmlDiagram"/>
+  <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/lockedCanvas" alias="lockedCanvas" id="dmlLockedCanvas"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/lockedCanvas" alias="lockedCanvas" id="dmlLockedCanvas"/>
+  <namespace-alias name="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" alias="wps" id="wps"/>
+  <namespace-alias name="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" alias="wpg" id="wpg"/>
+  <namespace-alias name="http://schemas.openxmlformats.org/drawingml/2006/chart" alias="chart" id="dmlChart"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/drawingml/chart" alias="chart" id="dmlChart"/>
   <namespace-alias name="urn:schemas-microsoft-com:office:word" alias="vml_wordprocessingDrawing" id="vmlWord"/>
   <namespace-alias name="http://schemas.openxmlformats.org/wordprocessingml/2006/main" alias="wordprocessingml" id="doc"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/wordprocessingml/main" alias="wordprocessingml" id="doc"/>
   <namespace-alias name="http://schemas.openxmlformats.org/officeDocument/2006/math" alias="math" id="officeMath"/>
+  <namespace-alias name="http://purl.oclc.org/ooxml/officeDocument/math" alias="math" id="officeMath"/>
   <namespace-alias name="http://schemas.openxmlformats.org/schemaLibrary/2006/main" alias="schemaLibrary" id="schema"/>
+  <namespace-alias name="http://schemas.openxmlformats.org/markup-compatibility/2006" alias="mce" id="mce"/>
+  <namespace-alias name="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" alias="wp14" id="wp14"/>
+  <namespace-alias name="http://schemas.microsoft.com/office/word/2010/wordml" alias="w14" id="w14"/>
+  <namespace-alias name="http://schemas.microsoft.com/office/drawing/2010/main" alias="a14" id="a14"/>
   <namespace-alias name="http://sprm" alias="sprm" id="sprm"/>
   <token tokenid="ooxml:shape"/>
   <token tokenid="ooxml:token"/>
@@ -39,16 +54,37 @@
   <token tokenid="ooxml:trackchange"/>
   <token tokenid="ooxml:object"/>
   <token tokenid="ooxml:tblStart"/>
+  <token tokenid="ooxml:tblEnd"/>
+
+  <!-- These are not directly generated from OOXML XML elements / attributes, need to clean them up in the future. -->
+  <token tokenid="ooxml:tblDepth"/>
+  <token tokenid="ooxml:inTbl"/>
+  <token tokenid="ooxml:tblCell"/>
+  <token tokenid="ooxml:tblRow"/>
+
   <token tokenid="ooxml:ffdata"/>
+  <token tokenid="ooxml:starmath"/>
+  <token tokenid="ooxml:blip"/>
+  <token tokenid="ooxml:payload"/>
+  <token tokenid="ooxml:footnote"/>
+  <token tokenid="ooxml:endnote"/>
+  <token tokenid="ooxml:annotation"/>
+  <token tokenid="ooxml:headerl"/>
+  <token tokenid="ooxml:headerr"/>
+  <token tokenid="ooxml:headerf"/>
+  <token tokenid="ooxml:footerl"/>
+  <token tokenid="ooxml:footerr"/>
+  <token tokenid="ooxml:footerf"/>
   <namespace name="dml-stylesheet" url="http://schemas.openxmlformats.org/drawingml/2006/main" file="dml-stylesheet.rng">
     <start name="theme"/>
     <start name="themeOverride"/>
     <start name="themeManager"/>
-    <grammar xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+    <start name="hlinkClick"/>
+    <grammar xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
       <!-- ISO RELAX NG Schema -->
       <include href="dml-baseStylesheet.rng"/>
       <include href="dml-styleDefaults.rng"/>
-      <!-- start = theme | themeOverride | themeManager -->
+      <!-- start = theme | themeOverride | themeManager | hlinkClick -->
       <define name="CT_EmptyElement">
         <empty/>
       </define>
@@ -194,6 +230,13 @@
           <ref name="CT_ColorMapping"/>
         </element>
       </define>
+      <define name="CT_Hyperlink">
+        <optional>
+          <attribute name="r:id">
+            <text/>
+          </attribute>
+        </optional>
+      </define>
       <define name="theme">
         <element name="theme">
           <ref name="CT_OfficeStyleSheet"/>
@@ -209,13 +252,24 @@
           <ref name="CT_EmptyElement"/>
         </element>
       </define>
+      <define name="hlinkClick">
+        <element name="hlinkClick">
+          <ref name="CT_Hyperlink"/>
+        </element>
+      </define>
     </grammar>
     <resource name="CT_OfficeStyleSheet" resource="Table" tokenid="ooxml:THEMETABLE"/>
+    <resource xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_Hyperlink" resource="Properties" tag="shape">
+      <attribute name="r:id" tokenid="ooxml:CT_Hyperlink_r_id"/>
+    </resource>
     <resource name="theme" resource="Stream" tag="theme">
       <element name="theme" tokenid="ooxml:THEMETABLE"/>
     </resource>
     <resource name="themeOverride" resource="Stream" tag="theme"/>
     <resource name="themeManager" resource="Stream" tag="theme"/>
+    <resource name="hlinkClick" resource="Properties" tag="shape">
+      <element name="hlinkClick" tokenid="ooxml:hlinkClick_hlinkClick"/>
+    </resource>
   </namespace>
   <namespace name="dml-styleDefaults" file="dml-styleDefaults">
     <grammar xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -984,6 +1038,9 @@
         </attribute>
         <attribute name="typeface">
           <ref name="ST_TextTypeface"/>
+          <data type="string">
+            <xs:documentation>Typeface</xs:documentation>
+          </data>
           <xs:documentation>Typeface</xs:documentation>
         </attribute>
       </define>
@@ -4457,6 +4514,9 @@
       <attribute name="val" tokenid="ooxml:CT_Percentage_val" action="setValue"/>
       <action name="start" action="setDefaultIntegerValue"/>
     </resource>
+    <resource name="ST_PositivePercentage" resource="Value">
+      <action name="characters" action="positivePercentage"/>
+    </resource>
     <resource name="CT_PositivePercentage" resource="Value" generated="yes" tag="attribute">
       <attribute name="val" tokenid="ooxml:CT_PositivePercentage_val" action="setValue"/>
     </resource>
@@ -4740,7 +4800,7 @@
     <resource name="ST_DrawingElementId" resource="Integer" generated="yes"/>
   </namespace>
   <namespace name="dml-documentProperties" file="dml-documentProperties.rng" todo="ignore">
-    <grammar xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+    <grammar xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
       <!-- ISO RELAX NG Schema -->
       <include href="dml-baseTypes.rng"/>
       <include href="dml-shapeGeometry.rng"/>
@@ -4987,8 +5047,8 @@
       <define name="CT_NonVisualDrawingProps">
         <group>
           <optional>
-            <element name="hlinkClick">
-              <ref name="CT_Hyperlink"/>
+            <element name="a:hlinkClick">
+              <ref name="BUILT_IN_ANY_TYPE"/>
             </element>
           </optional>
           <optional>
@@ -5026,6 +5086,14 @@
               <xs:documentation>Hidden</xs:documentation>
             </data>
             <xs:documentation>Hidden</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="title">
+            <data type="string">
+              <xs:documentation>Title</xs:documentation>
+            </data>
+            <xs:documentation>Title</xs:documentation>
           </attribute>
         </optional>
       </define>
@@ -5129,14 +5197,15 @@
       <attribute name="noMove" tokenid="ooxml:CT_GraphicalObjectFrameLocking_noMove"/>
       <attribute name="noResize" tokenid="ooxml:CT_GraphicalObjectFrameLocking_noResize"/>
     </resource>
-    <resource name="CT_NonVisualDrawingProps" resource="Properties" tag="shape">
-      <element name="hlinkClick" tokenid="ooxml:CT_NonVisualDrawingProps_hlinkClick"/>
+    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CT_NonVisualDrawingProps" resource="Properties" tag="shape">
+      <element name="a:hlinkClick" tokenid="ooxml:CT_NonVisualDrawingProps_a_hlinkClick"/>
       <element name="hlinkHover" tokenid="ooxml:CT_NonVisualDrawingProps_hlinkHover"/>
       <element name="extLst" tokenid="ooxml:CT_NonVisualDrawingProps_extLst"/>
       <attribute name="id" tokenid="ooxml:CT_NonVisualDrawingProps_id"/>
       <attribute name="name" tokenid="ooxml:CT_NonVisualDrawingProps_name"/>
       <attribute name="descr" tokenid="ooxml:CT_NonVisualDrawingProps_descr"/>
       <attribute name="hidden" tokenid="ooxml:CT_NonVisualDrawingProps_hidden"/>
+      <attribute name="title" tokenid="ooxml:CT_NonVisualDrawingProps_title"/>
     </resource>
     <resource name="CT_NonVisualPictureProperties" resource="Properties" tag="shape">
       <element name="picLocks" tokenid="ooxml:CT_NonVisualPictureProperties_picLocks"/>
@@ -5156,6 +5225,11 @@
       <define name="CT_GraphicalObjectData">
         <zeroOrMore>
           <ref name="pic"/>
+          <ref name="relIds"/>
+          <ref name="lockedCanvas"/>
+          <ref name="chart"/>
+          <ref name="wsp"/>
+          <ref name="wgp"/>
           <element>
             <anyName/>
             <ref name="BUILT_IN_ANY_TYPE"/>
@@ -5181,6 +5255,11 @@
     </grammar>
     <resource name="CT_GraphicalObjectData" resource="Properties" tag="shape">
       <element name="pic" tokenid="ooxml:CT_GraphicalObjectData_pic"/>
+      <element name="relIds" tokenid="ooxml:CT_GraphicalObjectData_relIds"/>
+      <element name="lockedCanvas" tokenid="ooxml:CT_GraphicalObjectData_lockedCanvas"/>
+      <element name="chart" tokenid="ooxml:CT_GraphicalObjectData_chart"/>
+      <element name="wsp" tokenid="ooxml:CT_GraphicalObjectData_wsp"/>
+      <element name="wgp" tokenid="ooxml:CT_GraphicalObjectData_wgp"/>
       <attribute name="uri" tokenid="ooxml:CT_GraphicalObjectData_uri"/>
     </resource>
     <resource name="CT_GraphicalObject" resource="Properties" tag="shape">
@@ -5189,6 +5268,1942 @@
     <resource name="graphic" resource="Properties" tag="shape">
       <element name="graphic" tokenid="ooxml:graphic_graphic"/>
     </resource>
+  </namespace>
+  <namespace name="wp14">
+    <start name="sizeRelH"/>
+    <start name="sizeRelV"/>
+    <grammar xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+      <define name="ST_SizeRelFromH">
+        <choice>
+          <value>margin</value>
+          <value>page</value>
+          <value>leftMargin</value>
+          <value>rightMargin</value>
+          <value>insideMargin</value>
+          <value>outsideMargin</value>
+        </choice>
+      </define>
+      <define name="ST_SizeRelFromV">
+        <choice>
+          <value>margin</value>
+          <value>page</value>
+          <value>topMargin</value>
+          <value>bottomMargin</value>
+          <value>insideMargin</value>
+          <value>outsideMargin</value>
+        </choice>
+      </define>
+      <define name="CT_SizeRelH">
+        <element name="pctWidth">
+          <ref name="ST_PositivePercentage"/>
+        </element>
+        <attribute name="relativeFrom">
+          <ref name="ST_SizeRelFromH"/>
+        </attribute>
+      </define>
+      <define name="CT_SizeRelV">
+        <element name="pctHeight">
+          <ref name="ST_PositivePercentage"/>
+        </element>
+        <attribute name="relativeFrom">
+          <ref name="ST_SizeRelFromV"/>
+        </attribute>
+      </define>
+      <define name="sizeRelH">
+        <element name="sizeRelH">
+          <ref name="CT_SizeRelH"/>
+        </element>
+      </define>
+      <define name="sizeRelV">
+        <element name="sizeRelV">
+          <ref name="CT_SizeRelV"/>
+        </element>
+      </define>
+    </grammar>
+    <resource name="ST_SizeRelFromH" resource="List" generated="yes">
+      <value name="margin" tokenid="ooxml:ST_SizeRelFromH_margin">margin</value>
+      <value name="page" tokenid="ooxml:ST_SizeRelFromH_page">page</value>
+      <value name="leftMargin" tokenid="ooxml:ST_SizeRelFromH_leftMargin">leftMargin</value>
+      <value name="rightMargin" tokenid="ooxml:ST_SizeRelFromH_rightMargin">rightMargin</value>
+      <value name="insideMargin" tokenid="ooxml:ST_SizeRelFromH_insideMargin">insideMargin</value>
+      <value name="outsideMargin" tokenid="ooxml:ST_SizeRelFromH_outsideMargin">outsideMargin</value>
+    </resource>
+    <resource name="ST_SizeRelFromV" resource="List" generated="yes">
+      <value name="margin" tokenid="ooxml:ST_SizeRelFromV_margin">margin</value>
+      <value name="page" tokenid="ooxml:ST_SizeRelFromV_page">page</value>
+      <value name="topMargin" tokenid="ooxml:ST_SizeRelFromV_topMargin">topMargin</value>
+      <value name="bottomMargin" tokenid="ooxml:ST_SizeRelFromV_bottomMargin">bottomMargin</value>
+      <value name="insideMargin" tokenid="ooxml:ST_SizeRelFromV_insideMargin">insideMargin</value>
+      <value name="outsideMargin" tokenid="ooxml:ST_SizeRelFromV_outsideMargin">outsideMargin</value>
+    </resource>
+    <resource name="CT_SizeRelH" resource="Properties" tag="shape">
+      <element name="pctWidth" tokenid="ooxml:CT_SizeRelH_pctWidth"/>
+      <attribute name="relativeFrom" tokenid="ooxml:CT_SizeRelH_relativeFrom"/>
+    </resource>
+    <resource name="CT_SizeRelV" resource="Properties" tag="shape">
+      <element name="pctHeight" tokenid="ooxml:CT_SizeRelV_pctHeight"/>
+      <attribute name="relativeFrom" tokenid="ooxml:CT_SizeRelV_relativeFrom"/>
+    </resource>
+    <resource name="sizeRelH" resource="Properties" tag="shape">
+      <element name="sizeRelH" tokenid="ooxml:sizeRelH_sizeRelH"/>
+    </resource>
+    <resource name="sizeRelV" resource="Properties" tag="shape">
+      <element name="sizeRelV" tokenid="ooxml:sizeRelV_sizeRelV"/>
+    </resource>
+  </namespace>
+  <namespace name="w14" file="w14.rng">
+    <start name="glow"/>
+    <start name="shadow"/>
+    <start name="reflection"/>
+    <start name="textOutline"/>
+    <start name="textFill"/>
+    <start name="scene3d"/>
+    <start name="props3d"/>
+    <start name="ligatures"/>
+    <start name="numForm"/>
+    <start name="numSpacing"/>
+    <start name="stylisticSets"/>
+    <start name="cntxtAlts"/>
+    <grammar xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.microsoft.com/office/word/2010/wordml" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes" attributeFormDefault="qualified">
+      <define name="ST_SchemeColorVal">
+        <choice>
+          <value>bg1</value>
+          <value>tx1</value>
+          <value>bg2</value>
+          <value>tx2</value>
+          <value>accent1</value>
+          <value>accent2</value>
+          <value>accent3</value>
+          <value>accent4</value>
+          <value>accent5</value>
+          <value>accent6</value>
+          <value>hlink</value>
+          <value>folHlink</value>
+          <value>dk1</value>
+          <value>lt1</value>
+          <value>dk2</value>
+          <value>lt2</value>
+          <value>phClr</value>
+        </choice>
+      </define>
+      <define name="ST_RectAlignment">
+        <choice>
+          <value>none</value>
+          <value>tl</value>
+          <value>t</value>
+          <value>tr</value>
+          <value>l</value>
+          <value>ctr</value>
+          <value>r</value>
+          <value>bl</value>
+          <value>b</value>
+          <value>br</value>
+        </choice>
+      </define>
+      <define name="ST_LineCap">
+        <choice>
+          <value>rnd</value>
+          <value>sq</value>
+          <value>flat</value>
+        </choice>
+      </define>
+      <define name="ST_CompoundLine">
+        <choice>
+          <value>sng</value>
+          <value>dbl</value>
+          <value>thickThin</value>
+          <value>thinThick</value>
+          <value>tri</value>
+        </choice>
+      </define>
+      <define name="ST_PenAlignment">
+        <choice>
+          <value>ctr</value>
+          <value>in</value>
+        </choice>
+      </define>
+      <define name="ST_OnOff">
+        <choice>
+          <value>true</value>
+          <value>false</value>
+          <value>0</value>
+          <value>1</value>
+        </choice>
+      </define>
+      <define name="ST_PathShadeType">
+        <choice>
+          <value>shape</value>
+          <value>circle</value>
+          <value>rect</value>
+        </choice>
+      </define>
+      <define name="ST_PresetLineDashVal">
+        <choice>
+          <value>solid</value>
+          <value>dot</value>
+          <value>sysDot</value>
+          <value>dash</value>
+          <value>sysDash</value>
+          <value>lgDash</value>
+          <value>dashDot</value>
+          <value>sysDashDot</value>
+          <value>lgDashDot</value>
+          <value>lgDashDotDot</value>
+          <value>sysDashDotDot</value>
+        </choice>
+      </define>
+      <define name="ST_PresetCameraType">
+        <list>
+          <choice>
+            <value>legacyObliqueTopLeft</value>
+            <value>legacyObliqueTop</value>
+            <value>legacyObliqueTopRight</value>
+            <value>legacyObliqueLeft</value>
+            <value>legacyObliqueFront</value>
+            <value>legacyObliqueRight</value>
+            <value>legacyObliqueBottomLeft</value>
+            <value>legacyObliqueBottom</value>
+            <value>legacyObliqueBottomRight</value>
+            <value>legacyPerspectiveTopLeft</value>
+            <value>legacyPerspectiveTop</value>
+            <value>legacyPerspectiveTopRight</value>
+            <value>legacyPerspectiveLeft</value>
+            <value>legacyPerspectiveFront</value>
+            <value>legacyPerspectiveRight</value>
+            <value>legacyPerspectiveBottomLeft</value>
+            <value>legacyPerspectiveBottom</value>
+            <value>legacyPerspectiveBottomRight</value>
+            <value>orthographicFront</value>
+            <value>isometricTopUp</value>
+            <value>isometricTopDown</value>
+            <value>isometricBottomUp</value>
+            <value>isometricBottomDown</value>
+            <value>isometricLeftUp</value>
+            <value>isometricLeftDown</value>
+            <value>isometricRightUp</value>
+            <value>isometricRightDown</value>
+            <value>isometricOffAxis1Left</value>
+            <value>isometricOffAxis1Right</value>
+            <value>isometricOffAxis1Top</value>
+            <value>isometricOffAxis2Left</value>
+            <value>isometricOffAxis2Right</value>
+            <value>isometricOffAxis2Top</value>
+            <value>isometricOffAxis3Left</value>
+            <value>isometricOffAxis3Right</value>
+            <value>isometricOffAxis3Bottom</value>
+            <value>isometricOffAxis4Left</value>
+            <value>isometricOffAxis4Right</value>
+            <value>isometricOffAxis4Bottom</value>
+            <value>obliqueTopLeft</value>
+            <value>obliqueTop</value>
+            <value>obliqueTopRight</value>
+            <value>obliqueLeft</value>
+            <value>obliqueRight</value>
+            <value>obliqueBottomLeft</value>
+            <value>obliqueBottom</value>
+            <value>obliqueBottomRight</value>
+            <value>perspectiveFront</value>
+            <value>perspectiveLeft</value>
+            <value>perspectiveRight</value>
+            <value>perspectiveAbove</value>
+            <value>perspectiveBelow</value>
+            <value>perspectiveAboveLeftFacing</value>
+            <value>perspectiveAboveRightFacing</value>
+            <value>perspectiveContrastingLeftFacing</value>
+            <value>perspectiveContrastingRightFacing</value>
+            <value>perspectiveHeroicLeftFacing</value>
+            <value>perspectiveHeroicRightFacing</value>
+            <value>perspectiveHeroicExtremeLeftFacing</value>
+            <value>perspectiveHeroicExtremeRightFacing</value>
+            <value>perspectiveRelaxed</value>
+            <value>perspectiveRelaxedModerately</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_LightRigType">
+        <list>
+          <choice>
+            <value>legacyFlat1</value>
+            <value>legacyFlat2</value>
+            <value>legacyFlat3</value>
+            <value>legacyFlat4</value>
+            <value>legacyNormal1</value>
+            <value>legacyNormal2</value>
+            <value>legacyNormal3</value>
+            <value>legacyNormal4</value>
+            <value>legacyHarsh1</value>
+            <value>legacyHarsh2</value>
+            <value>legacyHarsh3</value>
+            <value>legacyHarsh4</value>
+            <value>threePt</value>
+            <value>balanced</value>
+            <value>soft</value>
+            <value>harsh</value>
+            <value>flood</value>
+            <value>contrasting</value>
+            <value>morning</value>
+            <value>sunrise</value>
+            <value>sunset</value>
+            <value>chilly</value>
+            <value>freezing</value>
+            <value>flat</value>
+            <value>twoPt</value>
+            <value>glow</value>
+            <value>brightRoom</value>
+          </choice>
+        </list>
+      </define>
+       <define name="ST_LightRigDirection">
+        <list>
+          <choice>
+            <value>tl</value>
+            <value>t</value>
+            <value>tr</value>
+            <value>l</value>
+            <value>r</value>
+            <value>bl</value>
+            <value>b</value>
+            <value>br</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_BevelPresetType">
+        <list>
+          <choice>
+            <value>relaxedInset</value>
+            <value>circle</value>
+            <value>slope</value>
+            <value>cross</value>
+            <value>angle</value>
+            <value>softRound</value>
+            <value>convex</value>
+            <value>coolSlant</value>
+            <value>divot</value>
+            <value>riblet</value>
+            <value>hardEdge</value>
+            <value>artDeco</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_PresetMaterialType">
+        <list>
+          <choice>
+            <value>legacyMatte</value>
+            <value>legacyPlastic</value>
+            <value>legacyMetal</value>
+            <value>legacyWireframe</value>
+            <value>matte</value>
+            <value>plastic</value>
+            <value>metal</value>
+            <value>warmMatte</value>
+            <value>translucentPowder</value>
+            <value>powder</value>
+            <value>dkEdge</value>
+            <value>softEdge</value>
+            <value>clear</value>
+            <value>flat</value>
+            <value>softmetal</value>
+            <value>none</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_Ligatures">
+        <list>
+          <choice>
+            <value>none</value>
+            <value>standard</value>
+            <value>contextual</value>
+            <value>historical</value>
+            <value>discretional</value>
+            <value>standardContextual</value>
+            <value>standardHistorical</value>
+            <value>contextualHistorical</value>
+            <value>standardDiscretional</value>
+            <value>contextualDiscretional</value>
+            <value>historicalDiscretional</value>
+            <value>standardContextualHistorical</value>
+            <value>standardContextualDiscretional</value>
+            <value>standardHistoricalDiscretional</value>
+            <value>contextualHistoricalDiscretional</value>
+            <value>all</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_NumForm">
+        <list>
+          <choice>
+            <value>default</value>
+            <value>lining</value>
+            <value>oldStyle</value>
+          </choice>
+        </list>
+      </define>
+      <define name="ST_NumSpacing">
+        <list>
+          <choice>
+            <value>default</value>
+            <value>proportional</value>
+            <value>tabular</value>
+          </choice>
+        </list>
+      </define>
+
+      <define name="ST_PositiveCoordinate">
+        <data type="long">
+          <xs:documentation>Positive Coordinate</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">27273042316900</param>
+        </data>
+      </define>
+      <define name="ST_HexColorRGB">
+        <data type="hexBinary">
+          <xs:documentation>Hexadecimal Color Value</xs:documentation>
+          <param name="length">3</param>
+        </data>
+      </define>
+      <define name="ST_PositiveFixedPercentage">
+        <data type="long">
+          <xs:documentation>Positive fixed precentage</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">27273042316900</param>
+        </data>
+      </define>
+      <define name="ST_PositivePercentage">
+        <data type="long">
+          <xs:documentation>Positive precentage</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">27273042316900</param>
+        </data>
+      </define>
+      <define name="ST_Percentage">
+        <data type="long">
+          <xs:documentation>Precentage</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">27273042316900</param>
+        </data>
+      </define>
+      <define name="ST_PositiveFixedAngle">
+        <data type="int">
+          <xs:documentation>Positive fixed angle</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">21600000</param>
+        </data>
+      </define>
+      <define name="ST_FixedAngle">
+        <data type="int">
+          <xs:documentation>Fixed angle</xs:documentation>
+          <param name="minInclusive">-5400000</param>
+          <param name="maxInclusive">5400000</param>
+        </data>
+      </define>
+      <define name="ST_LineWidth">
+        <data type="int">
+          <xs:documentation>Line width</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">20116800</param>
+        </data>
+      </define>
+      <define name="ST_UnsignedDecimalNumber">
+        <data type="unsignedLong">
+          <xs:documentation>Unsigned Decimal Number Value</xs:documentation>
+        </data>
+      </define>
+
+      <define name="EG_ColorChoice">
+        <choice>
+           <optional>
+            <element name="srgbClr">
+              <ref name="CT_SRgbColor"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="schemeClr">
+              <ref name="CT_SchemeColor"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+      <define name="EG_ColorTransform">
+        <choice>
+          <optional>
+            <element name="tint">
+              <ref name="CT_PositiveFixedPercentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="shade">
+              <ref name="CT_PositiveFixedPercentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="alpha">
+              <ref name="CT_PositiveFixedPercentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="hueMod">
+              <ref name="CT_PositivePercentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="sat">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="satOff">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="satMod">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="lum">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="lumOff">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="lumMod">
+              <ref name="CT_Percentage"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+      <define name="EG_FillProperties">
+        <choice>
+          <optional>
+            <element name="noFill">
+              <ref name="CT_Empty"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="solidFill">
+              <ref name="CT_SolidColorFillProperties"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="gradFill">
+              <ref name="CT_GradientFillProperties"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+      <define name="EG_ShadeProperties">
+        <choice>
+          <optional>
+            <element name="lin">
+              <ref name="CT_LinearShadeProperties"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="path">
+              <ref name="CT_PathShadeProperties"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+      <define name="EG_LineDashProperties">
+        <choice>
+          <optional>
+            <element name="prstDash">
+              <ref name="CT_PresetLineDashProperties"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+      <define name="EG_LineJoinProperties">
+        <choice>
+          <optional>
+            <element name="round">
+              <ref name="CT_Empty"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="bevel">
+              <ref name="CT_Empty"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="miter">
+              <ref name="CT_LineJoinMiterProperties"/>
+            </element>
+          </optional>
+        </choice>
+      </define>
+
+      <define name="CT_SRgbColor">
+        <ref name="EG_ColorTransform"/>
+        <attribute name="val">
+          <ref name="ST_HexColorRGB"/>
+        </attribute>
+      </define>
+      <define name="CT_SchemeColor">
+        <ref name="EG_ColorTransform"/>
+        <attribute name="val">
+          <ref name="ST_SchemeColorVal"/>
+        </attribute>
+      </define>
+      <define name="CT_PositiveFixedPercentage">
+        <attribute name="val">
+          <ref name="ST_PositiveFixedPercentage"/>
+        </attribute>
+      </define>
+      <define name="CT_PositivePercentage">
+        <attribute name="val">
+          <ref name="ST_PositivePercentage"/>
+        </attribute>
+      </define>
+      <define name="CT_Percentage">
+        <attribute name="val">
+          <ref name="ST_Percentage"/>
+        </attribute>
+      </define>
+      <define name="CT_Empty">
+        <empty/>
+      </define>
+      <define name="CT_SolidColorFillProperties">
+        <ref name="EG_ColorChoice"/>
+      </define>
+      <define name="CT_GradientFillProperties">
+        <optional>
+          <element name="gsLst">
+            <ref name="CT_GradientStopList"/>
+          </element>
+        </optional>
+        <optional>
+          <ref name="EG_ShadeProperties"/>
+        </optional>
+      </define>
+      <define name="CT_LinearShadeProperties">
+        <optional>
+          <attribute name="ang">
+            <ref name="ST_PositiveFixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="scaled">
+            <ref name="ST_OnOff"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PathShadeProperties">
+        <optional>
+          <element name="fillToRect">
+            <ref name="CT_RelativeRect"/>
+          </element>
+        </optional>
+        <optional>
+          <attribute name="path">
+            <ref name="ST_PathShadeType"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_GradientStopList">
+        <oneOrMore>
+          <element name="gs">
+            <ref name="CT_GradientStop"/>
+          </element>
+        </oneOrMore>
+      </define>
+      <define name="CT_GradientStop">
+        <ref name="EG_ColorChoice"/>
+        <attribute name="pos">
+          <ref name="ST_PositiveFixedPercentage"/>
+        </attribute>
+      </define>
+      <define name="CT_RelativeRect">
+        <optional>
+          <attribute name="l">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="t">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="r">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="b">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PresetLineDashProperties">
+        <optional>
+          <attribute name="val">
+            <ref name="ST_PresetLineDashVal"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_LineJoinMiterProperties">
+        <optional>
+          <attribute name="lim">
+            <ref name="ST_PositivePercentage"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_Camera">
+        <optional>
+          <attribute name="prst">
+            <ref name="ST_PresetCameraType"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_LightRig">
+        <element name="rot">
+          <ref name="CT_SphereCoords"/>
+        </element>
+        <attribute name="rig">
+          <ref name="ST_LightRigType"/>
+        </attribute>
+        <attribute name="dir">
+          <ref name="ST_LightRigDirection"/>
+        </attribute>
+      </define>
+      <define name="CT_SphereCoords">
+        <attribute name="lat">
+          <ref name="ST_PositiveFixedAngle"/>
+        </attribute>
+        <attribute name="lon">
+          <ref name="ST_PositiveFixedAngle"/>
+        </attribute>
+        <attribute name="rev">
+          <ref name="ST_PositiveFixedAngle"/>
+        </attribute>
+      </define>
+      <define name="CT_Bevel">
+        <optional>
+          <attribute name="w">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="h">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="prst">
+            <ref name="ST_BevelPresetType"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_Color">
+        <ref name="EG_ColorChoice"/>
+      </define>
+      <define name="CT_StyleSet">
+        <attribute name="id">
+          <ref name="ST_UnsignedDecimalNumber"/>
+        </attribute>
+        <optional>
+          <attribute name="val">
+            <ref name="ST_OnOff"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_OnOff">
+        <optional>
+          <attribute name="val">
+            <ref name="ST_OnOff"/>
+          </attribute>
+        </optional>
+      </define>
+
+
+      <!-- Main Elements-->
+      <define name="CT_Glow">
+        <optional>
+            <ref name="EG_ColorChoice"/>
+        </optional>
+        <attribute name="rad">
+          <ref name="ST_PositiveCoordinate"/>
+        </attribute>
+      </define>
+      <define name="CT_Shadow">
+        <optional>
+            <ref name="EG_ColorChoice"/>
+        </optional>
+        <optional>
+          <attribute name="blurRad">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="dist">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="dir">
+            <ref name="ST_PositiveFixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="sx">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="sy">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="kx">
+            <ref name="ST_FixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="ky">
+            <ref name="ST_FixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="algn">
+            <ref name="ST_RectAlignment"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_Reflection">
+        <optional>
+          <attribute name="blurRad">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="stA">
+            <ref name="ST_PositiveFixedPercentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="stPos">
+            <ref name="ST_PositiveFixedPercentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="endA">
+            <ref name="ST_PositiveFixedPercentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="endPos">
+            <ref name="ST_PositiveFixedPercentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="dist">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="dir">
+            <ref name="ST_PositiveFixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="fadeDir">
+            <ref name="ST_PositiveFixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="sx">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="sy">
+            <ref name="ST_Percentage"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="kx">
+            <ref name="ST_FixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="ky">
+            <ref name="ST_FixedAngle"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="algn">
+            <ref name="ST_RectAlignment"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_TextOutlineEffect">
+        <optional>
+            <ref name="EG_FillProperties"/>
+        </optional>
+        <optional>
+            <ref name="EG_LineDashProperties"/>
+        </optional>
+        <optional>
+            <ref name="EG_LineJoinProperties"/>
+        </optional>
+        <optional>
+          <attribute name="w">
+            <ref name="ST_LineWidth"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="cap">
+            <ref name="ST_LineCap"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="cmpd">
+            <ref name="ST_CompoundLine"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="algn">
+            <ref name="ST_PenAlignment"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_FillTextEffect">
+        <optional>
+            <ref name="EG_FillProperties"/>
+        </optional>
+      </define>
+      <define name="CT_Scene3D">
+        <element name="camera">
+          <ref name="CT_Camera"/>
+        </element>
+        <element name="lightRig">
+          <ref name="CT_LightRig"/>
+        </element>
+      </define>
+      <define name="CT_Props3D">
+        <element name="bevelT">
+          <ref name="CT_Bevel"/>
+        </element>
+        <element name="bevelB">
+          <ref name="CT_Bevel"/>
+        </element>
+        <element name="extrusionClr">
+          <ref name="CT_Color"/>
+        </element>
+        <element name="contourClr">
+          <ref name="CT_Color"/>
+        </element>
+        <optional>
+          <attribute name="extrusionH">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="contourW">
+            <ref name="ST_PositiveCoordinate"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="prstMaterial">
+            <ref name="ST_PresetMaterialType"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_Ligatures">
+        <attribute name="val">
+          <ref name="ST_Ligatures"/>
+        </attribute>
+      </define>
+      <define name="CT_NumForm">
+        <attribute name="val">
+          <ref name="ST_NumForm"/>
+        </attribute>
+      </define>
+      <define name="CT_NumSpacing">
+        <attribute name="val">
+          <ref name="ST_NumSpacing"/>
+        </attribute>
+      </define>
+      <define name="CT_StylisticSets">
+        <zeroOrMore>
+          <element name="styleSet">
+            <ref name="CT_StyleSet"/>
+          </element>
+        </zeroOrMore>
+      </define>
+
+      <define name="glow">
+        <element name="glow">
+          <ref name="CT_Glow"/>
+        </element>
+      </define>
+      <define name="shadow">
+        <element name="shadow">
+          <ref name="CT_Shadow"/>
+        </element>
+      </define>
+      <define name="reflection">
+        <element name="reflection">
+          <ref name="CT_Reflection"/>
+        </element>
+      </define>
+      <define name="textOutline">
+        <element name="textOutline">
+          <ref name="CT_TextOutlineEffect"/>
+        </element>
+      </define>
+      <define name="textFill">
+        <element name="textFill">
+          <ref name="CT_FillTextEffect"/>
+        </element>
+      </define>
+      <define name="scene3d">
+        <element name="scene3d">
+          <ref name="CT_Scene3D"/>
+        </element>
+      </define>
+      <define name="props3d">
+        <element name="props3d">
+          <ref name="CT_Props3D"/>
+        </element>
+      </define>
+      <define name="ligatures">
+        <element name="ligatures">
+          <ref name="CT_Ligatures"/>
+        </element>
+      </define>
+      <define name="numForm">
+        <element name="numForm">
+          <ref name="CT_NumForm"/>
+        </element>
+      </define>
+      <define name="numSpacing">
+        <element name="numSpacing">
+          <ref name="CT_NumSpacing"/>
+        </element>
+      </define>
+      <define name="stylisticSets">
+        <element name="stylisticSets">
+          <ref name="CT_StylisticSets"/>
+        </element>
+      </define>
+      <define name="cntxtAlts">
+        <element name="cntxtAlts">
+          <ref name="CT_OnOff"/>
+        </element>
+      </define>
+
+      <define name="ST_String">
+        <data type="string">
+          <xs:documentation>String</xs:documentation>
+        </data>
+      </define>
+      <define name="CT_String">
+        <attribute name="val">
+          <ref name="ST_String"/>
+          <xs:documentation>value</xs:documentation>
+        </attribute>
+      </define>
+      <define name="CT_SdtCheckbox">
+        <optional>
+          <element name="checked">
+            <ref name="CT_String"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="checkedState">
+            <ref name="CT_String"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="uncheckedState">
+            <ref name="CT_String"/>
+          </element>
+        </optional>
+      </define>
+    </grammar>
+
+    <!-- Simple Types Resource Definitions -->
+    <resource name="CT_String" resource="Value" tag="attribute">
+      <attribute name="val" tokenid="ooxml:CT_String_val" action="setValue"/>
+      <action name="start" action="setDefaultStringValue"/>
+    </resource>
+    <resource name="CT_SdtCheckbox" resource="Properties" tag="field">
+      <element name="checked" tokenid="ooxml:CT_SdtCheckbox_checked">checked</element>
+      <element name="checkedState" tokenid="ooxml:CT_SdtCheckbox_checkedState">checkedState</element>
+      <element name="uncheckedState" tokenid="ooxml:CT_SdtCheckbox_uncheckedState">uncheckedState</element>
+    </resource>
+    <resource name="ST_SchemeColorVal" resource="List" generated="yes">
+      <value name="bg1" tokenid="ooxml:ST_SchemeColorVal_bg1">bg1</value>
+      <value name="tx1" tokenid="ooxml:ST_SchemeColorVal_tx1">tx1</value>
+      <value name="bg2" tokenid="ooxml:ST_SchemeColorVal_bg2">bg2</value>
+      <value name="tx2" tokenid="ooxml:ST_SchemeColorVal_tx2">tx2</value>
+      <value name="accent1" tokenid="ooxml:ST_SchemeColorVal_accent1">accent1</value>
+      <value name="accent2" tokenid="ooxml:ST_SchemeColorVal_accent2">accent2</value>
+      <value name="accent3" tokenid="ooxml:ST_SchemeColorVal_accent3">accent3</value>
+      <value name="accent4" tokenid="ooxml:ST_SchemeColorVal_accent4">accent4</value>
+      <value name="accent5" tokenid="ooxml:ST_SchemeColorVal_accent5">accent5</value>
+      <value name="accent6" tokenid="ooxml:ST_SchemeColorVal_accent6">accent6</value>
+      <value name="hlink" tokenid="ooxml:ST_SchemeColorVal_hlink">hlink</value>
+      <value name="folHlink" tokenid="ooxml:ST_SchemeColorVal_folHlink">folHlink</value>
+      <value name="dk1" tokenid="ooxml:ST_SchemeColorVal_dk1">dk1</value>
+      <value name="lt1" tokenid="ooxml:ST_SchemeColorVal_lt1">lt1</value>
+      <value name="dk2" tokenid="ooxml:ST_SchemeColorVal_dk2">dk2</value>
+      <value name="lt2" tokenid="ooxml:ST_SchemeColorVal_lt2">lt2</value>
+      <value name="phClr" tokenid="ooxml:ST_SchemeColorVal_phClr">phClr</value>
+    </resource>
+    <resource name="ST_RectAlignment" resource="List" generated="yes">
+      <value name="none" tokenid="ooxml:ST_RectAlignment_none">none</value>
+      <value name="tl" tokenid="ooxml:ST_RectAlignment_tl">tl</value>
+      <value name="t" tokenid="ooxml:ST_RectAlignment_t">t</value>
+      <value name="tr" tokenid="ooxml:ST_RectAlignment_tr">tr</value>
+      <value name="l" tokenid="ooxml:ST_RectAlignment_l">l</value>
+      <value name="ctr" tokenid="ooxml:ST_RectAlignment_ctr">ctr</value>
+      <value name="r" tokenid="ooxml:ST_RectAlignment_r">r</value>
+      <value name="bl" tokenid="ooxml:ST_RectAlignment_bl">bl</value>
+      <value name="b" tokenid="ooxml:ST_RectAlignment_b">b</value>
+      <value name="br" tokenid="ooxml:ST_RectAlignment_br">br</value>
+    </resource>
+    <resource name="ST_LineCap" resource="List" generated="yes">
+      <value name="rnd" tokenid="ooxml:ST_LineCap_rnd">rnd</value>
+      <value name="sq" tokenid="ooxml:ST_LineCap_sq">sq</value>
+      <value name="flat" tokenid="ooxml:ST_LineCap_flat">flat</value>
+    </resource>
+    <resource name="ST_CompoundLine" resource="List" generated="yes">
+      <value name="sng" tokenid="ooxml:ST_CompoundLine_sng">sng</value>
+      <value name="dbl" tokenid="ooxml:ST_CompoundLine_dbl">dbl</value>
+      <value name="thickThin" tokenid="ooxml:ST_CompoundLine_thickThin">thickThin</value>
+      <value name="thinThick" tokenid="ooxml:ST_CompoundLine_thinThick">thinThick</value>
+      <value name="tri" tokenid="ooxml:ST_CompoundLine_tri">tri</value>
+    </resource>
+    <resource name="ST_PenAlignment" resource="List" generated="yes">
+      <value name="ctr" tokenid="ooxml:ST_PenAlignment_ctr">ctr</value>
+      <value name="in" tokenid="ooxml:ST_PenAlignment_in">in</value>
+    </resource>
+    <resource name="ST_OnOff" resource="List" generated="yes">
+      <value name="true" tokenid="ooxml:ST_OnOff_true">true</value>
+      <value name="false" tokenid="ooxml:ST_OnOff_false">false</value>
+      <value name="0" tokenid="ooxml:ST_OnOff_0">0</value>
+      <value name="1" tokenid="ooxml:ST_OnOff_1">1</value>
+    </resource>
+    <resource name="ST_PathShadeType" resource="List" generated="yes">
+      <value name="shape" tokenid="ooxml:ST_PathShadeType_shape">shape</value>
+      <value name="circle" tokenid="ooxml:ST_PathShadeType_circle">circle</value>
+      <value name="rect" tokenid="ooxml:ST_PathShadeType_rect">rect</value>
+    </resource>
+    <resource name="ST_PresetLineDashVal" resource="List" generated="yes">
+      <value name="solid" tokenid="ooxml:ST_PresetLineDashVal_solid">solid</value>
+      <value name="dot" tokenid="ooxml:ST_PresetLineDashVal_dot">dot</value>
+      <value name="sysDot" tokenid="ooxml:ST_PresetLineDashVal_sysDot">sysDot</value>
+      <value name="dash" tokenid="ooxml:ST_PresetLineDashVal_dash">dash</value>
+      <value name="sysDash" tokenid="ooxml:ST_PresetLineDashVal_sysDash">sysDash</value>
+      <value name="lgDash" tokenid="ooxml:ST_PresetLineDashVal_lgDash">lgDash</value>
+      <value name="dashDot" tokenid="ooxml:ST_PresetLineDashVal_dashDot">dashDot</value>
+      <value name="sysDashDot" tokenid="ooxml:ST_PresetLineDashVal_sysDashDot">sysDashDot</value>
+      <value name="lgDashDot" tokenid="ooxml:ST_PresetLineDashVal_lgDashDot">lgDashDot</value>
+      <value name="lgDashDotDot" tokenid="ooxml:ST_PresetLineDashVal_lgDashDotDot">lgDashDotDot</value>
+      <value name="sysDashDotDot" tokenid="ooxml:ST_PresetLineDashVal_sysDashDotDot">sysDashDotDot</value>
+    </resource>
+    <resource name="ST_PresetCameraType" resource="List" generated="yes">
+      <value name="legacyObliqueTopLeft" tokenid="ooxml:ST_PresetCameraType_legacyObliqueTopLeft">legacyObliqueTopLeft</value>
+      <value name="legacyObliqueTop" tokenid="ooxml:ST_PresetCameraType_legacyObliqueTop">legacyObliqueTop</value>
+      <value name="legacyObliqueTopRight" tokenid="ooxml:ST_PresetCameraType_legacyObliqueTopRight">legacyObliqueTopRight</value>
+      <value name="legacyObliqueLeft" tokenid="ooxml:ST_PresetCameraType_legacyObliqueLeft">legacyObliqueLeft</value>
+      <value name="legacyObliqueFront" tokenid="ooxml:ST_PresetCameraType_legacyObliqueFront">legacyObliqueFront</value>
+      <value name="legacyObliqueRight" tokenid="ooxml:ST_PresetCameraType_legacyObliqueRight">legacyObliqueRight</value>
+      <value name="legacyObliqueBottomLeft" tokenid="ooxml:ST_PresetCameraType_legacyObliqueBottomLeft">legacyObliqueBottomLeft</value>
+      <value name="legacyObliqueBottom" tokenid="ooxml:ST_PresetCameraType_legacyObliqueBottom">legacyObliqueBottom</value>
+      <value name="legacyObliqueBottomRight" tokenid="ooxml:ST_PresetCameraType_legacyObliqueBottomRight">legacyObliqueBottomRight</value>
+      <value name="legacyPerspectiveTopLeft" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveTopLeft">legacyPerspectiveTopLeft</value>
+      <value name="legacyPerspectiveTop" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveTop">legacyPerspectiveTop</value>
+      <value name="legacyPerspectiveTopRight" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveTopRight">legacyPerspectiveTopRight</value>
+      <value name="legacyPerspectiveLeft" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveLeft">legacyPerspectiveLeft</value>
+      <value name="legacyPerspectiveFront" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveFront">legacyPerspectiveFront</value>
+      <value name="legacyPerspectiveRight" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveRight">legacyPerspectiveRight</value>
+      <value name="legacyPerspectiveBottomLeft" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveBottomLeft">legacyPerspectiveBottomLeft</value>
+      <value name="legacyPerspectiveBottom" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveBottom">legacyPerspectiveBottom</value>
+      <value name="legacyPerspectiveBottomRight" tokenid="ooxml:ST_PresetCameraType_legacyPerspectiveBottomRight">legacyPerspectiveBottomRight</value>
+      <value name="orthographicFront" tokenid="ooxml:ST_PresetCameraType_orthographicFront">orthographicFront</value>
+      <value name="isometricTopUp" tokenid="ooxml:ST_PresetCameraType_isometricTopUp">isometricTopUp</value>
+      <value name="isometricTopDown" tokenid="ooxml:ST_PresetCameraType_isometricTopDown">isometricTopDown</value>
+      <value name="isometricBottomUp" tokenid="ooxml:ST_PresetCameraType_isometricBottomUp">isometricBottomUp</value>
+      <value name="isometricBottomDown" tokenid="ooxml:ST_PresetCameraType_isometricBottomDown">isometricBottomDown</value>
+      <value name="isometricLeftUp" tokenid="ooxml:ST_PresetCameraType_isometricLeftUp">isometricLeftUp</value>
+      <value name="isometricLeftDown" tokenid="ooxml:ST_PresetCameraType_isometricLeftDown">isometricLeftDown</value>
+      <value name="isometricRightUp" tokenid="ooxml:ST_PresetCameraType_isometricRightUp">isometricRightUp</value>
+      <value name="isometricRightDown" tokenid="ooxml:ST_PresetCameraType_isometricRightDown">isometricRightDown</value>
+      <value name="isometricOffAxis1Left" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis1Left">isometricOffAxis1Left</value>
+      <value name="isometricOffAxis1Right" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis1Right">isometricOffAxis1Right</value>
+      <value name="isometricOffAxis1Top" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis1Top">isometricOffAxis1Top</value>
+      <value name="isometricOffAxis2Left" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis2Left">isometricOffAxis2Left</value>
+      <value name="isometricOffAxis2Right" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis2Right">isometricOffAxis2Right</value>
+      <value name="isometricOffAxis2Top" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis2Top">isometricOffAxis2Top</value>
+      <value name="isometricOffAxis3Left" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis3Left">isometricOffAxis3Left</value>
+      <value name="isometricOffAxis3Right" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis3Right">isometricOffAxis3Right</value>
+      <value name="isometricOffAxis3Bottom" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis3Bottom">isometricOffAxis3Bottom</value>
+      <value name="isometricOffAxis4Left" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis4Left">isometricOffAxis4Left</value>
+      <value name="isometricOffAxis4Right" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis4Right">isometricOffAxis4Right</value>
+      <value name="isometricOffAxis4Bottom" tokenid="ooxml:ST_PresetCameraType_isometricOffAxis4Bottom">isometricOffAxis4Bottom</value>
+      <value name="obliqueTopLeft" tokenid="ooxml:ST_PresetCameraType_obliqueTopLeft">obliqueTopLeft</value>
+      <value name="obliqueTop" tokenid="ooxml:ST_PresetCameraType_obliqueTop">obliqueTop</value>
+      <value name="obliqueTopRight" tokenid="ooxml:ST_PresetCameraType_obliqueTopRight">obliqueTopRight</value>
+      <value name="obliqueLeft" tokenid="ooxml:ST_PresetCameraType_obliqueLeft">obliqueLeft</value>
+      <value name="obliqueRight" tokenid="ooxml:ST_PresetCameraType_obliqueRight">obliqueRight</value>
+      <value name="obliqueBottomLeft" tokenid="ooxml:ST_PresetCameraType_obliqueBottomLeft">obliqueBottomLeft</value>
+      <value name="obliqueBottom" tokenid="ooxml:ST_PresetCameraType_obliqueBottom">obliqueBottom</value>
+      <value name="obliqueBottomRight" tokenid="ooxml:ST_PresetCameraType_obliqueBottomRight">obliqueBottomRight</value>
+      <value name="perspectiveFront" tokenid="ooxml:ST_PresetCameraType_perspectiveFront">perspectiveFront</value>
+      <value name="perspectiveLeft" tokenid="ooxml:ST_PresetCameraType_perspectiveLeft">perspectiveLeft</value>
+      <value name="perspectiveRight" tokenid="ooxml:ST_PresetCameraType_perspectiveRight">perspectiveRight</value>
+      <value name="perspectiveAbove" tokenid="ooxml:ST_PresetCameraType_perspectiveAbove">perspectiveAbove</value>
+      <value name="perspectiveBelow" tokenid="ooxml:ST_PresetCameraType_perspectiveBelow">perspectiveBelow</value>
+      <value name="perspectiveAboveLeftFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveAboveLeftFacing">perspectiveAboveLeftFacing</value>
+      <value name="perspectiveAboveRightFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveAboveRightFacing">perspectiveAboveRightFacing</value>
+      <value name="perspectiveContrastingLeftFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveContrastingLeftFacing">perspectiveContrastingLeftFacing</value>
+      <value name="perspectiveContrastingRightFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveContrastingRightFacing">perspectiveContrastingRightFacing</value>
+      <value name="perspectiveHeroicLeftFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveHeroicLeftFacing">perspectiveHeroicLeftFacing</value>
+      <value name="perspectiveHeroicRightFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveHeroicRightFacing">perspectiveHeroicRightFacing</value>
+      <value name="perspectiveHeroicExtremeLeftFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveHeroicExtremeLeftFacing">perspectiveHeroicExtremeLeftFacing</value>
+      <value name="perspectiveHeroicExtremeRightFacing" tokenid="ooxml:ST_PresetCameraType_perspectiveHeroicExtremeRightFacing">perspectiveHeroicExtremeRightFacing</value>
+      <value name="perspectiveRelaxed" tokenid="ooxml:ST_PresetCameraType_perspectiveRelaxed">perspectiveRelaxed</value>
+      <value name="perspectiveRelaxedModerately" tokenid="ooxml:ST_PresetCameraType_perspectiveRelaxedModerately">perspectiveRelaxedModerately</value>
+    </resource>
+    <resource name="ST_LightRigType" resource="List" generated="yes">
+      <value name="legacyFlat1" tokenid="ooxml:ST_LightRigType_legacyFlat1">legacyFlat1</value>
+      <value name="legacyFlat2" tokenid="ooxml:ST_LightRigType_legacyFlat2">legacyFlat2</value>
+      <value name="legacyFlat3" tokenid="ooxml:ST_LightRigType_legacyFlat3">legacyFlat3</value>
+      <value name="legacyFlat4" tokenid="ooxml:ST_LightRigType_legacyFlat4">legacyFlat4</value>
+      <value name="legacyNormal1" tokenid="ooxml:ST_LightRigType_legacyNormal1">legacyNormal1</value>
+      <value name="legacyNormal2" tokenid="ooxml:ST_LightRigType_legacyNormal2">legacyNormal2</value>
+      <value name="legacyNormal3" tokenid="ooxml:ST_LightRigType_legacyNormal3">legacyNormal3</value>
+      <value name="legacyNormal4" tokenid="ooxml:ST_LightRigType_legacyNormal4">legacyNormal4</value>
+      <value name="legacyHarsh1" tokenid="ooxml:ST_LightRigType_legacyHarsh1">legacyHarsh1</value>
+      <value name="legacyHarsh2" tokenid="ooxml:ST_LightRigType_legacyHarsh2">legacyHarsh2</value>
+      <value name="legacyHarsh3" tokenid="ooxml:ST_LightRigType_legacyHarsh3">legacyHarsh3</value>
+      <value name="legacyHarsh4" tokenid="ooxml:ST_LightRigType_legacyHarsh4">legacyHarsh4</value>
+      <value name="threePt" tokenid="ooxml:ST_LightRigType_threePt">threePt</value>
+      <value name="balanced" tokenid="ooxml:ST_LightRigType_balanced">balanced</value>
+      <value name="soft" tokenid="ooxml:ST_LightRigType_soft">soft</value>
+      <value name="harsh" tokenid="ooxml:ST_LightRigType_harsh">harsh</value>
+      <value name="flood" tokenid="ooxml:ST_LightRigType_flood">flood</value>
+      <value name="contrasting" tokenid="ooxml:ST_LightRigType_contrasting">contrasting</value>
+      <value name="morning" tokenid="ooxml:ST_LightRigType_morning">morning</value>
+      <value name="sunrise" tokenid="ooxml:ST_LightRigType_sunrise">sunrise</value>
+      <value name="sunset" tokenid="ooxml:ST_LightRigType_sunset">sunset</value>
+      <value name="chilly" tokenid="ooxml:ST_LightRigType_chilly">chilly</value>
+      <value name="freezing" tokenid="ooxml:ST_LightRigType_freezing">freezing</value>
+      <value name="flat" tokenid="ooxml:ST_LightRigType_flat">flat</value>
+      <value name="twoPt" tokenid="ooxml:ST_LightRigType_twoPt">twoPt</value>
+      <value name="glow" tokenid="ooxml:ST_LightRigType_glow">glow</value>
+      <value name="brightRoom" tokenid="ooxml:ST_LightRigType_brightRoom">brightRoom</value>
+    </resource>
+    <resource name="ST_LightRigDirection" resource="List" generated="yes">
+      <value name="tl" tokenid="ooxml:ST_LightRigDirection_tl">tl</value>
+      <value name="t" tokenid="ooxml:ST_LightRigDirection_t">t</value>
+      <value name="tr" tokenid="ooxml:ST_LightRigDirection_tr">tr</value>
+      <value name="l" tokenid="ooxml:ST_LightRigDirection_l">l</value>
+      <value name="r" tokenid="ooxml:ST_LightRigDirection_r">r</value>
+      <value name="bl" tokenid="ooxml:ST_LightRigDirection_bl">bl</value>
+      <value name="b" tokenid="ooxml:ST_LightRigDirection_b">b</value>
+      <value name="br" tokenid="ooxml:ST_LightRigDirection_br">br</value>
+    </resource>
+    <resource name="ST_BevelPresetType" resource="List" generated="yes">
+      <value name="relaxedInset" tokenid="ooxml:ST_BevelPresetType_relaxedInset">relaxedInset</value>
+      <value name="circle" tokenid="ooxml:ST_BevelPresetType_circle">circle</value>
+      <value name="slope" tokenid="ooxml:ST_BevelPresetType_slope">slope</value>
+      <value name="cross" tokenid="ooxml:ST_BevelPresetType_cross">cross</value>
+      <value name="angle" tokenid="ooxml:ST_BevelPresetType_angle">angle</value>
+      <value name="softRound" tokenid="ooxml:ST_BevelPresetType_softRound">softRound</value>
+      <value name="convex" tokenid="ooxml:ST_BevelPresetType_convex">convex</value>
+      <value name="coolSlant" tokenid="ooxml:ST_BevelPresetType_coolSlant">coolSlant</value>
+      <value name="divot" tokenid="ooxml:ST_BevelPresetType_divot">divot</value>
+      <value name="riblet" tokenid="ooxml:ST_BevelPresetType_riblet">riblet</value>
+      <value name="hardEdge" tokenid="ooxml:ST_BevelPresetType_hardEdge">hardEdge</value>
+      <value name="artDeco" tokenid="ooxml:ST_BevelPresetType_artDeco">artDeco</value>
+    </resource>
+    <resource name="ST_PresetMaterialType" resource="List" generated="yes">
+      <value name="legacyMatte" tokenid="ooxml:ST_PresetMaterialType_legacyMatte">legacyMatte</value>
+      <value name="legacyPlastic" tokenid="ooxml:ST_PresetMaterialType_legacyPlastic">legacyPlastic</value>
+      <value name="legacyMetal" tokenid="ooxml:ST_PresetMaterialType_legacyMetal">legacyMetal</value>
+      <value name="legacyWireframe" tokenid="ooxml:ST_PresetMaterialType_legacyWireframe">legacyWireframe</value>
+      <value name="matte" tokenid="ooxml:ST_PresetMaterialType_matte">matte</value>
+      <value name="plastic" tokenid="ooxml:ST_PresetMaterialType_plastic">plastic</value>
+      <value name="metal" tokenid="ooxml:ST_PresetMaterialType_metal">metal</value>
+      <value name="warmMatte" tokenid="ooxml:ST_PresetMaterialType_warmMatte">warmMatte</value>
+      <value name="translucentPowder" tokenid="ooxml:ST_PresetMaterialType_translucentPowder">translucentPowder</value>
+      <value name="powder" tokenid="ooxml:ST_PresetMaterialType_powder">powder</value>
+      <value name="dkEdge" tokenid="ooxml:ST_PresetMaterialType_dkEdge">dkEdge</value>
+      <value name="softEdge" tokenid="ooxml:ST_PresetMaterialType_softEdge">softEdge</value>
+      <value name="clear" tokenid="ooxml:ST_PresetMaterialType_clear">clear</value>
+      <value name="flat" tokenid="ooxml:ST_PresetMaterialType_flat">flat</value>
+      <value name="softmetal" tokenid="ooxml:ST_PresetMaterialType_softmetal">softmetal</value>
+      <value name="none" tokenid="ooxml:ST_PresetMaterialType_none">none</value>
+    </resource>
+    <resource name="ST_Ligatures" resource="List" generated="yes">
+      <value name="none" tokenid="ooxml:ST_Ligatures_none">none</value>
+      <value name="standard" tokenid="ooxml:ST_Ligatures_standard">standard</value>
+      <value name="contextual" tokenid="ooxml:ST_Ligatures_contextual">contextual</value>
+      <value name="historical" tokenid="ooxml:ST_Ligatures_historical">historical</value>
+      <value name="discretional" tokenid="ooxml:ST_Ligatures_discretional">discretional</value>
+      <value name="standardContextual" tokenid="ooxml:ST_Ligatures_standardContextual">standardContextual</value>
+      <value name="standardHistorical" tokenid="ooxml:ST_Ligatures_standardHistorical">standardHistorical</value>
+      <value name="contextualHistorical" tokenid="ooxml:ST_Ligatures_contextualHistorical">contextualHistorical</value>
+      <value name="standardDiscretional" tokenid="ooxml:ST_Ligatures_standardDiscretional">standardDiscretional</value>
+      <value name="contextualDiscretional" tokenid="ooxml:ST_Ligatures_contextualDiscretional">contextualDiscretional</value>
+      <value name="historicalDiscretional" tokenid="ooxml:ST_Ligatures_historicalDiscretional">historicalDiscretional</value>
+      <value name="standardContextualHistorical" tokenid="ooxml:ST_Ligatures_standardContextualHistorical">standardContextualHistorical</value>
+      <value name="standardContextualDiscretional" tokenid="ooxml:ST_Ligatures_standardContextualDiscretional">standardContextualDiscretional</value>
+      <value name="standardHistoricalDiscretional" tokenid="ooxml:ST_Ligatures_standardHistoricalDiscretional">standardHistoricalDiscretional</value>
+      <value name="contextualHistoricalDiscretional" tokenid="ooxml:ST_Ligatures_contextualHistoricalDiscretional">contextualHistoricalDiscretional</value>
+      <value name="all" tokenid="ooxml:ST_Ligatures_all">all</value>
+    </resource>
+    <resource name="ST_NumForm" resource="List" generated="yes">
+      <value name="default" tokenid="ooxml:ST_NumForm_default">default</value>
+      <value name="lining" tokenid="ooxml:ST_NumForm_lining">lining</value>
+      <value name="oldStyle" tokenid="ooxml:ST_NumForm_oldStyle">oldStyle</value>
+    </resource>
+    <resource name="ST_NumSpacing" resource="List" generated="yes">
+      <value name="default" tokenid="ooxml:ST_NumSpacing_default">default</value>
+      <value name="proportional" tokenid="ooxml:ST_NumSpacing_proportional">proportional</value>
+      <value name="tabular" tokenid="ooxml:ST_NumSpacing_tabular">tabular</value>
+    </resource>
+
+    <resource name="ST_PositiveCoordinate" resource="Integer" generated="yes"/>
+    <resource name="ST_HexColorRGB" resource="Hex"/>
+    <resource name="ST_PositivePercentage" resource="Integer" generated="yes"/>
+    <resource name="ST_PositiveFixedPercentage" resource="Integer" generated="yes"/>
+    <resource name="ST_Percentage" resource="Integer" generated="yes"/>
+    <resource name="ST_PositiveFixedAngle" resource="Integer" generated="yes"/>
+    <resource name="ST_FixedAngle" resource="Integer" generated="yes"/>
+    <resource name="ST_LineWidth" resource="Integer" generated="yes"/>
+    <resource name="ST_UnsignedDecimalNumber" resource="Integer" generated="yes"/>
+
+    <!-- Groups Resource Definitions -->
+    <resource name="EG_ColorTransform" resource="Properties" tag="character">
+      <element name="tint" tokenid="ooxml:EG_ColorTransform_tint"/>
+      <element name="shade" tokenid="ooxml:EG_ColorTransform_shade"/>
+      <element name="alpha" tokenid="ooxml:EG_ColorTransform_alpha"/>
+      <element name="hueMod" tokenid="ooxml:EG_ColorTransform_hueMod"/>
+      <element name="sat" tokenid="ooxml:EG_ColorTransform_sat"/>
+      <element name="satOff" tokenid="ooxml:EG_ColorTransform_satOff"/>
+      <element name="satMod" tokenid="ooxml:EG_ColorTransform_satMod"/>
+      <element name="lum" tokenid="ooxml:EG_ColorTransform_lum"/>
+      <element name="lumOff" tokenid="ooxml:EG_ColorTransform_lumOff"/>
+      <element name="lumMod" tokenid="ooxml:EG_ColorTransform_lumMod"/>
+    </resource>
+    <resource name="EG_ColorChoice" resource="Properties" tag="character">
+      <element name="srgbClr" tokenid="ooxml:EG_ColorChoice_srgbClr"/>
+      <element name="schemeClr" tokenid="ooxml:EG_ColorChoice_schemeClr"/>
+    </resource>
+    <resource name="EG_FillProperties" resource="Properties" tag="character">
+      <element name="noFill" tokenid="ooxml:EG_FillProperties_noFill"/>
+      <element name="solidFill" tokenid="ooxml:EG_FillProperties_solidFill"/>
+      <element name="gradFill" tokenid="ooxml:EG_FillProperties_gradFill"/>
+    </resource>
+    <resource name="EG_ShadeProperties" resource="Properties" tag="character">
+      <element name="lin" tokenid="ooxml:EG_ShadeProperties_lin"/>
+      <element name="path" tokenid="ooxml:EG_ShadeProperties_path"/>
+    </resource>
+    <resource name="EG_LineDashProperties" resource="Properties" tag="character">
+      <element name="prstDash" tokenid="ooxml:EG_LineDashProperties_prstDash"/>
+    </resource>
+    <resource name="EG_LineJoinProperties" resource="Properties" tag="character">
+      <element name="round" tokenid="ooxml:EG_LineJoinProperties_round"/>
+      <element name="bevel" tokenid="ooxml:EG_LineJoinProperties_bevel"/>
+      <element name="miter" tokenid="ooxml:EG_LineJoinProperties_miter"/>
+    </resource>
+
+    <!-- Complex Types Resource Definitions -->
+    <resource name="CT_Glow" resource="Properties" tag="character">
+      <attribute name="rad" tokenid="ooxml:CT_Glow_rad"/>
+    </resource>
+    <resource name="CT_SRgbColor" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_SRgbColor_val"/>
+    </resource>
+    <resource name="CT_SchemeColor" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_SchemeColor_val"/>
+    </resource>
+    <resource name="CT_PositiveFixedPercentage" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_PositiveFixedPercentage_val"/>
+    </resource>
+    <resource name="CT_PositivePercentage" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_PositivePercentage_val"/>
+    </resource>
+    <resource name="CT_Percentage" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_Percentage_val"/>
+    </resource>
+    <resource name="CT_Empty" resource="Properties" tag="character"/>
+    <resource name="CT_SolidColorFillProperties" resource="Properties" tag="character"/>
+    <resource name="CT_GradientFillProperties" resource="Properties" tag="character">
+      <element name="gsLst" tokenid="ooxml:CT_GradientFillProperties_gsLst"/>
+    </resource>
+    <resource name="CT_GradientStopList" resource="Properties" tag="character">
+      <element name="gs" tokenid="ooxml:CT_GradientStopList_gs"/>
+    </resource>
+    <resource name="CT_GradientStop" resource="Properties" tag="character">
+      <attribute name="pos" tokenid="ooxml:CT_GradientStop_pos"/>
+    </resource>
+    <resource name="CT_LinearShadeProperties" resource="Properties" tag="character">
+      <attribute name="ang" tokenid="ooxml:CT_LinearShadeProperties_ang"/>
+      <attribute name="scaled" tokenid="ooxml:CT_LinearShadeProperties_scaled"/>
+    </resource>
+    <resource name="CT_PathShadeProperties" resource="Properties" tag="character">
+      <element name="fillToRect" tokenid="ooxml:CT_PathShadeProperties_fillToRect"/>
+      <attribute name="path" tokenid="ooxml:CT_PathShadeProperties_path"/>
+    </resource>
+    <resource name="CT_RelativeRect" resource="Properties" tag="character">
+      <attribute name="l" tokenid="ooxml:CT_RelativeRect_l"/>
+      <attribute name="t" tokenid="ooxml:CT_RelativeRect_t"/>
+      <attribute name="r" tokenid="ooxml:CT_RelativeRect_r"/>
+      <attribute name="b" tokenid="ooxml:CT_RelativeRect_b"/>
+    </resource>
+    <resource name="CT_PresetLineDashProperties" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_PresetLineDashProperties_val"/>
+    </resource>
+    <resource name="CT_LineJoinMiterProperties" resource="Properties" tag="character">
+      <attribute name="lim" tokenid="ooxml:CT_LineJoinMiterProperties_lim"/>
+    </resource>
+    <resource name="CT_Camera" resource="Properties" tag="character">
+      <attribute name="prst" tokenid="ooxml:CT_Camera_prst"/>
+    </resource>
+    <resource name="CT_LightRig" resource="Properties" tag="character">
+      <element name="rot" tokenid="ooxml:CT_LightRig_rot"/>
+      <attribute name="rig" tokenid="ooxml:CT_LightRig_rig"/>
+      <attribute name="dir" tokenid="ooxml:CT_LightRig_dir"/>
+    </resource>
+    <resource name="CT_SphereCoords" resource="Properties" tag="character">
+      <attribute name="lat" tokenid="ooxml:CT_SphereCoords_lat"/>
+      <attribute name="lon" tokenid="ooxml:CT_SphereCoords_lon"/>
+      <attribute name="rev" tokenid="ooxml:CT_SphereCoords_rev"/>
+    </resource>
+    <resource name="CT_Bevel" resource="Properties" tag="character">
+      <attribute name="w" tokenid="ooxml:CT_Bevel_w"/>
+      <attribute name="h" tokenid="ooxml:CT_Bevel_h"/>
+      <attribute name="prst" tokenid="ooxml:CT_Bevel_prst"/>
+    </resource>
+    <resource name="CT_Color" resource="Properties" tag="character"/>
+    <resource name="CT_StyleSet" resource="Properties" tag="character">
+      <attribute name="id" tokenid="ooxml:CT_StyleSet_id"/>
+      <attribute name="val" tokenid="ooxml:CT_StyleSet_val"/>
+    </resource>
+    <resource name="CT_OnOff" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_OnOff_val"/>
+    </resource>
+
+    <!-- Main element content -->
+    <resource name="CT_Shadow" resource="Properties" tag="character">
+      <attribute name="blurRad" tokenid="ooxml:CT_Shadow_blurRad"/>
+      <attribute name="dist" tokenid="ooxml:CT_Shadow_dist"/>
+      <attribute name="dir" tokenid="ooxml:CT_Shadow_dir"/>
+      <attribute name="sx" tokenid="ooxml:CT_Shadow_sx"/>
+      <attribute name="sy" tokenid="ooxml:CT_Shadow_sy"/>
+      <attribute name="kx" tokenid="ooxml:CT_Shadow_kx"/>
+      <attribute name="ky" tokenid="ooxml:CT_Shadow_ky"/>
+      <attribute name="algn" tokenid="ooxml:CT_Shadow_algn"/>
+    </resource>
+    <resource name="CT_Reflection" resource="Properties" tag="character">
+      <attribute name="blurRad" tokenid="ooxml:CT_Reflection_blurRad"/>
+      <attribute name="stA" tokenid="ooxml:CT_Reflection_stA"/>
+      <attribute name="stPos" tokenid="ooxml:CT_Reflection_stPos"/>
+      <attribute name="endA" tokenid="ooxml:CT_Reflection_endA"/>
+      <attribute name="endPos" tokenid="ooxml:CT_Reflection_endPos"/>
+      <attribute name="dist" tokenid="ooxml:CT_Reflection_dist"/>
+      <attribute name="dir" tokenid="ooxml:CT_Reflection_dir"/>
+      <attribute name="fadeDir" tokenid="ooxml:CT_Reflection_fadeDir"/>
+      <attribute name="sx" tokenid="ooxml:CT_Reflection_sx"/>
+      <attribute name="sy" tokenid="ooxml:CT_Reflection_sy"/>
+      <attribute name="kx" tokenid="ooxml:CT_Reflection_kx"/>
+      <attribute name="ky" tokenid="ooxml:CT_Reflection_ky"/>
+      <attribute name="algn" tokenid="ooxml:CT_Reflection_algn"/>
+    </resource>
+    <resource name="CT_TextOutlineEffect" resource="Properties" tag="character">
+      <attribute name="w" tokenid="ooxml:CT_TextOutlineEffect_w"/>
+      <attribute name="cap" tokenid="ooxml:CT_TextOutlineEffect_cap"/>
+      <attribute name="cmpd" tokenid="ooxml:CT_TextOutlineEffect_cmpd"/>
+      <attribute name="algn" tokenid="ooxml:CT_TextOutlineEffect_algn"/>
+    </resource>
+    <resource name="CT_FillTextEffect" resource="Properties" tag="character"/>
+    <resource name="CT_Scene3D" resource="Properties" tag="character">
+      <element name="camera" tokenid="ooxml:CT_Scene3D_camera"/>
+      <element name="lightRig" tokenid="ooxml:CT_Scene3D_lightRig"/>
+    </resource>
+    <resource name="CT_Props3D" resource="Properties" tag="character">
+      <element name="bevelT" tokenid="ooxml:CT_Props3D_bevelT"/>
+      <element name="bevelB" tokenid="ooxml:CT_Props3D_bevelB"/>
+      <element name="extrusionClr" tokenid="ooxml:CT_Props3D_extrusionClr"/>
+      <element name="contourClr" tokenid="ooxml:CT_Props3D_contourClr"/>
+      <attribute name="extrusionH" tokenid="ooxml:CT_Props3D_extrusionH"/>
+      <attribute name="contourW" tokenid="ooxml:CT_Props3D_contourW"/>
+      <attribute name="prstMaterial" tokenid="ooxml:CT_Props3D_prstMaterial"/>
+    </resource>
+    <resource name="CT_Ligatures" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_Ligatures_val"/>
+    </resource>
+    <resource name="CT_NumForm" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_NumForm_val"/>
+    </resource>
+    <resource name="CT_NumSpacing" resource="Properties" tag="character">
+      <attribute name="val" tokenid="ooxml:CT_NumSpacing_val"/>
+    </resource>
+    <resource name="CT_StylisticSets" resource="Properties" tag="character">
+      <attribute name="styleSet" tokenid="ooxml:CT_StylisticSets_styleSet"/>
+    </resource>
+
+    <resource name="glow" resource="Properties" tag="character">
+      <element name="glow" tokenid="ooxml:glow_glow"/>
+    </resource>
+    <resource name="shadow" resource="Properties" tag="character">
+      <element name="shadow" tokenid="ooxml:shadow_shadow"/>
+    </resource>
+    <resource name="reflection" resource="Properties" tag="character">
+      <element name="reflection" tokenid="ooxml:reflection_reflection"/>
+    </resource>
+    <resource name="textOutline" resource="Properties" tag="character">
+      <element name="textOutline" tokenid="ooxml:textOutline_textOutline"/>
+    </resource>
+    <resource name="textFill" resource="Properties" tag="character">
+      <element name="textFill" tokenid="ooxml:textFill_textFill"/>
+    </resource>
+    <resource name="scene3d" resource="Properties" tag="character">
+      <element name="scene3d" tokenid="ooxml:scene3d_scene3d"/>
+    </resource>
+    <resource name="props3d" resource="Properties" tag="character">
+      <element name="props3d" tokenid="ooxml:props3d_props3d"/>
+    </resource>
+    <resource name="ligatures" resource="Properties" tag="character">
+      <element name="ligatures" tokenid="ooxml:ligatures_ligatures"/>
+    </resource>
+    <resource name="numForm" resource="Properties" tag="character">
+      <element name="numForm" tokenid="ooxml:numForm_numForm"/>
+    </resource>
+    <resource name="numSpacing" resource="Properties" tag="character">
+      <element name="numSpacing" tokenid="ooxml:numSpacing_numSpacing"/>
+    </resource>
+    <resource name="stylisticSets" resource="Properties" tag="character">
+      <element name="stylisticSets" tokenid="ooxml:stylisticSets_stylisticSets"/>
+    </resource>
+    <resource name="cntxtAlts" resource="Properties" tag="character">
+      <element name="cntxtAlts" tokenid="ooxml:cntxtAlts_cntxtAlts"/>
+    </resource>
+  </namespace>
+  <namespace name="a14" file="a14.rng">
+    <grammar xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.microsoft.com/office/drawingml/2010/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+      <!-- Simple types -->
+      <define name="ST_ArtisticEffectParam10">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 10)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">10</param>
+        </data>
+      </define>
+      <define name="ST_ArtisticEffectParam100">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 100)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">100</param>
+        </data>
+      </define>
+      <define name="ST_ArtisticEffectParam4">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 4)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">4</param>
+        </data>
+      </define>
+      <define name="ST_ArtisticEffectParam6">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 6)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">6</param>
+        </data>
+      </define>
+      <define name="ST_ColorTemperature">
+        <data type="integer">
+          <xs:documentation>Integer value (1500 to 11500)</xs:documentation>
+          <param name="minInclusive">1500</param>
+          <param name="maxInclusive">11500</param>
+        </data>
+      </define>
+      <define name="ST_LegacySpreadsheetColorIndex">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 80)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">80</param>
+        </data>
+      </define>
+      <define name="ST_SaturationAmount">
+        <data type="integer">
+          <xs:documentation>Integer value (0 to 400000)</xs:documentation>
+          <param name="minInclusive">0</param>
+          <param name="maxInclusive">400000</param>
+        </data>
+      </define>
+
+      <!-- Complex types for effects -->
+      <define name="CT_PictureEffectBlur">
+        <optional>
+          <attribute name="visible">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectCement">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="crackSpacing">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectChalkSketch">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pressure">
+            <ref name="ST_ArtisticEffectParam4"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectCrisscrossEtching">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pressure">
+            <ref name="ST_ArtisticEffectParam4"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectCutout">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="numberOfShades">
+            <ref name="ST_ArtisticEffectParam6"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectFilmGrain">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="grainSize">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectGlass">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="scaling">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectGlowDiffused">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="intensity">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectGlowEdges">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="smoothness">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectLightScreen">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="gridSize">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectLineDrawing">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pencilSize">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectMarker">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="size">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectMosiaicBubbles">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pressure">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPaintStrokes">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="intensity">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPaintBrush">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="brushSize">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPastelsSmooth">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="scaling">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPencilGrayscale">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pencilSize">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPencilSketch">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="pressure">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPhotocopy">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="detail">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectPlasticWrap">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="smoothness">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectTexturizer">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="scaling">
+            <ref name="ST_ArtisticEffectParam100"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectWatercolorSponge">
+        <optional>
+          <attribute name="trans">
+            <ref name="a:ST_PositiveFixedPercentage"/>
+          </attribute>
+          <attribute name="brushSize">
+            <ref name="ST_ArtisticEffectParam10"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectBrightnessContrast">
+        <optional>
+          <attribute name="bright">
+            <ref name="a:ST_FixedPercentage"/>
+          </attribute>
+          <attribute name="contrast">
+            <ref name="a:ST_FixedPercentage"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectColorTemperature">
+        <optional>
+          <attribute name="colorTemp">
+            <ref name="ST_ColorTemperature"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectSaturation">
+        <optional>
+          <attribute name="sat">
+            <ref name="ST_SaturationAmount"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureEffectSharpenSoften">
+        <optional>
+          <attribute name="amount">
+            <ref name="ST_FixedPercentage"/>
+          </attribute>
+        </optional>
+      </define>
+
+      <!-- Complex types for containers -->
+      <define name="CT_PictureEffect">
+        <choice>
+          <element name="artisticBlur">
+            <ref name="CT_PictureEffectBlur"/>
+          </element>
+          <element name="artisticCement">
+            <ref name="CT_PictureEffectCement"/>
+          </element>
+          <element name="artisticChalkSketch">
+            <ref name="CT_PictureEffectChalkSketch"/>
+          </element>
+          <element name="artisticCrisscrossEtching">
+            <ref name="CT_PictureEffectCrisscrossEtching"/>
+          </element>
+          <element name="artisticCutout">
+            <ref name="CT_PictureEffectCutout"/>
+          </element>
+          <element name="artisticFilmGrain">
+            <ref name="CT_PictureEffectFilmGrain"/>
+          </element>
+          <element name="artisticGlass">
+            <ref name="CT_PictureEffectGlass"/>
+          </element>
+          <element name="artisticGlowDiffused">
+            <ref name="CT_PictureEffectGlowDiffused"/>
+          </element>
+          <element name="artisticGlowEdges">
+            <ref name="CT_PictureEffectGlowEdges"/>
+          </element>
+          <element name="artisticLightScreen">
+            <ref name="CT_PictureEffectLightScreen"/>
+          </element>
+          <element name="artisticLineDrawing">
+            <ref name="CT_PictureEffectLineDrawing"/>
+          </element>
+          <element name="artisticMarker">
+            <ref name="CT_PictureEffectMarker"/>
+          </element>
+          <element name="artisticMosiaicBubbles">
+            <ref name="CT_PictureEffectMosiaicBubbles"/>
+          </element>
+          <element name="artisticPaintStrokes">
+            <ref name="CT_PictureEffectPaintStrokes"/>
+          </element>
+          <element name="artisticPaintBrush">
+            <ref name="CT_PictureEffectPaintBrush"/>
+          </element>
+          <element name="artisticPastelsSmooth">
+            <ref name="CT_PictureEffectPastelsSmooth"/>
+          </element>
+          <element name="artisticPencilGrayscale">
+            <ref name="CT_PictureEffectPencilGrayscale"/>
+          </element>
+          <element name="artisticPencilSketch">
+            <ref name="CT_PictureEffectPencilSketch"/>
+          </element>
+          <element name="artisticPhotocopy">
+            <ref name="CT_PictureEffectPhotocopy"/>
+          </element>
+          <element name="artisticPlasticWrap">
+            <ref name="CT_PictureEffectPlasticWrap"/>
+          </element>
+          <element name="artisticTexturizer">
+            <ref name="CT_PictureEffectTexturizer"/>
+          </element>
+          <element name="artisticWatercolorSponge">
+            <ref name="CT_PictureEffectWatercolorSponge"/>
+          </element>
+          <element name="artisticBrightnessContrast">
+            <ref name="CT_PictureEffectBrightnessContrast"/>
+          </element>
+          <element name="artisticColorTemperature">
+            <ref name="CT_PictureEffectColorTemperature"/>
+          </element>
+          <element name="artisticSaturation">
+            <ref name="CT_PictureEffectSaturation"/>
+          </element>
+          <element name="artisticSharpenSoften">
+            <ref name="CT_PictureEffectSharpenSoften"/>
+          </element>
+        </choice>
+        <optional>
+          <attribute name="visible">
+            <data type="boolean"/>
+          </attribute>
+        </optional>
+      </define>
+      <define name="CT_PictureLayer">
+        <zeroOrMore>
+          <element name="imgEffect">
+            <ref name="CT_PictureEffect"/>
+          </element>
+        </zeroOrMore>
+        <attribute name="r:embed">
+          <text/>
+          <xs:documentation>Embedded Image Relationship Target</xs:documentation>
+        </attribute>
+      </define>
+      <define name="CT_Photo">
+        <zeroOrMore>
+          <element name="imgLayer">
+            <ref name="CT_PictureLayer"/>
+          </element>
+        </zeroOrMore>
+      </define>
+    </grammar>
   </namespace>
   <namespace name="dml-shapeGeometry" file="dml-shapeGeometry.rng" todo="ignore">
     <grammar xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
@@ -6322,7 +8337,7 @@
   <namespace name="dml-wordprocessingDrawing" file="dml-wordprocessingDrawing.rng">
     <start name="inline"/>
     <start name="anchor"/>
-    <grammar xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+    <grammar xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
       <!-- ISO RELAX NG Schema -->
       <include href="dml-graphicalObject.rng"/>
       <include href="dml-documentProperties.rng"/>
@@ -6350,6 +8365,11 @@
           <xs:documentation>Distance from Text</xs:documentation>
         </data>
       </define>
+      <define name="ST_EditId">
+        <data type="hexBinary">
+          <param name="length">4</param>
+        </data>
+      </define>
       <define name="CT_Inline">
         <group>
           <element name="extent">
@@ -6371,6 +8391,16 @@
           <element name="a:graphic">
             <ref name="BUILT_IN_ANY_TYPE"/>
           </element>
+          <optional>
+            <element name="wp14:sizeRelH">
+              <ref name="BUILT_IN_ANY_TYPE"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="wp14:sizeRelV">
+              <ref name="BUILT_IN_ANY_TYPE"/>
+            </element>
+          </optional>
         </group>
         <optional>
           <attribute name="distT">
@@ -6394,6 +8424,11 @@
           <attribute name="distR">
             <ref name="ST_WrapDistance"/>
             <xs:documentation>Distance From Text on Right Edge</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="wp14:anchorId">
+            <ref name="ST_EditId"/>
           </attribute>
         </optional>
       </define>
@@ -6550,16 +8585,10 @@
           </element>
         </choice>
       </define>
-      <define name="CT_PositionOffset">
-        <ref name="ST_PositionOffset"/>
-      </define>
       <define name="ST_PositionOffset">
         <data type="int">
           <xs:documentation>Absolute Position Offset Value</xs:documentation>
         </data>
-      </define>
-      <define name="CT_AlignH">
-        <ref name="ST_AlignH"/>
       </define>
       <define name="ST_AlignH">
         <list>
@@ -6604,19 +8633,16 @@
       <define name="CT_PosH">
         <choice>
           <element name="align">
-            <ref name="CT_AlignH"/>
+            <ref name="ST_AlignH"/>
           </element>
           <element name="posOffset">
-            <ref name="CT_PositionOffset"/>
+            <ref name="ST_PositionOffset"/>
           </element>
         </choice>
         <attribute name="relativeFrom">
           <ref name="ST_RelFromH"/>
           <xs:documentation>Horizontal Position Relative Base</xs:documentation>
         </attribute>
-      </define>
-      <define name="CT_AlignV">
-        <ref name="ST_AlignV"/>
       </define>
       <define name="ST_AlignV">
         <list>
@@ -6661,10 +8687,10 @@
       <define name="CT_PosV">
         <choice>
           <element name="align">
-            <ref name="CT_AlignV"/>
+            <ref name="ST_AlignV"/>
           </element>
           <element name="posOffset">
-            <ref name="CT_PositionOffset"/>
+            <ref name="ST_PositionOffset"/>
           </element>
         </choice>
         <attribute name="relativeFrom">
@@ -6703,6 +8729,16 @@
           <element name="a:graphic">
             <ref name="BUILT_IN_ANY_TYPE"/>
           </element>
+          <optional>
+            <element name="wp14:sizeRelH">
+              <ref name="BUILT_IN_ANY_TYPE"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="wp14:sizeRelV">
+              <ref name="BUILT_IN_ANY_TYPE"/>
+            </element>
+          </optional>
         </group>
         <optional>
           <attribute name="distT">
@@ -6772,6 +8808,11 @@
           </data>
           <xs:documentation>Allow Objects to Overlap</xs:documentation>
         </attribute>
+        <optional>
+          <attribute name="wp14:anchorId">
+            <ref name="ST_EditId"/>
+          </attribute>
+        </optional>
       </define>
       <define name="inline">
         <element name="inline">
@@ -6791,16 +8832,19 @@
       <attribute name="b" tokenid="ooxml:CT_EffectExtent_b"/>
     </resource>
     <resource name="ST_WrapDistance" resource="Integer" generated="yes"/>
-    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CT_Inline" resource="Properties" tag="shape">
+    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" name="CT_Inline" resource="Properties" tag="shape">
       <element name="extent" tokenid="ooxml:CT_Inline_extent"/>
       <element name="effectExtent" tokenid="ooxml:CT_Inline_effectExtent"/>
       <element name="docPr" tokenid="ooxml:CT_Inline_docPr"/>
       <element name="cNvGraphicFramePr" tokenid="ooxml:CT_Inline_cNvGraphicFramePr"/>
       <element name="a:graphic" tokenid="ooxml:CT_Inline_a_graphic"/>
+      <element name="wp14:sizeRelH" tokenid="ooxml:CT_Inline_wp14_sizeRelH"/>
+      <element name="wp14:sizeRelV" tokenid="ooxml:CT_Inline_wp14_sizeRelV"/>
       <attribute name="distT" tokenid="ooxml:CT_Inline_distT"/>
       <attribute name="distB" tokenid="ooxml:CT_Inline_distB"/>
       <attribute name="distL" tokenid="ooxml:CT_Inline_distL"/>
       <attribute name="distR" tokenid="ooxml:CT_Inline_distR"/>
+      <attribute name="wp14:anchorId" tokenid="ooxml:CT_Inline_wp14_anchorId"/>
     </resource>
     <resource name="ST_WrapText" resource="List" generated="yes">
       <value name="bothSides" tokenid="ooxml:Value_wordprocessingDrawing_ST_WrapText_bothSides">bothSides</value>
@@ -6846,15 +8890,11 @@
       <element name="wrapThrough" tokenid="ooxml:EG_WrapType_wrapThrough"/>
       <element name="wrapTopAndBottom" tokenid="ooxml:EG_WrapType_wrapTopAndBottom"/>
     </resource>
-    <resource name="CT_PositionOffset" resource="Value" tag="shape"/>
-    <resource name="ST_PositionOffset" resource="Integer" generated="yes"/>
-    <resource name="CT_AlignH" resource="Value" tag="shape"/>
-    <resource name="ST_AlignH" resource="List" generated="yes" tag="shape">
-      <value name="left" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_left">left</value>
-      <value name="right" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_right">right</value>
-      <value name="center" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_center">center</value>
-      <value name="inside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_inside">inside</value>
-      <value name="outside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignH_outside">outside</value>
+    <resource name="ST_PositionOffset" resource="Value">
+      <action name="characters" action="positionOffset"/>
+    </resource>
+    <resource name="ST_AlignH" resource="Value">
+      <action name="characters" action="alignH"/>
     </resource>
     <resource name="ST_RelFromH" resource="List" generated="yes">
       <value name="margin" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromH_margin">margin</value>
@@ -6871,13 +8911,8 @@
       <element name="posOffset" tokenid="ooxml:CT_PosH_posOffset"/>
       <attribute name="relativeFrom" tokenid="ooxml:CT_PosH_relativeFrom"/>
     </resource>
-    <resource name="CT_AlignV" resource="Value" tag="shape"/>
-    <resource name="ST_AlignV" resource="List" generated="yes">
-      <value name="top" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_top">top</value>
-      <value name="bottom" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_bottom">bottom</value>
-      <value name="center" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_center">center</value>
-      <value name="inside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_inside">inside</value>
-      <value name="outside" tokenid="ooxml:Value_wordprocessingDrawing_ST_AlignV_outside">outside</value>
+    <resource name="ST_AlignV" resource="Value">
+      <action name="characters" action="alignV"/>
     </resource>
     <resource name="ST_RelFromV" resource="List" generated="yes">
       <value name="margin" tokenid="ooxml:Value_wordprocessingDrawing_ST_RelFromV_margin">margin</value>
@@ -6894,7 +8929,8 @@
       <element name="posOffset" tokenid="ooxml:CT_PosV_posOffset"/>
       <attribute name="relativeFrom" tokenid="ooxml:CT_PosV_relativeFrom"/>
     </resource>
-    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CT_Anchor" resource="Properties" tag="shape">
+    <resource name="ST_EditId" resource="Hex"/>
+    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" name="CT_Anchor" resource="Properties" tag="shape">
       <element name="simplePos" tokenid="ooxml:CT_Anchor_simplePos_elem"/>
       <element name="positionH" tokenid="ooxml:CT_Anchor_positionH"/>
       <element name="positionV" tokenid="ooxml:CT_Anchor_positionV"/>
@@ -6903,6 +8939,7 @@
       <element name="docPr" tokenid="ooxml:CT_Anchor_docPr"/>
       <element name="cNvGraphicFramePr" tokenid="ooxml:CT_Anchor_cNvGraphicFramePr"/>
       <element name="a:graphic" tokenid="ooxml:CT_Anchor_a_graphic"/>
+      <element name="wp14:sizeRelV" tokenid="ooxml:CT_Anchor_wp14_sizeRelV"/>
       <attribute name="distT" tokenid="ooxml:CT_Anchor_distT"/>
       <attribute name="distB" tokenid="ooxml:CT_Anchor_distB"/>
       <attribute name="distL" tokenid="ooxml:CT_Anchor_distL"/>
@@ -6914,6 +8951,7 @@
       <attribute name="layoutInCell" tokenid="ooxml:CT_Anchor_layoutInCell"/>
       <attribute name="hidden" tokenid="ooxml:CT_Anchor_hidden"/>
       <attribute name="allowOverlap" tokenid="ooxml:CT_Anchor_allowOverlap"/>
+      <attribute name="wp14:anchorId" tokenid="ooxml:CT_Anchor_wp14_anchorId"/>
     </resource>
     <resource name="inline" resource="Properties" tag="shape">
       <element name="inline" tokenid="ooxml:inline_inline"/>
@@ -8033,9 +10071,13 @@
         <list>
           <xs:documentation>Justification</xs:documentation>
           <choice>
-            <!-- Left Justification -->
+            <!-- Align To Leading Edge -->
+            <value>start</value>
+            <!-- Align To Trailing Edge -->
+            <value>end</value>
+            <!-- Left Justification (ecma) -->
             <value>left</value>
-            <!-- Right -->
+            <!-- Right (ecma) -->
             <value>right</value>
             <!-- Center (Equation) -->
             <value>center</value>
@@ -8326,6 +10368,8 @@
       <attribute name="val" tokenid="ooxml:CT_Style_val" action="setValue"/>
     </resource>
     <resource name="ST_Jc" resource="List" generated="yes">
+      <value name="start" tokenid="ooxml:Value_math_ST_Jc_start">left</value>
+      <value name="end" tokenid="ooxml:Value_math_ST_Jc_end">right</value>
       <value name="left" tokenid="ooxml:Value_math_ST_Jc_left">left</value>
       <value name="right" tokenid="ooxml:Value_math_ST_Jc_right">right</value>
       <value name="center" tokenid="ooxml:Value_math_ST_Jc_center">center</value>
@@ -8334,7 +10378,7 @@
     <resource name="CT_OMathJc" resource="Value" generated="yes" tag="math">
       <attribute name="val" tokenid="ooxml:CT_OMathJc_val" action="setValue"/>
     </resource>
-    <resource name="ST_TwipsMeasure" resource="Integer" generated="yes"/>
+    <resource name="ST_TwipsMeasure" resource="UniversalMeasure"/>
     <resource name="CT_TwipsMeasure" resource="Value" generated="yes" tag="math">
       <attribute name="val" tokenid="ooxml:CT_TwipsMeasure_val" action="setValue"/>
       <action name="start" action="setDefaultIntegerValue"/>
@@ -8437,6 +10481,74 @@
           <ref name="CT_Picture"/>
         </element>
       </define>
+      <define xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_RelIds">
+        <attribute name="r:dm">
+          <text/>
+        </attribute>
+        <attribute name="r:lo">
+          <text/>
+        </attribute>
+        <attribute name="r:qs">
+          <text/>
+        </attribute>
+        <attribute name="r:cs">
+          <text/>
+        </attribute>
+      </define>
+      <define name="relIds">
+        <element xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" name="dgm:relIds">
+          <ref name="CT_RelIds"/>
+        </element>
+      </define>
+      <define xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_GvmlGroupShape">
+        <element name="nvGrpSpPr">
+          <ref name="CT_NonVisualGroupDrawingShapeProps"/>
+        </element>
+        <element name="grpSpPr">
+          <ref name="CT_GroupShapeProperties"/>
+        </element>
+      </define>
+      <define name="lockedCanvas">
+        <element xmlns:lc="http://schemas.openxmlformats.org/drawingml/2006/lockedCanvas" name="lc:lockedCanvas">
+          <ref name="CT_GvmlGroupShape"/>
+        </element>
+      </define>
+      <define xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_Chart">
+        <attribute name="r:id">
+          <text/>
+        </attribute>
+        </define>
+      <define name="chart">
+        <element xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" name="c:chart">
+            <ref name="CT_Chart"/>
+        </element>
+      </define>
+      <define name="CT_WordprocessingShape">
+        <element name="cNvSpPr">
+          <ref name="CT_NonVisualDrawingShapeProps"/>
+        </element>
+        <element name="spPr">
+          <ref name="CT_ShapeProperties"/>
+        </element>
+      </define>
+      <define name="wsp">
+        <element xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" name="wps:wsp">
+          <ref name="CT_WordprocessingShape"/>
+        </element>
+      </define>
+      <define name="CT_WordprocessingGroup">
+        <element name="cNvGrpSpPr">
+          <ref name="CT_NonVisualGroupDrawingShapeProps"/>
+        </element>
+        <element name="grpSpPr">
+          <ref name="CT_WordprocessingGroup"/>
+        </element>
+      </define>
+      <define name="wgp">
+        <element xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" name="wpg:wgp">
+          <ref name="CT_WordprocessingGroup"/>
+        </element>
+      </define>
     </grammar>
     <resource name="CT_PictureNonVisual" resource="Properties" tag="shape">
       <element name="cNvPr" tokenid="ooxml:CT_PictureNonVisual_cNvPr"/>
@@ -8450,6 +10562,43 @@
     <resource name="pic" resource="Properties" tag="shape">
       <element name="pic" tokenid="ooxml:pic_pic"/>
     </resource>
+    <resource xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_RelIds" resource="Shape" tag="shape">
+      <attribute name="r:dm" tokenid="ooxml:CT_RelIds_dm"/>
+      <attribute name="r:lo" tokenid="ooxml:CT_RelIds_lo"/>
+      <attribute name="r:qs" tokenid="ooxml:CT_RelIds_qs"/>
+      <attribute name="r:cs" tokenid="ooxml:CT_RelIds_cs"/>
+    </resource>
+    <resource name="relIds" resource="Shape" tag="shape">
+      <element xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" name="dgm:relIds" tokenid="ooxml:dgm_relIds"/>
+    </resource>
+    <resource xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CT_GvmlGroupShape" resource="Shape" tag="shape">
+      <element name="a:nvGrpSpPr" tokenid="ooxml:CT_GvmlGroupShape_nvGrpSpPr"/>
+      <element name="a:grpSpPr" tokenid="ooxml:CT_GvmlGroupShape_grpSpPr"/>
+    </resource>
+    <resource name="lockedCanvas" resource="Shape" tag="shape">
+      <element xmlns:lc="http://schemas.openxmlformats.org/drawingml/2006/lockedCanvas" name="lc:lockedCanvas" tokenid="ooxml:lc_lockedCanvas"/>
+    </resource>
+    <resource xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_Chart" resource="Shape" tag="shape">
+      <attribute name="r:id" tokenid="ooxml:CT_RelId_chart"/>
+    </resource>
+    <resource name="chart" resource="Shape" tag="shape">
+        <element xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" name="c:chart" tokenid="ooxml:c_chart"/>
+    </resource>
+    <resource xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" name="CT_WordprocessingShape" resource="Shape" tag="shape">
+      <element name="wps:cNvSpPr" tokenid="ooxml:CT_WordprocessingShape_cNvSpPr"/>
+      <element name="wps:spPr" tokenid="ooxml:CT_WordprocessingShape_spPr"/>
+    </resource>
+    <resource name="wsp" resource="Shape" tag="shape">
+      <element xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" name="wps:wsp" tokenid="ooxml:wps_wsp"/>
+    </resource>
+    <resource xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" name="CT_WordprocessingGroup" resource="Shape" tag="shape">
+      <element name="wpg:cNvGrpSpPr" tokenid="ooxml:CT_WordprocessingGroup_cNvGrpSpPr"/>
+      <element name="wpg:grpSpPr" tokenid="ooxml:CT_WordprocessingGroup_grpSpPr"/>
+    </resource>
+    <resource name="wgp" resource="Shape" tag="shape">
+      <element xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" name="wpg:wgp" tokenid="ooxml:wpg_wgp"/>
+    </resource>
+
   </namespace>
   <namespace name="vml-main" file="vml-main.rng" todo="ignore">
     <start name="shape"/>
@@ -10168,6 +12317,12 @@
       <value name="stacked" tokenid="ooxml:Value_vml_ST_EditAs_stacked">stacked</value>
       <value name="venn" tokenid="ooxml:Value_vml_ST_EditAs_venn">venn</value>
       <value name="bullseye" tokenid="ooxml:Value_vml_ST_EditAs_bullseye">bullseye</value>
+    </resource>
+    <resource name="CT_Background" resource="Properties" tag="shape">
+      <attribute name="id" tokenid="ooxml:CT_Background_id"/>
+    </resource>
+    <resource name="background" resource="Properties" tag="shape">
+      <element name="background" tokenid="ooxml:background_background"/>
     </resource>
   </namespace>
   <namespace name="vml-officeDrawing" file="vml-officeDrawing.rng">
@@ -12110,6 +14265,45 @@
       <value name="background" tokenid="ooxml:Value_office_ST_FillType_background">background</value>
     </resource>
   </namespace>
+  <namespace name="mce">
+    <start name="AlternateContent"/>
+    <grammar xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/markup-compatibility/2006" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+      <define name="nsList">
+        <list>
+          <zeroOrMore>
+            <data type="NCName"/>
+          </zeroOrMore>
+        </list>
+      </define>
+      <define name="AlternateContent">
+        <element name="AlternateContent">
+          <oneOrMore>
+            <ref name="choice"/>
+          </oneOrMore>
+          <optional>
+            <ref name="fallback"/>
+          </optional>
+        </element>
+      </define>
+      <define name="Choice">
+        <element name="Choice">
+          <attribute name="Requires">
+            <ref name="nsList"/>
+          </attribute>
+          <text/>
+        </element>
+      </define>
+      <define name="Fallback">
+        <element name="Fallback">
+          <text/>
+        </element>
+      </define>
+    </grammar>
+    <resource name="AlternateContent" resource="Value"/>
+    <resource name="Choice" resource="Value">
+      <attribute name="Requires" tokenid="ooxml:mc_Requires"/>
+    </resource>
+  </namespace>
   <namespace name="vml-wordprocessingDrawing" file="vml-wordprocessingDrawing.rng">
     <start name="bordertop"/>
     <start name="borderleft"/>
@@ -12425,7 +14619,7 @@
     <start name="styles"/>
     <start name="document"/>
     <start name="glossaryDocument"/>
-    <grammar xmlns:sl="http://schemas.openxmlformats.org/schemaLibrary/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" ns="http://schemas.openxmlformats.org/wordprocessingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes" attributeFormDefault="qualified">
+    <grammar xmlns:sl="http://schemas.openxmlformats.org/schemaLibrary/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2006/xpath-functions" xmlns="http://relaxng.org/ns/structure/1.0" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:v="urn:schemas-microsoft-com:vml" ns="http://schemas.openxmlformats.org/wordprocessingml/2006/main" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes" attributeFormDefault="qualified">
       <!-- ISO RELAX NG Schema -->
       <include href="shared-customXmlSchemaProperties.rng"/>
       <include href="shared-math.rng"/>
@@ -12784,11 +14978,15 @@
         </list>
       </define>
       <define name="CT_Underline">
-        <optional><attribute name="val"><ref name="ST_Underline"/><xs:documentation>Underline Style</xs:documentation></attribute>ST_String
+        <optional>
+          <attribute name="val">
+            <ref name="ST_Underline"/>
+            <xs:documentation>Underline Style</xs:documentation>
+          </attribute>
         </optional>
         <optional>
           <attribute name="color">
-            <text/>
+            <ref name="ST_HexColor"/>
             <xs:documentation>Underline Color</xs:documentation>
           </attribute>
         </optional>
@@ -13746,11 +15944,15 @@
           <choice>
             <!-- No Tab Stop -->
             <value>clear</value>
-            <!-- Left Tab -->
+            <!-- Leading Tab -->
+            <value>start</value>
+            <!-- Left Tab (ecma) -->
             <value>left</value>
             <!-- Centered Tab -->
             <value>center</value>
-            <!-- Right Tab -->
+            <!-- Trailing Tab -->
+            <value>end</value>
+            <!-- Right Tab (ecma) -->
             <value>right</value>
             <!-- Decimal Tab -->
             <value>decimal</value>
@@ -13861,6 +16063,30 @@
       </define>
       <define name="CT_Ind">
         <optional>
+          <attribute name="end">
+            <ref name="ST_SignedTwipsMeasure"/>
+            <xs:documentation>Left Indentation</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="endChars">
+            <ref name="ST_DecimalNumber"/>
+            <xs:documentation>Left Indentation in Character Units</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="start">
+            <ref name="ST_SignedTwipsMeasure"/>
+            <xs:documentation>Left Indentation</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="startChars">
+            <ref name="ST_DecimalNumber"/>
+            <xs:documentation>Left Indentation in Character Units</xs:documentation>
+          </attribute>
+        </optional>
+        <optional>
           <attribute name="left">
             <ref name="ST_SignedTwipsMeasure"/>
             <xs:documentation>Left Indentation</xs:documentation>
@@ -13913,11 +16139,15 @@
         <list>
           <xs:documentation>Horizontal Alignment Type</xs:documentation>
           <choice>
-            <!-- Align Left -->
+            <!-- Align To Leading Edge -->
+            <value>start</value>
+            <!-- Align To Trailing Edge -->
+            <value>end</value>
+            <!-- Align Left (ecma) -->
             <value>left</value>
             <!-- Align Center -->
             <value>center</value>
-            <!-- Align Right -->
+            <!-- Align Right (ecma) -->
             <value>right</value>
             <!-- Justified -->
             <value>both</value>
@@ -13963,7 +16193,7 @@
       </define>
       <define name="CT_View">
         <attribute name="val">
-          <text/>
+          <ref name="ST_View"/>
           <xs:documentation>Document View Setting  Value</xs:documentation>
         </attribute>
       </define>
@@ -14439,6 +16669,10 @@
         </optional>
       </define>
       <define name="CT_MarkupRangeBookmark">
+        <attribute name="id">
+          <text/>
+          <xs:documentation>Annotation Identifier</xs:documentation>
+        </attribute>
         <ref name="CT_MarkupRange"/>
       </define>
       <define name="CT_MarkupRangeCommentStart">
@@ -14481,6 +16715,10 @@
         </attribute>
       </define>
       <define name="CT_Comment">
+        <attribute name="id">
+          <ref name="ST_DecimalNumber"/>
+          <xs:documentation>Annotation Identifier</xs:documentation>
+        </attribute>
         <ref name="CT_TrackChange"/>
         <zeroOrMore>
           <ref name="EG_BlockLevelElts"/>
@@ -14597,13 +16835,13 @@
             <ref name="CT_MoveBookmark"/>
           </element>
           <element name="moveFromRangeEnd">
-            <ref name="CT_MarkupRange"/>
+            <ref name="CT_MarkupRangeBookmark"/>
           </element>
           <element name="moveToRangeStart">
             <ref name="CT_MoveBookmark"/>
           </element>
           <element name="moveToRangeEnd">
-            <ref name="CT_MarkupRange"/>
+            <ref name="CT_MarkupRangeBookmark"/>
           </element>
           <element name="commentRangeStart">
             <ref name="CT_MarkupRangeCommentStart"/>
@@ -14931,7 +17169,7 @@
         <ref name="CT_PictureBase"/>
         <optional>
           <attribute name="color">
-            <text/>
+            <ref name="ST_HexColor"/>
             <xs:documentation>Background Color</xs:documentation>
           </attribute>
         </optional>
@@ -14952,6 +17190,11 @@
             <text/>
             <xs:documentation>Border Theme Color Shade</xs:documentation>
           </attribute>
+        </optional>
+        <optional>
+          <element name="v:background">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
         </optional>
       </define>
       <define name="CT_Rel">
@@ -15271,7 +17514,7 @@
       <define name="CT_FFDDList">
         <optional>
           <element name="result">
-            <ref name="CT_DecimalNumber"/>
+            <ref name="CT_String"/>
           </element>
         </optional>
         <optional>
@@ -16623,6 +18866,66 @@
             <ref name="CT_OnOff"/>
           </element>
         </optional>
+        <optional>
+          <element name="w14:glow">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:shadow">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:reflection">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:textOutline">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:textFill">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:scene3d">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:props3d">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:ligatures">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:numForm">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:numSpacing">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:stylisticSets">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="w14:cntxtAlts">
+            <ref name="BUILT_IN_ANY_TYPE"/>
+          </element>
+        </optional>
       </define>
       <define name="EG_RPrContent">
         <optional>
@@ -16913,19 +19216,6 @@
           </attribute>
         </optional>
       </define>
-      <define name="CT_SdtComboBox">
-        <zeroOrMore>
-          <element name="listItem">
-            <ref name="CT_SdtListItem"/>
-          </element>
-        </zeroOrMore>
-        <optional>
-          <attribute name="lastValue">
-            <text/>
-            <xs:documentation>Combo Box Last Saved Value</xs:documentation>
-          </attribute>
-        </optional>
-      </define>
       <define name="CT_SdtDocPart">
         <optional>
           <element name="docPartGallery">
@@ -17032,10 +19322,13 @@
             <optional>
               <choice>
                 <element name="equation">
-                  <ref name="CT_Empty"/>
+                  <ref name="CT_OnOff"/>
                 </element>
                 <element name="comboBox">
-                  <ref name="CT_SdtComboBox"/>
+                  <ref name="CT_SdtDropDownList"/>
+                </element>
+                <element name="w14:checkbox">
+                  <ref name="CT_SdtCheckbox"/>
                 </element>
                 <element name="date">
                   <ref name="CT_SdtDate"/>
@@ -17050,19 +19343,19 @@
                   <ref name="CT_SdtDropDownList"/>
                 </element>
                 <element name="picture">
-                  <ref name="CT_Empty"/>
+                  <ref name="CT_OnOff"/>
                 </element>
                 <element name="richText">
                   <ref name="CT_Empty"/>
                 </element>
                 <element name="text">
-                  <ref name="CT_SdtText"/>
+                  <ref name="CT_OnOff"/>
                 </element>
                 <element name="citation">
-                  <ref name="CT_Empty"/>
+                  <ref name="CT_OnOff"/>
                 </element>
                 <element name="group">
-                  <ref name="CT_Empty"/>
+                  <ref name="CT_OnOff"/>
                 </element>
                 <element name="bibliography">
                   <ref name="CT_Empty"/>
@@ -17493,12 +19786,22 @@
           </element>
         </optional>
         <optional>
+          <element name="start">
+            <ref name="CT_Border"/>
+          </element>
+        </optional>
+        <optional>
           <element name="left">
             <ref name="CT_Border"/>
           </element>
         </optional>
         <optional>
           <element name="bottom">
+            <ref name="CT_Border"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="end">
             <ref name="CT_Border"/>
           </element>
         </optional>
@@ -17535,6 +19838,11 @@
           </element>
         </optional>
         <optional>
+          <element name="start">
+            <ref name="CT_TblWidth"/>
+          </element>
+        </optional>
+        <optional>
           <element name="left">
             <ref name="CT_TblWidth"/>
           </element>
@@ -17546,6 +19854,11 @@
         </optional>
         <optional>
           <element name="right">
+            <ref name="CT_TblWidth"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="end">
             <ref name="CT_TblWidth"/>
           </element>
         </optional>
@@ -17692,7 +20005,7 @@
             </optional>
             <optional>
               <element name="gridBefore">
-                <ref name="CT_DecimalNumber"/>
+                <ref name="CT_TrPrBaseGridBefore"/>
               </element>
             </optional>
             <optional>
@@ -17742,6 +20055,11 @@
             </optional>
           </choice>
         </oneOrMore>
+      </define>
+      <define name="CT_TrPrBaseGridBefore">
+        <attribute name="val">
+          <ref name="ST_DecimalNumber"/>
+        </attribute>
       </define>
       <define name="CT_TrPr">
         <ref name="CT_TrPrBase"/>
@@ -17796,7 +20114,7 @@
           <xs:documentation>Revision Identifier for Table Row Properties</xs:documentation>
         </attribute>
       </define>
-      <define name="ST_TblLayoutType">
+      <define name="ST_TblLayout">
         <list>
           <xs:documentation>Table Layout Type</xs:documentation>
           <choice>
@@ -17809,7 +20127,7 @@
       </define>
       <define name="CT_TblLayoutType">
         <attribute name="type">
-          <text/>
+          <ref name="ST_TblLayout"/>
           <xs:documentation>Table Layout Setting</xs:documentation>
         </attribute>
       </define>
@@ -17832,19 +20150,19 @@
       </define>
       <define name="CT_TblPPr">
         <attribute name="leftFromText">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>Distance From Left of Table to Text</xs:documentation>
         </attribute>
         <attribute name="rightFromText">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>(Distance From Right of Table to Text</xs:documentation>
         </attribute>
         <attribute name="topFromText">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>Distance From Top of Table to Text</xs:documentation>
         </attribute>
         <attribute name="bottomFromText">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>Distance From Bottom of Table to Text</xs:documentation>
         </attribute>
         <attribute name="vertAnchor">
@@ -17860,7 +20178,7 @@
           <xs:documentation>Relative Horizontal Alignment From Anchor</xs:documentation>
         </attribute>
         <attribute name="tblpX">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>Absolute Horizontal Distance From Anchor</xs:documentation>
         </attribute>
         <attribute name="tblpYSpec">
@@ -17868,13 +20186,18 @@
           <xs:documentation>Relative Vertical Alignment from Anchor</xs:documentation>
         </attribute>
         <attribute name="tblpY">
-          <text/>
+          <ref name="ST_SignedTwipsMeasure"/>
           <xs:documentation>Absolute Vertical Distance From Anchor</xs:documentation>
         </attribute>
       </define>
       <define name="CT_TblCellMar">
         <optional>
           <element name="top">
+            <ref name="CT_TblWidth"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="start">
             <ref name="CT_TblWidth"/>
           </element>
         </optional>
@@ -17893,10 +20216,20 @@
             <ref name="CT_TblWidth"/>
           </element>
         </optional>
+        <optional>
+          <element name="end">
+            <ref name="CT_TblWidth"/>
+          </element>
+        </optional>
       </define>
       <define name="CT_TblBorders">
         <optional>
           <element name="top">
+            <ref name="CT_Border"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="start">
             <ref name="CT_Border"/>
           </element>
         </optional>
@@ -17907,6 +20240,11 @@
         </optional>
         <optional>
           <element name="bottom">
+            <ref name="CT_Border"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="end">
             <ref name="CT_Border"/>
           </element>
         </optional>
@@ -18808,6 +21146,22 @@
             <ref name="CT_OnOff"/>
           </element>
         </optional>
+        <optional>
+          <element name="compatSetting">
+            <ref name="CT_CompatSetting"/>
+          </element>
+        </optional>
+      </define>
+      <define name="CT_CompatSetting">
+        <attribute name="name">
+          <ref name="ST_String"/>
+        </attribute>
+        <attribute name="uri">
+          <ref name="ST_String"/>
+        </attribute>
+        <attribute name="val">
+          <ref name="ST_String"/>
+        </attribute>
       </define>
       <define name="CT_DocVar">
         <attribute name="name">
@@ -19018,6 +21372,11 @@
         <optional>
           <element name="zoom">
             <ref name="CT_Zoom"/>
+          </element>
+        </optional>
+        <optional>
+          <element name="linkStyles">
+            <ref name="CT_OnOff"/>
           </element>
         </optional>
         <optional>
@@ -20366,7 +22725,12 @@
           </optional>
           <optional>
             <element name="charset">
-              <ref name="CT_UcharHexNumber"/>
+              <ref name="CT_Charset"/>
+            </element>
+          </optional>
+          <optional>
+            <element name="characterSet">
+              <ref name="CT_String"/>
             </element>
           </optional>
           <optional>
@@ -20421,6 +22785,18 @@
             <ref name="CT_Font"/>
           </element>
         </zeroOrMore>
+      </define>
+      <define name="CT_Charset">
+        <optional>
+          <attribute name="val">
+            <ref name="ST_UcharHexNumber"/>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="characterSet">
+            <ref name="ST_String"/>
+          </attribute>
+        </optional>
       </define>
       <define name="CT_DivBdr">
         <optional>
@@ -21097,12 +23473,12 @@
       <action name="start" action="setDefaultIntegerValue"/>
     </resource>
     <resource name="ST_UnsignedDecimalNumber" resource="Integer" generated="yes"/>
-    <resource name="ST_TwipsMeasure" resource="Integer"/>
+    <resource name="ST_TwipsMeasure" resource="UniversalMeasure"/>
     <resource name="CT_TwipsMeasure" resource="Value" tag="attribute">
       <attribute name="val" tokenid="ooxml:CT_TwipsMeasure_val" action="setValue"/>
       <action name="start" action="setDefaultIntegerValue"/>
     </resource>
-    <resource name="ST_SignedTwipsMeasure" resource="Integer"/>
+    <resource name="ST_SignedTwipsMeasure" resource="UniversalMeasure"/>
     <resource name="CT_SignedTwipsMeasure" resource="Value" tag="attribute">
       <attribute name="val" tokenid="ooxml:CT_SignedTwipsMeasure_val" action="setValue"/>
       <action name="start" action="setDefaultIntegerValue"/>
@@ -21249,8 +23625,8 @@
       <value tokenid="23">dashDotStroked</value>
       <value tokenid="24">threeDEmboss</value>
       <value tokenid="25">threeDEngrave</value>
-      <value tokenid="18">outset</value>
-      <value tokenid="17">inset</value>
+      <value tokenid="26">outset</value>
+      <value tokenid="27">inset</value>
       <value tokenid="64">apples</value>
       <value tokenid="65">archedScallops</value>
       <value tokenid="66">babyPacifier</value>
@@ -21417,20 +23793,33 @@
       <value tokenid="227">zigZagStitch</value>
     </resource>
     <resource name="CT_Border" resource="Properties" tag="attribute">
-      <attribute name="val" tokenid="rtf:BRCTYPE"/>
+      <attribute name="val" tokenid="ooxml:CT_Border_val"/>
       <attribute name="color" tokenid="ooxml:CT_Border_color"/>
       <attribute name="themeColor" tokenid="ooxml:CT_Border_themeColor"/>
       <attribute name="themeTint" tokenid="ooxml:CT_Border_themeTint"/>
       <attribute name="themeShade" tokenid="ooxml:CT_Border_themeShade"/>
-      <attribute name="sz" tokenid="rtf:DPTLINEWIDTH"/>
-      <attribute name="space" tokenid="rtf:DPTSPACE"/>
-      <attribute name="shadow" tokenid="rtf:FSHADOW"/>
-      <attribute name="frame" tokenid="rtf:FFRAME"/>
+      <attribute name="sz" tokenid="ooxml:CT_Border_sz"/>
+      <attribute name="space" tokenid="ooxml:CT_Border_space"/>
+      <attribute name="shadow" tokenid="ooxml:CT_Border_shadow"/>
+      <attribute name="frame" tokenid="ooxml:CT_Border_frame"/>
     </resource>
+    <!-- This DOCX values will be mapped to match the 'DOC' values that are defined here: -->
+    <!-- http://msdn.microsoft.com/en-us/library/dd945712(v=office.12).aspx -->
     <resource name="ST_Shd" resource="List">
-      <value tokenid="0">nil</value>
       <value tokenid="0">clear</value>
       <value tokenid="1">solid</value>
+      <value tokenid="2">pct5</value>
+      <value tokenid="3">pct10</value>
+      <value tokenid="4">pct20</value>
+      <value tokenid="5">pct25</value>
+      <value tokenid="6">pct30</value>
+      <value tokenid="7">pct40</value>
+      <value tokenid="8">pct50</value>
+      <value tokenid="9">pct60</value>
+      <value tokenid="10">pct70</value>
+      <value tokenid="11">pct75</value>
+      <value tokenid="12">pct80</value>
+      <value tokenid="13">pct90</value>
       <value tokenid="14">horzStripe</value>
       <value tokenid="15">vertStripe</value>
       <value tokenid="17">reverseDiagStripe</value>
@@ -21443,29 +23832,18 @@
       <value tokenid="22">thinDiagStripe</value>
       <value tokenid="24">thinHorzCross</value>
       <value tokenid="25">thinDiagCross</value>
-      <value tokenid="2">pct5</value>
-      <value tokenid="3">pct10</value>
-      <value tokenid="27">pct12</value>
-      <value tokenid="28">pct15</value>
-      <value tokenid="4">pct20</value>
-      <value tokenid="5">pct25</value>
-      <value tokenid="6">pct30</value>
+      <value tokenid="37">pct12</value>
+      <value tokenid="38">pct15</value>
       <value tokenid="43">pct35</value>
       <value tokenid="44">pct37</value>
-      <value tokenid="7">pct40</value>
       <value tokenid="46">pct45</value>
-      <value tokenid="8">pct50</value>
       <value tokenid="49">pct55</value>
-      <value tokenid="9">pct60</value>
       <value tokenid="51">pct62</value>
       <value tokenid="52">pct65</value>
-      <value tokenid="10">pct70</value>
-      <value tokenid="11">pct75</value>
-      <value tokenid="12">pct80</value>
       <value tokenid="57">pct85</value>
       <value tokenid="58">pct87</value>
-      <value tokenid="13">pct90</value>
       <value tokenid="60">pct95</value>
+      <value tokenid="65535">nil</value>
     </resource>
     <resource name="CT_Shd" resource="Properties" tag="attribute">
       <attribute name="val" tokenid="ooxml:CT_Shd_val"/>
@@ -21567,11 +23945,11 @@
       <kind name="paragraph"/>
       <attribute name="dropCap" tokenid="ooxml:CT_FramePr_dropCap"/>
       <attribute name="lines" tokenid="ooxml:CT_FramePr_lines"/>
-      <attribute name="w" tokenid="sprm:PDxaWidth"/>
-      <attribute name="h" tokenid="sprm:PWHeightAbs"/>
-      <attribute name="vSpace" tokenid="sprm:PDyaFromText"/>
-      <attribute name="hSpace" tokenid="sprm:PDxaFromText"/>
-      <attribute name="wrap" tokenid="sprm:PWr"/>
+      <attribute name="w" tokenid="ooxml:CT_FramePr_w"/>
+      <attribute name="h" tokenid="ooxml:CT_FramePr_h"/>
+      <attribute name="vSpace" tokenid="ooxml:CT_FramePr_vSpace"/>
+      <attribute name="hSpace" tokenid="ooxml:CT_FramePr_hSpace"/>
+      <attribute name="wrap" tokenid="ooxml:CT_FramePr_wrap"/>
       <attribute name="hAnchor" tokenid="ooxml:CT_FramePr_hAnchor"/>
       <attribute name="vAnchor" tokenid="ooxml:CT_FramePr_vAnchor"/>
       <attribute name="x" tokenid="ooxml:CT_FramePr_x"/>
@@ -21579,12 +23957,14 @@
       <attribute name="y" tokenid="ooxml:CT_FramePr_y"/>
       <attribute name="yAlign" tokenid="ooxml:CT_FramePr_yAlign"/>
       <attribute name="hRule" tokenid="ooxml:CT_FramePr_hRule"/>
-      <attribute name="anchorLock" tokenid="sprm:PFLocked"/>
+      <attribute name="anchorLock" tokenid="ooxml:CT_FramePr_anchorLock"/>
     </resource>
     <resource name="ST_TabJc" resource="List">
       <value tokenid="ooxml:Value_ST_TabJc_clear">clear</value>
+      <value tokenid="0">start</value>
       <value tokenid="0">left</value>
       <value tokenid="1">center</value>
+      <value tokenid="2">end</value>
       <value tokenid="2">right</value>
       <value tokenid="3">decimal</value>
       <value tokenid="4">bar</value>
@@ -21619,19 +23999,26 @@
       <attribute name="lineRule" tokenid="ooxml:CT_Spacing_lineRule"/>
     </resource>
     <resource name="CT_Ind" resource="Properties" tag="paragraph">
-      <attribute name="left" tokenid="ooxml:CT_Ind_left"/>
-      <attribute name="leftChars" tokenid="ooxml:CT_Ind_leftChars"/>
-      <attribute name="right" tokenid="ooxml:CT_Ind_right"/>
-      <attribute name="rightChars" tokenid="ooxml:CT_Ind_rightChars"/>
+      <attribute name="end" tokenid="ooxml:CT_Ind_end"/>
+      <attribute name="endChars" tokenid="ooxml:CT_Ind_endChars"/>
+      <attribute name="start" tokenid="ooxml:CT_Ind_start"/>
+      <attribute name="startChars" tokenid="ooxml:CT_Ind_startChars"/>
       <attribute name="hanging" tokenid="ooxml:CT_Ind_hanging"/>
       <attribute name="hangingChars" tokenid="ooxml:CT_Ind_hangingChars"/>
       <attribute name="firstLine" tokenid="ooxml:CT_Ind_firstLine"/>
       <attribute name="firstLineChars" tokenid="ooxml:CT_Ind_firstLineChars"/>
+      <!-- ECMA 1st version -->
+      <attribute name="left" tokenid="ooxml:CT_Ind_left"/>
+      <attribute name="leftChars" tokenid="ooxml:CT_Ind_leftChars"/>
+      <attribute name="right" tokenid="ooxml:CT_Ind_right"/>
+      <attribute name="rightChars" tokenid="ooxml:CT_Ind_rightChars"/>
     </resource>
     <resource name="ST_Jc" resource="List">
       <value tokenid="0">left</value>
-      <value tokenid="1">center</value>
       <value tokenid="2">right</value>
+      <value tokenid="0">start</value>
+      <value tokenid="1">center</value>
+      <value tokenid="2">end</value>
       <value tokenid="3">both</value>
       <value tokenid="ooxml:Value_ST_Jc_mediumKashida">mediumKashida</value>
       <value tokenid="ooxml:Value_ST_Jc_distribute">distribute</value>
@@ -21825,7 +24212,7 @@
       <attribute name="displacedByCustomXml" tokenid="ooxml:CT_MarkupRange_displacedByCustomXml"/>
     </resource>
     <resource name="CT_MarkupRangeBookmark" resource="Properties" tag="redline">
-      <attribute name="id" tokenid="rtf:IBKL"/>
+      <attribute name="id" tokenid="ooxml:CT_MarkupRangeBookmark_id"/>
     </resource>
     <resource name="CT_MarkupRangeCommentStart" resource="Properties" tag="content">
       <attribute name="id" tokenid="ooxml:EG_RangeMarkupElements_commentRangeStart"/>
@@ -21840,7 +24227,7 @@
     </resource>
     <resource name="CT_Bookmark" resource="Properties" tag="reference">
       <type name="Bookmark"/>
-      <attribute name="name" tokenid="rtf:BOOKMARKNAME"/>
+      <attribute name="name" tokenid="ooxml:CT_Bookmark_name"/>
     </resource>
     <resource name="CT_MoveBookmark" resource="Properties" tag="reference">
       <attribute name="author" tokenid="ooxml:CT_MoveBookmark_author"/>
@@ -21876,6 +24263,9 @@
     </resource>
     <resource name="CT_RPrChange" resource="Properties" tag="character">
       <element name="rPr" tokenid="ooxml:CT_RPrChange_rPr"/>
+      <action name="end" action="tokenproperty"/>
+      <action name="end" action="propagateCharacterPropertiesAsSet" sendtokenid="ooxml:endtrackchange"/>
+      <action name="end" action="clearProps"/>
     </resource>
     <resource name="CT_ParaRPrChange" resource="Properties" tag="character">
       <element name="rPr" tokenid="ooxml:CT_ParaRPrChange_rPr"/>
@@ -21884,7 +24274,9 @@
       <action name="start" action="tokenproperty"/>
       <action name="start" action="propagateCharacterPropertiesAsSet" sendtokenid="ooxml:trackchange"/>
       <action name="start" action="clearProps"/>
-      <action name="end" action="mark" sendtokenid="ooxml:endtrackchange"/>
+      <action name="end" action="tokenproperty"/>
+      <action name="end" action="propagateCharacterPropertiesAsSet" sendtokenid="ooxml:endtrackchange"/>
+      <action name="end" action="clearProps"/>
     </resource>
     <resource name="EG_RangeMarkupElements" resource="Properties" tag="redlines">
       <element name="bookmarkStart" tokenid="ooxml:EG_RangeMarkupElements_bookmarkStart"/>
@@ -21906,19 +24298,19 @@
     </resource>
     <resource name="CT_NumPr" resource="Properties" tag="numbering">
       <kind name="paragraph"/>
-      <element name="ilvl" tokenid="sprm:PIlvl"/>
-      <element name="numId" tokenid="sprm:PIlfo"/>
+      <element name="ilvl" tokenid="ooxml:CT_NumPr_ilvl"/>
+      <element name="numId" tokenid="ooxml:CT_NumPr_numId"/>
       <element name="numberingChange" tokenid="ooxml:CT_NumPr_numberingChange"/>
       <element name="ins" tokenid="ooxml:CT_NumPr_ins"/>
     </resource>
     <resource name="CT_PBdr" resource="Properties" tag="paragraph">
       <kind name="paragraph"/>
-      <element name="top" tokenid="sprm:PBrcTop"/>
-      <element name="left" tokenid="sprm:PBrcLeft"/>
-      <element name="bottom" tokenid="sprm:PBrcBottom"/>
-      <element name="right" tokenid="sprm:PBrcRight"/>
-      <element name="between" tokenid="sprm:PBrcBetween"/>
-      <element name="bar" tokenid="sprm:PBrcBar"/>
+      <element name="top" tokenid="ooxml:CT_PBdr_top"/>
+      <element name="left" tokenid="ooxml:CT_PBdr_left"/>
+      <element name="bottom" tokenid="ooxml:CT_PBdr_bottom"/>
+      <element name="right" tokenid="ooxml:CT_PBdr_right"/>
+      <element name="between" tokenid="ooxml:CT_PBdr_between"/>
+      <element name="bar" tokenid="ooxml:CT_PBdr_bar"/>
     </resource>
     <resource name="CT_Tabs" resource="Properties" tag="paragraph">
       <element name="tab" tokenid="ooxml:CT_Tabs_tab"/>
@@ -21937,36 +24329,36 @@
     <resource name="CT_PPrBase" resource="Properties" tag="paragraph">
       <kind name="paragraph"/>
       <element name="pStyle" tokenid="ooxml:CT_PPrBase_pStyle"/>
-      <element name="keepNext" tokenid="sprm:PFKeepFollow"/>
-      <element name="keepLines" tokenid="sprm:PFKeep"/>
-      <element name="pageBreakBefore" tokenid="sprm:PFPageBreakBefore"/>
+      <element name="keepNext" tokenid="ooxml:CT_PPrBase_keepNext"/>
+      <element name="keepLines" tokenid="ooxml:CT_PPrBase_keepLines"/>
+      <element name="pageBreakBefore" tokenid="ooxml:CT_PPrBase_pageBreakBefore"/>
       <element name="framePr" tokenid="ooxml:CT_PPrBase_framePr"/>
       <element name="widowControl" tokenid="ooxml:CT_PPrBase_widowControl"/>
       <element name="numPr" tokenid="ooxml:CT_PPrBase_numPr"/>
-      <element name="suppressLineNumbers" tokenid="sprm:PFNoLineNumb"/>
+      <element name="suppressLineNumbers" tokenid="ooxml:CT_PPrBase_suppressLineNumbers"/>
       <element name="pBdr" tokenid="ooxml:CT_PrBase_pBdr"/>
-      <element name="shd" tokenid="sprm:PShd"/>
+      <element name="shd" tokenid="ooxml:CT_PrBase_shd"/>
       <element name="tabs" tokenid="ooxml:CT_PPrBase_tabs"/>
-      <element name="suppressAutoHyphens" tokenid="sprm:PFNoAutoHyph"/>
+      <element name="suppressAutoHyphens" tokenid="ooxml:CT_PPrBase_suppressAutoHyphens"/>
       <element name="kinsoku" tokenid="ooxml:CT_PPrBase_kinsoku"/>
       <element name="wordWrap" tokenid="ooxml:CT_PPrBase_wordWrap"/>
-      <element name="overflowPunct" tokenid="sprm:PFOverflowPunct"/>
-      <element name="topLinePunct" tokenid="sprm:PFTopLinePunct"/>
-      <element name="autoSpaceDE" tokenid="sprm:PFAutoSpaceDE"/>
-      <element name="autoSpaceDN" tokenid="sprm:PFAutoSpaceDN"/>
-      <element name="bidi" tokenid="sprm:PFBiDi"/>
+      <element name="overflowPunct" tokenid="ooxml:CT_PPrBase_overflowPunct"/>
+      <element name="topLinePunct" tokenid="ooxml:CT_PPrBase_topLinePunct"/>
+      <element name="autoSpaceDE" tokenid="ooxml:CT_PPrBase_autoSpaceDE"/>
+      <element name="autoSpaceDN" tokenid="ooxml:CT_PPrBase_autoSpaceDN"/>
+      <element name="bidi" tokenid="ooxml:CT_PPrBase_bidi"/>
       <element name="adjustRightInd" tokenid="ooxml:CT_PPrBase_adjustRightInd"/>
       <element name="snapToGrid" tokenid="ooxml:CT_PPrBase_snapToGrid"/>
       <element name="spacing" tokenid="ooxml:CT_PPrBase_spacing"/>
       <element name="ind" tokenid="ooxml:CT_PPrBase_ind"/>
-      <element name="contextualSpacing" tokenid="0x246d"/>
-      <element name="mirrorIndents" tokenid="0x2470"/>
-      <element name="suppressOverlap" tokenid="0x2462"/>
-      <element name="jc" tokenid="sprm:PJc"/>
-      <element name="textDirection" tokenid="sprm:PFrameTextFlow"/>
-      <element name="textAlignment" tokenid="sprm:PWAlignFont"/>
-      <element name="textboxTightWrap" tokenid="sprm:PTightWrap"/>
-      <element name="outlineLvl" tokenid="sprm:POutLvl"/>
+      <element name="contextualSpacing" tokenid="ooxml:CT_PPrBase_contextualSpacing"/>
+      <element name="mirrorIndents" tokenid="ooxml:CT_PPrBase_mirrorIndents"/>
+      <element name="suppressOverlap" tokenid="ooxml:CT_PPrBase_suppressOverlap"/>
+      <element name="jc" tokenid="ooxml:CT_PPrBase_jc"/>
+      <element name="textDirection" tokenid="ooxml:CT_PPrBase_textDirection"/>
+      <element name="textAlignment" tokenid="ooxml:CT_PPrBase_textAlignment"/>
+      <element name="textboxTightWrap" tokenid="ooxml:CT_PPrBase_textboxTightWrap"/>
+      <element name="outlineLvl" tokenid="ooxml:CT_PPrBase_outlineLvl"/>
       <element name="divId" tokenid="ooxml:CT_PPrBase_divId"/>
       <element name="cnfStyle" tokenid="ooxml:CT_PPrBase_cnfStyle"/>
     </resource>
@@ -21980,11 +24372,12 @@
       <attribute name="shapeid" tokenid="ooxml:CT_Control_shapeid"/>
       <attribute name="r:id" tokenid="ooxml:CT_Control_r_id"/>
     </resource>
-    <resource name="CT_Background" resource="Properties">
+    <resource xmlns:v="urn:schemas-microsoft-com:vml" name="CT_Background" resource="Properties">
       <attribute name="color" tokenid="ooxml:CT_Background_color"/>
       <attribute name="themeColor" tokenid="ooxml:CT_Background_themeColor"/>
       <attribute name="themeTint" tokenid="ooxml:CT_Background_themeTint"/>
       <attribute name="themeShade" tokenid="ooxml:CT_Background_themeShade"/>
+      <element name="v:background" tokenid="ooxml:CT_Background_v_background"/>
     </resource>
     <resource xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" name="CT_Rel" resource="Properties">
       <attribute name="r:id" tokenid="ooxml:CT_Rel_id"/>
@@ -22283,9 +24676,9 @@
       <attribute name="charSpace" tokenid="ooxml:CT_DocGrid_charSpace"/>
     </resource>
     <resource name="ST_HdrFtr" resource="List">
-      <value tokenid="ooxml:Value_ST_HrdFtr_even">even</value>
-      <value tokenid="ooxml:Value_ST_HrdFtr_default">default</value>
-      <value tokenid="ooxml:Value_ST_HrdFtr_first">first</value>
+      <value tokenid="ooxml:Value_ST_HdrFtr_even">even</value>
+      <value tokenid="ooxml:Value_ST_HdrFtr_default">default</value>
+      <value tokenid="ooxml:Value_ST_HdrFtr_first">first</value>
     </resource>
     <resource name="ST_FtnEdn" resource="List" generated="yes">
       <value name="normal" tokenid="ooxml:Value_wordprocessingml_ST_FtnEdn_normal">normal</value>
@@ -22302,7 +24695,9 @@
       <element name="headerReference" tokenid="ooxml:EG_HdrFtrReferences_headerReference"/>
       <element name="footerReference" tokenid="ooxml:EG_HdrFtrReferences_footerReference"/>
     </resource>
-    <resource name="CT_HdrFtr" resource="Stream" tag="header"/>
+    <resource name="CT_HdrFtr" resource="Stream" tag="header">
+      <action name="end" action="endParagraphGroup"/>
+    </resource>
     <resource name="EG_SectPrContents" resource="Properties" tag="section">
       <element name="bidi" tokenid="ooxml:EG_SectPrContents_bidi"/>
       <element name="cols" tokenid="ooxml:EG_SectPrContents_cols"/>
@@ -22321,7 +24716,7 @@
       <element name="rtlGutter" tokenid="ooxml:EG_SectPrContents_rtlGutter"/>
       <element name="textDirection" tokenid="ooxml:EG_SectPrContents_textDirection"/>
       <element name="titlePg" tokenid="ooxml:EG_SectPrContents_titlePg"/>
-      <element name="type" tokenid="sprm:SBkc"/>
+      <element name="type" tokenid="ooxml:EG_SectPrContents_type"/>
       <element name="vAlign" tokenid="ooxml:EG_SectPrContents_vAlign"/>
     </resource>
     <resource name="CT_SectPrBase" resource="Properties" tag="section"/>
@@ -22471,47 +24866,59 @@
       <attribute name="eastAsiaTheme" tokenid="ooxml:CT_Fonts_eastAsiaTheme"/>
       <attribute name="cstheme" tokenid="ooxml:CT_Fonts_cstheme"/>
     </resource>
-    <resource name="EG_RPrBase" resource="Properties" tag="paragraph">
+    <resource name="EG_RPrBase" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" resource="Properties" tag="paragraph">
       <kind name="paragraph"/>
       <element name="rStyle" tokenid="ooxml:EG_RPrBase_rStyle"/>
       <element name="rFonts" tokenid="ooxml:EG_RPrBase_rFonts"/>
-      <element name="b" tokenid="sprm:CFBold"/>
-      <element name="bCs" tokenid="sprm:CFBoldBi"/>
-      <element name="i" tokenid="sprm:CFItalic"/>
-      <element name="iCs" tokenid="sprm:CFItalicBi"/>
-      <element name="caps" tokenid="sprm:CFCaps"/>
-      <element name="smallCaps" tokenid="sprm:CFSmallCaps"/>
-      <element name="strike" tokenid="sprm:CFStrike"/>
-      <element name="dstrike" tokenid="sprm:CFDStrike"/>
-      <element name="outline" tokenid="sprm:CFOutline"/>
-      <element name="shadow" tokenid="sprm:CFShadow"/>
-      <element name="emboss" tokenid="sprm:CFEmboss"/>
-      <element name="imprint" tokenid="sprm:CFImprint"/>
-      <element name="noProof" tokenid="sprm:CFNoProof"/>
+      <element name="b" tokenid="ooxml:EG_RPrBase_b"/>
+      <element name="bCs" tokenid="ooxml:EG_RPrBase_bCs"/>
+      <element name="i" tokenid="ooxml:EG_RPrBase_i"/>
+      <element name="iCs" tokenid="ooxml:EG_RPrBase_iCs"/>
+      <element name="caps" tokenid="ooxml:EG_RPrBase_caps"/>
+      <element name="smallCaps" tokenid="ooxml:EG_RPrBase_smallCaps"/>
+      <element name="strike" tokenid="ooxml:EG_RPrBase_strike"/>
+      <element name="dstrike" tokenid="ooxml:EG_RPrBase_dstrike"/>
+      <element name="outline" tokenid="ooxml:EG_RPrBase_outline"/>
+      <element name="shadow" tokenid="ooxml:EG_RPrBase_shadow"/>
+      <element name="emboss" tokenid="ooxml:EG_RPrBase_emboss"/>
+      <element name="imprint" tokenid="ooxml:EG_RPrBase_imprint"/>
+      <element name="noProof" tokenid="ooxml:EG_RPrBase_noProof"/>
       <element name="snapToGrid" tokenid="ooxml:EG_RPrBase_snapToGrid"/>
-      <element name="vanish" tokenid="sprm:CFVanish"/>
-      <element name="webHidden" tokenid="sprm:CFVanish"/>
+      <element name="vanish" tokenid="ooxml:EG_RPrBase_vanish"/>
+      <element name="webHidden" tokenid="ooxml:EG_RPrBase_webHidden"/>
       <element name="color" tokenid="ooxml:EG_RPrBase_color"/>
-      <element name="spacing" tokenid="sprm:CDxaSpace"/>
-      <element name="w" tokenid="sprm:CCharScale"/>
-      <element name="kern" tokenid="sprm:CHpsKern"/>
-      <element name="position" tokenid="sprm:CHpsPos"/>
-      <element name="sz" tokenid="sprm:CHps"/>
-      <element name="szCs" tokenid="sprm:CHpsBi"/>
-      <element name="highlight" tokenid="sprm:CHighlight"/>
+      <element name="spacing" tokenid="ooxml:EG_RPrBase_spacing"/>
+      <element name="w" tokenid="ooxml:EG_RPrBase_w"/>
+      <element name="kern" tokenid="ooxml:EG_RPrBase_kern"/>
+      <element name="position" tokenid="ooxml:EG_RPrBase_position"/>
+      <element name="sz" tokenid="ooxml:EG_RPrBase_sz"/>
+      <element name="szCs" tokenid="ooxml:EG_RPrBase_szCs"/>
+      <element name="highlight" tokenid="ooxml:EG_RPrBase_highlight"/>
       <element name="u" tokenid="ooxml:EG_RPrBase_u"/>
-      <element name="effect" tokenid="sprm:CSfxText"/>
+      <element name="effect" tokenid="ooxml:EG_RPrBase_effect"/>
       <element name="bdr" tokenid="ooxml:EG_RPrBase_bdr"/>
-      <element name="shd" tokenid="sprm:CShd"/>
+      <element name="shd" tokenid="ooxml:EG_RPrBase_shd"/>
       <element name="fitText" tokenid="ooxml:EG_RPrBase_fitText"/>
       <element name="vertAlign" tokenid="ooxml:EG_RPrBase_vertAlign"/>
-      <element name="rtl" tokenid="sprm:CFBiDi"/>
-      <element name="cs" tokenid="sprm:CComplexScript"/>
-      <element name="em" tokenid="sprm:CKcd"/>
+      <element name="rtl" tokenid="ooxml:EG_RPrBase_rtl"/>
+      <element name="cs" tokenid="ooxml:EG_RPrBase_cs"/>
+      <element name="em" tokenid="ooxml:EG_RPrBase_em"/>
       <element name="lang" tokenid="ooxml:EG_RPrBase_lang"/>
       <element name="eastAsianLayout" tokenid="ooxml:EG_RPrBase_eastAsianLayout"/>
-      <element name="specVanish" tokenid="0x818"/>
+      <element name="specVanish" tokenid="ooxml:EG_RPrBase_specVanish"/>
       <element name="oMath" tokenid="ooxml:EG_RPrBase_oMath"/>
+      <element name="w14:glow" tokenid="ooxml:EG_RPrBase_w14_glow"/>
+      <element name="w14:shadow" tokenid="ooxml:EG_RPrBase_w14_shadow"/>
+      <element name="w14:reflection" tokenid="ooxml:EG_RPrBase_w14_reflection"/>
+      <element name="w14:textOutline" tokenid="ooxml:EG_RPrBase_w14_textOutline"/>
+      <element name="w14:textFill" tokenid="ooxml:EG_RPrBase_w14_textFill"/>
+      <element name="w14:scene3d" tokenid="ooxml:EG_RPrBase_w14_scene3d"/>
+      <element name="w14:props3d" tokenid="ooxml:EG_RPrBase_w14_props3d"/>
+      <element name="w14:ligatures" tokenid="ooxml:EG_RPrBase_w14_ligatures"/>
+      <element name="w14:numForm" tokenid="ooxml:EG_RPrBase_w14_numForm"/>
+      <element name="w14:numSpacing" tokenid="ooxml:EG_RPrBase_w14_numSpacing"/>
+      <element name="w14:stylisticSets" tokenid="ooxml:EG_RPrBase_w14_stylisticSets"/>
+      <element name="w14:cntxtAlts" tokenid="ooxml:EG_RPrBase_w14_cntxtAlts"/>
     </resource>
     <resource name="EG_RPrContent" resource="Properties" tag="character">
       <element name="rPrChange" tokenid="ooxml:EG_RPrContent_rPrChange"/>
@@ -22577,7 +24984,12 @@
       <attribute name="val" tokenid="ooxml:CT_CalendarType_val" action="setValue"/>
       <action name="start" action="setDefaultStringValue"/>
     </resource>
-    <resource name="CT_SdtPr" resource="Properties" tag="field">
+    <resource name="CT_DataBinding" resource="Properties">
+      <attribute name="prefixMappings" tokenid="ooxml:CT_DataBinding_prefixMappings"/>
+      <attribute name="xpath" tokenid="ooxml:CT_DataBinding_xpath"/>
+      <attribute name="storeItemID" tokenid="ooxml:CT_DataBinding_storeItemID"/>
+    </resource>
+    <resource xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" name="CT_SdtPr" resource="Properties" tag="field">
       <element name="rPr" tokenid="ooxml:CT_SdtPr_rPr"/>
       <element name="alias" tokenid="ooxml:CT_SdtPr_alias"/>
       <element name="lock" tokenid="ooxml:CT_SdtPr_lock"/>
@@ -22589,6 +25001,7 @@
       <element name="tag" tokenid="ooxml:CT_SdtPr_tag"/>
       <element name="equation" tokenid="ooxml:CT_SdtPr_equation"/>
       <element name="comboBox" tokenid="ooxml:CT_SdtPr_comboBox"/>
+      <element name="w14:checkbox" tokenid="ooxml:CT_SdtPr_checkbox"/>
       <element name="date" tokenid="ooxml:CT_SdtPr_date"/>
       <element name="docPartObj" tokenid="ooxml:CT_SdtPr_docPartObj"/>
       <element name="docPartList" tokenid="ooxml:CT_SdtPr_docPartList"/>
@@ -22611,11 +25024,16 @@
       <element name="sdtPr" tokenid="ooxml:CT_SdtBlock_sdtPr"/>
       <element name="sdtEndPr" tokenid="ooxml:CT_SdtBlock_sdtEndPr"/>
       <element name="sdtContent" tokenid="ooxml:CT_SdtBlock_sdtContent"/>
+      <element name="sdtEndContent" tokenid="ooxml:CT_SdtBlock_sdtEndContent"/>
+      <action name="start" action="startSdt"/>
+      <action name="end" action="endSdt"/>
     </resource>
     <resource name="CT_SdtRun" resource="Stream" tag="field">
       <element name="sdtPr" tokenid="ooxml:CT_SdtRun_sdtPr"/>
       <element name="sdtEndPr" tokenid="ooxml:CT_SdtRun_sdtEndPr"/>
       <element name="sdtContent" tokenid="ooxml:CT_SdtRun_sdtContent"/>
+      <action name="start" action="startSdt"/>
+      <action name="end" action="endSdt"/>
     </resource>
     <resource name="CT_SdtCell" resource="Stream" tag="field">
       <element name="sdtPr" tokenid="ooxml:CT_SdtCell_sdtPr"/>
@@ -22627,6 +25045,23 @@
       <element name="sdtEndPr" tokenid="ooxml:CT_SdtRow_sdtEndPr"/>
       <element name="sdtContent" tokenid="ooxml:CT_SdtRow_sdtContent"/>
     </resource>
+    <resource name="CT_SdtDropDownList" resource="Properties" tag="field">
+      <element name="listItem" tokenid="ooxml:CT_SdtDropDownList_listItem"/>
+    </resource>
+    <resource name="CT_SdtDate" resource="Properties" tag="field">
+      <attribute name="fullDate" tokenid="ooxml:CT_SdtDate_fullDate"/>
+      <element name="dateFormat" tokenid="ooxml:CT_SdtDate_dateFormat"/>
+      <element name="lid" tokenid="ooxml:CT_SdtDate_lid"/>
+    </resource>
+    <resource name="CT_SdtDocPart" resource="Properties" tag="field">
+      <element name="docPartGallery" tokenid="ooxml:CT_SdtDocPart_docPartGallery"/>
+      <element name="docPartCategory" tokenid="ooxml:CT_SdtDocPart_docPartCategory"/>
+      <element name="docPartUnique" tokenid="ooxml:CT_SdtDocPart_docPartUnique"/>
+    </resource>
+    <resource name="CT_SdtListItem" resource="Properties" tag="field">
+      <attribute name="displayText" tokenid="ooxml:CT_SdtListItem_displayText"/>
+      <attribute name="value" tokenid="ooxml:CT_SdtListItem_value"/>
+    </resource>
     <resource name="CT_Attr" resource="Properties" tag="content">
       <attribute name="uri" tokenid="ooxml:CT_Attr_uri"/>
       <attribute name="name" tokenid="ooxml:CT_Attr_name"/>
@@ -22636,6 +25071,21 @@
       <element name="customXmlPr" tokenid="ooxml:CT_CustomXmlRun_customXmlPr"/>
       <attribute name="uri" tokenid="ooxml:CT_CustomXmlRun_uri"/>
       <attribute name="element" tokenid="ooxml:CT_CustomXmlRun_element"/>
+    </resource>
+    <resource name="CT_CustomXmlBlock" resource="Properties" tag="content">
+      <element name="customXmlPr" tokenid="ooxml:CT_CustomXmlBlock_customXmlPr"/>
+      <attribute name="uri" tokenid="ooxml:CT_CustomXmlBlock_uri"/>
+      <attribute name="element" tokenid="ooxml:CT_CustomXmlBlock_element"/>
+    </resource>
+    <resource name="CT_CustomXmlCell" resource="Properties" tag="content">
+      <element name="customXmlPr" tokenid="ooxml:CT_CustomXmlCell_customXmlPr"/>
+      <attribute name="uri" tokenid="ooxml:CT_CustomXmlCell_uri"/>
+      <attribute name="element" tokenid="ooxml:CT_CustomXmlCell_element"/>
+    </resource>
+    <resource name="CT_CustomXmlRow" resource="Properties" tag="content">
+      <element name="customXmlPr" tokenid="ooxml:CT_CustomXmlRow_customXmlPr"/>
+      <attribute name="uri" tokenid="ooxml:CT_CustomXmlRow_uri"/>
+      <attribute name="element" tokenid="ooxml:CT_CustomXmlRow_element"/>
     </resource>
     <resource name="CT_SmartTagRun" resource="Properties" tag="content">
       <element name="smartTagPr" tokenid="ooxml:CT_SmartTagRun_smartTagPr"/>
@@ -22668,6 +25118,18 @@
       <attribute name="w" tokenid="ooxml:CT_TblWidth_w"/>
       <attribute name="type" tokenid="ooxml:CT_TblWidth_type"/>
     </resource>
+    <resource name="CT_TblPPr" resource="Properties" tag="table">
+      <attribute name="vertAnchor" tokenid="ooxml:CT_TblPPr_vertAnchor"/>
+      <attribute name="tblpYSpec" tokenid="ooxml:CT_TblPPr_tblpYSpec"/>
+      <attribute name="horzAnchor" tokenid="ooxml:CT_TblPPr_horzAnchor"/>
+      <attribute name="tblpXSpec" tokenid="ooxml:CT_TblPPr_tblpXSpec"/>
+      <attribute name="tblpY" tokenid="ooxml:CT_TblPPr_tblpY"/>
+      <attribute name="tblpX" tokenid="ooxml:CT_TblPPr_tblpX"/>
+      <attribute name="leftFromText" tokenid="ooxml:CT_TblPPr_leftFromText"/>
+      <attribute name="rightFromText" tokenid="ooxml:CT_TblPPr_rightFromText"/>
+      <attribute name="topFromText" tokenid="ooxml:CT_TblPPr_topFromText"/>
+      <attribute name="bottomFromText" tokenid="ooxml:CT_TblPPr_bottomFromText"/>
+    </resource>
     <resource name="CT_TblGridCol" resource="Value" tag="table">
       <attribute name="w" tokenid="ooxml:CT_TblGridCol_w" action="setValue"/>
       <action name="start" action="setDefaultIntegerValue"/>
@@ -22683,8 +25145,10 @@
     <resource name="CT_TcBorders" resource="Properties" tag="table">
       <kind name="table"/>
       <element name="top" tokenid="ooxml:CT_TcBorders_top"/>
+      <element name="start" tokenid="ooxml:CT_TcBorders_start"/>
       <element name="left" tokenid="ooxml:CT_TcBorders_left"/>
       <element name="bottom" tokenid="ooxml:CT_TcBorders_bottom"/>
+      <element name="end" tokenid="ooxml:CT_TcBorders_end"/>
       <element name="right" tokenid="ooxml:CT_TcBorders_right"/>
       <element name="insideH" tokenid="ooxml:CT_TcBorders_insideH"/>
       <element name="insideV" tokenid="ooxml:CT_TcBorders_insideV"/>
@@ -22694,8 +25158,10 @@
     <resource name="CT_TcMar" resource="Properties" tag="table">
       <kind name="table"/>
       <element name="top" tokenid="ooxml:CT_TcMar_top"/>
+      <element name="start" tokenid="ooxml:CT_TcMar_start"/>
       <element name="left" tokenid="ooxml:CT_TcMar_left"/>
       <element name="bottom" tokenid="ooxml:CT_TcMar_bottom"/>
+      <element name="end" tokenid="ooxml:CT_TcMar_end"/>
       <element name="right" tokenid="ooxml:CT_TcMar_right"/>
     </resource>
     <resource name="ST_Merge" resource="List">
@@ -22724,6 +25190,8 @@
       <element name="tcFitText" tokenid="ooxml:CT_TcPrBase_tcFitText"/>
       <element name="vAlign" tokenid="ooxml:CT_TcPrBase_vAlign"/>
       <element name="hideMark" tokenid="ooxml:CT_TcPrBase_hideMark"/>
+      <element name="cellDel" tokenid="ooxml:CT_TcPrBase_cellDel"/>
+      <element name="cellIns" tokenid="ooxml:CT_TcPrBase_cellIns"/>
     </resource>
     <resource name="CT_TcPr" resource="Properties" tag="table">
       <element name="tcPrChange" tokenid="ooxml:CT_TcPr_tcPrChange"/>
@@ -22746,16 +25214,19 @@
       <kind name="table"/>
       <element name="cnfStyle" tokenid="ooxml:CT_TrPrBase_cnfStyle"/>
       <element name="divId" tokenid="ooxml:CT_TrPrBase_divId"/>
-      <element name="gridBefore" tokenid="ooxml:CT_TrPrBase_gridBefore"/>
+<!--      <element name="gridBefore" tokenid="ooxml:CT_TrPrBase_gridBefore"/> -->
       <element name="gridAfter" tokenid="ooxml:CT_TrPrBase_gridAfter"/>
       <element name="wBefore" tokenid="ooxml:CT_TrPrBase_wBefore"/>
       <element name="wAfter" tokenid="ooxml:CT_TrPrBase_wAfter"/>
-      <element name="cantSplit" tokenid="sprm:TCantSplit"/>
+      <element name="cantSplit" tokenid="ooxml:CT_TrPrBase_cantSplit"/>
       <element name="trHeight" tokenid="ooxml:CT_TrPrBase_trHeight"/>
       <element name="tblHeader" tokenid="ooxml:CT_TrPrBase_tblHeader"/>
       <element name="tblCellSpacing" tokenid="ooxml:CT_TrPrBase_tblCellSpacing"/>
       <element name="jc" tokenid="ooxml:CT_TrPrBase_jc"/>
       <element name="hidden" tokenid="ooxml:CT_TrPrBase_hidden"/>
+    </resource>
+    <resource name="CT_TrPrBaseGridBefore" resource="TextTableRow">
+      <attribute name="val" tokenid="ooxml:CT_TrPrBase_gridBefore" action="handleGridBefore"/>
     </resource>
     <resource name="CT_TrPr" resource="Properties" tag="table">
       <kind name="table"/>
@@ -22771,9 +25242,12 @@
       <action name="end" action="sendTableProperties"/>
       <action name="end" action="endRow"/>
     </resource>
-    <resource name="ST_TblLayoutType" resource="List" generated="yes">
-      <value name="fixed" tokenid="ooxml:Value_wordprocessingml_ST_TblLayoutType_fixed">fixed</value>
-      <value name="autofit" tokenid="ooxml:Value_wordprocessingml_ST_TblLayoutType_autofit">autofit</value>
+    <resource name="ST_TblLayout" resource="List">
+      <value tokenid="ooxml:Value_wordprocessingml_ST_TblLayout_fixed">fixed</value>
+      <value tokenid="ooxml:Value_wordprocessingml_ST_TblLayout_autofit">autofit</value>
+    </resource>
+    <resource name="CT_TblLayoutType" resource="Value" tag="table">
+      <attribute name="type" tokenid="ooxml:CT_TblLayoutType_type" action="setValue"/>
     </resource>
     <resource name="ST_TblOverlap" resource="List">
       <value tokenid="ooxml:Value_ST_TblOverlap_never">never</value>
@@ -22784,15 +25258,19 @@
     </resource>
     <resource name="CT_TblCellMar" resource="Properties" tag="table">
       <element name="top" tokenid="ooxml:CT_TblCellMar_top"/>
+      <element name="start" tokenid="ooxml:CT_TblCellMar_start"/>
       <element name="left" tokenid="ooxml:CT_TblCellMar_left"/>
       <element name="bottom" tokenid="ooxml:CT_TblCellMar_bottom"/>
+      <element name="end" tokenid="ooxml:CT_TblCellMar_end"/>
       <element name="right" tokenid="ooxml:CT_TblCellMar_right"/>
     </resource>
     <resource name="CT_TblBorders" resource="Properties" tag="table">
       <kind name="table"/>
       <element name="top" tokenid="ooxml:CT_TblBorders_top"/>
+      <element name="start" tokenid="ooxml:CT_TblBorders_start"/>
       <element name="left" tokenid="ooxml:CT_TblBorders_left"/>
       <element name="bottom" tokenid="ooxml:CT_TblBorders_bottom"/>
+      <element name="end" tokenid="ooxml:CT_TblBorders_end"/>
       <element name="right" tokenid="ooxml:CT_TblBorders_right"/>
       <element name="insideH" tokenid="ooxml:CT_TblBorders_insideH"/>
       <element name="insideV" tokenid="ooxml:CT_TblBorders_insideV"/>
@@ -22851,14 +25329,14 @@
     </resource>
     <resource name="CT_FtnEdnRef" resource="Properties" tag="reference">
       <attribute name="customMarkFollows" tokenid="ooxml:CT_FtnEdnRef_customMarkFollows"/>
-      <attribute name="id" tokenid="ooxml:CT_FtnEdnRef_id" action="setIDForXNoteStream"/>
+      <attribute name="id" tokenid="ooxml:CT_FtnEdnRef_id" action="setXNoteId"/>
       <action name="end" action="handleXNotes"/>
     </resource>
     <resource name="CT_FtnEdnSepRef" resource="Properties" tag="reference">
       <attribute name="id" tokenid="ooxml:CT_FtnEdnSepRef_id"/>
     </resource>
     <resource name="CT_FtnEdn" resource="XNote" tag="reference">
-      <attribute name="type" tokenid="ooxml:CT_FtnEdn_type"/>
+      <attribute name="type" tokenid="ooxml:CT_FtnEdn_type" action="checkType"/>
       <attribute name="id" tokenid="ooxml:CT_FtnEdn_id" action="checkId"/>
       <action name="start" action="propagateCharacterProperties"/>
       <action name="end" action="endSectionGroup"/>
@@ -23000,6 +25478,12 @@
       <element name="doNotVertAlignInTxbx" tokenid="ooxml:CT_Compat_doNotVertAlignInTxbx"/>
       <element name="useAnsiKerningPairs" tokenid="ooxml:CT_Compat_useAnsiKerningPairs"/>
       <element name="cachedColBalance" tokenid="ooxml:CT_Compat_cachedColBalance"/>
+      <element name="compatSetting" tokenid="ooxml:CT_Compat_compatSetting"/>
+    </resource>
+    <resource name="CT_CompatSetting" resource="Properties" tag="document">
+      <attribute name="name" tokenid="ooxml:CT_CompatSetting_name"/>
+      <attribute name="uri" tokenid="ooxml:CT_CompatSetting_uri"/>
+      <attribute name="val" tokenid="ooxml:CT_CompatSetting_val"/>
     </resource>
     <resource name="CT_DocVar" resource="Properties" tag="document">
       <attribute name="name" tokenid="ooxml:CT_DocVar_name"/>
@@ -23031,6 +25515,23 @@
     <resource name="CT_DocDefaults" resource="Properties" tag="document">
       <element name="pPrDefault" tokenid="ooxml:CT_DocDefaults_pPrDefault"/>
       <element name="rPrDefault" tokenid="ooxml:CT_DocDefaults_rPrDefault"/>
+    </resource>
+    <resource name="CT_LatentStyles" resource="Properties" tag="document">
+      <attribute name="defLockedState" tokenid="ooxml:CT_LatentStyles_defLockedState"/>
+      <attribute name="defUIPriority" tokenid="ooxml:CT_LatentStyles_defUIPriority"/>
+      <attribute name="defSemiHidden" tokenid="ooxml:CT_LatentStyles_defSemiHidden"/>
+      <attribute name="defUnhideWhenUsed" tokenid="ooxml:CT_LatentStyles_defUnhideWhenUsed"/>
+      <attribute name="defQFormat" tokenid="ooxml:CT_LatentStyles_defQFormat"/>
+      <attribute name="count" tokenid="ooxml:CT_LatentStyles_count"/>
+      <element name="lsdException" tokenid="ooxml:CT_LatentStyles_lsdException"/>
+    </resource>
+    <resource name="CT_LsdException" resource="Properties" tag="document">
+      <attribute name="name" tokenid="ooxml:CT_LsdException_name"/>
+      <attribute name="locked" tokenid="ooxml:CT_LsdException_locked"/>
+      <attribute name="uiPriority" tokenid="ooxml:CT_LsdException_uiPriority"/>
+      <attribute name="semiHidden" tokenid="ooxml:CT_LsdException_semiHidden"/>
+      <attribute name="unhideWhenUsed" tokenid="ooxml:CT_LsdException_unhideWhenUsed"/>
+      <attribute name="qFormat" tokenid="ooxml:CT_LsdException_qFormat"/>
     </resource>
     <resource name="ST_ColorSchemeIndex" resource="List" generated="yes">
       <value name="dark1" tokenid="ooxml:Value_wordprocessingml_ST_ColorSchemeIndex_dark1">dark1</value>
@@ -23192,15 +25693,15 @@
     </resource>
     <resource name="CT_Lvl" resource="Properties" tag="numbering">
       <kind name="paragraph"/>
-      <element name="start" tokenid="rtf:ISTARTAT"/>
-      <element name="numFmt" tokenid="rtf:NFC"/>
+      <element name="start" tokenid="ooxml:CT_Lvl_start"/>
+      <element name="numFmt" tokenid="ooxml:CT_Lvl_numFmt"/>
       <element name="lvlRestart" tokenid="ooxml:CT_Lvl_lvlRestart"/>
       <element name="pStyle" tokenid="ooxml:CT_Lvl_pStyle"/>
-      <element name="isLgl" tokenid="rtf:FLEGAL"/>
+      <element name="isLgl" tokenid="ooxml:CT_Lvl_isLgl"/>
       <element name="suff" tokenid="ooxml:CT_Lvl_suff"/>
       <element name="lvlText" tokenid="ooxml:CT_Lvl_lvlText"/>
       <element name="lvlPicBulletId" tokenid="ooxml:CT_Lvl_lvlPicBulletId"/>
-      <element name="legacy" tokenid="rtf:FCONVERTED"/>
+      <element name="legacy" tokenid="ooxml:CT_Lvl_legacy"/>
       <element name="lvlJc" tokenid="ooxml:CT_Lvl_lvlJc"/>
       <element name="pPr" tokenid="ooxml:CT_Lvl_pPr"/>
       <element name="rPr" tokenid="ooxml:CT_Lvl_rPr"/>
@@ -23216,11 +25717,16 @@
     <resource name="CT_MultiLevelType" resource="Value" tag="numbering">
       <attribute name="val" tokenid="ooxml:CT_MultiLevelType_val" action="setValue"/>
     </resource>
+    <resource name="CT_NumPicBullet" resource="Properties" tag="numbering">
+      <kind name="paragraph"/>
+      <element name="pict" tokenid="ooxml:CT_NumPicBullet_pict"/>
+      <attribute name="numPicBulletId" tokenid="ooxml:CT_NumPicBullet_numPicBulletId"/>
+    </resource>
     <resource name="CT_AbstractNum" resource="Properties" tag="numbering">
       <kind name="paragraph"/>
-      <element name="nsid" tokenid="rtf:LSID"/>
+      <element name="nsid" tokenid="ooxml:CT_AbstractNum_nsid"/>
       <element name="multiLevelType" tokenid="ooxml:CT_AbstractNum_multiLevelType"/>
-      <element name="tmpl" tokenid="rtf:TPLC"/>
+      <element name="tmpl" tokenid="ooxml:CT_AbstractNum_tmpl"/>
       <element name="name" tokenid="ooxml:CT_AbstractNum_name"/>
       <element name="styleLink" tokenid="ooxml:CT_AbstractNum_styleLink"/>
       <element name="numStyleLink" tokenid="ooxml:CT_AbstractNum_numStyleLink"/>
@@ -23303,11 +25809,15 @@
       <attribute name="default" tokenid="ooxml:CT_Style_default"/>
       <attribute name="customStyle" tokenid="ooxml:CT_Style_customStyle"/>
     </resource>
-    <resource name="CT_Styles" resource="Table" tokenid="rtf:STYLESHEET" tag="style"/>
+    <resource name="CT_Styles" resource="Table" tokenid="ooxml:STYLESHEET" tag="style"/>
     <resource name="ST_Panose" resource="Hex"/>
     <resource name="CT_Panose" resource="Value" tag="font">
       <attribute name="val" tokenid="ooxml:CT_Panose_val" action="setValue"/>
       <action name="start" action="setDefaultHexValue"/>
+    </resource>
+    <resource name="CT_Charset" resource="Properties">
+      <attribute name="val" tokenid="ooxml:CT_Charset_val"/>
+      <attribute name="characterSet" tokenid="ooxml:CT_Charset_characterSet"/>
     </resource>
     <resource name="ST_FontFamily" resource="List">
       <value tokenid="ooxml:Value_ST_FontFamily_decorative">decorative</value>
@@ -23325,8 +25835,8 @@
       <value tokenid="ooxml:Value_ST_Pitch_variable">variable</value>
       <value tokenid="ooxml:Value_ST_Pitch_default">default</value>
     </resource>
-    <resource name="CT_Pitch" resource="Value" tag="font">
-      <attribute name="val" tokenid="ooxml:CT_Pitch_val" action="setValue"/>
+    <resource name="CT_Pitch" resource="Properties" tag="font">
+      <attribute name="val" tokenid="ooxml:CT_Pitch_val"/>
     </resource>
     <resource name="CT_FontSig" resource="Properties" tag="font">
       <attribute name="usb0" tokenid="ooxml:CT_FontSig_usb0"/>
@@ -23339,12 +25849,14 @@
     <resource name="CT_FontRel" resource="Properties" tag="font">
       <attribute name="fontKey" tokenid="ooxml:CT_FontRel_fontKey"/>
       <attribute name="subsetted" tokenid="ooxml:CT_FontRel_subsetted"/>
+      <action name="start" action="handleFontRel"/>
     </resource>
     <resource name="CT_Font" resource="Properties" tag="font">
       <kind name="character"/>
       <element name="altName" tokenid="ooxml:CT_Font_altName"/>
       <element name="panose1" tokenid="ooxml:CT_Font_panose1"/>
       <element name="charset" tokenid="ooxml:CT_Font_charset"/>
+      <element name="characterSet" tokenid="ooxml:CT_Font_characterSet"/>
       <element name="family" tokenid="ooxml:CT_Font_family"/>
       <element name="notTrueType" tokenid="ooxml:CT_Font_notTrueType"/>
       <element name="pitch" tokenid="ooxml:CT_Font_pitch"/>
@@ -23355,7 +25867,7 @@
       <element name="embedBoldItalic" tokenid="ooxml:CT_Font_embedBoldItalic"/>
       <attribute name="name" tokenid="ooxml:CT_Font_name"/>
     </resource>
-    <resource name="CT_FontsList" resource="Table" tokenid="rtf:FONTTABLE" tag="font"/>
+    <resource name="CT_FontsList" resource="Table" tokenid="ooxml:FONTTABLE" tag="font"/>
     <resource name="EG_RunLevelElts" resource="Stream" tag="character">
       <element name="proofErr" tokenid="ooxml:EG_RunLevelElts_proofErr"/>
       <element name="permStart" tokenid="ooxml:EG_RunLevelElts_permStart"/>
@@ -23374,7 +25886,7 @@
       <action name="start" action="footnoteCont"/>
       <action name="start" action="endnoteSeparator"/>
       <action name="start" action="endnoteCont"/>
--->
+      -->
       <action name="end" action="endCharacterGroup"/>
       <action name="end" action="endParagraphGroup"/>
       <action name="end" action="endSectionGroup"/>
@@ -23500,13 +26012,13 @@
       <element name="settings" tokenid="ooxml:settings_settings"/>
     </resource>
     <resource name="fonts" resource="Stream" tag="font">
-      <element name="fonts" tokenid="rtf:FONTTABLE"/>
+      <element name="fonts" tokenid="ooxml:FONTTABLE"/>
     </resource>
     <resource name="numbering" resource="Stream" tag="numbering">
       <element name="numbering" tokenid="ooxml:NUMBERING"/>
     </resource>
     <resource name="styles" resource="Stream" tag="style">
-      <element name="styles" tokenid="rtf:STYLESHEET"/>
+      <element name="styles" tokenid="ooxml:STYLESHEET"/>
     </resource>
     <resource name="ST_CaptionPos" resource="List" generated="yes">
       <value name="above" tokenid="ooxml:Value_wordprocessingml_ST_CaptionPos_above">above</value>
@@ -23541,5 +26053,13 @@
     <resource name="CT_GlossaryDocument" resource="Stream" tag="content"/>
     <resource name="document" resource="Stream" tag="content"/>
     <resource name="glossaryDocument" resource="Stream" tag="content"/>
+    <resource name="CT_TxbxContent" resource="Stream" tag="shape">
+      <action name="start" action="startTxbxContent"/>
+      <action name="end" action="endTxbxContent"/>
+    </resource>
+    <resource name="CT_OMath" resource="Math" tag="math"/>
+    <resource name="CT_OMathPara" resource="Stream" tag="math"/>
   </namespace>
 </model>
+<!-- vim: shiftwidth=2 softtabstop=2 expandtab:
+-->

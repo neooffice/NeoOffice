@@ -1,31 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_OLEHANDLER_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_OLEHANDLER_HXX
 
-
-#ifndef INCLUDED_OLEHANDLER_HXX
-#define INCLUDED_OLEHANDLER_HXX
-
-#ifndef INCLUDED_WRITERFILTERDLLAPI_H
-#include <WriterFilterDllApi.hxx>
-#endif
 #include <resourcemodel/LoggedResources.hxx>
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/awt/Size.hpp>
@@ -34,9 +27,6 @@
 #include <com/sun/star/drawing/XShape.hpp>
 
 namespace com{ namespace sun{ namespace star{
-    namespace embed{
-        class XEmbeddedObject;
-    }
     namespace graphic{
         class XGraphic;
     }
@@ -44,26 +34,29 @@ namespace com{ namespace sun{ namespace star{
         class XInputStream;
     }
     namespace text{
+        class XTextContent;
         class XTextDocument;
     }
-    namespace uno{
+    namespace uno {
         class XComponentContext;
     }
 }}}
 namespace writerfilter {
 namespace dmapper
 {
-//class PropertyMap;
+class DomainMapper;
 /** Handler for OLE objects
  */
-class WRITERFILTER_DLLPRIVATE OLEHandler : public LoggedProperties
+class OLEHandler : public LoggedProperties
 {
-    ::rtl::OUString     m_sObjectType;
-    ::rtl::OUString     m_sProgId;
-    ::rtl::OUString     m_sShapeId;
-    ::rtl::OUString     m_sDrawAspect;
-    ::rtl::OUString     m_sObjectId;
-    ::rtl::OUString     m_sr_id;
+    OUString     m_sObjectType;
+    OUString     m_sProgId;
+    OUString     m_sShapeId;
+    OUString     m_sDrawAspect;
+    OUString     m_sObjectId;
+    OUString     m_sr_id;
+    /// The stream URL right after the import of the raw data.
+    OUString     m_aURL;
 
     sal_Int32                   m_nDxaOrig;
     sal_Int32                   m_nDyaOrig;
@@ -75,30 +68,44 @@ class WRITERFILTER_DLLPRIVATE OLEHandler : public LoggedProperties
     ::com::sun::star::awt::Point m_aShapePosition;
 
     ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic > m_xReplacement;
-    
+
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > m_xInputStream;
+    DomainMapper& m_rDomainMapper;
 
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val);
-    virtual void lcl_sprm(Sprm & sprm);
+    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
+    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
+
+    // Interoperability
+    virtual void saveInteropProperties( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument,
+                                        const OUString& sObjectName, const OUString& sOldObjectName = OUString() );
 
 public:
-    OLEHandler();
+    OLEHandler(DomainMapper& rDomainMapper);
     virtual ~OLEHandler();
 
     inline ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > getShape( ) { return m_xShape; };
 
     inline bool isOLEObject( ) { return m_xInputStream.is( ); };
 
-    ::rtl::OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument );
+    OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument );
+    /// In case of a valid CLSID, import the native data to the previously created empty OLE object.
+    void importStream(css::uno::Reference<css::uno::XComponentContext> xComponentContext,
+                      css::uno::Reference<css::text::XTextDocument> xTextDocument,
+                      css::uno::Reference<css::text::XTextContent> xOLE);
+
+    /// Get the CLSID of the OLE object, in case we can find one based on m_sProgId.
+    OUString getCLSID();
 
     ::com::sun::star::awt::Size     getSize() const { return m_aShapeSize;}
     ::com::sun::star::awt::Point    getPosition() const { return m_aShapePosition;}
-    ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic > 
+    ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic >
                                     getReplacement() const { return m_xReplacement; }
 
 };
 typedef boost::shared_ptr< OLEHandler >  OLEHandlerPtr;
 }}
 
-#endif //
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

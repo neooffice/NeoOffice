@@ -33,4 +33,26 @@
 #endif
 #define WRITERFILTER_DLLPRIVATE SAL_DLLPRIVATE
 
+#if SUPD == 310
+
+#include <string>
+
+namespace rtl
+{
+	class OString;
+	class OStringBuffer;
+	class OUString;
+	class OUStringBuffer;
+	class OUStringHash;
+}
+
+using rtl::OString;
+using rtl::OStringBuffer;
+using rtl::OUString;
+using rtl::OUStringBuffer;
+using rtl::OUStringHash;
+using std::string;
+
+#endif	// SUPD == 310
+
 #endif /* INCLUDED_WRITERFILTERDLLAPI_H */

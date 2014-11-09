@@ -1,151 +1,95 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef INCLUDED_TAG_LOGGER_HXX
-#define INCLUDED_TAG_LOGGER_HXX
+#ifndef INCLUDED_WRITERFILTER_INC_RESOURCEMODEL_TAGLOGGER_HXX
+#define INCLUDED_WRITERFILTER_INC_RESOURCEMODEL_TAGLOGGER_HXX
 
 #include <rtl/ustring.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <WriterFilterDllApi.hxx>
 #include <resourcemodel/WW8ResourceModel.hxx>
 #include <string>
-#include <vector>
-#include <stack>
+#if SUPD == 310
 #include <hash_map>
+#else	// SUPD == 310
+#include <boost/unordered_map.hpp>
+#endif	// SUPD == 310
 #include <boost/shared_ptr.hpp>
-#include <iostream>
+#include <libxml/xmlwriter.h>
 
 namespace writerfilter
 {
-    using namespace::std;
-    
-    struct XMLAttribute
-    {
-        string mName;
-        string mValue;
-    public:
-        XMLAttribute(string sName, string sValue) 
-        : mName(sName), mValue(sValue) 
-        {
-        }        
-    };
-    
-    class WRITERFILTER_DLLPUBLIC XMLTag
-    {
-    public:
-        enum eMode { START, END, COMPLETE };
-        typedef boost::shared_ptr<XMLTag> Pointer_t;
-        static Pointer_t NIL;
-        
-    private:
-        string mTag;
-        string mChars;
-        
-        typedef vector<XMLAttribute> XMLAttributes_t;
-        XMLAttributes_t mAttrs;
-        typedef vector<XMLTag::Pointer_t> XMLTags_t;
-        XMLTags_t mTags;
-        eMode mMode;
-        
-    public:
-        XMLTag(string sTag, eMode mode = COMPLETE) : mTag(sTag), mMode(mode) {}
-        
-        void addAttr(string name, string value);
-        void addAttr(string name, const ::rtl::OUString & value);
-        void addAttr(string name, sal_uInt32 nValue);
-        void addAttr(string name, uno::Any rAny);
-        void addTag(Pointer_t pTag);
-        void chars(const string & rChars);
-        void chars(const ::rtl::OUString & rChars);
-        const string & getTag() const;
-        string toString() const; 
-        
-        ostream & output(ostream & o, const string & sIndent = "") const;
-    };
-
-    class WRITERFILTER_DLLPUBLIC TagLogger
-    {
-    public:
-        typedef boost::shared_ptr<TagLogger> Pointer_t;
-        
-    private:
-        stack<XMLTag::Pointer_t> mTags;
-        XMLTag::Pointer_t currentTag() const;
-        XMLTag::Pointer_t mpRoot;
-        string mFileName;
-
-        TagLogger();
-        
-    public:
-        ~TagLogger();
-        
-        static Pointer_t getInstance(const char * name);
-        
-        void setFileName(const string & rName);
-        
-        void startDocument();
-        void element(const string & name);
-        void startElement(const string & name);
-        void attribute(const string & name, const string & value);
-        void attribute(const string & name, const ::rtl::OUString & value);
-        void attribute(const string & name, sal_uInt32 value);
-        void attribute(const string & name, const uno::Any aAny);
-        void addTag(XMLTag::Pointer_t pTag);
-        void chars(const string & chars);
-        void chars(const ::rtl::OUString & chars);
-        void endElement(const string & name);
-        void endDocument();
-        
-        ostream & output(ostream & o) const;
-        static void dump(const char * name);
-    };
-    
     class IdToString
     {
     public:
         typedef boost::shared_ptr<IdToString> Pointer_t;
-        virtual string toString(const Id & id) const = 0;
-    };
-    
-    class WRITERFILTER_DLLPUBLIC PropertySetToTagHandler : public Properties
-    {
-        XMLTag::Pointer_t mpTag;
-        IdToString::Pointer_t mpIdToString;
-        
-    public:
-        PropertySetToTagHandler(IdToString::Pointer_t pIdToString); 
-        virtual ~PropertySetToTagHandler();
-        
-        XMLTag::Pointer_t getTag() const { return mpTag; }
-        
-        void resolve(XMLTag & rTag,
-                     writerfilter::Reference<Properties>::Pointer_t props);
-        
-        virtual void attribute(Id name, Value & val);
-        virtual void sprm(Sprm & sprm);
+        virtual std::string toString(const Id & id) const = 0;
+
+    protected:
+        ~IdToString() {}
     };
 
-WRITERFILTER_DLLPUBLIC XMLTag::Pointer_t unoPropertySetToTag(uno::Reference<beans::XPropertySet> rPropSet);
+    class TagLogger
+    {
+    public:
+        typedef boost::shared_ptr<TagLogger> Pointer_t;
+
+    private:
+        xmlTextWriterPtr pWriter;
+        const char* pName;
+
+        TagLogger(const char* name);
+
+    public:
+        ~TagLogger();
+
+        static Pointer_t getInstance(const char * name);
+
+#ifdef DEBUG_IMPORT
+        void setFileName(const std::string & filename);
+        void startDocument();
+        void endDocument();
+#endif
+
+#ifdef DEBUG_DOMAINMAPPER
+        void element(const std::string & name);
+        void unoPropertySet(css::uno::Reference<css::beans::XPropertySet> rPropSet);
+#endif
+#if OSL_DEBUG_LEVEL > 1
+        void startElement(const std::string & name);
+#endif
+        void attribute(const std::string & name, const std::string & value);
+#if OSL_DEBUG_LEVEL > 1
+        void attribute(const std::string & name, const OUString & value);
+        void attribute(const std::string & name, sal_uInt32 value);
+        void attribute(const std::string & name, const css::uno::Any aAny);
+        void chars(const std::string & chars);
+        void chars(const OUString & chars);
+        void endElement();
+#endif
+
+#ifdef DEBUG_CONTEXT_HANDLER
+        void propertySet(writerfilter::Reference<Properties>::Pointer_t props,
+                IdToString::Pointer_t pIdToString);
+#endif
+    };
 }
 
-#endif // INCLUDED_TAG_LOGGER_HXX
+#endif // INCLUDED_WRITERFILTER_INC_RESOURCEMODEL_TAGLOGGER_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

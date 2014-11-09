@@ -37,6 +37,7 @@ ENABLE_EXCEPTIONS=TRUE
 
 # --- Files --------------------------------------------------------
 
+.IF "$(UPD)" != "310"
 SLOFILES= \
 	$(SLO)$/WW8Annotation.obj \
 	$(SLO)$/WW8OutputWithDepth.obj \
@@ -88,11 +89,13 @@ SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 DEFLIB1NAME=$(TARGET)
+.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets ------------------------------------------------------
 
 .INCLUDE :	target.mk
 
+.IF "$(UPD)" != "310"
 DOCTOKHXXOUTDIR=$(INCCOM)/doctok
 DOCTOKCXXOUTDIR=$(MISC)
 DOCTOKHXXOUTDIRCREATED=$(DOCTOKHXXOUTDIR)/created
@@ -144,3 +147,4 @@ genclean:
 	rm -f $(DOCTOKGENFILES)
 
 genheaders: $(DOCTOKGENHEADERS)
+.ENDIF		# "$(UPD)" != "310"

@@ -30,10 +30,6 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE : settings.mk
 .INCLUDE :  $(PRJ)$/inc$/writerfilter.mk
 
-.IF "$(UPD)" == "310"
-INCLOCAL += -I$(PRJ)$/..$/oox/inc -I$(PRJ)$/..$/sal/inc
-.ENDIF		# "$(UPD)" == "310"
-
 # --- Files -------------------------------------
 
 SLOFILES=           $(SLO)$/WriterFilter.obj \

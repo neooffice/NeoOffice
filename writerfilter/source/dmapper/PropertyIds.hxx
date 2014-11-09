@@ -1,29 +1,28 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYIDS_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYIDS_HXX
 
 
-#ifndef INCLUDED_DMAPPER_PROPERTYIDS_HXX
-#define INCLUDED_DMAPPER_PROPERTYIDS_HXX
-
-namespace rtl{ class OUString;}
+#if SUPD == 310
+#include <WriterFilterDllApi.hxx>
+#endif	// SUPD == 310
 
 namespace writerfilter {
 namespace dmapper{
@@ -46,6 +45,7 @@ enum PropertyIds
         ,PROP_ANCHOR_TYPE
         ,PROP_AUTOMATIC_DISTANCE
         ,PROP_BACK_COLOR
+        ,PROP_BACK_COLOR_TRANSPARENCY
         ,PROP_BITMAP
         ,PROP_BOTTOM_BORDER
         ,PROP_BOTTOM_BORDER_DISTANCE
@@ -64,6 +64,14 @@ enum PropertyIds
         ,PROP_CHAR_COMBINE_PREFIX
         ,PROP_CHAR_COMBINE_SUFFIX
         ,PROP_CHAR_CONTOURED
+        ,PROP_CHAR_LEFT_BORDER
+        ,PROP_CHAR_RIGHT_BORDER
+        ,PROP_CHAR_TOP_BORDER
+        ,PROP_CHAR_BOTTOM_BORDER
+        ,PROP_CHAR_LEFT_BORDER_DISTANCE
+        ,PROP_CHAR_RIGHT_BORDER_DISTANCE
+        ,PROP_CHAR_TOP_BORDER_DISTANCE
+        ,PROP_CHAR_BOTTOM_BORDER_DISTANCE
         ,PROP_CHAR_EMPHASIS
         ,PROP_CHAR_ESCAPEMENT
         ,PROP_CHAR_ESCAPEMENT_HEIGHT
@@ -87,6 +95,7 @@ enum PropertyIds
         ,PROP_CHAR_HEIGHT_ASIAN
         ,PROP_CHAR_HEIGHT_COMPLEX
         ,PROP_CHAR_HIDDEN
+        ,PROP_CHAR_HIGHLIGHT
         ,PROP_CHAR_LOCALE
         ,PROP_CHAR_LOCALE_ASIAN
         ,PROP_CHAR_LOCALE_COMPLEX
@@ -99,6 +108,7 @@ enum PropertyIds
         ,PROP_CHAR_RELIEF
         ,PROP_CHAR_ROTATION
         ,PROP_CHAR_ROTATION_IS_FIT_TO_LINE
+        ,PROP_CHAR_SHADOW_FORMAT
         ,PROP_CHAR_SCALE_WIDTH
         ,PROP_CHAR_SHADOWED
         ,PROP_CHAR_STRIKEOUT
@@ -110,7 +120,6 @@ enum PropertyIds
         ,PROP_CHAR_WEIGHT_ASIAN
         ,PROP_CHAR_WEIGHT_COMPLEX
         ,PROP_CHAR_WORD_MODE
-        ,PROP_CNF_STYLE
         ,PROP_CONTENT
         ,PROP_CONTOUR_OUTSIDE
         ,PROP_CONTOUR_POLY_POLYGON
@@ -138,6 +147,7 @@ enum PropertyIds
         ,PROP_FOOTER_IS_SHARED
         ,PROP_FOOTER_TEXT
         ,PROP_FOOTER_TEXT_LEFT
+        ,PROP_FOOTNOTE_COUNTING
         ,PROP_FORMAT
         ,PROP_FULL_NAME
         ,PROP_GAMMA
@@ -180,11 +190,14 @@ enum PropertyIds
         ,PROP_IS_LANDSCAPE
         ,PROP_IS_ON
         ,PROP_IS_SPLIT_ALLOWED
+        ,PROP_IS_VISIBLE
         ,PROP_KEYWORDS
+        ,PROP_LABEL_CATEGORY
         ,PROP_LEFT_BORDER
         ,PROP_LEFT_BORDER_DISTANCE
         ,PROP_LEFT_MARGIN
         ,PROP_LEVEL
+        ,PROP_LEVEL_FOLLOW
         ,PROP_LEVEL_FORMAT
         ,PROP_LEVEL_PARAGRAPH_STYLES
         ,PROP_LISTTAB_STOP_POSITION
@@ -201,7 +214,9 @@ enum PropertyIds
         ,PROP_PAGE_DESC_NAME
         ,PROP_PAGE_NUMBER_OFFSET
         ,PROP_PAGE_TOGGLE
+        ,PROP_PARAGRAPH_FORMAT
         ,PROP_PARAGRAPH_STYLES
+        ,PROP_PARAGRAPH_STYLE_NAME
         ,PROP_PARA_ADJUST
         ,PROP_PARA_BACK_COLOR
         ,PROP_PARA_BOTTOM_MARGIN
@@ -220,6 +235,7 @@ enum PropertyIds
         ,PROP_PARA_STYLE_NAME
         ,PROP_PARA_TAB_STOPS
         ,PROP_PARA_TOP_MARGIN
+        ,PROP_PARA_VERT_ALIGNMENT
         ,PROP_PARA_WIDOWS
         ,PROP_PARENT_NUMBERING
         ,PROP_POSITION_AND_SPACE_MODE
@@ -232,6 +248,8 @@ enum PropertyIds
         ,PROP_REDLINE_IDENTIFIER
         ,PROP_REDLINE_SUCCESSOR_DATA
         ,PROP_REDLINE_TYPE
+        ,PROP_REDLINE_TOKEN
+        ,PROP_REDLINE_REVERT_PROPERTIES
         ,PROP_REFERENCE_FIELD_PART
         ,PROP_REFERENCE_FIELD_SOURCE
         ,PROP_RESTART_AT_EACH_PAGE
@@ -259,6 +277,15 @@ enum PropertyIds
         ,PROP_TABLE_BORDER
         ,PROP_TABLE_BORDER_DISTANCES
         ,PROP_TABLE_COLUMN_SEPARATORS
+        ,PROP_TABLE_REDLINE_PARAMS
+        ,PROP_TABLE_REDLINE_AUTHOR
+        ,PROP_TABLE_REDLINE_DATE
+        ,PROP_TABLE_REDLINE_ID
+        ,PROP_TABLE_REDLINE_TOKEN
+        ,PROP_TABLE_ROW_DELETE
+        ,PROP_TABLE_ROW_INSERT
+        ,PROP_TABLE_CELL_DELETE
+        ,PROP_TABLE_CELL_INSERT
         ,PROP_TABS_RELATIVE_TO_INDENT
         ,PROP_TAB_STOP_DISTANCE
         ,PROP_TEXT
@@ -282,7 +309,67 @@ enum PropertyIds
         ,PROP_VERT_ORIENT_RELATION
         ,PROP_WIDTH
         ,PROP_WIDTH_TYPE
+        ,PROP_TBL_LOOK
         ,PROP_WRITING_MODE
+/*253*/ ,PROP_FRM_DIRECTION
+        ,PROP_EMBEDDED_OBJECT
+        ,PROP_PARA_CONTEXT_MARGIN
+        ,PROP_PAGE_STYLE_LAYOUT
+        ,PROP_Z_ORDER
+        ,PROP_EMBED_FONTS
+        ,PROP_EMBED_SYSTEM_FONTS
+        ,PROP_SHADOW_FORMAT
+        ,PROP_RELATIVE_WIDTH
+        ,PROP_IS_WIDTH_RELATIVE
+        ,PROP_GRAPHIC_URL
+        ,PROP_GRAPHIC_BITMAP
+        ,PROP_CHAR_SHADING_VALUE
+        ,PROP_FIRST_IS_SHARED
+        ,PROP_MIRROR_INDENTS
+        ,PROP_SURROUND_TEXT_WRAP_SMALL
+        ,PROP_PARA_SHADOW_FORMAT
+        ,PROP_FOOTNOTE_LINE_RELATIVE_WIDTH
+        ,PROP_PARA_TOP_MARGIN_BEFORE_AUTO_SPACING
+        ,PROP_PARA_BOTTOM_MARGIN_AFTER_AUTO_SPACING
+        ,PROP_TBL_HEADER
+        ,PROP_CHAR_THEME_NAME_ASCII
+        ,PROP_CHAR_THEME_NAME_CS
+        ,PROP_CHAR_THEME_NAME_H_ANSI
+        ,PROP_CHAR_THEME_NAME_EAST_ASIA
+        ,PROP_CHAR_THEME_FONT_NAME_ASCII
+        ,PROP_CHAR_THEME_FONT_NAME_CS
+        ,PROP_CHAR_THEME_FONT_NAME_H_ANSI
+        ,PROP_CHAR_THEME_FONT_NAME_EAST_ASIA
+        ,PROP_CHAR_THEME_COLOR
+        ,PROP_CHAR_THEME_ORIGINAL_COLOR
+        ,PROP_CHAR_THEME_COLOR_SHADE
+        ,PROP_CHAR_THEME_FILL
+        ,PROP_HORIZONTAL_MERGE
+        ,PROP_HIDE_TAB_LEADER_AND_PAGE_NUMBERS
+        ,PROP_TAB_IN_TOC
+        ,PROP_TOC_BOOKMARK
+        ,PROP_TOC_NEW_LINE
+        ,PROP_TOC_PARAGRAPH_OUTLINE_LEVEL
+        ,PROP_CHAR_THEME_COLOR_TINT
+        ,PROP_CHAR_GLOW_TEXT_EFFECT
+        ,PROP_CHAR_SHADOW_TEXT_EFFECT
+        ,PROP_CHAR_REFLECTION_TEXT_EFFECT
+        ,PROP_CHAR_TEXTOUTLINE_TEXT_EFFECT
+        ,PROP_CHAR_TEXTFILL_TEXT_EFFECT
+        ,PROP_CHAR_SCENE3D_TEXT_EFFECT
+        ,PROP_CHAR_PROPS3D_TEXT_EFFECT
+        ,PROP_CHAR_LIGATURES_TEXT_EFFECT
+        ,PROP_CHAR_NUMFORM_TEXT_EFFECT
+        ,PROP_CHAR_NUMSPACING_TEXT_EFFECT
+        ,PROP_CHAR_STYLISTICSETS_TEXT_EFFECT
+        ,PROP_CHAR_CNTXTALTS_TEXT_EFFECT
+        ,PROP_SDTPR
+        ,PROP_CELL_INTEROP_GRAB_BAG
+        ,PROP_TABLE_INTEROP_GRAB_BAG
+        ,PROP_INDEX_ENTRY_TYPE
+        ,PROP_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
+        ,PROP_CELL_DIRECTION
+        ,PROP_CELL_HIDE_MARK
     };
 struct PropertyNameSupplier_Impl;
 class PropertyNameSupplier
@@ -291,10 +378,12 @@ class PropertyNameSupplier
 public:
     PropertyNameSupplier();
     ~PropertyNameSupplier();
-    const rtl::OUString& GetName( PropertyIds eId ) const;
+    OUString GetName( PropertyIds eId ) const;
 
     static PropertyNameSupplier& GetPropertyNameSupplier();
 };
 } //namespace dmapper
 } // namespace writerfilter
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

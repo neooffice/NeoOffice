@@ -1,21 +1,30 @@
 #**************************************************************
 #  
 #  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
+#  or more contributor license agreements.
 #  
-#    http://www.apache.org/licenses/LICENSE-2.0
+#  $RCSfile$
+#  $Revision$
 #  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
+#  This file is part of NeoOffice.
+#  
+#  NeoOffice is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License version 3
+#  only, as published by the Free Software Foundation.
+#  
+#  NeoOffice is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License version 3 for more details
+#  (a copy is included in the LICENSE file that accompanied this code).
+#  
+#  You should have received a copy of the GNU General Public License
+#  version 3 along with NeoOffice.  If not, see
+#  <http://www.gnu.org/licenses/gpl-3.0.txt>
+#  for a copy of the GPLv3 License.
+#  
+#  Modified November 2014 by Patrick Luby. NeoOffice is distributed under
+#  GPL only under Section 4 of the Apache License v2.0.
 #  
 #**************************************************************
 PRJ=..$/..
@@ -32,8 +41,6 @@ ENABLE_EXCEPTIONS=TRUE
 
 #CFLAGS+=-DISOLATION_AWARE_ENABLED -DWIN32_LEAN_AND_MEAN -DXML_UNICODE -D_NTSDK -DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0501
 #CFLAGS+=-wd4710 -wd4711 -wd4514 -wd4619 -wd4217 -wd4820
-
-INCLOCAL += -I$(PRJ)$/..$/sax$/$(INPATH)$/inc/$/cssxmlsax
 
 NAMESPACES= \
 	wml \
@@ -61,6 +68,14 @@ NAMESPACES= \
 	vml-officeDrawing \
 	vml-wordprocessingDrawing
 
+.IF "$(UPD)" == "310"
+NAMESPACES += \
+	a14 \
+	mce \
+	w14 \
+	wp14
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Files --------------------------------------------------------
 
 SLOFACTORIESNAMESPACES= \
@@ -82,6 +97,7 @@ SLOFILES= \
 	$(SLO)$/OOXMLFastContextHandler.obj \
 	$(SLO)$/OOXMLFastTokenHandler.obj
 
+.IF "$(UPD)" != "310"
 SHL1TARGET=$(TARGET)
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC" || "$(GUI)"=="OS2"
@@ -107,6 +123,7 @@ SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 DEFLIB1NAME=$(TARGET)
+.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets ------------------------------------------------------
 
@@ -219,9 +236,11 @@ $(OOXMLFACTORYVALUESHXX): $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED) > $@
 
+.IF "$(UPD)" != "310"
 $(OOXMLFACTORYVALUESCXX): $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" != "310"
 
 $(OOXMLRESOURCEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLRESOURCEIDSXSL) \
 	$(MODELPROCESSED)
@@ -233,9 +252,15 @@ $(OOXMLNAMESPACEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLNAMESPACEIDSXSL) \
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLNAMESPACEIDSXSL) $(MODELPROCESSED) > $@
 
+.IF "$(UPD)" == "310"
+$(GPERFFASTTOKENHXX): $(OOXMLGPERFFASTTOKENXSL) $(TOKENXML)
+    @echo "Making:   " $(@:f)   
+	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(TOKENXML) | tr -d '\r' | $(GPERF) -c -E -G -I  -LC++ -S1 -t  > $@
+.ELSE		# "$(UPD)" == "310"
 $(GPERFFASTTOKENHXX): $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED) | tr -d '\r' | $(GPERF) -I -t -E -S1 -c -G -LC++ > $@
+.ENDIF		# "$(UPD)" == "310"
 
 $(SLOFACTORIESNAMESPACES): $(OOXMLFACTORYSCXXS) $(OOXMLGENHEADERS)
 

@@ -1,46 +1,48 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_CELLMARGINHANDLER_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_CELLMARGINHANDLER_HXX
 
-
-#ifndef INCLUDED_CELLMARGINHANDLER_HXX
-#define INCLUDED_CELLMARGINHANDLER_HXX
-
-#ifndef INCLUDED_WRITERFILTERDLLAPI_H
-#include <WriterFilterDllApi.hxx>
-#endif
 #include <resourcemodel/LoggedResources.hxx>
 #include <boost/shared_ptr.hpp>
+#include <vector>
+#include <com/sun/star/beans/PropertyValue.hpp>
 
 namespace writerfilter {
 namespace dmapper
 {
 class TablePropertyMap;
-class WRITERFILTER_DLLPRIVATE CellMarginHandler : public LoggedProperties
+class CellMarginHandler : public LoggedProperties
 {
 private:
-    sal_Int32   m_nValue;
+    sal_Int32   m_nValue; ///< Converted value.
+    sal_Int32   m_nWidth; ///< Original value.
+    sal_Int32   m_nType; ///< Unit of the value (dxa, etc).
+
+    OUString m_aInteropGrabBagName;
+    std::vector<css::beans::PropertyValue> m_aInteropGrabBag;
 
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val);
-    virtual void lcl_sprm(Sprm & sprm);
+    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
+    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
+
+    void createGrabBag(const OUString& aName);
 
 public:
     sal_Int32   m_nLeftMargin;
@@ -58,8 +60,13 @@ public:
 
     ::boost::shared_ptr<TablePropertyMap>            getProperties();
 
+    void enableInteropGrabBag(const OUString& aName);
+    css::beans::PropertyValue getInteropGrabBag();
+
 };
 typedef boost::shared_ptr< CellMarginHandler >          CellMarginHandlerPtr;
 }}
 
-#endif //
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

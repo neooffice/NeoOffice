@@ -1,21 +1,30 @@
 #**************************************************************
 #  
 #  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
+#  or more contributor license agreements.
 #  
-#    http://www.apache.org/licenses/LICENSE-2.0
+#  $RCSfile$
+#  $Revision$
 #  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
+#  This file is part of NeoOffice.
+#  
+#  NeoOffice is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License version 3
+#  only, as published by the Free Software Foundation.
+#  
+#  NeoOffice is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License version 3 for more details
+#  (a copy is included in the LICENSE file that accompanied this code).
+#  
+#  You should have received a copy of the GNU General Public License
+#  version 3 along with NeoOffice.  If not, see
+#  <http://www.gnu.org/licenses/gpl-3.0.txt>
+#  for a copy of the GPLv3 License.
+#  
+#  Modified November 2014 by Patrick Luby. NeoOffice is distributed under
+#  GPL only under Section 4 of the Apache License v2.0.
 #  
 #**************************************************************
 PRJ=..$/..
@@ -34,10 +43,6 @@ ENABLE_EXCEPTIONS=TRUE
 #CFLAGS+=-wd4710 -wd4711 -wd4514 -wd4619 -wd4217 -wd4820
 CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 
-.IF "$(UPD)" == "310"
-INCLOCAL += -I$(PRJ)$/..$/sal/inc
-.ENDIF		# "$(UPD)" == "310"
-
 
 # --- Files --------------------------------------------------------
 
@@ -48,15 +53,22 @@ NOOPTFILES= \
 SLOFILES= \
 	$(SLO)$/Fraction.obj \
 	$(SLO)$/LoggedResources.obj \
-	$(SLO)$/Protocol.obj \
 	$(SLO)$/ResourceModelHelper.obj \
 	$(SLO)$/TagLogger.obj \
-	$(SLO)$/WW8Analyzer.obj \
 	$(SLO)$/XPathLogger.obj \
 	$(SLO)$/qnametostr.obj \
+	$(SLO)$/util.obj
+
+.IF "$(UPD)" == "310"
+SLOFILES += \
+	$(SLO)$/qnametostrcore.obj
+.ELSE		# "$(UPD)" == "310"
+SLOFILES += \
+	$(SLO)$/Protocol.obj \
+	$(SLO)$/WW8Analyzer.obj \
 	$(SLO)$/resourcemodel.obj \
-	$(SLO)$/sprmcodetostr.obj \
-	$(SLO)$/util.obj \
+	$(SLO)$/sprmcodetostr.obj
+.ENDIF		# "$(UPD)" == "310"
 
 # FreeBSD/Linux 64-bit: compiler (gcc 4.2.x) fails with 'out of memory'
 .IF "$(OUTPATH)"=="unxfbsdx" || "$(OUTPATH)"=="unxfbsdi" || "$(OUTPATH)"=="unxlngx6"
@@ -64,6 +76,7 @@ NOOPTFILES= \
 	$(SLO)$/qnametostr.obj
 .ENDIF
 
+.IF "$(UPD)" != "310"
 SHL1TARGET=$(TARGET)
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
@@ -89,6 +102,7 @@ SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 DEFLIB1NAME=$(TARGET)
+.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets ------------------------------------------------------
 
@@ -136,26 +150,39 @@ NAMESPACESTXT=$(PRJ)$/..$/oox$/$(INPATH)$/misc/namespaces.txt
 NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/namespaces.txt
 .ENDIF		# "$(UPD)" == "310"
 
-GENERATEDHEADERS=$(DOCTOKRESOURCEIDSHXX) $(OOXMLRESOURCEIDSHXX) $(SPRMIDSHXX)
+GENERATEDHEADERS=$(OOXMLRESOURCEIDSHXX)
 GENERATEDFILES= \
 	$(GENERATEDHEADERS) \
 	$(QNAMETOSTRCXX) \
-	$(SPRMCODETOSTRCXX) \
 	$(MODELPROCESSED) \
+
+.IF "$(UPD)" != "310"
+GENERATEDHEADERS += $(DOCTOKRESOURCEIDSHXX) $(SPRMIDSHXX)
+GENERATEDFILES += \
+	$(SPRMCODETOSTRCXX) \
 	$(OOXMLQNAMETOSTRTMP) \
 	$(DOCTOKQNAMETOSTRTMP) \
 	$(SPRMCODETOSTRTMP)
+.ENDIF		# "$(UPD)" != "310"
 
+.IF "$(UPD)" == "310"
+$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
+    @echo "Making:   " $(@:f)   
+	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLQNAMETOSTRTMP): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
 $(DOCTOKQNAMETOSTRTMP): $(DOCTOKQNAMETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
 	$(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
+.IF "$(UPD)" != "310"
 $(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrheader qnametostrfooter $(OOXMLFACTORYTOOLSXSL) $(DOCTOKRESOURCETOOLS)
 	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
+.ENDIF		# "$(UPD)" != "310"
 
 $(SPRMCODETOSTRTMP): $(DOCTOKSPRMCODETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   

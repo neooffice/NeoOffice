@@ -1,25 +1,22 @@
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- ***********************************************************-->
-<xsl:stylesheet 
-    version="1.0" 
+<!--
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+-->
+<xsl:stylesheet
+    version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" 
     xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" 
@@ -104,6 +101,7 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
                 <xsl:if test="generate-id(key('resources', @resource)) = generate-id(.)">
                     <xsl:if test="not(@resource = 'Hex' or 
                                       @resource = 'Integer' or 
+                                      @resource = 'UniversalMeasure' or
                                       @resource = 'Boolean' or
                                       @resource = 'List' or
                                       @resource = 'String')">
@@ -130,7 +128,7 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
     }
     
 #ifdef DEBUG_FACTORY
-    debug_logger->endElement("factory.createFastChildContextFromFactory");        
+    debug_logger->endElement();
 #endif
 
     return aResult;
@@ -192,13 +190,14 @@ uno::Reference&lt; xml::sax::XFastContextHandler &gt; OOXMLFactory::createFastCh
     <xsl:text>
     
 #ifdef DEBUG_FACTORY
-    debug_logger->endElement("factory.createFastChildContextFromStart");
+    debug_logger->endElement();
 #endif
     return aResult;
 }
 </xsl:text>
 </xsl:template>
 
+<xsl:key name="namespaces-by-id" match="namespace-alias" use="@id"/>
 <xsl:template name="fasttokentoid">
   <xsl:text>
 namespace tokenmap {
@@ -220,7 +219,7 @@ string fastTokenToId(sal_uInt32 nToken)
 
     switch (nToken &amp; 0xffff0000)
     {</xsl:text>
-    <xsl:for-each select="//namespace-alias">
+    <xsl:for-each select="//namespace-alias[generate-id() = generate-id(key('namespaces-by-id', @id)[1])]">
       <xsl:text>
     case NS_</xsl:text>
     <xsl:value-of select="@alias"/>
@@ -324,20 +323,13 @@ uno::Reference &lt; xml::sax::XFastParser &gt; OOXMLStreamImpl::getFastParser()
 {
     if (! mxFastParser.is())
     {
-        uno::Reference &lt; lang::XMultiComponentFactory &gt; xFactory = 
-            uno::Reference &lt; lang::XMultiComponentFactory &gt;
-            (mxContext->getServiceManager());
-
-        mxFastParser.set(xFactory->createInstanceWithContext
-            ( ::rtl::OUString::createFromAscii
-                ( "com.sun.star.xml.sax.FastParser" ), 
-                    mxContext ), uno::UNO_QUERY_THROW);
+        mxFastParser = css::xml::sax::FastParser::create(mxContext);
 </xsl:text>
 <xsl:for-each select="//namespace-alias">
   <xsl:text>
-        mxFastParser->registerNamespace(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("</xsl:text>
+        mxFastParser->registerNamespace("</xsl:text>
     <xsl:value-of select="@name"/>
-    <xsl:text>")), </xsl:text>
+    <xsl:text>", </xsl:text>
     <xsl:call-template name="namespaceid"/>
     <xsl:text>);</xsl:text>
 </xsl:for-each>
@@ -350,12 +342,11 @@ uno::Reference &lt; xml::sax::XFastParser &gt; OOXMLStreamImpl::getFastParser()
 </xsl:template>
 
   <xsl:template match="/">
-    <xsl:text>    
-#include "OOXMLFactory.hxx"
-#include "OOXMLFastHelper.hxx"
-#include "OOXMLStreamImpl.hxx"
-#include "doctok/sprmids.hxx"
-#include "doctok/resourceids.hxx"
+    <xsl:text>
+#include &lt;com/sun/star/xml/sax/FastParser.hpp&gt;
+#include "ooxml/OOXMLFactory.hxx"
+#include "ooxml/OOXMLFastHelper.hxx"
+#include "ooxml/OOXMLStreamImpl.hxx"
 </xsl:text>
     <xsl:call-template name="factoryincludes"/>
     <xsl:text>

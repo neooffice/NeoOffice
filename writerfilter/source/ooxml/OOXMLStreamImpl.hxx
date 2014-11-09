@@ -1,87 +1,92 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLSTREAMIMPL_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLSTREAMIMPL_HXX
 
-
-#ifndef INCLUDED_OOXML_STREAM_IMPL_HXX
-#define INCLUDED_OOXML_STREAM_IMPL_HXX
+#include <map>
 
 #include <ooxml/OOXMLDocument.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <com/sun/star/embed/XRelationshipAccess.hpp>
 #include <com/sun/star/io/XStream.hpp>
 
+extern OUString customTarget;
+extern OUString embeddingsTarget;
+
 namespace writerfilter {
 namespace ooxml
 {
-
-using namespace com::sun::star;
 
 class OOXMLStreamImpl : public OOXMLStream
 {
     void init();
 
-    uno::Reference<uno::XComponentContext> mxContext;
-    uno::Reference<io::XInputStream> mxStorageStream;
-    uno::Reference<embed::XStorage> mxStorage;
-    uno::Reference<embed::XRelationshipAccess> mxRelationshipAccess;
-    uno::Reference<io::XStream> mxDocumentStream;
-    uno::Reference<xml::sax::XFastParser> mxFastParser;
-    uno::Reference<xml::sax::XFastTokenHandler> mxFastTokenHandler;
+    css::uno::Reference<css::uno::XComponentContext> mxContext;
+    css::uno::Reference<css::io::XInputStream> mxStorageStream;
+    css::uno::Reference<css::embed::XStorage> mxStorage;
+    css::uno::Reference<css::embed::XRelationshipAccess> mxRelationshipAccess;
+    css::uno::Reference<css::io::XStream> mxDocumentStream;
+    css::uno::Reference<css::xml::sax::XFastParser> mxFastParser;
+    css::uno::Reference<css::xml::sax::XFastTokenHandler> mxFastTokenHandler;
 
     StreamType_t mnStreamType;
-    
-    rtl::OUString msId;
-    rtl::OUString msPath;
-    rtl::OUString msTarget;
 
-    bool lcl_getTarget(uno::Reference<embed::XRelationshipAccess> 
+    OUString msId;
+    OUString msPath;
+    OUString msTarget;
+
+    /// Cache holding an Id <-> Target map of external relations.
+    std::map<OUString, OUString> maIdCache;
+
+    bool lcl_getTarget(css::uno::Reference<css::embed::XRelationshipAccess>
                        xRelationshipAccess,
-                       StreamType_t nStreamType, 
-                       const ::rtl::OUString & rId, 
-                       ::rtl::OUString & rDocumentTarget);
+                       StreamType_t nStreamType,
+                       const OUString & rId,
+                       OUString & rDocumentTarget);
 public:
     typedef boost::shared_ptr<OOXMLStreamImpl> Pointer_t;
 
     OOXMLStreamImpl
     (OOXMLStreamImpl & rStream, StreamType_t nType);
     OOXMLStreamImpl
-    (uno::Reference<uno::XComponentContext> xContext,
-     uno::Reference<io::XInputStream> xStorageStream, 
-     StreamType_t nType);
-    OOXMLStreamImpl(OOXMLStreamImpl & rStream, const rtl::OUString & rId);
+    (css::uno::Reference<css::uno::XComponentContext> xContext,
+     css::uno::Reference<css::io::XInputStream> xStorageStream,
+     StreamType_t nType, bool bRepairStorage);
+    OOXMLStreamImpl(OOXMLStreamImpl & rStream, const OUString & rId);
 
     virtual ~OOXMLStreamImpl();
 
-    virtual uno::Reference<xml::sax::XParser> getParser();
-    virtual uno::Reference<xml::sax::XFastParser> getFastParser();
-    virtual uno::Reference<io::XInputStream> getDocumentStream();
-    virtual uno::Reference<io::XInputStream> getStorageStream();
-    virtual uno::Reference<uno::XComponentContext> getContext();
-    virtual ::rtl::OUString getTargetForId(const ::rtl::OUString & rId);
-    virtual const ::rtl::OUString & getTarget() const;
+    virtual css::uno::Reference<css::xml::sax::XParser> getParser() SAL_OVERRIDE;
+    virtual css::uno::Reference<css::xml::sax::XFastParser> getFastParser() SAL_OVERRIDE;
+    virtual css::uno::Reference<css::io::XInputStream> getDocumentStream() SAL_OVERRIDE;
+    virtual css::uno::Reference<css::io::XInputStream> getStorageStream() SAL_OVERRIDE;
+    virtual css::uno::Reference<css::uno::XComponentContext> getContext() SAL_OVERRIDE;
+    virtual OUString getTargetForId(const OUString & rId) SAL_OVERRIDE;
+    virtual const OUString & getTarget() const SAL_OVERRIDE;
 
-    virtual uno::Reference<xml::sax::XFastTokenHandler> 
-    getFastTokenHandler(uno::Reference<uno::XComponentContext> rContext);
+    virtual css::uno::Reference<css::xml::sax::XFastTokenHandler>
+    getFastTokenHandler(css::uno::Reference<css::uno::XComponentContext> rContext) SAL_OVERRIDE;
 
-    void setInputStream(uno::Reference<io::XInputStream> rxInputStream);
+    void setInputStream(css::uno::Reference<css::io::XInputStream> rxInputStream);
+    css::uno::Reference<css::io::XStream> accessDocumentStream();
 };
 }}
-#endif // INCLUDED_OOXML_STREAM_IMPL_HXX
+#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLSTREAMIMPL_HXX
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
