@@ -369,9 +369,8 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_sot_patch \
 	build.neo_store_patch \
 	build.neo_svtools_patch \
-	build.neo_sw_patch \
 	build.neo_tools_patch \
-	build.neo_vcl_patch build.neo_svx_patch \
+	build.neo_vcl_patch build.neo_svx_patch build.neo_sw_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
