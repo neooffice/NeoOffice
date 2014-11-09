@@ -161,6 +161,9 @@
 #include <sfx2/tbxctrl.hxx>
 #include <svx/strarray.hxx>
 #include "svx/svxdllapi.h"
+#ifdef USE_JAVA
+#include <svx/boxitem.hxx>
+#endif	// USE_JAVA
 
 #include <com/sun/star/awt/FontDescriptor.hpp>
 
