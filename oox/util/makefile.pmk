@@ -46,6 +46,7 @@ INCLOCAL+= \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssscriptvba \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csssheet \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmldom \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
