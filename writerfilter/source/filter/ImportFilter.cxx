@@ -242,6 +242,7 @@ void WriterFilter::setTargetDocument( const uno::Reference< lang::XComponent >& 
    xSettings->setPropertyValue( "TableRowKeep", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "IgnoreTabsAndBlanksForLineCalculation", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "InvertBorderSpacing", uno::makeAny( sal_True ) );
+#if SUPD != 310
    xSettings->setPropertyValue( "CollapseEmptyCellPara", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "TabOverflow", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "UnbreakableNumberings", uno::makeAny( sal_True ) );
@@ -250,6 +251,7 @@ void WriterFilter::setTargetDocument( const uno::Reference< lang::XComponent >& 
    xSettings->setPropertyValue( "ClippedPictures", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "BackgroundParaOverDrawings", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "TabOverMargin", uno::makeAny( sal_True ) );
+#endif	// SUPD != 310
 }
 
 void WriterFilter::setSourceDocument( const uno::Reference< lang::XComponent >& xDoc )
