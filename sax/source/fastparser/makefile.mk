@@ -55,10 +55,9 @@ INCLOCAL+= \
 	-I$(PRJ)$/..$/sal/inc \
 	-I$(PRJ)$/..$/salhelper/inc
 
-PREPENDLIBS=$(PRJ)$/..$/expat$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib
+PREPENDLIBS=$(PRJ)$/..$/salhelper$/$(INPATH)$/lib
 
-# Link to modified libexpat*.a and libuno_salhelper
+# Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
 SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"
