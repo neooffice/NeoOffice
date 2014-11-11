@@ -43,6 +43,7 @@ ENABLE_EXCEPTIONS=TRUE
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
+	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal/inc
@@ -50,7 +51,7 @@ INCLOCAL+= \
 PREPENDLIBS=$(PRJ)$/..$/expat$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib
 
-# Link to modified libexpat*.a and libuno_salhelper
+# Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
 SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"
@@ -82,7 +83,7 @@ SHL1STDLIBS= \
 
 .IF "$(UPD)" == "310"
 SHL1STDLIBS+= \
-		$(EXPAT3RDLIB) \
+		$(EXPATASCII3RDLIB) \
 		$(SALHELPERLIB)
 .ENDIF		# "$(UPD)" == "310"
 

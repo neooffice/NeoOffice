@@ -50,6 +50,7 @@ CFLAGS+=-DSYSTEM_EXPAT
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
+	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal/inc \
@@ -84,8 +85,12 @@ SHL1STDLIBS= \
 		$(SALLIB)  \
 		$(SAXLIB)  \
 		$(CPPULIB) \
-		$(CPPUHELPERLIB)\
+		$(CPPUHELPERLIB)
+
+.IF "$(UPD)" != "310"
+SHL1STDLIBS += \
 		$(EXPATASCII3RDLIB)
+.ENDIF		# "$(UPD)" != "310"
 
 SHL1DEPN=
 SHL1VERSIONMAP=	$(SOLARENV)$/src$/component.map
