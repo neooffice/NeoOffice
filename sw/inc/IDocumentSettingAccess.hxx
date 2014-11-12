@@ -92,20 +92,7 @@ namespace com { namespace sun { namespace star { namespace i18n { struct Forbidd
          // --> OD 2008-06-05 #i89181#
          TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST,
          // <--
-#if SUPD == 310
-         INVERT_BORDER_SPACING,
-         COLLAPSE_EMPTY_CELL_PARA,
-         SMALL_CAPS_PERCENTAGE_66,
-         TAB_OVERFLOW,
-         UNBREAKABLE_NUMBERINGS,
-         CLIPPED_PICTURES,
-         BACKGROUND_PARA_OVER_DRAWINGS,
-         TAB_OVER_MARGIN,
-         // MS Word still wraps text around objects with less space than LO would.
-         SURROUND_TEXT_WRAP_SMALL,
-#else	// SUPD == 310
 	 INVERT_BORDER_SPACING,
-#endif	// SUPD == 310
          // COMPATIBILITY FLAGS END
 
          BROWSE_MODE,
@@ -114,16 +101,23 @@ namespace com { namespace sun { namespace star { namespace i18n { struct Forbidd
          GLOBAL_DOCUMENT_SAVE_LINKS,
          LABEL_DOCUMENT,
          PURGE_OLE,
+         KERN_ASIAN_PUNCTUATION
 #if SUPD == 310
-         KERN_ASIAN_PUNCTUATION,
+         , COLLAPSE_EMPTY_CELL_PARA,
+         SMALL_CAPS_PERCENTAGE_66,
+         TAB_OVERFLOW,
+         UNBREAKABLE_NUMBERINGS,
+         CLIPPED_PICTURES,
+         BACKGROUND_PARA_OVER_DRAWINGS,
+         TAB_OVER_MARGIN,
+         // MS Word still wraps text around objects with less space than LO would.
+         SURROUND_TEXT_WRAP_SMALL,
          MATH_BASELINE_ALIGNMENT,
          STYLES_NODEFAULT,
          FLOATTABLE_NOMARGINS,
          EMBED_FONTS,
          EMBED_SYSTEM_FONTS,
          APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
-#else	// SUPD == 310
-         KERN_ASIAN_PUNCTUATION
 #endif	// SUPD == 310
      };
 

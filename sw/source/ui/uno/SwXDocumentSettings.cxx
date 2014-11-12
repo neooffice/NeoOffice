@@ -139,9 +139,9 @@ enum SwDocumentSettingsPropertyHandles
     // --> OD 2008-06-05 #i89181#
     HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST
     // <--
+    ,HANDLE_INVERT_BORDER_SPACING
 #if SUPD == 310
     , HANDLE_MATH_BASELINE_ALIGNMENT,
-    HANDLE_INVERT_BORDER_SPACING,
     HANDLE_COLLAPSE_EMPTY_CELL_PARA,
     HANDLE_SMALL_CAPS_PERCENTAGE_66,
     HANDLE_TAB_OVERFLOW,
@@ -155,8 +155,6 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_TAB_OVER_MARGIN,
     HANDLE_SURROUND_TEXT_WRAP_SMALL,
     HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
-#else	// SUPD == 310
-    ,HANDLE_INVERT_BORDER_SPACING
 #endif	// SUPD == 310
 };
 
@@ -211,9 +209,9 @@ MasterPropertySetInfo * lcl_createSettingsInfo()
         { RTL_CONSTASCII_STRINGPARAM("ProtectForm"), HANDLE_PROTECT_FORM, CPPUTYPE_BOOLEAN, 0, 0},
         // --> OD 2008-06-05 #i89181#
         { RTL_CONSTASCII_STRINGPARAM("TabAtLeftIndentForParagraphsInList"), HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST, CPPUTYPE_BOOLEAN, 0, 0},
+        { RTL_CONSTASCII_STRINGPARAM("InvertBorderSpacing"), HANDLE_INVERT_BORDER_SPACING, CPPUTYPE_BOOLEAN, 0, 0},
 #if SUPD == 310
         { RTL_CONSTASCII_STRINGPARAM("MathBaselineAlignment"), HANDLE_MATH_BASELINE_ALIGNMENT, CPPUTYPE_BOOLEAN, 0, 0},
-        { RTL_CONSTASCII_STRINGPARAM("InvertBorderSpacing"), HANDLE_INVERT_BORDER_SPACING, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("CollapseEmptyCellPara"), HANDLE_COLLAPSE_EMPTY_CELL_PARA, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("SmallCapsPercentage66"), HANDLE_SMALL_CAPS_PERCENTAGE_66, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("TabOverflow"), HANDLE_TAB_OVERFLOW, CPPUTYPE_BOOLEAN, 0, 0},
@@ -227,8 +225,6 @@ MasterPropertySetInfo * lcl_createSettingsInfo()
         { RTL_CONSTASCII_STRINGPARAM("TabOverMargin"), HANDLE_TAB_OVER_MARGIN, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("SurroundTextWrapSmall"), HANDLE_SURROUND_TEXT_WRAP_SMALL, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("ApplyParagraphMarkFormatToNumbering"), HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, CPPUTYPE_BOOLEAN, 0, 0},
-#else	// SUPD == 310
-        { RTL_CONSTASCII_STRINGPARAM("InvertBorderSpacing"), HANDLE_INVERT_BORDER_SPACING, CPPUTYPE_BOOLEAN, 0, 0},
 #endif	// SUPD == 310
 /*
  * As OS said, we don't have a view when we need to set this, so I have to
@@ -723,17 +719,17 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
         }
         break;
         // <--
+	case HANDLE_INVERT_BORDER_SPACING:
+	{
+            sal_Bool bTmp = *(sal_Bool*)rValue.getValue();
+            mpDoc->set(IDocumentSettingAccess::INVERT_BORDER_SPACING, bTmp);
+	}
+	break;
 #if SUPD == 310
         case HANDLE_MATH_BASELINE_ALIGNMENT:
         {
             bool bTmp = *(sal_Bool*)rValue.getValue();
             mpDoc->set( IDocumentSettingAccess::MATH_BASELINE_ALIGNMENT, bTmp );
-        }
-        break;
-        case HANDLE_INVERT_BORDER_SPACING:
-        {
-            bool bTmp = *(sal_Bool*)rValue.getValue();
-            mpDoc->set(IDocumentSettingAccess::INVERT_BORDER_SPACING, bTmp);
         }
         break;
         case HANDLE_COLLAPSE_EMPTY_CELL_PARA:
@@ -814,14 +810,7 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             mpDoc->set(IDocumentSettingAccess::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, bTmp);
         }
         break;
-#else	// SUPD == 310
-	case HANDLE_INVERT_BORDER_SPACING:
-	{
-            sal_Bool bTmp = *(sal_Bool*)rValue.getValue();
-            mpDoc->set(IDocumentSettingAccess::INVERT_BORDER_SPACING, bTmp);
-	}
 #endif	// SUPD == 310
-	break;
         default:
 			throw UnknownPropertyException();
 	}
@@ -1149,6 +1138,12 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         }
         break;
         // <--
+	case HANDLE_INVERT_BORDER_SPACING:
+	{
+            sal_Bool bTmp = mpDoc->get(IDocumentSettingAccess::INVERT_BORDER_SPACING);
+            rValue.setValue( &bTmp, ::getBooleanCppuType() );
+	}
+	break;
 #if SUPD == 310
         case HANDLE_MATH_BASELINE_ALIGNMENT:
         {
@@ -1156,12 +1151,6 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
             rValue.setValue( &bTmp, ::getBooleanCppuType() );
         }
         break;
-    case HANDLE_INVERT_BORDER_SPACING:
-    {
-            sal_Bool bTmp = mpDoc->get(IDocumentSettingAccess::INVERT_BORDER_SPACING);
-            rValue.setValue( &bTmp, ::getBooleanCppuType() );
-    }
-    break;
         case HANDLE_COLLAPSE_EMPTY_CELL_PARA:
         {
             sal_Bool bTmp = mpDoc->get( IDocumentSettingAccess::COLLAPSE_EMPTY_CELL_PARA );
@@ -1240,13 +1229,6 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
             rValue.setValue( &bTmp, ::getBooleanCppuType() );
         }
         break;
-#else	// SUPD == 310
-	case HANDLE_INVERT_BORDER_SPACING:
-	{
-            sal_Bool bTmp = mpDoc->get(IDocumentSettingAccess::INVERT_BORDER_SPACING);
-            rValue.setValue( &bTmp, ::getBooleanCppuType() );
-	}
-	break;
 #endif	// SUPD == 310
         default:
 			throw UnknownPropertyException();
