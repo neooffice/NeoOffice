@@ -372,12 +372,12 @@ void SvtMatchContext_Impl::ReadFolder( const String& rURL,
     // check folder to scan
 #if defined USE_JAVA && defined MACOSX
     // Eliminate sandbox deny file-read-data messages by checking if the
-    // URL is a directory. If the path is inaccessible, skip display of the
+    // URL is a directory. If the path is inaccessible or contains an alias,
+    // skip display of the
     // native Open dialog and treat path as not a directory.
-    ::rtl::OUString aSystemURL;
     ::rtl::OUString aSystemPath;
     struct stat aSystemPathStat;
-    if ( ::osl::FileBase::getCanonicalName( rURL, aSystemURL) != ::osl::FileBase::E_None || ::osl::FileBase::getSystemPathFromFileURL( aSystemURL, aSystemPath ) != ::osl::FileBase::E_None || stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) || !S_ISDIR( aSystemPathStat.st_mode ) || access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), R_OK ) )
+    if ( ::osl::FileBase::getSystemPathFromFileURL( rURL, aSystemPath ) != ::osl::FileBase::E_None || stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) || !S_ISDIR( aSystemPathStat.st_mode ) || access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), R_OK ) )
 #else	// USE_JAVA && MACOSX
     if( !UCBContentHelper::IsFolder( rURL ) )
 #endif	// USE_JAVA && MACOSX
@@ -675,12 +675,11 @@ void SvtMatchContext_Impl::run()
 #if defined USE_JAVA && defined MACOSX
                     // Eliminate sandbox deny file-read-data messages by
                     // checking if the URL is a directory. If the path is
-                    // inaccessible, skip display of the native Open dialog
-                    // and treat path as not a directory.
-                    ::rtl::OUString aSystemURL;
+                    // inaccessible or contains an alias, skip display of the
+                    // native Open dialog and treat path as not a directory.
                     ::rtl::OUString aSystemPath;
                     struct stat aSystemPathStat;
-                    if ( aURLObject.hasFinalSlash() && ::osl::FileBase::getCanonicalName( aMainURL, aSystemURL) == ::osl::FileBase::E_None && ::osl::FileBase::getSystemPathFromFileURL( aSystemURL, aSystemPath ) == ::osl::FileBase::E_None && stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) && !access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), R_OK ) )
+                    if ( aURLObject.hasFinalSlash() && ::osl::FileBase::getSystemPathFromFileURL( aMainURL, aSystemPath ) == ::osl::FileBase::E_None && stat( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ), &aSystemPathStat ) && S_ISDIR( aSystemPathStat.st_mode ) && !access( ::rtl::OUStringToOString( aSystemPath, osl_getThreadTextEncoding() ).getStr(), R_OK ) )
 #else	// USE_JAVA && MACOSX
             		if ( UCBContentHelper::IsFolder( aMainURL ) && aURLObject.hasFinalSlash() )
 #endif	// USE_JAVA && MACOSX
