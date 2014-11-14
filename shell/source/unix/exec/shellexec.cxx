@@ -51,6 +51,19 @@
 #include <errno.h>
 #include <unistd.h>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef void* id;
+typedef id Application_acquireSecurityScopedURLFromOUString_Type( const ::rtl::OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const ::rtl::OUString *pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+
+static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 //------------------------------------------------------------------------
 // namespace directives
 //------------------------------------------------------------------------
@@ -144,6 +157,9 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     // Check wether aCommand contains a document url or not
     sal_Int32 nIndex = aCommand.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM(":/") ) );
     
+#if defined USE_JAVA && defined MACOSX
+    id pSecurityScopedURL = NULL;
+#endif	// USE_JAVA && MACOSX
     if( nIndex > 0 || 0 == aCommand.compareToAscii("mailto:", 7) )
     {
         // It seems to be a url ..
@@ -277,6 +293,20 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
             aLaunchBuffer.append(" ");
             escapeForShell(aLaunchBuffer, OUStringToOString(aURL, osl_getThreadTextEncoding()));
         }
+
+#if defined USE_JAVA && defined MACOSX
+        // Fix failure to open file URL hyperlinks by obtaining a security
+        // scoped bookmark before opening the URL
+        if ( 0 == aURL.compareToAscii("file://", 7) )
+        {
+            if ( !pApplication_acquireSecurityScopedURLFromOUString )
+                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+            if ( !pApplication_releaseSecurityScopedURL )
+                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+            if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aURL, sal_True, NULL );
+        }
+#endif	// USE_JAVA && MACOSX
     } else {
         escapeForShell(aBuffer, OUStringToOString(aCommand, osl_getThreadTextEncoding()));
         aBuffer.append(" ");
@@ -319,6 +349,10 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         throw SystemShellExecuteException(OUString::createFromAscii( strerror( nerr ) ), 
             static_cast < XSystemShellExecute * > (this), nerr );
     }
+#if defined USE_JAVA && defined MACOSX
+    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+#endif	// USE_JAVA && MACOSX
 }
 
 
