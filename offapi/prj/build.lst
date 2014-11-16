@@ -1,4 +1,5 @@
 oa	offapi	:	udkapi idlc solenv NULL
+oa	offapi\com\sun\star\beans			nmake   -   all oa_cssbeans NULL
 oa	offapi\com\sun\star\chart			nmake   -   all oa_csschart NULL
 oa	offapi\com\sun\star\chart2			nmake   -   all oa_csschart2 NULL
 oa	offapi\com\sun\star\chart2\data		nmake   -   all oa_csschart2data NULL
