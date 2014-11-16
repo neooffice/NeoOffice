@@ -122,6 +122,11 @@ SHL1STDLIBS+= -framework Quartz
 .ENDIF # MACOSX
 .ENDIF # WNT
 
+.IF "$(UPD)" == "310"
+SHL1STDLIBS += \
+	$(LIBXML2LIB)
+.ENDIF		# "$(UPD)" == "310"
+
 
 SHL1DEPN += $(shell @$(FIND) $(SLO) -type f -name "*.OBJ" -print)
 
