@@ -43,8 +43,11 @@ CDEFS += -DSW_DLLIMPLEMENTATION
 VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
+# Avoid conflicting header file names by putting this project first in the list
 INCLOCAL += \
+	-I$(PRJ)$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/sal/inc \
+	-I$(PRJ)$/..$/svtools/inc \
 	-I$(PRJ)$/..$/svx/inc
 .ENDIF		# "$(UPD)" == "310"

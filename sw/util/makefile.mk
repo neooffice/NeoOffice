@@ -41,7 +41,8 @@ USE_DEFFILE=TRUE
 .INCLUDE :  settings.mk
 
 .IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/svx$/$(INPATH)$/lib \
+PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib
 
 # Link to modified libraries
