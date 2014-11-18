@@ -149,6 +149,10 @@
 #define MID_RIGHT_BORDER            11
 #define MID_TOP_BORDER              12
 #define MID_BOTTOM_BORDER           13
+#if SUPD == 310
+#define LINE_STYLE                  14
+#define LINE_WIDTH                  15
+#endif	// SUPD == 310
 
 #define ALL_BORDER					10
 #define ALL_BORDER_PADDING			11
