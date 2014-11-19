@@ -230,6 +230,11 @@
 #define MID_HORJUST_HORJUST		0
 #define MID_HORJUST_ADJUST		1
 
+#if SUPD == 310
+// SvxShadowItem
+#define MID_SHADOW_TRANSPARENCE 1
+#endif	// SUPD == 310
+
 // SvxPageModelItem
 #define MID_AUTO                1
 
