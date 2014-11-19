@@ -47,6 +47,7 @@ CFLAGS+=-DPRODUCT_MAC_APP_STORE_URL='"$(PRODUCT_MAC_APP_STORE_URL)"'
 INCLOCAL += \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssbeans \
 	-I$(PRJ)$/..$/sal$/inc \
+	-I$(PRJ)$/..$/svtools$/inc \
 	$(LIBXML_CFLAGS)
 .ENDIF		# "$(UPD)" == "310"
 
