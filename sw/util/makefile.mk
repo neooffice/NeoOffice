@@ -41,7 +41,8 @@ USE_DEFFILE=TRUE
 .INCLUDE :  settings.mk
 
 .IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
+PREPENDLIBS=$(PRJ)$/..$/sfx2$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib
 

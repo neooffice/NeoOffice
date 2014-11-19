@@ -48,6 +48,7 @@ INCLOCAL += \
 	-I$(PRJ)$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/sal/inc \
+	-I$(PRJ)$/..$/sfx2/inc \
 	-I$(PRJ)$/..$/svtools/inc \
 	-I$(PRJ)$/..$/svx/inc
 .ENDIF		# "$(UPD)" == "310"
