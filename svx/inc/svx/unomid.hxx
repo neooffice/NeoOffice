@@ -58,6 +58,9 @@
 #define MID_LO_MARGIN		4
 #define MID_UP_REL_MARGIN	5
 #define MID_LO_REL_MARGIN	6
+#if SUPD == 310
+#define MID_CTX_MARGIN      7
+#endif	// SUPD == 310
 
 //SvxBoolItem
 #define MID_BOLD			0
