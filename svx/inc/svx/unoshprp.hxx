@@ -337,6 +337,9 @@
     { MAP_CHAR_LEN(UNO_NAME_MISC_OBJ_BOUNDRECT),		OWN_ATTR_BOUNDRECT,			&::getCppuType((const ::com::sun::star::awt::Rectangle*)0), ::com::sun::star::beans::PropertyAttribute::READONLY, 0},
 
 #define MISC_OBJ_PROPERTIES \
+/* #if SUPD == 310 */ \
+    { MAP_CHAR_LEN(UNO_NAME_MISC_OBJ_INTEROPGRABBAG),   OWN_ATTR_INTEROPGRABBAG,    SEQTYPE(::getCppuType((::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >*)0)),  0,  0}, \
+/* #endif	// SUPD == 310 */ \
 	MISC_OBJ_PROPERTIES_NO_SHEAR \
 	{ MAP_CHAR_LEN(UNO_NAME_MISC_OBJ_SHEARANGLE),		SDRATTR_SHEARANGLE,			&::getCppuType((const sal_Int32*)0),		0,	0},
 
