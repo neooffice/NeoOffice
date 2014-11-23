@@ -50,6 +50,7 @@ PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/oox$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/tools$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/unotools$/$(INPATH)$/lib \
