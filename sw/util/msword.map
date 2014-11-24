@@ -1,0 +1,8 @@
+MSWORD_1_0 {
+        global:
+                ImportDOC;
+                ExportDOC;
+
+        local:
+                *;
+};
