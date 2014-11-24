@@ -174,11 +174,7 @@ void CollectFrameAtNode( SwClient& rClnt, const SwNodeIndex& rIdx,
 /* -----------------29.04.98 07:35-------------------
  *
  * --------------------------------------------------*/
-#if SUPD == 310
-class SW_DLLPUBLIC SwUnoInternalPaM : public SwPaM
-#else	// SUPD == 310
 class SwUnoInternalPaM : public SwPaM
-#endif	// SUPD == 310
 {
 	SwUnoInternalPaM( const SwUnoInternalPaM& );
 public:
