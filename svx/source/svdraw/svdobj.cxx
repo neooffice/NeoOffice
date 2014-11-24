@@ -450,12 +450,12 @@ SdrObject::SdrObject()
 	pUserCall(NULL),
 	pPlusData(NULL),
 	nOrdNum(0),
-#if SUPD == 310
-    pGrabBagItem(NULL),
-#endif	// SUPD == 310
     mnNavigationPosition(SAL_MAX_UINT32),
 	mnLayerID(0),
 	mpSvxShape(0)
+#if SUPD == 310
+    ,pGrabBagItem(NULL)
+#endif	// SUPD == 310
 {
 	DBG_CTOR(SdrObject,NULL);
 	bVirtObj         =FALSE;
@@ -522,10 +522,6 @@ SdrObject::~SdrObject()
 	SendUserCall(SDRUSERCALL_DELETE, GetLastBoundRect());
 	if (pPlusData!=NULL) delete pPlusData;
 
-#if SUPD == 310
-    delete pGrabBagItem;
-#endif	// SUPD == 310
-
 	if(mpProperties)
 	{
 		delete mpProperties;
@@ -538,6 +534,10 @@ SdrObject::~SdrObject()
 		delete mpViewContact;
 		mpViewContact = 0L;
 	}
+
+#if SUPD == 310
+    delete pGrabBagItem;
+#endif	// SUPD == 310
 }
 
 void SdrObject::Free( SdrObject*& _rpObject )

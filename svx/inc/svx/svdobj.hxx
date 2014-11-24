@@ -462,10 +462,6 @@ protected:
 
 	sal_uInt32					nOrdNum;      // Rangnummer des Obj in der Liste
 
-#if SUPD == 310
-    SfxGrabBagItem*             pGrabBagItem; // holds the GrabBagItem property
-#endif	// SUPD == 310
-
     /** Position in the navigation order.  SAL_MAX_UINT32 when not used.
     */
     sal_uInt32                  mnNavigationPosition;
@@ -1143,6 +1139,10 @@ protected:
 private:
 	/** do not use directly, always use getSvxShape() if you have to! */
 	SvxShape* mpSvxShape;
+
+#if SUPD == 310
+    SfxGrabBagItem*             pGrabBagItem; // holds the GrabBagItem property
+#endif	// SUPD == 310
 
 };
 
