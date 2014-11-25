@@ -264,12 +264,12 @@ SfxItemPropertyMap* ImplGetSvxGraphicObjectPropertyMap()
 		LINE_PROPERTIES
 		LINE_PROPERTIES_START_END
 		SHAPE_DESCRIPTOR_PROPERTIES
-#if SUPD  == 310
+#if SUPD == 310
         // #i118485# Full properties now, shear included
         MISC_OBJ_PROPERTIES
-#else	// SUPD  == 310
+#else	// SUPD == 310
 		MISC_OBJ_PROPERTIES_NO_SHEAR
-#endif	// SUPD  == 310
+#endif	// SUPD == 310
 		LINKTARGET_PROPERTIES
 		SHADOW_PROPERTIES
 		TEXT_PROPERTIES
