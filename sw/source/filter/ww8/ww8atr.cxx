@@ -25,6 +25,14 @@
  * Modified February 2010 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -5073,6 +5081,15 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_CHRATR_OVERLINE */           0,
 /* RES_CHRATR_DUMMY1 */             0,
 /* RES_CHRATR_DUMMY2 */             0,
+#if SUPD == 310
+/* RES_CHRATR_RSID */               0,
+/* RES_CHRATR_BOX */                0,
+/* RES_CHRATR_SHADOW */             0,
+/* RES_CHRATR_HIGHLIGHT */          0,
+/* RES_CHRATR_GRABBAG */            0,
+/* RES_CHRATR_BIDIRTL */            0,
+/* RES_CHRATR_IDCTHINT */           0,
+#endif	// SUPD == 310
 
 /* RES_TXTATR_DUMMY4 */             0,
 /* RES_TXTATR_INETFMT */            OutSwFmtINetFmt,
@@ -5084,6 +5101,11 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_TXTATR_UNKNOWN_CONTAINER */  0,
 /* RES_TXTATR_DUMMY6 */             0,
 /* RES_TXTATR_DUMMY7 */             0,
+#if SUPD == 310
+/* RES_TXTATR_META */               0,
+/* RES_TXTATR_METAFIELD */          0,
+/* RES_TXTATR_INPUTFIELD */         0,
+#endif	// SUPD == 310
 
 /* RES_TXTATR_FIELD */              OutWW8_SwField,
 /* RES_TXTATR_FLYCNT    */          OutWW8_SwFlyCntnt,
@@ -5092,6 +5114,10 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_TXTATR_HARDBLANK */          OutWW8_SwHardBlank,
 /* RES_TXTATR_DUMMY1 */             0, // Dummy:
 /* RES_TXTATR_DUMMY2 */             0, // Dummy:
+#if SUPD == 310
+/* RES_TXTATR_ANNOTATION */         0,
+/* RES_TXTATR_DUMMY3 */             0,
+#endif	// SUPD == 310
 
 /* RES_PARATR_LINESPACING   */      OutWW8_SvxLineSpacing,
 /* RES_PARATR_ADJUST    */          OutWW8_SvxAdjust,
@@ -5110,6 +5136,10 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_PARATR_SNAPTOGRID*/          OutWW8_SvxParaGridItem,
 /* RES_PARATR_CONNECT_TO_BORDER */  0, // new
 /* RES_PARATR_OUTLINELEVEL */       0, // new - outlinelevel
+#if SUPD == 310
+/* RES_PARATR_RSID */               0,
+/* RES_PARATR_GRABBAG */            0,
+#endif	// SUPD == 310
 
 /* RES_PARATR_LIST_ID */            0, // new
 /* RES_PARATR_LIST_LEVEL */         0, // new
@@ -5158,6 +5188,12 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_AUTO_STYLE */                0, // Dummy:
 /* RES_FRMATR_DUMMY4 */             0, // Dummy:
 /* RES_FRMATR_DUMMY5 */             0, // Dummy:
+#if SUPD == 310
+/* RES_FILL_STYLE */                0,
+/* RES_FILL_GRADIENT */             0,
+/* RES_FRMATR_GRABBAG */            0,
+/* RES_TEXT_VERT_ADJUST */          0,
+#endif	// SUPD == 310
 
 /* RES_GRFATR_MIRRORGRF */          0, // OutW4W_SwMirrorGrf,
 /* RES_GRFATR_CROPGRF   */          0, // OutW4W_SwCropGrf
