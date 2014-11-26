@@ -20,6 +20,10 @@
 #ifndef INCLUDED_OOX_EXPORT_UTILS_HXX
 #define INCLUDED_OOX_EXPORT_UTILS_HXX
 
+#if SUPD == 310
+#define S(x) String( RTL_CONSTASCII_USTRINGPARAM( x ) )
+#define US(x) OUString( RTL_CONSTASCII_USTRINGPARAM( x ))
+#endif	// SUPD == 310
 #define I32S(x) OString::number( (sal_Int32) x ).getStr()
 #define I64S(x) OString::number( (sal_Int64) x ).getStr()
 #define IS(x) OString::number( x ).getStr()
