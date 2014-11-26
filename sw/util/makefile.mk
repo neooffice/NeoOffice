@@ -43,11 +43,14 @@ USE_DEFFILE=TRUE
 .IF "$(UPD)" == "310"
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/oox$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sfx2$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib
+	-L$(PRJ)$/..$/tools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/xmloff$/$(INPATH)$/lib
 
 # Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)

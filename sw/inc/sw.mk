@@ -50,6 +50,7 @@ INCLOCAL += \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/oox/inc \
 	-I$(PRJ)$/..$/sal/inc \
+	-I$(PRJ)$/..$/sax/inc \
 	-I$(PRJ)$/..$/sfx2/inc \
 	-I$(PRJ)$/..$/svtools/inc \
 	-I$(PRJ)$/..$/svx/inc
