@@ -46,7 +46,9 @@ VISIBILITY_HIDDEN=TRUE
 # Avoid conflicting header file names by putting this project first in the list
 INCLOCAL += \
 	-I$(PRJ)$/inc \
+	-I$(PRJ)$/..$/comphelper/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
+	-I$(PRJ)$/..$/oox/inc \
 	-I$(PRJ)$/..$/sal/inc \
 	-I$(PRJ)$/..$/sfx2/inc \
 	-I$(PRJ)$/..$/svtools/inc \
