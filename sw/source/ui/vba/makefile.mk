@@ -36,13 +36,14 @@ ENABLE_EXCEPTIONS=TRUE
 
 # --- Settings -----------------------------------------------------
 
-.IF "$(UPD)" == "310"
-.INCLUDE :	$(PRJ)$/inc$/swpre.mk
-.ENDIF		# "$(UPD)" == "310"
 .INCLUDE :  settings.mk
+
 .IF "$(UPD)" == "310"
-.INCLUDE :	$(PRJ)$/inc$/sw.mk
+INCLOCAL += \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
+	-I$(PRJ)$/..$/sal/inc
 .ENDIF		# "$(UPD)" == "310"
+
 DLLPRE =
 
 .IF "$(ENABLE_VBA)"!="YES"
