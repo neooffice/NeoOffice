@@ -44,6 +44,16 @@ USE_DEFFILE=TRUE
 LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
 .ENDIF
 
+.IF "$(UPD)" == "310"
+PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
+.ENDIF		# "$(UPD)" == "310"
+
 # --- Resourcen ----------------------------------------------------
 
 RESLIB1LIST=\
