@@ -367,7 +367,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_store_patch \
 	build.neo_svtools_patch build.neo_extensions_patch build.neo_shell_patch build.neo_sfx2_patch \
 	build.neo_tools_patch \
-	build.neo_vcl_patch build.neo_svx_patch build.neo_forms_patch build.neo_sc_patch build.neo_sd_patch build.neo_sw_patch \
+	build.neo_vcl_patch build.neo_svx_patch build.neo_forms_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_unotools_patch \
@@ -375,7 +375,7 @@ build.neo_patches: build.ooo-build_all \
 	build.neo_uui_patch \
 	build.neo_vos_patch \
 	build.neo_libwpd_patch build.neo_writerperfect_patch \
-	build.neo_xmloff_patch build.neo_oox_patch build.neo_writerfilter_patch
+	build.neo_xmloff_patch build.neo_oox_patch build.neo_writerfilter_patch build.neo_sc_patch build.neo_sd_patch build.neo_sw_patch
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
