@@ -571,7 +571,8 @@ endif
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/filter"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in oox-drawingml-adj-names vmlexport-shape-types ; do cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/$$i" "share/filter/$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/oox-drawingml-adj-names" "share/filter/oox-drawingml-adj-names"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/vmlexport-shape-types" "share/filter/vml-shape-types"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; sh -e -c 'for i in `find "$(PWD)/offapi/$(UOUTPUTDIR)/ucr" -name "css*.db"` ; do regmerge offapi.rdb / "$$i" ; done'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libAppleRemote$(DLLSUFFIX).dylib'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libMacOSXSpell$(DLLSUFFIX).dylib'
@@ -748,7 +749,8 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/salhelper/$(UOUTPUTDIR)/lib/libuno_salhelpergcc3.dylib.3" "basis-link/ure-link/lib"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_SHORT_VERSION)#$(PRODUCT_SHORT_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(PRODUCT_BUILD_VERSION)#$(PRODUCT_VERSION)#g' > "Info.plist"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/filter"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in oox-drawingml-adj-names vmlexport-shape-types ; do cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/$$i" "share/filter/$$i" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/oox-drawingml-adj-names" "share/filter/oox-drawingml-adj-names"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/vmlexport-shape-types" "share/filter/vml-shape-types"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program" ; cp "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/basis-link/program/offapi.rdb" .
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program" ; cp "$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app/Contents/basis-link/program/services.rdb" .
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "etc/bootstraprc"
