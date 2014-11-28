@@ -5,7 +5,8 @@ Intructions for Building NeoOffice
 Steps for building on 10.8 Mountain Lion for Intel
 --------------------------------------------------
 
-At this time, the NeoOffice will not build on Mac OS X 10.8 Mountain Lion. This section is only for keeping track of the requirements that we have found so far. 
+At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
+
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
    Xcode Tools v4.6.3
@@ -43,7 +44,7 @@ At this time, the NeoOffice will not build on Mac OS X 10.8 Mountain Lion. This 
 Steps for building on Windows XP or Vista
 -----------------------------------------
 
-Although building on Windows will not work, in theory the Go-oo portion of the build supports building on Windows. Although we have not successfully build the Go-oo code using the NeoOffice makefile, we have listed the dependencies that we know of at the end of this file for anyone who may be interested in porting NeoOffice to Windows.
+Although building on Windows will not work, in theory the Go-oo portion of the build supports building on Windows. Although we have not successfully built the Go-oo code using the NeoOffice makefile, we have listed the dependencies that we know of at the end of this file for anyone who may be interested in porting NeoOffice to Windows.
 
 1. Download and install Cygwin from http://www.cygwin.com/. When installing, be sure to enable installation of the following tools that Cygwin does not install by default:
 
