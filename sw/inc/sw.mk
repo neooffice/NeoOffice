@@ -49,6 +49,7 @@ INCLOCAL += \
 	-I$(PRJ)$/..$/comphelper/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/oox/inc \
+	-I$(PRJ)$/..$/oox$/$(INPATH)$/inc \
 	-I$(PRJ)$/..$/sal/inc \
 	-I$(PRJ)$/..$/sax/inc \
 	-I$(PRJ)$/..$/sfx2/inc \
