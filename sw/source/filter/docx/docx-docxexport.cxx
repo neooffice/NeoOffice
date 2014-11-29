@@ -43,11 +43,7 @@
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/i18n/ScriptType.hdl>
 
-#if SUPD == 310
-#include <oox/token/tokens.hxx>
-#else	// SUPD == 310
 #include <oox/core/tokens.hxx>
-#endif	// SUPD == 310
 #include <oox/export/drawingml.hxx>
 #include <oox/export/vmlexport.hxx>
 
@@ -83,10 +79,6 @@ using oox::vml::VMLExport;
 
 using rtl::OUString;
 using rtl::OUStringBuffer;
-
-#if SUPD == 310
-using namespace oox;
-#endif	// SUPD == 310
 
 #define S( x ) OUString( RTL_CONSTASCII_USTRINGPARAM( x ) )
 
