@@ -57,7 +57,7 @@ using ::rtl::OUString;
 
 DocxExportFilter::DocxExportFilter( const uno::Reference< lang::XMultiServiceFactory >& rMSF )
 #if SUPD == 310
-    : oox::core::XmlFilterBase( ::getProcessComponentContext() )
+    : oox::core::XmlFilterBase( ::comphelper::getProcessComponentContext() )
 #else	// SUPD == 310
     : oox::core::XmlFilterBase( rMSF )
 #endif	// SUPD == 310
