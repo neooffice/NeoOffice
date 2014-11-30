@@ -475,7 +475,7 @@ namespace frm
 
         case PROPERTY_ID_DEFAULTCONTROL:
 #if SUPD == 310
-            aDefault <<= (::rtl::OUString&)FRM_SUN_CONTROL_RICHTEXTCONTROL;
+            aDefault <<= ::rtl::OUString((const sal_Char*)FRM_SUN_CONTROL_RICHTEXTCONTROL);
 #else	// SUPD == 310
             aDefault <<= (::rtl::OUString)FRM_SUN_CONTROL_RICHTEXTCONTROL;
 #endif	// SUPD == 310
