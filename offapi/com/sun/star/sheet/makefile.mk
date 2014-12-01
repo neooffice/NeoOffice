@@ -53,6 +53,7 @@ IDLFILES= \
 	FilterOperator2.idl \
 	NameToken.idl \
 	TableFilterField3.idl \
+	XDataPilotDataLayoutFieldSupplier.idl \
 	XFilterFormulaParser.idl \
 	XSheetFilterDescriptor3.idl
 
@@ -62,6 +63,7 @@ UNOTYPES= \
 	com.sun.star.sheet.FilterOperator2 \
 	com.sun.star.sheet.NameToken \
 	com.sun.star.sheet.TableFilterField3 \
+	com.sun.star.sheet.XDataPilotDataLayoutFieldSupplier \
 	com.sun.star.sheet.XFilterFormulaParser \
 	com.sun.star.sheet.XSheetFilterDescriptor3
 
