@@ -49,11 +49,13 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 
 IDLFILES= \
 	BorderLine2.idl \
-	BorderLineStyle.idl
+	BorderLineStyle.idl \
+	CellVertJustify2.idl
 
 UNOTYPES= \
 	com.sun.star.table.BorderLine2 \
-	com.sun.star.table.BorderLineStyle
+	com.sun.star.table.BorderLineStyle \
+	com.sun.star.table.CellVertJustify2
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
