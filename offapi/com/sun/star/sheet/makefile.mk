@@ -55,6 +55,7 @@ IDLFILES= \
 	TableFilterField3.idl \
 	XDataPilotDataLayoutFieldSupplier.idl \
 	XFilterFormulaParser.idl \
+	XSheetCondition2.idl \
 	XSheetFilterDescriptor3.idl
 
 UNOTYPES= \
@@ -65,6 +66,7 @@ UNOTYPES= \
 	com.sun.star.sheet.TableFilterField3 \
 	com.sun.star.sheet.XDataPilotDataLayoutFieldSupplier \
 	com.sun.star.sheet.XFilterFormulaParser \
+	com.sun.star.sheet.XSheetCondition2 \
 	com.sun.star.sheet.XSheetFilterDescriptor3
 
 # Force creation of the IDL header files before the compiling source files
