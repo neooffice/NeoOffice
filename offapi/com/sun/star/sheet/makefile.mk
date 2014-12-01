@@ -51,6 +51,7 @@ IDLFILES= \
 	ConditionOperator2.idl \
 	FilterFieldValue.idl \
 	FilterOperator2.idl \
+	NameToken.idl \
 	TableFilterField3.idl \
 	XFilterFormulaParser.idl \
 	XSheetFilterDescriptor3.idl
@@ -59,6 +60,7 @@ UNOTYPES= \
 	com.sun.star.sheet.ConditionOperator2 \
 	com.sun.star.sheet.FilterFieldValue \
 	com.sun.star.sheet.FilterOperator2 \
+	com.sun.star.sheet.NameToken \
 	com.sun.star.sheet.TableFilterField3 \
 	com.sun.star.sheet.XFilterFormulaParser \
 	com.sun.star.sheet.XSheetFilterDescriptor3
