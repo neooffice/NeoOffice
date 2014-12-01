@@ -48,10 +48,12 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db $(OUT)$/ucr$/csschart.db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
-	XDataProvider2.idl
+	XDataProvider2.idl \
+	XSheetDataProvider.idl
 
 UNOTYPES= \
-	com.sun.star.chart2.data.XDataProvider2
+	com.sun.star.chart2.data.XDataProvider2 \
+	com.sun.star.chart2.data.XSheetDataProvider
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
