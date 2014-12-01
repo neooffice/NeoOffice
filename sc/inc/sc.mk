@@ -37,13 +37,20 @@
 # Avoid conflicting header file names by putting this project first in the list
 INCLOCAL += \
 	-I$(PRJ)$/inc \
-	-I$(PRJ)$/..$/comphelper/inc \
+	-I$(PRJ)$/source$/ui$/inc \
+	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2data \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssdocument \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csssheet \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
-	-I$(PRJ)$/..$/oox/inc \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \
+	-I$(PRJ)$/..$/oox$/inc \
 	-I$(PRJ)$/..$/oox$/$(INPATH)$/inc \
-	-I$(PRJ)$/..$/sal/inc \
-	-I$(PRJ)$/..$/sax/inc \
-	-I$(PRJ)$/..$/sfx2/inc \
-	-I$(PRJ)$/..$/svtools/inc \
-	-I$(PRJ)$/..$/svx/inc
+	-I$(PRJ)$/..$/sal$/inc \
+	-I$(PRJ)$/..$/salhelper$/inc \
+	-I$(PRJ)$/..$/sax$/inc \
+	-I$(PRJ)$/..$/sfx2$/inc \
+	-I$(PRJ)$/..$/svtools$/inc \
+	-I$(PRJ)$/..$/svx$/inc \
+	-I$(PRJ)$/..$/vcl$/inc
 .ENDIF		# "$(UPD)" == "310"

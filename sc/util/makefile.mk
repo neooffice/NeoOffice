@@ -237,7 +237,8 @@ SHL6STDLIBS= \
 
 .IF "$(UPD)" == "310"
 SHL6LIBS += $(SLB)$/oox.lib
-.ELSE		# "$(UPD)" == "310"
+.ENDIF		# "$(UPD)" == "310"
+
 # xlsx filter
 LIB7TARGET = $(SLB)$/xlsx2.lib
 LIB7OBJFILES = \
@@ -283,6 +284,9 @@ SHL7STDLIBS= \
 	$(OOXLIB)       \
 	$(SAXLIB) \
     $(FORLIB)
+
+.IF "$(UPD)" == "310"
+SHL7LIBS += $(SLB)$/oox.lib
 .ENDIF		# "$(UPD)" == "310"
 
 # add for scui
