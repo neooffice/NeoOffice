@@ -48,6 +48,7 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	ConditionOperator2.idl \
 	FilterFieldValue.idl \
 	FilterOperator2.idl \
 	TableFilterField3.idl \
@@ -55,6 +56,7 @@ IDLFILES= \
 	XSheetFilterDescriptor3.idl
 
 UNOTYPES= \
+	com.sun.star.sheet.ConditionOperator2 \
 	com.sun.star.sheet.FilterFieldValue \
 	com.sun.star.sheet.FilterOperator2 \
 	com.sun.star.sheet.TableFilterField3 \
