@@ -48,10 +48,18 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
-	XFilterFormulaParser.idl
+	FilterFieldValue.idl \
+	FilterOperator2.idl \
+	TableFilterField3.idl \
+	XFilterFormulaParser.idl \
+	XSheetFilterDescriptor3.idl
 
 UNOTYPES= \
-	com.sun.star.sheet.XFilterFormulaParser
+	com.sun.star.sheet.FilterFieldValue \
+	com.sun.star.sheet.FilterOperator2 \
+	com.sun.star.sheet.TableFilterField3 \
+	com.sun.star.sheet.XFilterFormulaParser \
+	com.sun.star.sheet.XSheetFilterDescriptor3
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
