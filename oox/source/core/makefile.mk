@@ -42,6 +42,7 @@ CFLAGS+= $(OPENSSL_CFLAGS)
 
 SLOFILES =	\
 		$(SLO)$/binarycodec.obj				\
+		$(SLO)$/binaryfilterbase.obj		\
 		$(SLO)$/contexthandler.obj			\
 		$(SLO)$/contexthandler2.obj			\
 		$(SLO)$/fastparser.obj				\
@@ -55,11 +56,6 @@ SLOFILES =	\
 		$(SLO)$/relationshandler.obj		\
 		$(SLO)$/services.obj				\
 		$(SLO)$/xmlfilterbase.obj
-
-.IF "$(UPD)" != "310"
-SLOFILES += \
-		$(SLO)$/binaryfilterbase.obj
-.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets -------------------------------------------------------
 

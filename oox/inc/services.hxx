@@ -40,6 +40,11 @@ namespace oox {
     namespace ppt {     DECLARE_FUNCTIONS( QuickDiagrammingImport );    }
     namespace ppt {     DECLARE_FUNCTIONS( QuickDiagrammingLayout );    }
     namespace shape {   DECLARE_FUNCTIONS( ShapeContextHandler );       }
+#if SUPD == 310
+    namespace xls {     DECLARE_FUNCTIONS( BiffDetector );              }
+    namespace xls {     DECLARE_FUNCTIONS( ExcelFilter );               }
+    namespace xls {     DECLARE_FUNCTIONS( ExcelBiffFilter );           }
+#endif	// SUPD == 310
 }
 
 #undef DECLARE_FUNCTIONS

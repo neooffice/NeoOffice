@@ -61,7 +61,6 @@ OOX_DLLPUBLIC sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKe
 		{
 			css::registry::XRegistryKey *pKey = reinterpret_cast< css::registry::XRegistryKey * >( pRegistryKey );
 
-#if SUPD == 310
             WRITEINFO( ::oox::core::FastTokenHandler );
             WRITEINFO( ::oox::core::FilterDetect );
             WRITEINFO( ::oox::docprop::DocumentPropertiesImport );
@@ -69,18 +68,9 @@ OOX_DLLPUBLIC sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKe
             WRITEINFO( ::oox::ppt::QuickDiagrammingImport );
             WRITEINFO( ::oox::ppt::QuickDiagrammingLayout );
             WRITEINFO( ::oox::shape::ShapeContextHandler );
-#else	// SUPD == 310
-            WRITEINFO( ::oox::core::FilterDetect );
-			WRITEINFO( ::oox::ppt::PowerPointImport );
-			WRITEINFO( ::oox::ppt::QuickDiagrammingImport );
-			WRITEINFO( ::oox::ppt::QuickDiagrammingLayout );
             WRITEINFO( ::oox::xls::BiffDetector );
             WRITEINFO( ::oox::xls::ExcelFilter );
             WRITEINFO( ::oox::xls::ExcelBiffFilter );
-            WRITEINFO( ::oox::shape::ShapeContextHandler );
-            WRITEINFO( ::oox::shape::FastTokenHandlerService );
-            WRITEINFO( ::oox::docprop::OOXMLDocPropImportImpl );
-#endif	// SUPD == 310
 		}
 		catch (css::registry::InvalidRegistryException &)
 		{
@@ -121,7 +111,6 @@ OOX_DLLPUBLIC void * SAL_CALL component_getFactory( const sal_Char * pImplName, 
 		const sal_Int32 nImplNameLen = strlen( pImplName );
 
 		// impress oasis import
-#if SUPD == 310
         SINGLEFACTORY2( ::oox::core::FastTokenHandler )
         else SINGLEFACTORY2( ::oox::core::FilterDetect )
         else SINGLEFACTORY2( ::oox::docprop::DocumentPropertiesImport )
@@ -129,18 +118,9 @@ OOX_DLLPUBLIC void * SAL_CALL component_getFactory( const sal_Char * pImplName, 
         else SINGLEFACTORY2( ::oox::ppt::QuickDiagrammingImport )
         else SINGLEFACTORY2( ::oox::ppt::QuickDiagrammingLayout )
         else SINGLEFACTORY2( ::oox::shape::ShapeContextHandler )
-#else	// SUPD == 310
-        SINGLEFACTORY( ::oox::core::FilterDetect )
-        else SINGLEFACTORY( oox::ppt::PowerPointImport )
-        else SINGLEFACTORY( oox::ppt::QuickDiagrammingImport )
-        else SINGLEFACTORY( oox::ppt::QuickDiagrammingLayout )
-        else SINGLEFACTORY( ::oox::xls::BiffDetector )
-        else SINGLEFACTORY( ::oox::xls::ExcelFilter )
-        else SINGLEFACTORY( ::oox::xls::ExcelBiffFilter )
-        else SINGLEFACTORY( ::oox::shape::ShapeContextHandler)
-        else SINGLEFACTORY( ::oox::shape::FastTokenHandlerService)
-        else SINGLEFACTORY2( ::oox::docprop::OOXMLDocPropImportImpl )
-#endif	// SUPD == 310
+        else SINGLEFACTORY2( ::oox::xls::BiffDetector )
+        else SINGLEFACTORY2( ::oox::xls::ExcelFilter )
+        else SINGLEFACTORY2( ::oox::xls::ExcelBiffFilter )
 
 		if( xFactory.is())
 		{

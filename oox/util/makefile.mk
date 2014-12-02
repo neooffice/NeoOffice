@@ -66,6 +66,7 @@ LIB1FILES=	\
     $(SLB)$/core.lib\
     $(SLB)$/ole.lib\
     $(SLB)$/ppt.lib\
+    $(SLB)$/xls.lib\
     $(SLB)$/vml.lib\
     $(SLB)$/drawingml.lib\
     $(SLB)$/diagram.lib\
@@ -80,9 +81,6 @@ LIB1FILES+= \
     $(SLB)$/crypto.lib \
     $(SLB)$/export.lib \
     $(SLB)$/mathml.lib
-.ELSE		# "$(UPD)" == "310"
-LIB1FILES+= \
-    $(SLB)$/xls.lib
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Shared-Library -----------------------------------------------
