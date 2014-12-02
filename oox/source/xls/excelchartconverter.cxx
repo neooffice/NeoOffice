@@ -31,6 +31,10 @@
 #include "oox/helper/containerhelper.hxx"
 #include "oox/xls/formulaparser.hxx"
 
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 

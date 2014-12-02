@@ -38,6 +38,12 @@
 #include "oox/helper/propertymap.hxx"
 #include "oox/xls/biffinputstream.hxx"
 
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 
@@ -1936,7 +1942,11 @@ sal_Int32 NumberFormat::finalizeImport( const Reference< XNumberFormats >& rxNum
 
 void NumberFormat::writeToPropertyMap( PropertyMap& rPropMap ) const
 {
+#if SUPD == 310
+    rPropMap.setProperty( PROP_NumberFormat, maApiData.mnIndex);
+#else	// SUPD == 310
     rPropMap[ PROP_NumberFormat ] <<= maApiData.mnIndex;
+#endif	// SUPD == 310
 }
 
 // ============================================================================
@@ -1948,7 +1958,12 @@ NumberFormatsBuffer::NumberFormatsBuffer( const WorkbookHelper& rHelper ) :
     // get the current locale
     try
     {
+#if SUPD == 310
+        Reference< XMultiServiceFactory > xFactory( getBaseFilter().getComponentContext()->getServiceManager(), UNO_QUERY_THROW );
+        Reference< XMultiServiceFactory > xConfigProv( xFactory->createInstance(
+#else	// SUPD == 310
         Reference< XMultiServiceFactory > xConfigProv( getBaseFilter().getServiceFactory()->createInstance(
+#endif	// SUPD == 310
             CREATE_OUSTRING( "com.sun.star.configuration.ConfigurationProvider" ) ), UNO_QUERY_THROW );
 
         // try user-defined locale setting

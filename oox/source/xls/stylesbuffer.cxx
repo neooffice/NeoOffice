@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -50,6 +58,10 @@
 #include "oox/xls/excelhandlers.hxx"
 #include "oox/xls/themebuffer.hxx"
 #include "oox/xls/unitconverter.hxx"
+
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
 
 namespace oox {
 namespace xls {
@@ -1103,66 +1115,127 @@ void Font::writeToPropertyMap( PropertyMap& rPropMap, FontPropertyType ePropType
     {
         if( maApiData.maLatinFont.maName.getLength() > 0 )
         {
+#if SUPD == 310
+            rPropMap.setProperty( PROP_CharFontName, maApiData.maLatinFont.maName);
+            rPropMap.setProperty( PROP_CharFontFamily, maApiData.maLatinFont.mnFamily);
+            rPropMap.setProperty( PROP_CharFontCharSet, maApiData.maLatinFont.mnTextEnc);
+#else	// SUPD == 310
             rPropMap[ PROP_CharFontName ]    <<= maApiData.maLatinFont.maName;
             rPropMap[ PROP_CharFontFamily ]  <<= maApiData.maLatinFont.mnFamily;
             rPropMap[ PROP_CharFontCharSet ] <<= maApiData.maLatinFont.mnTextEnc;
+#endif	// SUPD == 310
         }
         if( maApiData.maAsianFont.maName.getLength() > 0 )
         {
+#if SUPD == 310
+            rPropMap.setProperty( PROP_CharFontNameAsian, maApiData.maAsianFont.maName);
+            rPropMap.setProperty( PROP_CharFontFamilyAsian, maApiData.maAsianFont.mnFamily);
+            rPropMap.setProperty( PROP_CharFontCharSetAsian, maApiData.maAsianFont.mnTextEnc);
+#else	// SUPD == 310
             rPropMap[ PROP_CharFontNameAsian ]    <<= maApiData.maAsianFont.maName;
             rPropMap[ PROP_CharFontFamilyAsian ]  <<= maApiData.maAsianFont.mnFamily;
             rPropMap[ PROP_CharFontCharSetAsian ] <<= maApiData.maAsianFont.mnTextEnc;
+#endif	// SUPD == 310
         }
         if( maApiData.maCmplxFont.maName.getLength() > 0 )
         {
+#if SUPD == 310
+            rPropMap.setProperty( PROP_CharFontNameComplex, maApiData.maCmplxFont.maName);
+            rPropMap.setProperty( PROP_CharFontFamilyComplex, maApiData.maCmplxFont.mnFamily);
+            rPropMap.setProperty( PROP_CharFontCharSetComplex, maApiData.maCmplxFont.mnTextEnc);
+#else	// SUPD == 310
             rPropMap[ PROP_CharFontNameComplex ]    <<= maApiData.maCmplxFont.maName;
             rPropMap[ PROP_CharFontFamilyComplex ]  <<= maApiData.maCmplxFont.mnFamily;
             rPropMap[ PROP_CharFontCharSetComplex ] <<= maApiData.maCmplxFont.mnTextEnc;
+#endif	// SUPD == 310
         }
     }
     // font height
     if( maUsedFlags.mbHeightUsed )
     {
         float fHeight = static_cast< float >( maApiData.maDesc.Height / 20.0 ); // twips to points
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharHeight, fHeight);
+        rPropMap.setProperty( PROP_CharHeightAsian, fHeight);
+        rPropMap.setProperty( PROP_CharHeightComplex, fHeight);
+#else	// SUPD == 310
         rPropMap[ PROP_CharHeight ] <<= fHeight;
         rPropMap[ PROP_CharHeightAsian ] <<= fHeight;
         rPropMap[ PROP_CharHeightComplex ] <<= fHeight;
+#endif	// SUPD == 310
     }
     // font weight
     if( maUsedFlags.mbWeightUsed )
     {
         float fWeight = maApiData.maDesc.Weight;
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharWeight, fWeight);
+        rPropMap.setProperty( PROP_CharWeightAsian, fWeight);
+        rPropMap.setProperty( PROP_CharWeightComplex, fWeight);
+#else	// SUPD == 310
         rPropMap[ PROP_CharWeight ] <<= fWeight;
         rPropMap[ PROP_CharWeightAsian ] <<= fWeight;
         rPropMap[ PROP_CharWeightComplex ] <<= fWeight;
+#endif	// SUPD == 310
     }
     // font posture
     if( maUsedFlags.mbPostureUsed )
     {
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharPosture, maApiData.maDesc.Slant);
+        rPropMap.setProperty( PROP_CharPostureAsian, maApiData.maDesc.Slant);
+        rPropMap.setProperty( PROP_CharPostureComplex, maApiData.maDesc.Slant);
+#else	// SUPD == 310
         rPropMap[ PROP_CharPosture ] <<= maApiData.maDesc.Slant;
         rPropMap[ PROP_CharPostureAsian ] <<= maApiData.maDesc.Slant;
         rPropMap[ PROP_CharPostureComplex ] <<= maApiData.maDesc.Slant;
+#endif	// SUPD == 310
     }
     // character color
     if( maUsedFlags.mbColorUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharColor, maApiData.mnColor);
+#else	// SUPD == 310
         rPropMap[ PROP_CharColor ] <<= maApiData.mnColor;
+#endif	// SUPD == 310
     // underline style
     if( maUsedFlags.mbUnderlineUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharUnderline, maApiData.maDesc.Underline);
+#else	// SUPD == 310
         rPropMap[ PROP_CharUnderline ] <<= maApiData.maDesc.Underline;
+#endif	// SUPD == 310
     // strike out style
     if( maUsedFlags.mbStrikeoutUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharStrikeout, maApiData.maDesc.Strikeout);
+#else	// SUPD == 310
         rPropMap[ PROP_CharStrikeout ] <<= maApiData.maDesc.Strikeout;
+#endif	// SUPD == 310
     // outline style
     if( maUsedFlags.mbOutlineUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharContoured, maApiData.mbOutline);
+#else	// SUPD == 310
         rPropMap[ PROP_CharContoured ] <<= maApiData.mbOutline;
+#endif	// SUPD == 310
     // shadow style
     if( maUsedFlags.mbShadowUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharShadowed, maApiData.mbShadow);
+#else	// SUPD == 310
         rPropMap[ PROP_CharShadowed ] <<= maApiData.mbShadow;
+#endif	// SUPD == 310
     // escapement
     if( maUsedFlags.mbEscapementUsed && (ePropType == FONT_PROPTYPE_TEXT) )
     {
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CharEscapement, maApiData.mnEscapement);
+        rPropMap.setProperty( PROP_CharEscapementHeight, maApiData.mnEscapeHeight);
+#else	// SUPD == 310
         rPropMap[ PROP_CharEscapement ] <<= maApiData.mnEscapement;
         rPropMap[ PROP_CharEscapementHeight ] <<= maApiData.mnEscapeHeight;
+#endif	// SUPD == 310
     }
 }
 
@@ -1415,6 +1488,16 @@ void Alignment::finalizeImport()
 
 void Alignment::writeToPropertyMap( PropertyMap& rPropMap ) const
 {
+#if SUPD == 310
+    rPropMap.setProperty( PROP_HoriJustify, maApiData.meHorJustify);
+    rPropMap.setProperty( PROP_VertJustify, maApiData.meVerJustify);
+    rPropMap.setProperty( PROP_WritingMode, maApiData.mnWritingMode);
+    rPropMap.setProperty( PROP_RotateAngle, maApiData.mnRotation);
+    rPropMap.setProperty( PROP_Orientation, maApiData.meOrientation);
+    rPropMap.setProperty( PROP_ParaIndent, maApiData.mnIndent);
+    rPropMap.setProperty( PROP_IsTextWrapped, maApiData.mbWrapText);
+    rPropMap.setProperty( PROP_ShrinkToFit, maApiData.mbShrink);
+#else	// SUPD == 310
     rPropMap[ PROP_HoriJustify ]     <<= maApiData.meHorJustify;
     rPropMap[ PROP_VertJustify ]     <<= maApiData.meVerJustify;
     rPropMap[ PROP_WritingMode ]     <<= maApiData.mnWritingMode;
@@ -1423,6 +1506,7 @@ void Alignment::writeToPropertyMap( PropertyMap& rPropMap ) const
     rPropMap[ PROP_ParaIndent ]      <<= maApiData.mnIndent;
     rPropMap[ PROP_IsTextWrapped ]   <<= maApiData.mbWrapText;
     rPropMap[ PROP_ShrinkToFit ]     <<= maApiData.mbShrink;
+#endif	// SUPD == 310
 }
 
 // ============================================================================
@@ -1488,7 +1572,11 @@ void Protection::finalizeImport()
 
 void Protection::writeToPropertyMap( PropertyMap& rPropMap ) const
 {
+#if SUPD == 310
+    rPropMap.setProperty( PROP_CellProtection, maApiData.maCellProt);
+#else	// SUPD == 310
     rPropMap[ PROP_CellProtection ] <<= maApiData.maCellProt;
+#endif	// SUPD == 310
 }
 
 // ============================================================================
@@ -1768,11 +1856,20 @@ void Border::finalizeImport()
 void Border::writeToPropertyMap( PropertyMap& rPropMap ) const
 {
     if( maApiData.mbBorderUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_TableBorder, maApiData.maBorder);
+#else	// SUPD == 310
         rPropMap[ PROP_TableBorder ] <<= maApiData.maBorder;
+#endif	// SUPD == 310
     if( maApiData.mbDiagUsed )
     {
+#if SUPD == 310
+        rPropMap.setProperty( PROP_DiagonalTLBR, maApiData.maTLtoBR);
+        rPropMap.setProperty( PROP_DiagonalBLTR, maApiData.maBLtoTR);
+#else	// SUPD == 310
         rPropMap[ PROP_DiagonalTLBR ] <<= maApiData.maTLtoBR;
         rPropMap[ PROP_DiagonalBLTR ] <<= maApiData.maBLtoTR;
+#endif	// SUPD == 310
     }
 }
 
@@ -2183,8 +2280,13 @@ void Fill::writeToPropertyMap( PropertyMap& rPropMap ) const
 {
     if( maApiData.mbUsed )
     {
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CellBackColor, maApiData.mnColor);
+        rPropMap.setProperty( PROP_IsCellBackgroundTransparent, maApiData.mbTransparent);
+#else	// SUPD == 310
         rPropMap[ PROP_CellBackColor ] <<= maApiData.mnColor;
         rPropMap[ PROP_IsCellBackgroundTransparent ] <<= maApiData.mbTransparent;
+#endif	// SUPD == 310
     }
 }
 
@@ -2455,7 +2557,11 @@ void Xf::writeToPropertyMap( PropertyMap& rPropMap ) const
 
     // create and set cell style
     if( isCellXf() )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_CellStyle, rStyles.createCellStyle( maModel.mnStyleXfId ));
+#else	// SUPD == 310
         rPropMap[ PROP_CellStyle ] <<= rStyles.createCellStyle( maModel.mnStyleXfId );
+#endif	// SUPD == 310
 
     if( maModel.mbFontUsed )
         rStyles.writeFontToPropertyMap( rPropMap, maModel.mnFontId );
@@ -2470,7 +2576,11 @@ void Xf::writeToPropertyMap( PropertyMap& rPropMap ) const
     if( maModel.mbAreaUsed )
         rStyles.writeFillToPropertyMap( rPropMap, maModel.mnFillId );
     if( maModel.mbAlignUsed || maModel.mbBorderUsed )
+#if SUPD == 310
+        rPropMap.setProperty( PROP_RotateReference, meRotationRef);
+#else	// SUPD == 310
         rPropMap[ PROP_RotateReference ] <<= meRotationRef;
+#endif	// SUPD == 310
 }
 
 void Xf::writeToPropertySet( PropertySet& rPropSet ) const

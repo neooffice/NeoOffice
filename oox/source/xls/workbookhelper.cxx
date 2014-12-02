@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -66,6 +74,12 @@
 #include "oox/xls/viewsettings.hxx"
 #include "oox/xls/workbooksettings.hxx"
 #include "oox/xls/worksheetbuffer.hxx"
+
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
 
 namespace oox {
 namespace xls {
@@ -186,7 +200,11 @@ public:
     /** Returns the converter for string to cell address/range conversion. */
     inline AddressConverter& getAddressConverter() const { return *mxAddrConverter; }
     /** Returns the chart object converter. */
+#if SUPD == 310
+    inline oox::drawingml::chart::ChartConverter* getChartConverter() const { return mxChartConverter.get(); }
+#else	// SUPD == 310
     inline ExcelChartConverter& getChartConverter() const { return *mxChartConverter; }
+#endif	// SUPD == 310
     /** Returns the page/print settings converter. */
     inline PageSettingsConverter& getPageSettingsConverter() const { return *mxPageSettConverter; }
 
@@ -374,7 +392,7 @@ Reference< XNamedRange2 > WorkbookGlobals::createNamedRangeObject( OUString& orS
         // find an unused name
         PropertySet aDocProps( mxDoc );
 #if SUPD == 310
-        Reference< XNamedRanges > xNamedRanges( aDocProps.getAnyProperty( PROP_NamedRanges2 ), UNO_QUERY_THROW );
+        Reference< XNamedRanges > xNamedRanges( aDocProps.getAnyProperty( PROP_NamedRanges ), UNO_QUERY_THROW );
 #else	// SUPD == 310
         Reference< XNamedRanges2 > xNamedRanges( aDocProps.getAnyProperty( PROP_NamedRanges2 ), UNO_QUERY_THROW );
 #endif	// SUPD == 310
@@ -868,7 +886,11 @@ AddressConverter& WorkbookHelper::getAddressConverter() const
     return mrBookGlob.getAddressConverter();
 }
 
+#if SUPD == 310
+oox::drawingml::chart::ChartConverter* WorkbookHelper::getChartConverter() const
+#else	// SUPD == 310
 ExcelChartConverter& WorkbookHelper::getChartConverter() const
+#endif	// SUPD == 310
 {
     return mrBookGlob.getChartConverter();
 }

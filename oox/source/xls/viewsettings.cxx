@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
  *************************************************************/
 
 
@@ -40,6 +48,10 @@
 #include "oox/xls/unitconverter.hxx"
 #include "oox/xls/workbooksettings.hxx"
 #include "oox/xls/worksheetbuffer.hxx"
+
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
 
 namespace oox {
 namespace xls {
@@ -554,6 +566,30 @@ void SheetViewSettings::finalizeImport()
 
     // write the sheet view settings into the property sequence
     PropertyMap aPropMap;
+#if SUPD == 310
+    aPropMap.setProperty( PROP_TableSelected, bSelected);
+    aPropMap.setProperty( PROP_CursorPositionX, aCursor.Column);
+    aPropMap.setProperty( PROP_CursorPositionY, aCursor.Row);
+    aPropMap.setProperty( PROP_HorizontalSplitMode, nHSplitMode);
+    aPropMap.setProperty( PROP_VerticalSplitMode, nVSplitMode);
+    aPropMap.setProperty( PROP_HorizontalSplitPositionTwips, nHSplitPos);
+    aPropMap.setProperty( PROP_VerticalSplitPositionTwips, nVSplitPos);
+    aPropMap.setProperty( PROP_ActiveSplitRange, nActivePane);
+    aPropMap.setProperty( PROP_PositionLeft, aFirstPos.Column);
+    aPropMap.setProperty( PROP_PositionTop, aFirstPos.Row);
+    aPropMap.setProperty( PROP_PositionRight, xModel->maSecondPos.Column);
+    aPropMap.setProperty( PROP_PositionBottom, ((nVSplitPos > 0) ? xModel->maSecondPos.Row : xModel->maFirstPos.Row));
+    aPropMap.setProperty( PROP_ZoomType, API_ZOOMTYPE_PERCENT);
+    aPropMap.setProperty( PROP_ZoomValue, static_cast< sal_Int16 >( xModel->getNormalZoom() ));
+    aPropMap.setProperty( PROP_PageViewZoomValue, static_cast< sal_Int16 >( xModel->getPageBreakZoom() ));
+    aPropMap.setProperty( PROP_GridColor, xModel->getGridColor( getBaseFilter() ));
+    aPropMap.setProperty( PROP_ShowPageBreakPreview, xModel->isPageBreakPreview());
+    aPropMap.setProperty( PROP_ShowFormulas, xModel->mbShowFormulas);
+    aPropMap.setProperty( PROP_ShowGrid, xModel->mbShowGrid);
+    aPropMap.setProperty( PROP_HasColumnRowHeaders, xModel->mbShowHeadings);
+    aPropMap.setProperty( PROP_ShowZeroValues, xModel->mbShowZeros);
+    aPropMap.setProperty( PROP_IsOutlineSymbolsSet, xModel->mbShowOutline);
+#else	// SUPD == 310
     aPropMap[ PROP_TableSelected ]                <<= bSelected;
     aPropMap[ PROP_CursorPositionX ]              <<= aCursor.Column;
     aPropMap[ PROP_CursorPositionY ]              <<= aCursor.Row;
@@ -576,6 +612,7 @@ void SheetViewSettings::finalizeImport()
     aPropMap[ PROP_HasColumnRowHeaders ]          <<= xModel->mbShowHeadings;
     aPropMap[ PROP_ShowZeroValues ]               <<= xModel->mbShowZeros;
     aPropMap[ PROP_IsOutlineSymbolsSet ]          <<= xModel->mbShowOutline;
+#endif	// SUPD == 310
 
     // store sheet view settings in global view settings object
     getViewSettings().setSheetViewSettings( getSheetIndex(), xModel, Any( aPropMap.makePropertyValueSequence() ) );
@@ -746,6 +783,24 @@ void ViewSettings::finalizeImport()
     if( xContainer.is() ) try
     {
         PropertyMap aPropMap;
+#if SUPD == 310
+        aPropMap.setProperty( PROP_Tables, xSheetsNC);
+        aPropMap.setProperty( PROP_ActiveTable, rWorksheets.getCalcSheetName( nActiveSheet ));
+        aPropMap.setProperty( PROP_HasHorizontalScrollBar, rModel.mbShowHorScroll);
+        aPropMap.setProperty( PROP_HasVerticalScrollBar, rModel.mbShowVerScroll);
+        aPropMap.setProperty( PROP_HasSheetTabs, rModel.mbShowTabBar);
+        aPropMap.setProperty( PROP_RelativeHorizontalTabbarWidth, double( rModel.mnTabBarWidth / 1000.0 ));
+        aPropMap.setProperty( PROP_ShowObjects, nShowMode);
+        aPropMap.setProperty( PROP_ShowCharts, nShowMode);
+        aPropMap.setProperty( PROP_ShowDrawing, nShowMode);
+        aPropMap.setProperty( PROP_GridColor, rxActiveSheetView->getGridColor( getBaseFilter() ));
+        aPropMap.setProperty( PROP_ShowPageBreakPreview, rxActiveSheetView->isPageBreakPreview());
+        aPropMap.setProperty( PROP_ShowFormulas, rxActiveSheetView->mbShowFormulas);
+        aPropMap.setProperty( PROP_ShowGrid, rxActiveSheetView->mbShowGrid);
+        aPropMap.setProperty( PROP_HasColumnRowHeaders, rxActiveSheetView->mbShowHeadings);
+        aPropMap.setProperty( PROP_ShowZeroValues, rxActiveSheetView->mbShowZeros);
+        aPropMap.setProperty( PROP_IsOutlineSymbolsSet, rxActiveSheetView->mbShowOutline);
+#else	// SUPD == 310
         aPropMap[ PROP_Tables ]                        <<= xSheetsNC;
         aPropMap[ PROP_ActiveTable ]                   <<= rWorksheets.getCalcSheetName( nActiveSheet );
         aPropMap[ PROP_HasHorizontalScrollBar ]        <<= rModel.mbShowHorScroll;
@@ -762,6 +817,7 @@ void ViewSettings::finalizeImport()
         aPropMap[ PROP_HasColumnRowHeaders ]           <<= rxActiveSheetView->mbShowHeadings;
         aPropMap[ PROP_ShowZeroValues ]                <<= rxActiveSheetView->mbShowZeros;
         aPropMap[ PROP_IsOutlineSymbolsSet ]           <<= rxActiveSheetView->mbShowOutline;
+#endif	// SUPD == 310
 
         xContainer->insertByIndex( 0, Any( aPropMap.makePropertyValueSequence() ) );
         Reference< XIndexAccess > xIAccess( xContainer, UNO_QUERY_THROW );

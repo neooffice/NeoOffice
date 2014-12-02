@@ -34,6 +34,12 @@
 #include "oox/helper/propertyset.hxx"
 #include "oox/xls/stylesbuffer.hxx"
 
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 

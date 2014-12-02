@@ -46,6 +46,10 @@
 #include "oox/ole/oleobjecthelper.hxx"
 #include "oox/ole/vbaproject.hxx"
 
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace core {
 
@@ -217,6 +221,16 @@ OoxmlVersion FilterBase::getVersion() const
     return mxImpl->meVersion;
 }
 
+#if SUPD == 310
+
+Any FilterBase::getArgument( const OUString& rArgName ) const
+{
+    SequenceAsHashMap::const_iterator aIt = mxImpl->maArguments.find( rArgName );
+    return (aIt == mxImpl->maArguments.end()) ? Any() : aIt->second;
+}
+
+#endif	// SUPD == 310
+
 const Reference< XComponentContext >& FilterBase::getComponentContext() const
 {
     return mxImpl->mxComponentContext;
@@ -338,6 +352,15 @@ StorageRef FilterBase::getStorage() const
     return mxImpl->mxStorage;
 }
 
+#if SUPD == 310
+
+StorageRef FilterBase::openSubStorage( const OUString& rStorageName, bool bCreateMissing ) const
+{
+    return mxImpl->mxStorage->openSubStorage( rStorageName, bCreateMissing );
+}
+
+#endif	// SUPD == 310
+
 Reference< XInputStream > FilterBase::openInputStream( const OUString& rStreamName ) const
 {
     return mxImpl->mxStorage->openInputStream( rStreamName );
@@ -382,6 +405,18 @@ VbaProject& FilterBase::getVbaProject() const
         mxImpl->mxVbaProject.reset( implCreateVbaProject() );
     return *mxImpl->mxVbaProject;
 }
+
+#if SUPD == 310
+
+Sequence< NamedValue > FilterBase::requestEncryptionData( ::comphelper::IDocPasswordVerifier& rVerifier ) const
+{
+    ::std::vector< OUString > aDefaultPasswords;
+    aDefaultPasswords.push_back( CREATE_OUSTRING( "VelvetSweatshop" ) );
+    return ::comphelper::DocPasswordHelper::requestAndVerifyDocPassword(
+        rVerifier, mxImpl->maMediaDesc, ::comphelper::DocPasswordRequestType_MS, &aDefaultPasswords );
+}
+
+#endif	// SUPD == 310
 
 bool FilterBase::importBinaryData( StreamDataSequence& orDataSeq, const OUString& rStreamName )
 {

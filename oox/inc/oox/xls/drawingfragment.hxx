@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -87,14 +95,22 @@ class GroupShapeContext : public ::oox::drawingml::ShapeGroupContext, public Wor
 {
 public:
     explicit            GroupShapeContext(
+#if SUPD == 310
+                            ::oox::core::ContextHandler2Helper& rParent,
+#else	// SUPD == 310
                             ::oox::core::ContextHandler& rParent,
+#endif	// SUPD == 310
                             const WorksheetHelper& rHelper,
                             const ::oox::drawingml::ShapePtr& rxParentShape,
                             const ::oox::drawingml::ShapePtr& rxShape );
 
     static ::oox::core::ContextHandlerRef
                         createShapeContext(
+#if SUPD == 310
+                            ::oox::core::ContextHandler2Helper& rParent,
+#else	// SUPD == 310
                             ::oox::core::ContextHandler& rParent,
+#endif	// SUPD == 310
                             const WorksheetHelper& rHelper,
                             sal_Int32 nElement,
                             const AttributeList& rAttribs,

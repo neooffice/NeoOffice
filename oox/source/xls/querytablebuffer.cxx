@@ -33,6 +33,12 @@
 #include "oox/xls/connectionsbuffer.hxx"
 #include "oox/xls/defnamesbuffer.hxx"
 
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 

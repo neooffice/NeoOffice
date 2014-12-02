@@ -41,6 +41,10 @@
 #include <unotools/streamwrap.hxx>
 #include <comphelper/processfactory.hxx>
 
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 namespace ole {
 
@@ -98,7 +102,24 @@ inline sal_Int32 lclDecodeBgrColor( sal_uInt32 nOleColor )
 
 
 
+#if SUPD == 310
+const sal_Char* const OLE_GUID_URLMONIKER   = "{79EAC9E0-BAF9-11CE-8C82-00AA004BA90B}";
+const sal_Char* const OLE_GUID_FILEMONIKER  = "{00000303-0000-0000-C000-000000000046}";
+#endif	// SUPD == 310
+
 const sal_uInt32 OLE_STDPIC_ID              = 0x0000746C;
+
+#if SUPD == 310
+const sal_uInt32 OLE_STDHLINK_VERSION       = 2;
+const sal_uInt32 OLE_STDHLINK_HASTARGET     = 0x00000001;   /// Has hyperlink moniker.
+const sal_uInt32 OLE_STDHLINK_ABSOLUTE      = 0x00000002;   /// Absolute path.
+const sal_uInt32 OLE_STDHLINK_HASLOCATION   = 0x00000008;   /// Has target location.
+const sal_uInt32 OLE_STDHLINK_HASDISPLAY    = 0x00000010;   /// Has display string.
+const sal_uInt32 OLE_STDHLINK_HASGUID       = 0x00000020;   /// Has identification GUID.
+const sal_uInt32 OLE_STDHLINK_HASTIME       = 0x00000040;   /// Has creation time.
+const sal_uInt32 OLE_STDHLINK_HASFRAME      = 0x00000080;   /// Has frame.
+const sal_uInt32 OLE_STDHLINK_ASSTRING      = 0x00000100;   /// Hyperlink as simple string.
+#endif	// SUPD == 310
 
 struct GUIDCNamePair
 {
@@ -212,6 +233,29 @@ void lclAppendHex( OUStringBuffer& orBuffer, Type nValue )
         orBuffer[nCharIdx] = spcHexChars[ nValue & 0xF ];
 #endif	// SUPD == 310
 }
+
+#if SUPD == 310
+
+OUString lclReadStdHlinkString( BinaryInputStream& rInStrm, bool bUnicode )
+{
+    OUString aRet;
+    sal_Int32 nChars = rInStrm.readInt32();
+    if( nChars > 0 )
+    {
+        sal_Int32 nReadChars = getLimitedValue< sal_Int32, sal_Int32 >( nChars, 0, SAL_MAX_UINT16 );
+        // byte strings are always in ANSI (Windows 1252) encoding
+        aRet = bUnicode ? rInStrm.readUnicodeArray( nReadChars, true ) : rInStrm.readCharArrayUC( nReadChars, RTL_TEXTENCODING_MS_1252, true );
+        // strings are NUL terminated, remove trailing NUL and possible other garbage
+        sal_Int32 nNulPos = aRet.indexOf( '\0' );
+        if( nNulPos >= 0 )
+            aRet = aRet.copy( 0, nNulPos );
+        // skip remaining chars
+        rInStrm.skip( (bUnicode ? 2 : 1) * (nChars - nReadChars) );
+    }
+    return aRet;
+}
+
+#endif	// SUPD == 310
 
 } // namespace
 
@@ -343,6 +387,88 @@ bool OleHelper::importStdPic( StreamDataSequence& orGraphicData, BinaryInputStre
     OSL_ENSURE( nStdPicId == OLE_STDPIC_ID, "OleHelper::importStdPic - unexpected header version" );
     return !rInStrm.isEof() && (nStdPicId == OLE_STDPIC_ID) && (nBytes > 0) && (rInStrm.readData( orGraphicData, nBytes ) == nBytes);
 }
+
+#if SUPD == 310
+
+/*static*/ bool OleHelper::importStdHlink( StdHlinkInfo& orHlinkInfo, BinaryInputStream& rInStrm, bool bWithGuid )
+{
+    if( bWithGuid )
+    {
+        bool bIsStdHlink = importGuid( rInStrm ).equalsAscii( OLE_GUID_STDHLINK );
+        OSL_ENSURE( bIsStdHlink, "OleHelper::importStdHlink - unexpected header GUID, expected StdHlink" );
+        if( !bIsStdHlink )
+            return false;
+    }
+
+    sal_uInt32 nVersion, nFlags;
+    rInStrm >> nVersion >> nFlags;
+    OSL_ENSURE( nVersion == OLE_STDHLINK_VERSION, "OleHelper::importStdHlink - unexpected header version" );
+    if( rInStrm.isEof() || (nVersion != OLE_STDHLINK_VERSION) )
+        return false;
+
+    // display string
+    if( getFlag( nFlags, OLE_STDHLINK_HASDISPLAY ) )
+        orHlinkInfo.maDisplay = lclReadStdHlinkString( rInStrm, true );
+    // frame string
+    if( getFlag( nFlags, OLE_STDHLINK_HASFRAME ) )
+        orHlinkInfo.maFrame = lclReadStdHlinkString( rInStrm, true );
+
+    // target
+    if( getFlag( nFlags, OLE_STDHLINK_HASTARGET ) )
+    {
+        if( getFlag( nFlags, OLE_STDHLINK_ASSTRING ) )
+        {
+            OSL_ENSURE( getFlag( nFlags, OLE_STDHLINK_ABSOLUTE ), "OleHelper::importStdHlink - link not absolute" );
+            orHlinkInfo.maTarget = lclReadStdHlinkString( rInStrm, true );
+        }
+        else // hyperlink moniker
+        {
+            OUString aGuid = importGuid( rInStrm );
+            if( aGuid.equalsAscii( OLE_GUID_FILEMONIKER ) )
+            {
+                // file name, maybe relative and with directory up-count
+                sal_Int16 nUpLevels;
+                rInStrm >> nUpLevels;
+                OSL_ENSURE( (nUpLevels == 0) || !getFlag( nFlags, OLE_STDHLINK_ABSOLUTE ), "OleHelper::importStdHlink - absolute filename with upcount" );
+                orHlinkInfo.maTarget = lclReadStdHlinkString( rInStrm, false );
+                rInStrm.skip( 24 );
+                sal_Int32 nBytes = rInStrm.readInt32();
+                if( nBytes > 0 )
+                {
+                    sal_Int64 nEndPos = rInStrm.tell() + ::std::max< sal_Int32 >( nBytes, 0 );
+                    sal_uInt16 nChars = getLimitedValue< sal_uInt16, sal_Int32 >( rInStrm.readInt32() / 2, 0, SAL_MAX_UINT16 );
+                    rInStrm.skip( 2 );  // key value
+                    orHlinkInfo.maTarget = rInStrm.readUnicodeArray( nChars );  // NOT null terminated
+                    rInStrm.seek( nEndPos );
+                }
+                if( !getFlag( nFlags, OLE_STDHLINK_ABSOLUTE ) )
+                    for( sal_Int16 nLevel = 0; nLevel < nUpLevels; ++nLevel )
+                        orHlinkInfo.maTarget = CREATE_OUSTRING( "../" ) + orHlinkInfo.maTarget;
+            }
+            else if( aGuid.equalsAscii( OLE_GUID_URLMONIKER ) )
+            {
+                // URL, maybe relative and with leading '../'
+                sal_Int32 nBytes = rInStrm.readInt32();
+                sal_Int64 nEndPos = rInStrm.tell() + ::std::max< sal_Int32 >( nBytes, 0 );
+                orHlinkInfo.maTarget = rInStrm.readNulUnicodeArray();
+                rInStrm.seek( nEndPos );
+            }
+            else
+            {
+                OSL_ENSURE( false, "OleHelper::importStdHlink - unsupported hyperlink moniker" );
+                return false;
+            }
+        }
+    }
+
+    // target location
+    if( getFlag( nFlags, OLE_STDHLINK_HASLOCATION ) )
+        orHlinkInfo.maLocation = lclReadStdHlinkString( rInStrm, true );
+
+    return !rInStrm.isEof();
+}
+
+#endif	// SUPD == 310
 
 Reference< ::com::sun::star::frame::XFrame >
 lcl_getFrame( const  Reference< ::com::sun::star::frame::XModel >& rxModel )

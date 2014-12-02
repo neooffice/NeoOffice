@@ -26,6 +26,10 @@
 #include <rtl/ustrbuf.hxx>
 #include "oox/helper/helper.hxx"
 
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
+
 namespace oox {
 
 
@@ -79,6 +83,50 @@ void ValueRangeSet::insert( const ValueRange& rRange )
         maRanges.insert( aIt, rRange );
     }
 }
+
+#if SUPD == 310
+
+ValueRangeVector ValueRangeSet::getIntersection( const ValueRange& rRange ) const
+{
+    ValueRangeVector aRanges;
+    // find the range that contains nFirst or the first range that follows nFirst
+    ValueRangeVector::const_iterator aIt = ::std::lower_bound( maRanges.begin(), maRanges.end(), rRange, ValueRangeComp() );
+    for( ValueRangeVector::const_iterator aEnd = maRanges.end(); (aIt != aEnd) && (aIt->mnFirst <= rRange.mnLast); ++aIt )
+        aRanges.push_back( ValueRange( ::std::max( aIt->mnFirst, rRange.mnFirst ), ::std::min( aIt->mnLast, rRange.mnLast ) ) );
+    return aRanges;
+}
+
+Reference< XIndexContainer > ContainerHelper::createIndexContainer( const Reference< XComponentContext >& rxContext )
+{
+    Reference< XIndexContainer > xContainer;
+    if( rxContext.is() ) try
+    {
+        Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
+        xContainer.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.document.IndexedPropertyValues" ) ), UNO_QUERY_THROW );
+    }
+    catch( Exception& )
+    {
+    }
+    OSL_ENSURE( xContainer.is(), "ContainerHelper::createIndexContainer - cannot create container" );
+    return xContainer;
+}
+
+Reference< XNameContainer > ContainerHelper::createNameContainer( const Reference< XComponentContext >& rxContext )
+{
+    Reference< XNameContainer > xContainer;
+    if( rxContext.is() ) try
+    {
+        Reference< XMultiServiceFactory > xFactory( rxContext->getServiceManager(), UNO_QUERY_THROW );
+        xContainer.set( xFactory->createInstance( CREATE_OUSTRING( "com.sun.star.document.NamedPropertyValues" ) ), UNO_QUERY_THROW );
+    }
+    catch( Exception& )
+    {
+    }
+    OSL_ENSURE( xContainer.is(), "ContainerHelper::createNameContainer - cannot create container" );
+    return xContainer;
+}
+
+#endif	// SUPD == 310
 
 
 

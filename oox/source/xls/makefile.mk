@@ -36,7 +36,6 @@ ENABLE_EXCEPTIONS=TRUE
 
 # --- Files --------------------------------------------------------
 
-.IF "$(UPD)" != "310"
 SLOFILES =										\
 		$(SLO)$/addressconverter.obj			\
 		$(SLO)$/autofilterbuffer.obj			\
@@ -96,7 +95,6 @@ SLOFILES =										\
 		$(SLO)$/worksheetfragment.obj			\
 		$(SLO)$/worksheethelper.obj				\
 		$(SLO)$/worksheetsettings.obj
-.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets -------------------------------------------------------
 

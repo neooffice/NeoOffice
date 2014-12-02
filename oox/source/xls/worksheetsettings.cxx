@@ -30,6 +30,10 @@
 #include "oox/xls/pagesettings.hxx"
 #include "oox/xls/workbooksettings.hxx"
 
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 

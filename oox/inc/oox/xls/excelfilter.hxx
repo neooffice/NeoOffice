@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -65,7 +73,11 @@ public:
     virtual const ::oox::drawingml::Theme* getCurrentTheme() const;
     virtual ::oox::vml::Drawing* getVmlDrawing();
 	virtual const ::oox::drawingml::table::TableStyleListPtr getTableStyles();
+#if SUPD == 310
+    virtual ::oox::drawingml::chart::ChartConverter* getChartConverter();
+#else	// SUPD == 310
     virtual ::oox::drawingml::chart::ChartConverter& getChartConverter();
+#endif	// SUPD == 310
 
 private:
     virtual GraphicHelper* implCreateGraphicHelper() const;

@@ -76,6 +76,10 @@ public:
 
     /** Returns the ordered list of all value ranges. */
     const ValueRangeVector& getRanges() const { return maRanges; }
+#if SUPD == 310
+    /** Returns an intersection of the range list and the passed range. */
+    ValueRangeVector    getIntersection( const ValueRange& rRange ) const;
+#endif	// SUPD == 310
 
 private:
     ValueRangeVector    maRanges;
@@ -156,6 +160,16 @@ private:
 class OOX_DLLPUBLIC ContainerHelper
 {
 public:
+
+#if SUPD == 310
+    /** Creates a new index container object from scratch. */
+    static ::com::sun::star::uno::Reference< ::com::sun::star::container::XIndexContainer >
+                        createIndexContainer( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& rxContext );
+
+    /** Creates a new name container object from scratch. */
+    static ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameContainer >
+                        createNameContainer( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& rxContext );
+#endif	// SUPD == 310
 
     /** Returns a name that is not used in the passed name container.
 

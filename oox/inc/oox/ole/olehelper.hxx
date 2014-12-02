@@ -146,6 +146,16 @@ public:
                             BinaryInputStream& rInStrm,
                             bool bWithGuid );
 
+#if SUPD == 310
+    /** Imports an OLE StdHlink from the current position of the passed binary
+        stream.
+     */
+    static bool         importStdHlink(
+                            StdHlinkInfo& orHlinkInfo,
+                            BinaryInputStream& rInStrm,
+                            bool bWithGuid );
+#endif	// SUPD == 310
+
 private:
                         OleHelper();        // not implemented
                         ~OleHelper();       // not implemented

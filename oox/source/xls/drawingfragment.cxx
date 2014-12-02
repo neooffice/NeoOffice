@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -40,6 +48,10 @@
 #include "oox/xls/stylesbuffer.hxx"
 #include "oox/xls/themebuffer.hxx"
 #include "oox/xls/unitconverter.hxx"
+
+#if SUPD == 310
+#define CREATE_OUSTRING( x ) OUString( x )
+#endif	// SUPD == 310
 
 namespace oox {
 namespace xls {
@@ -115,14 +127,22 @@ void Shape::finalizeXShape( XmlFilterBase& rFilter, const Reference< XShapes >& 
 
 // ============================================================================
 
+#if SUPD == 310
+GroupShapeContext::GroupShapeContext( ContextHandler2Helper& rParent,
+#else	// SUPD == 310
 GroupShapeContext::GroupShapeContext( ContextHandler& rParent,
+#endif	// SUPD == 310
         const WorksheetHelper& rHelper, const ShapePtr& rxParentShape, const ShapePtr& rxShape ) :
     ShapeGroupContext( rParent, rxParentShape, rxShape ),
     WorksheetHelper( rHelper )
 {
 }
 
+#if SUPD == 310
+/*static*/ ContextHandlerRef GroupShapeContext::createShapeContext( ContextHandler2Helper& rParent,
+#else	// SUPD == 310
 /*static*/ ContextHandlerRef GroupShapeContext::createShapeContext( ContextHandler& rParent,
+#endif	// SUPD == 310
         const WorksheetHelper& rHelper, sal_Int32 nElement, const AttributeList& rAttribs,
         const ShapePtr& rxParentShape, ShapePtr* pxShape )
 {
@@ -261,7 +281,12 @@ void DrawingFragment::onEndElement()
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Y, 0, SAL_MAX_INT32 ),
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Width, 0, SAL_MAX_INT32 ),
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Height, 0, SAL_MAX_INT32 ) );
+#if SUPD == 310
+                    basegfx::B2DHomMatrix aTransformation;
+                    mxShape->addShape( getOoxFilter(), &getTheme(), mxDrawPage, aTransformation, mxShape->getFillProperties(), &aShapeRectEmu32 );
+#else	// SUPD == 310
                     mxShape->addShape( getOoxFilter(), &getTheme(), mxDrawPage, &aShapeRectEmu32 );
+#endif	// SUPD == 310
                     /*  Collect all shape positions in the WorksheetHelper base
                         class. But first, scale EMUs to 1/100 mm. */
                     Rectangle aShapeRectHmm(
@@ -508,7 +533,11 @@ Reference< XShape > VmlDrawing::createAndInsertClientXShape( const ::oox::vml::S
                 rAxModel.mnSpecialEffect = pClientData->mbNo3D ? AX_SPECIALEFFECT_FLAT : AX_SPECIALEFFECT_SUNKEN;
                 rAxModel.mnVerticalAlign = pClientData->mnTextVAlign;
                 bool bTriState = (pClientData->mnChecked != ::oox::vml::VML_CLIENTDATA_UNCHECKED) && (pClientData->mnChecked != ::oox::vml::VML_CLIENTDATA_CHECKED);
+#if SUPD == 310
+                rAxModel.mnMultiSelect = bTriState ? AX_SELECTION_MULTI : AX_SELECTION_SINGLE;
+#else	// SUPD == 310
                 rAxModel.mnMultiSelect = bTriState ? AX_SELCTION_MULTI : AX_SELCTION_SINGLE;
+#endif	// SUPD == 310
             }
             break;
 
@@ -531,9 +560,15 @@ Reference< XShape > VmlDrawing::createAndInsertClientXShape( const ::oox::vml::S
                 rAxModel.mnSpecialEffect = pClientData->mbNo3D2 ? AX_SPECIALEFFECT_FLAT : AX_SPECIALEFFECT_SUNKEN;
                 switch( pClientData->mnSelType )
                 {
+#if SUPD == 310
+                    case XML_Single:    rAxModel.mnMultiSelect = AX_SELECTION_SINGLE;    break;
+                    case XML_Multi:     rAxModel.mnMultiSelect = AX_SELECTION_MULTI;     break;
+                    case XML_Extend:    rAxModel.mnMultiSelect = AX_SELECTION_EXTENDED;  break;
+#else	// SUPD == 310
                     case XML_Single:    rAxModel.mnMultiSelect = AX_SELCTION_SINGLE;    break;
                     case XML_Multi:     rAxModel.mnMultiSelect = AX_SELCTION_MULTI;     break;
                     case XML_Extend:    rAxModel.mnMultiSelect = AX_SELCTION_EXTENDED;  break;
+#endif	// SUPD == 310
                 }
             }
             break;

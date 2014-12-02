@@ -121,6 +121,11 @@ public:
 
 
 
+#if SUPD == 310
+    /** Returns the specified argument passed through the XInitialization interface. */
+    ::com::sun::star::uno::Any getArgument( const ::rtl::OUString& rArgName ) const;
+#endif	// SUPD == 310
+
     /** Returns the component context passed in the filter constructor (always existing). */
     const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >&
                         getComponentContext() const;
@@ -164,6 +169,20 @@ public:
     /** Returns the base storage of the imported/exported file. */
     StorageRef          getStorage() const;
 
+#if SUPD == 310
+    /** Opens and returns the specified sub storage from the base storage.
+
+        @param rStorageName
+            The name of the embedded storage. The name may contain slashes to
+            open storages from embedded substorages.
+        @param bCreateMissing
+            True = create missing sub storages (for export filters).
+     */
+    StorageRef          openSubStorage(
+                            const ::rtl::OUString& rStorageName,
+                            bool bCreateMissing ) const;
+#endif	// SUPD == 310
+
     /** Opens and returns the specified input stream from the base storage.
 
         @param rStreamName
@@ -203,6 +222,13 @@ public:
 
     /** Returns the VBA project manager. */
     ::oox::ole::VbaProject& getVbaProject() const;
+
+#if SUPD == 310
+    /** Requests the encryption data from the media descriptor or from the user. On
+        success, the encryption data will be inserted into the media descriptor. */
+    ::com::sun::star::uno::Sequence< ::com::sun::star::beans::NamedValue >
+                        requestEncryptionData( ::comphelper::IDocPasswordVerifier& rVerifier ) const;
+#endif	// SUPD == 310
 
     /** Imports the raw binary data from the specified stream.
         @return  True, if the data could be imported from the stream. */

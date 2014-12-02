@@ -29,6 +29,10 @@
 #include "oox/helper/propertyset.hxx"
 #include "oox/xls/addressconverter.hxx"
 
+#if SUPD == 310
+#include "oox/token/properties.hxx"
+#endif	// SUPD == 310
+
 namespace oox {
 namespace xls {
 
