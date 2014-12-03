@@ -347,6 +347,12 @@ public:
     sax_fastparser::FSHelperPtr     GetStreamForPath( const ::rtl::OUString& rPath );
 
     sax_fastparser::FSHelperPtr&    WriteAttributes( sal_Int32 nAttribute, ... );
+#if SUPD == 310
+    sax_fastparser::FSHelperPtr&    WriteAttributes( sal_Int32 nAttribute, const char* value, FSEND_t )
+        { return WriteAttributes( nAttribute, value, FSEND_internal ); }
+    sax_fastparser::FSHelperPtr&    WriteAttributes( sal_Int32 nAttribute, const char* value, sal_Int32 nAttribute2, const char* value2, FSEND_t )
+        { return WriteAttributes( nAttribute, value, nAttribute2, value2, FSEND_internal ); }
+#endif	// SUPD == 310
 
     sax_fastparser::FSHelperPtr     CreateOutputStream (
                                         const ::rtl::OUString& sFullStream,
