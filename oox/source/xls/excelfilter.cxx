@@ -44,6 +44,8 @@
 #include "oox/xls/workbookfragment.hxx"
 
 #if SUPD == 310
+#include <comphelper/processfactory.hxx>
+
 #define CREATE_OUSTRING( x ) OUString( x )
 #endif	// SUPD == 310
 
@@ -191,6 +193,36 @@ GraphicHelper* ExcelFilter::implCreateGraphicHelper() const
 {
     return new ExcelVbaProject( getComponentContext(), Reference< XSpreadsheetDocument >( getModel(), UNO_QUERY ) );
 }
+
+#if SUPD == 310
+
+sal_Bool SAL_CALL ExcelFilter::filter( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw( ::com::sun::star::uno::RuntimeException )
+{
+    if ( XmlFilterBase::filter( rDescriptor ) )
+        return true;
+
+    if ( isExportFilter() )
+    {
+        Reference< XExporter > xExporter( ::comphelper::getProcessServiceFactory()->createInstance( CREATE_OUSTRING( "com.sun.star.comp.oox.ExcelFilterExport" ) ), UNO_QUERY );
+
+        if ( xExporter.is() )
+        {
+            Reference< XComponent > xDocument( getModel(), UNO_QUERY );
+            Reference< XFilter > xFilter( xExporter, UNO_QUERY );
+
+            if ( xFilter.is() )
+            {
+                xExporter->setSourceDocument( xDocument );
+                if ( xFilter->filter( rDescriptor ) )
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+#endif	// SUPD == 310
 
 OUString ExcelFilter::implGetImplementationName() const
 {
