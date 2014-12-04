@@ -1,12 +1,12 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
- * This file is part of the LibreOffice project.
+ * This file is part of NeoOffice.
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * This file incorporates work covered by the following license notices:
  *
- * This file incorporates work covered by the following license notice:
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *   Licensed to the Apache Software Foundation (ASF) under one or more
  *   contributor license agreements. See the NOTICE file distributed
@@ -15,6 +15,24 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified March 2012 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 3.3 of the Mozilla Public License v2.0.
  */
 
 #include <config_folders.h>
@@ -102,6 +120,11 @@
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
+
+#if defined USE_JAVA && defined MACOSX
+#include <vcl/metaact.hxx>
+#include <vcl/virdev.hxx>
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -861,6 +884,40 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic , bool bRelPathToMedia )
             pExtension = ".MOV";
             break;
         default: {
+#if defined USE_JAVA && defined MACOSX
+            // If this is an EPS image, draw to a bitmap and export that
+            bool bEPS = false;
+            GDIMetaFile aMtf( rGraphic.GetGDIMetaFile() );
+            for( MetaAction* pAct = aMtf.FirstAction(); pAct; pAct = aMtf.NextAction() )
+            {
+                if ( pAct->GetType() == META_EPS_ACTION )
+                {
+                    const MetaEPSAction *pA = (const MetaEPSAction *)pAct;
+                    const Size& rSize = pA->GetSize();
+                    if ( rSize.Width() && rSize.Height() )
+                    {
+                        // Draw EPS at 300 DPI
+                        sal_Int32 nEPSRes = 300;
+                        Size aDstSizePixel( rSize.Width() * nEPSRes / 72, rSize.Height() * nEPSRes / 72 );
+                        VirtualDevice* pVDev = new VirtualDevice;
+                        if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
+                        {
+                            // Convert EPS to bitmap
+                            bEPS = true;
+                            Point aPoint;
+                            pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+                            GraphicConverter::Export( aStream, Graphic( pVDev->GetBitmapEx( Point( 0, 0 ), aDstSizePixel ) ), CVT_PNG );
+                            sMediaType = US( "image/png" );
+                            pExtension = ".png";
+                        }
+                        delete pVDev;
+                    }
+                }
+            }
+
+            if ( !bEPS )
+            {
+#endif	// USE_JAVA || MACOSX
             GraphicType aType = rGraphic.GetType();
             if ( aType == GRAPHIC_BITMAP || aType == GRAPHIC_GDIMETAFILE) {
                 bool bSwapped = rGraphic.IsSwapOut();
@@ -897,6 +954,9 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic , bool bRelPathToMedia )
                   */
                 return sRelId;
             }
+#if defined USE_JAVA && defined MACOSX
+            }
+#endif	// USE_JAVA || MACOSX
 
             aData = aStream.GetData();
 #if SUPD == 310
