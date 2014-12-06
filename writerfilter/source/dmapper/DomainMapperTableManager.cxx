@@ -726,10 +726,14 @@ void DomainMapperTableManager::endOfRowAction()
 #endif
         insertRowProps(pPropMap);
     }
+#ifdef NO_LIBO_4_0_TABLE_FIXES
     else if ( pCellWidths->size() > 0 &&
                ( m_nLayoutType == NS_ooxml::LN_Value_wordprocessingml_ST_TblLayout_fixed
                  || pCellWidths->size() == ( m_nGridBefore + nGrids + m_nGridAfter ) )
              )
+#else	// NO_LIBO_4_0_TABLE_FIXES
+    else if ( pCellWidths->size() > 0 )
+#endif	// NO_LIBO_4_0_TABLE_FIXES
     {
         // If we're here, then the number of cells does not equal to the amount
         // defined by the grid, even after taking care of
