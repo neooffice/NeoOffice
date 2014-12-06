@@ -1253,7 +1253,7 @@ void SectionPropertyMap::_ApplyProperties( uno::Reference< beans::XPropertySet >
         }
         return;
     }
-#endif	// !NO_LIBO_4_0_TABLE_FIXES
+#endif	// NO_LIBO_4_0_TABLE_FIXES
     PropertyMap::iterator aMapIter = begin();
     while( aMapIter != end())
     {
