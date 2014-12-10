@@ -238,14 +238,45 @@ VBAMacroResolvedInfo resolveVBAMacro( SfxObjectShell* pShell, const rtl::OUStrin
         // macro format = Container.Module.Procedure
         parseMacro( MacroName, sContainer, sModule, sProcedure ); 
         uno::Reference< lang::XMultiServiceFactory> xSF( pShell->GetModel(), uno::UNO_QUERY);
+#if SUPD == 310
+#if 0
+    // As long as service VBAProjectNameProvider isn't supported in the model, disable the createInstance call
+    // (the ServiceNotRegisteredException is wrongly caught in ScModelObj::createInstance)
+    uno::Reference< container::XNameContainer > xPrjNameCache;
+    uno::Reference< lang::XMultiServiceFactory> xSF( pShell->GetModel(), uno::UNO_QUERY);
+    if ( xSF.is() ) try
+    {
+        xPrjNameCache.set( xSF->createInstance( "ooo.vba.VBAProjectNameProvider" ), uno::UNO_QUERY );
+    }
+    catch( const uno::Exception& )    // createInstance may throw
+    {
+    }
+#endif
+#else	// SUPD == 310
         uno::Reference< container::XNameContainer > xPrjNameCache;
         if ( xSF.is() )
             xPrjNameCache.set( xSF->createInstance( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM( "ooo.vba.VBAProjectNameProvider" ) ) ), uno::UNO_QUERY );
+#endif	// SUPD == 310
     
         std::vector< rtl::OUString > sSearchList; 
 
         if ( sContainer.Len() > 0 )
         { 
+#if SUPD == 310
+// service VBAProjectNameProvider not implemented
+#if 0
+        // get the Project associated with the Container
+        if ( xPrjNameCache.is() )
+        {
+            if ( xPrjNameCache->hasByName( sContainer ) )
+            {
+                OUString sProject;
+                xPrjNameCache->getByName( sContainer ) >>= sProject;
+                sContainer = sProject;
+            }
+        }
+#endif
+#else	// SUPD == 310
             // get the Project associated with the Container
             if ( xPrjNameCache.is() )
             {
@@ -256,6 +287,7 @@ VBAMacroResolvedInfo resolveVBAMacro( SfxObjectShell* pShell, const rtl::OUStrin
                     sContainer = sProject;
                 }
             }
+#endif	// SUPD == 310
             sSearchList.push_back( sContainer ); // First Lib to search
         }
         else
@@ -272,6 +304,67 @@ VBAMacroResolvedInfo resolveVBAMacro( SfxObjectShell* pShell, const rtl::OUStrin
                    sThisProject = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("Standard") );
             }
             sSearchList.push_back( sThisProject ); // First Lib to search
+#if SUPD == 310
+// service VBAProjectNameProvider not implemented
+#if 0
+        if ( xPrjNameCache.is() )
+        {
+            // is this document created from a template?
+            uno::Reference< document::XDocumentPropertiesSupplier > const
+                xDocPropSupp(pShell->GetModel(), uno::UNO_QUERY_THROW);
+            uno::Reference< document::XDocumentProperties > xDocProps( xDocPropSupp->getDocumentProperties(), uno::UNO_QUERY_THROW );
+
+            OUString sCreatedFrom = xDocProps->getTemplateURL();
+            if ( !sCreatedFrom.isEmpty() )
+            {
+                INetURLObject aObj;
+                aObj.SetURL( sCreatedFrom );
+                bool bIsURL = aObj.GetProtocol() != INET_PROT_NOT_VALID;
+                OUString aURL;
+                if ( bIsURL )
+                    aURL = sCreatedFrom;
+                else
+                {
+                    osl::FileBase::getFileURLFromSystemPath( sCreatedFrom, aURL );
+                    aObj.SetURL( aURL );
+                }
+                sCreatedFrom =  aObj.GetLastName();
+            }
+
+            sal_Int32 nIndex =  sCreatedFrom.lastIndexOf( '.' );
+            if ( nIndex != -1 )
+                sCreatedFrom = sCreatedFrom.copy( 0, nIndex );
+
+            OUString sPrj;
+            if ( !sCreatedFrom.isEmpty() && xPrjNameCache->hasByName( sCreatedFrom ) )
+            {
+                xPrjNameCache->getByName( sCreatedFrom ) >>= sPrj;
+                // Make sure we don't double up with this project
+                if ( !sPrj.equals( sThisProject ) )
+                    sSearchList.push_back( sPrj );
+            }
+
+            // get list of global template Names
+            uno::Sequence< OUString > sTemplateNames = xPrjNameCache->getElementNames();
+            sal_Int32 nLen = sTemplateNames.getLength();
+            for ( sal_Int32 index = 0; ( bSearchGlobalTemplates && index < nLen ); ++index )
+            {
+
+                if ( !sCreatedFrom.equals( sTemplateNames[ index ] ) )
+                {
+                    if ( xPrjNameCache->hasByName( sTemplateNames[ index ] ) )
+                    {
+                        xPrjNameCache->getByName( sTemplateNames[ index ] ) >>= sPrj;
+                        // Make sure we don't double up with this project
+                        if ( !sPrj.equals( sThisProject ) )
+                            sSearchList.push_back( sPrj );
+                    }
+                }
+
+            }
+        }
+#endif
+#else	// SUPD == 310
             if ( xPrjNameCache.is() )
             {
                 // is this document created from a template?
@@ -328,6 +421,7 @@ VBAMacroResolvedInfo resolveVBAMacro( SfxObjectShell* pShell, const rtl::OUStrin
         
                 }
             }
+#endif	// SUPD == 310
         }
         std::vector< rtl::OUString >::iterator it_end = sSearchList.end();
         for ( std::vector< rtl::OUString >::iterator it = sSearchList.begin(); it != it_end; ++it )
