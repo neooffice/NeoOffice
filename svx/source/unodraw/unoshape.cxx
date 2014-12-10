@@ -3051,11 +3051,19 @@ bool SvxShape::getPropertyValueImpl( const SfxItemPropertyMap* pProperty, ::com:
 	}
 
 	case SDRATTR_ROTATEANGLE:
+#if SUPD == 310
+		rValue <<= (sal_Int32)mpObj->GetRotateAngle();
+#else	// SUPD == 310
 		rValue <<= mpObj->GetRotateAngle();
+#endif	// SUPD == 310
 		break;
 
 	case SDRATTR_SHEARANGLE:
+#if SUPD == 310
+		rValue <<= (sal_Int32)mpObj->GetShearAngle();
+#else	// SUPD == 310
 		rValue <<= mpObj->GetShearAngle();
+#endif	// SUPD == 310
 		break;
 
 #if SUPD == 310
