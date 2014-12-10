@@ -9,7 +9,7 @@ Paste the following paragraphs into the Description text area. Stop before the "
 
 NeoOffice è una suite per ufficio completa per OS X. Con NeoOffice, gli utenti possono visualizzare, modificare e salvare documenti OpenOffice, file PDF e la maggior parte dei documenti di Microsoft Word, Excel e PowerPoint.
 
-Gli utenti di NeoOffice 3.x e OpenOffice: prima di acquistare NeoOffice, si consiglia di cliccare sul link «Supporto per NeoOffice» e leggere l'elenco delle modifiche.
+Gli utenti di NeoOffice 3.x, OpenOffice e LibreOffice: prima di acquistare NeoOffice, si consiglia di cliccare sul link «Supporto per NeoOffice» e leggere l'elenco delle modifiche.
 
 NeoOffice è estremamente stabile e migliaia di utenti lo usano giornalmente. Gli ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto OpenOffice funzionare nativamente su OS X per la prima volta.
 
