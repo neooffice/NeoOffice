@@ -1583,8 +1583,12 @@ static bool IsRunningMavericksOrLower()
 		[pTableHeaderCell setState:NSOffState];
 
 	// The enabled state is controlled by the [NSWindow _hasActiveControls]
-	// selector so we need to attach a custom hidden window to draw enabled
-	[VCLNativeControlWindow createAndAttachToView:pScrollView controlState:mnControlState];
+	// selector so we need to attach a custom hidden window to draw enabled.
+	// Fix hanging reported in the following NeoOffice forum topic by not
+	// attaching a custom window on OS X 10.10:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8656
+	if ( IsRunningMavericksOrLower() )
+		[VCLNativeControlWindow createAndAttachToView:pScrollView controlState:mnControlState];
 
 	return pTableColumn;
 }

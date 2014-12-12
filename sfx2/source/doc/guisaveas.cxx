@@ -86,6 +86,10 @@
 #include <sfxtypes.hxx>
 #include "alienwarn.hxx"
 
+#ifdef USE_JAVA
+#include <sfx2/fcontnr.hxx>
+#endif	// USE_JAVA
+
 #define DOCPROPSNUM 17
 
 // flags that specify requested operation
@@ -841,14 +845,29 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 	// modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
 	if ( !bSetStandardName )
 	{
-		::rtl::OUString aUserDataString( RTL_CONSTASCII_USTRINGPARAM( "UserData" ) );
+		static const ::rtl::OUString aUserDataString( RTL_CONSTASCII_USTRINGPARAM( "UserData" ) );
+		static const ::rtl::OUString aOXMLString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) );
 		::comphelper::SequenceAsHashMap::const_iterator it = GetMediaDescr().find( aUserDataString );
 		if ( it != GetMediaDescr().end() )
 		{
 			::rtl::OUString aUserData;
 			it->second >>= aUserData;
-			if ( aUserData == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
+			if ( aUserData == aOXMLString )
 				bSetStandardName = true;
+		}
+
+		// When doing a "save as", the "UserData" field will be empty so check
+		// the original file filter's "UserData" field
+		if ( !bSetStandardName )
+		{
+			::rtl::OUString aFilterName = GetDocProps().getUnpackedValueOrDefault( aFilterNameString, ::rtl::OUString() );
+			const SfxFilter* pFilter = SFX_APP()->GetFilterMatcher().GetFilter4FilterName( aFilterName );
+			if ( pFilter )
+			{
+				::rtl::OUString aUserData = pFilter->GetUserData();
+				if ( aUserData == aOXMLString )
+					bSetStandardName = true;
+			}
 		}
 	}
 #endif	// USE_JAVA
