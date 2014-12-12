@@ -1,40 +1,38 @@
-/*************************************************************************
+/*
+ * This file is part of NeoOffice.
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
- * This file incorporates work covered by the following license notice:
- *
- *   Portions of this file are part of the LibreOffice project.
+ * This file incorporates work covered by the following license notices:
  *
  *   This Source Code Form is subject to the terms of the Mozilla Public
  *   License, v. 2.0. If a copy of the MPL was not distributed with this
  *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- ************************************************************************/
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified December 2014 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 3.3 of the Mozilla Public License v2.0.
+ */
 
 #include "docxattributeoutput.hxx"
 #include "docxexport.hxx"
@@ -203,6 +201,9 @@ void DocxAttributeOutput::StartParagraph( const SwTxtNode& /*rNode*/, ww8::WW8Ta
     m_pSerializer->mark();
 
     // no section break in this paragraph yet; can be set in SectionBreak()
+#ifdef USE_JAVA
+    delete m_pSectionInfo;
+#endif	// USE_JAVA
     m_pSectionInfo = NULL;
     
     m_bParagraphOpened = true;
@@ -1832,7 +1833,11 @@ void DocxAttributeOutput::SectionBreak( BYTE nC, const WW8_SepInfo* pSectionInfo
                 {
                     // postpone the output of this; it has to be done inside the
                     // paragraph properties, so remember it until then
+#ifdef USE_JAVA
+                    m_pSectionInfo = new WW8_SepInfo( pSectionInfo->pPageDesc, pSectionInfo->pSectionFmt, pSectionInfo->nLnNumRestartNo, pSectionInfo->nPgRestartNo, pSectionInfo->pPDNd );
+#else	// USE_JAVA
                     m_pSectionInfo = pSectionInfo;
+#endif	// USE_JAVA
                 }
             }
             else
@@ -3106,11 +3111,6 @@ void DocxAttributeOutput::FormatULSpace( const SvxULSpaceItem& rULSpace )
                 OString::valueOf( (sal_Int32)rULSpace.GetUpper() ) );
         m_pSpacingAttrList->add( FSNS( XML_w, XML_after ), 
                 OString::valueOf( (sal_Int32)rULSpace.GetLower() ) );
-
-#if SUPD == 310
-        if (rULSpace.GetContext())
-            m_pSerializer->singleElementNS( XML_w, XML_contextualSpacing, FSEND );
-#endif	// SUPD == 310
     }
 }
 
@@ -3327,6 +3327,9 @@ DocxAttributeOutput::~DocxAttributeOutput()
     delete m_pEndnotesList, m_pEndnotesList = NULL;
 
     delete m_pTableWrt, m_pTableWrt = NULL;
+#ifdef USE_JAVA
+    delete m_pSectionInfo, m_pSectionInfo = NULL;
+#endif	// USE_JAVA
 }
 
 MSWordExportBase& DocxAttributeOutput::GetExport()
