@@ -1041,6 +1041,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 						[pQLView autorelease];
 
 						[pQLView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+						[[pWindow contentView] setAutoresizesSubviews:YES];
 						[[pWindow contentView] addSubview:pQLView];
 						pQLView.previewItem = pQLItem;
 					}
