@@ -361,6 +361,15 @@ long SfxTopWindow_Impl::Notify( NotifyEvent& rNEvt )
         if ( nHelpId )
             SfxHelp::OpenHelpAgent( pFrame, nHelpId );
 
+#if defined USE_JAVA && defined MACOSX
+        // Opening .docx files only calls SfxTopViewFrame::UpdateTitle() before
+        // the document is attached to a native window so enable versions for
+        // for this document if needed
+        SfxTopViewFrame *pTopViewFrame = dynamic_cast< SfxTopViewFrame* >( pFrame->GetCurrentViewFrame() );
+        if ( pTopViewFrame && pTopViewFrame->bNeedsUpdateTitle )
+            pTopViewFrame->UpdateTitle();
+#endif	// USE_JAVA && MACOSX
+
 		return sal_True;
 	}
     else if( rNEvt.GetType() == EVENT_KEYINPUT )
@@ -1271,6 +1280,8 @@ String SfxTopViewFrame::UpdateTitle()
         NSView *pView = pWindow->GetSystemData()->pView;
         if ( pView )
         {
+            bNeedsUpdateTitle = FALSE;
+
             ::rtl::OUString aPath;
             SfxObjectShell *pDoc = GetObjectShell();
             if ( pDoc )
@@ -1379,6 +1390,7 @@ SfxTopViewFrame::SfxTopViewFrame
 	DBG_CTOR(SfxTopViewFrame, 0);
 
 #if defined USE_JAVA && defined MACOSX
+	bNeedsUpdateTitle = TRUE;
 	aTimer.SetTimeoutHdl( LINK( this, SfxTopViewFrame, CheckForMovedFile ) );
 	aTimer.SetTimeout( 15000 );
 #endif	// USE_JAVA && MACOSX

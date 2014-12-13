@@ -320,6 +320,49 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 #import <Quartz/Quartz.h>
 #include <postmac.h>
 
+@interface NSView (SFXQLPreviewView)
+@property(retain) id< QLPreviewItem > previewItem;
+@end
+
+@interface SFXQLPreviewItem : NSObject <QLPreviewItem>
+{
+	NSURL*					mpURL;
+}
+@property(readonly) NSURL *previewItemURL;
+- (void)dealloc;
+- (id)initWithURL:(NSURL *)pURL;
+@end
+
+@implementation SFXQLPreviewItem
+
+@dynamic previewItemURL;
+
+- (void)dealloc
+{
+	if ( mpURL )
+		[mpURL release];
+	
+	[super dealloc];
+}
+
+- (id)initWithURL:(NSURL *)pURL
+{
+	[super init];
+
+	mpURL = pURL;
+	if ( mpURL )
+		[mpURL retain];
+
+	return self;
+}
+
+- (NSURL *)previewItemURL
+{
+	return mpURL;
+}
+
+@end
+
 static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 @implementation SFXDocument
@@ -904,58 +947,58 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		}
 	}
 
-	if ( pPDFData )
+	NSUInteger nStyleMask = NSTitledWindowMask | NSClosableWindowMask;
+	if ( NSIsEmptyRect( aLastVersionBrowserDocumentFrame ) )
 	{
-		PDFDocument *pPDFDoc = [[PDFDocument alloc] initWithData:pPDFData];
-		if ( pPDFDoc )
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
+		if ( pApp && pDocController )
 		{
-			[pPDFDoc autorelease];
-
-			NSUInteger nStyleMask = NSTitledWindowMask | NSClosableWindowMask;
-
-			if ( NSIsEmptyRect( aLastVersionBrowserDocumentFrame ) )
+			NSArray *pWindows = [pApp windows];
+			if ( pWindows )
 			{
-				NSApplication *pApp = [NSApplication sharedApplication];
-				NSDocumentController *pDocController = [NSDocumentController sharedDocumentController];
-				if ( pApp && pDocController )
+				NSDocument *pDoc = [pDocController currentDocument];
+				NSUInteger nCount = [pWindows count];
+				NSUInteger i = 0;
+				for ( ; i < nCount; i++ )
 				{
-					NSArray *pWindows = [pApp windows];
-					if ( pWindows )
+					NSWindow *pWindow = [pWindows objectAtIndex:i];
+					if ( pWindow )
 					{
-						NSDocument *pDoc = [pDocController currentDocument];
-						NSUInteger nCount = [pWindows count];
-						NSUInteger i = 0;
-						for ( ; i < nCount; i++ )
+						NSRect aContentRect = [NSWindow contentRectForFrameRect:[pWindow frame] styleMask:[pWindow styleMask]];
+						if ( !NSIsEmptyRect( aContentRect ) )
 						{
-							NSWindow *pWindow = [pWindows objectAtIndex:i];
-							if ( pWindow )
-							{
-								NSRect aContentRect = [NSWindow contentRectForFrameRect:[pWindow frame] styleMask:[pWindow styleMask]];
-								if ( !NSIsEmptyRect( aContentRect ) )
-								{
-									aLastVersionBrowserDocumentFrame = aContentRect;
-									if ( pDoc && [pDocController documentForWindow:pWindow] == pDoc )
-										break;
-								}
-							}
+							aLastVersionBrowserDocumentFrame = aContentRect;
+							if ( pDoc && [pDocController documentForWindow:pWindow] == pDoc )
+								break;
 						}
 					}
 				}
 			}
+		}
+	}
 
-			NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:aLastVersionBrowserDocumentFrame styleMask:nStyleMask backing:NSBackingStoreBuffered defer:YES];
-			if ( pWindow )
+	NSWindow *pWindow = [[NSWindow alloc] initWithContentRect:aLastVersionBrowserDocumentFrame styleMask:nStyleMask backing:NSBackingStoreBuffered defer:YES];
+	if ( pWindow )
+	{
+		[pWindow autorelease];
+
+		NSWindowController *pWinController = [[NSWindowController alloc] initWithWindow:pWindow];
+		if ( pWinController )
+		{
+			[pWinController autorelease];
+
+			[self addWindowController:pWinController];
+
+			PDFView *pPDFView = nil;
+			if ( pPDFData )
 			{
-				[pWindow autorelease];
-
-				NSWindowController *pWinController = [[NSWindowController alloc] initWithWindow:pWindow];
-				if ( pWinController )
+				PDFDocument *pPDFDoc = [[PDFDocument alloc] initWithData:pPDFData];
+				if ( pPDFDoc )
 				{
-					[pWinController autorelease];
+					[pPDFDoc autorelease];
 
-					[self addWindowController:pWinController];
-
-					PDFView *pPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
+					pPDFView = [[PDFView alloc] initWithFrame:[[pWindow contentView] frame]];
 					if ( pPDFView )
 					{
 						[pPDFView autorelease];
@@ -965,6 +1008,34 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 						[pPDFView setAutoScales:YES];
 						[pPDFView setDisplaysPageBreaks:NO];
 						[pWindow setContentView:pPDFView];
+					}
+				}
+			}
+
+			if ( !pPDFView && pFileURL )
+			{
+				SFXQLPreviewItem *pQLItem = [[SFXQLPreviewItem alloc] initWithURL:pFileURL];
+				if ( pQLItem )
+				{
+					[pQLItem autorelease];
+
+					NSRect aQLFrame = [[pWindow contentView] frame];
+					aQLFrame.origin.x = 0;
+					aQLFrame.origin.y = 0;
+
+					Class aQLViewClass = NSClassFromString( @"QLPreviewView" );
+					if ( aQLViewClass && class_getProperty( aQLViewClass, "previewItem" ) )
+					{
+						NSView *pQLView = [[aQLViewClass alloc] initWithFrame:aQLFrame];
+						if ( pQLView )
+						{
+							[pQLView autorelease];
+
+							[pQLView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+							[[pWindow contentView] setAutoresizesSubviews:YES];
+							[[pWindow contentView] addSubview:pQLView];
+							pQLView.previewItem = pQLItem;
+						}
 					}
 				}
 			}

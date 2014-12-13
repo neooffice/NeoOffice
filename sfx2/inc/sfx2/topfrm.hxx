@@ -96,6 +96,7 @@ friend class SfxTopViewFrame_Impl;
 	SfxTopViewFrame_Impl*	pImp;
     svtools::AsynchronLink* pCloser;
 #if defined USE_JAVA && defined MACOSX
+    BOOL					bNeedsUpdateTitle;
     Timer					aTimer;
 #endif	// USE_JAVA && MACOSX
 
