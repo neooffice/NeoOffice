@@ -560,6 +560,7 @@ static bool IsRunningMavericksOrLower()
 	JavaSalGraphics*		mpGraphics;
 	CGRect					maDestRect;
 	MacOSBOOL				mbDrawn;
+	MacOSBOOL				mbRTL;
 	NSSize					maSize;
 }
 + (id)createWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
@@ -569,6 +570,7 @@ static bool IsRunningMavericksOrLower()
 - (MacOSBOOL)drawn;
 - (void)getSize:(id)pObject;
 - (id)initWithControlState:(ControlState)nControlState editable:(MacOSBOOL)bEditable bitmapBuffer:(VCLBitmapBuffer *)pBuffer graphics:(JavaSalGraphics *)pGraphics destRect:(CGRect)aDestRect;
+- (MacOSBOOL)isRTL;
 - (NSSize)size;
 @end
 
@@ -754,7 +756,10 @@ static bool IsRunningMavericksOrLower()
 		{
 			NSCell *pCell = [pControl cell];
 			if ( pCell )
+			{
+				mbRTL = ( !IsRunningMavericksOrLower() && [pCell userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft );
 				maSize = [pCell cellSize];
+			}
 		}
 	}
 }
@@ -769,9 +774,15 @@ static bool IsRunningMavericksOrLower()
 	mpGraphics = pGraphics;
 	maDestRect = aDestRect;
 	mbDrawn = NO;
+	mbRTL = NO;
 	maSize = NSZeroSize;
 
 	return self;
+}
+
+- (MacOSBOOL)isRTL
+{
+	return mbRTL;
 }
 
 - (NSSize)size
@@ -4113,6 +4124,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					// Vertically center the preferred bounds
 					float fYAdjust = ( (float)comboBoxRect.GetHeight() - aSize.height ) / 2;
 					NSRect preferredRect = NSMakeRect( comboBoxRect.Left(), comboBoxRect.Top() + fYAdjust, aSize.width > comboBoxRect.GetWidth() ? aSize.width : comboBoxRect.GetWidth(), aSize.height );
+					MacOSBOOL bRTL = [pVCLNativeComboBox isRTL];
 
 					switch( nPart )
 					{
@@ -4130,7 +4142,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								if ( bEditable )
 								{
-									Point topLeft( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH - FOCUSRING_WIDTH, (long)preferredRect.origin.y );
+									Point topLeft;
+									if ( bRTL )
+										topLeft = Point( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+									else
+										topLeft = Point( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH - FOCUSRING_WIDTH, (long)preferredRect.origin.y );
 									Size boundsSize( COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH, (long)preferredRect.size.height );
 									rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								}
@@ -4148,7 +4164,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case PART_SUB_EDIT:
 							{
-								Point topLeft( (long)preferredRect.origin.x + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
+								Point topLeft;
+								if ( bRTL )
+									topLeft = Point( (long)preferredRect.origin.x + ( bEditable ? COMBOBOX_BUTTON_WIDTH + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH : LISTBOX_BUTTON_WIDTH - EDITFRAMEPADDING_WIDTH ), (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
+								else
+									topLeft = Point( (long)preferredRect.origin.x + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH, (long)preferredRect.origin.y + FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH );
 								Size boundsSize( (long)preferredRect.size.width - ( bEditable ? COMBOBOX_BUTTON_WIDTH : LISTBOX_BUTTON_WIDTH ) - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ), (long)preferredRect.size.height - ( ( FOCUSRING_WIDTH + EDITFRAMEPADDING_WIDTH ) * 2 ) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
