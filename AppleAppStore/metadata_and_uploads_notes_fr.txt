@@ -24,11 +24,11 @@ Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améli
 • Fenêtres d'outils flottantes natives
 
 What's New in this Version:
-Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice includes fixes for the following bugs:
+Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
 
-• After saving an .odp document, all bullet characters would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
-• After saving certain .odt documents, some pages would be hidden when the document was reopened in NeoOffice, OpenOffice, or LibreOffice
-• After opening a document that contains a link to an unreadable or nonexistent .ods document, clicking on the linked .ods document would cause NeoOffice to crash
+• NeoOffice would occasionally hang while editing a table in a Base database
+• Clicking any hyperlinks that point to a file would fail to open the linked file
+• When the user's language is Hebrew or Arabic, NeoOffice would draw text on top of the drop down button in comboboxes and popup buttons
 
 
 Keywords:
@@ -38,7 +38,7 @@ Support URL:
 http://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/download.php
+http://www.neooffice.org/neojava/features.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_fr.png file. Note: the ScreenSnapshotWriterAndCalc_fr.png was created using the document files in the ScreenSnapshotWriterAndCalc/fr subdirectory.
