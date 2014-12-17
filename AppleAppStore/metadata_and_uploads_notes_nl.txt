@@ -7,13 +7,11 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers OpenOffice-documenten, PDF-bestanden en ook de meeste Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
-
-NeoOffice 3.x, OpenOffice en LibreOffice gebruikers: voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de lijst met wijzigingen.
+NeoOffice is een compleet pakket kantoorsoftware voor OS X. Met NeoOffice kunnen gebruikers OpenOffice-documenten, LibreOffice-documenten en eenvoudige Microsoft Word-, Excel- en PowerPoint-documenten bekijken, bewerken en opslaan.
 
 NeoOffice is zeer stabiel en wordt dagelijks gebruikt door duizenden mensen. De ontwikkelaars van NeoOffice hebben NeoOffice gecreëerd in 2003, toen ze OpenOffice voor het eerst draaiend kregen op OS X.
 
-Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice die gebruikers niet in vinden in OpenOffice, zoals:
+Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aan NeoOffice die gebruikers niet in vinden in OpenOffice of LibreOffice, zoals:
 
 • NeoOffice > Toon bij starten menu voor de opening van Calc of Impress in plaats van Writer bij opstarten
 • Bestand > Blader door alle versies menu voor de restauratie van vorige versies van uw documenten
@@ -25,7 +23,9 @@ Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aa
 
 
 What's New in this Version:
-Voordat u koopt NeoOffice, klikt op de "Planamesa Inc. website" link en probeert NeoOffice gratis. This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
+NeoOffice 3.x, OpenOffice en LibreOffice gebruikers: voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de lijst met wijzigingen.
+
+This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
 
 • NeoOffice would occasionally hang while editing a table in a Base database
 • Clicking any hyperlinks that point to a file would fail to open the linked file
