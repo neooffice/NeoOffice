@@ -7,13 +7,11 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is a complete office suite for OS X. With NeoOffice, users can view, edit, and save OpenOffice documents, PDF files, and most Microsoft Word, Excel, and PowerPoint documents.
-
-NeoOffice 3.x, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the "การสนับสนุน NeoOffice" link and read the list of changes.
+NeoOffice is a complete office suite for OS X. With NeoOffice, users can view, edit, and save OpenOffice documents, LibreOffice documents, and simple Microsoft Word, Excel, and PowerPoint documents.
 
 NeoOffice is extremely stable and thousands of users use it daily. The NeoOffice engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time.
 
-Since then, the NeoOffice engineers have continually added improvements to NeoOffice that users will not find in OpenOffice such as:
+Since then, the NeoOffice engineers have continually added improvements to NeoOffice that users will not find in OpenOffice or LibreOffice such as:
 
 • NeoOffice > Open at Launch menu to open Calc or Impress instead of Writer at launch
 • File > Browse All Versions menu to restore previous versions of your documents
@@ -25,7 +23,9 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 
 
 What's New in this Version:
-Before you buy NeoOffice, click on the "เว็บไซต์ของ Planamesa Inc." link and try NeoOffice for free. This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
+NeoOffice 3.x, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the "การสนับสนุน NeoOffice" link and read the list of changes.
+
+This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
 
 • NeoOffice would occasionally hang while editing a table in a Base database
 • Clicking any hyperlinks that point to a file would fail to open the linked file

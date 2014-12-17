@@ -7,13 +7,11 @@ NeoOffice
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice est une suite bureautique complète pour OS X. Avec NeoOffice, les utilisateurs peuvent visualiser, modifier et enregistrer des documents OpenOffice, des fichiers PDF et la plupart des documents Microsoft Word, Excel et PowerPoint.
-
-Les utilisateurs de NeoOffice 3.x, OpenOffice et LibreOffice : avant d'acheter NeoOffice, nous vous recommandons de cliquer sur le lien « Assistance : NeoOffice » et de lire la liste des modifications.
+NeoOffice est une suite bureautique complète pour OS X. Avec NeoOffice, les utilisateurs peuvent visualiser, modifier et enregistrer des documents OpenOffice, des documents LibreOffice et des documents Microsoft Word, Excel et PowerPoint simples.
 
 NeoOffice est extrêmement stable et des milliers d'utilisateurs utilisent quotidiennement. Les ingénieurs de NeoOffice ont crée NeoOffice en 2003 quand ils ont fait OpenOffice s'exécutent en mode natif sur OS X pour la première fois.
 
-Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice, comme :
+Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que les utilisateurs ne trouveront pas dans OpenOffice ou LibreOffice, comme :
 
 • Menu de NeoOffice > Document par défault pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
 • Menu de Fichier > Parcourir toutes les versions pour restaurer les versions précédentes de vos documents
@@ -24,7 +22,9 @@ Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améli
 • Fenêtres d'outils flottantes natives
 
 What's New in this Version:
-Avant d'acheter NeoOffice, cliquer sur le lien « Site web : Planamesa Inc. » et essayer NeoOffice gratuitement. This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
+Les utilisateurs de NeoOffice 3.x, OpenOffice et LibreOffice : avant d'acheter NeoOffice, nous vous recommandons de cliquer sur le lien « Assistance : NeoOffice » et de lire la liste des modifications.
+
+This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
 
 • NeoOffice would occasionally hang while editing a table in a Base database
 • Clicking any hyperlinks that point to a file would fail to open the linked file
