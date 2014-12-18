@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  *************************************************************/
 
 
@@ -46,7 +54,11 @@ public:
     virtual ::com::sun::star::uno::Reference< ::com::sun::star::chart2::data::XDataSequence >
                         createDataSequence(
                             const ::com::sun::star::uno::Reference< ::com::sun::star::chart2::data::XDataProvider >& rxDataProvider,
+#if SUPD == 310
+            const oox::drawingml::chart::DataSequenceModel& rDataSeq, const OUString& rRole ) SAL_OVERRIDE;
+#else	// SUPD == 310
                             const ::oox::drawingml::chart::DataSequenceModel& rDataSeq );
+#endif	// SUPD == 310
 };
 
 // ============================================================================

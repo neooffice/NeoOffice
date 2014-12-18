@@ -17,6 +17,14 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
  *************************************************************/
 
 
@@ -75,7 +83,12 @@ void ExcelChartConverter::createDataProvider( const Reference< XChartDocument >&
 }
 
 Reference< XDataSequence > ExcelChartConverter::createDataSequence(
+#if SUPD == 310
+    const Reference< XDataProvider >& rxDataProvider, const DataSequenceModel& rDataSeq,
+    const OUString& /*rRole*/ )
+#else	// SUPD == 310
         const Reference< XDataProvider >& rxDataProvider, const DataSequenceModel& rDataSeq )
+#endif	// SUPD == 310
 {
     Reference< XDataSequence > xDataSeq;
     if( rxDataProvider.is() )
