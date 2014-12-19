@@ -282,6 +282,11 @@ void DrawingFragment::onEndElement()
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Width, 0, SAL_MAX_INT32 ),
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.Height, 0, SAL_MAX_INT32 ) );
 #if SUPD == 310
+
+                    // Make sure to set the position and size *before* calling addShape().
+                    mxShape->setPosition(Point(aShapeRectEmu.X, aShapeRectEmu.Y));
+                    mxShape->setSize(Size(aShapeRectEmu.Width, aShapeRectEmu.Height));
+
                     basegfx::B2DHomMatrix aTransformation;
                     mxShape->addShape( getOoxFilter(), &getTheme(), mxDrawPage, aTransformation, mxShape->getFillProperties(), &aShapeRectEmu32 );
 #else	// SUPD == 310
