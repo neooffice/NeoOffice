@@ -2065,6 +2065,10 @@ void DrawingML::WriteText( Reference< XInterface > rXIface, bool bBodyPr, bool b
     if( !enumeration.is() )
         return;
 
+#if SUPD == 310
+    try
+    {
+#endif	// SUPD == 310
     SdrObject* pSdrObject = GetSdrObjectFromXShape(uno::Reference<drawing::XShape>(rXIface, uno::UNO_QUERY_THROW));
     const SdrTextObj* pTxtObj = PTR_CAST(SdrTextObj, pSdrObject);
     if (pTxtObj && mpTextExport)
@@ -2094,6 +2098,12 @@ void DrawingML::WriteText( Reference< XInterface > rXIface, bool bBodyPr, bool b
         }
         return;
     }
+#if SUPD == 310
+    }
+    catch ( ... )
+    {
+    }
+#endif	// SUPD == 310
 
     while( enumeration->hasMoreElements() ) {
 #if SUPD == 310
