@@ -1,10 +1,30 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
- * This file is part of the LibreOffice project.
+ * This file is part of NeoOffice.
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * This file incorporates work covered by the following license notices:
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified December 2014 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 3.3 of the Mozilla Public License v2.0.
  */
 
 #include <com/sun/star/awt/Size.hpp>
@@ -28,6 +48,10 @@
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
+
+#ifdef USE_JAVA
+#include <tools/date.hxx>
+#endif	// USE_JAVA
 
 namespace writerfilter
 {
@@ -123,7 +147,17 @@ void SdtHelper::createDateControl(OUString& rContentText)
     if (utl::ISO8601parseDateTime(m_sDate.makeStringAndClear(), aDateTime))
     {
         utl::extractDate(aDateTime, aDate);
+#ifdef USE_JAVA
+        // Fix truncated content when opening the
+        // D-MSC-E-20121107-001-utilisation-dbi-clonage-tool.docx file in the
+        // following LibreOffice bug by converting the date to an integer:
+        // https://www.libreoffice.org/bugzilla/show_bug.cgi?id=65494
+        Date aConvertedDate;
+        utl::typeConvert(aDate, aConvertedDate);
+        xPropertySet->setPropertyValue("Date", uno::makeAny(aConvertedDate.GetDate()));
+#else	// USE_JAVA
         xPropertySet->setPropertyValue("Date", uno::makeAny(aDate));
+#endif	// USE_JAVA
         xPropertySet->setPropertyValue("HelpText", uno::makeAny(OUString("Click here to enter a date")));
     }
     else
