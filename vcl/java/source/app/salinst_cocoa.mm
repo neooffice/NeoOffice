@@ -709,7 +709,10 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 				[mpOpenPanel setCanChooseDirectories:YES];
 				[mpOpenPanel setCanChooseFiles:NO];
 				if ( mpTitle && [mpTitle length] )
+				{
 					[mpOpenPanel setTitle:mpTitle];
+					[mpOpenPanel setPrompt:mpTitle];
+				}
 
 				[mpOpenPanel setDelegate:self];
 				[self setResult:[mpOpenPanel runModal]];
