@@ -1813,7 +1813,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		return NSAccessibilityTextAreaRole;
 	}
-	else if ( [NSAccessibilityValueAttribute isEqualToString:aAttribute] || [NSAccessibilitySelectedTextAttribute isEqualToString:aAttribute] )
+	else if ( [NSAccessibilitySelectedTextAttribute isEqualToString:aAttribute] )
 	{
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] )
