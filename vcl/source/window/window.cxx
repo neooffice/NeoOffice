@@ -101,6 +101,10 @@
 
 #include <set>
 
+#if defined USE_JAVA && defined MACOSX
+#include <saldata.hxx>
+#endif	// USE_JAVA && MACOSX
+
 using namespace rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
@@ -8604,6 +8608,11 @@ Reference< XDragGestureRecognizer > Window::GetDragGestureRecognizer()
 Reference< XClipboard > Window::GetClipboard()
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
+
+#if defined USE_JAVA && defined MACOSX
+    if ( GetSalData()->mbUsePrimarySelectionClipboard )
+        return GetPrimarySelection();
+#endif	// USE_JAVA && MACOSX
 
     if( mpWindowImpl->mpFrameData )
     {
