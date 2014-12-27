@@ -198,7 +198,52 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 				if ( pWindow )
 				{
+					// Try to copy current selection to system clipboard
 					Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+					if ( xClipboard.is() && xFramesSupplier.is() )
+					{
+						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+						if ( xList.is() )
+						{
+							sal_Int32 nCount = xList->getCount();
+							for ( sal_Int32 i = 0; i < nCount; i++ )
+							{
+								Reference< XFrame > xFrame;
+								xList->getByIndex( i ) >>= xFrame;
+								if ( xFrame.is() )
+								{
+									Reference< XWindow > xWindow = xFrame->getComponentWindow();
+									if ( xWindow.is() )
+									{
+										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+											pCurrentWindow = pCurrentWindow->GetParent();
+										if ( pCurrentWindow == pWindow )
+										
+										{
+											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+											if ( xDispatchProvider.is() )
+											{
+												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+												if ( xDispatchHelper.is() )
+												{
+													bool bOldUsePrimarySelectionClipboard = pSalData->mbUsePrimarySelectionClipboard;
+													pSalData->mbUsePrimarySelectionClipboard = true;
+													xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
+													xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+													pSalData->mbUsePrimarySelectionClipboard = bOldUsePrimarySelectionClipboard;
+												}
+											}
+
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+
 					if ( xClipboard.is() )
 					{
 						Reference< XTransferable > xTransferable = xClipboard->getContents();
@@ -239,9 +284,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 										Sequence< sal_Int8 > aData;
 										aValue >>= aData;
 										if ( aData.getLength() )
-										{
 											*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
-										}
 									}
 								}
 							}
