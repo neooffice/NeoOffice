@@ -87,7 +87,6 @@ public:
 	JavaSalFrame*			mpLastResizeFrame;
 	timeval					maLastResizeTime;
 	JavaSalFrame*			mpLastMouseMoveFrame;
-	bool					mbUsePrimarySelectionClipboard;
 
 							SalData();
 							~SalData();

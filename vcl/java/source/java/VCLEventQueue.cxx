@@ -199,9 +199,12 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 				if ( pWindow )
 				{
 					// Try to copy current selection to system clipboard
-					Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+					Reference< XClipboard > xClipboard = pWindow->GetClipboard();
+					if ( xClipboard.is() )
+						xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
+
 					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-					if ( xClipboard.is() && xFramesSupplier.is() )
+					if ( xFramesSupplier.is() )
 					{
 						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
 						if ( xList.is() )
@@ -227,13 +230,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 											{
 												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
 												if ( xDispatchHelper.is() )
-												{
-													bool bOldUsePrimarySelectionClipboard = pSalData->mbUsePrimarySelectionClipboard;
-													pSalData->mbUsePrimarySelectionClipboard = true;
-													xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
 													xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
-													pSalData->mbUsePrimarySelectionClipboard = bOldUsePrimarySelectionClipboard;
-												}
 											}
 
 											break;
