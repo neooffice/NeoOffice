@@ -36,8 +36,10 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salinst.h>
+#include <vcl/edit.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
+#include <vcl/window.h>
 #include <vcl/window.hxx>
 #include <comphelper/processfactory.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -198,7 +200,54 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 				if ( pWindow )
 				{
-					Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+					// Try to copy current selection to system clipboard
+					Reference< XClipboard > xClipboard = pWindow->GetClipboard();
+					if ( xClipboard.is() )
+						xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
+
+					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+					if ( xFramesSupplier.is() )
+					{
+						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+						if ( xList.is() )
+						{
+							sal_Int32 nCount = xList->getCount();
+							for ( sal_Int32 i = 0; i < nCount; i++ )
+							{
+								Reference< XFrame > xFrame;
+								xList->getByIndex( i ) >>= xFrame;
+								if ( xFrame.is() )
+								{
+									Reference< XWindow > xWindow = xFrame->getComponentWindow();
+									if ( xWindow.is() )
+									{
+										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+											pCurrentWindow = pCurrentWindow->GetParent();
+										if ( pCurrentWindow == pWindow )
+										
+										{
+											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+											if ( xDispatchProvider.is() )
+											{
+												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+												if ( xDispatchHelper.is() )
+													xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+											}
+
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+
+					// If an edit window has focus, use its text
+					Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
+					if ( pEditWindow )
+						pEditWindow->Copy();
+
 					if ( xClipboard.is() )
 					{
 						Reference< XTransferable > xTransferable = xClipboard->getContents();
@@ -239,9 +288,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 										Sequence< sal_Int8 > aData;
 										aValue >>= aData;
 										if ( aData.getLength() )
-										{
 											*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
-										}
 									}
 								}
 							}
