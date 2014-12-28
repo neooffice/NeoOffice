@@ -35,6 +35,7 @@
 
 #include <salgdi.h>
 #include <saldata.hxx>
+#include <salinst.h>
 #include <basegfx/polygon/b2dpolygon.hxx>
 
 #include <premac.h>
@@ -1190,12 +1191,28 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 
 		CGContextSaveGState( aContext );
 
-		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, mbInvert && bAllowXOR ? true : false, mbXOR && bAllowXOR ? true : false, aContext, maNativeBounds, aSrcRect, aDestRect, false, false );
+		bool bInvert = ( mbInvert && bAllowXOR ? true : false );
+		bool bXOR = ( mbXOR && bAllowXOR ? true : false );
+		pSrcGraphics->copyToContext( maFrameClipPath, maNativeClipPath, bInvert, bXOR, aContext, maNativeBounds, aSrcRect, aDestRect, false, false );
 
 		CGContextRestoreGState( aContext );
 
 		if ( mpFrame )
+		{
 			addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
+
+			// Post a paint event for overlapping bounds
+			if ( !bXOR && pSrcGraphics == this )
+			{
+				CGRect aOverlapBounds = CGRectIntersection( aSrcRect, aDestRect );
+				if ( !CGRectIsEmpty( aOverlapBounds ) )
+				{
+					JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpFrame, new SalPaintEvent( (long)aDestRect.origin.x, (long)aDestRect.origin.y, (long)aDestRect.size.width, (long)aDestRect.size.height ) );
+					JavaSalEventQueue::postCachedEvent( pPaintEvent );
+					pPaintEvent->release();
+				}
+			}
+		}
 	}
 }
 

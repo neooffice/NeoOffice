@@ -1951,6 +1951,41 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
+- (id)accessibilityAttributeValue:(NSString *)aAttribute
+{
+	if ( [NSAccessibilityRoleAttribute isEqualToString:aAttribute] )
+	{
+		return NSAccessibilityTextAreaRole;
+	}
+	else if ( [NSAccessibilitySelectedTextAttribute isEqualToString:aAttribute] )
+	{
+		NSWindow *pWindow = [self window];
+		if ( pWindow && [pWindow isVisible] )
+		{
+			if ( aTextSelection )
+			{
+				CFRelease( aTextSelection );
+				aTextSelection = nil;
+			}
+
+			VCLEventQueue_getTextSelection( pWindow, &aTextSelection, NULL );
+			if ( aTextSelection )
+				return (NSString *)aTextSelection;
+		}
+
+		return @"";
+	}
+	else
+	{
+		return [super accessibilityAttributeValue:aAttribute];
+	}
+}
+
+- (MacOSBOOL)accessibilityIsIgnored
+{
+	return NO;
+}
+
 - (void)dealloc
 {
 	if ( mpInputManager )
