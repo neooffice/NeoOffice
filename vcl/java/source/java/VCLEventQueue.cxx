@@ -36,8 +36,10 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salinst.h>
+#include <vcl/edit.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp.hxx>
+#include <vcl/window.h>
 #include <vcl/window.hxx>
 #include <comphelper/processfactory.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -240,6 +242,11 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 							}
 						}
 					}
+
+					// If an edit window has focus, use its text
+					Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
+					if ( pEditWindow )
+						pEditWindow->Copy();
 
 					if ( xClipboard.is() )
 					{
