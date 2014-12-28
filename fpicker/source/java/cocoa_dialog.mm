@@ -862,8 +862,9 @@ using namespace vos;
 	// Fix bug 3568 by forcefully setting the directory when it has been
 	// changed by the user. Note that we only do this if the file URL is
 	// different than the panel's directory URL or else on Mac OS X 10.7 the
-	// file list will go into a infinite repainting loop.
-	if ( pURL && [pURL isFileURL] )
+	// file list will go into a infinite repainting loop. Fix exception on
+	// OS X 10.10 by ensuring the the parameter is really an NSURL instance.
+	if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL isFileURL] )
 	{
 		if ( mpDirectoryURL )
 			[mpDirectoryURL release];
