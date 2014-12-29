@@ -71,6 +71,9 @@ OOX_DLLPUBLIC sal_Bool SAL_CALL component_writeInfo( void * , void * pRegistryKe
             WRITEINFO( ::oox::xls::BiffDetector );
             WRITEINFO( ::oox::xls::ExcelFilter );
             WRITEINFO( ::oox::xls::ExcelBiffFilter );
+#ifndef NO_OOO_4_1_1_SERVICES
+            WRITEINFO( ::oox::xls::OOXMLFormulaParser );
+#endif	// NO_OOO_4_1_1_SERVICES
 		}
 		catch (css::registry::InvalidRegistryException &)
 		{
@@ -121,6 +124,9 @@ OOX_DLLPUBLIC void * SAL_CALL component_getFactory( const sal_Char * pImplName, 
         else SINGLEFACTORY2( ::oox::xls::BiffDetector )
         else SINGLEFACTORY2( ::oox::xls::ExcelFilter )
         else SINGLEFACTORY2( ::oox::xls::ExcelBiffFilter )
+#ifndef NO_OOO_4_1_1_SERVICES
+        else SINGLEFACTORY2( ::oox::xls::OOXMLFormulaParser )
+#endif	// NO_OOO_4_1_1_SERVICES
 
 		if( xFactory.is())
 		{

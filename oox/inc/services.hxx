@@ -44,6 +44,9 @@ namespace oox {
     namespace xls {     DECLARE_FUNCTIONS( BiffDetector );              }
     namespace xls {     DECLARE_FUNCTIONS( ExcelFilter );               }
     namespace xls {     DECLARE_FUNCTIONS( ExcelBiffFilter );           }
+#ifndef NO_OOO_4_1_1_SERVICES
+    namespace xls {     DECLARE_FUNCTIONS( OOXMLFormulaParser );           }
+#endif	// NO_OOO_4_1_1_SERVICES
 #endif	// SUPD == 310
 }
 
