@@ -89,21 +89,21 @@ bool lclGetApiOperatorFromToken( sal_Int32& rnApiOperator, sal_Int32 nToken )
 {
     switch( nToken )
     {
-#if SUPD
+#if SUPD == 310
         case XML_lessThan:              rnApiOperator = FilterOperator_NOT_EQUAL;     return true;
         case XML_equal:                 rnApiOperator = FilterOperator_EQUAL;         return true;
         case XML_lessThanOrEqual:       rnApiOperator = FilterOperator_LESS_EQUAL;    return true;
         case XML_greaterThan:           rnApiOperator = FilterOperator_GREATER;       return true;
         case XML_notEqual:              rnApiOperator = FilterOperator_NOT_EQUAL;     return true;
         case XML_greaterThanOrEqual:    rnApiOperator = FilterOperator_GREATER_EQUAL; return true;
-#else	// SUPD
+#else	// SUPD == 310
         case XML_lessThan:              rnApiOperator = FilterOperator2::NOT_EQUAL;     return true;
         case XML_equal:                 rnApiOperator = FilterOperator2::EQUAL;         return true;
         case XML_lessThanOrEqual:       rnApiOperator = FilterOperator2::LESS_EQUAL;    return true;
         case XML_greaterThan:           rnApiOperator = FilterOperator2::GREATER;       return true;
         case XML_notEqual:              rnApiOperator = FilterOperator2::NOT_EQUAL;     return true;
         case XML_greaterThanOrEqual:    rnApiOperator = FilterOperator2::GREATER_EQUAL; return true;
-#endif	// SUPD
+#endif	// SUPD == 310
     }
     return false;
 }

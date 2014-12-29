@@ -1356,11 +1356,11 @@ ApiTokenSequence ApiParserWrapper::parseFormula( const OUString& rFormula, const
     ApiTokenSequence aTokenSeq;
     if( mxParser.is() ) try
     {
-#if SUPD
+#if SUPD == 310
         aTokenSeq = mxParser->parseFormula( rFormula );
-#else	// SUPD
+#else	// SUPD == 310
         aTokenSeq = mxParser->parseFormula( rFormula, rRefPos );
-#endif	// SUPD
+#endif	// SUPD == 310
     }
     catch( Exception& )
     {
