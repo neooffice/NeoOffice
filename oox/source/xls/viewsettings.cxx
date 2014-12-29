@@ -256,6 +256,19 @@ void SheetViewSettings::importSheetView( const AttributeList& rAttribs )
     rModel.mbShowOutline     = rAttribs.getBool( XML_showOutlineSymbols, true );
 }
 
+#ifndef NO_OOO_3_1_1_TAB_COLOR
+
+void SheetViewSettings::importTabColor( const Color& rColor )
+{
+    if( !maSheetViews.empty() )
+    {
+        SheetViewModel& rModel = *maSheetViews.back();
+        rModel.maTabColor = rColor;
+    }
+}
+
+#endif	// !NO_OOO_3_1_1_TAB_COLOR
+
 void SheetViewSettings::importPane( const AttributeList& rAttribs )
 {
     OSL_ENSURE( !maSheetViews.empty(), "SheetViewSettings::importPane - missing sheet view model" );
@@ -583,6 +596,9 @@ void SheetViewSettings::finalizeImport()
     aPropMap.setProperty( PROP_ZoomValue, static_cast< sal_Int16 >( xModel->getNormalZoom() ));
     aPropMap.setProperty( PROP_PageViewZoomValue, static_cast< sal_Int16 >( xModel->getPageBreakZoom() ));
     aPropMap.setProperty( PROP_GridColor, xModel->getGridColor( getBaseFilter() ));
+#ifndef NO_OOO_3_1_1_TAB_COLOR
+    aPropMap.setProperty( PROP_TabColor, xModel->maTabColor.getColor( getBaseFilter().getGraphicHelper() ));
+#endif	// !NO_OOO_3_1_1_TAB_COLOR
     aPropMap.setProperty( PROP_ShowPageBreakPreview, xModel->isPageBreakPreview());
     aPropMap.setProperty( PROP_ShowFormulas, xModel->mbShowFormulas);
     aPropMap.setProperty( PROP_ShowGrid, xModel->mbShowGrid);

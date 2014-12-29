@@ -34,6 +34,10 @@
 #include "oox/token/properties.hxx"
 #endif	// SUPD == 310
 
+#ifndef NO_OOO_3_1_1_TAB_COLOR
+#include "oox/xls/viewsettings.hxx"
+#endif	// !NO_OOO_3_1_1_TAB_COLOR
+
 namespace oox {
 namespace xls {
 
@@ -335,11 +339,15 @@ void WorksheetSettings::finalizeImport()
     aPropSet.setProperty( PROP_CodeName, maSheetSettings.maCodeName );
 
     // sheet tab color
+#ifndef NO_OOO_3_1_1_TAB_COLOR
+    getSheetViewSettings().importTabColor( maSheetSettings.maTabColor );
+#else	// !NO_OOO_3_1_1_TAB_COLOR
     if( !maSheetSettings.maTabColor.isAuto() )
     {
         sal_Int32 nColor = maSheetSettings.maTabColor.getColor( getBaseFilter().getGraphicHelper() );
         aPropSet.setProperty( PROP_TabColor, nColor );
     }
+#endif	// !NO_OOO_3_1_1_TAB_COLOR
 }
 
 // ============================================================================
