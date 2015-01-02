@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#import <dlfcn.h>
+
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salinst.h>
@@ -60,6 +62,10 @@
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
+
+typedef void Application_setPrivateClipboard_Type( ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboard > *pClipboard, sal_Bool bSystemClipboard );
+
+static Application_setPrivateClipboard_Type *pApplication_setPrivateClipboard = NULL;
 
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
@@ -202,97 +208,107 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 				{
 					// Try to copy current selection to system clipboard
 					Reference< XClipboard > xClipboard = pWindow->GetClipboard();
-					if ( xClipboard.is() )
-						xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
-
-					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-					if ( xFramesSupplier.is() )
+					if ( !pApplication_setPrivateClipboard )
+						pApplication_setPrivateClipboard = (Application_setPrivateClipboard_Type *)dlsym( RTLD_DEFAULT, "Application_setPrivateClipboard" );
+					if ( xClipboard.is() && pApplication_setPrivateClipboard )
 					{
-						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
-						if ( xList.is() )
+						pApplication_setPrivateClipboard( &xClipboard, sal_True );
+						try
 						{
-							sal_Int32 nCount = xList->getCount();
-							for ( sal_Int32 i = 0; i < nCount; i++ )
-							{
-								Reference< XFrame > xFrame;
-								xList->getByIndex( i ) >>= xFrame;
-								if ( xFrame.is() )
-								{
-									Reference< XWindow > xWindow = xFrame->getComponentWindow();
-									if ( xWindow.is() )
-									{
-										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
-										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
-											pCurrentWindow = pCurrentWindow->GetParent();
-										if ( pCurrentWindow == pWindow )
-										
-										{
-											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
-											if ( xDispatchProvider.is() )
-											{
-												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
-												if ( xDispatchHelper.is() )
-													xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
-											}
+							xClipboard->setContents( Reference< XTransferable >(), Reference< XClipboardOwner >() );
 
-											break;
+							Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+							if ( xFramesSupplier.is() )
+							{
+								Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+								if ( xList.is() )
+								{
+									sal_Int32 nCount = xList->getCount();
+									for ( sal_Int32 i = 0; i < nCount; i++ )
+									{
+										Reference< XFrame > xFrame;
+										xList->getByIndex( i ) >>= xFrame;
+										if ( xFrame.is() )
+										{
+											Reference< XWindow > xWindow = xFrame->getComponentWindow();
+											if ( xWindow.is() )
+											{
+												Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+												while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+													pCurrentWindow = pCurrentWindow->GetParent();
+												if ( pCurrentWindow == pWindow )
+												
+												{
+													Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+													if ( xDispatchProvider.is() )
+													{
+														Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+														if ( xDispatchHelper.is() )
+															xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Copy" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+													}
+
+													break;
+												}
+											}
+										}
+									}
+								}
+							}
+
+							// If an edit window has focus, use its text
+							Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
+							if ( pEditWindow )
+								pEditWindow->Copy();
+
+							Reference< XTransferable > xTransferable = xClipboard->getContents();
+							if ( xTransferable.is() )
+							{
+								DataFlavor aFlavor;
+
+								// Handle string selection
+								if ( pTextSelection )
+								{
+									Type aType( getCppuType( ( OUString* )0 ) );
+									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+									aFlavor.DataType = aType;
+									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+									{
+										Any aValue = xTransferable->getTransferData( aFlavor );
+										if ( aValue.getValueType().equals( aType ) )
+										{
+											OUString aText;
+											aValue >>= aText;
+											if ( aText.getLength() )
+												*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+										}
+									}
+								}
+
+								// Handle RTF selection
+								if ( pRTFSelection )
+								{
+									Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
+									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
+									aFlavor.DataType = aType;
+									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+									{
+										Any aValue = xTransferable->getTransferData( aFlavor );
+										if ( aValue.getValueType().equals( aType ) )
+										{
+											Sequence< sal_Int8 > aData;
+											aValue >>= aData;
+											if ( aData.getLength() )
+												*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
 										}
 									}
 								}
 							}
 						}
-					}
-
-					// If an edit window has focus, use its text
-					Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
-					if ( pEditWindow )
-						pEditWindow->Copy();
-
-					if ( xClipboard.is() )
-					{
-						Reference< XTransferable > xTransferable = xClipboard->getContents();
-						if ( xTransferable.is() )
+						catch( ... )
 						{
-							DataFlavor aFlavor;
-
-							// Handle string selection
-							if ( pTextSelection )
-							{
-								Type aType( getCppuType( ( OUString* )0 ) );
-								aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
-								aFlavor.DataType = aType;
-								if ( xTransferable->isDataFlavorSupported( aFlavor ) )
-								{
-									Any aValue = xTransferable->getTransferData( aFlavor );
-									if ( aValue.getValueType().equals( aType ) )
-									{
-										OUString aText;
-										aValue >>= aText;
-										if ( aText.getLength() )
-											*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
-									}
-								}
-							}
-
-							// Handle RTF selection
-							if ( pRTFSelection )
-							{
-								Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
-								aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
-								aFlavor.DataType = aType;
-								if ( xTransferable->isDataFlavorSupported( aFlavor ) )
-								{
-									Any aValue = xTransferable->getTransferData( aFlavor );
-									if ( aValue.getValueType().equals( aType ) )
-									{
-										Sequence< sal_Int8 > aData;
-										aValue >>= aData;
-										if ( aData.getLength() )
-											*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
-									}
-								}
-							}
 						}
+
+						pApplication_setPrivateClipboard( &xClipboard, sal_False );
 					}
 				}
 			}
