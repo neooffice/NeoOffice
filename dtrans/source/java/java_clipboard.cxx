@@ -33,15 +33,10 @@
  *
  ************************************************************************/
 
-#ifndef _JAVA_CLIPBOARD_HXX_
-#include "java_clipboard.hxx"
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_RENDERINGCAPABILITIES_HPP_
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
-#endif
-#ifndef _DTRANSCLIPBOARD_HXX
+
+#include "java_clipboard.hxx"
 #include "DTransClipboard.hxx"
-#endif
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::clipboard;
@@ -69,9 +64,10 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex )
+JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex ),
+	mbSystemClipboard( bSystemClipboard ),
+	mbPrivateClipboard( sal_False )
 {
-	mbSystemClipboard = bSystemClipboard;
 }
 
 // ------------------------------------------------------------------------
@@ -89,7 +85,7 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
 	ClearableMutexGuard aGuard( maMutex );
 
 	if ( mbSystemClipboard )
-		aContents = Reference< XTransferable >( maContents );
+		aContents = Reference< XTransferable >( mbPrivateClipboard ? maPrivateContents : maContents );
 
 	aGuard.clear();
 
@@ -112,7 +108,7 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 	Reference< XTransferable > aContents( maContents );
 
-	if ( mbSystemClipboard )
+	if ( mbSystemClipboard && !mbPrivateClipboard )
 	{
 		DTransTransferable *pTransferable = NULL;
 		if ( maContents.is() )
@@ -186,7 +182,7 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 	Reference< XClipboardOwner > aOldOwner( maOwner );
 	maOwner = xClipboardOwner;
 
-	if ( mbSystemClipboard )
+	if ( mbSystemClipboard && !mbPrivateClipboard )
 	{
 		DTransTransferable *pTransferable = NULL;
 		if ( aOldContents.is() )
@@ -284,6 +280,60 @@ void SAL_CALL JavaClipboard::initialize( const Sequence< Any >& xAny ) throw( Ru
 {
 }
 
+// ------------------------------------------------------------------------
+
+void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
+{
+	ClearableMutexGuard aGuard( maMutex );
+
+	if ( mbSystemClipboard && bPrivateClipboard != mbPrivateClipboard )
+	{
+		Reference< XTransferable > aOldContents( maContents );
+		maContents.clear();
+
+		Reference< XClipboardOwner > aOldOwner( maOwner );
+		maOwner.clear();
+
+		mbPrivateClipboard = bPrivateClipboard;
+
+		if ( mbPrivateClipboard )
+		{
+			maPrivateContents = aOldContents;
+			maPrivateOwner = aOldOwner;
+		}
+		else
+		{
+			DTransTransferable *pTransferable = NULL;
+			if ( maPrivateContents.is() )
+				pTransferable = (DTransTransferable *)maPrivateContents.get();
+
+			if ( pTransferable && pTransferable->hasOwnership() )
+			{
+				maContents = maPrivateContents;
+				maOwner = maPrivateOwner;
+			}
+
+			maPrivateContents.clear();
+			maPrivateOwner.clear();
+		}
+
+		list< Reference< XClipboardListener > > listeners( maListeners );
+
+		aGuard.clear();
+
+		if ( aOldOwner.is() )
+			aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+
+		ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), maContents );
+		while ( listeners.begin() != listeners.end() )
+		{
+			if( listeners.front().is() )
+				listeners.front()->changedContents( aEvent );
+			listeners.pop_front();
+		}
+	}
+}
+
 // ========================================================================
 
 JavaClipboardFactory::JavaClipboardFactory() : WeakComponentImplHelper1< XSingleServiceFactory >( maMutex )
@@ -330,4 +380,20 @@ Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const
 	}
 
 	return xClipboard;
+}
+
+// ========================================================================
+
+extern "C" void Application_setPrivateClipboard( Reference< XClipboard > *pClipboard, sal_Bool bPrivateClipboard )
+{
+	if ( !pClipboard )
+		return;
+
+	Reference< XClipboard > aClipboard = *pClipboard;
+	if ( aClipboard.is() )
+	{
+		JavaClipboard *pJavaClipboard = dynamic_cast< JavaClipboard* >( aClipboard.get() );
+		if ( pJavaClipboard )
+			pJavaClipboard->setPrivateClipboard( bPrivateClipboard );
+	}
 }
