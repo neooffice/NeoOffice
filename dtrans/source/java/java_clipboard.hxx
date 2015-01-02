@@ -36,51 +36,23 @@
 #ifndef _JAVA_CLIPBOARD_HXX_
 #define _JAVA_CLIPBOARD_HXX_
 
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
-#ifndef _SAL_TYPES_H_
-#include <sal/types.h>
-#endif
-#ifndef _DTRANSCLIPBOARD_HXX
-#include "DTransClipboard.hxx"
-#endif
-#ifndef _CPPUHELPER_FACTORY_HXX_
-#include <cppuhelper/factory.hxx>
-#endif
-#ifndef _CPPUHELPER_COMPBASE1_HXX_
-#include <cppuhelper/compbase1.hxx>
-#endif
-#ifndef _CPPUHELPER_COMPBASE4_HXX_
-#include <cppuhelper/compbase4.hxx>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HPP_
-#include <com/sun/star/datatransfer/XTransferable.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARDEX_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboardEx.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARDOWNER_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboardOwner.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARDLISTENER_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboardListener.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARDNOTIFIER_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XFLUSHABLECLIPBOARD_HPP_
-#include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
-#include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef __SGI_STL_HASHMAP
 #include <hash_map>
-#endif
-#ifndef __SGI_STL_LIST
 #include <list>
-#endif
+
+#include <cppuhelper/factory.hxx>
+#include <cppuhelper/compbase1.hxx>
+#include <cppuhelper/compbase4.hxx>
+#include <com/sun/star/datatransfer/XTransferable.hpp>
+#include <com/sun/star/datatransfer/clipboard/XClipboardEx.hpp>
+#include <com/sun/star/datatransfer/clipboard/XClipboardOwner.hpp>
+#include <com/sun/star/datatransfer/clipboard/XClipboardListener.hpp>
+#include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
+#include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
+#include <com/sun/star/lang/XServiceInfo.hpp>
+
+#include <rtl/ustring.hxx>
+#include <sal/types.h>
+#include "DTransClipboard.hxx"
 
 #define JAVA_CLIPBOARD_SERVICE_NAME "com.sun.star.datatransfer.clipboard.SystemClipboard"
 #define JAVA_CLIPBOARD_IMPL_NAME "com.sun.star.datatransfer.clipboard.JavaClipboard"
@@ -93,8 +65,11 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardListener > >	maListeners;
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maPrivateContents;
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maPrivateOwner;
 	::osl::Mutex			maMutex;
 	bool					mbSystemClipboard;
+	sal_Bool				mbPrivateClipboard;
 
 public:
 							JavaClipboard( bool bSystemClipboard );
@@ -112,6 +87,8 @@ public:
 
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL initialize( const com::sun::star::uno::Sequence<com::sun::star::uno::Any>& xAny ) throw( ::com::sun::star::uno::RuntimeException );
+
+	void					setPrivateClipboard( sal_Bool bPrivateClipboard );
 };
 
 class JavaClipboardFactory : public ::cppu::WeakComponentImplHelper1< ::com::sun::star::lang::XSingleServiceFactory >
