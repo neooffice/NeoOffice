@@ -448,10 +448,17 @@ static const FunctionData saFuncTableBiff3[] =
     { 0/*"FIND"*/,              "FINDB",                205,    205,    2,  3,  V, { VR }, 0 },
     { 0/*"SEARCH"*/,            "SEARCHB",              206,    206,    2,  3,  V, { VR }, 0 },
     { 0/*"REPLACE"*/,           "REPLACEB",             207,    207,    4,  4,  V, { VR }, 0 },
+#if SUPD == 310
+    { 0/*"LEFTB"*/,                  "LEFTB",                208,    208,    1,  2,  V, { VR }, 0 },
+    { 0/*"RIGHTB"*/,                 "RIGHTB",               209,    209,    1,  2,  V, { VR }, 0 },
+    { 0/*"MIDB"*/,                   "MIDB",                 210,    210,    3,  3,  V, { VR }, 0 },
+    { 0/*"LENB"*/,                   "LENB",                 211,    211,    1,  1,  V, { VR }, 0 },
+#else	// SUPD == 310
     { "LEFTB",                  "LEFTB",                208,    208,    1,  2,  V, { VR }, 0 },
     { "RIGHTB",                 "RIGHTB",               209,    209,    1,  2,  V, { VR }, 0 },
     { "MIDB",                   "MIDB",                 210,    210,    3,  3,  V, { VR }, 0 },
     { "LENB",                   "LENB",                 211,    211,    1,  1,  V, { VR }, 0 },
+#endif	// SUPD == 310
     { "ROUNDUP",                "ROUNDUP",              212,    212,    2,  2,  V, { VR }, 0 },
     { "ROUNDDOWN",              "ROUNDDOWN",            213,    213,    2,  2,  V, { VR }, 0 },
     { "ASC",                    "ASC",                  214,    214,    1,  1,  V, { VR }, 0 },
@@ -730,10 +737,17 @@ static const FunctionData saFuncTableOox[] =
     { 0,                        "CUBESET",              478,    NOID,   2,  5,  V, { VR, RX, VR }, 0 },
     { 0,                        "CUBESETCOUNT",         479,    NOID,   1,  1,  V, { VR }, 0 },
     { 0,                        "IFERROR",              480,    NOID,   2,  2,  V, { VO, RO }, 0 },
+#if SUPD == 310
+    { 0/*"COUNTIFS"*/,               "COUNTIFS",             481,    NOID,   2,  MX, V, { RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS },
+    { 0/*"SUMIFS"*/,                 "SUMIFS",               482,    NOID,   3,  MX, V, { RO, RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS },
+    { 0/*"AVERAGEIF"*/,              "AVERAGEIF",            483,    NOID,   2,  3,  V, { RO, VR, RO }, FUNCFLAG_MACROCALL },
+    { 0/*"AVERAGEIFS"*/,             "AVERAGEIFS",           484,    NOID,   3,  MX, V, { RO, RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS }
+#else	// SUPD == 310
     { "COUNTIFS",               "COUNTIFS",             481,    NOID,   2,  MX, V, { RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS },
     { "SUMIFS",                 "SUMIFS",               482,    NOID,   3,  MX, V, { RO, RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS },
     { "AVERAGEIF",              "AVERAGEIF",            483,    NOID,   2,  3,  V, { RO, VR, RO }, FUNCFLAG_MACROCALL },
     { "AVERAGEIFS",             "AVERAGEIFS",           484,    NOID,   3,  MX, V, { RO, RO, VR }, FUNCFLAG_MACROCALL | FUNCFLAG_PARAMPAIRS }
+#endif	// SUPD == 310
 };
 
 /** Functions defined by OpenFormula, but not supported by Calc or by Excel. */
