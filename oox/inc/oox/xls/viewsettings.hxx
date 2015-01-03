@@ -75,9 +75,9 @@ struct SheetViewModel
     bool                mbShowZeros;                    /// True = show zero value zells.
     bool                mbShowOutline;                  /// True = show outlines.
     bool                mbZoomToFit;                    /// True = zoom chart sheet to fit window.
-#ifndef NO_OOO_3_1_1_TAB_COLOR
+#if SUPD == 310
     Color               maTabColor;                     /// Sheet tab color.
-#endif	// !NO_OOO_3_1_1_TAB_COLOR
+#endif	// SUPD == 310
 
     explicit            SheetViewModel();
 
@@ -109,10 +109,10 @@ public:
 
     /** Imports the sheetView element containing sheet view settings. */
     void                importSheetView( const AttributeList& rAttribs );
-#ifndef NO_OOO_3_1_1_TAB_COLOR
+#if SUPD == 310
     /** Imports the tabcolor element containing tab color settings. */
     void                importTabColor( const Color& rColor );
-#endif	// !NO_OOO_3_1_1_TAB_COLOR
+#endif	// SUPD == 310
     /** Imports the pane element containing sheet pane settings. */
     void                importPane( const AttributeList& rAttribs );
     /** Imports the selection element containing selection settings for a pane. */
