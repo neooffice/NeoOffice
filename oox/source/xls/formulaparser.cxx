@@ -1339,6 +1339,9 @@ ApiTokenSequence OoxFormulaParserImpl::importOoxFormula( const CellAddress& rBas
         maApiParser.getParserProperties().setProperty( PROP_ExternalLinks, getExternalLinks().getLinkInfos() );
         mbNeedExtRefs = false;
     }
+#if SUPD == 310
+    maApiParser.getParserProperties().setProperty( PROP_ReferencePosition, rBaseAddr );
+#endif	// SUPD == 310
     return finalizeTokenArray( maApiParser.parseFormula( rFormulaString, rBaseAddr ) );
 }
 
