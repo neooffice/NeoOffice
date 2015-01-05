@@ -41,7 +41,7 @@ ENABLE_EXCEPTIONS=TRUE
 .IF "$(UPD)" == "310"
 INCLOCAL += \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
-	-I$(PRJ)$/..$/sal/inc
+	-I$(PRJ)$/..$/sal$/inc
 .ENDIF		# "$(UPD)" == "310"
 
 DLLPRE =

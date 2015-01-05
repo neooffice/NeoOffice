@@ -42,8 +42,8 @@ AUTOSEG=true
 
 .IF "$(UPD)" == "310"
 INCLOCAL += \
-	-I$(PRJ)$/..$/sal/inc \
-	-I$(PRJ)$/..$/vcl/inc
+	-I$(PRJ)$/..$/sal$/inc \
+	-I$(PRJ)$/..$/vcl$/inc
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
