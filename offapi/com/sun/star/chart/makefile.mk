@@ -53,6 +53,7 @@ IDLFILES= \
 	TimeInterval.idl \
 	TimeUnit.idl \
 	XComplexDescriptionAccess.idl \
+	XDateCategories.idl \
 	XDiagramPositioning.idl
 
 UNOTYPES= \
@@ -61,6 +62,7 @@ UNOTYPES= \
 	com.sun.star.chart.TimeInterval \
 	com.sun.star.chart.TimeUnit \
 	com.sun.star.chart.XComplexDescriptionAccess \
+	com.sun.star.chart.XDateCategories \
 	com.sun.star.chart.XDiagramPositioning
 
 # Force creation of the IDL header files before the compiling source files
