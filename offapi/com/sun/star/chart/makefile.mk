@@ -52,6 +52,7 @@ IDLFILES= \
 	TimeIncrement.idl \
 	TimeInterval.idl \
 	TimeUnit.idl \
+	XAxis.idl \
 	XComplexDescriptionAccess.idl \
 	XDateCategories.idl \
 	XDiagramPositioning.idl
@@ -61,6 +62,7 @@ UNOTYPES= \
 	com.sun.star.chart.TimeIncrement \
 	com.sun.star.chart.TimeInterval \
 	com.sun.star.chart.TimeUnit \
+	com.sun.star.chart.XAxis \
 	com.sun.star.chart.XComplexDescriptionAccess \
 	com.sun.star.chart.XDateCategories \
 	com.sun.star.chart.XDiagramPositioning
