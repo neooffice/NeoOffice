@@ -51,13 +51,15 @@ IDLFILES= \
 	AxisType2.idl \
 	LinearScaling.idl \
 	LogarithmicScaling.idl \
-	ScaleData2.idl
+	ScaleData2.idl \
+	XDiagram2.idl
 
 UNOTYPES= \
 	com.sun.star.chart2.AxisType2 \
 	com.sun.star.chart2.LinearScaling \
 	com.sun.star.chart2.LogarithmicScaling \
-	com.sun.star.chart2.ScaleData2
+	com.sun.star.chart2.ScaleData2 \
+	com.sun.star.chart2.XDiagram2
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
