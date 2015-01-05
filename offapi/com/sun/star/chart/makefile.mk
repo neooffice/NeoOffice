@@ -48,6 +48,7 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	ChartAxisType.idl \
 	ChartLegendExpansion.idl \
 	TimeIncrement.idl \
 	TimeInterval.idl \
@@ -59,6 +60,7 @@ IDLFILES= \
 	XDiagramPositioning.idl
 
 UNOTYPES= \
+	com.sun.star.chart.ChartAxisType \
 	com.sun.star.chart.ChartLegendExpansion \
 	com.sun.star.chart.TimeIncrement \
 	com.sun.star.chart.TimeInterval \
