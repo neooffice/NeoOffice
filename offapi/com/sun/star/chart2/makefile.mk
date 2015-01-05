@@ -52,6 +52,7 @@ IDLFILES= \
 	LinearScaling.idl \
 	LogarithmicScaling.idl \
 	ScaleData2.idl \
+	XAnyDescriptionAccess.idl \
 	XDiagram2.idl
 
 UNOTYPES= \
@@ -59,6 +60,7 @@ UNOTYPES= \
 	com.sun.star.chart2.LinearScaling \
 	com.sun.star.chart2.LogarithmicScaling \
 	com.sun.star.chart2.ScaleData2 \
+	com.sun.star.chart2.XAnyDescriptionAccess \
 	com.sun.star.chart2.XDiagram2
 
 # Force creation of the IDL header files before the compiling source files
