@@ -46,7 +46,7 @@ INCLOCAL+= \
 	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
-	-I$(PRJ)$/..$/sal/inc
+	-I$(PRJ)$/..$/sal$/inc
 
 PREPENDLIBS=$(PRJ)$/..$/expat$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib

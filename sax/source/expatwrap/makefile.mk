@@ -57,7 +57,7 @@ INCLOCAL+= \
 	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
-	-I$(PRJ)$/..$/sal/inc
+	-I$(PRJ)$/..$/sal$/inc
 
 # Link to modified libexpat*.a
 SOLARLIB:=-L$(PRJ)$/..$/expat$/$(INPATH)$/lib $(SOLARLIB)

@@ -35,23 +35,23 @@ CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 .IF "$(UPD)" == "310"
 INCLOCAL += \
 	-I$(PRJ)$/source \
-	-I$(PRJ)$/..$/comphelper/inc \
-	-I$(PRJ)$/..$/i18npool/inc \
+	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/i18npool$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssdrawing \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmldom \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
-	-I$(PRJ)$/..$/oox/inc \
+	-I$(PRJ)$/..$/oox$/inc \
 	-I$(PRJ)$/..$/oox$/$(INPATH)$/inc \
-	-I$(PRJ)$/..$/sal/inc \
-	-I$(PRJ)$/..$/sax/inc \
-	-I$(PRJ)$/..$/svtools/inc \
-	-I$(PRJ)$/..$/svx/inc \
-	-I$(PRJ)$/..$/tools/inc \
-	-I$(PRJ)$/..$/unotools/inc \
-	-I$(PRJ)$/..$/vcl/inc \
-	-I$(PRJ)$/..$/xmloff/inc \
+	-I$(PRJ)$/..$/sal$/inc \
+	-I$(PRJ)$/..$/sax$/inc \
+	-I$(PRJ)$/..$/svtools$/inc \
+	-I$(PRJ)$/..$/svx$/inc \
+	-I$(PRJ)$/..$/tools$/inc \
+	-I$(PRJ)$/..$/unotools$/inc \
+	-I$(PRJ)$/..$/vcl$/inc \
+	-I$(PRJ)$/..$/xmloff$/inc \
 	$(LIBXML_CFLAGS)
 .ENDIF		# "$(UPD)" == "310"

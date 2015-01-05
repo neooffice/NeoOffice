@@ -36,7 +36,7 @@ VISIBILITY_HIDDEN=TRUE
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
-	-I$(PRJ)$/..$/comphelper/inc \
+	-I$(PRJ)$/..$/comphelper$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2 \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2data \
@@ -50,13 +50,13 @@ INCLOCAL+= \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmldom \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
-	-I$(PRJ)$/..$/sal/inc \
-	-I$(PRJ)$/..$/sax/inc \
-	-I$(PRJ)$/..$/svtools/inc \
-	-I$(PRJ)$/..$/svx/inc \
-	-I$(PRJ)$/..$/tools/inc \
-	-I$(PRJ)$/..$/unotools/inc \
-	-I$(PRJ)$/..$/vcl/inc \
-	-I$(PRJ)$/..$/xmloff/inc \
+	-I$(PRJ)$/..$/sal$/inc \
+	-I$(PRJ)$/..$/sax$/inc \
+	-I$(PRJ)$/..$/svtools$/inc \
+	-I$(PRJ)$/..$/svx$/inc \
+	-I$(PRJ)$/..$/tools$/inc \
+	-I$(PRJ)$/..$/unotools$/inc \
+	-I$(PRJ)$/..$/vcl$/inc \
+	-I$(PRJ)$/..$/xmloff$/inc \
 	-I$(PRJ)$/..$/include
 .ENDIF		# "$(UPD)" == "310"
