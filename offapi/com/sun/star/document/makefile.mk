@@ -43,17 +43,31 @@ PACKAGE=com$/sun$/star$/document
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
 # Add locally built types registry to cppumaker search path
-UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
+UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db $(OUT)$/ucr$/cssutil.db
 
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	EmptyUndoStackException.idl \
 	IndexedPropertyValues.idl \
-	NamedPropertyValues.idl
+	NamedPropertyValues.idl \
+	UndoContextNotClosedException.idl \
+	UndoFailedException.idl \
+	UndoManagerEvent.idl \
+	XUndoAction.idl \
+	XUndoManager.idl \
+	XUndoManagerListener.idl
 
 UNOTYPES= \
+	com.sun.star.document.EmptyUndoStackException \
 	com.sun.star.document.IndexedPropertyValues \
-	com.sun.star.document.NamedPropertyValues
+	com.sun.star.document.NamedPropertyValues \
+	com.sun.star.document.UndoContextNotClosedException \
+	com.sun.star.document.UndoFailedException \
+	com.sun.star.document.UndoManagerEvent \
+	com.sun.star.document.XUndoAction \
+	com.sun.star.document.XUndoManager \
+	com.sun.star.document.XUndoManagerListener
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db

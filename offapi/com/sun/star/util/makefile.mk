@@ -52,14 +52,20 @@ IDLFILES= \
 	DateTimeWithTimezone.idl \
 	DateWithTimezone.idl \
 	Duration.idl \
-	Time2.idl
+	InvalidStateException.idl \
+	NotLockedException.idl \
+	Time2.idl \
+	XLockable.idl
 
 UNOTYPES= \
 	com.sun.star.util.DateTime2 \
 	com.sun.star.util.DateTimeWithTimezone \
 	com.sun.star.util.DateWithTimezone \
 	com.sun.star.util.Duration \
-	com.sun.star.util.Time2
+	com.sun.star.util.InvalidStateException \
+	com.sun.star.util.NotLockedException \
+	com.sun.star.util.Time2 \
+	com.sun.star.util.XLockable
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
