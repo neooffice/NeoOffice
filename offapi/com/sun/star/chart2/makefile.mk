@@ -53,6 +53,7 @@ IDLFILES= \
 	LogarithmicScaling.idl \
 	ScaleData2.idl \
 	XAnyDescriptionAccess.idl \
+	XDataSeries2.idl \
 	XDiagram2.idl \
 	XInternalDataProvider2.idl
 
@@ -62,6 +63,7 @@ UNOTYPES= \
 	com.sun.star.chart2.LogarithmicScaling \
 	com.sun.star.chart2.ScaleData2 \
 	com.sun.star.chart2.XAnyDescriptionAccess \
+	com.sun.star.chart2.XDataSeries2 \
 	com.sun.star.chart2.XDiagram2 \
 	com.sun.star.chart2.XInternalDataProvider2
 
