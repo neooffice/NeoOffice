@@ -56,7 +56,8 @@ IDLFILES= \
 	UndoManagerEvent.idl \
 	XUndoAction.idl \
 	XUndoManager.idl \
-	XUndoManagerListener.idl
+	XUndoManagerListener.idl \
+	XUndoManagerSupplier.idl
 
 UNOTYPES= \
 	com.sun.star.document.EmptyUndoStackException \
@@ -67,7 +68,8 @@ UNOTYPES= \
 	com.sun.star.document.UndoManagerEvent \
 	com.sun.star.document.XUndoAction \
 	com.sun.star.document.XUndoManager \
-	com.sun.star.document.XUndoManagerListener
+	com.sun.star.document.XUndoManagerListener \
+	com.sun.star.document.XUndoManagerSupplier
 
 # Force creation of the IDL header files before the compiling source files
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
