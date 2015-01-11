@@ -195,6 +195,13 @@ TypeGroupConverter::TypeGroupConverter( const ConverterRoot& rParent, TypeGroupM
             if( mrModel.mnRadarStyle == XML_filled )
                 eTypeId = TYPEID_RADARAREA;
         break;
+#if SUPD == 310
+        case TYPEID_BUBBLE:
+            // create a symbol-only scatter chart from bubble charts
+            for( TypeGroupModel::SeriesVector::iterator aIt = mrModel.maSeries.begin(), aEnd = mrModel.maSeries.end(); aIt != aEnd; ++aIt )
+                (*aIt)->mxShapeProp.getOrCreate().getLineProperties().maLineFill.moFillType = XML_noFill;
+        break;
+#endif	// SUPD == 310
         case TYPEID_SURFACE:
             // create a deep 3D bar chart from surface charts
             mrModel.mnGrouping = XML_standard;
@@ -204,6 +211,18 @@ TypeGroupConverter::TypeGroupConverter( const ConverterRoot& rParent, TypeGroupM
 
     // set the chart type info struct for the current chart type
     maTypeInfo = lclGetTypeInfoFromTypeId( eTypeId );
+
+#if SUPD == 310
+    // change type info for some chart types
+    switch( eTypeId )
+    {
+        case TYPEID_BUBBLE:
+            // bubble chart has fill properties, but we create a scatter chart
+            maTypeInfo.mbSeriesIsFrame2d = false;
+        break;
+        default:;
+    }
+#endif	// SUPD == 310
 }
 
 TypeGroupConverter::~TypeGroupConverter()
@@ -555,12 +574,23 @@ void TypeGroupConverter::convertMarker( PropertySet& rPropSet, sal_Int32 nOoxSym
             case XML_square:    aSymbol.StandardSymbol = 0;             break;  // square
             case XML_diamond:   aSymbol.StandardSymbol = 1;             break;  // diamond
             case XML_triangle:  aSymbol.StandardSymbol = 3;             break;  // arrow up
+#if SUPD == 310
+            case XML_x:         aSymbol.StandardSymbol = 6;             break;  // bow tie
+            case XML_star:      aSymbol.StandardSymbol = 7;             break;  // sand glass
+#else	// SUPD == 310
             case XML_x:         aSymbol.StandardSymbol = 10;            break;  // X, legacy bow tie
             case XML_star:      aSymbol.StandardSymbol = 12;            break;  // asterisk, legacy sand glass
+#endif	// SUPD == 310
             case XML_dot:       aSymbol.StandardSymbol = 4;             break;  // arrow right
+#if SUPD == 310
+            case XML_dash:      aSymbol.StandardSymbol = 2;             break;  // arrow down
+            case XML_circle:    aSymbol.StandardSymbol = 4;             break;  // arrow right
+            case XML_plus:      aSymbol.StandardSymbol = 5;             break;  // arrow left
+#else	// SUPD == 310
             case XML_dash:      aSymbol.StandardSymbol = 13;            break;  // horizontal bar, legacy arrow down
             case XML_circle:    aSymbol.StandardSymbol = 8;             break;  // circle, legacy arrow right
             case XML_plus:      aSymbol.StandardSymbol = 11;            break;  // plus, legacy arrow left
+#endif	// SUPD == 310
         }
 
         // symbol size (points in OOXML, 1/100 mm in Chart2)
