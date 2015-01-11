@@ -61,10 +61,18 @@ const sal_Char SERVICE_CHART2_CANDLE[]    = "com.sun.star.chart2.CandleStickChar
 const sal_Char SERVICE_CHART2_COLUMN[]    = "com.sun.star.chart2.ColumnChartType";
 const sal_Char SERVICE_CHART2_LINE[]      = "com.sun.star.chart2.LineChartType";
 const sal_Char SERVICE_CHART2_NET[]       = "com.sun.star.chart2.NetChartType";
+#if SUPD == 310
+const sal_Char SERVICE_CHART2_FILLEDNET[] = "com.sun.star.chart2.NetChartType";
+#else	// SUPD == 310
 const sal_Char SERVICE_CHART2_FILLEDNET[] = "com.sun.star.chart2.FilledNetChartType";
+#endif	// SUPD == 310
 const sal_Char SERVICE_CHART2_PIE[]       = "com.sun.star.chart2.PieChartType";
 const sal_Char SERVICE_CHART2_SCATTER[]   = "com.sun.star.chart2.ScatterChartType";
+#if SUPD == 310
+const sal_Char SERVICE_CHART2_BUBBLE[]    = "com.sun.star.chart2.ScatterChartType";
+#else	// SUPD == 310
 const sal_Char SERVICE_CHART2_BUBBLE[]    = "com.sun.star.chart2.BubbleChartType";
+#endif	// SUPD == 310
 const sal_Char SERVICE_CHART2_SURFACE[]   = "com.sun.star.chart2.ColumnChartType";    // Todo
 
 namespace csscd = ::com::sun::star::chart::DataLabelPlacement;
