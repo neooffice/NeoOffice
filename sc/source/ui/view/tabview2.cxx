@@ -714,6 +714,35 @@ void ScTabView::ExpandBlock(SCsCOL nMovX, SCsROW nMovY, ScFollowMode eMode)
 
         if (!IsBlockMode())
             InitBlockMode(aViewData.GetCurX(), aViewData.GetCurY(), nTab, true);
+#ifdef USE_JAVA
+		// Fix selection bug after pasting reported in the following NeoOffice
+		// forum topic by resetting the block range by copying the block range
+		// resetting code from the ScTabView::MarkCursor() method:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8664
+		else
+		{
+			ScMarkData& rMark = aViewData.GetMarkData();
+			DBG_ASSERT(rMark.IsMarked() || rMark.IsMultiMarked(), "MarkCursor, !IsMarked()");
+			ScRange aMarkRange;
+			rMark.GetMarkArea(aMarkRange);
+			if (( aMarkRange.aStart.Col() != nBlockStartX && aMarkRange.aEnd.Col() != nBlockStartX ) ||
+				( aMarkRange.aStart.Row() != nBlockStartY && aMarkRange.aEnd.Row() != nBlockStartY ) ||
+				( bIsBlockMode == SC_BLOCKMODE_OWN ))
+			{
+				//	Markierung ist veraendert worden
+				//	(z.B. MarkToSimple, wenn per negativ alles bis auf ein Rechteck geloescht wurde)
+				//	oder nach InitOwnBlockMode wird mit Shift-Klick weitermarkiert...
+
+				BOOL bOldShift = bMoveIsShift;
+				bMoveIsShift = FALSE;				//	wirklich umsetzen
+				DoneBlockMode(FALSE);				//!	direkt Variablen setzen? (-> kein Geflacker)
+				bMoveIsShift = bOldShift;
+
+				InitBlockMode( aMarkRange.aStart.Col(), aMarkRange.aStart.Row(),
+								nBlockStartZ, rMark.IsMarkNegative(), false, false );
+			}
+		}
+#endif	// USE_JAVA
 
         lcl_moveCursorByProtRule(nBlockEndX, nBlockEndY, nMovX, nMovY, nTab, pDoc);
     
