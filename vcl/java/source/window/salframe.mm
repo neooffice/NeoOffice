@@ -3675,7 +3675,11 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 {
 	SalData *pSalData = GetSalData();
-	sal_Bool bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
+	// Fix unexpected resizing of window to the screen's visible bounds
+	// reported in thefollowing NeoOffice forum topic by using the full screen
+	// bounds when in full screen mode:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8663
+	sal_Bool bFullScreenMode = ( mbFullScreen || pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
 	long nX = rRect.nLeft;
 	long nY = rRect.nTop;
 	long nWidth = rRect.GetWidth();
