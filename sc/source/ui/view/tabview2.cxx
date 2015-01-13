@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified January 2015 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  * This file incorporates work covered by the following license notice:
  *
@@ -714,6 +713,58 @@ void ScTabView::ExpandBlock(SCsCOL nMovX, SCsROW nMovY, ScFollowMode eMode)
 
         if (!IsBlockMode())
             InitBlockMode(aViewData.GetCurX(), aViewData.GetCurY(), nTab, true);
+#ifdef USE_JAVA
+		// Fix selection bug after pasting reported in the following NeoOffice
+		// forum topic by resetting the block range by copying the block range
+		// resetting code from the ScTabView::MarkCursor() method:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8664
+		else
+		{
+			ScMarkData& rMark = aViewData.GetMarkData();
+			DBG_ASSERT(rMark.IsMarked() || rMark.IsMultiMarked(), "MarkCursor, !IsMarked()");
+			ScRange aMarkRange;
+			rMark.GetMarkArea(aMarkRange);
+			if (( aMarkRange.aStart.Col() != nBlockStartX && aMarkRange.aEnd.Col() != nBlockStartX ) ||
+				( aMarkRange.aStart.Row() != nBlockStartY && aMarkRange.aEnd.Row() != nBlockStartY ) ||
+				( bIsBlockMode == SC_BLOCKMODE_OWN ))
+			{
+				//	Markierung ist veraendert worden
+				//	(z.B. MarkToSimple, wenn per negativ alles bis auf ein Rechteck geloescht wurde)
+				//	oder nach InitOwnBlockMode wird mit Shift-Klick weitermarkiert...
+
+				BOOL bOldShift = bMoveIsShift;
+				bMoveIsShift = FALSE;				//	wirklich umsetzen
+				DoneBlockMode(FALSE);				//!	direkt Variablen setzen? (-> kein Geflacker)
+				bMoveIsShift = bOldShift;
+
+				InitBlockMode( aMarkRange.aStart.Col(), aMarkRange.aStart.Row(),
+								nBlockStartZ, rMark.IsMarkNegative(), false, false );
+			}
+		}
+
+		// Fix bug when selecting rightward or downword from a merged cell
+		// reported in the following NeoOffice forum post by moving the end
+		// of the selected to the edge closest to the direction that the
+		// selected range will expand to:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64992#64992
+		const ScMergeAttr* pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockEndX, nBlockEndY, nTab, ATTR_MERGE ) );
+		if ( pMergeAttr->IsMerged() )
+		{
+			if ( nMovX > 0 )
+				nBlockEndX += pMergeAttr->GetColMerge() - 1;
+			if ( nMovY > 0 )
+				nBlockEndY += pMergeAttr->GetRowMerge() - 1;
+		}
+
+		pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockStartX, nBlockStartY, nTab, ATTR_MERGE ) );
+		if ( pMergeAttr->IsMerged() && nBlockStartX + pMergeAttr->GetColMerge() - 1 >= nBlockEndX && nBlockStartY + pMergeAttr->GetRowMerge() - 1 >= nBlockEndY )
+		{
+			if ( nMovX < 0 )
+				nBlockEndX = nBlockStartX;
+			if ( nMovY < 0 )
+				nBlockEndY = nBlockStartY;
+		}
+#endif	// USE_JAVA
 
         lcl_moveCursorByProtRule(nBlockEndX, nBlockEndY, nMovX, nMovY, nTab, pDoc);
     
