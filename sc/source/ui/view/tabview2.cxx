@@ -741,6 +741,29 @@ void ScTabView::ExpandBlock(SCsCOL nMovX, SCsROW nMovY, ScFollowMode eMode)
 								nBlockStartZ, rMark.IsMarkNegative(), false, false );
 			}
 		}
+
+		// Fix bug when selecting rightward or downword from a merged cell
+		// reported in the following NeoOffice forum post by moving the end
+		// of the selected to the edge closest to the direction that the
+		// selected range will expand to:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64992#64992
+		const ScMergeAttr* pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockEndX, nBlockEndY, nTab, ATTR_MERGE ) );
+		if ( pMergeAttr->IsMerged() )
+		{
+			if ( nMovX > 0 )
+				nBlockEndX += pMergeAttr->GetColMerge() - 1;
+			if ( nMovY > 0 )
+				nBlockEndY += pMergeAttr->GetRowMerge() - 1;
+		}
+
+		pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockStartX, nBlockStartY, nTab, ATTR_MERGE ) );
+		if ( pMergeAttr->IsMerged() && nBlockStartX + pMergeAttr->GetColMerge() - 1 >= nBlockEndX && nBlockStartY + pMergeAttr->GetRowMerge() - 1 >= nBlockEndY )
+		{
+			if ( nMovX < 0 )
+				nBlockEndX = nBlockStartX;
+			if ( nMovY < 0 )
+				nBlockEndY = nBlockStartY;
+		}
 #endif	// USE_JAVA
 
         lcl_moveCursorByProtRule(nBlockEndX, nBlockEndY, nMovX, nMovY, nTab, pDoc);
