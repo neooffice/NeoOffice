@@ -3431,6 +3431,33 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		pEvent->dispatch();
 		pEvent->release();
 
+		// Fix bug reported in the following NeoOffice forum post by forcing
+		// the window into full screen mode if the focus frame is in full
+		// screen mode:
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
+		if ( bTopLevelWindow )
+		{
+			Window *pWindow = Application::GetActiveTopWindow();
+			if ( pWindow )
+			{
+				JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+				if ( pFrame && pFrame->mbVisible && pFrame->mbFullScreen )
+				{
+					NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+					NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
+					if ( pNSWindow )
+					{
+						VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow];
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:NO modes:pModes];
+					}
+
+					[pPool release];
+				}
+			}
+		}
+
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
