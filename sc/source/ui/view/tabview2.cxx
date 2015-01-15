@@ -742,28 +742,50 @@ void ScTabView::ExpandBlock(SCsCOL nMovX, SCsROW nMovY, ScFollowMode eMode)
 			}
 		}
 
+		// If cell is in a merged cell, find top left of merged cell
+		SCCOL nTempX = nBlockEndX;
+		SCROW nTempY = nBlockEndY;
+		while ( pDoc->IsHorOverlapped( nTempX, nTempY, nTab ) )
+			nTempX--;
+		while ( pDoc->IsVerOverlapped( nTempX, nTempY, nTab ) )
+			nTempY--;
+
 		// Fix bug when selecting rightward or downword from a merged cell
 		// reported in the following NeoOffice forum post by moving the end
 		// of the selected to the edge closest to the direction that the
 		// selected range will expand to:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64992#64992
-		const ScMergeAttr* pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockEndX, nBlockEndY, nTab, ATTR_MERGE ) );
+		const ScMergeAttr* pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nTempX, nTempY, nTab, ATTR_MERGE ) );
 		if ( pMergeAttr->IsMerged() )
 		{
 			if ( nMovX > 0 )
-				nBlockEndX += pMergeAttr->GetColMerge() - 1;
+				nTempX += pMergeAttr->GetColMerge() - 1;
 			if ( nMovY > 0 )
-				nBlockEndY += pMergeAttr->GetRowMerge() - 1;
+				nTempY += pMergeAttr->GetRowMerge() - 1;
 		}
 
-		pMergeAttr = static_cast<const ScMergeAttr*>( pDoc->GetAttr( nBlockStartX, nBlockStartY, nTab, ATTR_MERGE ) );
-		if ( pMergeAttr->IsMerged() && nBlockStartX + pMergeAttr->GetColMerge() - 1 >= nBlockEndX && nBlockStartY + pMergeAttr->GetRowMerge() - 1 >= nBlockEndY )
+		// Check if the top row is entirely within a merged cell
+		if ( nMovX < 0 )
 		{
-			if ( nMovX < 0 )
-				nBlockEndX = nBlockStartX;
-			if ( nMovY < 0 )
-				nBlockEndY = nBlockStartY;
+			SCCOL nStartX = nBlockEndX;
+			while ( pDoc->IsHorOverlapped( nStartX, nBlockStartY, nTab ) && nStartX >= nBlockStartX )
+				nStartX--;
+			if ( nTempX > nStartX )
+				nTempX = nStartX;
 		}
+
+		// Check if the left column is entirely within a merged cell
+		if ( nMovY < 0 )
+		{
+			SCROW nStartY = nBlockEndY;
+			while ( pDoc->IsVerOverlapped( nBlockStartX, nStartY, nTab ) && nStartY >= nBlockStartY )
+				nStartY--;
+			if ( nTempY > nStartY )
+				nTempY = nStartY;
+		}
+
+		nMovX += nTempX - nBlockEndX;
+		nMovY += nTempY - nBlockEndY;
 #endif	// USE_JAVA
 
         lcl_moveCursorByProtRule(nBlockEndX, nBlockEndY, nMovX, nMovY, nTab, pDoc);
