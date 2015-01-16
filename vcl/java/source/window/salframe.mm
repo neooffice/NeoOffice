@@ -283,27 +283,29 @@ static BOOL bIOPMAssertionIDSet = NO;
 
 @interface VCLToggleFullScreen : NSObject
 {
+	MacOSBOOL				mbToggleToCurrentScreenMode;
 	NSWindow*				mpWindow;
 }
-+ (id)createToggleFullScreen:(NSWindow *)pWindow;
-- (id)initToggleFullScreen:(NSWindow *)pWindow;
++ (id)createToggleFullScreen:(NSWindow *)pWindow toggleToCurrentScreenMode:(MacOSBOOL)bToggleToCurrentScreenMode;
+- (id)initToggleFullScreen:(NSWindow *)pWindow toggleToCurrentScreenMode:(MacOSBOOL)bToggleToCurrentScreenMode;
 - (void)dealloc;
 - (void)toggleFullScreen:(id)pObject;
 @end
 
 @implementation VCLToggleFullScreen
 
-+ (id)createToggleFullScreen:(NSWindow *)pWindow
++ (id)createToggleFullScreen:(NSWindow *)pWindow toggleToCurrentScreenMode:(MacOSBOOL)bToggleToCurrentScreenMode
 {
-	VCLToggleFullScreen *pRet = [[VCLToggleFullScreen alloc] initToggleFullScreen:pWindow];
+	VCLToggleFullScreen *pRet = [[VCLToggleFullScreen alloc] initToggleFullScreen:pWindow toggleToCurrentScreenMode:bToggleToCurrentScreenMode];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initToggleFullScreen:(NSWindow *)pWindow
+- (id)initToggleFullScreen:(NSWindow *)pWindow toggleToCurrentScreenMode:(MacOSBOOL)bToggleToCurrentScreenMode
 {
 	[super init];
 
+	mbToggleToCurrentScreenMode = bToggleToCurrentScreenMode;
 	mpWindow = pWindow;
 	if ( mpWindow )
 		[mpWindow retain];
@@ -322,7 +324,23 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)toggleFullScreen:(id)pObject
 {
 	if ( mpWindow && [mpWindow respondsToSelector:@selector(toggleFullScreen:)] )
-		[mpWindow toggleFullScreen:self];
+	{
+		MacOSBOOL bToggle = !mbToggleToCurrentScreenMode;
+		if ( !bToggle )
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+			{
+				MacOSBOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
+				MacOSBOOL bWindowInFullScreen = ( [mpWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
+				if ( bAppInFullScreen != bWindowInFullScreen )
+					bToggle = YES;
+			}
+		}
+
+		if ( bToggle )
+			[mpWindow toggleFullScreen:self];
+	}
 }
 
 @end
@@ -3432,30 +3450,22 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		pEvent->release();
 
 		// Fix bug reported in the following NeoOffice forum post by forcing
-		// the window into full screen mode if the focus frame is in full
+		// the window into full screen mode if the app is already in full
 		// screen mode:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
 		if ( bTopLevelWindow )
 		{
-			Window *pWindow = Application::GetActiveTopWindow();
-			if ( pWindow )
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
+			if ( pNSWindow )
 			{
-				JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-				if ( pFrame && pFrame->mbVisible && pFrame->mbFullScreen )
-				{
-					NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-					NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
-					if ( pNSWindow )
-					{
-						VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow];
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:NO modes:pModes];
-					}
-
-					[pPool release];
-				}
+				VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:NO modes:pModes];
 			}
+
+			[pPool release];
 		}
 
 		// Reattach floating children
@@ -3803,7 +3813,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
 		if ( pNSWindow )
 		{
-			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow];
+			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:NO];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		    ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
