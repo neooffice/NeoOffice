@@ -41,6 +41,10 @@
 // Comment out the following line to disable full screen mode
 #define USE_NATIVE_FULL_SCREEN_MODE
 
+#ifndef NSApplicationPresentationFullScreen
+#define NSApplicationPresentationFullScreen ( 1 << 10 )
+#endif
+
 #ifndef NSFullScreenWindowMask
 #define NSFullScreenWindowMask ( 1 << 14 )
 #endif
