@@ -1078,9 +1078,9 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 	// out will leave the application in an empty full screen mode state
 	if ( pWindow )
 	{
-		MacOSBOOL bFullScreenWindowFound = NO;
+		MacOSBOOL bOrderOut = NO;
 		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
+		if ( pApp && [pApp presentationOptions] & NSApplicationPresentationFullScreen && [pWindow styleMask] & NSFullScreenWindowMask )
 		{
 			NSArray *pWindows = [pApp windows];
 			if ( pWindows )
@@ -1092,14 +1092,14 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
 					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow styleMask] & NSFullScreenWindowMask && [pCurrentWindow isVisible] && [pCurrentWindow canBecomeKeyWindow] )
 					{
-						bFullScreenWindowFound = YES;
+						bOrderOut = YES;
 						break;
 					}
 				}
 			}
 		}
 
-		if ( bFullScreenWindowFound )
+		if ( bOrderOut )
 			[pWindow orderOut:pWindow];
 		else
 			[pWindow close];
