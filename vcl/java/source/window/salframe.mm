@@ -1074,8 +1074,9 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 static void CloseOrOrderOutWindow( NSWindow *pWindow )
 {
 	// Close, not order out the window because when the window is in full
-	// screen mode and there are no other full screen windows visible as order
-	// out will leave the application in an empty full screen mode state
+	// screen mode and one or more other visible windows are not in full screen
+	// mode, ordering out will leave the application in an empty full screen
+	// mode state
 	if ( pWindow )
 	{
 		MacOSBOOL bOrderOut = NO;
@@ -1090,10 +1091,17 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 				for ( ; i < nCount; i++ )
 				{
 					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
-					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow styleMask] & NSFullScreenWindowMask && [pCurrentWindow isVisible] && [pCurrentWindow canBecomeKeyWindow] )
+					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow isVisible] && [pCurrentWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
 					{
-						bOrderOut = YES;
-						break;
+						if ( ![pCurrentWindow styleMask] & NSFullScreenWindowMask )
+						{
+							bOrderOut = NO;
+							break;
+						}
+						else
+						{
+							bOrderOut = YES;
+						}
 					}
 				}
 			}
