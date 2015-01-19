@@ -1071,6 +1071,41 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 @end
 
+static void CloseOrOrderOutWindow( NSWindow *pWindow )
+{
+	// Close, not order out the window because when the window is in full
+	// screen mode and there are no other full screen windows visible as order
+	// out will leave the application in an empty full screen mode state
+	if ( pWindow )
+	{
+		MacOSBOOL bFullScreenWindowFound = NO;
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			NSArray *pWindows = [pApp windows];
+			if ( pWindows )
+			{
+				NSUInteger nCount = [pWindows count];
+				NSUInteger i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
+					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow styleMask] & NSFullScreenWindowMask && [pCurrentWindow isVisible] && [pCurrentWindow canBecomeKeyWindow] )
+					{
+						bFullScreenWindowFound = YES;
+						break;
+					}
+				}
+			}
+		}
+
+		if ( bFullScreenWindowFound )
+			[pWindow orderOut:pWindow];
+		else
+			[pWindow close];
+	}
+}
+
 static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLWindowWrapper
@@ -1404,10 +1439,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		// Close, not order out the window because when the window is in full
-		// screen mode, order out will leave the application in an empty full
-		// mode state
-		[mpWindow close];
+		CloseOrOrderOutWindow( mpWindow );
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
 		if ( nwit != aNativeWindowMap.end() )
@@ -1878,10 +1910,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( mpParent && [mpWindow parentWindow] )
 				[mpParent removeChildWindow:mpWindow];
 
-			// Close, not order out the window because when the window is in full
-			// screen mode, order out will leave the application in an empty full
-			// mode state
-			[mpWindow close];
+			CloseOrOrderOutWindow( mpWindow );
 
 			// Release cached cursor
 			::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
