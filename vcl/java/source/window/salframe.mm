@@ -1071,6 +1071,49 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 
 @end
 
+static void CloseOrOrderOutWindow( NSWindow *pWindow )
+{
+	// Close, not order out the window because when the window is in full
+	// screen mode and one or more other visible windows are not in full screen
+	// mode, ordering out will leave the application in an empty full screen
+	// mode state
+	if ( pWindow )
+	{
+		MacOSBOOL bOrderOut = NO;
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp && [pApp presentationOptions] & NSApplicationPresentationFullScreen && [pWindow styleMask] & NSFullScreenWindowMask )
+		{
+			NSArray *pWindows = [pApp windows];
+			if ( pWindows )
+			{
+				NSUInteger nCount = [pWindows count];
+				NSUInteger i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
+					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow isVisible] && [pCurrentWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
+					{
+						if ( ![pCurrentWindow styleMask] & NSFullScreenWindowMask )
+						{
+							bOrderOut = NO;
+							break;
+						}
+						else
+						{
+							bOrderOut = YES;
+						}
+					}
+				}
+			}
+		}
+
+		if ( bOrderOut )
+			[pWindow orderOut:pWindow];
+		else
+			[pWindow close];
+	}
+}
+
 static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 @implementation VCLWindowWrapper
@@ -1404,10 +1447,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		// Close, not order out the window because when the window is in full
-		// screen mode, order out will leave the application in an empty full
-		// mode state
-		[mpWindow close];
+		CloseOrOrderOutWindow( mpWindow );
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
 		if ( nwit != aNativeWindowMap.end() )
@@ -1878,10 +1918,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( mpParent && [mpWindow parentWindow] )
 				[mpParent removeChildWindow:mpWindow];
 
-			// Close, not order out the window because when the window is in full
-			// screen mode, order out will leave the application in an empty full
-			// mode state
-			[mpWindow close];
+			CloseOrOrderOutWindow( mpWindow );
 
 			// Release cached cursor
 			::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
