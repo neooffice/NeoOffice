@@ -1057,26 +1057,33 @@ static NSUInteger nMouseMask = 0;
 		NSApplication *pApp = [NSApplication sharedApplication];
 		if ( pApp )
 		{
-			// Don't change focus if OS X has already set focus to a non-utility
-			// window
-			NSWindow *pKeyWindow = [pApp keyWindow];
-			if ( !pKeyWindow || [pKeyWindow styleMask] & NSUtilityWindowMask )
+			NSArray *pWindows = [pApp orderedWindows];
+			if ( pWindows )
 			{
-				NSArray *pWindows = [pApp orderedWindows];
-				if ( pWindows )
+				NSWindow *pKeyWindow = nil;
+				unsigned int i = 0;
+				unsigned int nCount = [pWindows count];
+				for ( ; i < nCount; i++ )
 				{
-					unsigned int i = 0;
-					unsigned int nCount = [pWindows count];
-					for ( ; i < nCount; i++ )
+					NSWindow *pWindow = [pWindows objectAtIndex:i];
+					if ( pWindow && [pWindow isVisible] )
 					{
-						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+						if ( [pWindow styleMask] & NSFullScreenWindowMask )
 						{
-							[pWindow makeKeyWindow];
+							// If there is a visible full screen window, let
+							// OS X set the focus window
+							pKeyWindow = nil;
 							break;
+						}
+						else if ( !pKeyWindow && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
+						{
+							pKeyWindow = pWindow;
 						}
 					}
 				}
+
+				if ( pKeyWindow )
+					[pKeyWindow makeKeyWindow];
 			}
 		}
 	}
