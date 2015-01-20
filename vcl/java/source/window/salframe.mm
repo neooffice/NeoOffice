@@ -1093,14 +1093,14 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
 					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow isVisible] && [pCurrentWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
 					{
-						if ( ![pCurrentWindow styleMask] & NSFullScreenWindowMask )
+						if ( [pCurrentWindow styleMask] & NSFullScreenWindowMask )
 						{
-							bOrderOut = NO;
-							break;
+							bOrderOut = YES;
 						}
 						else
 						{
-							bOrderOut = YES;
+							bOrderOut = NO;
+							break;
 						}
 					}
 				}
