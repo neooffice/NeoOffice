@@ -1050,14 +1050,17 @@ static NSUInteger nMouseMask = 0;
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
-	if ( [self styleMask] & NSUtilityWindowMask && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
+	if ( ![self isVisible] && [self styleMask] & NSUtilityWindowMask && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
 	{
-		if ( ![self isVisible] )
+		// Fix bug 3637 by making the first non-floating, non-utility
+		// window have focus after a utility window is closed
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
 		{
-			// Fix bug 3637 by making the first non-floating, non-utility
-			// window have focus after a utility window is closed
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp )
+			// Don't change focus if OS X has already set focus to a non-utility
+			// window
+			NSWindow *pKeyWindow = [pApp keyWindow];
+			if ( !pKeyWindow || [pKeyWindow styleMask] & NSUtilityWindowMask )
 			{
 				NSArray *pWindows = [pApp orderedWindows];
 				if ( pWindows )
