@@ -907,7 +907,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	if ( pApp )
 	{
 		NSWindow *pKeyWindow = [pApp keyWindow];
-		if ( pKeyWindow && [pKeyWindow isVisible] )
+		if ( pKeyWindow && [pKeyWindow isVisible] && [pKeyWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
 		{
 			MacOSBOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
 			MacOSBOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
