@@ -1179,34 +1179,6 @@ static NSUInteger nMouseMask = 0;
 
 	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
 		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
-
-	if ( [self styleMask] & NSUtilityWindowMask && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-	{
-		if ( ![self isVisible] )
-		{
-			// Fix bug 3637 by making the first non-floating, non-utility
-			// window have focus after a utility window is closed
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp )
-			{
-				NSArray *pWindows = [pApp orderedWindows];
-				if ( pWindows )
-				{
-					unsigned int i = 0;
-					unsigned int nCount = [pWindows count];
-					for ( ; i < nCount; i++ )
-					{
-						NSWindow *pWindow = [pWindows objectAtIndex:i];
-						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && ( [pWindow isKindOfClass:[VCLPanel class]] || [pWindow isKindOfClass:[VCLWindow class]] || [[pWindow className] isEqualToString:pCocoaAppWindowString] ) )
-						{
-							[pWindow makeKeyWindow];
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
 }
 
 - (MacOSBOOL)performKeyEquivalent:(NSEvent *)pEvent
