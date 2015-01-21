@@ -1074,44 +1074,10 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 static void CloseOrOrderOutWindow( NSWindow *pWindow )
 {
 	// Close, not order out the window because when the window is in full
-	// screen mode and one or more other visible windows are not in full screen
-	// mode, ordering out will leave the application in an empty full screen
-	// mode state
+	// screen mode, ordering out will leave the application in an empty full
+	// screen mode state
 	if ( pWindow )
-	{
-		MacOSBOOL bOrderOut = NO;
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp && [pApp presentationOptions] & NSApplicationPresentationFullScreen && [pWindow styleMask] & NSFullScreenWindowMask )
-		{
-			NSArray *pWindows = [pApp windows];
-			if ( pWindows )
-			{
-				NSUInteger nCount = [pWindows count];
-				NSUInteger i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSWindow *pCurrentWindow = [pWindows objectAtIndex:i];
-					if ( pCurrentWindow && pCurrentWindow != pWindow && [pCurrentWindow isVisible] && [pCurrentWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
-					{
-						if ( [pCurrentWindow styleMask] & NSFullScreenWindowMask )
-						{
-							bOrderOut = YES;
-						}
-						else
-						{
-							bOrderOut = NO;
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		if ( bOrderOut )
-			[pWindow orderOut:pWindow];
-		else
-			[pWindow close];
-	}
+		[pWindow close];
 }
 
 static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
@@ -1186,15 +1152,22 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			for ( ; i < nCount; i++ )
 			{
 				NSWindow *pWindow = [pWindows objectAtIndex:i];
-				if ( pWindow && ![pWindow parentWindow] && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
+				if ( pWindow && ![pWindow parentWindow] && ! ( [pWindow styleMask] & NSUtilityWindowMask ) && ( [pWindow isVisible] || [pWindow isMiniaturized] ) )
 				{
 					::std::map< VCLWindow*, VCLWindow* >::const_iterator it = aShowOnlyMenusWindowMap.find( pWindow );
 					if ( it == aShowOnlyMenusWindowMap.end() )
 					{
-						if ( [pWindow isVisible] )
+						if ( [pWindow isVisible] && [pWindow canBecomeKeyWindow] )
 						{
-							pVisibleWindow = pWindow;
-							break;
+							if ( !pVisibleWindow )
+							{
+								pVisibleWindow = pWindow;
+							}
+							else if ( ! ( [pVisibleWindow styleMask] & NSFullScreenWindowMask ) && [pWindow styleMask] & NSFullScreenWindowMask )
+							{
+								pVisibleWindow = pWindow;
+								break;
+							}
 						}
 						else if ( !pMinitiarizedFrame && [pWindow isMiniaturized] )
 						{
