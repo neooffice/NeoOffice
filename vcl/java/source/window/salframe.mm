@@ -55,6 +55,7 @@
 #include "../java/VCLEventQueue_cocoa.h"
 
 #define MIN_CONTENT_WIDTH 130
+#define PRESENTATION_OPTIONS_CHECK_INTERVAL ( (NSTimeInterval)0.25f )
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
@@ -895,6 +896,25 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 		if ( pContentView )
 			it->second->setNeedsDisplay( pContentView );
 	}
+
+	// After using the Window menu to set focus to a non-full screen window and
+	// after closing that winodw sets the focus to a full screen window,
+	// closing the full screen focus will cause OS X to exit full screen mode
+	// even if focus is set to another full screen window. To fix this bug,
+	// that keep invoking [NSWindow makeKeyAndOrderFront:] on the key window
+	// to bring the application's and window's full screen modes back into sync.
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSWindow *pKeyWindow = [pApp keyWindow];
+		if ( pKeyWindow && [pKeyWindow isVisible] )
+		{
+			MacOSBOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
+			MacOSBOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
+			if ( ( bAppInFullScreen && !bWindowInFullScreen ) || ( !bAppInFullScreen && bWindowInFullScreen ) )
+				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
+		}
+	}
 }
 
 @end
@@ -1142,7 +1162,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8556
 	if ( !bShow && pApp && [pApp isActive] && ![pApp keyWindow] )
 	{
-		NSArray *pWindows = [pApp windows];
+		NSArray *pWindows = [pApp orderedWindows];
 		if ( pWindows )
 		{
 			NSWindow *pVisibleWindow = nil;
