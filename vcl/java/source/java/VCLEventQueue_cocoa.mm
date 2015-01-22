@@ -1041,8 +1041,8 @@ static NSUInteger nMouseMask = 0;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
-			[pNotificationCenter removeObserver:self name:@"NSWindowDidEnterFullScreenNotification" object:self];
-			[pNotificationCenter removeObserver:self name:@"NSWindowWillExitFullScreenNotification" object:self];
+			[pNotificationCenter removeObserver:self name:@"NSWindowDidExitFullScreenNotification" object:self];
+			[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
