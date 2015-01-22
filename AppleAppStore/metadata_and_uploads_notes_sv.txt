@@ -25,11 +25,16 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 What's New in this Version:
 NeoOffice 3.x, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the "Support för NeoOffice" link and read the list of changes.
 
-This version of NeoOffice includes fixes for the following bugs that occur when running on OS X Yosemite:
+This version of NeoOffice adds support for OS X's native "speak selected text" feature. With this new feature, NeoOffice speaks your document's selected text when you press OS X's "speak selected text" key shortcut.
 
-• NeoOffice would occasionally hang while editing a table in a Base database
-• Clicking any hyperlinks that point to a file would fail to open the linked file
-• When the user's language is Hebrew or Arabic, NeoOffice would draw text on top of the drop down button in comboboxes and popup buttons
+This version also includes fixes for the following bugs:
+
+• When opening a new document while in full screen mode, the new document window would be displayed as a normal window instead of a full screen window
+• After closing a full screen document window, in certain cases all windows would not be visible and only the active document's menubar would be visible
+• When in a Calc document, merged cells could not be selected using the Shift and arrow keys
+• When in a Calc document, editing a cell that has been scrolled off the edge of the document window would cause the cell's formula to be drawn in the wrong position
+• When in a Calc document, the NeoOffice > Services menu would use text from the last selected combobox instead of the currently selected cell
+• When in a Writer document, the NeoOffice > Services menu would use the last selected text even after unselecting all text
 
 
 Keywords:
