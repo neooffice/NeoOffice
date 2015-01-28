@@ -33,6 +33,11 @@
 #include "oox/drawingml/chart/chartspacemodel.hxx"
 #include "oox/helper/modelobjecthelper.hxx"
 
+#if SUPD == 310
+// OpenOffice 3.1.1 chart2 module cannot handle certain date format labels
+#define NO_OOO_4_1_1_CHARTS
+#endif	// SUPD == 310
+
 namespace oox {
 namespace drawingml {
 namespace chart {
@@ -1182,7 +1187,15 @@ void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFo
     if( mxData->mxNumFmts.is() )
     {
         sal_Int32 nPropId = bPercentFormat ? PROP_PercentageNumberFormat : PROP_NumberFormat;
+#ifdef NO_OOO_4_1_1_CHARTS
+        if( rNumberFormat.mbSourceLinked || (rNumberFormat.maFormatCode.getLength() == 0) )
+        {
+            rPropSet.setProperty( nPropId, Any() );
+        }
+        else try
+#else	// NO_OOO_4_1_1_CHARTS
         try
+#endif	// NO_OOO_4_1_1_CHARTS
         {
             bool bGeneral = rNumberFormat.maFormatCode.equalsIgnoreAsciiCase("general");
             sal_Int32 nIndex = bGeneral && !bPercentFormat ?
