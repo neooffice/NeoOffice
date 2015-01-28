@@ -36,6 +36,11 @@
 #include "oox/drawingml/theme.hxx"
 #include <comphelper/processfactory.hxx>
 
+#if SUPD == 310
+// OpenOffice 3.1.1 chart2 module cannot handle the RelativeSize property
+#define NO_OOO_4_1_1_CHARTS
+#endif	// SUPD == 310
+
 namespace oox {
 namespace drawingml {
 namespace chart {
@@ -463,6 +468,7 @@ bool LayoutConverter::calcAbsRectangle( awt::Rectangle& orRect ) const
 
 bool LayoutConverter::convertFromModel( PropertySet& rPropSet )
 {
+#ifndef NO_OOO_4_1_1_CHARTS
     if( !mrModel.mbAutoLayout &&
         (mrModel.mnXMode == XML_edge) && (mrModel.mfX >= 0.0) &&
         (mrModel.mnYMode == XML_edge) && (mrModel.mfY >= 0.0) )
@@ -482,6 +488,7 @@ bool LayoutConverter::convertFromModel( PropertySet& rPropSet )
             return true;
         }
     }
+#endif	// !NO_OOO_4_1_1_CHARTS
     return false;
 }
 
