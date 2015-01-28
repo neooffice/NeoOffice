@@ -41,6 +41,9 @@
 #if SUPD == 310
 #include <com/sun/star/chart2/AxisType2.hpp>
 #include <com/sun/star/chart2/ScaleData2.hpp>
+
+// OpenOffice 3.1.1 chart2 module cannot handle certain date axis properties
+#define NO_OOO_4_1_1_CHARTS
 #endif	// SUPD == 310
 
 namespace oox {
@@ -276,6 +279,7 @@ void AxisConverter::convertFromModel(
                 /*  Determine date axis type from XML type identifier, and not
                     via aScaleData.AxisType, as this value sticks to CATEGORY
                     for automatic category/date axes). */
+#ifndef NO_OOO_4_1_1_CHARTS
                 if( mrModel.mnTypeId == C_TOKEN( dateAx ) )
                 {
                     // scaling algorithm
@@ -306,6 +310,7 @@ void AxisConverter::convertFromModel(
 #endif	// SUPD == 310
                 }
                 else
+#endif	// !NO_OOO_4_1_1_CHARTS
                 {
                     // do not overlap text unless all labels are visible
                     aAxisProp.setProperty( PROP_TextOverlap, mrModel.mnTickLabelSkip == 1 );
