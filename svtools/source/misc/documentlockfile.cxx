@@ -22,7 +22,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * Modified January 2014 by Patrick Luby. NeoOffice is distributed under
+ * Modified January 2015 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
