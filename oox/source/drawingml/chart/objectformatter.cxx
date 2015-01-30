@@ -34,7 +34,8 @@
 #include "oox/helper/modelobjecthelper.hxx"
 
 #if SUPD == 310
-// OpenOffice 3.1.1 chart2 module cannot handle certain date format labels
+// OpenOffice 3.1.1 chart2 module cannot handle the LinkNumberFormatToSource
+// property
 #define NO_OOO_4_1_1_CHARTS
 #endif	// SUPD == 310
 
@@ -1188,7 +1189,7 @@ void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFo
     {
         sal_Int32 nPropId = bPercentFormat ? PROP_PercentageNumberFormat : PROP_NumberFormat;
 #ifdef NO_OOO_4_1_1_CHARTS
-        if( rNumberFormat.mbSourceLinked || (rNumberFormat.maFormatCode.getLength() == 0) )
+        if( rNumberFormat.maFormatCode.isEmpty() )
         {
             rPropSet.setProperty( nPropId, Any() );
         }
@@ -1212,9 +1213,11 @@ void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFo
                 append( OUStringToOString( rNumberFormat.maFormatCode, osl_getThreadTextEncoding() ) ).append( '\'' ).getStr() );
         }
 
+#ifndef NO_OOO_4_1_1_CHARTS
         // Format code is ignored if "LinkNumberFormatToSource" is set to "true" :-/
         // See AxisHelper::getExplicitNumberFormatKeyForAxis()
         rPropSet.setProperty(PROP_LinkNumberFormatToSource, makeAny(rNumberFormat.maFormatCode.isEmpty()));
+#endif	// !NO_OOO_4_1_1_CHARTS
     }
 }
 
