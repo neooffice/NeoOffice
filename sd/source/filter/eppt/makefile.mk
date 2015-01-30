@@ -39,7 +39,7 @@ VISIBILITY_HIDDEN=TRUE
 .INCLUDE : settings.mk
 
 .IF "$(UPD)" == "310"
-.INCLUDE : $(PRJ)/inc/sd.mk
+.INCLUDE : $(PRJ)$/inc$/sd.mk
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------

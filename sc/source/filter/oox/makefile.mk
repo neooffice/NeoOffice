@@ -41,7 +41,7 @@ TARGET=oox
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
-.INCLUDE : $(PRJ)/inc/sc.mk
+.INCLUDE : $(PRJ)$/inc$/sc.mk
 
 # --- Files --------------------------------------------------------
 

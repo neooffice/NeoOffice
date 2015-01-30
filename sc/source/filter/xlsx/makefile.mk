@@ -48,7 +48,7 @@ PROJECTPCHSOURCE=..\pch\filt_pch
 CFLAGS+=-DXLSX_COPY
 
 .IF "$(UPD)" == "310"
-.INCLUDE : $(PRJ)/inc/sc.mk
+.INCLUDE : $(PRJ)$/inc$/sc.mk
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------

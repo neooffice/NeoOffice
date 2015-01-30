@@ -40,7 +40,7 @@ VISIBILITY_HIDDEN=TRUE
 .INCLUDE :  settings.mk
 
 .IF "$(UPD)" == "310"
-.INCLUDE : $(PRJ)/inc/sc.mk
+.INCLUDE : $(PRJ)$/inc$/sc.mk
 .ENDIF		# "$(UPD)" == "310"
 
 DLLPRE =
