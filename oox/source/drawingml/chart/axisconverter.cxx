@@ -41,9 +41,6 @@
 #if SUPD == 310
 #include <com/sun/star/chart2/AxisType2.hpp>
 #include <com/sun/star/chart2/ScaleData2.hpp>
-
-// OpenOffice 3.1.1 chart2 module cannot handle certain date axis properties
-#define NO_OOO_4_1_1_CHARTS
 #endif	// SUPD == 310
 
 namespace oox {
@@ -279,8 +276,11 @@ void AxisConverter::convertFromModel(
                 /*  Determine date axis type from XML type identifier, and not
                     via aScaleData.AxisType, as this value sticks to CATEGORY
                     for automatic category/date axes). */
-#ifndef NO_OOO_4_1_1_CHARTS
+#if SUPD == 310
+                if( mrModel.mnTypeId == C_TOKEN( dateAx ) && ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
+#else	// SUPD == 310
                 if( mrModel.mnTypeId == C_TOKEN( dateAx ) )
+#endif	// SUPD == 310
                 {
                     // scaling algorithm
                     aScaleData.Scaling = LinearScaling::create( comphelper::getProcessComponentContext() );
@@ -289,16 +289,13 @@ void AxisConverter::convertFromModel(
                     lclSetValueOrClearAny( aScaleData.Maximum, mrModel.mofMax );
                     // major/minor increment
 #if SUPD == 310
-                    if ( ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
-                    {
-                        lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
-                        lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
-                        // base time unit
-                        if( mrModel.monBaseTimeUnit.has() )
-                            ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
-                        else
-                            ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution.clear();
-                    }
+                    lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
+                    lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
+                    // base time unit
+                    if( mrModel.monBaseTimeUnit.has() )
+                        ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
+                    else
+                        ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution.clear();
 #else	// SUPD == 310
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
@@ -310,7 +307,6 @@ void AxisConverter::convertFromModel(
 #endif	// SUPD == 310
                 }
                 else
-#endif	// !NO_OOO_4_1_1_CHARTS
                 {
                     // do not overlap text unless all labels are visible
                     aAxisProp.setProperty( PROP_TextOverlap, mrModel.mnTickLabelSkip == 1 );
