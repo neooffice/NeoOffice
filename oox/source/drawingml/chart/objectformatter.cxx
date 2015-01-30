@@ -35,7 +35,7 @@
 
 #if SUPD == 310
 // OpenOffice 3.1.1 chart2 module cannot handle the LinkNumberFormatToSource
-// property
+// property nor number formatters from the chart document
 #define NO_OOO_4_1_1_CHARTS
 #endif	// SUPD == 310
 
@@ -1084,7 +1084,13 @@ ObjectFormatterData::ObjectFormatterData( const XmlFilterBase& rFilter, const Re
     try
     {
 #if SUPD == 310
+#ifdef NO_OOO_4_1_1_CHARTS
+        // Fix Y axis in attachment in the following LibreOffice bug:
+        // https://bugs.documentfoundation.org/show_bug.cgi?id=86037
+        css::uno::Reference< XNumberFormatsSupplier > xNumFmtsSupp( mrFilter.getModel(), UNO_QUERY_THROW );
+#else	// NO_OOO_4_1_1_CHARTS
         css::uno::Reference< XNumberFormatsSupplier > xNumFmtsSupp( rxChartDoc, UNO_QUERY_THROW );
+#endif	// NO_OOO_4_1_1_CHARTS
 #else	// SUPD == 310
         Reference< XNumberFormatsSupplier > xNumFmtsSupp( rxChartDoc, UNO_QUERY_THROW );
 #endif	// SUPD == 310
