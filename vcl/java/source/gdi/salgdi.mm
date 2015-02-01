@@ -1198,21 +1198,7 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGRect aS
 		CGContextRestoreGState( aContext );
 
 		if ( mpFrame )
-		{
 			addNeedsDisplayRect( aDrawBounds, getNativeLineWidth() );
-
-			// Post a paint event for overlapping bounds
-			if ( !bXOR && pSrcGraphics == this )
-			{
-				CGRect aOverlapBounds = CGRectIntersection( aSrcRect, aDestRect );
-				if ( !CGRectIsEmpty( aOverlapBounds ) )
-				{
-					JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpFrame, new SalPaintEvent( (long)aDestRect.origin.x, (long)aDestRect.origin.y, (long)aDestRect.size.width, (long)aDestRect.size.height ) );
-					JavaSalEventQueue::postCachedEvent( pPaintEvent );
-					pPaintEvent->release();
-				}
-			}
-		}
 	}
 }
 
