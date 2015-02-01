@@ -35,6 +35,7 @@
 
 #include <salgdi.h>
 #include <salbmp.h>
+#include <salinst.h>
 #include <vcl/salwtype.hxx>
 #include <vcl/sysdata.hxx>
 #include <vcl/bmpacc.hxx>
@@ -150,6 +151,23 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 	CGRect aUnflippedSrcRect = UnflipFlippedRect( CGRectMake( nSrcX, nSrcY, nSrcWidth, nSrcHeight ), maNativeBounds );
 	CGRect aUnflippedDestRect = UnflipFlippedRect( CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ), maNativeBounds );
 	copyFromGraphics( this, aUnflippedSrcRect, aUnflippedDestRect, false );
+
+	if ( mpFrame && nFlags & SAL_COPYAREA_WINDOWINVALIDATE )
+	{
+		// Fix repaint bug described in the following NeoOffice topic by
+		// posting a paint event for overlapping bounds
+		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8661
+		Rectangle aSrcRect = Rectangle( Point( nSrcX, nSrcY ), Size( nSrcWidth, nSrcHeight ) );
+		Rectangle aDestRect = Rectangle( Point( nDestX, nDestY ), Size( nSrcWidth, nSrcHeight ) );
+		Rectangle aOverlapRect = aSrcRect.GetIntersection( aDestRect );
+		aOverlapRect.Justify();
+		if ( aOverlapRect.GetWidth() > 0 && aOverlapRect.GetHeight() > 0 )
+		{
+			JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpFrame, new SalPaintEvent( aOverlapRect.Left(), aOverlapRect.Top(), aOverlapRect.GetWidth(), aOverlapRect.GetHeight() ) );
+			JavaSalEventQueue::postCachedEvent( pPaintEvent );
+			pPaintEvent->release();
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
