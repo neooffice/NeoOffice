@@ -163,7 +163,8 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 		aOverlapRect.Justify();
 		if ( aOverlapRect.GetWidth() > 0 && aOverlapRect.GetHeight() > 0 )
 		{
-			JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpFrame, new SalPaintEvent( aOverlapRect.Left(), aOverlapRect.Top(), aOverlapRect.GetWidth(), aOverlapRect.GetHeight() ) );
+			// Repaint the source bounds, not just the overlapping bounds
+			JavaSalEvent *pPaintEvent = new JavaSalEvent( SALEVENT_PAINT, mpFrame, new SalPaintEvent( aSrcRect.Left(), aSrcRect.Top(), aSrcRect.GetWidth(), aSrcRect.GetHeight() ) );
 			JavaSalEventQueue::postCachedEvent( pPaintEvent );
 			pPaintEvent->release();
 		}
