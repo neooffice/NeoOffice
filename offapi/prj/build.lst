@@ -14,5 +14,6 @@ oa	offapi\com\sun\star\table			nmake   -   all oa_csstable NULL
 oa	offapi\com\sun\star\task			nmake	-	all oa_csstask NULL
 oa	offapi\com\sun\star\text			nmake	-	all oa_csstext NULL
 oa	offapi\com\sun\star\util			nmake	-	all oa_cssutil NULL
+oa	offapi\com\sun\star\xml\crypto		nmake   -   all oa_cssxmlcrypto NULL
 oa	offapi\com\sun\star\xml\dom			nmake   -   all oa_cssxmldom NULL
 oa	offapi\com\sun\star\xml\sax			nmake	-	all oa_cssxmlsax NULL
