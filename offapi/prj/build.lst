@@ -5,6 +5,7 @@ oa	offapi\com\sun\star\chart2			nmake   -   all oa_csschart2 NULL
 oa	offapi\com\sun\star\chart2\data		nmake   -   all oa_csschart2data NULL
 oa	offapi\com\sun\star\drawing			nmake   -   all oa_cssdrawing NULL
 oa	offapi\com\sun\star\document		nmake   -   all oa_cssdocument oa_cssutil NULL
+oa	offapi\com\sun\star\embed			nmake   -   all oa_cssembed NULL
 oa	offapi\com\sun\star\graphic			nmake   -   all oa_cssgraphic NULL
 oa	offapi\com\sun\star\office			nmake   -   all oa_cssoffice NULL
 oa	offapi\com\sun\star\script\vba		nmake   -   all oa_cssscriptvba NULL
