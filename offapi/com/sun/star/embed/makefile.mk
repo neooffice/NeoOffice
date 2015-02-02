@@ -43,7 +43,7 @@ PACKAGE=com$/sun$/star$/embed
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
 # Add locally built types registry to cppumaker search path
-UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db $(OUT)$/ucr$/cssembed.db
+UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 
 # --- Files --------------------------------------------------------
 
