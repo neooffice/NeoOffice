@@ -48,6 +48,7 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	CipherID.idl \
 	DigestID.idl \
 	XCipherContext.idl \
 	XCipherContextSupplier.idl \
@@ -56,6 +57,7 @@ IDLFILES= \
 	XNSSInitializer.idl
 
 UNOTYPES= \
+	com.sun.star.xml.crypto.CipherID \
 	com.sun.star.xml.crypto.DigestID \
 	com.sun.star.xml.crypto.XCipherContext \
 	com.sun.star.xml.crypto.XCipherContextSupplier \
