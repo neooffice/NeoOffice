@@ -48,6 +48,12 @@ CFLAGS+=-DSYSTEM_LIBXML $(LIBXML_CFLAGS)
 LIBTARGET=NO
 .ENDIF
 
+.IF "$(UPD)" == "310"
+INCLOCAL+= \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlcrypto \
+	-I$(PRJ)$/..$/sal$/inc
+.ENDIF		# "$(UPD)" == "310"
+
 .IF "$(CRYPTO_ENGINE)" == "nss"
 
 .IF "$(WITH_MOZILLA)" == "NO"
