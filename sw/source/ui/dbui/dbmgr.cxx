@@ -1455,6 +1455,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 #if defined USE_JAVA && defined MACOSX
                         // Fix mail merge failure when sending the merge to file
                         // by obtaining write permissions for the file
+                        aTempFile.reset();
                         if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
                         {
                             ::rtl::OUString aPath( sPath );
@@ -1730,17 +1731,6 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                         aFileIter != aFilesToRemove.end(); aFileIter++)
                 SWUnoHelper::UCB_DeleteFile( *aFileIter );
 
-#if defined USE_JAVA && defined MACOSX
-            if ( pApplication_releaseSecurityScopedURL )
-            {
-                while ( aSecurityScopedURLs.size() )
-                {
-                    pApplication_releaseSecurityScopedURL( aSecurityScopedURLs.back() );
-                    aSecurityScopedURLs.pop_back();
-                }
-            }
-#endif	// USE_JAVA && MACOSX
-
             // Alle Dispatcher freigeben
             pViewFrm = SfxViewFrame::GetFirst(pSourrceDocSh);
 			while (pViewFrm)
@@ -1750,6 +1740,18 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 			}
 
             SW_MOD()->SetView(&pSourceShell->GetView());
+
+#if defined USE_JAVA && defined MACOSX
+            aTempFile.reset();
+            if ( pApplication_releaseSecurityScopedURL )
+            {
+                while ( aSecurityScopedURLs.size() )
+                {
+                    pApplication_releaseSecurityScopedURL( aSecurityScopedURLs.back() );
+                    aSecurityScopedURLs.pop_back();
+                }
+            }
+#endif	// USE_JAVA && MACOSX
 		}
 
 		nMergeType = DBMGR_INSERT;
