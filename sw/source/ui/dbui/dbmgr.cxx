@@ -1348,14 +1348,6 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
             String sAddress;
 			bCancel = FALSE;
 
-#if defined USE_JAVA && defined MACOSX
-            id pSecurityScopedURL = NULL;
-            if ( !pApplication_acquireSecurityScopedURLFromOUString )
-                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
-            if ( !pApplication_releaseSecurityScopedURL )
-                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-#endif	// USE_JAVA && MACOSX
-
             // in case of creating a single resulting file this has to be created here
             SwWrtShell* pTargetShell = 0;
             SfxObjectShellRef xTargetDocShell;
@@ -1425,6 +1417,14 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
             long nStartRow, nEndRow;
             // collect temporary files
             ::std::vector< String> aFilesToRemove;
+#if defined USE_JAVA && defined MACOSX
+            ::std::vector< id > aSecurityScopedURLs;
+            if ( !pApplication_acquireSecurityScopedURLFromOUString )
+                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+            if ( !pApplication_releaseSecurityScopedURL )
+                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+#endif	// USE_JAVA && MACOSX
+
             do
             {
                 nStartRow = pImpl->pMergeData ? pImpl->pMergeData->xResultSet->getRow() : 0;
@@ -1453,16 +1453,14 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                         String sExt( pStoreToFilter->GetDefaultExtension() );
                         sExt.EraseLeadingChars('*');
 #if defined USE_JAVA && defined MACOSX
-                        if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-                            pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-
                         // Fix mail merge failure when sending the merge to file
                         // by obtaining write permissions for the file
-                        pSecurityScopedURL = NULL;
                         if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
                         {
                             ::rtl::OUString aPath( sPath );
-                            pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aPath, sal_True, NULL );
+                            id pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aPath, sal_True, NULL );
+                            if ( pSecurityScopedURL )
+                                aSecurityScopedURLs.push_back( pSecurityScopedURL );
                         }
 #endif	// USE_JAVA && MACOSX
                         aTempFile = std::auto_ptr< utl::TempFile >(
@@ -1726,16 +1724,22 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                 xTargetDocShell->DoClose();
             }
 
-#if defined USE_JAVA && defined MACOSX
-            if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-                pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-#endif	// USE_JAVA && MACOSX
-
             //remove the temporary files
             ::std::vector<String>::iterator aFileIter;
             for(aFileIter = aFilesToRemove.begin();
                         aFileIter != aFilesToRemove.end(); aFileIter++)
                 SWUnoHelper::UCB_DeleteFile( *aFileIter );
+
+#if defined USE_JAVA && defined MACOSX
+            if ( pApplication_releaseSecurityScopedURL )
+            {
+                while ( aSecurityScopedURLs.size() )
+                {
+                    pApplication_releaseSecurityScopedURL( aSecurityScopedURLs.back() );
+                    aSecurityScopedURLs.pop_back();
+                }
+            }
+#endif	// USE_JAVA && MACOSX
 
             // Alle Dispatcher freigeben
             pViewFrm = SfxViewFrame::GetFirst(pSourrceDocSh);
