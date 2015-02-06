@@ -232,6 +232,13 @@ int java_main( int argc, char **argv )
 	pTmpEnv = [NSString stringWithFormat:@"TEMP=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
 
+	// NSTemporaryDirectory() may reset the above temporary directory
+	// environmental variables so invoke NSTemporaryDirectory() now and set
+	// a custom environmental variable to be used by the sal/osl/unx sources
+	NSTemporaryDirectory();
+	pTmpEnv = [NSString stringWithFormat:@"SAL_TMPDIR=%@", pTmpDir];
+	putenv( strdup( [pTmpEnv UTF8String] ) );
+
 	// Put mozilla NSS files somewhere other than the default of "/"
 	pTmpEnv = [NSString stringWithFormat:@"MOZILLA_CERTIFICATE_FOLDER=%@", pTmpDir];
 	putenv( strdup( [pTmpEnv UTF8String] ) );
@@ -415,7 +422,7 @@ int java_main( int argc, char **argv )
 	}
 
 	// File locking is enabled by default
-	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
+	putenv( strdup( "SAL_ENABLE_FILE_LOCKING=1" ) );
 
 	// Dynamically load app's main symbol to improve startup speed
 	NSString *pAppMainLibPath = nil;
