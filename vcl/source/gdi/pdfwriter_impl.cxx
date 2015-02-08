@@ -12730,18 +12730,20 @@ void PDFWriterImpl::encodeGlyphs()
                 }
 
                 // Map font IDs to objects
-                OString aFontIDTagC = OString( "/C" );
                 OString aFontIDTagF = OString( "/F" );
                 OString aFontIDTagG = OString( "/G" );
                 OString aFontIDTagTc = OString( "/Tc" );
                 OString aFontIDTagTT = OString( "/TT" );
-                OString aFontIDTagTy1 = OString( "/Ty1" );
-                sal_Int32 nFontIDTagLenC = aFontIDTagC.getLength();
+                OString aFontIDTagTy = OString( "/Ty" );
+                OString aFontIDTagC = OString( "/C" );
+                OString aFontIDTagCs = OString( "/Cs" );
                 sal_Int32 nFontIDTagLenF = aFontIDTagF.getLength();
                 sal_Int32 nFontIDTagLenG = aFontIDTagG.getLength();
                 sal_Int32 nFontIDTagLenTc = aFontIDTagTc.getLength();
                 sal_Int32 nFontIDTagLenTT = aFontIDTagTT.getLength();
-                sal_Int32 nFontIDTagLenTy1 = aFontIDTagTy1.getLength();
+                sal_Int32 nFontIDTagLenTy = aFontIDTagTy.getLength();
+                sal_Int32 nFontIDTagLenC = aFontIDTagC.getLength();
+                sal_Int32 nFontIDTagLenCs = aFontIDTagCs.getLength();
                 if ( nProcSetObjID )
                 {
                     PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
@@ -12754,7 +12756,7 @@ void PDFWriterImpl::encodeGlyphs()
                     sal_Int32 nCurrentPosG = 0;
                     sal_Int32 nCurrentPosTc = 0;
                     sal_Int32 nCurrentPosTT = 0;
-                    sal_Int32 nCurrentPosTy1 = 0;
+                    sal_Int32 nCurrentPosTy = 0;
                     sal_Int32 nCurrentFontIDTagLen;
                     sal_Int32 nFontStartPos;
                     if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
@@ -12766,14 +12768,9 @@ void PDFWriterImpl::encodeGlyphs()
                         {
                             nCurrentPos = nFontStartPos + nFontStartTagLen;
 
-                            while ( ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 || ( nCurrentPosF = rObj.m_aContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 || ( nCurrentPosG = rObj.m_aContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 || ( nCurrentPosTc = rObj.m_aContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 || ( nCurrentPosTT = rObj.m_aContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 || ( nCurrentPosTy1 = rObj.m_aContent.indexOf( aFontIDTagTy1, nCurrentPos ) ) >= 0 )
+                            while ( ( nCurrentPosF = rObj.m_aContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 || ( nCurrentPosG = rObj.m_aContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 || ( nCurrentPosTc = rObj.m_aContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 || ( nCurrentPosTT = rObj.m_aContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 || ( nCurrentPosTy = rObj.m_aContent.indexOf( aFontIDTagTy, nCurrentPos ) ) >= 0 || ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
                             {
-                                if ( nCurrentPosC >= 0 )
-                                {
-                                    nCurrentPos = nCurrentPosC;
-                                    nCurrentFontIDTagLen = nFontIDTagLenC;
-                                }
-                                else if ( nCurrentPosF >= 0 )
+                                if ( nCurrentPosF >= 0 )
                                 {
                                     nCurrentPos = nCurrentPosF;
                                     nCurrentFontIDTagLen = nFontIDTagLenF;
@@ -12793,14 +12790,30 @@ void PDFWriterImpl::encodeGlyphs()
                                     nCurrentPos = nCurrentPosTT;
                                     nCurrentFontIDTagLen = nFontIDTagLenTT;
                                 }
-                                else if ( nCurrentPosTy1 >= 0 )
+                                else if ( nCurrentPosTy >= 0 )
                                 {
-                                    nCurrentPos = nCurrentPosTy1;
-                                    nCurrentFontIDTagLen = nFontIDTagLenTy1;
+                                    nCurrentPos = nCurrentPosTy;
+                                    nCurrentFontIDTagLen = nFontIDTagLenTy;
+                                }
+                                else if ( nCurrentPosC >= 0 )
+                                {
+									while ( rObj.m_aContent.indexOf( aFontIDTagCs, nCurrentPosC ) == nCurrentPosC )
+									{
+										nCurrentPosC += nFontIDTagLenCs;
+                                		if ( ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPosC ) ) < 0 )
+										{
+                                    		nCurrentPos = nFontEndPos;
+                                    		nCurrentFontIDTagLen = 0;
+											break;
+										}
+									}
+
+                                    nCurrentPos = nCurrentPosC;
+                                    nCurrentFontIDTagLen = nFontIDTagLenC;
                                 }
                                 else
                                 {
-                                    nCurrentPos = nFontEndPos;;
+                                    nCurrentPos = nFontEndPos;
                                     nCurrentFontIDTagLen = 0;
                                 }
 
@@ -12909,20 +12922,44 @@ void PDFWriterImpl::encodeGlyphs()
                             sal_Int32 nCurrentFontIDTagLen;
                             while ( nCurrentGlyph < nGlyphIDs )
                             {
-                                if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
-                                    nCurrentFontIDTagLen = nFontIDTagLenC;
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 )
+                                if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 )
+								{
                                     nCurrentFontIDTagLen = nFontIDTagLenF;
+								}
                                 else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 )
+								{
                                     nCurrentFontIDTagLen = nFontIDTagLenG;
+								}
                                 else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 )
+								{
                                     nCurrentFontIDTagLen = nFontIDTagLenTc;
+								}
                                 else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 )
+								{
                                     nCurrentFontIDTagLen = nFontIDTagLenTT;
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTy1, nCurrentPos ) ) >= 0 )
-                                    nCurrentFontIDTagLen = nFontIDTagLenTy1;
+								}
+                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTy, nCurrentPos ) ) >= 0 )
+								{
+                                    nCurrentFontIDTagLen = nFontIDTagLenTy;
+								}
+                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
+								{
+									while ( aPageContent.indexOf( aFontIDTagCs, nNextFontIDPos ) == nNextFontIDPos )
+									{
+										nNextFontIDPos += nFontIDTagLenCs;
+                                		if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nNextFontIDPos ) ) < 0 )
+										{
+                                    		nCurrentFontIDTagLen = 0;
+											break;
+										}
+									}
+
+                                   	nCurrentFontIDTagLen = nFontIDTagLenC;
+								}
                                 else
+								{
                                     nCurrentFontIDTagLen = 0;
+								}
 
                                 bool bIsTextRun = false;
                                 if ( aCurrentFontID.getLength() )
