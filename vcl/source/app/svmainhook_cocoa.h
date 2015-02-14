@@ -39,5 +39,6 @@
 #include <sal/types.h>
 
 SAL_DLLPRIVATE void NSApplication_run();
+SAL_DLLPRIVATE void NSApplication_terminate();
 
 #endif
