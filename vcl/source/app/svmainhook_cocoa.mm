@@ -232,7 +232,7 @@ void NSApplication_terminate()
 	{
 		NSURL *pURL = [pBundle appStoreReceiptURL];
 		NSError *pError = nil;
-		if ( pURL && [pURL checkResourceIsReachableAndReturnError:&pError] )
+		if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL checkResourceIsReachableAndReturnError:&pError] )
 		{
 			NSData *pData = [NSData dataWithContentsOfURL:pURL];
 			if ( pData && pData.length && pData.bytes )
