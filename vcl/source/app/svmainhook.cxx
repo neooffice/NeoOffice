@@ -127,6 +127,10 @@ static void RunSVMain(void *pData)
     	
     *tcx->pRet = ImplSVMain();
 
+#ifdef USE_JAVA
+    NSApplication_terminate();
+#endif	// USE_JAVA
+
     // Force exit since some JVMs won't shutdown when only exit() is invoked
     _exit( 0 );
 }
