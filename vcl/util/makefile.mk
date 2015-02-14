@@ -200,7 +200,8 @@ LIB1FILES+= \
 .IF "$(GUIBASE)"=="java"
 SHL1STDLIBS+= \
 	$(TKLIB) \
-	-framework IOKit
+	-framework IOKit \
+	-framework Security
 .ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
