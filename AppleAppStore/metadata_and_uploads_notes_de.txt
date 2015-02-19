@@ -25,16 +25,9 @@ Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice 
 What's New in this Version:
 NeoOffice 3.x, OpenOffice und LibreOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Liste der Änderungen.
 
-This version of NeoOffice adds support for OS X's native "speak selected text" feature. With this new feature, NeoOffice speaks your document's selected text when you press OS X's "speak selected text" key shortcut.
+This version fixes the following bug when running NeoOffice on OS X Yosemite: when exporting a document to PDF, all text in the document that uses a Type 1 font would not be displayed in the exported PDF.
 
-This version also includes fixes for the following bugs:
-
-• When opening a new document while in full screen mode, the new document window would be displayed as a normal window instead of a full screen window
-• After closing a full screen document window, in certain cases all windows would not be visible and only the active document's menubar would be visible
-• When in a Calc document, merged cells could not be selected using the Shift and arrow keys
-• When in a Calc document, editing a cell that has been scrolled off the edge of the document window would cause the cell's formula to be drawn in the wrong position
-• When in a Calc document, the NeoOffice > Services menu would use text from the last selected combobox instead of the currently selected cell
-• When in a Writer document, the NeoOffice > Services menu would use the last selected text even after unselecting all text
+This version also fixes the following bug: if a user had any documents opened for more than a day, OS X would sometimes delete NeoOffice's temporary files. This, in turn, would cause saving any open documents to fail until NeoOffice was relaunched. 
 
 
 Keywords:
