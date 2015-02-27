@@ -636,6 +636,14 @@ void ScMyTables::DeleteTable()
 
         auto_ptr<ScTableProtection> pProtect(new ScTableProtection);
         pProtect->setProtected(maProtectionData.mbProtected);
+#ifdef USE_JAVA
+        // Fix bug when saving files that don't have a digest specified
+        // (i.e. files created by a later version of OpenOffice and
+        // LibreOffice) by using the SHA1 digest
+        if (maProtectionData.meHash1 == PASSHASH_UNSPECIFIED && maProtectionData.meHash2 == PASSHASH_UNSPECIFIED)
+            pProtect->setPasswordHash(aHash, PASSHASH_SHA1);
+        else
+#endif	// USE_JAVA
         pProtect->setPasswordHash(aHash, maProtectionData.meHash1, maProtectionData.meHash2);
         pProtect->setOption(ScTableProtection::SELECT_LOCKED_CELLS,   maProtectionData.mbSelectProtectedCells);
         pProtect->setOption(ScTableProtection::SELECT_UNLOCKED_CELLS, maProtectionData.mbSelectUnprotectedCells);
