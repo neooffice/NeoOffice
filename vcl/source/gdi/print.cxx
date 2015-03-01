@@ -1361,7 +1361,13 @@ IMPL_LINK( Printer, ImplDestroyPrinterAsync, void*, pSalPrinter )
 void Printer::ImplUpdateQuickStatus()
 {
     // remove possibly added "IsQuickJob"
+#ifdef USE_JAVA
+    // Fix crash when this method is called after the printer's printer data
+    // has already been deleted
+    if( mpPrinterData && mpPrinterData->mbNextJobIsQuick )
+#else	// USE_JAVA
     if( mpPrinterData->mbNextJobIsQuick )
+#endif	// USE_JAVA
     {
         rtl::OUString aKey( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) );
         // const data means not really const, but change all references
