@@ -653,6 +653,12 @@ void DeInitVCL()
     // Sal deinitialisieren
     DestroySalInstance( pSVData->mpDefInst );
 
+#if defined USE_JAVA && defined MACOSX
+    // Fix random crashing in native callbacks that get called after destroying
+    // the SalInstance by setting it to NULL
+    pSVData->mpDefInst = NULL;
+#endif	// USE_JAVA && MACOSX
+
     DeInitTools();
 
     DeInitSalMain();
