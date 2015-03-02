@@ -1080,7 +1080,11 @@ void SalYieldMutex::acquire()
 				}
 
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-				if ( tryToAcquire() )
+
+				// Fix crashing bug when quitting by checking if another thread
+				// has started shutting down the application to avoid using this
+				// instance after it has been deleted
+				if ( Application::IsShutDown() || tryToAcquire() )
 					break;
 			}
 
