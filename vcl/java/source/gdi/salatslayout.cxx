@@ -689,15 +689,15 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 					// Fix bug 3666 while still using
 					// kCTVerticalFormsAttributeName attribute by detecting
 					// only assuming there is a fallback font when the font's
-					// underlying font descriptors are different
+					// PostScript names are different
 					CTFontRef aFont = (CTFontRef)CFDictionaryGetValue( aDict, kCTFontAttributeName );
-					CTFontDescriptorRef aFallbackFontDescriptor = aFont ? CTFontCopyFontDescriptor( aFont ) : NULL;
-					CTFontDescriptorRef aFontDescriptor = CTFontCopyFontDescriptor( maFont );
-					bool bHasFallbackFont = ( aFallbackFontDescriptor && aFallbackFontDescriptor != aFontDescriptor );
-					if ( aFallbackFontDescriptor )
-						CFRelease( aFallbackFontDescriptor );
-					if ( aFontDescriptor )
-						CFRelease( aFontDescriptor );
+					CFStringRef aFallbackFontPSName = aFont ? CTFontCopyPostScriptName( aFont ) : NULL;
+					CFStringRef aFontPSName = CTFontCopyPostScriptName( maFont );
+					bool bHasFallbackFont = ( aFallbackFontPSName && ( !aFontPSName || CFStringCompare( aFallbackFontPSName, aFontPSName, 0 ) != kCFCompareEqualTo ) );
+					if ( aFallbackFontPSName )
+						CFRelease( aFallbackFontPSName );
+					if ( aFontPSName )
+						CFRelease( aFontPSName );
 
 					if ( !aFont )
 					{
