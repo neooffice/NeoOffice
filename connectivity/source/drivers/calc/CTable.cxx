@@ -25,6 +25,16 @@
  * Modified March 2010 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -355,10 +365,22 @@ void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& xSheet,
 		{
 			case DataType::VARCHAR:
 				{
+#if SUPD == 310
+                if ( eCellType == CellContentType_EMPTY )
+                    rValue.setNull();
+                else
+                {
+                    // #i25840# still let Calc convert numbers to text
+                    const Reference<XText> xText( xCell, UNO_QUERY );
+	                if ( xText.is() )
+		                rValue = xText->getString();
+                }
+#else	// SUPD == 310
 					// no difference between empty cell and empty string in spreadsheet
 					Reference<XText> xText( xCell, UNO_QUERY );
 					if ( xText.is() )
 						rValue = xText->getString();
+#endif	// SUPD == 310
 				}
 				break;
 			case DataType::DECIMAL:
