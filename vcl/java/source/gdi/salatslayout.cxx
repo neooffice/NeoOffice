@@ -435,9 +435,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	if ( mpHash->mbVertical )
 	{
-		// Fix bug 3666 by not using the kCTVerticalFormsAttributeName
-		// attribute as it will cause zero glyphs to be used for most
-		// ideographic fonts on Mac OS X 10.7 Lion
+		for ( int i = 0; i < mpHash->mnLen; i++ )
+		{
+			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
+				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
+		}
+
 		float fAscent = fabs( CTFontGetAscent( maFont ) );
 		float fDescent = fabs( CTFontGetDescent( maFont ) );
 		mnBaselineDelta = Float32ToLong( ( ( ( fAscent + fDescent ) / 2 ) - fDescent ) * UNITS_PER_PIXEL );
@@ -683,12 +686,24 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				CFDictionaryRef aDict = CTRunGetAttributes( aGlyphRun );
 				if ( aDict )
 				{
+					// Fix bug 3666 while still using
+					// kCTVerticalFormsAttributeName attribute by detecting
+					// only assuming there is a fallback font when the font's
+					// underlying font descriptors are different
 					CTFontRef aFont = (CTFontRef)CFDictionaryGetValue( aDict, kCTFontAttributeName );
+					CTFontDescriptorRef aFallbackFontDescriptor = aFont ? CTFontCopyFontDescriptor( aFont ) : NULL;
+					CTFontDescriptorRef aFontDescriptor = CTFontCopyFontDescriptor( maFont );
+					bool bHasFallbackFont = ( aFallbackFontDescriptor && aFallbackFontDescriptor != aFontDescriptor );
+					if ( aFallbackFontDescriptor )
+						CFRelease( aFallbackFontDescriptor );
+					if ( aFontDescriptor )
+						CFRelease( aFontDescriptor );
+
 					if ( !aFont )
 					{
 						// No fallback font exists so don't bother looking
 					}
-					else if ( aFont != maFont )
+					else if ( bHasFallbackFont )
 					{
 						if ( !mpNeedFallback )
 						{
@@ -1807,7 +1822,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					if ( nGlyph == 3 && mbSpecialSpacingGlyph && !IsSpacingGlyph( nChar | GF_ISCHAR ) )
 						mbSpecialSpacingGlyph = false;
 
-					if ( pCurrentLayoutData->mpHash->mbVertical )
+					// Prevent drawing of zero glyphs on top of fallback glyphs
+					// that occurs with case like Hiragino Mincho Pro character
+					// 0x301E by not applying vertical flags to zero glyphs
+					if ( nGlyph && pCurrentLayoutData->mpHash->mbVertical )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
