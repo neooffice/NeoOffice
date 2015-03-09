@@ -25,9 +25,13 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 What's New in this Version:
 NeoOffice 3.x, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the «NeoOffice» - поддержка» link and read the list of changes.
 
-This version fixes the following bug when running NeoOffice on OS X Yosemite: when exporting a document to PDF, all text in the document that uses a Type 1 font would not be displayed in the exported PDF.
-
-This version also fixes the following bug: if a user had any documents opened for more than a day, OS X would sometimes delete NeoOffice's temporary files. This, in turn, would cause saving any open documents to fail until NeoOffice was relaunched. 
+This version of NeoOffice fixes the following bugs:
+• NeoOffice would sometimes crash when quitting
+• When saving .ods files that were originally created in OpenOffice or LibreOffice, NeoOffice would require the user to reset the password for each protected sheet
+• When clicking on cells in .ods files that were originally created in LibreOffice, NeoOffice would fail to select any cells in protected sheets
+• NeoOffice would draw punctuation characters in Japanese vertical text in the wrong position and with horizontal font glyphs
+• When querying for null values in spreadsheet data sources, empty cells would be treated as if they were not null
+• When sending a mail merge to a file instead of to the printer, NeoOffice would fail to create the mail merge file
 
 
 Keywords:
