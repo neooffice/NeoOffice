@@ -48,9 +48,11 @@ UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
 # --- Files --------------------------------------------------------
 
 IDLFILES= \
+	StorageFormats.idl \
 	XEncryptionProtectedSource2.idl
 
 UNOTYPES= \
+	com.sun.star.embed.StorageFormats \
 	com.sun.star.embed.XEncryptionProtectedSource2
 
 # Force creation of the IDL header files before the compiling source files
