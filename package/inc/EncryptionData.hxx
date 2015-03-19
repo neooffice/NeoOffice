@@ -1,70 +1,77 @@
-/*************************************************************************
- *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 #ifndef _ENCRYPTION_DATA_HXX_
 #define _ENCRYPTION_DATA_HXX_
 
 #include <com/sun/star/uno/Sequence.hxx>
 #include <cppuhelper/weak.hxx>
 
-#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
-
-// Digest types
-#define ENCRYPTION_DATA_SHA1 ( (sal_Int32)1 )
-#define ENCRYPTION_DATA_SHA256 ( (sal_Int32)2 )
-#define ENCRYPTION_DATA_SHA1_1K ( (sal_Int32)3 )
-#define ENCRYPTION_DATA_SHA256_1K ( (sal_Int32)4 )
-
-// Algorithms
-#define ENCRYPTION_DATA_AES_CBC_W3C_PADDING ( (sal_Int32)1 )
-#define ENCRYPTION_DATA_BLOWFISH_CFB_8 ( (sal_Int32)2 )
-
-#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
-
-class EncryptionData : public cppu::OWeakObject
+class BaseEncryptionData : public cppu::OWeakObject
 {
 public:
-	// On export aKey holds the derived key
-	// On import aKey holds the hash of the user enterred key
-	com::sun::star::uno::Sequence < sal_Int8 > aKey;
-#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
-	com::sun::star::uno::Sequence < sal_Int8 > aKeySHA256;
-#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
-	com::sun::star::uno::Sequence < sal_uInt8 > aSalt, aInitVector, aDigest;
-	sal_Int32 nIterationCount;
-#ifdef NO_OOO_3_4_1_AES_ENCRYPTION
-	EncryptionData(): nIterationCount ( 0 ){}
-#else	// NO_OOO_3_4_1_AES_ENCRYPTION
-	sal_Int32 nDigestType;
-	sal_Int32 nAlgorithm;
-	sal_Int32 nDerivedKeySize;
-	sal_Int32 nStartKeyAlgorithm;
-	EncryptionData(): nIterationCount( 0 ), nDigestType( 0 ), nAlgorithm( 0 ), nDerivedKeySize( 0 ), nStartKeyAlgorithm( 0 ) {}
-#endif	// NO_OOO_3_4_1_AES_ENCRYPTION
+    ::com::sun::star::uno::Sequence< sal_Int8 > m_aSalt;
+    ::com::sun::star::uno::Sequence< sal_Int8 > m_aInitVector;
+    ::com::sun::star::uno::Sequence< sal_Int8 > m_aDigest;
+    sal_Int32 m_nIterationCount;
+
+    BaseEncryptionData()
+    : m_nIterationCount ( 0 ){}
+
+    BaseEncryptionData( const BaseEncryptionData& aData )
+    : cppu::OWeakObject()
+    , m_aSalt( aData.m_aSalt )
+    , m_aInitVector( aData.m_aInitVector )
+    , m_aDigest( aData.m_aDigest )
+    , m_nIterationCount( aData.m_nIterationCount )
+    {}
 };
+
+class EncryptionData : public BaseEncryptionData
+{
+public:
+    ::com::sun::star::uno::Sequence < sal_Int8 > m_aKey;
+    sal_Int32 m_nEncAlg;
+    sal_Int32 m_nCheckAlg;
+    sal_Int32 m_nDerivedKeySize;
+    sal_Int32 m_nStartKeyGenID;
+
+    EncryptionData( const BaseEncryptionData& aData, const ::com::sun::star::uno::Sequence< sal_Int8 >& aKey, sal_Int32 nEncAlg, sal_Int32 nCheckAlg, sal_Int32 nDerivedKeySize, sal_Int32 nStartKeyGenID )
+    : BaseEncryptionData( aData )
+    , m_aKey( aKey )
+    , m_nEncAlg( nEncAlg )
+    , m_nCheckAlg( nCheckAlg )
+    , m_nDerivedKeySize( nDerivedKeySize )
+    , m_nStartKeyGenID( nStartKeyGenID )
+    {}
+
+    EncryptionData( const EncryptionData& aData )
+    : BaseEncryptionData( aData )
+    , m_aKey( aData.m_aKey )
+    , m_nEncAlg( aData.m_nEncAlg )
+    , m_nCheckAlg( aData.m_nCheckAlg )
+    , m_nDerivedKeySize( aData.m_nDerivedKeySize )
+    , m_nStartKeyGenID( aData.m_nStartKeyGenID )
+    {}
+};
+
 #endif

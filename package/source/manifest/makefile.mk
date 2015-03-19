@@ -23,33 +23,21 @@
 # <http://www.gnu.org/licenses/gpl-3.0.txt>
 # for a copy of the GPLv3 License.
 #
-# Modified March 2013 by Patrick Luby. NeoOffice is distributed under
+# Modified March 2015 by Patrick Luby. NeoOffice is distributed under
 # GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
 PRJ=..$/..
 PRJNAME=package
-TARGET=zipapi
+TARGET=manifest
+AUTOSEG=true
 
 ENABLE_EXCEPTIONS=TRUE
 
 # --- Settings -----------------------------------------------------
 
 .INCLUDE : settings.mk
-
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-.IF "$(SYSTEM_MOZILLA)" != "YES"
-MOZ_INC = $(SOLARVERSION)$/$(INPATH)$/inc$(UPDMINOREXT)$/mozilla
-NSS_INC = $(MOZ_INC)$/nss
-NSPR_INC = $(MOZ_INC)$/nspr
-.ELSE
-# MOZ_INC already defined from environment
-NSS_INC = $(MOZ_NSS_CFLAGS)
-NSPR_INC = $(MOZ_INC)$/nspr
-.ENDIF
-SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
@@ -58,26 +46,14 @@ INCLOCAL+= \
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
-#CFLAGS+=/Ob0 /Od
-.IF "$(SYSTEM_ZLIB)" == "YES"
-CFLAGS+=-DSYSTEM_ZLIB
-.ENDIF
-SLOFILES= \
-		$(SLO)$/CRC32.obj			\
-		$(SLO)$/ByteChucker.obj		\
-		$(SLO)$/ByteGrabber.obj		\
-		$(SLO)$/Inflater.obj		\
-		$(SLO)$/Deflater.obj		\
-		$(SLO)$/ZipEnumeration.obj	\
-		$(SLO)$/ZipFile.obj			\
-		$(SLO)$/ZipOutputStream.obj	\
-		$(SLO)$/XUnbufferedStream.obj
 
-.IF "$(UPD)" == "310"
-SLOFILES += \
-		$(SLO)$/blowfishcontext.obj \
-		$(SLO)$/sha1context.obj
-.ENDIF		# "$(UPD)" == "310"
+SLOFILES= \
+		$(SLO)$/ManifestReader.obj	\
+		$(SLO)$/ManifestWriter.obj \
+		$(SLO)$/ManifestImport.obj \
+		$(SLO)$/ManifestExport.obj \
+		$(SLO)$/Base64Codec.obj \
+		$(SLO)$/UnoRegister.obj
 
 # --- Targets ------------------------------------------------------
 

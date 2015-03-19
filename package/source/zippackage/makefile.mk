@@ -23,14 +23,15 @@
 # <http://www.gnu.org/licenses/gpl-3.0.txt>
 # for a copy of the GPLv3 License.
 #
-# Modified March 2013 by Patrick Luby. NeoOffice is distributed under
+# Modified March 2015 by Patrick Luby. NeoOffice is distributed under
 # GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
 PRJ=..$/..
 PRJNAME=package
-TARGET=zipapi
+TARGET=zippackage
+AUTOSEG=true
 
 ENABLE_EXCEPTIONS=TRUE
 
@@ -38,46 +39,31 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE : settings.mk
 
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-.IF "$(SYSTEM_MOZILLA)" != "YES"
-MOZ_INC = $(SOLARVERSION)$/$(INPATH)$/inc$(UPDMINOREXT)$/mozilla
-NSS_INC = $(MOZ_INC)$/nss
-NSPR_INC = $(MOZ_INC)$/nspr
-.ELSE
-# MOZ_INC already defined from environment
-NSS_INC = $(MOZ_NSS_CFLAGS)
-NSPR_INC = $(MOZ_INC)$/nspr
-.ENDIF
-SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
+	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssembed \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlcrypto \
 	-I$(PRJ)$/..$/sal$/inc
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
+# the following flag un-inlines function calls and disables optimisations
 #CFLAGS+=/Ob0 /Od
-.IF "$(SYSTEM_ZLIB)" == "YES"
-CFLAGS+=-DSYSTEM_ZLIB
-.ENDIF
-SLOFILES= \
-		$(SLO)$/CRC32.obj			\
-		$(SLO)$/ByteChucker.obj		\
-		$(SLO)$/ByteGrabber.obj		\
-		$(SLO)$/Inflater.obj		\
-		$(SLO)$/Deflater.obj		\
-		$(SLO)$/ZipEnumeration.obj	\
-		$(SLO)$/ZipFile.obj			\
-		$(SLO)$/ZipOutputStream.obj	\
-		$(SLO)$/XUnbufferedStream.obj
 
-.IF "$(UPD)" == "310"
-SLOFILES += \
-		$(SLO)$/blowfishcontext.obj \
-		$(SLO)$/sha1context.obj
-.ENDIF		# "$(UPD)" == "310"
+SLOFILES= \
+		$(SLO)$/ZipPackage.obj			\
+		$(SLO)$/ZipPackageBuffer.obj	\
+		$(SLO)$/ZipPackageEntry.obj		\
+		$(SLO)$/ZipPackageFolder.obj	\
+		$(SLO)$/ZipPackageFolderEnumeration.obj	\
+		$(SLO)$/ZipPackageSink.obj		\
+		$(SLO)$/ZipPackageStream.obj	\
+		$(SLO)$/wrapstreamforshare.obj	\
+		$(SLO)$/zipfileaccess.obj
+
+#		$(SLO)$/InteractionRequest.obj  \
+#		$(SLO)$/InteractionContinuation.obj
 
 # --- Targets ------------------------------------------------------
 

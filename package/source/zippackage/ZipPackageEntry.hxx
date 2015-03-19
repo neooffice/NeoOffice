@@ -33,4 +33,4 @@
  *
  ************************************************************************/
 
-#include "../../inc/ZipPackageStream.hxx"
+#include "../../inc/ZipPackageEntry.hxx"
