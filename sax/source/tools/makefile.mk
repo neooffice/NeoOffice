@@ -44,8 +44,8 @@ ENABLE_EXCEPTIONS=TRUE
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
 	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
-	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssutil \
-	-I$(PRJ)$/..$/offapi/$(INPATH)$/inc$/cssxmlsax \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal$/inc
 
 PREPENDLIBS=$(PRJ)$/..$/expat$/$(INPATH)$/lib \
