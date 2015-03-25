@@ -1,31 +1,36 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/*************************************************************************
+ *
+ * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * $RCSfile$
+ * $Revision$
+ *
+ * This file is part of NeoOffice.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified March 2013 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 #ifndef _MANIFEST_DEFINES_HXX
 #define _MANIFEST_DEFINES_HXX
 
 #include <PackageConstants.hxx>
 
-#define MANIFEST_NSPREFIX "manifest:"
 #define ELEMENT_MANIFEST "manifest:manifest"
 #define ATTRIBUTE_XMLNS "xmlns:manifest"
 #define MANIFEST_NAMESPACE "http://openoffice.org/2001/manifest"
@@ -47,14 +52,19 @@
 #define ATTRIBUTE_ALGORITHM_NAME "manifest:algorithm-name"
 #define ATTRIBUTE_INITIALISATION_VECTOR "manifest:initialisation-vector"
 
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 #define ELEMENT_START_KEY_GENERATION "manifest:start-key-generation"
 #define ATTRIBUTE_START_KEY_GENERATION_NAME "manifest:start-key-generation-name"
 #define ATTRIBUTE_KEY_SIZE "manifest:key-size"
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 #define ELEMENT_KEY_DERIVATION "manifest:key-derivation"
 #define ATTRIBUTE_KEY_DERIVATION_NAME "manifest:key-derivation-name"
 #define ATTRIBUTE_SALT "manifest:salt"
 #define ATTRIBUTE_ITERATION_COUNT "manifest:iteration-count"
+#define CHECKSUM_TYPE "SHA1/1K"
+
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
 
 #define SHA256_URL "http://www.w3.org/2000/09/xmldsig#sha256"
 #define SHA1_NAME "SHA1"
@@ -72,5 +82,7 @@
 
 #define PBKDF2_NAME "PBKDF2"
 #define PBKDF2_URL "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0#pbkdf2"
+
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 #endif

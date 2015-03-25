@@ -51,12 +51,6 @@ NSPR_INC = $(MOZ_INC)$/nspr
 SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
-.IF "$(UPD)" == "310"
-INCLOCAL+= \
-	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlcrypto \
-	-I$(PRJ)$/..$/sal$/inc
-.ENDIF		# "$(UPD)" == "310"
-
 # --- Files --------------------------------------------------------
 #CFLAGS+=/Ob0 /Od
 .IF "$(SYSTEM_ZLIB)" == "YES"
@@ -72,12 +66,6 @@ SLOFILES= \
 		$(SLO)$/ZipFile.obj			\
 		$(SLO)$/ZipOutputStream.obj	\
 		$(SLO)$/XUnbufferedStream.obj
-
-.IF "$(UPD)" == "310"
-SLOFILES += \
-		$(SLO)$/blowfishcontext.obj \
-		$(SLO)$/sha1context.obj
-.ENDIF		# "$(UPD)" == "310"
 
 # --- Targets ------------------------------------------------------
 

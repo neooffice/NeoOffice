@@ -52,20 +52,6 @@ NSPR_INC = $(MOZ_INC)$/nspr
 SOLARINC += -I$(MOZ_INC) -I$(NSS_INC) -I$(NSPR_INC) -I$(PRJ)$/source$/xmlsec
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
-.IF "$(UPD)" == "310"
-INCLOCAL+= \
-	-I$(PRJ)$/..$/comphelper$/inc \
-	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssembed \
-	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csslogging \
-	-I$(PRJ)$/..$/sal$/inc
-
-PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib
-
-# Link to modified libraries
-SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
-SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
-.ENDIF		# "$(UPD)" == "310"
-
 # --- Files --------------------------------------------------------
 
 SLOFILES =  \
@@ -78,11 +64,6 @@ SLOFILES =  \
         $(SLO)$/disposelistener.obj\
         $(SLO)$/switchpersistencestream.obj\
         $(SLO)$/register.obj
-
-.IF "$(UPD)" == "310"
-SLOFILES += \
-	$(SLO)$/selfterminatefilestream.obj
-.ENDIF		# "$(UPD)" == "310"
 
 SHL1TARGET=$(TARGET)
 SHL1STDLIBS=\

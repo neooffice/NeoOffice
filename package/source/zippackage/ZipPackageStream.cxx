@@ -1,37 +1,40 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/*************************************************************************
+ *
+ * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * $RCSfile$
+ * $Revision$
+ *
+ * This file is part of NeoOffice.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified March 2013 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 
-
-
-// MARKER( update_precomp.py ): autogen include statement, do not remove
+// MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_package.hxx"
 #include <com/sun/star/packages/zip/ZipConstants.hpp>
-#include <com/sun/star/embed/StorageFormats.hpp>
 #include <com/sun/star/packages/zip/ZipIOException.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/io/XStream.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
-#include <com/sun/star/xml/crypto/DigestID.hpp>
-#include <com/sun/star/xml/crypto/CipherID.hpp>
 
 
 #include <ZipPackageStream.hxx>
@@ -44,8 +47,6 @@
 #include <comphelper/seekableinput.hxx>
 #include <comphelper/storagehelper.hxx>
 
-#include <rtl/instance.hxx>
-
 #include <PackageConstants.hxx>
 
 using namespace com::sun::star::packages::zip::ZipConstants;
@@ -56,33 +57,24 @@ using namespace com::sun::star;
 using namespace cppu;
 using namespace rtl;
 
-namespace { struct lcl_CachedImplId : public rtl::Static< Sequence < sal_Int8 >, lcl_CachedImplId > {}; }
+Sequence < sal_Int8 > ZipPackageStream::aImplementationId = Sequence < sal_Int8 > ();
 
-const ::com::sun::star::uno::Sequence < sal_Int8 >& ZipPackageStream::static_getImplementationId()
-{
-    return lcl_CachedImplId::get();
-}
 
 ZipPackageStream::ZipPackageStream ( ZipPackage & rNewPackage,
-									const uno::Reference< XMultiServiceFactory >& xFactory,
+									const Reference< XMultiServiceFactory >& xFactory,
 									sal_Bool bAllowRemoveOnInsert ) 
 : m_xFactory( xFactory )
-, rZipPackage( rNewPackage )
+, rZipPackage(rNewPackage)
 , bToBeCompressed ( sal_True )
 , bToBeEncrypted ( sal_False )
 , bHaveOwnKey ( sal_False )
 , bIsEncrypted ( sal_False )
-, m_nImportedStartKeyAlgorithm( 0 )
-, m_nImportedEncryptionAlgorithm( 0 )
-, m_nImportedChecksumAlgorithm( 0 )
-, m_nImportedDerivedKeySize( 0 )
+, xEncryptionData ( )
 , m_nStreamMode( PACKAGE_STREAM_NOTSET )
 , m_nMagicalHackPos( 0 )
 , m_nMagicalHackSize( 0 )
 , m_bHasSeekable( sal_False )
 , m_bCompressedIsSetFromOutside( sal_False )
-, m_bFromManifest( sal_False )
-, m_bUseWinEncoding( false )
 { 
 	OSL_ENSURE( m_xFactory.is(), "No factory is provided to ZipPackageStream!\n" );
 
@@ -97,19 +89,20 @@ ZipPackageStream::ZipPackageStream ( ZipPackage & rNewPackage,
 	aEntry.nCompressedSize	= -1;
 	aEntry.nSize		= -1;
 	aEntry.nOffset		= -1;
-	aEntry.nPathLen		= -1;
+	aEntry.nNameLen		= -1;
 	aEntry.nExtraLen	= -1;
 
-	Sequence < sal_Int8 > &rCachedImplId = lcl_CachedImplId::get();
-	if ( !rCachedImplId.getLength() )
-	    rCachedImplId = getImplementationId();
+	if ( !aImplementationId.getLength() )
+        {
+            aImplementationId = getImplementationId();
+        }
 }
 
 ZipPackageStream::~ZipPackageStream( void )
 {
 }
 
-void ZipPackageStream::setZipEntryOnLoading( const ZipEntry &rInEntry )
+void ZipPackageStream::setZipEntryOnLoading( const ZipEntry &rInEntry)
 {
 	aEntry.nVersion = rInEntry.nVersion;
 	aEntry.nFlag = rInEntry.nFlag;
@@ -119,8 +112,8 @@ void ZipPackageStream::setZipEntryOnLoading( const ZipEntry &rInEntry )
 	aEntry.nCompressedSize = rInEntry.nCompressedSize;
 	aEntry.nSize = rInEntry.nSize;
 	aEntry.nOffset = rInEntry.nOffset;
-	aEntry.sPath = rInEntry.sPath;
-	aEntry.nPathLen = rInEntry.nPathLen;
+	aEntry.sName = rInEntry.sName;
+	aEntry.nNameLen = rInEntry.nNameLen;
 	aEntry.nExtraLen = rInEntry.nExtraLen;
 
 	if ( aEntry.nMethod == STORED )
@@ -139,7 +132,7 @@ void ZipPackageStream::CloseOwnStreamIfAny()
 }
 
 //--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > ZipPackageStream::GetOwnSeekStream()
+uno::Reference< io::XInputStream >& ZipPackageStream::GetOwnSeekStream()
 {
 	if ( !m_bHasSeekable && xStream.is() )
 	{
@@ -148,10 +141,10 @@ uno::Reference< io::XInputStream > ZipPackageStream::GetOwnSeekStream()
 		// is accessed before commit it MUST be wrapped.
 		// Wrap the stream in case it is not seekable
 		xStream = ::comphelper::OSeekableInputWrapper::CheckSeekableCanWrap( xStream, m_xFactory );
-		uno::Reference< io::XSeekable > xSeek( xStream, UNO_QUERY );
+		Reference< io::XSeekable > xSeek( xStream, UNO_QUERY );
 		if ( !xSeek.is() )
-			throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "The stream must support XSeekable!" ) ),
-									uno::Reference< XInterface >() );
+			throw RuntimeException( OUString::createFromAscii( "The stream must support XSeekable!" ),
+									Reference< XInterface >() );
 
 		m_bHasSeekable = sal_True;
 	}
@@ -163,29 +156,29 @@ uno::Reference< io::XInputStream > ZipPackageStream::GetOwnSeekStream()
 uno::Reference< io::XInputStream > ZipPackageStream::GetRawEncrStreamNoHeaderCopy()
 {
 	if ( m_nStreamMode != PACKAGE_STREAM_RAW || !GetOwnSeekStream().is() )
-		throw io::IOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw io::IOException(); // TODO
 
-	if ( m_xBaseEncryptionData.is() )
-		throw ZipIOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Encrypted stream without encryption data!\n" ) ),
-							uno::Reference< XInterface >() );
+	if ( xEncryptionData.isEmpty() )
+		throw ZipIOException( OUString::createFromAscii( "Encrypted stream without encryption data!\n" ),
+							Reference< XInterface >() );
 
 	uno::Reference< io::XSeekable > xSeek( GetOwnSeekStream(), UNO_QUERY );
 	if ( !xSeek.is() )
-		throw ZipIOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "The stream must be seekable!\n" ) ),
-							uno::Reference< XInterface >() );
+		throw ZipIOException( OUString::createFromAscii( "The stream must be seekable!\n" ),
+							Reference< XInterface >() );
 
 	// skip header
-	xSeek->seek( n_ConstHeaderSize + getInitialisationVector().getLength() + 
-					getSalt().getLength() + getDigest().getLength() );
+	xSeek->seek( n_ConstHeaderSize + xEncryptionData->aInitVector.getLength() + 
+					xEncryptionData->aSalt.getLength() + xEncryptionData->aDigest.getLength() );
 
 	// create temporary stream
 	uno::Reference < io::XOutputStream > xTempOut( 
-						m_xFactory->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.io.TempFile" ) ) ),
+						m_xFactory->createInstance ( ::rtl::OUString::createFromAscii( "com.sun.star.io.TempFile" ) ),
 						uno::UNO_QUERY );
 	uno::Reference < io::XInputStream > xTempIn( xTempOut, UNO_QUERY );
 	uno::Reference < io::XSeekable > xTempSeek( xTempOut, UNO_QUERY );
 	if ( !xTempOut.is() || !xTempIn.is() || !xTempSeek.is() )
-		throw io::IOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw io::IOException(); // TODO:
 
 	// copy the raw stream to the temporary file starting from the current position
 	::comphelper::OStorageHelper::CopyInputToOutput( GetOwnSeekStream(), xTempOut );
@@ -196,155 +189,79 @@ uno::Reference< io::XInputStream > ZipPackageStream::GetRawEncrStreamNoHeaderCop
 }
 
 //--------------------------------------------------------------------------
-sal_Int32 ZipPackageStream::GetEncryptionAlgorithm() const
+Reference< io::XInputStream > ZipPackageStream::TryToGetRawFromDataStream( sal_Bool bAddHeaderForEncr )
 {
-    return m_nImportedEncryptionAlgorithm ? m_nImportedEncryptionAlgorithm : rZipPackage.GetEncAlgID();
-}
-
-//--------------------------------------------------------------------------
-sal_Int32 ZipPackageStream::GetBlockSize() const
-{
-    return GetEncryptionAlgorithm() == ::com::sun::star::xml::crypto::CipherID::AES_CBC_W3C_PADDING ? 16 : 8;
-}
-
-//--------------------------------------------------------------------------
-::rtl::Reference< EncryptionData > ZipPackageStream::GetEncryptionData( bool bUseWinEncoding )
-{
-    ::rtl::Reference< EncryptionData > xResult;
-    if ( m_xBaseEncryptionData.is() )
-        xResult = new EncryptionData( 
-            *m_xBaseEncryptionData,
-            GetEncryptionKey( bUseWinEncoding ),
-            GetEncryptionAlgorithm(),
-            m_nImportedChecksumAlgorithm ? m_nImportedChecksumAlgorithm : rZipPackage.GetChecksumAlgID(),
-            m_nImportedDerivedKeySize ? m_nImportedDerivedKeySize : rZipPackage.GetDefaultDerivedKeySize(),
-            GetStartKeyGenID() );
-
-    return xResult;
-}
-
-//--------------------------------------------------------------------------
-void ZipPackageStream::SetBaseEncryptionData( const ::rtl::Reference< BaseEncryptionData >& xData )
-{
-    m_xBaseEncryptionData = xData;
-}
-
-//--------------------------------------------------------------------------
-uno::Sequence< sal_Int8 > ZipPackageStream::GetEncryptionKey( bool bUseWinEncoding )
-{
-    uno::Sequence< sal_Int8 > aResult;
-    sal_Int32 nKeyGenID = GetStartKeyGenID();
-    bUseWinEncoding = ( bUseWinEncoding || m_bUseWinEncoding );
-
-    if ( bHaveOwnKey && m_aStorageEncryptionKeys.getLength() )
-    {
-        ::rtl::OUString aNameToFind;
-        if ( nKeyGenID == xml::crypto::DigestID::SHA256 )
-            aNameToFind = PACKAGE_ENCRYPTIONDATA_SHA256UTF8;
-        else if ( nKeyGenID == xml::crypto::DigestID::SHA1 )
-        {
-            aNameToFind = bUseWinEncoding ? PACKAGE_ENCRYPTIONDATA_SHA1MS1252 : PACKAGE_ENCRYPTIONDATA_SHA1UTF8;
-        }
-        else
-            throw uno::RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "No expected key is provided!" ) ), uno::Reference< uno::XInterface >() );
-
-        for ( sal_Int32 nInd = 0; nInd < m_aStorageEncryptionKeys.getLength(); nInd++ )
-            if ( m_aStorageEncryptionKeys[nInd].Name.equals( aNameToFind ) )
-                m_aStorageEncryptionKeys[nInd].Value >>= aResult;
-
-        // empty keys are not allowed here
-        // so it is not important whether there is no key, or the key is empty, it is an error
-        if ( !aResult.getLength() )
-            throw uno::RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "No expected key is provided!" ) ), uno::Reference< uno::XInterface >() );
-    }
-    else
-        aResult = m_aEncryptionKey;
-
-    if ( !aResult.getLength() || !bHaveOwnKey )
-        aResult = rZipPackage.GetEncryptionKey();
-
-    return aResult;
-}
-
-//--------------------------------------------------------------------------
-sal_Int32 ZipPackageStream::GetStartKeyGenID()
-{
-    // generally should all the streams use the same Start Key
-    // but if raw copy without password takes place, we should preserve the imported algorithm
-    return m_nImportedStartKeyAlgorithm ? m_nImportedStartKeyAlgorithm : rZipPackage.GetStartKeyGenID();
-}
-
-//--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > ZipPackageStream::TryToGetRawFromDataStream( sal_Bool bAddHeaderForEncr )
-{
-	if ( m_nStreamMode != PACKAGE_STREAM_DATA || !GetOwnSeekStream().is() || ( bAddHeaderForEncr && !bToBeEncrypted ) )
-		throw packages::NoEncryptionException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+	if ( m_nStreamMode != PACKAGE_STREAM_DATA || !GetOwnSeekStream().is() || bAddHeaderForEncr && !bToBeEncrypted )
+		throw packages::NoEncryptionException(); // TODO
 
 	Sequence< sal_Int8 > aKey;
 	
 	if ( bToBeEncrypted )
 	{
-		aKey = GetEncryptionKey();
+		aKey = ( xEncryptionData.isEmpty() || !bHaveOwnKey ) ? rZipPackage.getEncryptionKey() : 
+																				xEncryptionData->aKey;
 		if ( !aKey.getLength() )
-			throw packages::NoEncryptionException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw packages::NoEncryptionException(); // TODO
 	}
 
 	try
 	{
 		// create temporary file
 		uno::Reference < io::XStream > xTempStream( 
-							m_xFactory->createInstance ( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.io.TempFile" ) ) ),
+							m_xFactory->createInstance ( ::rtl::OUString::createFromAscii( "com.sun.star.io.TempFile" ) ),
 							uno::UNO_QUERY );
 		if ( !xTempStream.is() )
-			throw io::IOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw io::IOException(); // TODO:
 	
 		// create a package based on it
 		ZipPackage* pPackage = new ZipPackage( m_xFactory );
-		uno::Reference< XSingleServiceFactory > xPackageAsFactory( static_cast< XSingleServiceFactory* >( pPackage ) );
+		Reference< XSingleServiceFactory > xPackageAsFactory( static_cast< XSingleServiceFactory* >( pPackage ) );
 		if ( !xPackageAsFactory.is() )
-			throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw RuntimeException(); // TODO
 	
 		Sequence< Any > aArgs( 1 );
 		aArgs[0] <<= xTempStream;
 		pPackage->initialize( aArgs );
 	
 		// create a new package stream
-		uno::Reference< XDataSinkEncrSupport > xNewPackStream( xPackageAsFactory->createInstance(), UNO_QUERY );
+		Reference< XDataSinkEncrSupport > xNewPackStream( xPackageAsFactory->createInstance(), UNO_QUERY );
 		if ( !xNewPackStream.is() )
-			throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw RuntimeException(); // TODO
 	
+		if ( !m_aSharedMutexRef.Is() )
+			m_aSharedMutexRef = new SotMutexHolder();
 		xNewPackStream->setDataStream( static_cast< io::XInputStream* >(
-													new WrapStreamForShare( GetOwnSeekStream(), rZipPackage.GetSharedMutexRef() ) ) );
+													new WrapStreamForShare( GetOwnSeekStream(), m_aSharedMutexRef ) ) );
 	
-		uno::Reference< XPropertySet > xNewPSProps( xNewPackStream, UNO_QUERY );
+		Reference< XPropertySet > xNewPSProps( xNewPackStream, UNO_QUERY );
 		if ( !xNewPSProps.is() )
-			throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw RuntimeException(); // TODO
 
 		// copy all the properties of this stream to the new stream
-		xNewPSProps->setPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "MediaType" ) ), makeAny( sMediaType ) );
-		xNewPSProps->setPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Compressed" ) ), makeAny( bToBeCompressed ) );
+		xNewPSProps->setPropertyValue( ::rtl::OUString::createFromAscii( "MediaType" ), makeAny( sMediaType ) );
+		xNewPSProps->setPropertyValue( ::rtl::OUString::createFromAscii( "Compressed" ), makeAny( bToBeCompressed ) );
 		if ( bToBeEncrypted )
 		{
-			xNewPSProps->setPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ENCRYPTION_KEY_PROPERTY ) ), makeAny( aKey ) );
-			xNewPSProps->setPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Encrypted" ) ), makeAny( sal_True ) );
+			xNewPSProps->setPropertyValue( ::rtl::OUString::createFromAscii( "EncryptionKey" ), makeAny( aKey ) );
+			xNewPSProps->setPropertyValue( ::rtl::OUString::createFromAscii( "Encrypted" ), makeAny( sal_True ) );
 		}
 
 		// insert a new stream in the package
-		uno::Reference< XUnoTunnel > xTunnel;
-		Any aRoot = pPackage->getByHierarchicalName( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/" ) ) );
+		Reference< XUnoTunnel > xTunnel;
+		Any aRoot = pPackage->getByHierarchicalName( ::rtl::OUString::createFromAscii( "/" ) );
 		aRoot >>= xTunnel;
-		uno::Reference< container::XNameContainer > xRootNameContainer( xTunnel, UNO_QUERY );
+		Reference< container::XNameContainer > xRootNameContainer( xTunnel, UNO_QUERY );
 		if ( !xRootNameContainer.is() )
-			throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw RuntimeException(); // TODO
 	
-		uno::Reference< XUnoTunnel > xNPSTunnel( xNewPackStream, UNO_QUERY );
-		xRootNameContainer->insertByName( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "dummy" ) ), makeAny( xNPSTunnel ) );
+		Reference< XUnoTunnel > xNPSTunnel( xNewPackStream, UNO_QUERY );
+		xRootNameContainer->insertByName( ::rtl::OUString::createFromAscii( "dummy" ), makeAny( xNPSTunnel ) );
 
 		// commit the temporary package
 		pPackage->commitChanges();
 
 		// get raw stream from the temporary package
-		uno::Reference< io::XInputStream > xInRaw;
+		Reference< io::XInputStream > xInRaw;
 		if ( bAddHeaderForEncr )
 			xInRaw = xNewPackStream->getRawStream();
 		else
@@ -352,12 +269,12 @@ uno::Reference< io::XInputStream > ZipPackageStream::TryToGetRawFromDataStream( 
 		
 		// create another temporary file
 		uno::Reference < io::XOutputStream > xTempOut( 
-							m_xFactory->createInstance ( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.io.TempFile" ) ) ),
+							m_xFactory->createInstance ( ::rtl::OUString::createFromAscii( "com.sun.star.io.TempFile" ) ),
 							uno::UNO_QUERY );
 		uno::Reference < io::XInputStream > xTempIn( xTempOut, UNO_QUERY );
 		uno::Reference < io::XSeekable > xTempSeek( xTempOut, UNO_QUERY );
 		if ( !xTempOut.is() || !xTempIn.is() || !xTempSeek.is() )
-			throw io::IOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+			throw io::IOException(); // TODO:
 
 		// copy the raw stream to the temporary file
 		::comphelper::OStorageHelper::CopyInputToOutput( xInRaw, xTempOut );
@@ -365,12 +282,12 @@ uno::Reference< io::XInputStream > ZipPackageStream::TryToGetRawFromDataStream( 
 		xTempSeek->seek( 0 );
 
 		// close raw stream, package stream and folder
-		xInRaw = uno::Reference< io::XInputStream >();
-		xNewPSProps = uno::Reference< XPropertySet >();
-		xNPSTunnel = uno::Reference< XUnoTunnel >();
-		xNewPackStream = uno::Reference< XDataSinkEncrSupport >();
-		xTunnel = uno::Reference< XUnoTunnel >();
-		xRootNameContainer = uno::Reference< container::XNameContainer >();
+		xInRaw = Reference< io::XInputStream >();
+		xNewPSProps = Reference< XPropertySet >();
+		xNPSTunnel = Reference< XUnoTunnel >();
+		xNewPackStream = Reference< XDataSinkEncrSupport >();
+		xTunnel = Reference< XUnoTunnel >();
+		xRootNameContainer = Reference< container::XNameContainer >();
 
 		// return the stream representing the first temporary file
 		return xTempIn;
@@ -383,7 +300,7 @@ uno::Reference< io::XInputStream > ZipPackageStream::TryToGetRawFromDataStream( 
 	{
 	}
 
-	throw io::IOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+	throw io::IOException(); // TODO
 }
 	
 //--------------------------------------------------------------------------
@@ -396,7 +313,7 @@ sal_Bool ZipPackageStream::ParsePackageRawStream()
 
 	sal_Bool bOk = sal_False;
 
-	::rtl::Reference< BaseEncryptionData > xTempEncrData;
+	vos::ORef < EncryptionData > xTempEncrData;
 	sal_Int32 nMagHackSize = 0;
 	Sequence < sal_Int8 > aHeader ( 4 );
 
@@ -412,25 +329,17 @@ sal_Bool ZipPackageStream::ParsePackageRawStream()
 			if ( nHeader == n_ConstHeader )
 			{
 				// this is one of our god-awful, but extremely devious hacks, everyone cheer
-				xTempEncrData = new BaseEncryptionData;
+				xTempEncrData = new EncryptionData;
 	
 				::rtl::OUString aMediaType;
-                sal_Int32 nEncAlgorithm = 0;
-                sal_Int32 nChecksumAlgorithm = 0;
-                sal_Int32 nDerivedKeySize = 0;
-                sal_Int32 nStartKeyGenID = 0;
-				if ( ZipFile::StaticFillData( xTempEncrData, nEncAlgorithm, nChecksumAlgorithm, nDerivedKeySize, nStartKeyGenID, nMagHackSize, aMediaType, GetOwnSeekStream() ) )
+				if ( ZipFile::StaticFillData ( xTempEncrData, nMagHackSize, aMediaType, GetOwnSeekStream() ) )
 				{
 					// We'll want to skip the data we've just read, so calculate how much we just read
 					// and remember it
-					m_nMagicalHackPos = n_ConstHeaderSize + xTempEncrData->m_aSalt.getLength() 
-														+ xTempEncrData->m_aInitVector.getLength()
-														+ xTempEncrData->m_aDigest.getLength()
+					m_nMagicalHackPos = n_ConstHeaderSize + xTempEncrData->aSalt.getLength() 
+														+ xTempEncrData->aInitVector.getLength()
+														+ xTempEncrData->aDigest.getLength()
 														+ aMediaType.getLength() * sizeof( sal_Unicode );
-                    m_nImportedEncryptionAlgorithm = nEncAlgorithm;
-                    m_nImportedChecksumAlgorithm = nChecksumAlgorithm;
-                    m_nImportedDerivedKeySize = nDerivedKeySize;
-                    m_nImportedStartKeyAlgorithm = nStartKeyGenID;
 					m_nMagicalHackSize = nMagHackSize;
 					sMediaType = aMediaType;
 	
@@ -449,7 +358,7 @@ sal_Bool ZipPackageStream::ParsePackageRawStream()
 		return sal_False;
 	}
 
-	m_xBaseEncryptionData = xTempEncrData;
+	xEncryptionData = xTempEncrData;
 	SetIsEncrypted ( sal_True );
 	// it's already compressed and encrypted
 	bToBeEncrypted = bToBeCompressed = sal_False;
@@ -471,12 +380,12 @@ void ZipPackageStream::SetPackageMember( sal_Bool bNewValue )
 
 // XActiveDataSink
 //--------------------------------------------------------------------------
-void SAL_CALL ZipPackageStream::setInputStream( const uno::Reference< io::XInputStream >& aStream ) 
-		throw( RuntimeException )
+void SAL_CALL ZipPackageStream::setInputStream( const Reference< io::XInputStream >& aStream ) 
+		throw(RuntimeException)
 {
 	// if seekable access is required the wrapping will be done on demand
+	m_aSharedMutexRef = new SotMutexHolder();
 	xStream = aStream;
-    m_nImportedEncryptionAlgorithm = 0;
 	m_bHasSeekable = sal_False;
 	SetPackageMember ( sal_False );
 	aEntry.nTime = -1;
@@ -484,145 +393,147 @@ void SAL_CALL ZipPackageStream::setInputStream( const uno::Reference< io::XInput
 }
 
 //--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getRawData()
-		throw( RuntimeException )
+Reference< io::XInputStream > SAL_CALL ZipPackageStream::getRawData()
+		throw(RuntimeException)
 {
 	try
 	{
-		if ( IsPackageMember() )
+		if (IsPackageMember())
 		{
-			return rZipPackage.getZipFile().getRawData( aEntry, GetEncryptionData(), bIsEncrypted, rZipPackage.GetSharedMutexRef() );
+			if ( !xEncryptionData.isEmpty() && !bHaveOwnKey )
+				xEncryptionData->aKey = rZipPackage.getEncryptionKey();
+			return rZipPackage.getZipFile().getRawData( aEntry, xEncryptionData, bIsEncrypted );
 		}
 		else if ( GetOwnSeekStream().is() )
 		{
-			return new WrapStreamForShare( GetOwnSeekStream(), rZipPackage.GetSharedMutexRef() );
+			if ( !m_aSharedMutexRef.Is() )
+				m_aSharedMutexRef = new SotMutexHolder();
+			return new WrapStreamForShare( GetOwnSeekStream(), m_aSharedMutexRef );
 		}
 		else
-			return uno::Reference < io::XInputStream > ();
+			return Reference < io::XInputStream > ();
 	}
-	catch ( ZipException & )//rException )
+	catch (ZipException &)//rException)
 	{
-		VOS_ENSURE( 0, "ZipException thrown" );//rException.Message );
-		return uno::Reference < io::XInputStream > ();
+		VOS_ENSURE( 0, "ZipException thrown");//rException.Message);
+		return Reference < io::XInputStream > ();
 	}
-	catch ( Exception & )
+	catch (Exception &)
 	{
-		VOS_ENSURE( 0, "Exception is thrown during stream wrapping!\n" );
-		return uno::Reference < io::XInputStream > ();
+		VOS_ENSURE( 0, "Exception is thrown during stream wrapping!\n");
+		return Reference < io::XInputStream > ();
 	}
 }
 
 //--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getInputStream() 
-		throw( RuntimeException )
+Reference< io::XInputStream > SAL_CALL ZipPackageStream::getInputStream(  ) 
+		throw(RuntimeException)
 {
 	try
 	{
-		if ( IsPackageMember() )
+		if (IsPackageMember())
 		{
-			return rZipPackage.getZipFile().getInputStream( aEntry, GetEncryptionData(), bIsEncrypted, rZipPackage.GetSharedMutexRef() );
+			if ( !xEncryptionData.isEmpty() && !bHaveOwnKey )
+				xEncryptionData->aKey = rZipPackage.getEncryptionKey();
+			return rZipPackage.getZipFile().getInputStream( aEntry, xEncryptionData, bIsEncrypted );
 		}
 		else if ( GetOwnSeekStream().is() )
 		{
-			return new WrapStreamForShare( GetOwnSeekStream(), rZipPackage.GetSharedMutexRef() );
+			if ( !m_aSharedMutexRef.Is() )
+				m_aSharedMutexRef = new SotMutexHolder();
+			return new WrapStreamForShare( GetOwnSeekStream(), m_aSharedMutexRef );
 		}
 		else
-			return uno::Reference < io::XInputStream > ();
+			return Reference < io::XInputStream > ();
 	}
-	catch ( ZipException & )//rException )
+	catch (ZipException &)//rException)
 	{
-		VOS_ENSURE( 0,"ZipException thrown" );//rException.Message );
-		return uno::Reference < io::XInputStream > ();
+		VOS_ENSURE( 0,"ZipException thrown");//rException.Message);
+		return Reference < io::XInputStream > ();
 	}
-	catch ( Exception & )
+	catch (Exception &)
 	{
-		VOS_ENSURE( 0, "Exception is thrown during stream wrapping!\n" );
-		return uno::Reference < io::XInputStream > ();
+		VOS_ENSURE( 0, "Exception is thrown during stream wrapping!\n");
+		return Reference < io::XInputStream > ();
 	}
 }
 
 // XDataSinkEncrSupport
 //--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getDataStream()
+Reference< io::XInputStream > SAL_CALL ZipPackageStream::getDataStream()
 		throw ( packages::WrongPasswordException,
 				io::IOException,
 				RuntimeException )
 {
 	// There is no stream attached to this object
 	if ( m_nStreamMode == PACKAGE_STREAM_NOTSET )
-		return uno::Reference< io::XInputStream >();
+		return Reference< io::XInputStream >();
 
 	// this method can not be used together with old approach
 	if ( m_nStreamMode == PACKAGE_STREAM_DETECT )
-		throw packages::zip::ZipIOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw packages::zip::ZipIOException(); // TODO
 
-	if ( IsPackageMember() )
+	if ( !xEncryptionData.isEmpty() && !bHaveOwnKey )
+		xEncryptionData->aKey = rZipPackage.getEncryptionKey();
+
+	if (IsPackageMember())
 	{
-        uno::Reference< io::XInputStream > xResult;
-        try
-        {
-		    xResult = rZipPackage.getZipFile().getDataStream( aEntry, GetEncryptionData(), bIsEncrypted, rZipPackage.GetSharedMutexRef() );
-        }
-        catch( packages::WrongPasswordException& )
-        {
-            // workaround for the encrypted documents generated with the old OOo1.x bug.
-            if ( rZipPackage.GetStartKeyGenID() == xml::crypto::DigestID::SHA1 && !m_bUseWinEncoding )
-            {
-                xResult = rZipPackage.getZipFile().getDataStream( aEntry, GetEncryptionData( true ), bIsEncrypted, rZipPackage.GetSharedMutexRef() );
-                m_bUseWinEncoding = true;
-            }
-            else
-                throw;
-        }
-        return xResult;
+		if ( !xEncryptionData.isEmpty() && !bHaveOwnKey )
+			xEncryptionData->aKey = rZipPackage.getEncryptionKey();
+
+		return rZipPackage.getZipFile().getDataStream( aEntry, xEncryptionData, bIsEncrypted );
 	}
 	else if ( m_nStreamMode == PACKAGE_STREAM_RAW )
-		return ZipFile::StaticGetDataFromRawStream( m_xFactory, GetOwnSeekStream(), GetEncryptionData() );
+		return ZipFile::StaticGetDataFromRawStream( GetOwnSeekStream(), xEncryptionData );
 	else if ( GetOwnSeekStream().is() )
 	{
-		return new WrapStreamForShare( GetOwnSeekStream(), rZipPackage.GetSharedMutexRef() );
+		if ( !m_aSharedMutexRef.Is() )
+			m_aSharedMutexRef = new SotMutexHolder();
+		return new WrapStreamForShare( GetOwnSeekStream(), m_aSharedMutexRef );
 	}
 	else
 		return uno::Reference< io::XInputStream >();
 }
 
 //--------------------------------------------------------------------------
-uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getRawStream()
+Reference< io::XInputStream > SAL_CALL ZipPackageStream::getRawStream()
 		throw ( packages::NoEncryptionException,
 				io::IOException,
 				uno::RuntimeException )
 {
 	// There is no stream attached to this object
 	if ( m_nStreamMode == PACKAGE_STREAM_NOTSET )
-		return uno::Reference< io::XInputStream >();
+		return Reference< io::XInputStream >();
 
 	// this method can not be used together with old approach
 	if ( m_nStreamMode == PACKAGE_STREAM_DETECT )
-		throw packages::zip::ZipIOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw packages::zip::ZipIOException(); // TODO
 
-	if ( IsPackageMember() )
+	if (IsPackageMember())
 	{
-		if ( !bIsEncrypted || !GetEncryptionData().is() )
-			throw packages::NoEncryptionException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		if ( !bIsEncrypted || xEncryptionData.isEmpty() )
+			throw packages::NoEncryptionException(); // TODO
 
-		return rZipPackage.getZipFile().getWrappedRawStream( aEntry, GetEncryptionData(), sMediaType, rZipPackage.GetSharedMutexRef() );
+		return rZipPackage.getZipFile().getWrappedRawStream( aEntry, xEncryptionData, sMediaType );
 	}
 	else if ( GetOwnSeekStream().is() )
 	{
 		if ( m_nStreamMode == PACKAGE_STREAM_RAW )
 		{
-			return new WrapStreamForShare( GetOwnSeekStream(), rZipPackage.GetSharedMutexRef() );
+			if ( !m_aSharedMutexRef.Is() )
+				m_aSharedMutexRef = new SotMutexHolder();
+			return new WrapStreamForShare( GetOwnSeekStream(), m_aSharedMutexRef );
 		}
 		else if ( m_nStreamMode == PACKAGE_STREAM_DATA && bToBeEncrypted )
 			return TryToGetRawFromDataStream( sal_True );
 	}
 	
-	throw packages::NoEncryptionException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+	throw packages::NoEncryptionException(); // TODO
 }
 
 
 //--------------------------------------------------------------------------
-void SAL_CALL ZipPackageStream::setDataStream( const uno::Reference< io::XInputStream >& aStream )
+void SAL_CALL ZipPackageStream::setDataStream( const Reference< io::XInputStream >& aStream )
 		throw ( io::IOException,
 				RuntimeException )
 {
@@ -631,31 +542,32 @@ void SAL_CALL ZipPackageStream::setDataStream( const uno::Reference< io::XInputS
 }
 
 //--------------------------------------------------------------------------
-void SAL_CALL ZipPackageStream::setRawStream( const uno::Reference< io::XInputStream >& aStream )
+void SAL_CALL ZipPackageStream::setRawStream( const Reference< io::XInputStream >& aStream )
 		throw ( packages::EncryptionNotAllowedException,
 				packages::NoRawFormatException,
 				io::IOException,
-				RuntimeException )
+				RuntimeException)
 {
 	// wrap the stream in case it is not seekable
-	uno::Reference< io::XInputStream > xNewStream = ::comphelper::OSeekableInputWrapper::CheckSeekableCanWrap( aStream, m_xFactory );
-	uno::Reference< io::XSeekable > xSeek( xNewStream, UNO_QUERY );
+	Reference< io::XInputStream > xNewStream = ::comphelper::OSeekableInputWrapper::CheckSeekableCanWrap( aStream, m_xFactory );
+	Reference< io::XSeekable > xSeek( xNewStream, UNO_QUERY );
 	if ( !xSeek.is() )
-		throw RuntimeException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "The stream must support XSeekable!" ) ),
-									uno::Reference< XInterface >() );
+		throw RuntimeException( OUString::createFromAscii( "The stream must support XSeekable!" ),
+									Reference< XInterface >() );
 
 	xSeek->seek( 0 );
-	uno::Reference< io::XInputStream > xOldStream = xStream;
+	Reference< io::XInputStream > xOldStream = xStream;
 	xStream = xNewStream;
 	if ( !ParsePackageRawStream() )
 	{
 		xStream = xOldStream;
-		throw packages::NoRawFormatException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw packages::NoRawFormatException();
 	}
 
 	// the raw stream MUST have seekable access
 	m_bHasSeekable = sal_True;
 	
+	m_aSharedMutexRef = new SotMutexHolder();
 	SetPackageMember ( sal_False );
 	aEntry.nTime = -1;
 	m_nStreamMode = PACKAGE_STREAM_RAW;
@@ -668,15 +580,15 @@ uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getPlainRawStream(
 {
 	// There is no stream attached to this object
 	if ( m_nStreamMode == PACKAGE_STREAM_NOTSET )
-		return uno::Reference< io::XInputStream >();
+		return Reference< io::XInputStream >();
 
 	// this method can not be used together with old approach
 	if ( m_nStreamMode == PACKAGE_STREAM_DETECT )
-		throw packages::zip::ZipIOException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw packages::zip::ZipIOException(); // TODO
 
-	if ( IsPackageMember() )
+	if (IsPackageMember())
 	{
-		return rZipPackage.getZipFile().getRawData( aEntry, GetEncryptionData(), bIsEncrypted, rZipPackage.GetSharedMutexRef() );
+		return rZipPackage.getZipFile().getRawData( aEntry, xEncryptionData, bIsEncrypted );
 	}
 	else if ( GetOwnSeekStream().is() )
 	{
@@ -689,14 +601,14 @@ uno::Reference< io::XInputStream > SAL_CALL ZipPackageStream::getPlainRawStream(
 			return TryToGetRawFromDataStream( sal_False );
 	}
 	
-	return uno::Reference< io::XInputStream >();
+	return Reference< io::XInputStream >();
 }
 
 // XUnoTunnel
 
 //--------------------------------------------------------------------------
 sal_Int64 SAL_CALL ZipPackageStream::getSomething( const Sequence< sal_Int8 >& aIdentifier ) 
-	throw( RuntimeException )
+	throw(RuntimeException)
 {																
 	sal_Int64 nMe = 0;
 	if ( aIdentifier.getLength() == 16 && 
@@ -708,18 +620,18 @@ sal_Int64 SAL_CALL ZipPackageStream::getSomething( const Sequence< sal_Int8 >& a
 // XPropertySet
 //--------------------------------------------------------------------------
 void SAL_CALL ZipPackageStream::setPropertyValue( const OUString& aPropertyName, const Any& aValue ) 
-		throw( beans::UnknownPropertyException, beans::PropertyVetoException, IllegalArgumentException, WrappedTargetException, RuntimeException )
+		throw(beans::UnknownPropertyException, beans::PropertyVetoException, IllegalArgumentException, WrappedTargetException, RuntimeException)
 {
-	if ( aPropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "MediaType" )) )
+	if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("MediaType")))
 	{
-		if ( rZipPackage.getFormat() != embed::StorageFormats::PACKAGE && rZipPackage.getFormat() != embed::StorageFormats::OFOPXML )
-			throw beans::PropertyVetoException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		if ( rZipPackage.getFormat() != PACKAGE_FORMAT && rZipPackage.getFormat() != OFOPXML_FORMAT )
+			throw beans::PropertyVetoException();
 
 		if ( aValue >>= sMediaType )
 		{
-			if ( sMediaType.getLength() > 0 )
+			if (sMediaType.getLength() > 0)
 			{
-				if ( sMediaType.indexOf ( OUString( RTL_CONSTASCII_USTRINGPARAM ( "text" ) ) ) != -1
+				if ( sMediaType.indexOf (OUString( RTL_CONSTASCII_USTRINGPARAM ( "text" ) ) ) != -1
 			 	|| sMediaType.equals( OUString( RTL_CONSTASCII_USTRINGPARAM ( "application/vnd.sun.star.oleobject" ) ) ) )
 					bToBeCompressed = sal_True;
 				else if ( !m_bCompressedIsSetFromOutside )
@@ -727,121 +639,92 @@ void SAL_CALL ZipPackageStream::setPropertyValue( const OUString& aPropertyName,
 			}
 		}
 		else
-			throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "MediaType must be a string!\n" ) ),
-											uno::Reference< XInterface >(),
+			throw IllegalArgumentException( OUString::createFromAscii( "MediaType must be a string!\n" ),
+											Reference< XInterface >(),
 											2 );
 
 	}
-	else if ( aPropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "Size" ) ) )
+	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Size") ) )
 	{
 		if ( !( aValue >>= aEntry.nSize ) )
-			throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Wrong type for Size property!\n" ) ),
-											uno::Reference< XInterface >(),
+			throw IllegalArgumentException( OUString::createFromAscii( "Wrong type for Size property!\n" ),
+											Reference< XInterface >(),
 											2 );
 	}
-	else if ( aPropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "Encrypted" ) ) )
+	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Encrypted") ) )
 	{
-		if ( rZipPackage.getFormat() != embed::StorageFormats::PACKAGE )
-			throw beans::PropertyVetoException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		if ( rZipPackage.getFormat() != PACKAGE_FORMAT )
+			throw beans::PropertyVetoException();
 
 		sal_Bool bEnc = sal_False;
 		if ( aValue >>= bEnc )
 		{
 			// In case of new raw stream, the stream must not be encrypted on storing
 			if ( bEnc && m_nStreamMode == PACKAGE_STREAM_RAW )
-				throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Raw stream can not be encrypted on storing" ) ),
-												uno::Reference< XInterface >(),
+				throw IllegalArgumentException( OUString::createFromAscii( "Raw stream can not be encrypted on storing" ),
+												Reference< XInterface >(),
 												2 );
 
 			bToBeEncrypted = bEnc;
-			if ( bToBeEncrypted && !m_xBaseEncryptionData.is() )
-				m_xBaseEncryptionData = new BaseEncryptionData;
+			if ( bToBeEncrypted && xEncryptionData.isEmpty())
+				xEncryptionData = new EncryptionData;
 		}
 		else
-			throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Wrong type for Encrypted property!\n" ) ),
-											uno::Reference< XInterface >(),
+			throw IllegalArgumentException( OUString::createFromAscii( "Wrong type for Encrypted property!\n" ),
+											Reference< XInterface >(),
 											2 );
 
 	}
-	else if ( aPropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( ENCRYPTION_KEY_PROPERTY ) ) )
+#ifdef NO_OOO_3_4_1_AES_ENCRYPTION
+	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("EncryptionKey") ) )
+#else	// NO_OOO_3_4_1_AES_ENCRYPTION
+	else if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("EncryptionKey") ) || aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("EncryptionKeySHA256") ) )
+#endif	// NO_OOO_3_4_1_AES_ENCRYPTION
 	{
-		if ( rZipPackage.getFormat() != embed::StorageFormats::PACKAGE )
-			throw beans::PropertyVetoException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		if ( rZipPackage.getFormat() != PACKAGE_FORMAT )
+			throw beans::PropertyVetoException();
 
-		uno::Sequence< sal_Int8 > aNewKey;
+		Sequence < sal_Int8 > aNewKey;
 
 		if ( !( aValue >>= aNewKey ) )
 		{
 			OUString sTempString;
 			if ( ( aValue >>= sTempString ) )
 			{
-				sal_Int32 nPathLength = sTempString.getLength();
-				Sequence < sal_Int8 > aSequence ( nPathLength );
+				sal_Int32 nNameLength = sTempString.getLength();
+				Sequence < sal_Int8 > aSequence ( nNameLength );
 				sal_Int8 *pArray = aSequence.getArray();
 				const sal_Unicode *pChar = sTempString.getStr();
-				for ( sal_Int16 i = 0; i < nPathLength; i++ )
-					pArray[i] = static_cast < const sal_Int8 > ( pChar[i] );
+				for ( sal_Int16 i = 0; i < nNameLength; i++)
+					pArray[i] = static_cast < const sal_Int8 > (pChar[i]);
 				aNewKey = aSequence;
 			}
 			else
-				throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Wrong type for EncryptionKey property!\n" ) ),
-												uno::Reference< XInterface >(),
+				throw IllegalArgumentException( OUString::createFromAscii( "Wrong type for EncryptionKey property!\n" ),
+												Reference< XInterface >(),
 												2 );
 		}
 
 		if ( aNewKey.getLength() )
 		{
-			if ( !m_xBaseEncryptionData.is() )
-				m_xBaseEncryptionData = new BaseEncryptionData;
+			if ( xEncryptionData.isEmpty())
+				xEncryptionData = new EncryptionData;
 
-			m_aEncryptionKey = aNewKey;
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+			if (aPropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("EncryptionKeySHA256") ) )
+				xEncryptionData->aKeySHA256 = aNewKey;
+			else
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+			xEncryptionData->aKey = aNewKey;
 			// In case of new raw stream, the stream must not be encrypted on storing
 			bHaveOwnKey = sal_True;
 			if ( m_nStreamMode != PACKAGE_STREAM_RAW )
 				bToBeEncrypted = sal_True;
 		}
 		else
-        {
 			bHaveOwnKey = sal_False;
-            m_aEncryptionKey.realloc( 0 );
-        }
-
-        m_aStorageEncryptionKeys.realloc( 0 );
 	}
-	else if ( aPropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( STORAGE_ENCRYPTION_KEYS_PROPERTY ) ) )
-	{
-		if ( rZipPackage.getFormat() != embed::StorageFormats::PACKAGE )
-			throw beans::PropertyVetoException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
-
-		uno::Sequence< beans::NamedValue > aKeys;
-		if ( !( aValue >>= aKeys ) )
-		{
-				throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Wrong type for StorageEncryptionKeys property!\n" ) ),
-												uno::Reference< XInterface >(),
-												2 );
-		}
-
-		if ( aKeys.getLength() )
-		{
-			if ( !m_xBaseEncryptionData.is() )
-				m_xBaseEncryptionData = new BaseEncryptionData;
-
-			m_aStorageEncryptionKeys = aKeys;
-
-			// In case of new raw stream, the stream must not be encrypted on storing
-			bHaveOwnKey = sal_True;
-			if ( m_nStreamMode != PACKAGE_STREAM_RAW )
-				bToBeEncrypted = sal_True;
-		}
-		else
-        {
-			bHaveOwnKey = sal_False;
-            m_aStorageEncryptionKeys.realloc( 0 );
-        }
-
-        m_aEncryptionKey.realloc( 0 );
-	}
-	else if ( aPropertyName.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "Compressed" ) ) )
+	else if (aPropertyName.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "Compressed" ) ) )
 	{
 		sal_Bool bCompr = sal_False;
 		
@@ -849,91 +732,93 @@ void SAL_CALL ZipPackageStream::setPropertyValue( const OUString& aPropertyName,
 		{
 			// In case of new raw stream, the stream must not be encrypted on storing
 			if ( bCompr && m_nStreamMode == PACKAGE_STREAM_RAW )
-				throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Raw stream can not be encrypted on storing" ) ),
-												uno::Reference< XInterface >(),
+				throw IllegalArgumentException( OUString::createFromAscii( "Raw stream can not be encrypted on storing" ),
+												Reference< XInterface >(),
 												2 );
 
 			bToBeCompressed = bCompr;
 			m_bCompressedIsSetFromOutside = sal_True;
 		}
 		else
-			throw IllegalArgumentException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX "Wrong type for Compressed property!\n" ) ),
-											uno::Reference< XInterface >(),
+			throw IllegalArgumentException( OUString::createFromAscii( "Wrong type for Compressed property!\n" ),
+											Reference< XInterface >(),
 											2 );
 	}
 	else
-		throw beans::UnknownPropertyException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw beans::UnknownPropertyException();
 }
 
 //--------------------------------------------------------------------------
 Any SAL_CALL ZipPackageStream::getPropertyValue( const OUString& PropertyName ) 
-		throw( beans::UnknownPropertyException, WrappedTargetException, RuntimeException )
+		throw(beans::UnknownPropertyException, WrappedTargetException, RuntimeException)
 {
 	Any aAny;
-	if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "MediaType" ) ) )
+	if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "MediaType" ) ) )
 	{
 		aAny <<= sMediaType;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Size" ) ) )
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Size" ) ) )
 	{
 		aAny <<= aEntry.nSize;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Encrypted" ) ) )
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Encrypted" ) ) )
 	{
 		aAny <<= ( m_nStreamMode == PACKAGE_STREAM_RAW ) ? sal_True : bToBeEncrypted;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "WasEncrypted" ) ) )
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "WasEncrypted" ) ) )
 	{
 		aAny <<= bIsEncrypted;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Compressed" ) ) )
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( "Compressed" ) ) )
 	{
 		aAny <<= bToBeCompressed;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( ENCRYPTION_KEY_PROPERTY ) ) )
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "EncryptionKey" ) ) )
 	{
-		aAny <<= m_aEncryptionKey;
+		aAny <<= xEncryptionData.isEmpty () ? Sequence < sal_Int8 > () : xEncryptionData->aKey;
 		return aAny;
 	}
-	else if ( PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( STORAGE_ENCRYPTION_KEYS_PROPERTY ) ) )
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	else if (PropertyName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "EncryptionKeySHA256" ) ) )
 	{
-		aAny <<= m_aStorageEncryptionKeys;
+		aAny <<= xEncryptionData.isEmpty () ? Sequence < sal_Int8 > () : xEncryptionData->aKeySHA256;
 		return aAny;
 	}
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 	else
-		throw beans::UnknownPropertyException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		throw beans::UnknownPropertyException();
 }
 
 //--------------------------------------------------------------------------
-void ZipPackageStream::setSize ( const sal_Int32 nNewSize )
+void ZipPackageStream::setSize (const sal_Int32 nNewSize)
 { 
-	if ( aEntry.nCompressedSize != nNewSize )
+	if (aEntry.nCompressedSize != nNewSize )
 		aEntry.nMethod = DEFLATED;
 	aEntry.nSize = nNewSize;
 }
 //--------------------------------------------------------------------------
 OUString ZipPackageStream::getImplementationName()
-	throw ( RuntimeException )
+	throw (RuntimeException)
 {
 	return OUString ( RTL_CONSTASCII_USTRINGPARAM ( "ZipPackageStream" ) );
 }
 
 //--------------------------------------------------------------------------
 Sequence< OUString > ZipPackageStream::getSupportedServiceNames()
-	throw ( RuntimeException )
+	throw (RuntimeException)
 {
-	Sequence< OUString > aNames( 1 );
+	Sequence< OUString > aNames(1);
 	aNames[0] = OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.packages.PackageStream" ) );
 	return aNames;
 }
 //--------------------------------------------------------------------------
 sal_Bool SAL_CALL ZipPackageStream::supportsService( OUString const & rServiceName )
-	throw ( RuntimeException )
+	throw (RuntimeException)
 {
 	return rServiceName == getSupportedServiceNames()[0];
 }

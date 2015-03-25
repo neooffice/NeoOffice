@@ -1,62 +1,68 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/*************************************************************************
+ *
+ * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * $RCSfile$
+ * $Revision$
+ *
+ * This file is part of NeoOffice.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified March 2013 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_package.hxx"
-
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/ucb/XProgressHandler.hpp>
-#include <com/sun/star/packages/zip/ZipConstants.hpp>
-#include <com/sun/star/xml/crypto/XCipherContext.hpp>
-#include <com/sun/star/xml/crypto/XDigestContext.hpp>
-#include <com/sun/star/xml/crypto/XCipherContextSupplier.hpp>
-#include <com/sun/star/xml/crypto/XDigestContextSupplier.hpp>
-#include <com/sun/star/xml/crypto/CipherID.hpp>
-#include <com/sun/star/xml/crypto/DigestID.hpp>
-
-#include <comphelper/storagehelper.hxx>
-#include <comphelper/processfactory.hxx>
-#include <rtl/digest.h>
-
-#include <vector>
-
-#include "blowfishcontext.hxx"
-#include "sha1context.hxx"
 #include <ZipFile.hxx>
 #include <ZipEnumeration.hxx>
+#include <com/sun/star/packages/zip/ZipConstants.hpp>
+#include <rtl/cipher.h>
+#include <rtl/digest.h>
+/*
+#include <XMemoryStream.hxx>
+#include <XFileStream.hxx>
+*/
 #include <XUnbufferedStream.hxx>
 #include <PackageConstants.hxx>
 #include <EncryptedDataHeader.hxx>
 #include <EncryptionData.hxx>
 #include <MemoryByteGrabber.hxx>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/ucb/XProgressHandler.hpp>
 
+#ifndef _CRC32_HXX_
 #include <CRC32.hxx>
+#endif
 
-#if SUPD == 310
-#include <osl/diagnose.hxx>
-#endif	// SUPD == 310
+#include <string.h> // for memcpy
+#include <vector>
 
-#define AES_CBC_BLOCK_SIZE 16
+#include <comphelper/storagehelper.hxx>
+
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+
+#include <com/sun/star/xml/crypto/XSEInitializer.hpp>
+#include <com/sun/star/xml/crypto/XXMLSecurityContext.hpp>
+#include <comphelper/processfactory.hxx>
+#include <pk11func.h>
+
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
 
 using namespace vos;
 using namespace rtl;
@@ -72,13 +78,13 @@ using namespace com::sun::star::packages::zip::ZipConstants;
 
 /** This class is used to read entries from a zip file
  */
-ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference < XMultiServiceFactory > &xNewFactory, sal_Bool bInitialise )
+ZipFile::ZipFile( Reference < XInputStream > &xInput, const Reference < XMultiServiceFactory > &xNewFactory, sal_Bool bInitialise )
 	throw(IOException, ZipException, RuntimeException)
 : aGrabber(xInput)
 , aInflater (sal_True)
 , xStream(xInput)
 , xSeek(xInput, UNO_QUERY)
-, m_xFactory ( xNewFactory )
+, xFactory ( xNewFactory )
 , bRecoveryMode( sal_False )
 {
 	if (bInitialise)
@@ -86,20 +92,20 @@ ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference 
 		if ( readCEN() == -1 )
 		{
 			aEntries.clear();
-			throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "stream data looks to be broken" ) ), uno::Reference < XInterface > () );
+			throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "stream data looks to be broken" ) ), Reference < XInterface > () );
 		}
 	}
 }
 
 
 
-ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference < XMultiServiceFactory > &xNewFactory, sal_Bool bInitialise, sal_Bool bForceRecovery, uno::Reference < XProgressHandler > xProgress )
+ZipFile::ZipFile( Reference < XInputStream > &xInput, const Reference < XMultiServiceFactory > &xNewFactory, sal_Bool bInitialise, sal_Bool bForceRecovery, Reference < XProgressHandler > xProgress )
 	throw(IOException, ZipException, RuntimeException)
 : aGrabber(xInput)
 , aInflater (sal_True)
 , xStream(xInput)
 , xSeek(xInput, UNO_QUERY)
-, m_xFactory ( xNewFactory )
+, xFactory ( xNewFactory )
 , xProgressHandler( xProgress )
 , bRecoveryMode( bForceRecovery )
 {
@@ -112,7 +118,7 @@ ZipFile::ZipFile( uno::Reference < XInputStream > &xInput, const uno::Reference 
 		else if ( readCEN() == -1 )
 		{
 			aEntries.clear();
-			throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "stream data looks to be broken" ) ), uno::Reference < XInterface > () );
+			throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "stream data looks to be broken" ) ), Reference < XInterface > () );
 		}
 	}
 }
@@ -122,94 +128,124 @@ ZipFile::~ZipFile()
     aEntries.clear();
 }
 
-void ZipFile::setInputStream ( uno::Reference < XInputStream > xNewStream )
+void ZipFile::setInputStream ( Reference < XInputStream > xNewStream )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	xStream = xNewStream;
-	xSeek = uno::Reference < XSeekable > ( xStream, UNO_QUERY );
+	xSeek = Reference < XSeekable > ( xStream, UNO_QUERY );
 	aGrabber.setInputStream ( xStream );
 }
 
-uno::Reference< xml::crypto::XDigestContext > ZipFile::StaticGetDigestContextForChecksum( const uno::Reference< lang::XMultiServiceFactory >& xArgFactory, const ::rtl::Reference< EncryptionData >& xEncryptionData )
+void ZipFile::StaticGetCipher ( const ORef < EncryptionData > & xEncryptionData, rtlCipher &rCipher )
 {
-    uno::Reference< xml::crypto::XDigestContext > xDigestContext;
-    if ( xEncryptionData->m_nCheckAlg == xml::crypto::DigestID::SHA256_1K )
-    {
-        uno::Reference< lang::XMultiServiceFactory > xFactory = xArgFactory;
-        if ( !xFactory.is() )
-            xFactory.set( comphelper::getProcessServiceFactory(), uno::UNO_SET_THROW );
+    if ( ! xEncryptionData.isEmpty() )
+	{
+		Sequence < sal_uInt8 > aDerivedKey (16);
+		rtlCipherError aResult;
+		Sequence < sal_Int8 > aDecryptBuffer;
 
-        uno::Reference< xml::crypto::XDigestContextSupplier > xDigestContextSupplier(
-            xFactory->createInstance( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.NSSInitializer" ) ) ),
-            uno::UNO_QUERY_THROW );
+		// Get the key
+		rtl_digest_PBKDF2 ( aDerivedKey.getArray(), 16,
+							reinterpret_cast < const sal_uInt8 * > (xEncryptionData->aKey.getConstArray() ),
+							xEncryptionData->aKey.getLength(),
+							reinterpret_cast < const sal_uInt8 * > ( xEncryptionData->aSalt.getConstArray() ),
+							xEncryptionData->aSalt.getLength(),
+							xEncryptionData->nIterationCount );
 
-        xDigestContext.set( xDigestContextSupplier->getDigestContext( xEncryptionData->m_nCheckAlg, uno::Sequence< beans::NamedValue >() ), uno::UNO_SET_THROW );
-    }
-    else if ( xEncryptionData->m_nCheckAlg == xml::crypto::DigestID::SHA1_1K )
-        xDigestContext.set( SHA1DigestContext::Create(), uno::UNO_SET_THROW );
-
-    return xDigestContext;
+		rCipher = rtl_cipher_create (rtl_Cipher_AlgorithmBF, rtl_Cipher_ModeStream);
+		aResult = rtl_cipher_init( rCipher, rtl_Cipher_DirectionDecode,
+								   aDerivedKey.getConstArray(),
+								   aDerivedKey.getLength(),
+								   reinterpret_cast < const sal_uInt8 * > ( xEncryptionData->aInitVector.getConstArray() ),
+								   xEncryptionData->aInitVector.getLength());
+		OSL_ASSERT (aResult == rtl_Cipher_E_None);
+	}
 }
 
-uno::Reference< xml::crypto::XCipherContext > ZipFile::StaticGetCipher( const uno::Reference< lang::XMultiServiceFactory >& xArgFactory, const ::rtl::Reference< EncryptionData >& xEncryptionData, bool bEncrypt )
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+
+sal_Bool ZipFile::StaticGetDecryptedData( const ::com::sun::star::uno::Sequence< sal_Int8 > &aReadBuffer, const vos::ORef < EncryptionData > &rData, ::com::sun::star::uno::Sequence< sal_Int8 > &aDecryptedBuffer )
 {
-    uno::Reference< xml::crypto::XCipherContext > xResult;
+	sal_Bool bRet = sal_False;
 
-    try
-    {
-        uno::Sequence< sal_Int8 > aDerivedKey( xEncryptionData->m_nDerivedKeySize );
-        if ( rtl_Digest_E_None != rtl_digest_PBKDF2( reinterpret_cast< sal_uInt8* >( aDerivedKey.getArray() ),
-                            aDerivedKey.getLength(),
-							reinterpret_cast< const sal_uInt8 * > (xEncryptionData->m_aKey.getConstArray() ),
-							xEncryptionData->m_aKey.getLength(),
-							reinterpret_cast< const sal_uInt8 * > ( xEncryptionData->m_aSalt.getConstArray() ),
-							xEncryptionData->m_aSalt.getLength(),
-							xEncryptionData->m_nIterationCount ) )
-        {
-            throw ZipIOException( ::rtl::OUString::createFromAscii( "Can not create derived key!\n" ),
-                                  uno::Reference< XInterface >() );
-        }
+	if ( !rData.isValid() )
+		return bRet;
 
-        if ( xEncryptionData->m_nEncAlg == xml::crypto::CipherID::AES_CBC_W3C_PADDING )
-        {
-            uno::Reference< lang::XMultiServiceFactory > xFactory = xArgFactory;
-            if ( !xFactory.is() )
-                xFactory.set( comphelper::getProcessServiceFactory(), uno::UNO_SET_THROW );
+	if ( rData->nAlgorithm == ENCRYPTION_DATA_AES_CBC_W3C_PADDING )
+	{
+		Sequence < sal_Int8 > aKey = rData->nStartKeyAlgorithm == ENCRYPTION_DATA_SHA256 ? rData->aKeySHA256 : rData->aKey;
+		if ( aKey.getLength() && rData->nDerivedKeySize > 0 && rData->aInitVector.getLength() )
+		{
+			// Get the key
+			Sequence< sal_uInt8 > aDerivedKey( rData->nDerivedKeySize );
+			rtl_digest_PBKDF2( aDerivedKey.getArray(), aDerivedKey.getLength(), reinterpret_cast< const sal_uInt8* >( aKey.getConstArray() ), aKey.getLength(), reinterpret_cast< const sal_uInt8* >( rData->aSalt.getConstArray() ), rData->aSalt.getLength(), rData->nIterationCount );
 
-            uno::Reference< xml::crypto::XCipherContextSupplier > xCipherContextSupplier(
-                xFactory->createInstance( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.NSSInitializer" ) ) ),
-                uno::UNO_QUERY_THROW );
+			// Decrypt data
+			uno::Reference< xml::crypto::XSEInitializer > xSEInitializer( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.SEInitializer" ) ) ), uno::UNO_QUERY );
+			if ( xSEInitializer.is() )
+			{
+				uno::Reference< xml::crypto::XXMLSecurityContext > xSecurityContext = xSEInitializer->createSecurityContext( ::rtl::OUString() );
+				if ( xSecurityContext.is() )
+				{
+					CK_MECHANISM_TYPE nCipherType = CKM_AES_CBC;
+					PK11SlotInfo *pSlot = PK11_GetBestSlot( nCipherType, NULL );
+					if ( pSlot )
+					{
+						SECItem aKeyItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aDerivedKey.getConstArray() ) ), aDerivedKey.getLength() };
+						PK11SymKey *pSymKey = PK11_ImportSymKey( pSlot, nCipherType, PK11_OriginDerive, CKA_DECRYPT, &aKeyItem, NULL );
+						if ( pSymKey )
+						{
+							SECItem aIVItem = { siBuffer, const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( rData->aInitVector.getConstArray() ) ), rData->aInitVector.getLength() };
+							SECItem *pSecParam = PK11_ParamFromIV( nCipherType, &aIVItem );
+							if ( pSecParam )
+							{
+								PK11Context *pEncContext = PK11_CreateContextBySymKey( nCipherType, CKA_DECRYPT, pSymKey, pSecParam );
+								if ( pEncContext )
+								{
+									int nBlockSize = PK11_GetBlockSize( nCipherType, pSecParam );
+									aDecryptedBuffer.realloc( aReadBuffer.getLength() + nBlockSize );
+									int nDecryptedLen = 0;
+									if ( PK11_CipherOp( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() ), &nDecryptedLen, aDecryptedBuffer.getLength(), const_cast< unsigned char* >( reinterpret_cast< const unsigned char* >( aReadBuffer.getConstArray() ) ), aReadBuffer.getLength() ) == SECSuccess )
+									{
+										unsigned int nFinalizedLen = 0;
+										aDecryptedBuffer.realloc( nDecryptedLen + ( nBlockSize * 2 ) );
+										if ( PK11_DigestFinal( pEncContext, reinterpret_cast< unsigned char* >( aDecryptedBuffer.getArray() + nDecryptedLen ), &nFinalizedLen, aDecryptedBuffer.getLength() - nDecryptedLen ) == SECSuccess )
+										{
+											aDecryptedBuffer.realloc( nDecryptedLen + nFinalizedLen );
+											bRet = sal_True;
+										}
+									}
 
-            xResult = xCipherContextSupplier->getCipherContext( xEncryptionData->m_nEncAlg, aDerivedKey, xEncryptionData->m_aInitVector, bEncrypt, uno::Sequence< beans::NamedValue >() );
-        }
-        else if ( xEncryptionData->m_nEncAlg == xml::crypto::CipherID::BLOWFISH_CFB_8 )
-        {
-            xResult = BlowfishCFB8CipherContext::Create( aDerivedKey, xEncryptionData->m_aInitVector, bEncrypt );
-        }
-        else
-        {
-            throw ZipIOException( ::rtl::OUString::createFromAscii( "Unknown cipher algorithm is requested!\n" ),
-                                  uno::Reference< XInterface >() );
-        }
-    }
-    catch( uno::Exception& )
-    {
-        OSL_ENSURE( sal_False, "Can not create cipher context!" );
-    }
+									PK11_DestroyContext( pEncContext, PR_TRUE );
+								}
 
-    return xResult;
+								SECITEM_FreeItem( pSecParam, PR_TRUE );
+							}
+
+							PK11_FreeSymKey( pSymKey );
+						}
+
+						PK11_FreeSlot( pSlot );
+					}
+
+      		 	 	xSEInitializer->freeSecurityContext( xSecurityContext );
+				}
+			}
+		}
+	}
+	return bRet;
 }
 
-void ZipFile::StaticFillHeader( const ::rtl::Reference< EncryptionData >& rData, 
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+
+void ZipFile::StaticFillHeader ( const ORef < EncryptionData > & rData, 
 								sal_Int32 nSize,
 								const ::rtl::OUString& aMediaType,
 								sal_Int8 * & pHeader )
 {
 	// I think it's safe to restrict vector and salt length to 2 bytes !
-	sal_Int16 nIVLength = static_cast < sal_Int16 > ( rData->m_aInitVector.getLength() );
-	sal_Int16 nSaltLength = static_cast < sal_Int16 > ( rData->m_aSalt.getLength() );
-	sal_Int16 nDigestLength = static_cast < sal_Int16 > ( rData->m_aDigest.getLength() );
+	sal_Int16 nIVLength = static_cast < sal_Int16 > ( rData->aInitVector.getLength() );
+	sal_Int16 nSaltLength = static_cast < sal_Int16 > ( rData->aSalt.getLength() );
+	sal_Int16 nDigestLength = static_cast < sal_Int16 > ( rData->aDigest.getLength() );
 	sal_Int16 nMediaTypeLength = static_cast < sal_Int16 > ( aMediaType.getLength() * sizeof( sal_Unicode ) );
 
 	// First the header
@@ -223,7 +259,7 @@ void ZipFile::StaticFillHeader( const ::rtl::Reference< EncryptionData >& rData,
 	*(pHeader++) = ( n_ConstCurrentVersion >> 8 ) & 0xFF;
 
 	// Then the iteration Count
-	sal_Int32 nIterationCount = rData->m_nIterationCount;
+	sal_Int32 nIterationCount = rData->nIterationCount;
 	*(pHeader++) = static_cast< sal_Int8 >(( nIterationCount >> 0 ) & 0xFF);
 	*(pHeader++) = static_cast< sal_Int8 >(( nIterationCount >> 8 ) & 0xFF);
 	*(pHeader++) = static_cast< sal_Int8 >(( nIterationCount >> 16 ) & 0xFF);
@@ -234,34 +270,6 @@ void ZipFile::StaticFillHeader( const ::rtl::Reference< EncryptionData >& rData,
 	*(pHeader++) = static_cast< sal_Int8 >(( nSize >> 8 ) & 0xFF);
 	*(pHeader++) = static_cast< sal_Int8 >(( nSize >> 16 ) & 0xFF);
 	*(pHeader++) = static_cast< sal_Int8 >(( nSize >> 24 ) & 0xFF);
-
-	// Then the encryption algorithm
-    sal_Int32 nEncAlgID = rData->m_nEncAlg;
-	*(pHeader++) = static_cast< sal_Int8 >(( nEncAlgID >> 0 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nEncAlgID >> 8 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nEncAlgID >> 16 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nEncAlgID >> 24 ) & 0xFF);
-
-	// Then the checksum algorithm
-    sal_Int32 nChecksumAlgID = rData->m_nCheckAlg;
-	*(pHeader++) = static_cast< sal_Int8 >(( nChecksumAlgID >> 0 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nChecksumAlgID >> 8 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nChecksumAlgID >> 16 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nChecksumAlgID >> 24 ) & 0xFF);
-
-	// Then the derived key size
-    sal_Int32 nDerivedKeySize = rData->m_nDerivedKeySize;
-	*(pHeader++) = static_cast< sal_Int8 >(( nDerivedKeySize >> 0 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nDerivedKeySize >> 8 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nDerivedKeySize >> 16 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nDerivedKeySize >> 24 ) & 0xFF);
-
-	// Then the start key generation algorithm
-    sal_Int32 nKeyAlgID = rData->m_nStartKeyGenID;
-	*(pHeader++) = static_cast< sal_Int8 >(( nKeyAlgID >> 0 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nKeyAlgID >> 8 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nKeyAlgID >> 16 ) & 0xFF);
-	*(pHeader++) = static_cast< sal_Int8 >(( nKeyAlgID >> 24 ) & 0xFF);
 
 	// Then the salt length
 	*(pHeader++) = static_cast< sal_Int8 >(( nSaltLength >> 0 ) & 0xFF);
@@ -280,30 +288,26 @@ void ZipFile::StaticFillHeader( const ::rtl::Reference< EncryptionData >& rData,
 	*(pHeader++) = static_cast< sal_Int8 >(( nMediaTypeLength >> 8 ) & 0xFF);
 
 	// Then the salt content
-	rtl_copyMemory ( pHeader, rData->m_aSalt.getConstArray(), nSaltLength ); 
+	memcpy ( pHeader, rData->aSalt.getConstArray(), nSaltLength ); 
 	pHeader += nSaltLength;
 
 	// Then the IV content
-	rtl_copyMemory ( pHeader, rData->m_aInitVector.getConstArray(), nIVLength ); 
+	memcpy ( pHeader, rData->aInitVector.getConstArray(), nIVLength ); 
 	pHeader += nIVLength;
 
 	// Then the digest content
-	rtl_copyMemory ( pHeader, rData->m_aDigest.getConstArray(), nDigestLength ); 
+	memcpy ( pHeader, rData->aDigest.getConstArray(), nDigestLength ); 
 	pHeader += nDigestLength;
 
 	// Then the mediatype itself
-	rtl_copyMemory ( pHeader, aMediaType.getStr(), nMediaTypeLength ); 
+	memcpy ( pHeader, aMediaType.getStr(), nMediaTypeLength ); 
 	pHeader += nMediaTypeLength;
 }
 
-sal_Bool ZipFile::StaticFillData (  ::rtl::Reference< BaseEncryptionData > & rData,
-                                    sal_Int32 &rEncAlg,
-                                    sal_Int32 &rChecksumAlg,
-                                    sal_Int32 &rDerivedKeySize,
-                                    sal_Int32 &rStartKeyGenID,
+sal_Bool ZipFile::StaticFillData ( ORef < EncryptionData > & rData,
 									sal_Int32 &rSize,
 									::rtl::OUString& aMediaType,
-									const uno::Reference< XInputStream >& rStream )
+									Reference < XInputStream > &rStream )
 {
 	sal_Bool bOk = sal_False;
 	const sal_Int32 nHeaderSize = n_ConstHeaderSize - 4;
@@ -320,32 +324,12 @@ sal_Bool ZipFile::StaticFillData (  ::rtl::Reference< BaseEncryptionData > & rDa
 			nCount |= ( pBuffer[nPos++] & 0xFF ) << 8;
 			nCount |= ( pBuffer[nPos++] & 0xFF ) << 16;
 			nCount |= ( pBuffer[nPos++] & 0xFF ) << 24;
-			rData->m_nIterationCount = nCount;
+			rData->nIterationCount = nCount;
 
 			rSize  =   pBuffer[nPos++] & 0xFF;
 			rSize |= ( pBuffer[nPos++] & 0xFF ) << 8;
 			rSize |= ( pBuffer[nPos++] & 0xFF ) << 16;
 			rSize |= ( pBuffer[nPos++] & 0xFF ) << 24;
-
-			rEncAlg   =   pBuffer[nPos++] & 0xFF;
-			rEncAlg  |= ( pBuffer[nPos++] & 0xFF ) << 8;
-			rEncAlg  |= ( pBuffer[nPos++] & 0xFF ) << 16;
-			rEncAlg  |= ( pBuffer[nPos++] & 0xFF ) << 24;
-
-			rChecksumAlg   =   pBuffer[nPos++] & 0xFF;
-			rChecksumAlg  |= ( pBuffer[nPos++] & 0xFF ) << 8;
-			rChecksumAlg  |= ( pBuffer[nPos++] & 0xFF ) << 16;
-			rChecksumAlg  |= ( pBuffer[nPos++] & 0xFF ) << 24;
-
-			rDerivedKeySize   =   pBuffer[nPos++] & 0xFF;
-			rDerivedKeySize  |= ( pBuffer[nPos++] & 0xFF ) << 8;
-			rDerivedKeySize  |= ( pBuffer[nPos++] & 0xFF ) << 16;
-			rDerivedKeySize  |= ( pBuffer[nPos++] & 0xFF ) << 24;
-
-			rStartKeyGenID   =   pBuffer[nPos++] & 0xFF;
-			rStartKeyGenID  |= ( pBuffer[nPos++] & 0xFF ) << 8;
-			rStartKeyGenID  |= ( pBuffer[nPos++] & 0xFF ) << 16;
-			rStartKeyGenID  |= ( pBuffer[nPos++] & 0xFF ) << 24;
 
 			sal_Int16 nSaltLength =   pBuffer[nPos++] & 0xFF;
 			nSaltLength          |= ( pBuffer[nPos++] & 0xFF ) << 8;
@@ -359,16 +343,16 @@ sal_Bool ZipFile::StaticFillData (  ::rtl::Reference< BaseEncryptionData > & rDa
 
 			if ( nSaltLength == rStream->readBytes ( aBuffer, nSaltLength ) )
 			{
-				rData->m_aSalt.realloc ( nSaltLength );
-				rtl_copyMemory ( rData->m_aSalt.getArray(), aBuffer.getConstArray(), nSaltLength );
+				rData->aSalt.realloc ( nSaltLength );
+				memcpy ( rData->aSalt.getArray(), aBuffer.getConstArray(), nSaltLength );
 				if ( nIVLength == rStream->readBytes ( aBuffer, nIVLength ) )
 				{
-					rData->m_aInitVector.realloc ( nIVLength );
-					rtl_copyMemory ( rData->m_aInitVector.getArray(), aBuffer.getConstArray(), nIVLength );
+					rData->aInitVector.realloc ( nIVLength );
+					memcpy ( rData->aInitVector.getArray(), aBuffer.getConstArray(), nIVLength );
 					if ( nDigestLength == rStream->readBytes ( aBuffer, nDigestLength ) )
 					{
-						rData->m_aDigest.realloc ( nDigestLength );
-						rtl_copyMemory ( rData->m_aDigest.getArray(), aBuffer.getConstArray(), nDigestLength );
+						rData->aDigest.realloc ( nDigestLength );
+						memcpy ( rData->aDigest.getArray(), aBuffer.getConstArray(), nDigestLength );
 
 						if ( nMediaTypeLength == rStream->readBytes ( aBuffer, nMediaTypeLength ) )
 						{
@@ -384,107 +368,110 @@ sal_Bool ZipFile::StaticFillData (  ::rtl::Reference< BaseEncryptionData > & rDa
 	return bOk;
 }
 
-uno::Reference< XInputStream > ZipFile::StaticGetDataFromRawStream( const uno::Reference< lang::XMultiServiceFactory >& xFactory,
-                                                                const uno::Reference< XInputStream >& xStream,
-																const ::rtl::Reference< EncryptionData > &rData )
+Reference< XInputStream > ZipFile::StaticGetDataFromRawStream(	const Reference< XInputStream >& xStream,
+																const ORef < EncryptionData > &rData )
 		throw ( packages::WrongPasswordException, ZipIOException, RuntimeException )
 {
-	if ( !rData.is() )
+	if ( rData.isEmpty() )
 		throw ZipIOException( OUString::createFromAscii( "Encrypted stream without encryption data!\n" ),
-							uno::Reference< XInterface >() );
+							Reference< XInterface >() );
 
-	if ( !rData->m_aKey.getLength() )
-		throw packages::WrongPasswordException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+	if ( !rData->aKey.getLength() )
+		throw packages::WrongPasswordException();
 
-	uno::Reference< XSeekable > xSeek( xStream, UNO_QUERY );
+	Reference< XSeekable > xSeek( xStream, UNO_QUERY );
 	if ( !xSeek.is() )
 		throw ZipIOException( OUString::createFromAscii( "The stream must be seekable!\n" ),
-							uno::Reference< XInterface >() );
+							Reference< XInterface >() );
 
 
 	// if we have a digest, then this file is an encrypted one and we should
 	// check if we can decrypt it or not
-	OSL_ENSURE( rData->m_aDigest.getLength(), "Can't detect password correctness without digest!\n" );
-	if ( rData->m_aDigest.getLength() )
+	OSL_ENSURE( rData->aDigest.getLength(), "Can't detect password correctness without digest!\n" );
+	if ( rData->aDigest.getLength() )
 	{
-        sal_Int32 nSize = sal::static_int_cast< sal_Int32 >( xSeek->getLength() );
-        if ( nSize > n_ConstDigestLength + 32 )
-            nSize = n_ConstDigestLength + 32;
+            sal_Int32 nSize = sal::static_int_cast< sal_Int32 >( xSeek->getLength() );
+		nSize = nSize > n_ConstDigestLength ? n_ConstDigestLength : nSize;
 
 		// skip header
-		xSeek->seek( n_ConstHeaderSize + rData->m_aInitVector.getLength() + 
-								rData->m_aSalt.getLength() + rData->m_aDigest.getLength() );
+		xSeek->seek( n_ConstHeaderSize + rData->aInitVector.getLength() + 
+								rData->aSalt.getLength() + rData->aDigest.getLength() );
 
 		// Only want to read enough to verify the digest
 		Sequence < sal_Int8 > aReadBuffer ( nSize );
 
 		xStream->readBytes( aReadBuffer, nSize ); 
 	
-		if ( !StaticHasValidPassword( xFactory, aReadBuffer, rData ) )
-			throw packages::WrongPasswordException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		if ( !StaticHasValidPassword( aReadBuffer, rData ) )
+			throw packages::WrongPasswordException();
 	}
 
-	return new XUnbufferedStream( xFactory, xStream, rData );
+	return new XUnbufferedStream ( xStream, rData );
 }
 
-#if 0
-// for debugging purposes
-void CheckSequence( const uno::Sequence< sal_Int8 >& aSequence )
+sal_Bool ZipFile::StaticHasValidPassword( const Sequence< sal_Int8 > &aReadBuffer, const ORef < EncryptionData > &rData )
 {
-    if ( aSequence.getLength() )
-    {
-        sal_Int32* pPointer = *( (sal_Int32**)&aSequence );
-        sal_Int32 nSize = *( pPointer + 1 );
-        sal_Int32 nMemSize = *( pPointer - 2 );
-        sal_Int32 nUsedMemSize = ( nSize + 4 * sizeof( sal_Int32 ) );
-        OSL_ENSURE( nSize == aSequence.getLength() && nUsedMemSize + 7 - ( nUsedMemSize - 1 ) % 8 == nMemSize, "Broken Sequence!" );
-    }
-}
-#endif
-
-sal_Bool ZipFile::StaticHasValidPassword( const uno::Reference< lang::XMultiServiceFactory >& xFactory, const Sequence< sal_Int8 > &aReadBuffer, const ::rtl::Reference< EncryptionData > &rData )
-{
-	if ( !rData.is() || !rData->m_aKey.getLength() )
+	if ( !rData.isValid() || !rData->aKey.getLength() )
 		return sal_False;
 
 	sal_Bool bRet = sal_False;
+	sal_Int32 nSize = aReadBuffer.getLength();
 
-    uno::Reference< xml::crypto::XCipherContext > xCipher( StaticGetCipher( xFactory, rData, false ), uno::UNO_SET_THROW );
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	Sequence< sal_Int8 > aDecryptedBuffer;
+	if ( StaticGetDecryptedData( aReadBuffer, rData, aDecryptedBuffer ) )
+	{
+		// Check digest of decrypted data
+		PK11Context *pDigestContext = PK11_CreateDigestContext( rData->nDigestType == ENCRYPTION_DATA_SHA256_1K ? SEC_OID_SHA256 : SEC_OID_SHA1 );
+		if ( pDigestContext && PK11_DigestBegin( pDigestContext ) == SECSuccess )
+		{
+			if ( PK11_DigestOp( pDigestContext, reinterpret_cast< const unsigned char* >( aDecryptedBuffer.getConstArray() ), aDecryptedBuffer.getLength() > 1024 ? 1024 : aDecryptedBuffer.getLength() ) == SECSuccess )
+			{
+				uno::Sequence< sal_Int8 > aDigestSeq( 32 );
+				unsigned int nDigestLen = 0;
+				if ( PK11_DigestFinal( pDigestContext, reinterpret_cast< unsigned char* >( aDigestSeq.getArray() ), &nDigestLen, aDigestSeq.getLength() ) == SECSuccess )
+				{
+					aDigestSeq.realloc( nDigestLen );
+					if ( !rData->aDigest.getLength() || ( aDigestSeq.getLength() == rData->aDigest.getLength() && !rtl_compareMemory( aDigestSeq.getConstArray(), rData->aDigest.getConstArray(), aDigestSeq.getLength() ) ) )
+						bRet = sal_True;
+				}
+			}
 
-    uno::Sequence< sal_Int8 > aDecryptBuffer;
-    uno::Sequence< sal_Int8 > aDecryptBuffer2;
-    try
-    {
-        aDecryptBuffer = xCipher->convertWithCipherContext( aReadBuffer );
-        aDecryptBuffer2 = xCipher->finalizeCipherContextAndDispose();
+			PK11_DestroyContext( pDigestContext, PR_TRUE );
+		}
+	}
+	else
+	{
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+	// make a temporary cipher
+	rtlCipher aCipher;
+	StaticGetCipher ( rData, aCipher );
+
+	Sequence < sal_Int8 > aDecryptBuffer ( nSize );
+	rtlDigest aDigest = rtl_digest_createSHA1();
+	rtlDigestError aDigestResult;
+	Sequence < sal_uInt8 > aDigestSeq ( RTL_DIGEST_LENGTH_SHA1 );
+	rtlCipherError aResult = rtl_cipher_decode ( aCipher,
+								  aReadBuffer.getConstArray(),
+								  nSize,
+								  reinterpret_cast < sal_uInt8 * > (aDecryptBuffer.getArray()),
+								  nSize);
+	if(aResult != rtl_Cipher_E_None ) {
+        OSL_ASSERT ( aResult == rtl_Cipher_E_None);
     }
-    catch( uno::Exception& )
-    {
-        // decryption with padding will throw the exception in finalizing if the buffer represent only part of the stream
-        // it is no problem, actually this is why we read 32 additional bytes ( two of maximal possible encryption blocks )
-    }
+    
+	aDigestResult = rtl_digest_updateSHA1 ( aDigest,
+											static_cast < const void * > ( aDecryptBuffer.getConstArray() ), nSize );
+	OSL_ASSERT ( aDigestResult == rtl_Digest_E_None );
 
-    if ( aDecryptBuffer2.getLength() )
-    {
-        sal_Int32 nOldLen = aDecryptBuffer.getLength();
-        aDecryptBuffer.realloc( nOldLen + aDecryptBuffer2.getLength() );
-        rtl_copyMemory( aDecryptBuffer.getArray() + nOldLen, aDecryptBuffer2.getArray(), aDecryptBuffer2.getLength() );
-    }
+	aDigestResult = rtl_digest_getSHA1 ( aDigest, aDigestSeq.getArray(), RTL_DIGEST_LENGTH_SHA1 );
+	OSL_ASSERT ( aDigestResult == rtl_Digest_E_None );
 
-    if ( aDecryptBuffer.getLength() > n_ConstDigestLength )
-        aDecryptBuffer.realloc( n_ConstDigestLength );
-
-    uno::Sequence< sal_Int8 > aDigestSeq;
-    uno::Reference< xml::crypto::XDigestContext > xDigestContext( StaticGetDigestContextForChecksum( xFactory, rData ), uno::UNO_SET_THROW );
-
-    xDigestContext->updateDigest( aDecryptBuffer );
-    aDigestSeq = xDigestContext->finalizeDigestAndDispose();
-
-    // If we don't have a digest, then we have to assume that the password is correct
-	if (  rData->m_aDigest.getLength() != 0  && 
-	      ( aDigestSeq.getLength() != rData->m_aDigest.getLength() ||
+	// If we don't have a digest, then we have to assume that the password is correct
+	if (  rData->aDigest.getLength() != 0  && 
+	      ( aDigestSeq.getLength() != rData->aDigest.getLength() ||
 	        0 != rtl_compareMemory ( aDigestSeq.getConstArray(), 
-		 					        rData->m_aDigest.getConstArray(), 
+		 					        rData->aDigest.getConstArray(), 
 							        aDigestSeq.getLength() ) ) )
 	{
 		// We should probably tell the user that the password they entered was wrong
@@ -492,44 +479,134 @@ sal_Bool ZipFile::StaticHasValidPassword( const uno::Reference< lang::XMultiServ
 	else
 		bRet = sal_True;
 
+	rtl_digest_destroySHA1 ( aDigest );
+#ifndef NO_OOO_3_4_1_AES_ENCRYPTION
+	}
+#endif	// !NO_OOO_3_4_1_AES_ENCRYPTION
+
 	return bRet;
 }
 
-sal_Bool ZipFile::hasValidPassword ( ZipEntry & rEntry, const ::rtl::Reference< EncryptionData >& rData )
+sal_Bool ZipFile::hasValidPassword ( ZipEntry & rEntry, const ORef < EncryptionData > &rData )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	sal_Bool bRet = sal_False;
-	if ( rData.is() && rData->m_aKey.getLength() )
+	if ( rData->aKey.getLength() )
 	{
 		xSeek->seek( rEntry.nOffset );
 		sal_Int32 nSize = rEntry.nMethod == DEFLATED ? rEntry.nCompressedSize : rEntry.nSize;
 
 		// Only want to read enough to verify the digest
-        if ( nSize > n_ConstDigestDecrypt )
-            nSize = n_ConstDigestDecrypt;
-
+		nSize = nSize > n_ConstDigestLength ? n_ConstDigestLength : nSize;
 		Sequence < sal_Int8 > aReadBuffer ( nSize );
 
 		xStream->readBytes( aReadBuffer, nSize ); 
 
-		bRet = StaticHasValidPassword( m_xFactory, aReadBuffer, rData );
+		bRet = StaticHasValidPassword( aReadBuffer, rData );
 	}
-
 	return bRet;
 }
 
-uno::Reference< XInputStream > ZipFile::createUnbufferedStream(
-            SotMutexHolderRef aMutexHolder,
+#if 0
+Reference < XInputStream > ZipFile::createFileStream(
 			ZipEntry & rEntry,
-			const ::rtl::Reference< EncryptionData > &rData,
+			const ORef < EncryptionData > &rData,
+			sal_Bool bRawStream,
+			sal_Bool bIsEncrypted )
+{
+	static OUString sServiceName ( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.io.TempFile" ) );
+	Reference < XInputStream > xTempStream = Reference < XInputStream > ( xFactory->createInstance ( sServiceName ), UNO_QUERY );
+	return new XFileStream ( rEntry, xStream, xTempStream, rData, bRawStream, bIsEncrypted );
+}
+Reference < XInputStream > ZipFile::createMemoryStream(
+			ZipEntry & rEntry,
+			const ORef < EncryptionData > &rData,
+			sal_Bool bRawStream, 
+			sal_Bool bIsEncrypted )
+{
+	sal_Int32 nUncompressedSize, nEnd;
+	if (bRawStream)
+	{
+		nUncompressedSize = rEntry.nMethod == DEFLATED ? rEntry.nCompressedSize : rEntry.nSize;
+		nEnd = rEntry.nOffset + nUncompressedSize;
+	}
+	else
+	{
+		nUncompressedSize = rEntry.nSize;
+		nEnd = rEntry.nMethod == DEFLATED ? rEntry.nOffset + rEntry.nCompressedSize : rEntry.nOffset + rEntry.nSize;
+	}
+	sal_Int32 nSize = rEntry.nMethod == DEFLATED ? rEntry.nCompressedSize : rEntry.nSize;
+	Sequence < sal_Int8 > aReadBuffer ( nSize ), aDecryptBuffer, aWriteBuffer;
+	rtlCipher aCipher;
+
+	// If the encryption key is zero, we need to return the raw stream. First check if
+	// we have the salt. If we have the salt, then check if we have the encryption key
+	// if not, return rawStream instead.
+	
+	sal_Bool bHaveEncryptData = ( !rData.isEmpty() && rData->aSalt.getLength() && rData->aInitVector.getLength() && rData->nIterationCount != 0 ) ? sal_True : sal_False;
+	sal_Bool bMustDecrypt = ( !bRawStream && bHaveEncryptData && bIsEncrypted ) ? sal_True : sal_False;
+
+	if ( bMustDecrypt )
+	{
+		StaticGetCipher ( rData, aCipher );
+		aDecryptBuffer.realloc ( nSize );
+	}
+
+	if ( nSize <0 )
+		throw IOException ( );
+
+	xSeek->seek( rEntry.nOffset );
+	xStream->readBytes( aReadBuffer, nSize ); // Now it holds the raw stuff from disk
+
+	if ( bMustDecrypt )
+	{
+		rtlCipherError aResult = rtl_cipher_decode ( aCipher,
+									  aReadBuffer.getConstArray(),
+									  nSize,
+									  reinterpret_cast < sal_uInt8 * > (aDecryptBuffer.getArray()),
+									  nSize);
+		OSL_ASSERT (aResult == rtl_Cipher_E_None);
+		aReadBuffer = aDecryptBuffer; // Now it holds the decrypted data
+	}
+	if (bRawStream || rEntry.nMethod == STORED)
+		aWriteBuffer = aReadBuffer; // bRawStream means the caller doesn't want it decompressed
+	else
+	{
+		aInflater.setInputSegment( aReadBuffer, 0, nSize );
+		aWriteBuffer.realloc( nUncompressedSize );
+		aInflater.doInflate( aWriteBuffer );
+		aInflater.reset();
+	}
+
+	if ( bHaveEncryptData && !bMustDecrypt && bIsEncrypted )
+	{
+		// if we have the data needed to decrypt it, but didn't want it decrypted (or
+		// we couldn't decrypt it due to wrong password), then we prepend this
+		// data to the stream
+
+		// Make a buffer big enough to hold both the header and the data itself
+		Sequence < sal_Int8 > aEncryptedDataHeader ( n_ConstHeaderSize + 
+													 rData->aInitVector.getLength() + 
+													 rData->aSalt.getLength() + 
+													 rData->aDigest.getLength() + 
+													 aWriteBuffer.getLength() );
+		sal_Int8 * pHeader = aEncryptedDataHeader.getArray();
+		StaticFillHeader ( rData, rEntry.nSize, pHeader );
+		memcpy ( pHeader, aWriteBuffer.getConstArray(), aWriteBuffer.getLength() );
+
+		// dump old buffer and point aWriteBuffer to the new one with the header
+		aWriteBuffer = aEncryptedDataHeader;
+	}
+	return Reference < XInputStream > ( new XMemoryStream ( aWriteBuffer ) );
+}
+#endif
+Reference < XInputStream > ZipFile::createUnbufferedStream(
+			ZipEntry & rEntry,
+			const ORef < EncryptionData > &rData,
 			sal_Int8 nStreamMode,
 			sal_Bool bIsEncrypted,
 			::rtl::OUString aMediaType )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-	return new XUnbufferedStream ( m_xFactory, aMutexHolder, rEntry, xStream, rData, nStreamMode, bIsEncrypted, aMediaType, bRecoveryMode );
+	return new XUnbufferedStream ( rEntry, xStream, rData, nStreamMode, bIsEncrypted, aMediaType, bRecoveryMode );
 }
 
 
@@ -538,14 +615,11 @@ ZipEnumeration * SAL_CALL ZipFile::entries(  )
 	return new ZipEnumeration ( aEntries );
 }
 
-uno::Reference< XInputStream > SAL_CALL ZipFile::getInputStream( ZipEntry& rEntry,
-		const ::rtl::Reference< EncryptionData > &rData,
-		sal_Bool bIsEncrypted,
-        SotMutexHolderRef aMutexHolder )
+Reference< XInputStream > SAL_CALL ZipFile::getInputStream( ZipEntry& rEntry,
+		const vos::ORef < EncryptionData > &rData,
+		sal_Bool bIsEncrypted )
 	throw(IOException, ZipException, RuntimeException)
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	if ( rEntry.nOffset <= 0 )
 		readLOC( rEntry );
 
@@ -556,27 +630,23 @@ uno::Reference< XInputStream > SAL_CALL ZipFile::getInputStream( ZipEntry& rEntr
 	
 	// if we have a digest, then this file is an encrypted one and we should
 	// check if we can decrypt it or not
-	if ( bIsEncrypted && rData.is() && rData->m_aDigest.getLength() )
+	if ( bIsEncrypted && !rData.isEmpty() && rData->aDigest.getLength() )
 		bNeedRawStream = !hasValidPassword ( rEntry, rData );
 
-	return createUnbufferedStream ( aMutexHolder,
-                                    rEntry,
+	return createUnbufferedStream ( rEntry,
 									rData,
 									bNeedRawStream ? UNBUFF_STREAM_RAW : UNBUFF_STREAM_DATA,
 									bIsEncrypted );
 }
 
-uno::Reference< XInputStream > SAL_CALL ZipFile::getDataStream( ZipEntry& rEntry,
-		const ::rtl::Reference< EncryptionData > &rData,
-		sal_Bool bIsEncrypted,
-        SotMutexHolderRef aMutexHolder )
+Reference< XInputStream > SAL_CALL ZipFile::getDataStream( ZipEntry& rEntry,
+		const vos::ORef < EncryptionData > &rData,
+		sal_Bool bIsEncrypted )
 	throw ( packages::WrongPasswordException,
 			IOException,
 			ZipException,
 			RuntimeException )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	if ( rEntry.nOffset <= 0 )
 		readLOC( rEntry );
 
@@ -587,75 +657,66 @@ uno::Reference< XInputStream > SAL_CALL ZipFile::getDataStream( ZipEntry& rEntry
 	{
 		// in case no digest is provided there is no way
 		// to detect password correctness
-		if ( !rData.is() )
+		if ( rData.isEmpty() )
 			throw ZipException( OUString::createFromAscii( "Encrypted stream without encryption data!\n" ),
-								uno::Reference< XInterface >() );
+								Reference< XInterface >() );
 
 		// if we have a digest, then this file is an encrypted one and we should
 		// check if we can decrypt it or not
-		OSL_ENSURE( rData->m_aDigest.getLength(), "Can't detect password correctness without digest!\n" );
-		if ( rData->m_aDigest.getLength() && !hasValidPassword ( rEntry, rData ) )
-				throw packages::WrongPasswordException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+		OSL_ENSURE( rData->aDigest.getLength(), "Can't detect password correctness without digest!\n" );
+		if ( rData->aDigest.getLength() && !hasValidPassword ( rEntry, rData ) )
+				throw packages::WrongPasswordException();
 	}
 	else
 		bNeedRawStream = ( rEntry.nMethod == STORED );
 
-	return createUnbufferedStream ( aMutexHolder,
-                                    rEntry,
+	return createUnbufferedStream ( rEntry,
 									rData,
 									bNeedRawStream ? UNBUFF_STREAM_RAW : UNBUFF_STREAM_DATA,
 									bIsEncrypted );
 }
 
-uno::Reference< XInputStream > SAL_CALL ZipFile::getRawData( ZipEntry& rEntry,
-		const ::rtl::Reference< EncryptionData >& rData,
-		sal_Bool bIsEncrypted,
-        SotMutexHolderRef aMutexHolder )
+Reference< XInputStream > SAL_CALL ZipFile::getRawData( ZipEntry& rEntry,
+		const vos::ORef < EncryptionData > &rData,
+		sal_Bool bIsEncrypted )
 	throw(IOException, ZipException, RuntimeException)
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	if ( rEntry.nOffset <= 0 )
 		readLOC( rEntry );
 
-	return createUnbufferedStream ( aMutexHolder, rEntry, rData, UNBUFF_STREAM_RAW, bIsEncrypted );
+	return createUnbufferedStream ( rEntry, rData, UNBUFF_STREAM_RAW, bIsEncrypted );
 }
 
-uno::Reference< XInputStream > SAL_CALL ZipFile::getWrappedRawStream(
+Reference< XInputStream > SAL_CALL ZipFile::getWrappedRawStream(
 		ZipEntry& rEntry,
-		const ::rtl::Reference< EncryptionData >& rData,
-		const ::rtl::OUString& aMediaType,
-        SotMutexHolderRef aMutexHolder )
+		const vos::ORef < EncryptionData > &rData,
+		const ::rtl::OUString& aMediaType )
 	throw ( packages::NoEncryptionException,
 			IOException,
 			ZipException,
 			RuntimeException )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-	if ( !rData.is() )
-		throw packages::NoEncryptionException( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( OSL_LOG_PREFIX ) ), uno::Reference< uno::XInterface >() );
+	if ( rData.isEmpty() )
+		throw packages::NoEncryptionException();
 
 	if ( rEntry.nOffset <= 0 )
 		readLOC( rEntry );
 
-	return createUnbufferedStream ( aMutexHolder, rEntry, rData, UNBUFF_STREAM_WRAPPEDRAW, sal_True, aMediaType );
+	return createUnbufferedStream ( rEntry, rData, UNBUFF_STREAM_WRAPPEDRAW, sal_True, aMediaType );
 }
 
 sal_Bool ZipFile::readLOC( ZipEntry &rEntry )
 	throw(IOException, ZipException, RuntimeException)
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	sal_Int32 nTestSig, nTime, nCRC, nSize, nCompressedSize;
-	sal_Int16 nVersion, nFlag, nHow, nPathLen, nExtraLen;
+	sal_Int16 nVersion, nFlag, nHow, nNameLen, nExtraLen;
 	sal_Int32 nPos = -rEntry.nOffset;
 
 	aGrabber.seek(nPos);
 	aGrabber >> nTestSig;
 
 	if (nTestSig != LOCSIG)
-		throw ZipIOException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid LOC header (bad signature") ), uno::Reference < XInterface > () );
+		throw ZipIOException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid LOC header (bad signature") ), Reference < XInterface > () );
 	aGrabber >> nVersion;
 	aGrabber >> nFlag;
 	aGrabber >> nHow;
@@ -663,36 +724,22 @@ sal_Bool ZipFile::readLOC( ZipEntry &rEntry )
 	aGrabber >> nCRC;
 	aGrabber >> nCompressedSize;
 	aGrabber >> nSize;
-	aGrabber >> nPathLen;
+	aGrabber >> nNameLen;
 	aGrabber >> nExtraLen;
-	rEntry.nOffset = static_cast < sal_Int32 > (aGrabber.getPosition()) + nPathLen + nExtraLen;
+	rEntry.nOffset = static_cast < sal_Int32 > (aGrabber.getPosition()) + nNameLen + nExtraLen;
 
-    // read always in UTF8, some tools seem not to set UTF8 bit
-    uno::Sequence < sal_Int8 > aNameBuffer( nPathLen );
-    sal_Int32 nRead = aGrabber.readBytes( aNameBuffer, nPathLen );
-    if ( nRead < aNameBuffer.getLength() )
-            aNameBuffer.realloc( nRead );
-
-    ::rtl::OUString sLOCPath = rtl::OUString::intern( (sal_Char *) aNameBuffer.getArray(), 
-                                                        aNameBuffer.getLength(), 
-                                                        RTL_TEXTENCODING_UTF8 );
-
-	if ( rEntry.nPathLen == -1 ) // the file was created
-    {
-		rEntry.nPathLen = nPathLen;
-        rEntry.sPath = sLOCPath;
-    }
+	if ( rEntry.nNameLen == -1 ) // the file was created
+		rEntry.nNameLen = nNameLen;
 
 	// the method can be reset for internal use so it is not checked
 	sal_Bool bBroken = rEntry.nVersion != nVersion
 					|| rEntry.nFlag != nFlag
 					|| rEntry.nTime != nTime
-					|| rEntry.nPathLen != nPathLen
-                    || !rEntry.sPath.equals( sLOCPath );
+					|| rEntry.nNameLen != nNameLen;
 
 	if ( bBroken && !bRecoveryMode )
 		throw ZipIOException( OUString( RTL_CONSTASCII_USTRINGPARAM( "The stream seems to be broken!" ) ),
-							uno::Reference< XInterface >() );
+							Reference< XInterface >() );
 
 	return sal_True;
 }
@@ -700,7 +747,6 @@ sal_Bool ZipFile::readLOC( ZipEntry &rEntry )
 sal_Int32 ZipFile::findEND( )
 	throw(IOException, ZipException, RuntimeException)
 {
-    // this method is called in constructor only, no need for mutex
 	sal_Int32 nLength, nPos, nEnd;
 	Sequence < sal_Int8 > aBuffer;
 	try
@@ -726,23 +772,22 @@ sal_Int32 ZipFile::findEND( )
 	}
 	catch ( IllegalArgumentException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
 	catch ( NotConnectedException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
 	catch ( BufferSizeExceededException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
-	throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+	throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 }
 
 sal_Int32 ZipFile::readCEN()
 	throw(IOException, ZipException, RuntimeException)
 {
-    // this method is called in constructor only, no need for mutex
 	sal_Int32 nCenLen, nCenPos = -1, nCenOff, nEndPos, nLocPos;
 	sal_uInt16 nCount, nTotal;
 
@@ -757,25 +802,25 @@ sal_Int32 ZipFile::readCEN()
 		aGrabber >> nCenOff;
 
 		if ( nTotal * CENHDR > nCenLen )
-			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "invalid END header (bad entry count)") ), uno::Reference < XInterface > () );
+			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "invalid END header (bad entry count)") ), Reference < XInterface > () );
 
 		if ( nTotal > ZIP_MAXENTRIES )
-			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "too many entries in ZIP File") ), uno::Reference < XInterface > () );
+			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "too many entries in ZIP File") ), Reference < XInterface > () );
 
 		if ( nCenLen < 0 || nCenLen > nEndPos )
-			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid END header (bad central directory size)") ), uno::Reference < XInterface > () );
+			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid END header (bad central directory size)") ), Reference < XInterface > () );
 
 		nCenPos = nEndPos - nCenLen;
 
 		if ( nCenOff < 0 || nCenOff > nCenPos )
-			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid END header (bad central directory size)") ), uno::Reference < XInterface > () );
+			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid END header (bad central directory size)") ), Reference < XInterface > () );
 
 		nLocPos = nCenPos - nCenOff;
 		aGrabber.seek( nCenPos );
 		Sequence < sal_Int8 > aCENBuffer ( nCenLen );
 		sal_Int64 nRead = aGrabber.readBytes ( aCENBuffer, nCenLen );
 		if ( static_cast < sal_Int64 > ( nCenLen ) != nRead )
-			throw ZipException ( OUString ( RTL_CONSTASCII_USTRINGPARAM ( "Error reading CEN into memory buffer!") ), uno::Reference < XInterface > () );
+			throw ZipException ( OUString ( RTL_CONSTASCII_USTRINGPARAM ( "Error reading CEN into memory buffer!") ), Reference < XInterface > () );
 
 		MemoryByteGrabber aMemGrabber ( aCENBuffer );
 
@@ -787,25 +832,25 @@ sal_Int32 ZipFile::readCEN()
 		{
 			aMemGrabber >> nTestSig;
 			if ( nTestSig != CENSIG )
-				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (bad signature)") ), uno::Reference < XInterface > () );
+				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (bad signature)") ), Reference < XInterface > () );
 
 			aMemGrabber.skipBytes ( 2 );
 			aMemGrabber >> aEntry.nVersion;
 
 			if ( ( aEntry.nVersion & 1 ) == 1 )
-				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (encrypted entry)") ), uno::Reference < XInterface > () );
+				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (encrypted entry)") ), Reference < XInterface > () );
 
 			aMemGrabber >> aEntry.nFlag;
 			aMemGrabber >> aEntry.nMethod;
 
 			if ( aEntry.nMethod != STORED && aEntry.nMethod != DEFLATED)
-				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (bad compression method)") ), uno::Reference < XInterface > () );
+				throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Invalid CEN header (bad compression method)") ), Reference < XInterface > () );
 
 			aMemGrabber >> aEntry.nTime;
 			aMemGrabber >> aEntry.nCrc;
 			aMemGrabber >> aEntry.nCompressedSize;
 			aMemGrabber >> aEntry.nSize;
-			aMemGrabber >> aEntry.nPathLen;
+			aMemGrabber >> aEntry.nNameLen;
 			aMemGrabber >> aEntry.nExtraLen;
 			aMemGrabber >> nCommentLen;
 			aMemGrabber.skipBytes ( 8 );
@@ -814,29 +859,29 @@ sal_Int32 ZipFile::readCEN()
 			aEntry.nOffset += nLocPos;
 			aEntry.nOffset *= -1;
 
-			if ( aEntry.nPathLen < 0 )
-				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "unexpected name length" ) ), uno::Reference < XInterface > () );
+			if ( aEntry.nNameLen < 0 || aEntry.nNameLen > ZIP_MAXNAMELEN )
+				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "name length exceeds ZIP_MAXNAMELEN bytes" ) ), Reference < XInterface > () );
 
-			if ( nCommentLen < 0 )
-				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "unexpected comment length" ) ), uno::Reference < XInterface > () );
+			if ( nCommentLen < 0 || nCommentLen > ZIP_MAXNAMELEN )
+				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "comment length exceeds ZIP_MAXNAMELEN bytes" ) ), Reference < XInterface > () );
 
-			if ( aEntry.nExtraLen < 0 )
-				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "unexpected extra header info length") ), uno::Reference < XInterface > () );
+			if ( aEntry.nExtraLen < 0 || aEntry.nExtraLen > ZIP_MAXEXTRA )
+				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "extra header info exceeds ZIP_MAXEXTRA bytes") ), Reference < XInterface > () );
 
             // read always in UTF8, some tools seem not to set UTF8 bit
-			aEntry.sPath = rtl::OUString::intern ( (sal_Char *) aMemGrabber.getCurrentPos(), 
-                                                   aEntry.nPathLen, 
+			aEntry.sName = rtl::OUString::intern ( (sal_Char *) aMemGrabber.getCurrentPos(), 
+                                                   aEntry.nNameLen, 
                                                    RTL_TEXTENCODING_UTF8 );
 
-            if ( !::comphelper::OStorageHelper::IsValidZipEntryFileName( aEntry.sPath, sal_True ) )
-				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip entry has an invalid name.") ), uno::Reference < XInterface > () );
+            if ( !::comphelper::OStorageHelper::IsValidZipEntryFileName( aEntry.sName, sal_True ) )
+				throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip entry has an invalid name.") ), Reference < XInterface > () );
 
-			aMemGrabber.skipBytes( aEntry.nPathLen + aEntry.nExtraLen + nCommentLen );
-			aEntries[aEntry.sPath] = aEntry;	
+			aMemGrabber.skipBytes( aEntry.nNameLen + aEntry.nExtraLen + nCommentLen );
+			aEntries[aEntry.sName] = aEntry;	
 		}
 
 		if (nCount != nTotal)
-			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Count != Total") ), uno::Reference < XInterface > () );
+			throw ZipException(OUString( RTL_CONSTASCII_USTRINGPARAM ( "Count != Total") ), Reference < XInterface > () );
 	}
 	catch ( IllegalArgumentException & )
 	{
@@ -849,8 +894,6 @@ sal_Int32 ZipFile::readCEN()
 sal_Int32 ZipFile::recover()
 	throw(IOException, ZipException, RuntimeException)
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	sal_Int32 nLength;
 	Sequence < sal_Int8 > aBuffer;
 	Sequence < sal_Int32 > aHeaderOffsets;
@@ -863,18 +906,13 @@ sal_Int32 ZipFile::recover()
 
 		aGrabber.seek( 0 );
 
-		const sal_Int32 nToRead = 32000;
-        for( sal_Int32 nGenPos = 0; aGrabber.readBytes( aBuffer, nToRead ) && aBuffer.getLength() > 16; )
-        {
-            const sal_Int8 *pBuffer = aBuffer.getConstArray();
-            sal_Int32 nBufSize = aBuffer.getLength();
+		for( sal_Int32 nGenPos = 0; aGrabber.readBytes( aBuffer, 32000 ) && aBuffer.getLength() > 30; )
+		{
+			const sal_Int8 *pBuffer = aBuffer.getConstArray();
+			sal_Int32 nBufSize = aBuffer.getLength();
 
-            sal_Int32 nPos = 0;
-            // the buffer should contain at least one header,
-            // or if it is end of the file, at least the postheader with sizes and hash
-            while( nPos < nBufSize - 30
-                || ( aBuffer.getLength() < nToRead && nPos < nBufSize - 16 ) )
-
+			sal_Int32 nPos = 0;
+			while( nPos < nBufSize - 16 )
 			{
 				if ( nPos < nBufSize - 30 && pBuffer[nPos] == 'P' && pBuffer[nPos+1] == 'K' && pBuffer[nPos+2] == 3 && pBuffer[nPos+3] == 4 )
 				{
@@ -893,7 +931,7 @@ sal_Int32 ZipFile::recover()
 							aMemGrabber >> aEntry.nCrc;
 							aMemGrabber >> aEntry.nCompressedSize;
 							aMemGrabber >> aEntry.nSize;
-							aMemGrabber >> aEntry.nPathLen;
+							aMemGrabber >> aEntry.nNameLen;
 							aMemGrabber >> aEntry.nExtraLen;
 
 							sal_Int32 nDescrLength = 
@@ -905,32 +943,32 @@ sal_Int32 ZipFile::recover()
 							// For OOo2.0 the whole package must be switched to unsigned values
 							if ( aEntry.nCompressedSize < 0 ) aEntry.nCompressedSize = 0x7FFFFFFF;
 							if ( aEntry.nSize < 0 ) aEntry.nSize = 0x7FFFFFFF;
-							if ( aEntry.nPathLen < 0 ) aEntry.nPathLen = 0x7FFF;
+							if ( aEntry.nNameLen < 0 ) aEntry.nNameLen = 0x7FFF;
 							if ( aEntry.nExtraLen < 0 ) aEntry.nExtraLen = 0x7FFF;
 							// End of quick fix
 
-							sal_Int32 nDataSize = ( aEntry.nMethod == DEFLATED ) ? aEntry.nCompressedSize : aEntry.nSize;
-							sal_Int32 nBlockLength = nDataSize + aEntry.nPathLen + aEntry.nExtraLen + 30 + nDescrLength;
-							if ( aEntry.nPathLen >= 0 && aEntry.nExtraLen >= 0
+
+							sal_Int32 nBlockLength = aEntry.nSize + aEntry.nNameLen + aEntry.nExtraLen + 30 + nDescrLength;
+							if ( aEntry.nNameLen <= ZIP_MAXNAMELEN && aEntry.nExtraLen < ZIP_MAXEXTRA 
 								&& ( nGenPos + nPos + nBlockLength ) <= nLength )
 							{
                                 // read always in UTF8, some tools seem not to set UTF8 bit
-								if( nPos + 30 + aEntry.nPathLen <= nBufSize )
-									aEntry.sPath = OUString ( (sal_Char *) &pBuffer[nPos + 30], 
-									  							aEntry.nPathLen, 
+								if( nPos + 30 + aEntry.nNameLen <= nBufSize )
+									aEntry.sName = OUString ( (sal_Char *) &pBuffer[nPos + 30], 
+									  							aEntry.nNameLen, 
 																RTL_TEXTENCODING_UTF8 );
 								else
 								{
 									Sequence < sal_Int8 > aFileName;
 									aGrabber.seek( nGenPos + nPos + 30 );
-									aGrabber.readBytes( aFileName, aEntry.nPathLen );
-									aEntry.sPath = OUString ( (sal_Char *) aFileName.getArray(), 
+									aGrabber.readBytes( aFileName, aEntry.nNameLen );
+									aEntry.sName = OUString ( (sal_Char *) aFileName.getArray(), 
 																aFileName.getLength(), 
 																RTL_TEXTENCODING_UTF8 );
-									aEntry.nPathLen = static_cast< sal_Int16 >(aFileName.getLength());
+									aEntry.nNameLen = static_cast< sal_Int16 >(aFileName.getLength());
 								}
 
-								aEntry.nOffset = nGenPos + nPos + 30 + aEntry.nPathLen + aEntry.nExtraLen;
+								aEntry.nOffset = nGenPos + nPos + 30 + aEntry.nNameLen + aEntry.nExtraLen;
 
 								if ( ( aEntry.nSize || aEntry.nCompressedSize ) && !checkSizeAndCRC( aEntry ) )
 								{
@@ -939,8 +977,8 @@ sal_Int32 ZipFile::recover()
 									aEntry.nSize = 0;
 								}
 
-								if ( aEntries.find( aEntry.sPath ) == aEntries.end() )
-									aEntries[aEntry.sPath] = aEntry;
+								if ( aEntries.find( aEntry.sName ) == aEntries.end() )
+									aEntries[aEntry.sName] = aEntry;
 							}
 						}
 					}
@@ -1009,22 +1047,20 @@ sal_Int32 ZipFile::recover()
 	}
 	catch ( IllegalArgumentException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
 	catch ( NotConnectedException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
 	catch ( BufferSizeExceededException& )
 	{
-		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), uno::Reference < XInterface > () );
+		throw ZipException( OUString( RTL_CONSTASCII_USTRINGPARAM ( "Zip END signature not found!") ), Reference < XInterface > () );
 	}
 }
 
 sal_Bool ZipFile::checkSizeAndCRC( const ZipEntry& aEntry )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	sal_Int32 nSize = 0, nCRC = 0;
 
 	if( aEntry.nMethod == STORED )
@@ -1036,8 +1072,6 @@ sal_Bool ZipFile::checkSizeAndCRC( const ZipEntry& aEntry )
 
 sal_Int32 ZipFile::getCRC( sal_Int32 nOffset, sal_Int32 nSize )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	Sequence < sal_Int8 > aBuffer;
 	CRC32 aCRC;
 	sal_Int32 nBlockSize = ::std::min( nSize, static_cast< sal_Int32 >( 32000 ) );
@@ -1055,8 +1089,6 @@ sal_Int32 ZipFile::getCRC( sal_Int32 nOffset, sal_Int32 nSize )
 
 void ZipFile::getSizeAndCRC( sal_Int32 nOffset, sal_Int32 nCompressedSize, sal_Int32 *nSize, sal_Int32 *nCRC )
 {
-    ::osl::MutexGuard aGuard( m_aMutex );
-
 	Sequence < sal_Int8 > aBuffer;
 	CRC32 aCRC;
 	sal_Int32 nRealSize = 0;
@@ -1083,7 +1115,11 @@ void ZipFile::getSizeAndCRC( sal_Int32 nOffset, sal_Int32 nCompressedSize, sal_I
 		nRealSize += nInBlock;
 	}
 
-    *nSize = nRealSize;
-    *nCRC = aCRC.getValue();
+	if( aInflaterLocal.finished() )
+	{
+		*nSize = nRealSize;
+		*nCRC = aCRC.getValue();
+	}
+	else
+		*nSize = *nCRC = 0;		
 }
-
