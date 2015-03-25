@@ -212,7 +212,6 @@ cssu::Reference< cssxc::XXMLSecurityContext > SAL_CALL
 {
 	CERTCertDBHandle	*pCertHandle = NULL ;
 
-#if SUPD != 310
 	rtl::OString sCertDir;
 	if( sCertDB.getLength() ) 
 	{
@@ -253,7 +252,14 @@ cssu::Reference< cssxc::XXMLSecurityContext > SAL_CALL
 		return NULL;
 	}
 	----*/
+#if SUPD == 310
+	// Avoid duplicate initialization of NSPR and NSS by having the
+	// NSSInitializer service do the initialization
+	cssu::Reference< cssu::XInterface > xNSSInitializer( mxMSF->createInstance( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.xml.crypto.NSSInitializer" ) ) ), uno::UNO_QUERY );
+	if( xNSSInitializer.is() )
+#else	// SUPD == 310
 	if( !nsscrypto_initialize( sCertDir.getStr() ) )
+#endif	// SUPD == 310
     {
 		RTL_LOGFILE_TRACE( "XMLSEC: Error - nsscrypto_initialize() failed." );
 		if ( NSS_NoDB_Init(NULL) != SECSuccess )
@@ -266,11 +272,12 @@ cssu::Reference< cssxc::XXMLSecurityContext > SAL_CALL
 			RTL_LOGFILE_TRACE( "XMLSEC: NSS_NoDB_Init works, enough for verifying signatures..." );
 		}
 	}
+#if SUPD != 310
 	else
 		atexit(nsscrypto_finalize );
+#endif	// SUPD != 310
 
 	pCertHandle = CERT_GetDefaultCertDB() ;
-#endif	// SUPD != 310
 
 	try 
 	{
