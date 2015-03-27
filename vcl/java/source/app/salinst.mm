@@ -1081,6 +1081,13 @@ void SalYieldMutex::acquire()
 
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
+				// Fix hanging that occurs when the native Open dialog and the 
+				// the OOo "Enter password" dialogs are both displayed and the
+				// OOo dialog is closed first by dispatching any pending
+				// NSModalPanelRunLoopMode events
+				if ( NSApplication_getModalWindow() )
+					NSApplication_dispatchPendingEvents( bInNativeDrag, FALSE );
+
 				// Fix crashing bug when quitting by checking if another thread
 				// has started shutting down the application to avoid using this
 				// instance after it has been deleted
