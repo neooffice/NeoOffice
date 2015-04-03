@@ -159,21 +159,30 @@ void VMLExport::CloseContainer()
     EscherEx::CloseContainer();
 }
 
+#if SUPD == 310
+sal_uInt32 VMLExport::EnterGroup( const String& rShapeName, const Rectangle* pRect )
+#else	// SUPD == 310
 sal_uInt32 VMLExport::EnterGroup( const OUString& rShapeName, const Rectangle* pRect )
+#endif	// SUPD == 310
 {
 #if SUPD == 310
     sal_uInt32 nShapeId = GetShapeID();
-#else	// UPD == 310
+#else	// SUPD == 310
     sal_uInt32 nShapeId = GenerateShapeId();
-#endif	// UPD == 310
+#endif	// SUPD == 310
 
     OStringBuffer aStyle( 200 );
     FastAttributeList *pAttrList = m_pSerializer->createAttrList();
 
     pAttrList->add( XML_id, ShapeIdString( nShapeId ) );
 
+#if SUPD == 310
+    if ( rShapeName.Len() )
+        pAttrList->add( XML_alt, OUStringToOString( OUString( rShapeName.GetBuffer(), rShapeName.Len() ), RTL_TEXTENCODING_UTF8 ) );
+#else	// SUPD == 310
     if ( rShapeName.getLength() )
         pAttrList->add( XML_alt, OUStringToOString( rShapeName, RTL_TEXTENCODING_UTF8 ) );
+#endif	// SUPD == 310
 
     bool rbAbsolutePos = true;
     //editAs

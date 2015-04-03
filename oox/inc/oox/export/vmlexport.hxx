@@ -122,7 +122,11 @@ private:
     virtual void OpenContainer( sal_uInt16 nEscherContainer, int nRecInstance = 0 ) SAL_OVERRIDE;
     virtual void CloseContainer() SAL_OVERRIDE;
 
+#if SUPD == 310
+    virtual sal_uInt32 EnterGroup( const String& rShapeName, const Rectangle* pBoundRect = 0 ) SAL_OVERRIDE;
+#else	// SUPD == 310
     virtual sal_uInt32 EnterGroup( const OUString& rShapeName, const Rectangle* pBoundRect = 0 ) SAL_OVERRIDE;
+#endif	// SUPD == 310
     virtual void LeaveGroup() SAL_OVERRIDE;
 
     virtual void AddShape( sal_uInt32 nShapeType, sal_uInt32 nShapeFlags, sal_uInt32 nShapeId = 0 ) SAL_OVERRIDE;
