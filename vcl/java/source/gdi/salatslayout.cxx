@@ -67,7 +67,9 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
+static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
+static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
 static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
@@ -1517,7 +1519,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					{
 						// Fix bug 2757 by detecting when a font cannot support
 						// Arabic text layout. The characters in our layout
-						// should always product different glyphs for each
+						// should always produce different glyphs for each
 						// character so if any are the same, the font does not
 						// support Arabic properly.
 						for ( int i = 0; i < (int)mpKashidaLayoutData->mnGlyphCount; i++ )
@@ -1541,33 +1543,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 					if ( !bHasArabicFontSupport )
 					{
-						for ( int i = nMinCharPos; i < nEndCharPos; i++ )
-							rArgs.NeedFallback( i, bRunRTL );
-
 						if ( !pFallbackFont )
 						{
 							// If there is no fallback font but the font really
 							// does not support Arabic (e.g. non-AAT fonts like
 							// STIXihei), assign Geeza Pro as this layout's
 							// fallback font
-							if ( mpKashidaLayoutData->mpFallbackFont )
+							if ( !mpKashidaLayoutData->mpFallbackFont )
 							{
-								delete mpKashidaLayoutData->mpFallbackFont;
-								mpKashidaLayoutData->mpFallbackFont = NULL;
-							}
+								SalData *pSalData = GetSalData();
 
-							SalData *pSalData = GetSalData();
-
-							::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
-							if ( it != pSalData->maFontNameMapping.end() )
-							{
-								JavaImplFont *pFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
-								if ( pFont )
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
+								if ( it == pSalData->maFontNameMapping.end() )
 								{
-									if ( pFont->getNativeFont() != mpFont->getNativeFont() )
-										mpKashidaLayoutData->mpFallbackFont = pFont;
-									else
-										delete pFont;
+									it = pSalData->maFontNameMapping.find( aGeezaProRegular );
+									if ( it == pSalData->maFontNameMapping.end() )
+										it = pSalData->maFontNameMapping.find( aAlBayanPlain );
+								}
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									JavaImplFont *pFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pFont )
+									{
+										if ( pFont->getNativeFont() != mpFont->getNativeFont() )
+											mpKashidaLayoutData->mpFallbackFont = pFont;
+										else
+											delete pFont;
+									}
 								}
 							}
 
@@ -1575,7 +1577,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								pFallbackFont = mpKashidaLayoutData->mpFallbackFont;
 						}
 
-						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						if ( pFallbackFont )
+						{
+							for ( int i = nMinCharPos; i < nEndCharPos; i++ )
+								rArgs.NeedFallback( i, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
 					}
 					else
 					{
