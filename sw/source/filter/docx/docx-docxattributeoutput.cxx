@@ -2740,9 +2740,13 @@ void DocxAttributeOutput::FootnotesEndnotes( bool bFootnotes )
     sal_Int32 nBody = bFootnotes? XML_footnotes: XML_endnotes;
     sal_Int32 nItem = bFootnotes? XML_footnote:  XML_endnote;
 
+#if SUPD == 310
+    m_pSerializer->startElementNS( XML_w, nBody, m_rExport.MainXmlNamespaces(m_pSerializer) );
+#else	// SUPD == 310
     m_pSerializer->startElementNS( XML_w, nBody,
             FSNS( XML_xmlns, XML_w ), "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
             FSEND );
+#endif	// SUPD == 310
 
     sal_Int32 nIndex = 0;
 

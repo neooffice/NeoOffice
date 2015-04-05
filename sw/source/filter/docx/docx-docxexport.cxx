@@ -72,6 +72,9 @@
 #include <rtl/ustrbuf.hxx>
 #include <vcl/font.hxx>
 
+#if SUPD == 310
+using namespace sax_fastparser;
+#endif	// SUPD == 310
 using namespace ::comphelper;
 using namespace ::com::sun::star;
 
@@ -682,9 +685,13 @@ void DocxExport::WriteHeaderFooter( const SwFmt& rFmt, bool bHeader, const char*
 #endif	// SUPD == 310
                     S( "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml" ) );
 
+#if SUPD == 310
+        pFS->startElementNS( XML_w, XML_hdr, MainXmlNamespaces( pFS ));
+#else	// SUPD == 310
         pFS->startElementNS( XML_w, XML_hdr,
                 FSNS( XML_xmlns, XML_w ), "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
                 FSEND );
+#endif	// SUPD == 310
     }
     else
     {
@@ -701,9 +708,13 @@ void DocxExport::WriteHeaderFooter( const SwFmt& rFmt, bool bHeader, const char*
 #endif	// SUPD == 310
                     S( "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml" ) );
 
+#if SUPD == 310
+        pFS->startElementNS( XML_w, XML_ftr, MainXmlNamespaces( pFS ));
+#else	// SUPD == 310
         pFS->startElementNS( XML_w, XML_ftr,
                 FSNS( XML_xmlns, XML_w ), "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
                 FSEND );
+#endif	// SUPD == 310
     }
 
     // switch the serializer to redirect the output to word/styles.xml
@@ -764,6 +775,28 @@ void DocxExport::WriteFonts()
 
     pFS->endElementNS( XML_w, XML_fonts );
 }
+
+#if SUPD == 310
+
+XFastAttributeListRef DocxExport::MainXmlNamespaces( FSHelperPtr serializer )
+{
+    FastAttributeList* pAttr = serializer->createAttrList();
+    pAttr->add( FSNS( XML_xmlns, XML_o ), "urn:schemas-microsoft-com:office:office" );
+    pAttr->add( FSNS( XML_xmlns, XML_r ), "http://schemas.openxmlformats.org/officeDocument/2006/relationships" );
+    pAttr->add( FSNS( XML_xmlns, XML_v ), "urn:schemas-microsoft-com:vml" );
+    pAttr->add( FSNS( XML_xmlns, XML_w ), "http://schemas.openxmlformats.org/wordprocessingml/2006/main" );
+    pAttr->add( FSNS( XML_xmlns, XML_w10 ), "urn:schemas-microsoft-com:office:word" );
+    pAttr->add( FSNS( XML_xmlns, XML_wp ), "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" );
+    pAttr->add( FSNS( XML_xmlns, XML_wps ), "http://schemas.microsoft.com/office/word/2010/wordprocessingShape" );
+    pAttr->add( FSNS( XML_xmlns, XML_wpg ), "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" );
+    pAttr->add( FSNS( XML_xmlns, XML_mc ), "http://schemas.openxmlformats.org/markup-compatibility/2006" );
+    pAttr->add( FSNS( XML_xmlns, XML_wp14 ), "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" );
+    pAttr->add( FSNS( XML_xmlns, XML_w14 ), "http://schemas.microsoft.com/office/word/2010/wordml" );
+    pAttr->add( FSNS( XML_mc, XML_Ignorable ), "w14 wp14" );
+    return XFastAttributeListRef( pAttr );
+}
+
+#endif	// SUPD == 310
 
 
 void DocxExport::WriteProperties( ) 
