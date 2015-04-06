@@ -26,16 +26,13 @@ What's New in this Version:
 NeoOffice 3.x, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the «Støtte for NeoOffice» link and read the list of changes.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would sometimes crash when quitting
-• When saving .ods files that were originally created in OpenOffice or LibreOffice, NeoOffice would require the user to reset the password for each protected sheet
-• When clicking on cells in .ods files that were originally created in LibreOffice, NeoOffice would fail to select any cells in protected sheets
-• NeoOffice would draw punctuation characters in Japanese vertical text in the wrong position and with horizontal font glyphs
-• When querying for null values in spreadsheet data sources, empty cells would be treated as if they were not null
-• When sending a mail merge to a file instead of to the printer, NeoOffice would fail to create the mail merge file
+• When running on OS X Yosemite, NeoOffice would sometimes draw Arabic characters on top of each other
+• One of the bug fixes that we added in NeoOffice 2014.6 would cause NeOffice to sometimes scroll slower than normal
+• NeoOffice would crash when entering data into dBase database tables that have a unique index
 
 
 Keywords:
-neo,office,pdf,regneark,excel,xlsx,xls,tekst,word,docx,doc,presentasjon,powerpoint,pptx,ppt
+neo,office,regneark,tekst,presentasjon,open,libre
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
