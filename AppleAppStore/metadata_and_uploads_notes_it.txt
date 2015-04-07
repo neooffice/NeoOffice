@@ -27,7 +27,7 @@ Gli utenti di NeoOffice 3.x, OpenOffice e LibreOffice: prima di acquistare NeoOf
 
 This version of NeoOffice fixes the following bugs:
 • When running on OS X Yosemite, NeoOffice would sometimes draw Arabic characters on top of each other
-• One of the bug fixes that we added in NeoOffice 2014.6 would cause NeOffice to sometimes scroll slower than normal
+• One of the bug fixes that we added in NeoOffice 2014.6 would cause NeoOffice to sometimes scroll slower than normal
 • NeoOffice would crash when entering data into dBase database tables that have a unique index
 
 
