@@ -21,6 +21,7 @@ Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améli
 • Prise en charge des Services OS X
 • Fenêtres d'outils flottantes natives
 
+
 What's New in this Version:
 Les utilisateurs de NeoOffice 3.x, OpenOffice et LibreOffice : avant d'acheter NeoOffice, nous vous recommandons de cliquer sur le lien « Assistance : NeoOffice » et de lire la liste des modifications.
 
