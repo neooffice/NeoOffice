@@ -748,7 +748,7 @@ TOOLS_DLLPUBLIC inline OUString read_uInt16_lenPrefixed_uInt16s_ToOUString(SvStr
 {
     sal_uInt16 nUnits = 0;
 #if SUPD == 310
-    rStrm.ReadNumber( nUnits );
+    rStrm >> nUnits;
 #else	// SUPD == 310
     rStrm.ReadUInt16( nUnits );
 #endif	// SUPD == 310
@@ -759,7 +759,7 @@ TOOLS_DLLPUBLIC inline OUString read_uInt32_lenPrefixed_uInt16s_ToOUString(SvStr
 {
     sal_uInt32 nUnits = 0;
 #if SUPD == 310
-    rStrm.ReadNumber( nUnits );
+    rStrm >> nUnits;
 #else	// SUPD == 310
     rStrm.ReadUInt32( nUnits );
 #endif	// SUPD == 310
@@ -784,7 +784,7 @@ TOOLS_DLLPUBLIC inline OString read_uInt16_lenPrefixed_uInt8s_ToOString(SvStream
 {
     sal_uInt16 nUnits = 0;
 #if SUPD == 310
-    rStrm.ReadNumber( nUnits );
+    rStrm >> nUnits;
 #else	// SUPD == 310
     rStrm.ReadUInt16( nUnits );
 #endif	// SUPD == 310
@@ -793,10 +793,11 @@ TOOLS_DLLPUBLIC inline OString read_uInt16_lenPrefixed_uInt8s_ToOString(SvStream
 
 TOOLS_DLLPUBLIC inline OString read_uInt8_lenPrefixed_uInt8s_ToOString(SvStream& rStrm)
 {
-    sal_uInt8 nUnits = 0;
 #if SUPD == 310
-    rStrm.Read( &nUnits, 1 );
+    unsigned char nUnits = 0;
+    rStrm >> nUnits;
 #else	// SUPD == 310
+    sal_uInt8 nUnits = 0;
     rStrm.ReadUChar( nUnits );
 #endif	// SUPD == 310
     return read_uInt8s_ToOString(rStrm, nUnits);
@@ -806,7 +807,7 @@ TOOLS_DLLPUBLIC inline OString read_uInt32_lenPrefixed_uInt8s_ToOString(SvStream
 {
     sal_uInt32 nUnits = 0;
 #if SUPD == 310
-    rStrm.ReadNumber( nUnits );
+    rStrm >> nUnits;
 #else	// SUPD == 310
     rStrm.ReadUInt32( nUnits );
 #endif	// SUPD == 310
