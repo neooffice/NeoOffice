@@ -81,7 +81,11 @@ public:
     /** @internal */
     rtl_String * pData;
 
+#if SUPD == 310
+public:
+#else	// SUPD == 310
 private:
+#endif	// SUPD == 310
     /** @internal */
     class DO_NOT_ACQUIRE;
 
