@@ -26,6 +26,14 @@
  * Modified October 2014 by Patrick Luby. NeoOffice is distributed under
  * GPL only under Section 4 of the Apache License v2.0.
  * 
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
  *************************************************************/
 
 
@@ -81,11 +89,7 @@ public:
     /** @internal */
     rtl_String * pData;
 
-#if SUPD == 310
-public:
-#else	// SUPD == 310
 private:
-#endif	// SUPD == 310
     /** @internal */
     class DO_NOT_ACQUIRE;
 
@@ -126,6 +130,20 @@ public:
         pData = str;
         rtl_string_acquire( pData );
     }
+
+#if SUPD == 310
+    /** New string from OString data without acquiring it.  Takeover of ownership.
+
+        The SAL_NO_ACQUIRE dummy parameter is only there to distinguish this
+        from other constructors.
+
+      @param    str         a OString data.
+    */
+    inline OString( rtl_String * str, __sal_NoAcquire ) SAL_THROW(())
+    {
+        pData = str;
+    }
+#endif	// SUPD == 310
 
     /**
       New string from a single character.
