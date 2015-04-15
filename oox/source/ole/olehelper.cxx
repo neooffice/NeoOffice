@@ -594,8 +594,6 @@ void OleFormCtrlExportHelper::exportControl( const Reference< XOutputStream >& r
     }
 }
 
-#if SUPD != 310
-
 MSConvertOCXControls::MSConvertOCXControls( const Reference< ::com::sun::star::frame::XModel >& rxModel ) : SvxMSConvertOCXControls( rxModel ), mxCtx( comphelper::getProcessComponentContext() ), maGrfHelper( mxCtx, lcl_getFrame( rxModel ), StorageRef() )
 {
 }
@@ -752,8 +750,6 @@ bool MSConvertOCXControls::WriteOCXStream( const Reference< XModel >& rxModel, S
     }
     return true;
 }
-
-#endif	// SUPD != 310
 
 } // namespace ole
 } // namespace oox

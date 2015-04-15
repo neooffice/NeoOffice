@@ -161,8 +161,6 @@ private:
                         ~OleHelper();       // not implemented
 };
 
-#if SUPD != 310
-
 // ideally it would be great to get rid of SvxMSConvertOCXControls
 // however msfilter/source/msfilter/svdfppt.cxx still uses
 // SvxMSConvertOCXControls as a base class, unfortunately oox depends on
@@ -190,8 +188,6 @@ public:
     static bool WriteOCXStream( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& rxModel, SotStorageRef &rSrc1, const com::sun::star::uno::Reference< com::sun::star::awt::XControlModel > &rControlModel, const com::sun::star::awt::Size& rSize,OUString &rName);
     static bool WriteOCXExcelKludgeStream( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& rxModel, const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream >& xOutStrm, const com::sun::star::uno::Reference< com::sun::star::awt::XControlModel > &rControlModel, const com::sun::star::awt::Size& rSize,OUString &rName);
 };
-
-#endif	// SUPD != 310
 
 
 
