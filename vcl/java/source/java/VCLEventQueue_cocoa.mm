@@ -1393,9 +1393,12 @@ static NSUInteger nMouseMask = 0;
 			JavaSalEventQueue::postCachedEvent( pSalKeyModEvent );
 			pSalKeyModEvent->release();
 		}
-		// Handle scroll wheel and magnify
-		else if ( nType == NSScrollWheel || ( nType == NSEventTypeMagnify && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
+		// Handle scroll wheel, magnify, and swipe
+		else if ( nType == NSScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
+			// Check if there are more events of this type pending
+			NSApplication *pApp = [NSApplication sharedApplication];
+			MacOSBOOL bPendingEvent = ( pApp && [pApp nextEventMatchingMask:NSEventMaskFromType( nType )  untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:NO] );
 			int nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 			float fDeltaX;
 			float fDeltaY;
@@ -1413,7 +1416,7 @@ static NSUInteger nMouseMask = 0;
 				// amount to zero until enough events' combined magnification
 				// amounts naturally round to a non-zero integer
 				fUnpostedMagnification += [pEvent magnification] * 2;
-				if ( Float32ToLong( fUnpostedMagnification ) )
+				if ( !bPendingEvent || Float32ToLong( fUnpostedMagnification ) )
 				{
 					fDeltaY = fUnpostedMagnification;
 					fUnpostedMagnification = 0;
@@ -1437,7 +1440,11 @@ static NSUInteger nMouseMask = 0;
 				// by only reducing horizontal events:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
 				float fDeltaReductionFactor = 5.0f;
-				if ( nModifiers & NSCommandKeyMask )
+				if ( nType == NSEventTypeSwipe )
+				{
+					fDeltaReductionFactor = 1.0f;
+				}
+				else if ( nModifiers & NSCommandKeyMask )
 				{
 					// Precise scrolling devices have excessively large
 					// deltas so apply a much larger reduction factor when
@@ -1455,7 +1462,7 @@ static NSUInteger nMouseMask = 0;
 				}
 				fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
 
-				if ( Float32ToLong( fUnpostedHorizontalScrollWheel ) )
+				if ( !bPendingEvent || Float32ToLong( fUnpostedHorizontalScrollWheel ) )
 				{
 					fDeltaX = fUnpostedHorizontalScrollWheel;
 					fUnpostedHorizontalScrollWheel = 0;
@@ -1465,7 +1472,7 @@ static NSUInteger nMouseMask = 0;
 					fDeltaX = 0;
 				}
 
-				if ( Float32ToLong( fUnpostedVerticalScrollWheel ) )
+				if ( !bPendingEvent || Float32ToLong( fUnpostedVerticalScrollWheel ) )
 				{
 					fDeltaY = fUnpostedVerticalScrollWheel;
 					fUnpostedVerticalScrollWheel = 0;
@@ -1487,6 +1494,8 @@ static NSUInteger nMouseMask = 0;
 			// values:
 			//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
 			//   ScrollUnits == 1
+			// Set ScrollUnits to SAL_WHEELMOUSE_EVENT_PAGESCROLL for swipe
+			// events
 			long nDeltaX = Float32ToLong( fDeltaX );
 			if ( nDeltaX )
 			{
@@ -1496,7 +1505,7 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
 				pWheelMouseEvent->mnDelta = nDeltaX * WHEEL_ROTATION_FACTOR;
 				pWheelMouseEvent->mnNotchDelta = nDeltaX;
-				pWheelMouseEvent->mnScrollLines = 1;
+				pWheelMouseEvent->mnScrollLines = ( nType == NSEventTypeSwipe ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : 1 );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = TRUE;
 
@@ -1514,38 +1523,13 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnDelta = nDeltaY * ( nType == NSEventTypeMagnify ? 1.0f : WHEEL_ROTATION_FACTOR );
 				pWheelMouseEvent->mnNotchDelta = nDeltaY;
 				pWheelMouseEvent->mnScrollLines = 1;
+				pWheelMouseEvent->mnScrollLines = ( nType == NSEventTypeSwipe ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : 1 );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = FALSE;
 
 				JavaSalEvent *pSalWheelMouseEvent = new JavaSalEvent( SALEVENT_WHEELMOUSE, mpFrame, pWheelMouseEvent );
 				JavaSalEventQueue::postCachedEvent( pSalWheelMouseEvent );
 				pSalWheelMouseEvent->release();
-			}
-		}
-		// Handle swipe
-		else if ( nType == NSEventTypeSwipe && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] )
-		{
-			NSApplication *pApp = [NSApplication sharedApplication];
-			float fDeltaX = [pEvent deltaX] * -1;
-			float fDeltaY = [pEvent deltaY] * -1;
-			if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
-			{
-				unichar pChars[ 1 ];
-				pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
-				unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? kVK_PageUp : kVK_PageDown );
-				NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
-				if ( pChar )
-				{
-					NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-					NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:JavaSalEventQueue::getLastNativeEventTime() windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
-					if ( pKeyDownEvent && pKeyUpEvent )
-					{
-						// Post in reverse order since we are posting to the
-						// front
-						[pApp postEvent:pKeyUpEvent atStart:YES];
-						[pApp postEvent:pKeyDownEvent atStart:YES];
-					}
-				}
 			}
 		}
 
