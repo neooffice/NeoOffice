@@ -53,8 +53,6 @@
 #define SALEVENT_ABOUT				((USHORT)130)
 #define SALEVENT_PREFS				((USHORT)140)
 
-#define WHEEL_ROTATION_FACTOR 120
-
 // -----------------
 // - SalYieldMutex -
 // -----------------
@@ -146,7 +144,7 @@ public:
 	void					addRepeatCount( USHORT nCount );
 	void					addOriginalKeyEvent( JavaSalEvent *pEvent );
 	void					addUpdateRect( const Rectangle& rRect );
-	void					addWheelRotation( long nRotation );
+	bool					addWheelRotationAndScrollLines( long nRotation, ULONG nScrollLines, sal_Bool bHorizontal );
 	void					cancelShutdown();
 	void					dispatch();
 	ULONG					getCommittedCharacterCount();
