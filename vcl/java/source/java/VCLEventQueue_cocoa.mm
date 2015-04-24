@@ -1550,12 +1550,17 @@ static NSUInteger nMouseMask = 0;
 		// Handle scroll wheel, magnify, and swipe
 		else if ( nType == NSScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
+			static float fUnpostedMagnification = 0;
+			static float fUnpostedVerticalScrollWheel = 0;
+
 			NSApplication *pApp = [NSApplication sharedApplication];
 			int nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 			float fDeltaX = 0;
 			float fDeltaY = 0;
 			if ( nType == NSEventTypeMagnify )
 			{
+				fUnpostedVerticalScrollWheel = 0;
+
 				// Magnify events need to be converted to vertical scrolls with
 				// the Command key pressed to force the OOo code to zoom.
 				nModifiers |= NSCommandKeyMask;
@@ -1567,9 +1572,22 @@ static NSUInteger nMouseMask = 0;
 					while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
 						fDeltaY += [pPendingEvent magnification];
 				}
+
+				fUnpostedMagnification += fDeltaY;
+				if ( FloatToLong( fUnpostedMagnification ) )
+				{
+					fDeltaY = fUnpostedMagnification;
+					fUnpostedMagnification = 0;
+				}
+				else
+				{
+					fDeltaY = 0;
+				}
 			}
 			else
 			{
+				fUnpostedMagnification = 0;
+
 				// Fix bug 3284 by not rounding tiny scroll wheel and swipe
 				// amounts to a non-zero integer and, instead, set the
 				// amount to zero until there are no more pending events of
@@ -1595,6 +1613,29 @@ static NSUInteger nMouseMask = 0;
 					// Only allow horizontal scroll when the Command key is not
 					// pressed
 					fDeltaX = 0;
+
+					// Precise scrolling devices have excessively large
+					// deltas so apply a much larger reduction factor when
+					// zooming
+					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
+						fDeltaY /= 10.0f;
+					else
+						fDeltaY /= 5.0f;
+
+					fUnpostedVerticalScrollWheel += fDeltaY;
+					if ( FloatToLong( fUnpostedVerticalScrollWheel ) )
+					{
+						fDeltaY = fUnpostedVerticalScrollWheel;
+						fUnpostedVerticalScrollWheel = 0;
+					}
+					else
+					{
+						fDeltaY = 0;
+					}
+				}
+				else
+				{
+					fUnpostedVerticalScrollWheel = 0;
 				}
 			}
 
