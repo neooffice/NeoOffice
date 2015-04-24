@@ -668,9 +668,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 					bContinue = false;
 				break;
 			case SALEVENT_MOUSEMOVE:
-                // Make highlighting by dragging more responsive
+				// Make highlighting by dragging more responsive
                 if ( pEvent->getModifiers() & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
 					bContinue = false;
+				break;
+			case SALEVENT_WHEELMOUSE:
+				// Make scroll wheel and swipes more responsive
+				bContinue = false;
 				break;
 			default:
 				// Fix bug that causes slideshows to display a blank black
@@ -1307,14 +1311,26 @@ void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
 
 // -------------------------------------------------------------------------
 
-void JavaSalEvent::addWheelRotation( long nRotation )
+bool JavaSalEvent::addWheelRotationAndScrollLines( long nRotation, ULONG nScrollLines, sal_Bool bHorizontal )
 {
-	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
+	bool bRet = false;
+
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE && nScrollLines != SAL_WHEELMOUSE_EVENT_PAGESCROLL )
 	{
 		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
-		pWheelMouseEvent->mnNotchDelta += nRotation;
-		pWheelMouseEvent->mnDelta = pWheelMouseEvent->mnNotchDelta * WHEEL_ROTATION_FACTOR;
+		if ( pWheelMouseEvent->mbHorz == bHorizontal )
+		{
+			// Suppress excessive magnification but not adding rotation for
+			// magnify events
+			if ( !pWheelMouseEvent->mnCode & KEY_MOD1 )
+				pWheelMouseEvent->mnDelta += nRotation;
+			pWheelMouseEvent->mnNotchDelta = ( pWheelMouseEvent->mnDelta < 0 ? -1 : 1 );
+			pWheelMouseEvent->mnScrollLines = abs( pWheelMouseEvent->mnDelta );
+			bRet = true;
+		}
 	}
+
+	return bRet;
 }
 
 // -------------------------------------------------------------------------
@@ -1984,8 +2000,8 @@ void JavaSalEvent::dispatch()
 					pWheelMouseEvent->mnTime = getWhen();
 					pWheelMouseEvent->mnX = getX();
 					pWheelMouseEvent->mnY = getY();
-					pWheelMouseEvent->mnDelta = nWheelRotation * WHEEL_ROTATION_FACTOR;
-					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
+					pWheelMouseEvent->mnNotchDelta = ( nWheelRotation < 0 ? -1 : 1 );
+					pWheelMouseEvent->mnDelta = ( nWheelRotation ? nWheelRotation : pWheelMouseEvent->mnNotchDelta );
 					pWheelMouseEvent->mnScrollLines = getScrollAmount();
 					pWheelMouseEvent->mnCode = getModifiers();
 					pWheelMouseEvent->mbHorz = bHorz;
@@ -2426,7 +2442,7 @@ long JavaSalEvent::getWheelRotation()
 	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
 		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
-		nRet = pWheelMouseEvent->mnNotchDelta;
+		nRet = pWheelMouseEvent->mnDelta;
 	}
 
 	return nRet;
@@ -2782,10 +2798,10 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					if ( pEventQueue->size() )
 					{
 						JavaSalEvent *pOldEvent = pEventQueue->back()->getEvent();
-						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() && pOldEvent->isHorizontal() == pNewEvent->isHorizontal() )
+						if ( pOldEvent && pOldEvent->getID() == nID && pOldEvent->getFrame() == pFrame && !pEventQueue->back()->isRemove() )
 						{
-							pEventQueue->back()->remove();
-							pNewEvent->addWheelRotation( pOldEvent->getWheelRotation() );
+							if ( pNewEvent->addWheelRotationAndScrollLines( pOldEvent->getWheelRotation(), pOldEvent->getScrollAmount(), pOldEvent->isHorizontal() ) )
+								pEventQueue->back()->remove();
 						}
 					}
 

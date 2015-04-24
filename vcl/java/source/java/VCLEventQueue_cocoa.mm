@@ -1396,50 +1396,26 @@ static NSUInteger nMouseMask = 0;
 		// Handle scroll wheel, magnify, and swipe
 		else if ( nType == NSScrollWheel || ( ( nType == NSEventTypeMagnify || nType == NSEventTypeSwipe ) && pSharedResponder && ![pSharedResponder ignoreTrackpadGestures] ) )
 		{
-			static float fUnpostedMagnification = 0;
-			static float fUnpostedHorizontalScrollWheel = 0;
-			static float fUnpostedVerticalScrollWheel = 0;
-			static int nLastModifiers = 0;
-
+			NSApplication *pApp = [NSApplication sharedApplication];
 			int nModifiers = [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
-			if ( nLastModifiers != nModifiers )
-			{
-				fUnpostedMagnification = 0;
-				fUnpostedHorizontalScrollWheel = 0;
-				fUnpostedVerticalScrollWheel = 0;
-				nLastModifiers = nModifiers;
-			}
-
-			float fDeltaX;
-			float fDeltaY;
+			float fDeltaX = 0;
+			float fDeltaY = 0;
 			if ( nType == NSEventTypeMagnify )
 			{
-				fUnpostedHorizontalScrollWheel = 0;
-				fUnpostedVerticalScrollWheel = 0;
-
 				// Magnify events need to be converted to vertical scrolls with
 				// the Command key pressed to force the OOo code to zoom.
 				nModifiers |= NSCommandKeyMask;
-				fDeltaX = 0;
+				fDeltaY = [pEvent magnification];
 
-				// Fix bug 3284 by not rounding tiny magnification amounts
-				// to a non-zero integer and, instead, set the amount to zero
-				// until there are no more pending events of this type
-				fUnpostedMagnification += [pEvent magnification] * 2;
-				if ( FloatToLong( fUnpostedMagnification ) )
+				if ( pApp )
 				{
-					fDeltaY = fUnpostedMagnification;
-					fUnpostedMagnification = 0;
-				}
-				else
-				{
-					fDeltaY = 0;
+					NSEvent *pPendingEvent;
+					while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+						fDeltaY += [pPendingEvent magnification];
 				}
 			}
 			else
 			{
-				fUnpostedMagnification = 0;
-
 				// Fix bug 3284 by not rounding tiny scroll wheel and swipe
 				// amounts to a non-zero integer and, instead, set the
 				// amount to zero until there are no more pending events of
@@ -1447,39 +1423,24 @@ static NSUInteger nMouseMask = 0;
 				// events reported in the following NeoOffice forum topic
 				// by only reducing horizontal events:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8609
-				float fDeltaReductionFactor = 5.0f;
-				if ( nModifiers & NSCommandKeyMask )
+				fDeltaX = [pEvent deltaX];
+				fDeltaY = [pEvent deltaY];
+
+				if ( pApp )
 				{
-					// Precise scrolling devices have excessively large
-					// deltas so apply a much larger reduction factor when
-					// zooming
-					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
-						fDeltaReductionFactor = 40.0f;
-					else
-						fDeltaReductionFactor = 20.0f;
+					NSEvent *pPendingEvent;
+					while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+					{
+						fDeltaX += [pEvent deltaX];
+						fDeltaY += [pEvent deltaY];
+					}
 				}
-				else
+
+				if ( nModifiers & NSCommandKeyMask )
 				{
 					// Only allow horizontal scroll when the Command key is not
 					// pressed
-					fUnpostedHorizontalScrollWheel += [pEvent deltaX] / fDeltaReductionFactor;
-				}
-				fUnpostedVerticalScrollWheel += [pEvent deltaY] / fDeltaReductionFactor;
-
-				// Check if there are more events of this type pending
-				NSApplication *pApp = [NSApplication sharedApplication];
-				MacOSBOOL bPendingEvent = ( pApp && [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:NO] );
-				if ( !bPendingEvent )
-				{
-					fDeltaX = fUnpostedHorizontalScrollWheel;
-					fUnpostedHorizontalScrollWheel = 0;
-					fDeltaY = fUnpostedVerticalScrollWheel;
-					fUnpostedVerticalScrollWheel = 0;
-				}
-				else
-				{
 					fDeltaX = 0;
-					fDeltaY = 0;
 				}
 			}
 
@@ -1490,13 +1451,6 @@ static NSUInteger nMouseMask = 0;
 			USHORT nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
 			MacOSBOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSCommandKeyMask ) );
 
-			// Note: no matter what buttons we press, mimic the MouseWheelEvents
-			// in Apple's JVMs always seem to have the following constant
-			// values:
-			//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
-			//   ScrollUnits == 1
-			// Set ScrollUnits to SAL_WHEELMOUSE_EVENT_PAGESCROLL for swipe
-			// events
 			long nDeltaX = FloatToLong( fDeltaX );
 			if ( !nDeltaX )
 			{
@@ -1512,9 +1466,9 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
-				pWheelMouseEvent->mnDelta = nDeltaX * WHEEL_ROTATION_FACTOR;
-				pWheelMouseEvent->mnNotchDelta = nDeltaX;
-				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : 1 );
+				pWheelMouseEvent->mnDelta = nDeltaX;
+				pWheelMouseEvent->mnNotchDelta = ( nDeltaX < 0 ? -1 : 1 );
+				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaX ) );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = TRUE;
 
@@ -1537,9 +1491,9 @@ static NSUInteger nMouseMask = 0;
 				pWheelMouseEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 				pWheelMouseEvent->mnX = (long)aLocation.x;
 				pWheelMouseEvent->mnY = (long)aLocation.y;
-				pWheelMouseEvent->mnDelta = nDeltaY * ( nType == NSEventTypeMagnify ? 1.0f : WHEEL_ROTATION_FACTOR );
-				pWheelMouseEvent->mnNotchDelta = nDeltaY;
-				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : 1 );
+				pWheelMouseEvent->mnDelta = nDeltaY;
+				pWheelMouseEvent->mnNotchDelta = ( nDeltaY < 0 ? -1 : 1 );
+				pWheelMouseEvent->mnScrollLines = ( bScrollPages ? SAL_WHEELMOUSE_EVENT_PAGESCROLL : abs( nDeltaY ) );
 				pWheelMouseEvent->mnCode = nCode;
 				pWheelMouseEvent->mbHorz = FALSE;
 
