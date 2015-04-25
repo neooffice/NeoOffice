@@ -1475,7 +1475,13 @@ static long ImplHandleWheelEvent( Window* pWindow, const SalWheelMouseEvent& rEv
     ImplSVData* pSVData = ImplGetSVData();
     if ( pSVData->maWinData.mpAutoScrollWin )
         pSVData->maWinData.mpAutoScrollWin->EndAutoScroll();
+#ifdef USE_JAVA
+    // Don't destroy help window as that causes the page/row number tooltip
+    // to rapidly flicker when using the scroll wheel
+    if( pWindow->ImplGetWindow() == pSVData->maHelpData.mpHelpWin )
+#else	// USE_JAVA
     if ( pSVData->maHelpData.mpHelpWin )
+#endif	// USE_JAVA
         ImplDestroyHelpWindow( true );
     if( aDogTag.IsDelete() )
         return 0;
