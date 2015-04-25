@@ -1635,6 +1635,15 @@ static NSUInteger nMouseMask = 0;
 				}
 				else
 				{
+					// Precise scrolling devices have excessively large
+					// deltas so apply a small reduction factor when scrolling
+					// so that scrolling can be done down to a single line
+					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
+					{
+						fDeltaX /= 2.0f;
+						fDeltaY /= 2.0f;
+					}
+
 					fUnpostedVerticalScrollWheel = 0;
 				}
 			}
