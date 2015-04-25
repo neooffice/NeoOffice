@@ -680,10 +680,6 @@ static void RegisterMainBundleWithLaunchServices()
 
 @end
 
-@interface NSEvent (VCLWindow)
-- (BOOL)hasPreciseScrollingDeltas;
-@end
-
 @interface NSWindow (VCLWindowPoseAs)
 - (void)_init;
 - (void)poseAsBecomeKeyWindow;
@@ -1463,7 +1459,7 @@ static NSUInteger nMouseMask = 0;
 					// Precise scrolling devices have excessively large
 					// deltas so apply a much larger reduction factor when
 					// zooming
-					if ( [pEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)] && [pEvent hasPreciseScrollingDeltas] )
+					if ( [pEvent hasPreciseScrollingDeltas] )
 						fDeltaY /= 10.0f;
 					else
 						fDeltaY /= 5.0f;
@@ -1482,6 +1478,15 @@ static NSUInteger nMouseMask = 0;
 				else
 				{
 					fUnpostedVerticalScrollWheel = 0;
+
+					// Precise scrolling devices have excessively large
+					// deltas so apply a small reduction factor when scrolling
+					// so that scrolling can be done down to a single line
+					if ( [pEvent hasPreciseScrollingDeltas] )
+					{
+						fDeltaX /= 2.0f;
+						fDeltaY /= 2.0f;
+					}
 				}
 			}
 
