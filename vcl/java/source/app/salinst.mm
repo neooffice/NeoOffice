@@ -1322,7 +1322,7 @@ bool JavaSalEvent::addWheelRotationAndScrollLines( long nRotation, ULONG nScroll
 		{
 			// Suppress excessive magnification but not adding rotation for
 			// magnify events
-			if ( !pWheelMouseEvent->mnCode & KEY_MOD1 )
+			if ( ! ( pWheelMouseEvent->mnCode & KEY_MOD1 ) )
 				pWheelMouseEvent->mnDelta += nRotation;
 			pWheelMouseEvent->mnNotchDelta = ( pWheelMouseEvent->mnDelta < 0 ? -1 : 1 );
 			pWheelMouseEvent->mnScrollLines = abs( pWheelMouseEvent->mnDelta );
