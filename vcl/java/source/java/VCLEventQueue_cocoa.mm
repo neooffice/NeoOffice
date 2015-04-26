@@ -1440,21 +1440,18 @@ static NSUInteger nMouseMask = 0;
 				fDeltaX = [pEvent deltaX];
 				fDeltaY = [pEvent deltaY];
 
-				if ( pApp )
-				{
-					NSEvent *pPendingEvent;
-					while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
-					{
-						fDeltaX += [pEvent deltaX];
-						fDeltaY += [pEvent deltaY];
-					}
-				}
-
 				if ( nModifiers & NSCommandKeyMask )
 				{
 					// Only allow horizontal scroll when the Command key is not
 					// pressed
 					fDeltaX = 0;
+
+					if ( pApp )
+					{
+						NSEvent *pPendingEvent;
+						while ( ( pPendingEvent = [pApp nextEventMatchingMask:NSEventMaskFromType( nType ) untilDate:[NSDate date] inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+							fDeltaY += [pEvent deltaY];
+					}
 
 					// Precise scrolling devices have excessively large
 					// deltas so apply a much larger reduction factor when
