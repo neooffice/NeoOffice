@@ -77,7 +77,11 @@ DateTime DTTM2DateTime( long lDTTM )
                                             Friday=5
                                             Saturday=6)
     */
+#if SUPD == 310
     DateTime aDateTime(Date( 0 ), Time( 0 ));
+#else	// SUPD == 310
+    DateTime aDateTime(Date( 0 ), ::tools::Time( 0 ));
+#endif	// SUPD == 310
     if( lDTTM )
     {
         sal_uInt16 lMin = (sal_uInt16)(lDTTM & 0x0000003F);
@@ -89,7 +93,11 @@ DateTime DTTM2DateTime( long lDTTM )
         sal_uInt16 lMon = (sal_uInt16)(lDTTM & 0x0000000F);
         lDTTM >>= 4;
         sal_uInt16 lYear= (sal_uInt16)(lDTTM & 0x000001FF) + 1900;
+#if SUPD == 310
         aDateTime = DateTime(Date(lDay, lMon, lYear), Time(lHour, lMin));
+#else	// SUPD == 310
+        aDateTime = DateTime(Date(lDay, lMon, lYear), tools::Time(lHour, lMin));
+#endif	// SUPD == 310
     }
     return aDateTime;
 }
@@ -1354,6 +1362,18 @@ MSO_SPT GETVMLShapeType(const OString& aType)
     return i == pDMLToVMLMap->end() ? mso_sptNil : i->second;
 }
 
+bool HasTextBoxContent(sal_uInt32 nShapeType)
+{
+    switch (nShapeType)
+    {
+    case ESCHER_ShpInst_TextPlainText:
+    case ESCHER_ShpInst_TextSlantUp:
+    case ESCHER_ShpInst_TextDeflateInflateDeflate:
+        return false;
+    default:
+        return true;
+    }
+}
 }
 }
 
