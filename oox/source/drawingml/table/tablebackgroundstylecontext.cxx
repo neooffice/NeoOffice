@@ -19,8 +19,8 @@
 
 #include <osl/diagnose.h>
 
-#include "oox/drawingml/table/tablebackgroundstylecontext.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/table/tablebackgroundstylecontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/helper/attributelist.hxx"
 
 using namespace ::oox::core;

@@ -1,50 +1,36 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *  $RCSfile$
  *
- */
+ *  $Revision$
+ *
+ *  last change: $Author$ $Date$
+ *
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
+ *
+ *         - GNU General Public License Version 2.1
+ *
+ *  Patrick Luby, April 2015
+ *
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2015 Planamesa Inc.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_OOX_DRAWINGML_TEXTEFFECTSCONTEXT_HXX
-#define INCLUDED_OOX_DRAWINGML_TEXTEFFECTSCONTEXT_HXX
-
-#include <com/sun/star/beans/PropertyValue.hpp>
-
-#include <oox/helper/grabbagstack.hxx>
-#include <oox/core/contexthandler2.hxx>
-#include <boost/scoped_ptr.hpp>
-#include <vector>
-
-namespace oox { namespace drawingml {
-
-class TextEffectsContext : public oox::core::ContextHandler2
-{
-public:
-    TextEffectsContext(oox::core::ContextHandler2Helper& rParent,
-                       sal_Int32 aElementToken,
-                       std::vector<css::beans::PropertyValue>& rTextEffectsProperties);
-    virtual ~TextEffectsContext();
-
-    virtual void onStartElement(const oox::AttributeList& rAttribs) SAL_OVERRIDE;
-    virtual void onEndElement() SAL_OVERRIDE;
-
-    virtual oox::core::ContextHandlerRef onCreateContext(sal_Int32 Element, const oox::AttributeList& rAttribs) SAL_OVERRIDE;
-
-protected:
-    std::vector<css::beans::PropertyValue>& mrTextEffectsProperties;
-    boost::scoped_ptr<oox::GrabBagStack> mpGrabBagStack;
-    sal_Int32 mnCurrentElement;
-
-private:
-    void processAttributes(const AttributeList& rAttribs);
-    void pushAttributeToGrabBag (const sal_Int32& aAttributeId, const OUString& rElementName, const AttributeList& rAttribs);
-};
-
-} }
-
-#endif // INCLUDED_OOX_DRAWINGML_TEXTEFFECTSCONTEXT_HXX
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+#include "drawingml/texteffectscontext.hxx"

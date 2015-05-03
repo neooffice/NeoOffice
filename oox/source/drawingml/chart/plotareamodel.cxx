@@ -17,13 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/plotareamodel.hxx"
+#include "drawingml/chart/plotareamodel.hxx"
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 View3DModel::View3DModel() :
     mnDepthPercent( 100 ),
@@ -36,8 +34,6 @@ View3DModel::~View3DModel()
 {
 }
 
-
-
 WallFloorModel::WallFloorModel()
 {
 }
@@ -45,8 +41,6 @@ WallFloorModel::WallFloorModel()
 WallFloorModel::~WallFloorModel()
 {
 }
-
-
 
 DataTableModel::DataTableModel() :
         mbShowHBorder(false),
@@ -59,8 +53,6 @@ DataTableModel::~DataTableModel()
 {
 }
 
-
-
 PlotAreaModel::PlotAreaModel()
 {
 }
@@ -68,8 +60,6 @@ PlotAreaModel::PlotAreaModel()
 PlotAreaModel::~PlotAreaModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

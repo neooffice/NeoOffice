@@ -40,32 +40,31 @@ OUString lclAppendFileName( const OUString& rPath, const OUString& rFileName )
 
 OUString createOfficeDocRelationTypeTransitional(const OUString& rType)
 {
-    static const OUString aTransitionalBase("http://schemas.openxmlformats.org/officeDocument/2006/relationships/");
-    return aTransitionalBase + rType;
+    return OUString("http://schemas.openxmlformats.org/officeDocument/2006/relationships/") + rType;
 }
 
 OUString createOfficeDocRelationTypeStrict(const OUString& rType)
 {
-    static const OUString aStrictBase("http://purl.oclc.org/ooxml/officeDocument/relationships/");
-    return aStrictBase + rType;
+    return OUString("http://purl.oclc.org/ooxml/officeDocument/relationships/") + rType;
 }
 
 }
 
-Relations::Relations( const OUString& rFragmentPath ) :
-    maFragmentPath( rFragmentPath )
+Relations::Relations( const OUString& rFragmentPath )
+    : maMap()
+    , maFragmentPath( rFragmentPath )
 {
 }
 
 const Relation* Relations::getRelationFromRelId( const OUString& rId ) const
 {
-    const_iterator aIt = find( rId );
-    return (aIt == end()) ? 0 : &aIt->second;
+    ::std::map< OUString, Relation >::const_iterator aIt = maMap.find( rId );
+    return (aIt == maMap.end()) ? 0 : &aIt->second;
 }
 
 const Relation* Relations::getRelationFromFirstType( const OUString& rType ) const
 {
-    for( const_iterator aIt = begin(), aEnd = end(); aIt != aEnd; ++aIt )
+    for( ::std::map< OUString, Relation >::const_iterator aIt = maMap.begin(), aEnd = maMap.end(); aIt != aEnd; ++aIt )
         if( aIt->second.maType.equalsIgnoreAsciiCase( rType ) )
             return &aIt->second;
     return 0;
@@ -74,10 +73,10 @@ const Relation* Relations::getRelationFromFirstType( const OUString& rType ) con
 RelationsRef Relations::getRelationsFromTypeFromOfficeDoc( const OUString& rType ) const
 {
     RelationsRef xRelations( new Relations( maFragmentPath ) );
-    for( const_iterator aIt = begin(), aEnd = end(); aIt != aEnd; ++aIt )
+    for( ::std::map< OUString, Relation >::const_iterator aIt = maMap.begin(), aEnd = maMap.end(); aIt != aEnd; ++aIt )
         if( aIt->second.maType.equalsIgnoreAsciiCase( createOfficeDocRelationTypeTransitional(rType) ) ||
                 aIt->second.maType.equalsIgnoreAsciiCase( createOfficeDocRelationTypeStrict(rType) ))
-            (*xRelations)[ aIt->first ] = aIt->second;
+            xRelations->maMap[ aIt->first ] = aIt->second;
     return xRelations;
 }
 

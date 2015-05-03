@@ -20,6 +20,7 @@
 #ifndef INCLUDED_OOX_CORE_FASTTOKENHANDLER_HXX
 #define INCLUDED_OOX_CORE_FASTTOKENHANDLER_HXX
 
+#include <oox/dllapi.h>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 #include <cppuhelper/implbase2.hxx>
@@ -37,7 +38,7 @@ typedef ::cppu::WeakImplHelper2< ::com::sun::star::lang::XServiceInfo, ::com::su
 /** Wrapper implementing the com.sun.star.xml.sax.XFastTokenHandler API interface
     that provides access to the tokens generated from the internal token name list.
  */
-class FastTokenHandler : public FastTokenHandler_BASE,
+class OOX_DLLPUBLIC FastTokenHandler : public FastTokenHandler_BASE,
                          public sax_fastparser::FastTokenHandlerBase
 {
 public:
@@ -62,8 +63,6 @@ public:
     virtual ::com::sun::star::uno::Sequence< sal_Int8 > SAL_CALL getUTF8Identifier( sal_Int32 nToken ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
     virtual sal_Int32 SAL_CALL getTokenFromUTF8( const ::com::sun::star::uno::Sequence< sal_Int8 >& Identifier ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
 #else	// SUPD == 310
-    virtual sal_Int32 SAL_CALL getToken( const OUString& rIdentifier ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual OUString SAL_CALL getIdentifier( sal_Int32 nToken ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
     virtual ::com::sun::star::uno::Sequence< sal_Int8 > SAL_CALL getUTF8Identifier( sal_Int32 nToken ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
     virtual sal_Int32 SAL_CALL getTokenFromUTF8( const ::com::sun::star::uno::Sequence< sal_Int8 >& Identifier ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 #endif	// SUPD == 310

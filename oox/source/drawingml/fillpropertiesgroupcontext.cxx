@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/graphichelper.hxx"
 #include "oox/core/xmlfilterbase.hxx"
@@ -152,6 +152,7 @@ BlipContext::BlipContext( ContextHandler2Helper& rParent,
     else if( rAttribs.hasAttribute( R_TOKEN( link ) ) )
     {
         // external URL
+
 #if SUPD == 310
         // we will embed this link, this is better than just doing nothing..
         // TODO: import this graphic as real link, but this requires some

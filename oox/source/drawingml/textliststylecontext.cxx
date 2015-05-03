@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/textliststylecontext.hxx"
-#include "oox/drawingml/textparagraphpropertiescontext.hxx"
+#include "drawingml/textliststylecontext.hxx"
+#include "drawingml/textparagraphpropertiescontext.hxx"
 #include "oox/helper/attributelist.hxx"
 
 using namespace ::oox::core;
@@ -37,8 +37,6 @@ TextListStyleContext::TextListStyleContext( ContextHandler2Helper& rParent, Text
 TextListStyleContext::~TextListStyleContext()
 {
 }
-
-
 
 ContextHandlerRef TextListStyleContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
 {
@@ -72,8 +70,6 @@ ContextHandlerRef TextListStyleContext::onCreateContext( sal_Int32 aElementToken
 
     return this;
 }
-
-
 
 } }
 

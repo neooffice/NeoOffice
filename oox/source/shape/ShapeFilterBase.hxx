@@ -23,14 +23,12 @@
 #include <boost/shared_ptr.hpp>
 #include <rtl/ref.hxx>
 #include "oox/vml/vmldrawing.hxx"
-#include "oox/drawingml/table/tablestylelist.hxx"
+#include "drawingml/table/tablestylelist.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 
 namespace oox {
 namespace shape {
-
-
 
 class ShapeFilterBase : public core::XmlFilterBase
 {
@@ -69,8 +67,6 @@ private:
     ::boost::shared_ptr< ::oox::drawingml::chart::ChartConverter > mxChartConv;
     ::oox::drawingml::ThemePtr mpTheme;
 };
-
-
 
 } // namespace shape
 } // namespace oox

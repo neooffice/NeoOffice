@@ -26,6 +26,7 @@
 #include <com/sun/star/io/XInputStreamProvider.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
+#include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include <xmlscript/xmldlg_imexp.hxx>
 #include "oox/helper/attributelist.hxx"
@@ -79,8 +80,6 @@ const sal_uInt32 VBA_SITE_DEFFLAGS              = 0x00000033;
 const sal_uInt8 VBA_SITEINFO_COUNT              = 0x80;
 const sal_uInt8 VBA_SITEINFO_MASK               = 0x7F;
 
-
-
 /** Collects names of all controls in a user form or container control. Allows
     to generate unused names for dummy controls separating option groups.
  */
@@ -126,8 +125,6 @@ OUString VbaControlNamesSet::generateDummyName()
     return aCtrlName;
 }
 
-
-
 /** Functor that inserts the name of a control into a VbaControlNamesSet. */
 struct VbaControlNameInserter
 {
@@ -136,8 +133,6 @@ public:
     inline explicit     VbaControlNameInserter( VbaControlNamesSet& rCtrlNames ) : mrCtrlNames( rCtrlNames ) {}
     inline void         operator()( const VbaFormControl& rControl ) { mrCtrlNames.insertName( rControl ); }
 };
-
-
 
 /** A dummy invisible form control (fixed label without text) that is used to
     separate two groups of option buttons.
@@ -160,8 +155,6 @@ VbaDummyFormControl::VbaDummyFormControl( const OUString& rName )
 }
 
 } // namespace
-
-
 
 VbaSiteModel::VbaSiteModel() :
     maPos( 0, 0 ),
@@ -319,8 +312,6 @@ void VbaSiteModel::convertProperties( PropertyMap& rPropMap,
         rConv.convertPosition( rPropMap, maPos );
     }
 }
-
-
 
 VbaFormControl::VbaFormControl()
 {
@@ -728,8 +719,6 @@ bool VbaFormControl::compareByTabIndex( const VbaFormControlRef& rxLeft, const V
     return nLeftTabIndex < nRightTabIndex;
 }
 
-
-
 namespace {
 
 OUString lclGetQuotedString( const OUString& rCodeLine )
@@ -781,8 +770,6 @@ bool lclEatKeyword( OUString& rCodeLine, const OUString& rKeyword )
 }
 
 } // namespace
-
-
 
 VbaUserForm::VbaUserForm( const Reference< XComponentContext >& rxContext,
         const Reference< XModel >& rxDocModel, const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr ) :
@@ -873,8 +860,6 @@ void VbaUserForm::importForm( const Reference< XNameContainer >& rxDialogLib,
     {
     }
 }
-
-
 
 } // namespace ole
 } // namespace oox

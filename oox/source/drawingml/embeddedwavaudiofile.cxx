@@ -17,33 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/embeddedwavaudiofile.hxx"
+#include "drawingml/embeddedwavaudiofile.hxx"
 #include "oox/helper/attributelist.hxx"
-
-using namespace ::oox::core;
-using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::xml::sax;
-
 
 namespace oox { namespace drawingml {
 
-
     // CT_EmbeddedWAVAudioFile
-    void getEmbeddedWAVAudioFile( const Relations& rRelations,
-#if SUPD == 310
-            const css::uno::Reference< XFastAttributeList >& xAttribs, EmbeddedWAVAudioFile & aAudio )
-#else	// SUPD == 310
-            const Reference< XFastAttributeList >& xAttribs, EmbeddedWAVAudioFile & aAudio )
-#endif	// SUPD == 310
-    {
-        AttributeList attribs(xAttribs);
-
-        OUString sId = xAttribs->getOptionalValue( R_TOKEN( embed ) );
-        aAudio.msEmbed = rRelations.getFragmentPathFromRelId( sId );
-        aAudio.mbBuiltIn = attribs.getBool( XML_builtIn, false );
-        aAudio.msName = xAttribs->getOptionalValue( XML_name );
-    }
-
+OUString getEmbeddedWAVAudioFile( const core::Relations& rRelations, const AttributeList& rAttribs )
+{
+    if (rAttribs.getBool( XML_builtIn, false ))
+        return rAttribs.getString( XML_name ).get();
+    else
+        return rRelations.getFragmentPathFromRelId( rAttribs.getString( R_TOKEN(embed) ).get() );
+}
 
 } }
 

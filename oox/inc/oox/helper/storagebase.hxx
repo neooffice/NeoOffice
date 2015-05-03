@@ -66,14 +66,14 @@ public:
 
     /** Returns true, if the storage operates in read-only mode (based on an
         input stream). */
-    bool                isReadOnly() const;
+    bool                isReadOnly() const { return mbReadOnly;}
 
     /** Returns the com.sun.star.embed.XStorage interface of the current storage. */
     ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage >
                         getXStorage() const;
 
     /** Returns the element name of this storage. */
-    const OUString& getName() const;
+    const OUString& getName() const { return maStorageName;}
 
     /** Returns the full path of this storage. */
     OUString     getPath() const;

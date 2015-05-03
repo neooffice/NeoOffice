@@ -22,15 +22,16 @@
 #include <functional>
 #include <boost/bind.hpp>
 
+#include <osl/diagnose.h>
 #include <basegfx/numeric/ftools.hxx>
 
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/fillproperties.hxx"
 #include "oox/drawingml/lineproperties.hxx"
-#include "oox/drawingml/textbody.hxx"
-#include "oox/drawingml/textparagraph.hxx"
-#include "oox/drawingml/textrun.hxx"
-#include "oox/drawingml/customshapeproperties.hxx"
+#include "drawingml/textbody.hxx"
+#include "drawingml/textparagraph.hxx"
+#include "drawingml/textrun.hxx"
+#include "drawingml/customshapeproperties.hxx"
 #include "layoutnodecontext.hxx"
 
 using namespace ::com::sun::star;
@@ -39,7 +40,6 @@ using namespace ::com::sun::star::xml::sax;
 using namespace ::oox::core;
 
 namespace oox { namespace drawingml {
-
 
 IteratorAttr::IteratorAttr( )
     : mnAxis( 0 )
@@ -66,8 +66,6 @@ void IteratorAttr::loadFromXAttr( const Reference< XFastAttributeList >& xAttr )
     mnStep = attr.getInteger( XML_step, 1 );
 }
 
-
-
 ConditionAttr::ConditionAttr()
     : mnFunc( 0 )
     , mnArg( 0 )
@@ -75,7 +73,6 @@ ConditionAttr::ConditionAttr()
 {
 
 }
-
 
 #if SUPD == 310
 void ConditionAttr::loadFromXAttr( const css::uno::Reference< XFastAttributeList >& xAttr )
@@ -90,7 +87,6 @@ void ConditionAttr::loadFromXAttr( const Reference< XFastAttributeList >& xAttr 
     msVal = xAttr->getOptionalValue( XML_val );
 }
 
-
 void LayoutAtom::dump(int level)
 {
     OSL_TRACE( "level = %d - %s of type %s", level,
@@ -100,7 +96,6 @@ void LayoutAtom::dump(int level)
     std::for_each( pChildren.begin(), pChildren.end(),
                    boost::bind( &LayoutAtom::dump, _1, level + 1 ) );
 }
-
 
 #if SUPD == 310
 ForEachAtom::ForEachAtom(const css::uno::Reference< XFastAttributeList >& xAttributes)
@@ -416,7 +411,15 @@ bool LayoutNode::setupShape( const ShapePtr& rShape, const Diagram& rDgm, sal_uI
             const DiagramData::StringMap::value_type::second_type::const_iterator aVecEnd=aNodeName->second.end();
             while( aVecIter != aVecEnd )
             {
-                DiagramData::PointNameMap::const_iterator aDataNode2=rDgm.getData()->getPointNameMap().find(aVecIter->first);
+                DiagramData::PointNameMap& rMap = rDgm.getData()->getPointNameMap();
+                DiagramData::PointNameMap::const_iterator aDataNode2 = rMap.find(aVecIter->first);
+                if (aDataNode2 == rMap.end())
+                {
+                    //busted, skip it
+                    ++aVecIter;
+                    continue;
+                }
+
                 if( aVecIter->second == 0 )
                 {
                     // grab shape attr from topmost element(s)
@@ -522,10 +525,7 @@ bool LayoutNode::setupShape( const ShapePtr& rShape, const Diagram& rDgm, sal_uI
     return false;
 }
 
-
-
 // Visitation
-
 
 class ShapeLayoutingVisitor : public LayoutAtomVisitor
 {

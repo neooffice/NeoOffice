@@ -96,14 +96,11 @@ namespace oox { namespace ppt {
             return sServiceName;
         }
 
-
-
     TimeNode::TimeNode( sal_Int16 nNodeType )
         : mnNodeType( nNodeType )
         , mbHasEndSyncValue( false )
     {
     }
-
 
     TimeNode::~TimeNode()
     {
@@ -152,7 +149,7 @@ namespace oox { namespace ppt {
                         // with node
                         xE2->nextElement() >>= xEA2;
                         if( xEA2.is() )
-                            xE2.query( xEA2->createEnumeration() );
+                            xE2.set(xEA2->createEnumeration(), css::uno::UNO_QUERY);
                         else
                             xE2.clear();
 
@@ -193,8 +190,6 @@ namespace oox { namespace ppt {
             SAL_INFO("oox.ppt","fixMainSequenceTiming(), exception caught!" );
         }
     }
-
-
 
     static void fixInteractiveSequenceTiming( const ::com::sun::star::uno::Reference< ::com::sun::star::animations::XAnimationNode >& xNode )
     {
@@ -624,7 +619,6 @@ namespace oox { namespace ppt {
         }
     }
 
-
 #if SUPD == 310
     css::uno::Reference< XAnimationNode > TimeNode::createAndInsert(
 #else	// SUPD == 310
@@ -662,7 +656,6 @@ namespace oox { namespace ppt {
 #endif	// SUPD == 310
     }
 
-
     void    TimeNode::setId( sal_Int32 nId )
     {
         msId = OUString::number(nId);
@@ -673,7 +666,6 @@ namespace oox { namespace ppt {
         maNodeProperties[ NP_TO ] = aTo;
     }
 
-
     void TimeNode::setFrom( const Any & aFrom )
     {
         maNodeProperties[ NP_FROM ] = aFrom;
@@ -683,7 +675,6 @@ namespace oox { namespace ppt {
     {
         maNodeProperties[ NP_BY ] = aBy;
     }
-
 
 } }
 

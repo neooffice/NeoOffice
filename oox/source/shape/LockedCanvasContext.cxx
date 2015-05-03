@@ -30,11 +30,6 @@ LockedCanvasContext::~LockedCanvasContext()
 {
 }
 
-oox::drawingml::ShapePtr LockedCanvasContext::getShape()
-{
-    return mpShape;
-}
-
 ::oox::core::ContextHandlerRef LockedCanvasContext::onCreateContext(sal_Int32 aElementToken, const ::oox::AttributeList& /*rAttribs*/)
 {
     switch (getBaseToken(aElementToken))

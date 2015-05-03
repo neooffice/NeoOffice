@@ -46,6 +46,7 @@ using ::com::sun::star::text::WritingMode;
 #include <com/sun/star/drawing/EnhancedCustomShapeParameterType.hpp>
 #include <com/sun/star/drawing/HomogenMatrix3.hpp>
 #include <cppuhelper/implbase2.hxx>
+#include <osl/diagnose.h>
 #include <osl/mutex.hxx>
 #include "oox/token/propertynames.hxx"
 using ::com::sun::star::uno::Any;
@@ -70,7 +71,6 @@ using ::com::sun::star::container::XIndexReplace;
 #include <com/sun/star/style/LineSpacingMode.hpp>
 #include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/drawing/TextHorizontalAdjust.hpp>
-#include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #define USS(x) OUStringToOString( x, RTL_TEXTENCODING_UTF8 ).getStr()
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;

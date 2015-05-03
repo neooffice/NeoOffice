@@ -30,6 +30,7 @@
 
 #include "oox/drawingml/shape.hxx"
 #include "oox/drawingml/fillproperties.hxx"
+#include <oox/token/tokens.hxx>
 
 namespace com { namespace sun { namespace star {
     namespace xml { namespace dom { class XDocument; } }
@@ -64,7 +65,6 @@ struct Connection
 };
 
 typedef std::vector< Connection > Connections;
-
 
 /** A point
  */
@@ -152,12 +152,8 @@ typedef std::vector< Point >        Points;
 class LayoutNode;
 typedef boost::shared_ptr< LayoutNode > LayoutNodePtr;
 
-
-
 typedef std::map< OUString, css::uno::Reference<css::xml::dom::XDocument> > DiagramDomMap;
 typedef css::uno::Sequence< css::uno::Sequence< css::uno::Any > > DiagramRelsMap;
-
-
 
 class DiagramData
 {
@@ -199,10 +195,6 @@ private:
 };
 
 typedef boost::shared_ptr< DiagramData > DiagramDataPtr;
-
-
-
-
 
 class DiagramLayout
 {
@@ -250,8 +242,6 @@ private:
 
 typedef boost::shared_ptr< DiagramLayout > DiagramLayoutPtr;
 
-
-
 struct DiagramStyle
 {
     ShapeStyleRef maFillStyle;
@@ -273,8 +263,6 @@ struct DiagramColor
 };
 
 typedef std::map<OUString,DiagramColor> DiagramColorMap;
-
-
 
 class Diagram
 {
@@ -309,7 +297,6 @@ private:
     DiagramDomMap                  maMainDomMap;
     DiagramRelsMap                 maDataRelsMap;
 };
-
 
 typedef boost::shared_ptr< Diagram > DiagramPtr;
 

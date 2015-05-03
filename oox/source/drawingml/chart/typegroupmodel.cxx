@@ -17,13 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/typegroupmodel.hxx"
+#include "drawingml/chart/typegroupmodel.hxx"
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 UpDownBarsModel::UpDownBarsModel() :
     mnGapWidth( 150 )
@@ -33,8 +32,6 @@ UpDownBarsModel::UpDownBarsModel() :
 UpDownBarsModel::~UpDownBarsModel()
 {
 }
-
-
 
 TypeGroupModel::TypeGroupModel( sal_Int32 nTypeId ) :
     mfSplitPos( 0.0 ),
@@ -66,8 +63,6 @@ TypeGroupModel::TypeGroupModel( sal_Int32 nTypeId ) :
 TypeGroupModel::~TypeGroupModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

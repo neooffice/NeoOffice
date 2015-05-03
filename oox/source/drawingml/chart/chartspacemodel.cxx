@@ -17,13 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/chartspacemodel.hxx"
+#include "drawingml/chart/chartspacemodel.hxx"
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 ChartSpaceModel::ChartSpaceModel() :
     mnDispBlanksAs( XML_gap ),  // not zero as specified
@@ -38,8 +37,6 @@ ChartSpaceModel::ChartSpaceModel() :
 ChartSpaceModel::~ChartSpaceModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

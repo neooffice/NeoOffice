@@ -36,10 +36,10 @@
 #if SUPD == 310
 #include <com/sun/star/beans/PropertyValue.hpp>
 #endif	// SUPD == 310
-#ifndef PPTX_EXPORT_ROTATE_CLOCKWISIFY
+#ifndef OOX_DRAWINGML_EXPORT_ROTATE_CLOCKWISIFY
 // Our rotation is counter-clockwise and is in 100ths of a degree.
 // drawingML rotation is clockwise and is in 60000ths of a degree.
-#define PPTX_EXPORT_ROTATE_CLOCKWISIFY(input) ((21600000-input*600)%21600000)
+#define OOX_DRAWINGML_EXPORT_ROTATE_CLOCKWISIFY(input) ((21600000-input*600)%21600000)
 #endif
 
 class Graphic;
@@ -78,6 +78,8 @@ class OOX_DLLPUBLIC DMLTextExport
 {
 public:
     virtual void WriteOutliner(const OutlinerParaObject& rParaObj) = 0;
+    /// Write the contents of the textbox that is associated to this shape.
+    virtual void WriteTextBox(css::uno::Reference<css::drawing::XShape> xShape) = 0;
 protected:
     DMLTextExport() {}
     virtual ~DMLTextExport() {}
@@ -127,6 +129,8 @@ public:
     ::sax_fastparser::FSHelperPtr GetFS() { return mpFS; }
     ::oox::core::XmlFilterBase* GetFB() { return mpFB; }
     DocumentType GetDocumentType() { return meDocumentType; }
+    /// The application-specific text exporter callback, if there is one.
+    DMLTextExport* GetTextExport() { return mpTextExport; }
 
     /// If bRelPathToMedia is true add "../" to image folder path while adding the image relationship
     OUString WriteImage( const Graphic &rGraphic , bool bRelPathToMedia = false);
@@ -169,7 +173,7 @@ public:
     void WriteTransformation( const Rectangle& rRectangle,
                   sal_Int32 nXmlNamespace, bool bFlipH = false, bool bFlipV = false, sal_Int32 nRotation = 0 );
 
-    void WriteText( ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > rXIface, bool bBodyPr = true, bool bText = true, sal_Int32 nXmlNamespace = 0);
+    void WriteText( ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > rXIface, const OUString& presetWarp, bool bBodyPr = true, bool bText = true, sal_Int32 nXmlNamespace = 0);
     void WriteParagraph( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent > rParagraph );
     void WriteParagraphProperties( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent > rParagraph );
     void WriteParagraphNumbering( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > rXPropSet,
@@ -179,7 +183,11 @@ public:
 
     void WritePresetShape( const char* pShape );
     void WritePresetShape( const char* pShape, MSO_SPT eShapeType, bool bPredefinedHandlesUsed, sal_Int32 nAdjustmentsWhichNeedsToBeConverted, const ::com::sun::star::beans::PropertyValue& rProp );
+#if SUPD == 310
     void WritePolyPolygon( const PolyPolygon& rPolyPolygon );
+#else	 // SUPD == 310
+    void WritePolyPolygon( const tools::PolyPolygon& rPolyPolygon );
+#endif	// SUPD == 310
     void WriteFill( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xPropSet );
     void WriteShapeStyle( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > rXPropSet );
     void WriteShapeEffects( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > rXPropSet );

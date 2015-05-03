@@ -73,7 +73,11 @@ private:
     RecordInputSource   maSource;
     ::rtl::Reference< FragmentHandler > mxHandler;
     ::rtl::Reference< prv::Locator > mxLocator;
+#if SUPD == 310
     ::std::auto_ptr< prv::ContextStack > mxStack;
+#else	// SUPD == 310
+    ::std::unique_ptr< prv::ContextStack > mxStack;
+#endif	// SUPD == 310
     RecordInfoMap       maStartMap;
     RecordInfoMap       maEndMap;
 };

@@ -21,10 +21,9 @@
 #define INCLUDED_OOX_DRAWINGML_SHAPE_HXX
 
 #include <oox/helper/propertymap.hxx>
+#include <oox/core/xmlfilterbase.hxx>
+#include <oox/drawingml/color.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
-#include <oox/drawingml/customshapeproperties.hxx>
-#include <oox/drawingml/textliststyle.hxx>
-#include <oox/drawingml/shape3dproperties.hxx>
 
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/drawing/XDrawPage.hpp>
@@ -140,7 +139,7 @@ public:
     void                            setTableType();
 
     void                setTextBody(const TextBodyPtr & pTextBody);
-    TextBodyPtr         getTextBody();
+    TextBodyPtr         getTextBody() { return mpTextBody;}
     void                setMasterTextListStyle( const TextListStylePtr& pMasterTextListStyle );
     TextListStylePtr    getMasterTextListStyle() const { return mpMasterTextListStyle; }
 
@@ -153,7 +152,7 @@ public:
                             ::oox::core::XmlFilterBase& rFilterBase,
                             const Theme* pTheme,
                             const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShapes >& rxShapes,
-                            basegfx::B2DHomMatrix& aTransformation,
+                            const basegfx::B2DHomMatrix& aTransformation,
                             FillProperties& rShapeOrParentShapeFillProps,
                             const ::com::sun::star::awt::Rectangle* pShapeRect = 0,
                             ShapeIdMap* pShapeMap = 0 );
@@ -181,9 +180,9 @@ public:
     void                setFontRefColorForNodes(const Color& rColor) { maFontRefColorForNodes = rColor; }
     const Color&        getFontRefColorForNodes() const { return maFontRefColorForNodes; }
     void                setLockedCanvas(bool bLockedCanvas);
-    bool                getLockedCanvas();
+    bool                getLockedCanvas() { return mbLockedCanvas;}
     void                setWps(bool bWps);
-    bool                getWps();
+    bool                getWps() { return mbWps;}
     void                setTextBox(bool bTextBox);
     const com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> &
                         getDiagramDoms() { return maDiagramDoms; }
@@ -217,7 +216,7 @@ protected:
                             const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShapes >& rxShapes,
                             const ::com::sun::star::awt::Rectangle& rClientRect,
                             ShapeIdMap* pShapeMap,
-                            basegfx::B2DHomMatrix& aTransformation );
+                            const basegfx::B2DHomMatrix& aTransformation );
 
     void                keepDiagramCompatibilityInfo( ::oox::core::XmlFilterBase& rFilterBase );
 
@@ -243,13 +242,13 @@ protected:
     std::vector< ShapePtr >     maChildren;               // only used for group shapes
     com::sun::star::awt::Size   maChSize;                 // only used for group shapes
     com::sun::star::awt::Point  maChPosition;             // only used for group shapes
-    com::sun::star::awt::Size   maAbsoluteSize;           // only used for group shapes
-    com::sun::star::awt::Point  maAbsolutePosition;       // only used for group shapes
     bool                        mbIsChild;
 
     TextBodyPtr                 mpTextBody;
     LinePropertiesPtr           mpLinePropertiesPtr;
+    LinePropertiesPtr           mpShapeRefLinePropPtr;
     FillPropertiesPtr           mpFillPropertiesPtr;
+    FillPropertiesPtr           mpShapeRefFillPropPtr;
     GraphicPropertiesPtr        mpGraphicPropertiesPtr;
     CustomShapePropertiesPtr    mpCustomShapePropertiesPtr;
     table::TablePropertiesPtr   mpTablePropertiesPtr;

@@ -33,8 +33,6 @@
 namespace oox {
 namespace docprop {
 
-
-
 class DocumentPropertiesImport :
     public ::cppu::WeakImplHelper2<
         ::com::sun::star::lang::XServiceInfo,
@@ -68,8 +66,6 @@ public:
 private:
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > mxContext;
 };
-
-
 
 } // namespace docprop
 } // namespace oox

@@ -27,6 +27,7 @@
 #endif	// SUPD == 310
 
 #include <osl/time.h>
+#include <osl/diagnose.h>
 #if SUPD == 310
 #include <sal/log.hxx>
 #else	// SUPD == 310
@@ -45,7 +46,6 @@ using namespace ::com::sun::star;
 namespace oox {
 namespace docprop {
 
-
 OOXMLDocPropHandler::OOXMLDocPropHandler( const uno::Reference< uno::XComponentContext >& xContext,
                                           const uno::Reference< document::XDocumentProperties > xDocProp )
     : m_xContext( xContext )
@@ -59,11 +59,9 @@ OOXMLDocPropHandler::OOXMLDocPropHandler( const uno::Reference< uno::XComponentC
         throw uno::RuntimeException();
 }
 
-
 OOXMLDocPropHandler::~OOXMLDocPropHandler()
 {
 }
-
 
 void OOXMLDocPropHandler::InitNew()
 {
@@ -73,7 +71,6 @@ void OOXMLDocPropHandler::InitNew()
     m_nType = 0;
     m_nInBlock = 0;
 }
-
 
 void OOXMLDocPropHandler::AddCustomProperty( const uno::Any& aAny )
 {
@@ -99,7 +96,6 @@ void OOXMLDocPropHandler::AddCustomProperty( const uno::Any& aAny )
         }
     }
 }
-
 
 util::DateTime OOXMLDocPropHandler::GetDateTimeFromW3CDTF( const OUString& aChars )
 {
@@ -201,7 +197,6 @@ util::DateTime OOXMLDocPropHandler::GetDateTimeFromW3CDTF( const OUString& aChar
             aOslDTime.Day, aOslDTime.Month, aOslDTime.Year, false);
 #endif	// SUPD == 310
 }
-
 
 uno::Sequence< OUString > OOXMLDocPropHandler::GetKeywordsSet( const OUString& aChars )
 {
@@ -330,7 +325,6 @@ void OOXMLDocPropHandler::UpdateDocStatistic( const OUString& aChars )
     }
 }
 
-
 // com.sun.star.xml.sax.XFastDocumentHandler
 
 void SAL_CALL OOXMLDocPropHandler::startDocument()
@@ -342,7 +336,6 @@ void SAL_CALL OOXMLDocPropHandler::startDocument()
 {
 }
 
-
 void SAL_CALL OOXMLDocPropHandler::endDocument()
 #if SUPD == 310
     throw (xml::sax::SAXException, uno::RuntimeException)
@@ -353,7 +346,6 @@ void SAL_CALL OOXMLDocPropHandler::endDocument()
     InitNew();
 }
 
-
 void SAL_CALL OOXMLDocPropHandler::setDocumentLocator( const uno::Reference< xml::sax::XLocator >& )
 #if SUPD == 310
     throw (xml::sax::SAXException, uno::RuntimeException)
@@ -362,7 +354,6 @@ void SAL_CALL OOXMLDocPropHandler::setDocumentLocator( const uno::Reference< xml
 #endif	// SUPD == 310
 {
 }
-
 
 // com.sun.star.xml.sax.XFastContextHandler
 
@@ -411,7 +402,6 @@ void SAL_CALL OOXMLDocPropHandler::startFastElement( ::sal_Int32 nElement, const
     m_nInBlock++;
 }
 
-
 void SAL_CALL OOXMLDocPropHandler::startUnknownElement( const OUString& aNamespace, const OUString& aName, const uno::Reference< xml::sax::XFastAttributeList >& )
 #if SUPD == 310
     throw (xml::sax::SAXException, uno::RuntimeException)
@@ -426,7 +416,6 @@ void SAL_CALL OOXMLDocPropHandler::startUnknownElement( const OUString& aNamespa
 
     m_nInBlock++;
 }
-
 
 void SAL_CALL OOXMLDocPropHandler::endFastElement( ::sal_Int32 )
 #if SUPD == 310
@@ -451,7 +440,6 @@ void SAL_CALL OOXMLDocPropHandler::endFastElement( ::sal_Int32 )
     }
 }
 
-
 void SAL_CALL OOXMLDocPropHandler::endUnknownElement( const OUString&, const OUString& )
 #if SUPD == 310
     throw (xml::sax::SAXException, uno::RuntimeException)
@@ -462,7 +450,6 @@ void SAL_CALL OOXMLDocPropHandler::endUnknownElement( const OUString&, const OUS
     if ( m_nInBlock )
         m_nInBlock--;
 }
-
 
 uno::Reference< xml::sax::XFastContextHandler > SAL_CALL OOXMLDocPropHandler::createFastChildContext( ::sal_Int32, const uno::Reference< xml::sax::XFastAttributeList >& )
 #if SUPD == 310
@@ -475,7 +462,6 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL OOXMLDocPropHandler::cr
     return uno::Reference< xml::sax::XFastContextHandler >( static_cast< xml::sax::XFastContextHandler* >( this ) );
 }
 
-
 uno::Reference< xml::sax::XFastContextHandler > SAL_CALL OOXMLDocPropHandler::createUnknownChildContext( const OUString&, const OUString&, const uno::Reference< xml::sax::XFastAttributeList >& )
 #if SUPD == 310
     throw (xml::sax::SAXException, uno::RuntimeException)
@@ -485,7 +471,6 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL OOXMLDocPropHandler::cr
 {
     return uno::Reference< xml::sax::XFastContextHandler >( static_cast< xml::sax::XFastContextHandler* >( this ) );
 }
-
 
 void SAL_CALL OOXMLDocPropHandler::characters( const OUString& aChars )
 #if SUPD == 310
@@ -778,12 +763,10 @@ void SAL_CALL OOXMLDocPropHandler::characters( const OUString& aChars )
     }
 }
 
-
 void SAL_CALL OOXMLDocPropHandler::ignorableWhitespace( const OUString& )
     throw (xml::sax::SAXException, uno::RuntimeException)
 {
 }
-
 
 void SAL_CALL OOXMLDocPropHandler::processingInstruction( const OUString&, const OUString& )
     throw (xml::sax::SAXException, uno::RuntimeException)

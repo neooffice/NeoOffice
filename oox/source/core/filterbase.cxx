@@ -23,6 +23,7 @@
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
@@ -34,6 +35,7 @@
 #include <unotools/mediadescriptor.hxx>
 #endif	// SUPD == 310
 #include <osl/mutex.hxx>
+#include <osl/diagnose.h>
 #include <rtl/instance.hxx>
 #include <rtl/uri.hxx>
 #include <set>
@@ -326,11 +328,7 @@ OUString FilterBase::getAbsoluteUrl( const OUString& rUrl ) const
     /*  (5) handle URLs relative to current drive, e.g. the URL '/path1/file1'
         relative to the base URL 'file:///C:/path2/file2' does not result in
         the expected 'file:///C:/path1/file1', but in 'file:///path1/file1'. */
-#if SUPD == 310
-    if( (aUrl.getLength() >= 1) && (aUrl[ 0 ] == '/') &&
-#else	// SUPD == 310
     if( aUrl.startsWith("/") &&
-#endif	// SUPD == 310
         mxImpl->maFileUrl.match( aFilePrefix ) &&
         lclIsDosDrive( mxImpl->maFileUrl, nFilePrefixLen ) )
     {

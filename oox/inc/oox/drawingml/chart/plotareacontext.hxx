@@ -1,98 +1,36 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *  $RCSfile$
  *
- * This file incorporates work covered by the following license notice:
+ *  $Revision$
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ *  last change: $Author$ $Date$
+ *
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
+ *
+ *         - GNU General Public License Version 2.1
+ *
+ *  Patrick Luby, April 2015
+ *
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2015 Planamesa Inc.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_OOX_DRAWINGML_CHART_PLOTAREACONTEXT_HXX
-#define INCLUDED_OOX_DRAWINGML_CHART_PLOTAREACONTEXT_HXX
-
-#include <oox/drawingml/chart/chartcontextbase.hxx>
-
-namespace oox {
-namespace drawingml {
-namespace chart {
-
-
-
-struct View3DModel;
-
-/** Handler for a chart plot area context (c:plotArea element).
- */
-class View3DContext : public ContextBase< View3DModel >
-{
-public:
-    explicit            View3DContext( ::oox::core::ContextHandler2Helper& rParent, View3DModel& rModel );
-    virtual             ~View3DContext();
-
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
-};
-
-
-
-struct WallFloorModel;
-
-/** Handler for a chart wall/floor context (c:backWall, c:floor, c:sideWall
-    elements).
- */
-class WallFloorContext : public ContextBase< WallFloorModel >
-{
-public:
-    explicit            WallFloorContext( ::oox::core::ContextHandler2Helper& rParent, WallFloorModel& rModel );
-    virtual             ~WallFloorContext();
-
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
-};
-
-
-
-struct DataTableModel;
-
-/** Handler for a data table context (c:dTable element).
- */
-class DataTableContext : public ContextBase< DataTableModel >
-{
-public:
-    explicit            DataTableContext( ::oox::core::ContextHandler2Helper& rParent, DataTableModel& rModel );
-    virtual             ~DataTableContext();
-
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
-};
-
-
-
-struct PlotAreaModel;
-
-/** Handler for a chart plot area context (c:plotArea element).
- */
-class PlotAreaContext : public ContextBase< PlotAreaModel >
-{
-public:
-    explicit            PlotAreaContext( ::oox::core::ContextHandler2Helper& rParent, PlotAreaModel& rModel );
-    virtual             ~PlotAreaContext();
-
-    virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs ) SAL_OVERRIDE;
-};
-
-
-
-} // namespace chart
-} // namespace drawingml
-} // namespace oox
-
-#endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+#include "drawingml/chart/plotareacontext.hxx"

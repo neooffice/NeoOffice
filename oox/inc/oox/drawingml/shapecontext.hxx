@@ -24,7 +24,6 @@
 
 #include <oox/core/contexthandler2.hxx>
 #include <oox/drawingml/shape.hxx>
-#include <oox/drawingml/shapepropertiescontext.hxx>
 #include <oox/dllapi.h>
 
 namespace oox { namespace drawingml {
@@ -37,7 +36,7 @@ public:
 
     virtual ::oox::core::ContextHandlerRef onCreateContext( ::sal_Int32 Element, const ::oox::AttributeList& rAttribs ) SAL_OVERRIDE;
 
-    ShapePtr getShape();
+    ShapePtr getShape() { return mpShapePtr;}
 
 protected:
 

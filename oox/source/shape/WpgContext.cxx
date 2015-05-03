@@ -8,7 +8,7 @@
  */
 
 #include "WpgContext.hxx"
-#include <oox/drawingml/shapepropertiescontext.hxx>
+#include <drawingml/shapepropertiescontext.hxx>
 #include <oox/drawingml/shapegroupcontext.hxx>
 #include <oox/drawingml/graphicshapecontext.hxx>
 
@@ -32,11 +32,6 @@ WpgContext::WpgContext(ContextHandler2Helper& rParent)
 
 WpgContext::~WpgContext()
 {
-}
-
-oox::drawingml::ShapePtr WpgContext::getShape()
-{
-    return mpShape;
 }
 
 oox::core::ContextHandlerRef WpgContext::onCreateContext(sal_Int32 nElementToken, const oox::AttributeList& /*rAttribs*/)
@@ -67,6 +62,8 @@ oox::core::ContextHandlerRef WpgContext::onCreateContext(sal_Int32 nElementToken
         return new oox::drawingml::ShapeGroupContext(*this, mpShape, oox::drawingml::ShapePtr(new oox::drawingml::Shape("com.sun.star.drawing.GroupShape")));
     }
     break;
+    case XML_graphicFrame:
+        break;
     default:
         SAL_WARN("oox", "WpgContext::createFastChildContext: unhandled element: " << getBaseToken(nElementToken));
         break;

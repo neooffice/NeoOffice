@@ -21,10 +21,10 @@
 
 #include "oox/ole/olehelper.hxx"
 
+#include <osl/diagnose.h>
+
 namespace oox {
 namespace ole {
-
-
 
 namespace {
 
@@ -32,8 +32,6 @@ const sal_uInt32 AX_STRING_SIZEMASK         = 0x7FFFFFFF;
 const sal_uInt32 AX_STRING_COMPRESSED       = 0x80000000;
 
 } // namespace
-
-
 
 AxAlignedInputStream::AxAlignedInputStream( BinaryInputStream& rInStrm ) :
     BinaryStreamBase( false ),
@@ -106,8 +104,6 @@ void AxAlignedInputStream::align( size_t nSize )
     skip( static_cast< sal_Int32 >( (nSize - (mnStrmPos % nSize)) % nSize ) );
 }
 
-
-
 namespace {
 
 bool lclReadString( AxAlignedInputStream& rInStrm, OUString& rValue, sal_uInt32 nSize, bool bArrayString )
@@ -126,8 +122,6 @@ bool lclReadString( AxAlignedInputStream& rInStrm, OUString& rValue, sal_uInt32 
 }
 
 } // namespace
-
-
 
 AxBinaryPropertyReader::ComplexProperty::~ComplexProperty()
 {
@@ -174,8 +168,6 @@ bool AxBinaryPropertyReader::PictureProperty::readProperty( AxAlignedInputStream
 {
     return OleHelper::importStdPic( mrPicData, rInStrm, true );
 }
-
-
 
 AxBinaryPropertyReader::AxBinaryPropertyReader( BinaryInputStream& rInStrm, bool b64BitPropFlags ) :
     maInStrm( rInStrm ),
@@ -284,8 +276,6 @@ bool AxBinaryPropertyReader::startNextProperty()
     mnNextProp <<= 1;
     return ensureValid() && bHasProp;
 }
-
-
 
 } // namespace ole
 } // namespace oox

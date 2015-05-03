@@ -27,18 +27,15 @@
 #include <map>
 #include <string.h>
 #include <rtl/strbuf.hxx>
+#include <osl/diagnose.h>
 #include "oox/helper/helper.hxx"
 #include "oox/helper/textinputstream.hxx"
 
 namespace oox {
 namespace vml {
 
-
-
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -80,8 +77,6 @@ inline void lclAppendToBuffer( OStringBuffer& rBuffer, const sal_Char* pcBeg, co
 {
     rBuffer.append( pcBeg, static_cast< sal_Int32 >( pcEnd - pcBeg ) );
 }
-
-
 
 void lclProcessAttribs( OStringBuffer& rBuffer, const sal_Char* pcBeg, const sal_Char* pcEnd )
 {
@@ -259,8 +254,6 @@ bool lclProcessCharacters( OStringBuffer& rBuffer, const OString& rChars )
 
 } // namespace
 
-
-
 InputStream::InputStream( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStrm ) :
     // use single-byte ISO-8859-1 encoding which maps all byte characters to the first 256 Unicode characters
     mxTextStrm( TextInputStream::createXTextInputStream( rxContext, rxInStrm, RTL_TEXTENCODING_ISO_8859_1 ) ),
@@ -413,8 +406,6 @@ OString InputStream::readToElementEnd() throw (IOException, RuntimeException)
     OSL_ENSURE( aText.endsWith(">"), "InputStream::readToElementEnd - missing closing bracket of XML element" );
     return aText;
 }
-
-
 
 } // namespace vml
 } // namespave oox

@@ -27,6 +27,7 @@
 #include <com/sun/star/script/ModuleType.hpp>
 #include <com/sun/star/script/vba/XVBAModuleInfo.hpp>
 #include <com/sun/star/awt/KeyEvent.hpp>
+#include <osl/diagnose.h>
 #include <cppuhelper/implbase1.hxx>
 #if SUPD == 310
 #include <svx/msvbahelper.hxx>
@@ -41,8 +42,6 @@
 
 namespace oox {
 namespace ole {
-
-
 
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::script::vba;
@@ -170,7 +169,7 @@ void VbaModule::createEmptyModule( const Reference< container::XNameContainer >&
 OUString VbaModule::readSourceCode( StorageBase& rVbaStrg ) const
 {
     OUStringBuffer aSourceCode;
-    const static OUString sUnmatchedRemovedTag( "Rem removed unmatched Sub/End: " );
+    static const char sUnmatchedRemovedTag[] = "Rem removed unmatched Sub/End: ";
     if( !maStreamName.isEmpty() && (mnOffset != SAL_MAX_UINT32) )
     {
         BinaryXInputStream aInStrm( rVbaStrg.openInputStream( maStreamName ), true );
@@ -381,8 +380,6 @@ void VbaModule::createModule( const OUString& rVBASourceCode,
         OSL_FAIL( "VbaModule::createModule - cannot insert module into library" );
     }
 }
-
-
 
 } // namespace ole
 } // namespace oox

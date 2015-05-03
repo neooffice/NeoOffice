@@ -49,14 +49,10 @@ class AgileTokenHandler : public cppu::WeakImplHelper1< XFastTokenHandler >
 public:
 #if SUPD == 310
     virtual sal_Int32 SAL_CALL getToken( const OUString& /*nIdentifier*/ ) throw (RuntimeException) SAL_OVERRIDE
-#else	// SUPD == 310
-    virtual sal_Int32 SAL_CALL getToken( const OUString& /*nIdentifier*/ ) throw (RuntimeException, std::exception) SAL_OVERRIDE
-#endif	// SUPD == 310
     {
         return FastToken::DONTKNOW;
     }
 
-#if SUPD == 310
     virtual sal_Int32 SAL_CALL getTokenFromUTF8( const Sequence< sal_Int8 >& /*nIdentifier*/ ) throw (RuntimeException) SAL_OVERRIDE
 #else	// SUPD == 310
     virtual sal_Int32 SAL_CALL getTokenFromUTF8( const Sequence< sal_Int8 >& /*nIdentifier*/ ) throw (RuntimeException, std::exception) SAL_OVERRIDE
@@ -67,14 +63,10 @@ public:
 
 #if SUPD == 310
     virtual OUString SAL_CALL getIdentifier( sal_Int32 /*nToken*/ ) throw (RuntimeException) SAL_OVERRIDE
-#else	// SUPD == 310
-    virtual OUString SAL_CALL getIdentifier( sal_Int32 /*nToken*/ ) throw (RuntimeException, std::exception) SAL_OVERRIDE
-#endif	// SUPD == 310
     {
         return OUString();
     }
 
-#if SUPD == 310
     virtual Sequence<sal_Int8> SAL_CALL getUTF8Identifier(sal_Int32 /*nToken*/) throw (RuntimeException) SAL_OVERRIDE
 #else	// SUPD == 310
     virtual Sequence<sal_Int8> SAL_CALL getUTF8Identifier(sal_Int32 /*nToken*/) throw (RuntimeException, std::exception) SAL_OVERRIDE
@@ -329,7 +321,6 @@ bool DocumentDecryption::readStandard2007EncryptionInfo(BinaryInputStream& rStre
     Standard2007Engine* engine = new Standard2007Engine();
     mEngine.reset(engine);
     StandardEncryptionInfo& info = engine->getInfo();
-
 
     rStream >> info.header.flags;
     if( getFlag( info.header.flags, ENCRYPTINFO_EXTERNAL ) )

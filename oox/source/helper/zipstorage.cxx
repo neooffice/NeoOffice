@@ -26,6 +26,7 @@
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
+#include <osl/diagnose.h>
 #include <comphelper/storagehelper.hxx>
 #include "oox/helper/helper.hxx"
 
@@ -35,15 +36,11 @@
 
 namespace oox {
 
-
-
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
-
-
 
 ZipStorage::ZipStorage( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStream ) :
     StorageBase( rxInStream, false )
@@ -219,8 +216,6 @@ void ZipStorage::implCommit() const
         SAL_WARN("oox.storage", "commit: exception: " << e.Message);
     }
 }
-
-
 
 } // namespace oox
 

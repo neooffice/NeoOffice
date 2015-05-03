@@ -224,10 +224,11 @@ WorksheetFragment::WorksheetFragment( const WorksheetHelper& rHelper, const OUSt
     // import data tables related to this worksheet
 #if SUPD == 310
     RelationsRef xTableRels = getRelations().getRelationsFromTypeFromOfficeDoc( "table" );
+    for( std::map< OUString, Relation >::const_iterator aIt = xTableRels->begin(), aEnd = xTableRels->end(); aIt != aEnd; ++aIt )
 #else	// SUPD == 310
     RelationsRef xTableRels = getRelations().getRelationsFromType( CREATE_OFFICEDOC_RELATION_TYPE( "table" ) );
-#endif	// SUPD == 310
     for( Relations::const_iterator aIt = xTableRels->begin(), aEnd = xTableRels->end(); aIt != aEnd; ++aIt )
+#endif	// SUPD == 310
         importOoxFragment( new TableFragment( *this, getFragmentPathFromRelation( aIt->second ) ) );
 
     // import comments related to this worksheet
@@ -483,19 +484,21 @@ void WorksheetFragment::initializeImport()
     // import query table fragments related to this worksheet
 #if SUPD == 310
     RelationsRef xQueryRels = getRelations().getRelationsFromTypeFromOfficeDoc( "queryTable" );
+    for( std::map< OUString, Relation >::const_iterator aIt = xQueryRels->begin(), aEnd = xQueryRels->end(); aIt != aEnd; ++aIt )
 #else	// SUPD == 310
     RelationsRef xQueryRels = getRelations().getRelationsFromType( CREATE_OFFICEDOC_RELATION_TYPE( "queryTable" ) );
-#endif	// SUPD == 310
     for( Relations::const_iterator aIt = xQueryRels->begin(), aEnd = xQueryRels->end(); aIt != aEnd; ++aIt )
+#endif	// SUPD == 310
         importOoxFragment( new QueryTableFragment( *this, getFragmentPathFromRelation( aIt->second ) ) );
 
     // import pivot table fragments related to this worksheet
 #if SUPD == 310
     RelationsRef xPivotRels = getRelations().getRelationsFromTypeFromOfficeDoc( "pivotTable" );
+    for( std::map< OUString, Relation >::const_iterator aIt = xPivotRels->begin(), aEnd = xPivotRels->end(); aIt != aEnd; ++aIt )
 #else	// SUPD == 310
     RelationsRef xPivotRels = getRelations().getRelationsFromType( CREATE_OFFICEDOC_RELATION_TYPE( "pivotTable" ) );
-#endif	// SUPD == 310
     for( Relations::const_iterator aIt = xPivotRels->begin(), aEnd = xPivotRels->end(); aIt != aEnd; ++aIt )
+#endif	// SUPD == 310
         importOoxFragment( new PivotTableFragment( *this, getFragmentPathFromRelation( aIt->second ) ) );
 }
 

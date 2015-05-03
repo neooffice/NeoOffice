@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef OOX_PPT_SLIDEFRAGMENTHANDLER
-#define OOX_PPT_SLIDEFRAGMENTHANDLER
+#ifndef INCLUDED_OOX_PPT_SLIDEFRAGMENTHANDLER_HXX
+#define INCLUDED_OOX_PPT_SLIDEFRAGMENTHANDLER_HXX
 
 #include <com/sun/star/drawing/XDrawPage.hpp>
 #include <oox/helper/propertymap.hxx>
@@ -34,8 +34,8 @@ namespace oox { namespace ppt {
 class SlideFragmentHandler : public ::oox::core::FragmentHandler2
 {
 public:
-    SlideFragmentHandler( ::oox::core::XmlFilterBase& rFilter, const OUString& rFragmentPath, SlidePersistPtr pPersistPtr, const ShapeLocation eShapeLocation ) throw();
-    virtual ~SlideFragmentHandler() throw();
+    SlideFragmentHandler( ::oox::core::XmlFilterBase& rFilter, const OUString& rFragmentPath, SlidePersistPtr pPersistPtr, const ShapeLocation eShapeLocation );
+    virtual ~SlideFragmentHandler();
 
     virtual void finalizeImport() SAL_OVERRIDE;
     virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs ) SAL_OVERRIDE;
@@ -55,6 +55,6 @@ private:
 
 } }
 
-#endif // OOX_PPT_SLIDEFRAGMENTHANDLER
+#endif // INCLUDED_OOX_PPT_SLIDEFRAGMENTHANDLER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

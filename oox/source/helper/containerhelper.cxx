@@ -23,6 +23,7 @@
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
+#include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include "oox/helper/helper.hxx"
 
@@ -32,13 +33,9 @@
 
 namespace oox {
 
-
-
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -51,8 +48,6 @@ struct ValueRangeComp
 };
 
 } // namespace
-
-
 
 void ValueRangeSet::insert( const ValueRange& rRange )
 {
@@ -128,8 +123,6 @@ Reference< XNameContainer > ContainerHelper::createNameContainer( const Referenc
 
 #endif	// SUPD == 310
 
-
-
 OUString ContainerHelper::getUnusedName(
         const Reference< XNameAccess >& rxNameAccess, const OUString& rSuggestedName,
         sal_Unicode cSeparator, sal_Int32 nFirstIndexToAppend )
@@ -173,7 +166,6 @@ OUString ContainerHelper::insertByUnusedName(
 
     // find an unused name
 #if SUPD == 310
-    // find an unused name
     Reference< XNameAccess > xNameAccess( rxNameContainer, UNO_QUERY );
     OUString aNewName = getUnusedName( xNameAccess, rSuggestedName, cSeparator );
 #else	// SUPD == 310
@@ -200,8 +192,6 @@ OUString ContainerHelper::insertByUnusedName(
     insertByName( rxNameContainer, aNewName, rObject );
     return aNewName;
 }
-
-
 
 } // namespace oox
 

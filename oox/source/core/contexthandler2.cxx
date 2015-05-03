@@ -19,17 +19,13 @@
 
 #include "oox/core/contexthandler2.hxx"
 #include <rtl/ustrbuf.hxx>
+#include <osl/diagnose.h>
 
 namespace oox {
 namespace core {
 
-
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
-
-
-
 
 /** Information about a processed element. */
 struct ElementInfo
@@ -40,8 +36,6 @@ struct ElementInfo
 
     inline explicit     ElementInfo() : maChars( 0), mnElement( XML_TOKEN_INVALID ), mbTrimSpaces( false ) {}
 };
-
-
 
 ContextHandler2Helper::ContextHandler2Helper( bool bEnableTrimSpace ) :
     mxContextStack( new ContextStack ),
@@ -195,8 +189,6 @@ void ContextHandler2Helper::processCollectedChars()
     }
 }
 
-
-
 ContextHandler2::ContextHandler2( ContextHandler2Helper& rParent ) :
     ContextHandler( dynamic_cast< ContextHandler& >( rParent ) ),
     ContextHandler2Helper( rParent )
@@ -296,8 +288,6 @@ void ContextHandler2::onStartRecord( SequenceInputStream& )
 void ContextHandler2::onEndRecord()
 {
 }
-
-
 
 } // namespace core
 } // namespace oox

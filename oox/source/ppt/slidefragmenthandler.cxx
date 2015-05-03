@@ -22,6 +22,7 @@
 
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/container/XNamed.hpp>
+#include <osl/diagnose.h>
 
 #include "oox/helper/propertyset.hxx"
 #include "oox/core/xmlfilterbase.hxx"
@@ -35,9 +36,9 @@
 #include "oox/ppt/pptshape.hxx"
 #include "oox/vml/vmldrawing.hxx"
 #include "oox/vml/vmldrawingfragment.hxx"
-#include "oox/drawingml/clrschemecontext.hxx"
+#include "drawingml/clrschemecontext.hxx"
+#include "drawingml/textliststyle.hxx"
 #include "oox/ppt/pptimport.hxx"
-
 
 using namespace ::com::sun::star;
 using namespace ::oox::core;
@@ -49,7 +50,7 @@ using namespace ::com::sun::star::container;
 
 namespace oox { namespace ppt {
 
-SlideFragmentHandler::SlideFragmentHandler( XmlFilterBase& rFilter, const OUString& rFragmentPath, SlidePersistPtr pPersistPtr, const ShapeLocation eShapeLocation ) throw()
+SlideFragmentHandler::SlideFragmentHandler( XmlFilterBase& rFilter, const OUString& rFragmentPath, SlidePersistPtr pPersistPtr, const ShapeLocation eShapeLocation )
 : FragmentHandler2( rFilter, rFragmentPath )
 , mpSlidePersistPtr( pPersistPtr )
 , meShapeLocation( eShapeLocation )
@@ -60,7 +61,7 @@ SlideFragmentHandler::SlideFragmentHandler( XmlFilterBase& rFilter, const OUStri
             getFilter(), aVMLDrawingFragmentPath, *pPersistPtr->getDrawing() ) );
 }
 
-SlideFragmentHandler::~SlideFragmentHandler() throw ()
+SlideFragmentHandler::~SlideFragmentHandler()
 {
     // convert and insert all VML shapes (mostly form controls)
     mpSlidePersistPtr->getDrawing()->convertAndInsert();

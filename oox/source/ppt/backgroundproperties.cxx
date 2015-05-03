@@ -18,7 +18,7 @@
  */
 
 #include "oox/ppt/backgroundproperties.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/core/contexthandler2.hxx"
 
@@ -27,7 +27,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 
 namespace oox { namespace ppt {
-
 
 BackgroundPropertiesContext::BackgroundPropertiesContext( FragmentHandler2& rParent, ::oox::drawingml::FillProperties& rFillProperties )
 : FragmentHandler2( rParent )

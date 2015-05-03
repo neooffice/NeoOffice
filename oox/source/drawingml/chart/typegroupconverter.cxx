@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/typegroupconverter.hxx"
+#include "drawingml/chart/typegroupconverter.hxx"
 
 #include <com/sun/star/chart/DataLabelPlacement.hpp>
 #if SUPD != 310
@@ -35,23 +35,20 @@
 #include <com/sun/star/chart2/XDataSeriesContainer.hpp>
 #include <com/sun/star/chart2/data/XDataSink.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
+#include <osl/diagnose.h>
 #include "oox/drawingml/lineproperties.hxx"
-#include "oox/drawingml/chart/seriesconverter.hxx"
-#include "oox/drawingml/chart/typegroupmodel.hxx"
+#include "drawingml/chart/seriesconverter.hxx"
+#include "drawingml/chart/typegroupmodel.hxx"
 #include "oox/helper/containerhelper.hxx"
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -110,7 +107,10 @@ const TypeGroupInfo& lclGetTypeInfoFromTypeId( TypeId eTypeId )
 
 } // namespace
 
-
+const TypeGroupInfo& GetTypeGroupInfo( TypeId eType )
+{
+    return lclGetTypeInfoFromTypeId(eType);
+}
 
 UpDownBarsConverter::UpDownBarsConverter( const ConverterRoot& rParent, UpDownBarsModel& rModel ) :
     ConverterBase< UpDownBarsModel >( rParent, rModel )
@@ -153,8 +153,6 @@ void UpDownBarsConverter::convertFromModel( const Reference< XChartType >& rxCha
         getFormatter().convertFrameFormatting( aPropSet, mrModel.mxDownBars, OBJECTTYPE_DOWNBAR );
     }
 }
-
-
 
 TypeGroupConverter::TypeGroupConverter( const ConverterRoot& rParent, TypeGroupModel& rModel ) :
     ConverterBase< TypeGroupModel >( rParent, rModel ),
@@ -237,11 +235,6 @@ bool TypeGroupConverter::isStacked() const
 bool TypeGroupConverter::isPercent() const
 {
     return maTypeInfo.mbSupportsStacking && (mrModel.mnGrouping == XML_percentStacked);
-}
-
-bool TypeGroupConverter::is3dChart() const
-{
-    return mb3dChart;
 }
 
 bool TypeGroupConverter::isWall3dChart() const
@@ -700,8 +693,6 @@ void TypeGroupConverter::insertDataSeries( const Reference< XChartType >& rxChar
         }
     }
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

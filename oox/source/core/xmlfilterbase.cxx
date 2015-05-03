@@ -21,8 +21,10 @@
 
 #include <cstdio>
 #include <set>
+#include <com/sun/star/beans/XPropertyAccess.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/embed/XRelationshipAccess.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/xml/sax/InputSource.hpp>
 #include <com/sun/star/xml/sax/XFastParser.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
@@ -37,11 +39,11 @@
 #include <rtl/strbuf.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/instance.hxx>
+#include <osl/diagnose.h>
 #if SUPD != 310
 #include <i18nlangtag/languagetag.hxx>
 #endif	// SUPD != 310
 #include "oox/core/fastparser.hxx"
-#include "oox/core/filterdetect.hxx"
 #include "oox/core/fragmenthandler.hxx"
 #include "oox/core/recordparser.hxx"
 #include "oox/core/relationshandler.hxx"
@@ -58,6 +60,15 @@
 #include <comphelper/storagehelper.hxx>
 
 #include <oox/crypto/DocumentEncryption.hxx>
+#include <tools/date.hxx>
+#include <tools/datetime.hxx>
+#include <com/sun/star/util/Duration.hpp>
+#include <sax/tools/converter.hxx>
+
+#if SUPD == 310
+#include <com/sun/star/util/Date.hpp>
+#include <com/sun/star/util/DateTime2.hpp>
+#endif	// SUPD == 310
 
 using ::com::sun::star::xml::dom::DocumentBuilder;
 using ::com::sun::star::xml::dom::XDocument;
@@ -152,7 +163,7 @@ struct NamespaceIds: public rtl::StaticWithInit<
             NMSP_xlsExtLst
         };
 
-        Sequence< beans::Pair< OUString, sal_Int32 > > aRet(STATIC_ARRAY_SIZE(namespaceIds));
+        Sequence< beans::Pair< OUString, sal_Int32 > > aRet(SAL_N_ELEMENTS(namespaceIds));
         for( sal_Int32 i=0; i<aRet.getLength(); ++i )
             aRet[i] = make_Pair(
                 OUString::createFromAscii(namespaceURIs[i]),
@@ -165,8 +176,8 @@ void registerNamespaces( FastParser& rParser )
 {
     const Sequence< beans::Pair<OUString, sal_Int32> > ids = NamespaceIds::get();
 
-    // Filter out duplicates: a namespace can have multiple URL's, think of
-    // strict vs trasitional.
+    // Filter out duplicates: a namespace can have multiple URLs, think of
+    // strict vs transitional.
     std::set<sal_Int32> aSet;
     for (sal_Int32 i = 0; i < ids.getLength(); ++i)
         aSet.insert(ids[i].Second);
@@ -242,8 +253,6 @@ XmlFilterBase::~XmlFilterBase()
     mxImpl->maFastParser.setDocumentHandler( 0 );
 }
 
-
-
 void XmlFilterBase::importDocumentProperties()
 {
 #if SUPD == 310
@@ -297,14 +306,12 @@ namespace {
 
 OUString getTransitionalRelationshipOfficeDocType(const OUString& rPart)
 {
-    static const OUString aBase("http://schemas.openxmlformats.org/officeDocument/2006/relationships/");
-    return aBase + rPart;
+    return OUString("http://schemas.openxmlformats.org/officeDocument/2006/relationships/") + rPart;
 }
 
 OUString getStrictRelationshipOfficeDocType(const OUString& rPart)
 {
-    static const OUString aBase("http://purl.oclc.org/ooxml/officeDocument/relationships/");
-    return aBase + rPart;
+    return OUString("http://purl.oclc.org/ooxml/officeDocument/relationships/") + rPart;
 }
 
 }
@@ -630,7 +637,7 @@ static void
 writeElement( FSHelperPtr pDoc, sal_Int32 nXmlElement, const sal_Int32 nValue )
 {
     pDoc->startElement( nXmlElement, FSEND );
-    pDoc->write( OUString::number( nValue ) );
+    pDoc->write( nValue );
     pDoc->endElement( nXmlElement );
 }
 
@@ -773,7 +780,6 @@ writeAppProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProp
     writeElement( pAppProps, XML_Template,              xProperties->getTemplateName() );
 #ifdef OOXTODO
     writeElement( pAppProps, XML_Manager,               "manager" );
-    writeElement( pAppProps, XML_Company,               "company" );
     writeElement( pAppProps, XML_Pages,                 "pages" );
     writeElement( pAppProps, XML_Words,                 "words" );
     writeElement( pAppProps, XML_Characters,            "characters" );
@@ -803,22 +809,125 @@ writeAppProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProp
     writeElement( pAppProps, XML_DocSecurity,           "doc security" );
 #endif  /* def OOXTODO */
 
-    uno::Sequence<beans::NamedValue> aStats = xProperties->getDocumentStatistics();
-    for (sal_Int32 i = 0; i < aStats.getLength(); ++i)
+    comphelper::SequenceAsHashMap aStats = xProperties->getDocumentStatistics();
+    comphelper::SequenceAsHashMap::iterator it = aStats.find("ParagraphCount");
+    if (it != aStats.end())
     {
-        if (aStats[i].Name == "ParagraphCount")
-        {
             sal_Int32 nValue = 0;
-            if (aStats[i].Value >>= nValue)
-            {
-                writeElement(pAppProps, XML_Paragraphs, OUString::number(nValue));
-                break;
-            }
-        }
+            if (it->second >>= nValue)
+                writeElement(pAppProps, XML_Paragraphs, nValue);
+    }
+
+    uno::Reference<beans::XPropertyAccess> xUserDefinedProperties(xProperties->getUserDefinedProperties(), uno::UNO_QUERY);
+    comphelper::SequenceAsHashMap aUserDefinedProperties(xUserDefinedProperties->getPropertyValues());
+    it = aUserDefinedProperties.find("Company");
+    if (it != aUserDefinedProperties.end())
+    {
+        OUString aValue;
+        if (it->second >>= aValue)
+            writeElement(pAppProps, XML_Company, aValue);
     }
 
     pAppProps->endElement( XML_Properties );
 }
+
+static void
+writeCustomProperties( XmlFilterBase& rSelf, Reference< XDocumentProperties > xProperties )
+{
+    uno::Reference<beans::XPropertyAccess> xUserDefinedProperties( xProperties->getUserDefinedProperties(), uno::UNO_QUERY );
+    Sequence< PropertyValue > aprop( xUserDefinedProperties->getPropertyValues() );
+    sal_Int32 nbCustomProperties = aprop.getLength();
+    // tdf#89791 : if no custom properties, no need to add docProps/custom.x
+    if (!nbCustomProperties)
+        return;
+
+    rSelf.addRelation(
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties",
+            "docProps/custom.xml" );
+    FSHelperPtr pAppProps = rSelf.openFragmentStreamWithSerializer(
+            "docProps/custom.xml",
+            "application/vnd.openxmlformats-officedocument.custom-properties+xml" );
+    pAppProps->startElement( XML_Properties,
+            XML_xmlns,                  "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties",
+            FSNS( XML_xmlns, XML_vt ),  "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes",
+            FSEND );
+
+    for ( sal_Int32 n = 0; n < nbCustomProperties; ++n )
+    {
+        if ( !aprop[n].Name.isEmpty() )
+        {
+            // Ignore empty string property as well.
+            if (aprop[n].Value.has<OUString>() && aprop[n].Value.get<OUString>().isEmpty())
+                continue;
+
+            OString aName = OUStringToOString( aprop[n].Name, RTL_TEXTENCODING_ASCII_US );
+            // pid starts from 2 not from 1 as MS supports pid from 2
+            pAppProps->startElement( XML_property ,
+#if SUPD == 310
+                XML_fmtid,  OString("{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"),
+#else	// SUPD == 310
+                XML_fmtid,  "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}",
+#endif	// SUPD == 310
+                XML_pid,    OString::number(n + 2),
+                XML_name,   aName,
+                FSEND);
+
+            switch ( ( aprop[n].Value ).getValueTypeClass() )
+            {
+                case TypeClass_STRING:
+                {
+                    OUString aValue;
+                    aprop[n].Value >>= aValue;
+                     writeElement( pAppProps, FSNS( XML_vt, XML_lpwstr ), aValue );
+                }
+                break;
+                case TypeClass_BOOLEAN:
+                {
+                    bool val ;
+                    val = *( sal_Bool * )( aprop[n].Value ).getValue();
+                    writeElement( pAppProps, FSNS( XML_vt, XML_bool ), val ? 1 : 0);
+                }
+                break;
+                default:
+                {
+                    double num;
+                    util::Date aDate;
+                    util::Duration aDuration;
+                    util::DateTime aDateTime;
+                    if ( ( aprop[n].Value ) >>= num )
+                    {
+                        writeElement( pAppProps, FSNS( XML_vt, XML_i4 ), num );
+                    }
+                    else if ( ( aprop[n].Value ) >>= aDate )
+                    {
+#if SUPD == 310
+                        aDateTime = util::DateTime2( 0, 0 , 0, 0, aDate.Day, aDate.Month, aDate.Year, 0, true );
+#else	// SUPD == 310
+                        aDateTime = util::DateTime( 0, 0 , 0, 0, aDate.Year, aDate.Month, aDate.Day, true );
+#endif	// SUPD == 310
+                        writeElement( pAppProps, FSNS( XML_vt, XML_filetime ), aDateTime);
+                    }
+                    else if ( ( aprop[n].Value ) >>= aDuration )
+                    {
+                        OUStringBuffer buf;
+                        ::sax::Converter::convertDuration( buf, aDuration );
+                        OUString pDuration = buf.makeStringAndClear();
+                        writeElement( pAppProps, FSNS( XML_vt, XML_lpwstr ), pDuration );
+                    }
+                    else if ( ( aprop[n].Value ) >>= aDateTime )
+                            writeElement( pAppProps, FSNS( XML_vt, XML_filetime ), aDateTime );
+                    else
+                        //no other options
+                        OSL_FAIL( "XMLFilterBase::writeCustomProperties unsupported value type!" );
+                 }
+                 break;
+            }
+            pAppProps->endElement( XML_property );
+        }
+    }
+    pAppProps->endElement( XML_Properties );
+}
+
 
 #if SUPD == 310
 XmlFilterBase& XmlFilterBase::exportDocumentProperties( css::uno::Reference< XDocumentProperties > xProperties )
@@ -830,6 +939,7 @@ XmlFilterBase& XmlFilterBase::exportDocumentProperties( Reference< XDocumentProp
     {
         writeCoreProperties( *this, xProperties );
         writeAppProperties( *this, xProperties );
+        writeCustomProperties( *this, xProperties );
     }
     return *this;
 }
@@ -947,8 +1057,6 @@ StorageRef XmlFilterBase::implCreateStorage( const Reference< XStream >& rxOutSt
 {
     return StorageRef( new ZipStorage( getComponentContext(), rxOutStream ) );
 }
-
-
 
 } // namespace core
 } // namespace oox

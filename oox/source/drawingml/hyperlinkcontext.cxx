@@ -21,10 +21,11 @@
 
 #include <com/sun/star/xml/sax/XFastContextHandler.hpp>
 
+#include <osl/diagnose.h>
 #include "oox/helper/propertymap.hxx"
 #include "oox/core/relations.hxx"
 #include "oox/core/xmlfilterbase.hxx"
-#include "oox/drawingml/embeddedwavaudiofile.hxx"
+#include "drawingml/embeddedwavaudiofile.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
@@ -99,7 +100,11 @@ HyperLinkContext::HyperLinkContext( ContextHandler2Helper& rParent,
             }
             else if ( aPPAction.match( sHlinksldjump ) )
             {
+#if SUPD == 310
                 sURL = OUString();
+#else	// SUPD == 310
+                sURL.clear();
+#endif	// SUPD == 310
 
                 sal_Int32 nIndex2 = 0;
                 while ( nIndex2 < sHref.getLength() )
@@ -150,15 +155,14 @@ HyperLinkContext::~HyperLinkContext()
 }
 
 ContextHandlerRef HyperLinkContext::onCreateContext(
-        ::sal_Int32 aElement, const AttributeList& rAttribs )
+        ::sal_Int32 aElement, const AttributeList&  )
 {
     switch( aElement )
     {
     case A_TOKEN( extLst ):
         return 0;
     case A_TOKEN( snd ):
-        EmbeddedWAVAudioFile aAudio;
-        getEmbeddedWAVAudioFile( getRelations(), rAttribs.getFastAttributeList(), aAudio );
+        // TODO use getEmbeddedWAVAudioFile() here
         break;
     }
 

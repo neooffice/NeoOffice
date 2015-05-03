@@ -29,7 +29,7 @@
 #include "oox/helper/attributelist.hxx"
 #include "oox/core/fragmenthandler.hxx"
 #include "oox/core/xmlfilterbase.hxx"
-#include "oox/drawingml/colorchoicecontext.hxx"
+#include "drawingml/colorchoicecontext.hxx"
 #include "pptfilterhelpers.hxx"
 
 using namespace ::oox::core;
@@ -56,7 +56,6 @@ namespace oox { namespace ppt {
             maValue = makeAny( maColor.getColor( getFilter().getGraphicHelper() ) );
         }
     }
-
 
     ContextHandlerRef AnimVariantContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
     {
@@ -96,8 +95,6 @@ namespace oox { namespace ppt {
 
         return this;
     }
-
-
 
 } }
 

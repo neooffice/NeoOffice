@@ -19,9 +19,9 @@
 
 #include <osl/diagnose.h>
 
-#include "oox/drawingml/table/tablestylecellstylecontext.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
-#include "oox/drawingml/linepropertiescontext.hxx"
+#include "drawingml/table/tablestylecellstylecontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/linepropertiescontext.hxx"
 #include "oox/helper/attributelist.hxx"
 
 using namespace ::oox::core;

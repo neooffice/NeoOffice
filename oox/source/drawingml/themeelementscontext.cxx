@@ -17,16 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/themeelementscontext.hxx"
-#include "oox/drawingml/clrschemecontext.hxx"
+#include "drawingml/themeelementscontext.hxx"
+#include "drawingml/clrschemecontext.hxx"
 #include "oox/drawingml/lineproperties.hxx"
-#include "oox/drawingml/linepropertiescontext.hxx"
-#include "oox/drawingml/effectproperties.hxx"
-#include "oox/drawingml/effectpropertiescontext.hxx"
+#include "drawingml/linepropertiescontext.hxx"
 #include "oox/drawingml/fillproperties.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/textcharacterproperties.hxx"
 #include "oox/drawingml/theme.hxx"
 #include "oox/helper/attributelist.hxx"
+#include "effectproperties.hxx"
+#include "effectpropertiescontext.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
@@ -34,8 +35,6 @@ using namespace ::com::sun::star::xml::sax;
 
 namespace oox {
 namespace drawingml {
-
-
 
 class FillStyleListContext : public ContextHandler2
 {
@@ -69,8 +68,6 @@ ContextHandlerRef FillStyleListContext::onCreateContext( sal_Int32 nElement, con
     return 0;
 }
 
-
-
 class LineStyleListContext : public ContextHandler2
 {
 public:
@@ -97,8 +94,6 @@ ContextHandlerRef LineStyleListContext::onCreateContext( sal_Int32 nElement, con
     }
     return 0;
 }
-
-
 
 class EffectStyleListContext : public ContextHandler2
 {
@@ -131,8 +126,6 @@ ContextHandlerRef EffectStyleListContext::onCreateContext( sal_Int32 nElement, c
     }
     return 0;
 }
-
-
 
 class FontSchemeContext : public ContextHandler2
 {
@@ -192,8 +185,6 @@ void FontSchemeContext::onEndElement()
     }
 }
 
-
-
 ThemeElementsContext::ThemeElementsContext( ContextHandler2Helper& rParent, Theme& rTheme ) :
     ContextHandler2( rParent ),
     mrTheme( rTheme )
@@ -225,8 +216,6 @@ ContextHandlerRef ThemeElementsContext::onCreateContext( sal_Int32 nElement, con
     }
     return 0;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

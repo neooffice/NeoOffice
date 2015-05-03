@@ -32,7 +32,6 @@ private:
         oox::drawingml::ShapePtr        mpGroupShapePtr;
 };
 
-
 } }
 
 #endif

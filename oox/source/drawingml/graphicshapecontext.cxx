@@ -19,15 +19,15 @@
 
 #include <com/sun/star/io/TempFile.hpp>
 #include "oox/drawingml/graphicshapecontext.hxx"
-#include <osl/diagnose.h>
-#if SUPD == 310
-#include <sal/log.hxx>
-#endif	// SUPD == 310
 
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
-#include "oox/drawingml/customshapeproperties.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
-#include "oox/drawingml/table/tablecontext.hxx"
+#include <osl/diagnose.h>
+
+#include <drawingml/embeddedwavaudiofile.hxx>
+#include "drawingml/fillpropertiesgroupcontext.hxx"
+#include "drawingml/graphicproperties.hxx"
+#include "drawingml/customshapeproperties.hxx"
+#include "drawingml/diagram/diagram.hxx"
+#include "drawingml/table/tablecontext.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/graphichelper.hxx"
@@ -36,11 +36,14 @@
 #include "oox/vml/vmlshape.hxx"
 #include "oox/vml/vmlshapecontainer.hxx"
 #include "oox/drawingml/fillproperties.hxx"
-#include "oox/drawingml/transform2dcontext.hxx"
+#include "drawingml/transform2dcontext.hxx"
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/binaryoutputstream.hxx"
 #include "oox/ppt/pptshapegroupcontext.hxx"
-#include <comphelper/processfactory.hxx>
+
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::io;
@@ -50,9 +53,23 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::oox::core;
 
+static uno::Reference<io::XInputStream>
+lcl_GetMediaStream(const OUString& rStream, const oox::core::XmlFilterBase& rFilter)
+{
+    if (rStream.isEmpty())
+        return nullptr;
+
+    Reference< XInputStream > xInStrm( rFilter.openInputStream(rStream), UNO_SET_THROW );
+    return xInStrm;
+}
+
+static OUString lcl_GetMediaReference(const OUString& rStream)
+{
+    return rStream.isEmpty() ? OUString() : "vnd.sun.star.Package:" + rStream;
+}
+
 namespace oox {
 namespace drawingml {
-
 
 // CT_Picture
 
@@ -72,27 +89,22 @@ ContextHandlerRef GraphicShapeContext::onCreateContext( sal_Int32 aElementToken,
         return new BlipFillContext( *this, rAttribs, mpShapePtr->getGraphicProperties().maBlipProps );
     case XML_wavAudioFile:
         {
-            getEmbeddedWAVAudioFile( getRelations(), rAttribs.getFastAttributeList(), mpShapePtr->getGraphicProperties().maAudio );
-            if( !mpShapePtr->getGraphicProperties().maAudio.msEmbed.isEmpty() )
-            {
-#if SUPD == 310
-                css::uno::Reference< XComponentContext > xContext = comphelper::getProcessComponentContext();
-                css::uno::Reference< XInputStream > xInStrm( getFilter().openInputStream( mpShapePtr->getGraphicProperties().maAudio.msEmbed ), UNO_SET_THROW );
-                css::uno::Reference< XTempFile > xTempFile( TempFile::create(xContext) );
-                css::uno::Reference< XOutputStream > xOutStrm( xTempFile->getOutputStream(), UNO_SET_THROW );
-#else	// SUPD == 310
-                Reference< XComponentContext > xContext = comphelper::getProcessComponentContext();
-                Reference< XInputStream > xInStrm( getFilter().openInputStream( mpShapePtr->getGraphicProperties().maAudio.msEmbed ), UNO_SET_THROW );
-                Reference< XTempFile > xTempFile( TempFile::create(xContext) );
-                Reference< XOutputStream > xOutStrm( xTempFile->getOutputStream(), UNO_SET_THROW );
-#endif	// SUPD == 310
-                BinaryXOutputStream aOutStrm( xOutStrm, false );
-                BinaryXInputStream aInStrm( xInStrm, false );
-                aInStrm.copyToStream( aOutStrm );
-
-                xTempFile->setRemoveFile( false );
-                mpShapePtr->getGraphicProperties().maAudio.msEmbed = xTempFile->getUri();
-            }
+            OUString const path(getEmbeddedWAVAudioFile(getRelations(), rAttribs));
+            mpShapePtr->getGraphicProperties().m_xMediaStream =
+                lcl_GetMediaStream(path, getFilter());
+            mpShapePtr->getGraphicProperties().m_sMediaPackageURL =
+                lcl_GetMediaReference(path);
+        }
+        break;
+    case XML_audioFile:
+    case XML_videoFile:
+        {
+            OUString rPath = getRelations().getFragmentPathFromRelId(
+                    rAttribs.getString(R_TOKEN(link)).get() );
+            mpShapePtr->getGraphicProperties().m_xMediaStream =
+                lcl_GetMediaStream(rPath, getFilter());
+            mpShapePtr->getGraphicProperties().m_sMediaPackageURL =
+                lcl_GetMediaReference(rPath);
         }
         break;
     }
@@ -108,7 +120,6 @@ ContextHandlerRef GraphicShapeContext::onCreateContext( sal_Int32 aElementToken,
 
     return ShapeContext::onCreateContext( aElementToken, rAttribs );
 }
-
 
 // CT_GraphicalObjectFrameContext
 
@@ -228,8 +239,6 @@ ContextHandlerRef OleObjectGraphicDataContext::onCreateContext( sal_Int32 nEleme
     return 0;
 }
 
-
-
 DiagramGraphicDataContext::DiagramGraphicDataContext( ContextHandler2Helper& rParent, ShapePtr pShapePtr )
 : ShapeContext( rParent, ShapePtr(), pShapePtr )
 {
@@ -273,8 +282,6 @@ ContextHandlerRef DiagramGraphicDataContext::onCreateContext( ::sal_Int32 aEleme
     return ShapeContext::onCreateContext( aElementToken, rAttribs );
 }
 
-
-
 ChartGraphicDataContext::ChartGraphicDataContext( ContextHandler2Helper& rParent, const ShapePtr& rxShape, bool bEmbedShapes ) :
     ShapeContext( rParent, ShapePtr(), rxShape ),
     mrChartShapeInfo( rxShape->setChartType( bEmbedShapes ) )
@@ -289,8 +296,6 @@ ContextHandlerRef ChartGraphicDataContext::onCreateContext( ::sal_Int32 nElement
     }
     return 0;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

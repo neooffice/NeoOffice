@@ -37,6 +37,7 @@ VISIBILITY_HIDDEN=TRUE
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
 	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/goodies$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2 \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csschart2data \

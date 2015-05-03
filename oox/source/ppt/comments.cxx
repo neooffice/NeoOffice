@@ -15,7 +15,6 @@
 #include <tools/string.hxx>
 #endif	// SUPD == 310
 
-
 namespace oox { namespace ppt {
 
 void CommentAuthorList::setValues(const CommentAuthorList& list)

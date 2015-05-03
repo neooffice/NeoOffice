@@ -20,13 +20,13 @@
 #include "diagramdefinitioncontext.hxx"
 #include "layoutnodecontext.hxx"
 #include "datamodelcontext.hxx"
+#include <osl/diagnose.h>
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 
 namespace oox { namespace drawingml {
-
 
 // CT_DiagramDefinition
 DiagramDefinitionContext::DiagramDefinitionContext( ContextHandler2Helper& rParent,
@@ -46,10 +46,11 @@ DiagramDefinitionContext::DiagramDefinitionContext( ContextHandler2Helper& rPare
     mpLayout->setUniqueId( rAttributes.getString( XML_uniqueId ).get() );
 }
 
-
 DiagramDefinitionContext::~DiagramDefinitionContext()
 {
-    mpLayout->getNode()->dump(0);
+    LayoutNodePtr node = mpLayout->getNode();
+    if (node)
+        node->dump(0);
 }
 
 ContextHandlerRef
@@ -91,7 +92,6 @@ DiagramDefinitionContext::onCreateContext( ::sal_Int32 aElement,
 
     return this;
 }
-
 
 } }
 

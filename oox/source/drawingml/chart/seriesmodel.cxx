@@ -17,13 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/seriesmodel.hxx"
+#include "drawingml/chart/seriesmodel.hxx"
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 DataLabelModelBase::DataLabelModelBase() :
     mbDeleted( false )
@@ -34,8 +33,6 @@ DataLabelModelBase::~DataLabelModelBase()
 {
 }
 
-
-
 DataLabelModel::DataLabelModel() :
     mnIndex( -1 )
 {
@@ -45,8 +42,6 @@ DataLabelModel::~DataLabelModel()
 {
 }
 
-
-
 DataLabelsModel::DataLabelsModel() :
     mbShowLeaderLines( false )
 {
@@ -55,8 +50,6 @@ DataLabelsModel::DataLabelsModel() :
 DataLabelsModel::~DataLabelsModel()
 {
 }
-
-
 
 PictureOptionsModel::PictureOptionsModel() :
     mfStackUnit( 1.0 ),
@@ -71,8 +64,6 @@ PictureOptionsModel::~PictureOptionsModel()
 {
 }
 
-
-
 ErrorBarModel::ErrorBarModel() :
     mfValue( 0.0 ),
     mnDirection( XML_y ),
@@ -86,8 +77,6 @@ ErrorBarModel::~ErrorBarModel()
 {
 }
 
-
-
 TrendlineLabelModel::TrendlineLabelModel()
 {
 }
@@ -95,8 +84,6 @@ TrendlineLabelModel::TrendlineLabelModel()
 TrendlineLabelModel::~TrendlineLabelModel()
 {
 }
-
-
 
 TrendlineModel::TrendlineModel() :
     mnOrder( 2 ),
@@ -111,8 +98,6 @@ TrendlineModel::~TrendlineModel()
 {
 }
 
-
-
 DataPointModel::DataPointModel() :
     mnIndex( -1 ),
     mbInvertNeg( false )
@@ -122,8 +107,6 @@ DataPointModel::DataPointModel() :
 DataPointModel::~DataPointModel()
 {
 }
-
-
 
 SeriesModel::SeriesModel() :
     mnExplosion( 0 ),
@@ -140,8 +123,6 @@ SeriesModel::SeriesModel() :
 SeriesModel::~SeriesModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

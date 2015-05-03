@@ -20,7 +20,8 @@
 #include <iterator>
 #include <boost/utility.hpp>
 
-#include "oox/drawingml/fillproperties.hxx"
+#include <oox/drawingml/fillproperties.hxx>
+#include <drawingml/graphicproperties.hxx>
 
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -37,11 +38,14 @@
 #else	// SUPD == 310
 #include <com/sun/star/graphic/XGraphicTransformer.hpp>
 #endif	// SUPD == 310
+#include <oox/core/fragmenthandler.hxx>
 #include "oox/helper/graphichelper.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/shapepropertymap.hxx"
 #include "oox/token/tokens.hxx"
 #include <rtl/math.hxx>
+#include <osl/diagnose.h>
+
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
@@ -58,8 +62,6 @@ using ::com::sun::star::geometry::IntegerRectangle2D;
 
 namespace oox {
 namespace drawingml {
-
-
 
 namespace {
 
@@ -140,7 +142,6 @@ Reference< XGraphic > applyBrightnessContrast( Reference< XGraphic > xGraphic, s
     return xGraphic;
 }
 
-
 BitmapMode lclGetBitmapMode( sal_Int32 nToken )
 {
     OSL_ASSERT((nToken & sal_Int32(0xFFFF0000))==0);
@@ -202,8 +203,6 @@ const awt::Size lclGetOriginalSize( const GraphicHelper& rGraphicHelper, const R
 
 } // namespace
 
-
-
 void GradientFillProperties::assignUsed( const GradientFillProperties& rSourceProps )
 {
     if( !rSourceProps.maGradientStops.empty() )
@@ -217,16 +216,12 @@ void GradientFillProperties::assignUsed( const GradientFillProperties& rSourcePr
     moRotateWithShape.assignIfUsed( rSourceProps.moRotateWithShape );
 }
 
-
-
 void PatternFillProperties::assignUsed( const PatternFillProperties& rSourceProps )
 {
     maPattFgColor.assignIfUsed( rSourceProps.maPattFgColor );
     maPattBgColor.assignIfUsed( rSourceProps.maPattBgColor );
     moPattPreset.assignIfUsed( rSourceProps.moPattPreset );
 }
-
-
 
 void BlipFillProperties::assignUsed( const BlipFillProperties& rSourceProps )
 {
@@ -250,8 +245,6 @@ void BlipFillProperties::assignUsed( const BlipFillProperties& rSourceProps )
     maDuotoneColors[1].assignIfUsed( rSourceProps.maDuotoneColors[1] );
     maEffect.assignUsed( rSourceProps.maEffect );
 }
-
-
 
 void FillProperties::assignUsed( const FillProperties& rSourceProps )
 {
@@ -458,7 +451,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                                     bSymmetric = false;
                                 else
                                 {
-                                    aItA++;
+                                    ++aItA;
                                     aItZ = boost::prior(aItZ);
                                 }
                             }
@@ -486,7 +479,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                                  ", number of stops: " << aGradientStops.size());
                         for (GradientFillProperties::GradientStopMap::iterator p(aGradientStops.begin());
                              p != aGradientStops.end();
-                             p++)
+                             ++p)
                             SAL_INFO("oox.drawingml.gradient", "  " << std::distance(aGradientStops.begin(), p) << ": " <<
                                      p->first << ": " <<
                                      std::hex << p->second.getColor( rGraphicHelper, nPhClr ) << std::dec <<
@@ -499,7 +492,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                         GradientFillProperties::GradientStopMap::iterator aIt(aGradientStops.begin());
                         double nWidestWidth = -1;
                         GradientFillProperties::GradientStopMap::iterator aWidestSegmentStart;
-                        aIt++;
+                        ++aIt;
                         while( aIt != aGradientStops.end() )
                         {
                             if( aIt->first - boost::prior(aIt)->first > nWidestWidth )
@@ -507,7 +500,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                                 nWidestWidth = aIt->first - boost::prior(aIt)->first;
                                 aWidestSegmentStart = boost::prior(aIt);
                             }
-                            aIt++;
+                            ++aIt;
                         }
                         assert( nWidestWidth > 0 );
 
@@ -559,7 +552,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                                 nShapeRotation = 180*60000 - nShapeRotation;
                             }
 
-                            aGradientStops.erase( aWidestSegmentStart );
+                            aGradientStops.erase( aWidestSegmentStart++ );
 
                             // Look for which is widest now
                             aIt = boost::next(aGradientStops.begin());
@@ -571,7 +564,7 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
                                     nWidestWidth = aIt->first - boost::prior(aIt)->first;
                                     aWidestSegmentStart = boost::prior(aIt);
                                 }
-                                aIt++;
+                                ++aIt;
                             }
                         }
                         SAL_INFO("oox.drawingml.gradient", "widest segment start: " << aWidestSegmentStart->first << ", border: " << nBorder);
@@ -742,8 +735,6 @@ void FillProperties::pushToPropMap( ShapePropertyMap& rPropMap,
     }
 }
 
-
-
 void GraphicProperties::pushToPropMap( PropertyMap& rPropMap, const GraphicHelper& rGraphicHelper, sal_Int32 nPhClr ) const
 {
     sal_Int16 nBrightness = getLimitedValue< sal_Int16, sal_Int32 >( maBlipProps.moBrightness.get( 0 ) / PER_PERCENT, -100, 100 );
@@ -811,8 +802,12 @@ void GraphicProperties::pushToPropMap( PropertyMap& rPropMap, const GraphicHelpe
         rPropMap.setProperty(PROP_AdjustContrast, nContrast);
 
     // Media content
-    if( !maAudio.msEmbed.isEmpty() )
-        rPropMap.setProperty(PROP_MediaURL, maAudio.msEmbed);
+    assert(m_xMediaStream.is() != m_sMediaPackageURL.isEmpty());
+    if (m_xMediaStream.is() && !m_sMediaPackageURL.isEmpty())
+    {
+        rPropMap.setProperty(PROP_PrivateStream, m_xMediaStream);
+        rPropMap.setProperty(PROP_MediaURL, m_sMediaPackageURL);
+    }
 }
 
 bool ArtisticEffectProperties::isEmpty() const
@@ -919,7 +914,7 @@ OUString ArtisticEffectProperties::getEffectString( sal_Int32 nToken )
     return OUString();
 }
 
-sal_Int32 ArtisticEffectProperties::getEffectToken( OUString sName )
+sal_Int32 ArtisticEffectProperties::getEffectToken( const OUString& sName )
 {
     // effects
     if( sName == "artisticBlur" )
@@ -1018,8 +1013,6 @@ sal_Int32 ArtisticEffectProperties::getEffectToken( OUString sName )
     SAL_WARN( "oox.drawingml", "ArtisticEffectProperties::getEffectToken - unexpected token name" );
     return XML_none;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

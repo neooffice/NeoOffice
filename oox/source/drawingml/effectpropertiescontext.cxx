@@ -7,10 +7,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "oox/drawingml/effectpropertiescontext.hxx"
+#include "effectpropertiescontext.hxx"
+#include "effectproperties.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
-#include "oox/drawingml/effectproperties.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/helper/attributelist.hxx"
 
 using namespace ::oox::core;
@@ -20,7 +20,6 @@ using namespace ::com::sun::star::xml::sax;
 // CT_EffectProperties
 
 namespace oox { namespace drawingml {
-
 
 EffectPropertiesContext::EffectPropertiesContext( ContextHandler2Helper& rParent,
     EffectProperties& rEffectProperties ) throw()
@@ -72,27 +71,31 @@ void EffectPropertiesContext::saveUnsupportedAttribs( Effect& rEffect, const Att
 ContextHandlerRef EffectPropertiesContext::onCreateContext( sal_Int32 nElement, const AttributeList& rAttribs )
 {
     sal_Int32 nPos = mrEffectProperties.maEffects.size();
+#if SUPD == 310
+    mrEffectProperties.maEffects.push_back( Effect() );
+#else	// SUPD == 310
     mrEffectProperties.maEffects.push_back( new Effect() );
+#endif	// SUPD == 310
     switch( nElement )
     {
         case A_TOKEN( outerShdw ):
         {
-            mrEffectProperties.maEffects[nPos]->msName = "outerShdw";
-            saveUnsupportedAttribs( *mrEffectProperties.maEffects[nPos], rAttribs );
+            mrEffectProperties.maEffects[nPos].msName = "outerShdw";
+            saveUnsupportedAttribs( mrEffectProperties.maEffects[nPos], rAttribs );
 
             mrEffectProperties.maShadow.moShadowDist = rAttribs.getInteger( XML_dist, 0 );
             mrEffectProperties.maShadow.moShadowDir = rAttribs.getInteger( XML_dir, 0 );
-            return new ColorContext( *this, mrEffectProperties.maEffects[nPos]->moColor );
+            return new ColorContext( *this, mrEffectProperties.maEffects[nPos].moColor );
         }
         break;
         case A_TOKEN( innerShdw ):
         {
-            mrEffectProperties.maEffects[nPos]->msName = "innerShdw";
-            saveUnsupportedAttribs( *mrEffectProperties.maEffects[nPos], rAttribs );
+            mrEffectProperties.maEffects[nPos].msName = "innerShdw";
+            saveUnsupportedAttribs( mrEffectProperties.maEffects[nPos], rAttribs );
 
             mrEffectProperties.maShadow.moShadowDist = rAttribs.getInteger( XML_dist, 0 );
             mrEffectProperties.maShadow.moShadowDir = rAttribs.getInteger( XML_dir, 0 );
-            return new ColorContext( *this, mrEffectProperties.maEffects[nPos]->moColor );
+            return new ColorContext( *this, mrEffectProperties.maEffects[nPos].moColor );
         }
         break;
         case A_TOKEN( glow ):
@@ -101,15 +104,15 @@ ContextHandlerRef EffectPropertiesContext::onCreateContext( sal_Int32 nElement, 
         case A_TOKEN( blur ):
         {
             if( nElement == A_TOKEN( glow ) )
-                mrEffectProperties.maEffects[nPos]->msName = "glow";
+                mrEffectProperties.maEffects[nPos].msName = "glow";
             else if( nElement == A_TOKEN( softEdge ) )
-                mrEffectProperties.maEffects[nPos]->msName = "softEdge";
+                mrEffectProperties.maEffects[nPos].msName = "softEdge";
             else if( nElement == A_TOKEN( reflection ) )
-                mrEffectProperties.maEffects[nPos]->msName = "reflection";
+                mrEffectProperties.maEffects[nPos].msName = "reflection";
             else if( nElement == A_TOKEN( blur ) )
-                mrEffectProperties.maEffects[nPos]->msName = "blur";
-            saveUnsupportedAttribs( *mrEffectProperties.maEffects[nPos], rAttribs );
-            return new ColorContext( *this, mrEffectProperties.maEffects[nPos]->moColor );
+                mrEffectProperties.maEffects[nPos].msName = "blur";
+            saveUnsupportedAttribs( mrEffectProperties.maEffects[nPos], rAttribs );
+            return new ColorContext( *this, mrEffectProperties.maEffects[nPos].moColor );
         }
         break;
     }

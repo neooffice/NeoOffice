@@ -17,9 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/customshapegeometry.hxx"
+#include "drawingml/customshapegeometry.hxx"
+#include <drawingml/customshapeproperties.hxx>
 
 #include <com/sun/star/xml/sax/FastToken.hpp>
+#include <osl/diagnose.h>
 #if SUPD == 310
 #include <com/sun/star/drawing/EnhancedCustomShapeSegmentCommand2.hpp>
 #include <comphelper/stl_types.hxx>
@@ -95,7 +97,6 @@ typedef boost::unordered_map< OUString, FormularCommand, OUStringHash > FormulaC
 #endif	// SUPD == 310
 
 static const FormulaCommandHMap* pCommandHashMap;
-
 
 OUString GetFormulaParameter( const EnhancedCustomShapeParameter& rParameter )
 {
@@ -230,8 +231,6 @@ OUString GetFormulaParameter( const EnhancedCustomShapeParameter& rParameter )
     return aRet;
 }
 
-
-
 static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCustomShapeProperties, const OUString& rValue, bool bNoSymbols = true )
 {
     com::sun::star::drawing::EnhancedCustomShapeParameter aRet;
@@ -269,7 +268,6 @@ static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCu
                     aRet.Type = EnhancedCustomShapeParameterType::LOGHEIGHT;   // TODO: HEIGHT needs to be implemented
             }
             break;
-
 
             case XML_hd10 :   // !!PASSTHROUGH INTENDED
                 nIntVal += 2; // */ h 1.0 10.0
@@ -446,7 +444,6 @@ static EnhancedCustomShapeParameter GetAdjCoordinate( CustomShapeProperties& rCu
     }
     return aRet;
 }
-
 
 // CT_GeomGuideList
 class GeomGuideListContext : public ContextHandler2
@@ -645,13 +642,10 @@ ContextHandlerRef GeomGuideListContext::onCreateContext( sal_Int32 aElementToken
     return this;
 }
 
-
-
 static const OUString GetGeomGuideName( const OUString& rValue )
 {
     return rValue;
 }
-
 
 // CT_AdjPoint2D
 class AdjPoint2DContext : public ContextHandler2
@@ -666,7 +660,6 @@ AdjPoint2DContext::AdjPoint2DContext( ContextHandler2Helper& rParent, const Attr
     rAdjPoint2D.First = GetAdjCoordinate( rCustomShapeProperties, rAttribs.getString( XML_x ).get(), true );
     rAdjPoint2D.Second = GetAdjCoordinate( rCustomShapeProperties, rAttribs.getString( XML_y ).get(), true );
 }
-
 
 // CT_XYAdjustHandle
 class XYAdjustHandleContext : public ContextHandler2
@@ -719,7 +712,6 @@ ContextHandlerRef XYAdjustHandleContext::onCreateContext( sal_Int32 aElementToke
     return 0;
 }
 
-
 // CT_PolarAdjustHandle
 class PolarAdjustHandleContext : public ContextHandler2
 {
@@ -771,7 +763,6 @@ ContextHandlerRef PolarAdjustHandleContext::onCreateContext( sal_Int32 aElementT
     return 0;
 }
 
-
 // CT_AdjustHandleList
 class AdjustHandleListContext : public ContextHandler2
 {
@@ -808,7 +799,6 @@ ContextHandlerRef AdjustHandleListContext::onCreateContext( sal_Int32 aElementTo
     return 0;
 }
 
-
 // CT_ConnectionSite
 class ConnectionSiteContext : public ContextHandler2
 {
@@ -836,7 +826,6 @@ ContextHandlerRef ConnectionSiteContext::onCreateContext( sal_Int32 aElementToke
     return 0;
 }
 
-
 // CT_Path2DMoveTo
 class Path2DMoveToContext : public ContextHandler2
 {
@@ -863,7 +852,6 @@ ContextHandlerRef Path2DMoveToContext::onCreateContext( sal_Int32 aElementToken,
     return 0;
 }
 
-
 // CT_Path2DLineTo
 class Path2DLineToContext : public ContextHandler2
 {
@@ -889,7 +877,6 @@ ContextHandlerRef Path2DLineToContext::onCreateContext( sal_Int32 aElementToken,
         return new AdjPoint2DContext( *this, rAttribs, mrCustomShapeProperties, mrAdjPoint2D );     // CT_AdjPoint2D
     return 0;
 }
-
 
 // CT_Path2DQuadBezierTo
 class Path2DQuadBezierToContext : public ContextHandler2
@@ -923,7 +910,6 @@ ContextHandlerRef Path2DQuadBezierToContext::onCreateContext( sal_Int32 aElement
         return new AdjPoint2DContext( *this, rAttribs, mrCustomShapeProperties, nCount++ ? mrPt2 : mrPt1 ); // CT_AdjPoint2D
     return 0;
 }
-
 
 // CT_Path2DCubicBezierTo
 class Path2DCubicBezierToContext : public ContextHandler2
@@ -961,7 +947,6 @@ ContextHandlerRef Path2DCubicBezierToContext::onCreateContext( sal_Int32 aElemen
             nCount++ ? nCount == 2 ? mrControlPt2 : mrEndPt : mrControlPt1 );   // CT_AdjPoint2D
     return 0;
 }
-
 
 // CT_Path2DContext
 class Path2DContext : public ContextHandler2
@@ -1185,7 +1170,6 @@ ContextHandlerRef Path2DContext::onCreateContext( sal_Int32 aElementToken,
     return 0;
 }
 
-
 // CT_Path2DList
 class Path2DListContext : public ContextHandler2
 {
@@ -1221,7 +1205,6 @@ ContextHandlerRef Path2DListContext::onCreateContext( sal_Int32 aElementToken, c
     }
     return 0;
 }
-
 
 // CT_CustomGeometry2D
 CustomShapeGeometryContext::CustomShapeGeometryContext( ContextHandler2Helper& rParent, const AttributeList& /* rAttribs */, CustomShapeProperties& rCustomShapeProperties )
@@ -1266,7 +1249,6 @@ ContextHandlerRef CustomShapeGeometryContext::onCreateContext( sal_Int32 aElemen
     return 0;
 }
 
-
 // CT_PresetGeometry2D
 PresetShapeGeometryContext::PresetShapeGeometryContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, CustomShapeProperties& rCustomShapeProperties )
 : ContextHandler2( rParent )
@@ -1284,7 +1266,6 @@ ContextHandlerRef PresetShapeGeometryContext::onCreateContext( sal_Int32 aElemen
     else
         return this;
 }
-
 
 // CT_PresetTextShape
 PresetTextShapeContext::PresetTextShapeContext( ContextHandler2Helper& rParent, const AttributeList& rAttribs, CustomShapeProperties& rCustomShapeProperties )

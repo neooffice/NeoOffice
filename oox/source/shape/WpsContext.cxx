@@ -8,10 +8,13 @@
  */
 
 #include "WpsContext.hxx"
-#include <oox/drawingml/shapepropertiescontext.hxx>
-#include <oox/drawingml/shapestylecontext.hxx>
+#include <drawingml/customshapeproperties.hxx>
+#include <drawingml/shapepropertiescontext.hxx>
+#include <drawingml/shapestylecontext.hxx>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
-#include <oox/drawingml/drawingmltypes.hxx>
+
+#include <boost/optional.hpp>
 
 #if SUPD == 310
 #include <sal/log.hxx>
@@ -36,11 +39,6 @@ WpsContext::~WpsContext()
 {
 }
 
-oox::drawingml::ShapePtr WpsContext::getShape()
-{
-    return mpShape;
-}
-
 oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken, const oox::AttributeList& rAttribs)
 {
     switch (getBaseToken(nElementToken))
@@ -60,27 +58,37 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
     case XML_bodyPr:
         if (mxShape.is())
         {
+            uno::Reference<lang::XServiceInfo> xServiceInfo(mxShape, uno::UNO_QUERY);
+            uno::Reference<beans::XPropertySet> xPropertySet(mxShape, uno::UNO_QUERY);
             OptValue<OUString> oVert = rAttribs.getString(XML_vert);
             if (oVert.has() && oVert.get() == "vert270")
             {
-                // No support for this in core, work around by char rotation, as we do so for table cells already.
-                uno::Reference<text::XText> xText(mxShape, uno::UNO_QUERY);
-                uno::Reference<text::XTextCursor> xTextCursor = xText->createTextCursor();
-                xTextCursor->gotoStart(false);
-                xTextCursor->gotoEnd(true);
-                uno::Reference<beans::XPropertyState> xPropertyState(xTextCursor, uno::UNO_QUERY);
-                beans::PropertyState aState = xPropertyState->getPropertyState("CharRotation");
-                if (aState == beans::PropertyState_DEFAULT_VALUE)
+                if (xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
                 {
-                    uno::Reference<beans::XPropertySet> xPropertySet(xTextCursor, uno::UNO_QUERY);
-                    xPropertySet->setPropertyValue("CharRotation", uno::makeAny(sal_Int16(900)));
+                    // No support for this in core, work around by char rotation, as we do so for table cells already.
+                    uno::Reference<text::XText> xText(mxShape, uno::UNO_QUERY);
+                    uno::Reference<text::XTextCursor> xTextCursor = xText->createTextCursor();
+                    xTextCursor->gotoStart(false);
+                    xTextCursor->gotoEnd(true);
+                    uno::Reference<beans::XPropertyState> xPropertyState(xTextCursor, uno::UNO_QUERY);
+                    beans::PropertyState aState = xPropertyState->getPropertyState("CharRotation");
+                    if (aState == beans::PropertyState_DEFAULT_VALUE)
+                    {
+                        uno::Reference<beans::XPropertySet> xTextCursorPropertySet(xTextCursor, uno::UNO_QUERY);
+                        xTextCursorPropertySet->setPropertyValue("CharRotation", uno::makeAny(sal_Int16(900)));
+                    }
+                }
+                else
+                {
+                    comphelper::SequenceAsHashMap aCustomShapeGeometry(xPropertySet->getPropertyValue("CustomShapeGeometry"));
+                    aCustomShapeGeometry["TextPreRotateAngle"] = uno::makeAny(sal_Int32(-270));
+                    xPropertySet->setPropertyValue("CustomShapeGeometry", uno::makeAny(aCustomShapeGeometry.getAsConstPropertyValueList()));
                 }
             }
 
-            uno::Reference<lang::XServiceInfo> xServiceInfo(mxShape, uno::UNO_QUERY);
-            uno::Reference<beans::XPropertySet> xPropertySet(mxShape, uno::UNO_QUERY);
-            if (xServiceInfo.is() && xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
+            if (xServiceInfo.is())
             {
+                bool bTextFrame = xServiceInfo->supportsService("com.sun.star.text.TextFrame");
                 // Handle inset attributes for Writer textframes.
                 sal_Int32 aInsets[] = { XML_lIns, XML_tIns, XML_rIns, XML_bIns };
                 boost::optional<sal_Int32> oInsets[4];
@@ -89,11 +97,15 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
                     OptValue<OUString> oValue = rAttribs.getString(aInsets[i]);
                     if (oValue.has())
                         oInsets[i] = oox::drawingml::GetCoordinate(oValue.get());
+                    else
+                        // Defaults from the spec: left/right: 91440 EMU, top/bottom: 45720 EMU
+                        oInsets[i] = (aInsets[i] == XML_lIns || aInsets[i] == XML_rIns) ? 254 : 127;
                 }
                 OUString aProps[] = { OUString("LeftBorderDistance"), OUString("TopBorderDistance"), OUString("RightBorderDistance"), OUString("BottomBorderDistance") };
-                for (size_t i = 0; i < SAL_N_ELEMENTS(aProps); ++i)
+                OUString aShapeProps[] = { OUString("TextLeftDistance"), OUString("TextUpperDistance"), OUString("TextRightDistance"), OUString("TextLowerDistance") };
+                for (size_t i = 0; i < SAL_N_ELEMENTS(bTextFrame ? aProps : aShapeProps); ++i)
                     if (oInsets[i])
-                        xPropertySet->setPropertyValue(aProps[i], uno::makeAny(*oInsets[i]));
+                        xPropertySet->setPropertyValue((bTextFrame ? aProps : aShapeProps)[i], uno::makeAny(*oInsets[i]));
             }
 
             // Handle text vertical adjustment inside a text frame
@@ -101,6 +113,19 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
             {
                 drawing::TextVerticalAdjust eAdjust = drawingml::GetTextVerticalAdjust(rAttribs.getToken(XML_anchor, XML_t));
                 xPropertySet->setPropertyValue("TextVerticalAdjust", uno::makeAny(eAdjust));
+            }
+
+            // Apply character color of the shape to the shape's textbox.
+            uno::Reference<text::XText> xText(mxShape, uno::UNO_QUERY);
+            uno::Reference<text::XTextCursor> xTextCursor = xText->createTextCursor();
+            xTextCursor->gotoStart(false);
+            xTextCursor->gotoEnd(true);
+            const uno::Reference<beans::XPropertyState> xPropertyState(xTextCursor, uno::UNO_QUERY);
+            const beans::PropertyState ePropertyState = xPropertyState->getPropertyState("CharColor");
+            if (ePropertyState == beans::PropertyState_DEFAULT_VALUE)
+            {
+                uno::Reference<beans::XPropertySet> xTextBoxPropertySet(xTextCursor, uno::UNO_QUERY);
+                xTextBoxPropertySet->setPropertyValue("CharColor", xPropertySet->getPropertyValue("CharColor"));
             }
             return this;
         }
@@ -113,14 +138,29 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
         // is a child context of bodyPr, so the shape is already sent: we need
         // to alter the XShape directly.
         uno::Reference<beans::XPropertySet> xPropertySet(mxShape, uno::UNO_QUERY);
-        if (xPropertySet.is() && xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
-            xPropertySet->setPropertyValue("FrameIsAutomaticHeight", uno::makeAny(getBaseToken(nElementToken) == XML_spAutoFit));
+        if (xPropertySet.is())
+        {
+            if (xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
+                xPropertySet->setPropertyValue("FrameIsAutomaticHeight", uno::makeAny(getBaseToken(nElementToken) == XML_spAutoFit));
+            else
+                xPropertySet->setPropertyValue("TextAutoGrowHeight", uno::makeAny(getBaseToken(nElementToken) == XML_spAutoFit));
+        }
     }
     break;
+    case XML_prstTxWarp:
+        if (rAttribs.hasAttribute(XML_prst))
+        {
+            uno::Reference<beans::XPropertySet> xPropertySet(mxShape, uno::UNO_QUERY);
+            oox::OptValue<OUString> presetShapeName = rAttribs.getString(XML_prst);
+            OUString preset = presetShapeName.get();
+            comphelper::SequenceAsHashMap aCustomShapeGeometry(xPropertySet->getPropertyValue("CustomShapeGeometry"));
+            aCustomShapeGeometry["PresetTextWarp"] = uno::makeAny(preset);
+            xPropertySet->setPropertyValue("CustomShapeGeometry", uno::makeAny(aCustomShapeGeometry.getAsConstPropertyValueList()));
+        }
+        break;
     case XML_txbx:
     {
         mpShape->getCustomShapeProperties()->setShapeTypeOverride(true);
-        mpShape->setServiceName("com.sun.star.text.TextFrame");
         mpShape->setTextBox(true);
         //in case if the textbox is linked, save the attributes
         //for further processing.
@@ -142,7 +182,7 @@ oox::core::ContextHandlerRef WpsContext::onCreateContext(sal_Int32 nElementToken
         //in case if the textbox is linked, save the attributes
         //for further processing.
         mpShape->getCustomShapeProperties()->setShapeTypeOverride(true);
-        mpShape->setServiceName("com.sun.star.text.TextFrame");
+        mpShape->setTextBox(true);
         OptValue<OUString> id  = rAttribs.getString(XML_id);
         OptValue<OUString> seq = rAttribs.getString(XML_seq);
         if (id.has() && seq.has())

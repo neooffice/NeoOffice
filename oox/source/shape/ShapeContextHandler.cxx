@@ -59,7 +59,6 @@ ShapeContextHandler_createInstance( const uno::Reference< uno::XComponentContext
     return static_cast< ::cppu::OWeakObject* >( new ShapeContextHandler(context) );
 }
 
-
 ShapeContextHandler::ShapeContextHandler
 (uno::Reference< uno::XComponentContext > const & context) :
 mnStartToken(0), m_xContext(context)
@@ -208,7 +207,19 @@ ShapeContextHandler::getDrawingShapeContext()
            (new oox::vml::DrawingFragment
             ( *mxFilterBase, msRelationFragmentPath, *mpDrawing )));
     }
-
+    else
+    {
+        // Reset the handler if fragment path has changed
+        OUString sHandlerFragmentPath = dynamic_cast<ContextHandler&>(*mxDrawingFragmentHandler.get()).getFragmentPath();
+        if ( !msRelationFragmentPath.equals(sHandlerFragmentPath) )
+        {
+            mxDrawingFragmentHandler.clear();
+            mxDrawingFragmentHandler.set
+              (dynamic_cast<ContextHandler *>
+               (new oox::vml::DrawingFragment
+                ( *mxFilterBase, msRelationFragmentPath, *mpDrawing )));
+        }
+    }
     return mxDrawingFragmentHandler;
 }
 
@@ -285,8 +296,16 @@ void SAL_CALL ShapeContextHandler::startFastElement
         // Parse the theme relation, if available; the diagram won't have colors without it.
         if (!msRelationFragmentPath.isEmpty())
         {
-            FragmentHandlerRef rFragmentHandler(new ShapeFragmentHandler(*mxFilterBase, msRelationFragmentPath));
+            // Get Target for Type = "officeDocument" from _rels/.rels file
+            // aOfficeDocumentFragmentPath is pointing to "word/document.xml" for docx & to "ppt/presentation.xml" for pptx
+            FragmentHandlerRef rFragmentHandlerRef(new ShapeFragmentHandler(*mxFilterBase, "/"));
+            OUString aOfficeDocumentFragmentPath = rFragmentHandlerRef->getFragmentPathFromFirstTypeFromOfficeDoc( "officeDocument" );
+
+            // Get the theme DO NOT  use msRelationFragmentPath for getting theme as for a document there is a single theme in document.xml.rels
+            // and the same is used by header and footer as well.
+            FragmentHandlerRef rFragmentHandler(new ShapeFragmentHandler(*mxFilterBase, aOfficeDocumentFragmentPath));
             OUString aThemeFragmentPath = rFragmentHandler->getFragmentPathFromFirstTypeFromOfficeDoc( "theme" );
+
             if(!aThemeFragmentPath.isEmpty())
             {
                 uno::Reference<xml::sax::XFastSAXSerializable> xDoc(mxFilterBase->importFragment(aThemeFragmentPath), uno::UNO_QUERY_THROW);
@@ -345,7 +364,15 @@ void SAL_CALL ShapeContextHandler::endFastElement(::sal_Int32 Element)
     if (Element == (NMSP_wps | XML_wsp))
     {
         uno::Reference<lang::XServiceInfo> xServiceInfo(mxSavedShape, uno::UNO_QUERY);
-        if (xServiceInfo.is() && xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
+        bool bTextFrame = xServiceInfo.is() && xServiceInfo->supportsService("com.sun.star.text.TextFrame");
+        bool bTextBox = false;
+        if (!bTextFrame)
+        {
+            uno::Reference<beans::XPropertySet> xPropertySet(mxSavedShape, uno::UNO_QUERY);
+            if (xPropertySet.is())
+                bTextBox = xPropertySet->getPropertyValue("TextBox").get<bool>();
+        }
+        if (bTextFrame || bTextBox)
             mxWpsContext.clear();
         mxSavedShape.clear();
     }
@@ -488,7 +515,7 @@ ShapeContextHandler::getShape() throw (uno::RuntimeException, std::exception)
         }
         else if (mxLockedCanvasContext.is())
         {
-            ShapePtr pShape = dynamic_cast<LockedCanvasContext*>(mxLockedCanvasContext.get())->getShape();
+            ShapePtr pShape = dynamic_cast<LockedCanvasContext&>(*mxLockedCanvasContext.get()).getShape();
             if (pShape)
             {
                 basegfx::B2DHomMatrix aMatrix;
@@ -529,7 +556,7 @@ ShapeContextHandler::getShape() throw (uno::RuntimeException, std::exception)
         }
         else if (mxWpgContext.is())
         {
-            ShapePtr pShape = dynamic_cast<WpgContext*>(mxWpgContext.get())->getShape();
+            ShapePtr pShape = dynamic_cast<WpgContext&>(*mxWpgContext.get()).getShape();
             if (pShape)
             {
                 basegfx::B2DHomMatrix aMatrix;

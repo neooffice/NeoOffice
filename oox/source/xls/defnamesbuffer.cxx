@@ -120,7 +120,11 @@ OUString lclGetBaseName( sal_Unicode cBuiltinId )
 {
     OSL_ENSURE( cBuiltinId < STATIC_ARRAY_SIZE( sppcBaseNames ), "lclGetBaseName - unsupported built-in identifier" );
     OUStringBuffer aBuffer;
+#if SUPD == 310
+    if( cBuiltinId < SAL_N_ELEMENTS( sppcBaseNames ) )
+#else	// SUPD == 310
     if( cBuiltinId < STATIC_ARRAY_SIZE( sppcBaseNames ) )
+#endif	// SUPD == 310
         aBuffer.appendAscii( sppcBaseNames[ cBuiltinId ] );
     else
         aBuffer.append( static_cast< sal_Int32 >( cBuiltinId ) );
@@ -139,7 +143,11 @@ sal_Unicode lclGetBuiltinIdFromPrefixedName( const OUString& rModelName )
     sal_Int32 nPrefixLen = aPrefix.getLength();
     if( rModelName.matchIgnoreAsciiCase( aPrefix ) )
     {
+#if SUPD == 310
+        for( sal_Unicode cBuiltinId = 0; cBuiltinId < SAL_N_ELEMENTS( sppcBaseNames ); ++cBuiltinId )
+#else	// SUPD == 310
         for( sal_Unicode cBuiltinId = 0; cBuiltinId < STATIC_ARRAY_SIZE( sppcBaseNames ); ++cBuiltinId )
+#endif	// SUPD == 310
         {
             OUString aBaseName = lclGetBaseName( cBuiltinId );
             sal_Int32 nBaseNameLen = aBaseName.getLength();
@@ -153,7 +161,11 @@ sal_Unicode lclGetBuiltinIdFromPrefixedName( const OUString& rModelName )
 /** returns the built-in name identifier from a built-in base name, e.g. 'Print_Area'. */
 sal_Unicode lclGetBuiltinIdFromBaseName( const OUString& rModelName )
 {
+#if SUPD == 310
+    for( sal_Unicode cBuiltinId = 0; cBuiltinId < SAL_N_ELEMENTS( sppcBaseNames ); ++cBuiltinId )
+#else	// SUPD == 310
     for( sal_Unicode cBuiltinId = 0; cBuiltinId < STATIC_ARRAY_SIZE( sppcBaseNames ); ++cBuiltinId )
+#endif	// SUPD == 310
         if( rModelName.equalsIgnoreAsciiCaseAscii( sppcBaseNames[ cBuiltinId ] ) )
             return cBuiltinId;
     return BIFF_DEFNAME_UNKNOWN;

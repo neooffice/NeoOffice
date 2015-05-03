@@ -17,10 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/textfield.hxx"
+#include "drawingml/textfield.hxx"
 
 #include <list>
 
+#include <osl/diagnose.h>
 #include <rtl/ustring.hxx>
 #include <rtl/string.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -30,8 +31,8 @@
 #include "oox/helper/helper.hxx"
 #include "oox/helper/propertyset.hxx"
 #include "oox/core/xmlfilterbase.hxx"
-#include "oox/drawingml/textparagraphproperties.hxx"
-#include "oox/drawingml/textcharacterproperties.hxx"
+#include "drawingml/textparagraphproperties.hxx"
+#include "drawingml/textcharacterproperties.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -201,7 +202,7 @@ sal_Int32 TextField::insertAt(
 #if SUPD == 310
                     css::uno::Reference< XTextContent > xContent( *iter, UNO_QUERY);
 #else	// SUPD == 310
-                    css::uno::Reference< XTextContent > xContent( *iter, UNO_QUERY);
+                    Reference< XTextContent > xContent( *iter, UNO_QUERY);
 #endif	// SUPD == 310
                     if( bFirst)
                     {

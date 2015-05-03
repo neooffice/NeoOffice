@@ -62,6 +62,9 @@
 #include "oox/vml/vmltextbox.hxx"
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/containerhelper.hxx"
+#include "svx/EnhancedCustomShapeTypeNames.hxx"
+#include <svx/unoapi.hxx>
+#include <svx/svdoashp.hxx>
 
 #if SUPD == 310
 #include <sal/log.hxx>
@@ -76,8 +79,6 @@ using namespace ::com::sun::star::text;
 namespace oox {
 namespace vml {
 
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::graphic;
@@ -86,14 +87,10 @@ using namespace ::com::sun::star::io;
 
 using ::oox::core::XmlFilterBase;
 
-
-
 namespace {
 
 const sal_Int32 VML_SHAPETYPE_PICTUREFRAME  = 75;
 const sal_Int32 VML_SHAPETYPE_HOSTCONTROL   = 201;
-
-
 
 awt::Point lclGetAbsPoint( const awt::Point& rRelPoint, const awt::Rectangle& rShapeRect, const awt::Rectangle& rCoordSys )
 {
@@ -119,8 +116,6 @@ awt::Rectangle lclGetAbsRect( const awt::Rectangle& rRelRect, const awt::Rectang
 
 } // namespace
 
-
-
 ShapeTypeModel::ShapeTypeModel():
     mbAutoHeight( false ),
     mbVisible( true )
@@ -139,8 +134,6 @@ void ShapeTypeModel::assignUsed( const ShapeTypeModel& rSource )
     moGraphicPath.assignIfUsed( rSource.moGraphicPath );
     moGraphicTitle.assignIfUsed( rSource.moGraphicTitle );
 }
-
-
 
 ShapeType::ShapeType( Drawing& rDrawing ) :
     mrDrawing( rDrawing )
@@ -218,8 +211,6 @@ awt::Rectangle ShapeType::getRelRectangle() const
         nWidth, nHeight );
 }
 
-
-
 ClientData::ClientData() :
     mnObjType( XML_TOKEN_INVALID ),
     mnTextHAlign( XML_Left ),
@@ -247,8 +238,6 @@ ClientData::ClientData() :
 {
 }
 
-
-
 ShapeModel::ShapeModel()
 {
 }
@@ -268,8 +257,6 @@ ClientData& ShapeModel::createClientData()
     mxClientData.reset( new ClientData );
     return *mxClientData;
 }
-
-
 
 ShapeBase::ShapeBase( Drawing& rDrawing ) :
     ShapeType( rDrawing )
@@ -351,6 +338,12 @@ Reference< XShape > ShapeBase::convertAndInsert( const Reference< XShapes >& rxS
                     aGrabBag.realloc( length+1 );
                     aGrabBag[length].Name = "VML-Z-ORDER";
                     aGrabBag[length].Value = uno::makeAny( maTypeModel.maZIndex.toInt32() );
+                    if(!(maTypeModel.maRotation).isEmpty())
+                    {
+                        aGrabBag.realloc( length+2 );
+                        aGrabBag[length+1].Name = "mso-rotation-angle";
+                        aGrabBag[length+1].Value = uno::makeAny(sal_Int32(NormAngle360((maTypeModel.maRotation.toInt32()) * -100)));
+                    }
                     propertySet->setPropertyValue( "FrameInteropGrabBag", uno::makeAny(aGrabBag) );
                 }
                 else
@@ -480,8 +473,6 @@ void ShapeBase::convertShapeProperties( const Reference< XShape >& rxShape ) con
     PropertySet( rxShape ).setProperties( aPropMap );
 }
 
-
-
 SimpleShape::SimpleShape( Drawing& rDrawing, const OUString& rService ) :
     ShapeBase( rDrawing ),
     maService( rService )
@@ -510,12 +501,38 @@ void lcl_SetAnchorType(PropertySet& rPropSet, const ShapeTypeModel& rTypeModel)
 {
     if ( rTypeModel.maPositionHorizontal == "center" )
         rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::CENTER));
+    else if ( rTypeModel.maPositionHorizontal == "left" )
+        rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::LEFT));
+    else if ( rTypeModel.maPositionHorizontal == "right" )
+        rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::RIGHT));
+    else if ( rTypeModel.maPositionHorizontal == "inside" )
+    {
+        rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::LEFT));
+        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(sal_True));
+    }
+    else if ( rTypeModel.maPositionHorizontal == "outside" )
+    {
+        rPropSet.setAnyProperty(PROP_HoriOrient, makeAny(text::HoriOrientation::RIGHT));
+        rPropSet.setAnyProperty(PROP_PageToggle, makeAny(sal_True));
+    }
 
     if ( rTypeModel.maPositionHorizontalRelative == "page" )
         rPropSet.setAnyProperty(PROP_HoriOrientRelation, makeAny(text::RelOrientation::PAGE_FRAME));
+    else if ( rTypeModel.maPositionVerticalRelative == "margin" )
+        rPropSet.setProperty(PROP_VertOrientRelation, text::RelOrientation::PAGE_PRINT_AREA);
+    else if ( rTypeModel.maPositionVerticalRelative == "text" )
+        rPropSet.setProperty(PROP_VertOrientRelation, text::RelOrientation::FRAME);
 
     if ( rTypeModel.maPositionVertical == "center" )
         rPropSet.setAnyProperty(PROP_VertOrient, makeAny(text::VertOrientation::CENTER));
+    else if ( rTypeModel.maPositionVertical == "top" )
+        rPropSet.setAnyProperty(PROP_VertOrient, makeAny(text::VertOrientation::TOP));
+    else if ( rTypeModel.maPositionVertical == "bottom" )
+        rPropSet.setAnyProperty(PROP_VertOrient, makeAny(text::VertOrientation::BOTTOM));
+    else if ( rTypeModel.maPositionVertical == "inside" )
+        rPropSet.setAnyProperty(PROP_VertOrient, makeAny(text::VertOrientation::LINE_TOP));
+    else if ( rTypeModel.maPositionVertical == "outside" )
+        rPropSet.setAnyProperty(PROP_VertOrient, makeAny(text::VertOrientation::LINE_BOTTOM));
 
     if ( rTypeModel.maPosition == "absolute" )
     {
@@ -532,7 +549,6 @@ void lcl_SetAnchorType(PropertySet& rPropSet, const ShapeTypeModel& rTypeModel)
         }
         else
         {
-            // Vertical placement relative to margin, because parent style must not modify vertical position
             rPropSet.setProperty(PROP_VertOrientRelation, text::RelOrientation::FRAME);
         }
     }
@@ -582,6 +598,24 @@ Reference< XShape > SimpleShape::implConvertAndInsert( const Reference< XShapes 
 #else	// SUPD == 310
     Reference< XShape > xShape = mrDrawing.createAndInsertXShape( maService, rxShapes, aShapeRect );
 #endif	// SUPD == 310
+    SdrObject* pShape = GetSdrObjectFromXShape( xShape );
+    if( pShape && getShapeType() >= 0 )
+    {
+        OUString aShapeType;
+        aShapeType = EnhancedCustomShapeTypeNames::Get( static_cast< MSO_SPT >(getShapeType()) );
+        //The resize autoshape to fit text attr of FontWork/Word-Art should always be false
+        //for the fallback geometry.
+        if(aShapeType.startsWith("fontwork"))
+        {
+#if SUPD == 310
+            pShape->SetMergedItem(SdrTextAutoGrowHeightItem(FALSE));
+            pShape->SetMergedItem(SdrTextAutoGrowWidthItem(FALSE));
+#else	// SUPD == 310
+            pShape->SetMergedItem(makeSdrTextAutoGrowHeightItem(false));
+            pShape->SetMergedItem(makeSdrTextAutoGrowWidthItem(false));
+#endif	// SUPD == 310
+        }
+    }
     convertShapeProperties( xShape );
 
     // Handle left/right/top/bottom wrap distance.
@@ -787,8 +821,6 @@ Reference< XShape > SimpleShape::createPictureObject( const Reference< XShapes >
     return xShape;
 }
 
-
-
 RectangleShape::RectangleShape( Drawing& rDrawing ) :
     SimpleShape( rDrawing, "com.sun.star.drawing.RectangleShape" )
 {
@@ -829,14 +861,10 @@ Reference<XShape> RectangleShape::implConvertAndInsert(const Reference<XShapes>&
     return xShape;
 }
 
-
-
 EllipseShape::EllipseShape( Drawing& rDrawing ) :
     SimpleShape( rDrawing, "com.sun.star.drawing.EllipseShape" )
 {
 }
-
-
 
 PolyLineShape::PolyLineShape( Drawing& rDrawing ) :
     SimpleShape( rDrawing, "com.sun.star.drawing.PolyLineShape" )
@@ -900,8 +928,6 @@ awt::Rectangle LineShape::getRelRectangle() const
     aShapeRect.Height = maShapeModel.maTo.getToken(0, ',', nIndex).toInt32() - aShapeRect.Y;
     return aShapeRect;
 }
-
-
 
 BezierShape::BezierShape(Drawing& rDrawing)
     : SimpleShape(rDrawing, "com.sun.star.drawing.OpenBezierShape")
@@ -1011,8 +1037,6 @@ Reference< XShape > BezierShape::implConvertAndInsert( const Reference< XShapes 
     return xShape;
 }
 
-
-
 CustomShape::CustomShape( Drawing& rDrawing ) :
     SimpleShape( rDrawing, "com.sun.star.drawing.CustomShape" )
 {
@@ -1047,8 +1071,6 @@ Reference< XShape > CustomShape::implConvertAndInsert( const Reference< XShapes 
     }
     return xShape;
 }
-
-
 
 ComplexShape::ComplexShape( Drawing& rDrawing ) :
     CustomShape( rDrawing )
@@ -1164,8 +1186,6 @@ Reference< XShape > ComplexShape::implConvertAndInsert( const Reference< XShapes
     return CustomShape::implConvertAndInsert( rxShapes, rShapeRect );
 }
 
-
-
 GroupShape::GroupShape( Drawing& rDrawing ) :
     ShapeBase( rDrawing ),
     mxChildren( new ShapeContainer( rDrawing ) )
@@ -1257,8 +1277,6 @@ Reference< XShape > GroupShape::implConvertAndInsert( const Reference< XShapes >
         lcl_SetRotation(aPropertySet, maTypeModel.maRotation.toInt32());
     return xGroupShape;
 }
-
-
 
 } // namespace vml
 } // namespace oox

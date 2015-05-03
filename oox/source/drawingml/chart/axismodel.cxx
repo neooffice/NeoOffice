@@ -17,13 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/axismodel.hxx"
+#include "drawingml/chart/axismodel.hxx"
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 AxisDispUnitsModel::AxisDispUnitsModel() :
     mfCustomUnit( 0.0 )
@@ -33,8 +31,6 @@ AxisDispUnitsModel::AxisDispUnitsModel() :
 AxisDispUnitsModel::~AxisDispUnitsModel()
 {
 }
-
-
 
 AxisModel::AxisModel( sal_Int32 nTypeId ) :
     mnAxisId( -1 ),
@@ -62,8 +58,6 @@ AxisModel::AxisModel( sal_Int32 nTypeId ) :
 AxisModel::~AxisModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

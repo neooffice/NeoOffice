@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/textfont.hxx"
+#include "drawingml/textfont.hxx"
 #include <com/sun/star/awt/FontFamily.hpp>
 #include <com/sun/star/awt/FontPitch.hpp>
 #include "oox/drawingml/theme.hxx"
@@ -28,8 +28,6 @@ using ::oox::core::XmlFilterBase;
 
 namespace oox {
 namespace drawingml {
-
-
 
 namespace {
 
@@ -49,8 +47,6 @@ sal_Int16 lclGetFontFamily( sal_Int32 nOoxValue )
 
 } // namespace
 
-
-
 TextFont::TextFont() :
     mnPitch( 0 ),
     mnCharset( WINDOWS_CHARSET_ANSI )
@@ -68,7 +64,11 @@ void TextFont::setAttributes( const AttributeList& rAttribs )
 void TextFont::setAttributes( const OUString& sFontName )
 {
     maTypeface = sFontName;
+#if SUPD == 310
     maPanose = OUString();
+#else	// SUPD == 310
+    maPanose.clear();
+#endif	// SUPD == 310
     mnPitch = 0;
     mnCharset = WINDOWS_CHARSET_DEFAULT;
 }
@@ -94,8 +94,6 @@ bool TextFont::implGetFontData( OUString& rFontName, sal_Int16& rnFontPitch, sal
     rnFontFamily = lclGetFontFamily( extractValue< sal_Int16 >( mnPitch, 4, 4 ) );
     return !rFontName.isEmpty();
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

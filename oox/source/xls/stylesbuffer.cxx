@@ -2801,7 +2801,11 @@ const sal_Char* const sppcLegacyStyleNames[] =
     "Hyperlink",            // new in BIFF8
     "Followed_Hyperlink"
 };
+#if SUPD == 310
+const sal_Int32 snLegacyStyleNamesCount = static_cast< sal_Int32 >( SAL_N_ELEMENTS( sppcLegacyStyleNames ) );
+#else	// SUPD == 310
 const sal_Int32 snLegacyStyleNamesCount = static_cast< sal_Int32 >( STATIC_ARRAY_SIZE( sppcLegacyStyleNames ) );
+#endif	// SUPD == 310
 
 const sal_Char* const spcStyleNamePrefix = "Excel Built-in ";
 const sal_Char* const sppcStyleNames[] =
@@ -2861,7 +2865,11 @@ const sal_Char* const sppcStyleNames[] =
     "60% - Accent6",
     "Explanatory Text"
 };
+#if SUPD == 310
+const sal_Int32 snStyleNamesCount = static_cast< sal_Int32 >( SAL_N_ELEMENTS( sppcStyleNames ) );
+#else	// SUPD == 310
 const sal_Int32 snStyleNamesCount = static_cast< sal_Int32 >( STATIC_ARRAY_SIZE( sppcStyleNames ) );
+#endif	// SUPD == 310
 
 OUString lclGetBuiltinStyleName( sal_Int32 nBuiltinId, const OUString& rName, sal_Int32 nLevel = 0 )
 {

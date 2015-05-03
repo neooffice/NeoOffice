@@ -20,6 +20,7 @@
 #include "oox/ole/olehelper.hxx"
 
 #include <rtl/ustrbuf.hxx>
+#include <osl/diagnose.h>
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/graphichelper.hxx"
 #include "oox/token/tokens.hxx"
@@ -48,8 +49,6 @@
 namespace oox {
 namespace ole {
 
-
-
 using ::com::sun::star::form::XFormComponent;
 using ::com::sun::star::form::XForm;
 using ::com::sun::star::awt::XControlModel;
@@ -74,8 +73,6 @@ using ::com::sun::star::lang::XServiceInfo;
 
 using namespace ::com::sun::star::form;
 
-
-
 namespace {
 
 const sal_uInt32 OLE_COLORTYPE_MASK         = 0xFF000000;
@@ -86,7 +83,6 @@ const sal_uInt32 OLE_COLORTYPE_SYSCOLOR     = 0x80000000;
 
 const sal_uInt32 OLE_PALETTECOLOR_MASK      = 0x0000FFFF;
 const sal_uInt32 OLE_SYSTEMCOLOR_MASK       = 0x0000FFFF;
-
 
 /** Swaps the red and blue component of the passed color. */
 inline sal_uInt32 lclSwapRedBlue( sal_uInt32 nColor )
@@ -99,8 +95,6 @@ inline sal_Int32 lclDecodeBgrColor( sal_uInt32 nOleColor )
 {
     return static_cast< sal_Int32 >( lclSwapRedBlue( nOleColor ) & 0xFFFFFF );
 }
-
-
 
 #if SUPD == 310
 const sal_Char* const OLE_GUID_URLMONIKER   = "{79EAC9E0-BAF9-11CE-8C82-00AA004BA90B}";
@@ -218,8 +212,6 @@ GUIDCNamePairMap& classIdToGUIDCNamePairMap::get()
     return theInst.mnIdToGUIDCNamePairMap;
 }
 
-
-
 template< typename Type >
 void lclAppendHex( OUStringBuffer& orBuffer, Type nValue )
 {
@@ -259,8 +251,6 @@ OUString lclReadStdHlinkString( BinaryInputStream& rInStrm, bool bUnicode )
 
 } // namespace
 
-
-
 StdFontInfo::StdFontInfo() :
     mnHeight( 0 ),
     mnWeight( OLE_STDFONT_NORMAL ),
@@ -278,8 +268,6 @@ StdFontInfo::StdFontInfo( const OUString& rName, sal_uInt32 nHeight,
     mnFlags( nFlags )
 {
 }
-
-
 
 sal_Int32 OleHelper::decodeOleColor(
         const GraphicHelper& rGraphicHelper, sal_uInt32 nOleColor, bool bDefaultColorBgr )
@@ -320,20 +308,12 @@ sal_uInt32 OleHelper::encodeOleColor( sal_Int32 nRgbColor )
 
 void OleHelper::exportGuid( BinaryOutputStream& rOStr, const SvGlobalName& rId )
 {
-    const sal_uInt8* pBytes = rId.GetBytes();
-    sal_uInt32 a;
-    memcpy(&a, pBytes, sizeof(sal_uInt32));
-    rOStr<< a;
-
-    sal_uInt16 b;
-    memcpy(&b, pBytes+4, sizeof(sal_uInt16));
-    rOStr << b;
-
-    memcpy(&b, pBytes+6, sizeof(sal_uInt16));
-    rOStr << b;
-
-    rOStr.writeArray( (sal_uInt8 *)&pBytes[ 8 ], 8 );
+    rOStr << rId.GetCLSID().Data1;
+    rOStr << rId.GetCLSID().Data2;
+    rOStr << rId.GetCLSID().Data3;
+    rOStr.writeArray( rId.GetCLSID().Data4, 8 );
 }
+
 OUString OleHelper::importGuid( BinaryInputStream& rInStrm )
 {
     OUStringBuffer aBuffer;
@@ -521,9 +501,9 @@ OleFormCtrlExportHelper::OleFormCtrlExportHelper(  const Reference< XComponentCo
         PropertySet aPropSet( mxControlModel );
         if ( aPropSet.getProperty( nClassId, PROP_ClassId ) )
         {
-            /* psuedo ripped from legacy msocximex:
+            /* pseudo ripped from legacy msocximex:
               "There is a truly horrible thing with EditControls and FormattedField
-              Controls, they both pretend to have an EDITBOX ClassId for compability
+              Controls, they both pretend to have an EDITBOX ClassId for compatibility
               reasons, at some stage in the future hopefully there will be a proper
               FormulaField ClassId rather than this piggybacking two controls onto the
               same ClassId, cmc." - when fixed the fake FORMULAFIELD id entry
@@ -540,8 +520,7 @@ OleFormCtrlExportHelper::OleFormCtrlExportHelper(  const Reference< XComponentCo
             else if ( nClassId == FormComponentType::COMMANDBUTTON )
             {
                 bool bToggle = false;
-                aPropSet.getProperty( bToggle, PROP_Toggle );
-                if ( bToggle )
+                if ( aPropSet.getProperty( bToggle, PROP_Toggle ) && bToggle )
                     nClassId = TOGGLEBUTTON;
             }
             else if ( nClassId == FormComponentType::CONTROL )
@@ -677,7 +656,6 @@ bool MSConvertOCXControls::ReadOCXStorage( SotStorageRef& xOleStg,
 
         SvStorageStreamRef pContents = xOleStg->OpenSotStream( OUString("contents"));
         BinaryXInputStream aInStrm(  Reference< XInputStream >( new utl::OSeekableInputStreamWrapper( *pContents ) ), true );
-
 
         SvStorageStreamRef pClsStrm = xOleStg->OpenSotStream(OUString("\1CompObj"));
         BinaryXInputStream aClsStrm( Reference< XInputStream >( new utl::OSeekableInputStreamWrapper(*pClsStrm ) ), true );

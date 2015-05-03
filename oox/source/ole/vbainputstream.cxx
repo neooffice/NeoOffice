@@ -23,8 +23,6 @@
 namespace oox {
 namespace ole {
 
-
-
 namespace {
 
 const sal_uInt8 VBASTREAM_SIGNATURE         = 1;
@@ -35,8 +33,6 @@ const sal_uInt16 VBACHUNK_COMPRESSED        = 0x8000;
 const sal_uInt16 VBACHUNK_LENMASK           = 0x0FFF;
 
 } // namespace
-
-
 
 VbaInputStream::VbaInputStream( BinaryInputStream& rInStrm ) :
     BinaryStreamBase( false ),
@@ -202,13 +198,11 @@ bool VbaInputStream::updateChunk()
     }
     // decompression sometimes leaves the stream pos offset 1 place ( at
     // least ) past or before the expected stream pos.
-    // here we make sure we are on the chunk boundry
+    // here we make sure we are on the chunk boundary
     mpInStrm->seek( target );
     mnChunkPos = 0;
     return !mbEof;
 }
-
-
 
 } // namespace ole
 } // namespace oox

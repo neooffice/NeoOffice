@@ -192,10 +192,13 @@ struct ClientData
 struct ShapeModel
 {
     typedef ::std::vector< ::com::sun::star::awt::Point >   PointVector;
-    SAL_WNODEPRECATED_DECLARATIONS_PUSH
-    typedef ::std::auto_ptr< TextBox >                      TextBoxPtr;
-    typedef ::std::auto_ptr< ClientData >                   ClientDataPtr;
-    SAL_WNODEPRECATED_DECLARATIONS_POP
+#if SUPD == 310
+    typedef ::std::auto_ptr< TextBox >                    TextBoxPtr;
+    typedef ::std::auto_ptr< ClientData >                 ClientDataPtr;
+#else	// SUPD == 310
+    typedef ::std::unique_ptr< TextBox >                    TextBoxPtr;
+    typedef ::std::unique_ptr< ClientData >                 ClientDataPtr;
+#endif	// SUPD == 310
 
     OUString     maType;             ///< Shape template with default properties.
     PointVector         maPoints;           ///< Points for the polyline shape.
@@ -435,9 +438,11 @@ protected:
                             const ::com::sun::star::awt::Rectangle& rShapeRect ) const SAL_OVERRIDE;
 
 private:
-    SAL_WNODEPRECATED_DECLARATIONS_PUSH
+#if SUPD == 310
     typedef ::std::auto_ptr< ShapeContainer > ShapeContainerPtr;
-    SAL_WNODEPRECATED_DECLARATIONS_POP
+#else	// SUPD == 310
+    typedef ::std::unique_ptr< ShapeContainer > ShapeContainerPtr;
+#endif	// SUPD == 310
     ShapeContainerPtr   mxChildren;         ///< Shapes and templates that are part of this group.
 };
 

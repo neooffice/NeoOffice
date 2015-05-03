@@ -17,7 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/table/tableproperties.hxx"
+#include "drawingml/table/tableproperties.hxx"
+#include "drawingml/table/tablestylelist.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include <com/sun/star/table/XTable.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
@@ -34,7 +35,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::table;
-
 
 namespace oox { namespace drawingml { namespace table {
 

@@ -18,11 +18,11 @@
  */
 
 #include "oox/drawingml/theme.hxx"
+#include <oox/token/tokens.hxx>
+#include <drawingml/textcharacterproperties.hxx>
 
 namespace oox {
 namespace drawingml {
-
-
 
 Theme::Theme()
 {
@@ -105,8 +105,6 @@ const TextFont* Theme::resolveFont( const OUString& rName ) const
     }
     return 0;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

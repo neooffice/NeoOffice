@@ -48,6 +48,7 @@
 #include <com/sun/star/table/CellRangeAddress.hpp>
 #include <comphelper/string.hxx>
 #include <rtl/tencinfo.h>
+#include <osl/diagnose.h>
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/containerhelper.hxx"
@@ -92,8 +93,6 @@ const sal_uInt32 COMCTL_SCROLLBAR_HOR       = 0x00000010;
 
 const sal_uInt32 COMCTL_ID_PROGRESSBAR_50   = 0xE6E17E84;
 const sal_uInt32 COMCTL_ID_PROGRESSBAR_60   = 0x97AB8A01;
-
-
 
 const sal_uInt32 AX_CMDBUTTON_DEFFLAGS      = 0x0000001B;
 const sal_uInt32 AX_LABEL_DEFFLAGS          = 0x0080001B;
@@ -153,8 +152,6 @@ const sal_Int32 AX_CONTAINER_CYCLEALL       = 0;
 
 const sal_Int32 AX_CONTAINER_SCR_NONE       = 0x00;
 
-
-
 const sal_Int16 API_BORDER_NONE             = 0;
 const sal_Int16 API_BORDER_SUNKEN           = 1;
 const sal_Int16 API_BORDER_FLAT             = 2;
@@ -162,8 +159,6 @@ const sal_Int16 API_BORDER_FLAT             = 2;
 const sal_Int16 API_STATE_UNCHECKED         = 0;
 const sal_Int16 API_STATE_CHECKED           = 1;
 const sal_Int16 API_STATE_DONTKNOW          = 2;
-
-
 
 /** Tries to extract a range address from a defined name. */
 bool lclExtractRangeFromName( CellRangeAddress& orRangeAddr, const Reference< XModel >& rxDocModel, const OUString& rAddressString )
@@ -219,8 +214,6 @@ void lclPrepareConverter( PropertySet& rConverter, const Reference< XModel >& rx
 }
 
 } // namespace
-
-
 
 ControlConverter::ControlConverter( const Reference< XModel >& rxDocModel,
         const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr ) :
@@ -443,7 +436,7 @@ void ControlConverter::convertToAxBorder( PropertySet& rPropSet,
         case API_BORDER_NONE:
         default:
             break;
-    };
+    }
     convertToMSColor( rPropSet, PROP_BorderColor, nBorderColor );
 }
 
@@ -554,7 +547,11 @@ void ControlConverter::convertToAxState( PropertySet& rPropSet,
     // control is awt or not )
     rPropSet.getProperty( nState, PROP_State );
 
+#if SUPD == 310
     rValue = OUString(); // empty e.g. 'don't know'
+#else	// SUPD == 310
+    rValue.clear(); // empty e.g. 'don't know'
+#endif	// SUPD == 310
     if ( nState == API_STATE_UNCHECKED )
         rValue = OUString('0');
     else if ( nState == API_STATE_CHECKED )
@@ -590,8 +587,6 @@ void ControlConverter::convertToAxOrientation( PropertySet& rPropSet,
     else
         nOrientation = AX_ORIENTATION_VERTICAL;
 }
-
-
 
 ControlModelBase::ControlModelBase() :
     maSize( 0, 0 ),
@@ -666,8 +661,6 @@ void ControlModelBase::convertSize( PropertyMap& rPropMap, const ControlConverte
 {
     rConv.convertSize( rPropMap, maSize );
 }
-
-
 
 ComCtlModelBase::ComCtlModelBase( sal_uInt32 nDataPartId5, sal_uInt32 nDataPartId6,
         sal_uInt16 nVersion, bool bCommonPart, bool bComplexPart ) :
@@ -781,8 +774,6 @@ bool ComCtlModelBase::importComplexPart( BinaryInputStream& rInStrm )
     return false;
 }
 
-
-
 ComCtlScrollBarModel::ComCtlScrollBarModel( sal_uInt16 nVersion ) :
     ComCtlModelBase( SAL_MAX_UINT32, COMCTL_ID_SCROLLBAR_60, nVersion, true, true ),
     mnScrollBarFlags( 0x00000011 ),
@@ -811,8 +802,6 @@ void ComCtlScrollBarModel::importControlData( BinaryInputStream& rInStrm )
 {
     rInStrm >> mnScrollBarFlags >> mnLargeChange >> mnSmallChange >> mnMin >> mnMax >> mnPosition;
 }
-
-
 
 ComCtlProgressBarModel::ComCtlProgressBarModel( sal_uInt16 nVersion ) :
     ComCtlModelBase( COMCTL_ID_PROGRESSBAR_50, COMCTL_ID_PROGRESSBAR_60, nVersion, true, true ),
@@ -846,8 +835,6 @@ void ComCtlProgressBarModel::importControlData( BinaryInputStream& rInStrm )
         rInStrm >> mnVertical >> mnSmooth;
 }
 
-
-
 AxControlModelBase::AxControlModelBase()
 {
 }
@@ -870,8 +857,6 @@ void AxControlModelBase::importProperty( sal_Int32 nPropId, const OUString& rVal
         break;
     }
 }
-
-
 
 AxFontDataModel::AxFontDataModel( bool bSupportsAlign ) :
     mbSupportsAlign( bSupportsAlign )
@@ -974,8 +959,6 @@ void AxFontDataModel::convertFromProperties( PropertySet& rPropSet, const Contro
     }
 }
 
-
-
 AxCommandButtonModel::AxCommandButtonModel() :
     mnTextColor( AX_SYSCOLOR_BUTTONTEXT ),
     mnBackColor( AX_SYSCOLOR_BUTTONFACE ),
@@ -1025,7 +1008,6 @@ bool AxCommandButtonModel::importBinaryModel( BinaryInputStream& rInStrm )
     aReader.skipPictureProperty(); // mouse icon
     return aReader.finalizeImport() && AxFontDataModel::importBinaryModel( rInStrm );
 }
-
 
 void AxCommandButtonModel::exportBinaryModel( BinaryOutputStream& rOutStrm )
 {
@@ -1093,20 +1075,19 @@ void AxCommandButtonModel::convertProperties( PropertyMap& rPropMap, const Contr
 
 void AxCommandButtonModel::convertFromProperties( PropertySet& rPropSet, const ControlConverter& rConv )
 {
-    rPropSet.getProperty( maCaption, PROP_Label );
+    (void)rPropSet.getProperty(maCaption, PROP_Label);
     bool bRes = false;
     if ( rPropSet.getProperty( bRes, PROP_Enabled ) )
         setFlag( mnFlags, AX_FLAGS_ENABLED, bRes );
     if ( rPropSet.getProperty( bRes,  PROP_MultiLine ) )
         setFlag( mnFlags, AX_FLAGS_WORDWRAP, bRes );
-    rPropSet.getProperty( mbFocusOnClick, PROP_FocusOnClick );
+    (void)rPropSet.getProperty(mbFocusOnClick, PROP_FocusOnClick);
 
     rConv.convertToMSColor( rPropSet, PROP_TextColor, mnTextColor );
     rConv.convertToMSColor( rPropSet, PROP_BackgroundColor, mnBackColor );
 
     AxFontDataModel::convertFromProperties( rPropSet, rConv );
 }
-
 
 AxLabelModel::AxLabelModel() :
     mnTextColor( AX_SYSCOLOR_BUTTONTEXT ),
@@ -1238,8 +1219,6 @@ void AxLabelModel::convertProperties( PropertyMap& rPropMap, const ControlConver
     AxFontDataModel::convertProperties( rPropMap, rConv );
 }
 
-
-
 AxImageModel::AxImageModel() :
     mnBackColor( AX_SYSCOLOR_BUTTONFACE ),
     mnFlags( AX_IMAGE_DEFFLAGS ),
@@ -1358,8 +1337,6 @@ void AxImageModel::convertProperties( PropertyMap& rPropMap, const ControlConver
     rConv.convertAxPicture( rPropMap, maPictureData, mnPicSizeMode, mnPicAlign, mbPicTiling );
     AxControlModelBase::convertProperties( rPropMap, rConv );
 }
-
-
 
 AxTabStripModel::AxTabStripModel() :
     mnListIndex( 0 ),
@@ -1588,8 +1565,6 @@ void AxMorphDataModelBase::convertProperties( PropertyMap& rPropMap, const Contr
     AxFontDataModel::convertProperties( rPropMap, rConv );
 }
 
-
-
 AxToggleButtonModel::AxToggleButtonModel()
 {
     mnDisplayStyle = AX_DISPLAYSTYLE_TOGGLE;
@@ -1651,8 +1626,6 @@ void AxToggleButtonModel::exportCompObj( BinaryOutputStream& rOutStream )
     };
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
-
-
 
 AxCheckBoxModel::AxCheckBoxModel()
 {
@@ -1716,7 +1689,6 @@ void AxCheckBoxModel::exportCompObj( BinaryOutputStream& rOutStream )
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
 
-
 AxOptionButtonModel::AxOptionButtonModel()
 {
     mnDisplayStyle = AX_DISPLAYSTYLE_OPTBUTTON;
@@ -1779,8 +1751,6 @@ void AxOptionButtonModel::exportCompObj( BinaryOutputStream& rOutStream )
     };
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
-
-
 
 AxTextBoxModel::AxTextBoxModel()
 {
@@ -1859,7 +1829,6 @@ void AxTextBoxModel::exportCompObj( BinaryOutputStream& rOutStream )
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
 
-
 AxNumericFieldModel::AxNumericFieldModel()
 {
     mnDisplayStyle = AX_DISPLAYSTYLE_TEXT;
@@ -1922,7 +1891,6 @@ void AxNumericFieldModel::exportCompObj( BinaryOutputStream& rOutStream )
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
 
-
 AxListBoxModel::AxListBoxModel()
 {
     mnDisplayStyle = AX_DISPLAYSTYLE_LISTBOX;
@@ -1978,7 +1946,6 @@ void AxListBoxModel::exportCompObj( BinaryOutputStream& rOutStream )
     };
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
-
 
 AxComboBoxModel::AxComboBoxModel()
 {
@@ -2066,7 +2033,6 @@ void AxComboBoxModel::exportCompObj( BinaryOutputStream& rOutStream )
     };
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
-
 
 AxSpinButtonModel::AxSpinButtonModel() :
     mnArrowColor( AX_SYSCOLOR_BUTTONTEXT ),
@@ -2209,7 +2175,6 @@ void AxSpinButtonModel::exportCompObj( BinaryOutputStream& rOutStream )
 
     rOutStream.writeMemory( aCompObj, sizeof( aCompObj ) );
 }
-
 
 AxScrollBarModel::AxScrollBarModel() :
     mnArrowColor( AX_SYSCOLOR_BUTTONTEXT ),
@@ -2362,8 +2327,6 @@ void AxScrollBarModel::convertFromProperties( PropertySet& rPropSet, const Contr
 
 }
 
-
-
 AxContainerModelBase::AxContainerModelBase( bool bFontSupport ) :
     AxFontDataModel( false ),   // no support for alignment properties
     maLogicalSize( AX_CONTAINER_DEFWIDTH, AX_CONTAINER_DEFHEIGHT ),
@@ -2467,8 +2430,6 @@ bool AxContainerModelBase::importClassTable( BinaryInputStream& rInStrm, AxClass
     return bValid;
 }
 
-
-
 AxFrameModel::AxFrameModel() :
     AxContainerModelBase( true )
 {
@@ -2514,7 +2475,6 @@ ApiControlType AxMultiPageModel::getControlType() const
     return API_CONTROL_MULTIPAGE;
 }
 
-
 bool AxMultiPageModel::importPageAndMultiPageProperties( BinaryInputStream& rInStrm, sal_Int32 nPages )
 {
     // PageProperties
@@ -2553,9 +2513,6 @@ void AxMultiPageModel::convertProperties( PropertyMap& rPropMap, const ControlCo
     AxContainerModelBase::convertProperties( rPropMap, rConv );
 }
 
-
-
-
 AxUserFormModel::AxUserFormModel()
 {
 }
@@ -2581,8 +2538,8 @@ HtmlSelectModel::HtmlSelectModel()
 bool
 HtmlSelectModel::importBinaryModel( BinaryInputStream& rInStrm )
 {
-    static OUString sMultiple( "<SELECT MULTIPLE" );
-    static OUString sSelected( "OPTION SELECTED" );
+    static const char sMultiple[] = "<SELECT MULTIPLE";
+    static const char sSelected[] = "OPTION SELECTED";
 
     OUString sStringContents = rInStrm.readUnicodeArray( rInStrm.size() );
 
@@ -2673,7 +2630,6 @@ HtmlSelectModel::importBinaryModel( BinaryInputStream& rInStrm )
     return true;
 }
 
-
 void
 HtmlSelectModel::convertProperties( PropertyMap& rPropMap, const ControlConverter& rConv ) const
 {
@@ -2701,7 +2657,6 @@ HtmlTextBoxModel::importBinaryModel( BinaryInputStream& rInStrm )
 #endif
     return true;
 }
-
 
 EmbeddedControl::EmbeddedControl( const OUString& rName ) :
     maName( rName )
@@ -2775,8 +2730,6 @@ bool EmbeddedControl::convertFromProperties( const Reference< XControlModel >& r
     return false;
 }
 
-
-
 EmbeddedForm::EmbeddedForm( const Reference< XModel >& rxDocModel,
         const Reference< XDrawPage >& rxDrawPage, const GraphicHelper& rGraphicHelper, bool bDefaultColorBgr ) :
     maControlConv( rxDocModel, rGraphicHelper, bDefaultColorBgr ),
@@ -2839,8 +2792,6 @@ Reference< XIndexContainer > EmbeddedForm::createXForm()
     }
     return mxFormIC;
 }
-
-
 
 } // namespace ole
 } // namespace oox

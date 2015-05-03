@@ -110,23 +110,16 @@ Sequence< OUString > SAL_CALL FastTokenHandler::getSupportedServiceNames() throw
 // XFastTokenHandler
 #if SUPD == 310
 sal_Int32 FastTokenHandler::getToken( const OUString& rIdentifier ) throw( RuntimeException )
-#else	// SUPD == 310
-sal_Int32 FastTokenHandler::getToken( const OUString& rIdentifier ) throw( RuntimeException, std::exception )
-#endif	// SUPD == 310
 {
     return mrTokenMap.getTokenFromUnicode( rIdentifier );
 }
 
-#if SUPD == 310
 OUString FastTokenHandler::getIdentifier( sal_Int32 nToken ) throw( RuntimeException )
-#else	// SUPD == 310
-OUString FastTokenHandler::getIdentifier( sal_Int32 nToken ) throw( RuntimeException, std::exception )
-#endif	// SUPD == 310
 {
-    return mrTokenMap.getUnicodeTokenName( nToken );
+    Sequence< sal_Int8 > aNameSeq = mrTokenMap.getUtf8TokenName( nToken );
+    return OUString( (sal_Char *)aNameSeq.getConstArray(), aNameSeq.getLength(), RTL_TEXTENCODING_UTF8 );
 }
 
-#if SUPD == 310
 Sequence< sal_Int8 > FastTokenHandler::getUTF8Identifier( sal_Int32 nToken ) throw( RuntimeException )
 #else	// SUPD == 310
 Sequence< sal_Int8 > FastTokenHandler::getUTF8Identifier( sal_Int32 nToken ) throw( RuntimeException, std::exception )
@@ -148,8 +141,6 @@ sal_Int32 FastTokenHandler::getTokenDirect( const char *pToken, sal_Int32 nLengt
 {
     return mrTokenMap.getTokenFromUTF8( pToken, nLength );
 }
-
-
 
 } // namespace core
 } // namespace oox

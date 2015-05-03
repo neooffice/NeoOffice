@@ -21,10 +21,9 @@
 #define INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_DIAGRAMFRAGMENTHANDLER_HXX
 
 #include "oox/core/fragmenthandler2.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
+#include "drawingml/diagram/diagram.hxx"
 
 namespace oox { namespace drawingml {
-
 
 class DiagramDataFragmentHandler : public ::oox::core::FragmentHandler2
 {
@@ -43,8 +42,6 @@ private:
 
     DiagramDataPtr	mpDataPtr;
 };
-
-
 
 class DiagramLayoutFragmentHandler : public ::oox::core::FragmentHandler2
 {

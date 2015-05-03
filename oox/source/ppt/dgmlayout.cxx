@@ -20,11 +20,13 @@
 #include "oox/ppt/dgmlayout.hxx"
 #include "oox/drawingml/theme.hxx"
 #include "oox/drawingml/themefragmenthandler.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
+#include "drawingml/diagram/diagram.hxx"
 #include "oox/dump/pptxdumper.hxx"
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/drawing/XMasterPageTarget.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
 #include <com/sun/star/container/XChild.hpp>
@@ -69,7 +71,7 @@ QuickDiagrammingLayout::QuickDiagrammingLayout( const Reference< XComponentConte
     mpThemePtr(new drawingml::Theme())
 {}
 
-bool QuickDiagrammingLayout::importDocument() throw()
+bool QuickDiagrammingLayout::importDocument() throw (css::uno::RuntimeException)
 {
 #if SUPD == 310
     css::uno::Reference<drawing::XShape>  xParentShape(getParentShape(),

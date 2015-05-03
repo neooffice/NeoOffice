@@ -19,6 +19,7 @@
 
 #include "comphelper/anytostring.hxx"
 #include "cppuhelper/exc_hlp.hxx"
+#include <osl/diagnose.h>
 #include <tools/multisel.hxx>
 
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
@@ -35,7 +36,7 @@
 #include "oox/drawingml/theme.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/themefragmenthandler.hxx"
-#include "oox/drawingml/textliststylecontext.hxx"
+#include "drawingml/textliststylecontext.hxx"
 #include "oox/ppt/pptshape.hxx"
 #include "oox/ppt/presentationfragmenthandler.hxx"
 #include "oox/ppt/slidefragmenthandler.hxx"
@@ -550,9 +551,20 @@ bool PresentationFragmentHandler::importSlide( const FragmentHandlerRef& rxSlide
     SlidePersistPtr pMasterPersistPtr( pSlidePersistPtr->getMasterPersist() );
     if ( pMasterPersistPtr.get() )
     {
+        // Setting "Layout" property adds extra title and outliner preset shapes to the master slide
+        Reference< drawing::XDrawPage > xMasterSlide(pMasterPersistPtr->getPage());
+        const int nCount = xMasterSlide->getCount();
+
         const OUString sLayout = "Layout";
         uno::Reference< beans::XPropertySet > xSet( xSlide, uno::UNO_QUERY_THROW );
         xSet->setPropertyValue( sLayout, Any( pMasterPersistPtr->getLayoutFromValueToken() ) );
+
+        while( nCount < xMasterSlide->getCount())
+        {
+            Reference< drawing::XShape > xShape;
+            xMasterSlide->getByIndex(xMasterSlide->getCount()-1) >>= xShape;
+            xMasterSlide->remove(xShape);
+        }
     }
     while( xSlide->getCount() )
     {

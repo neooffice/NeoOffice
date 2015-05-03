@@ -69,7 +69,7 @@ Reference< XInterface > SAL_CALL DocumentPropertiesImport_createInstance( const 
 
 namespace {
 
-Sequence< InputSource > lclGetRelatedStreams( const Reference< XStorage >& rxStorage, const OUString& rStreamType ) throw (RuntimeException)
+Sequence< InputSource > lclGetRelatedStreams( const Reference< XStorage >& rxStorage, const OUString& rStreamType ) throw (RuntimeException, css::io::IOException)
 {
     Reference< XRelationshipAccess > xRelation( rxStorage, UNO_QUERY_THROW );
     Reference< XHierarchicalStorageAccess > xHierarchy( rxStorage, UNO_QUERY_THROW );
@@ -182,7 +182,11 @@ void SAL_CALL DocumentPropertiesImport::importProperties(
     if( aCoreStreams.hasElements() || aExtStreams.hasElements() || aCustomStreams.hasElements() )
     {
         if( aCoreStreams.getLength() > 1 )
-            throw IOException( "Unexpected core properties stream!", Reference< XInterface >() );
+#if SUPD == 310
+            throw IOException();
+#else	// SUPD == 310
+            throw IOException( "Unexpected core properties stream!" );
+#endif	// SUPD == 310
 
         ::oox::core::FastParser aParser( mxContext );
         aParser.registerNamespace( NMSP_packageMetaCorePr );
@@ -201,8 +205,6 @@ void SAL_CALL DocumentPropertiesImport::importProperties(
             aParser.parseStream( aCustomStreams[ nIndex ], true );
     }
 }
-
-
 
 } // namespace docprop
 } // namespace oox

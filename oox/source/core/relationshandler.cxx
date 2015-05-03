@@ -20,18 +20,14 @@
 #include "oox/core/relationshandler.hxx"
 
 #include <rtl/ustrbuf.hxx>
+#include <osl/diagnose.h>
 #include "oox/helper/attributelist.hxx"
 
 namespace oox {
 namespace core {
 
-
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
-
-
-
 
 namespace {
 
@@ -52,8 +48,6 @@ OUString lclGetRelationsPath( const OUString& rFragmentPath )
 }
 
 } // namespace
-
-
 
 RelationsFragment::RelationsFragment( XmlFilterBase& rFilter, RelationsRef xRelations ) :
     FragmentHandler( rFilter, lclGetRelationsPath( xRelations->getFragmentPath() ), xRelations ),
@@ -92,7 +86,7 @@ Reference< XFastContextHandler > RelationsFragment::createFastChildContext(
 
                 OSL_ENSURE( mxRelations->count( aRelation.maId ) == 0,
                     "RelationsFragment::createFastChildContext - relation identifier exists already" );
-                mxRelations->insert( Relations::value_type( aRelation.maId, aRelation ) );
+                mxRelations->insert( ::std::map< OUString, Relation >::value_type( aRelation.maId, aRelation ) );
             }
         }
         break;
@@ -102,8 +96,6 @@ Reference< XFastContextHandler > RelationsFragment::createFastChildContext(
     }
     return xRet;
 }
-
-
 
 } // namespace core
 } // namespace oox

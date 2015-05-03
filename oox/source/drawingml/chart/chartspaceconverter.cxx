@@ -17,22 +17,21 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/chartspaceconverter.hxx"
+#include "drawingml/chart/chartspaceconverter.hxx"
 
 #include <com/sun/star/chart/MissingValueTreatment.hpp>
 #include <com/sun/star/chart/XChartDocument.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
-#include <com/sun/star/chart2/data/XDataReceiver.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/chart/chartconverter.hxx"
-#include "oox/drawingml/chart/chartdrawingfragment.hxx"
-#include "oox/drawingml/chart/chartspacemodel.hxx"
-#include "oox/drawingml/chart/plotareaconverter.hxx"
-#include "oox/drawingml/chart/titleconverter.hxx"
 #include <oox/helper/graphichelper.hxx>
+#include "drawingml/chart/chartdrawingfragment.hxx"
+#include "drawingml/chart/chartspacemodel.hxx"
+#include "drawingml/chart/plotareaconverter.hxx"
+#include "drawingml/chart/titleconverter.hxx"
 
 using namespace ::com::sun::star;
 using ::com::sun::star::uno::Reference;
@@ -40,19 +39,15 @@ using ::com::sun::star::uno::Exception;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::UNO_QUERY_THROW;
 using ::com::sun::star::uno::makeAny;
-using ::com::sun::star::util::XNumberFormatsSupplier;
 using ::com::sun::star::drawing::XDrawPageSupplier;
 using ::com::sun::star::drawing::XShapes;
 using ::com::sun::star::chart2::XDiagram;
 using ::com::sun::star::chart2::XTitled;
-using ::com::sun::star::chart2::data::XDataReceiver;
 using ::com::sun::star::beans::XPropertySet;
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::chart2;
@@ -60,8 +55,6 @@ using namespace ::com::sun::star::chart2::data;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
-
-
 
 ChartSpaceConverter::ChartSpaceConverter( const ConverterRoot& rParent, ChartSpaceModel& rModel ) :
     ConverterBase< ChartSpaceModel >( rParent, rModel )
@@ -85,32 +78,9 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
         derived converters may create an external data provider) */
     getChartConverter()->createDataProvider( getChartDocument() );
 
-    // attach number formatter of container document to data receiver
-    try
-    {
-#if SUPD == 310
-        css::uno::Reference< XDataReceiver > xDataRec( getChartDocument(), UNO_QUERY_THROW );
-        css::uno::Reference< XNumberFormatsSupplier > xNumFmtSupp( getFilter().getModel(), UNO_QUERY_THROW );
-#else	// SUPD == 310
-        Reference< XDataReceiver > xDataRec( getChartDocument(), UNO_QUERY_THROW );
-        Reference< XNumberFormatsSupplier > xNumFmtSupp( getFilter().getModel(), UNO_QUERY_THROW );
-#endif	// SUPD == 310
-        xDataRec->attachNumberFormatsSupplier( xNumFmtSupp );
-    }
-    catch( Exception& )
-    {
-    }
-
     // formatting of the chart background.  The default fill style varies with applications.
     PropertySet aBackPropSet( getChartDocument()->getPageBackground() );
-    aBackPropSet.setProperty(
-        PROP_FillStyle,
-        uno::makeAny(getFilter().getGraphicHelper().getDefaultChartAreaFillStyle()));
-
-    if( mrModel.mxShapeProp.is() )
-    {
-        getFormatter().convertFrameFormatting( aBackPropSet, mrModel.mxShapeProp, OBJECTTYPE_CHARTSPACE );
-    }
+    getFormatter().convertFrameFormatting( aBackPropSet, mrModel.mxShapeProp, OBJECTTYPE_CHARTSPACE );
 
     // convert plot area (container of all chart type groups)
     PlotAreaConverter aPlotAreaConv( *this, mrModel.mxPlotArea.getOrCreate() );
@@ -262,8 +232,6 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
         aProps.setProperty( PROP_ExternalData , uno::makeAny(mrModel.maSheetPath) );
     }
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

@@ -19,7 +19,7 @@
 
 #include "oox/ppt/pptshape.hxx"
 #include "oox/core/xmlfilterbase.hxx"
-#include "oox/drawingml/textbody.hxx"
+#include "drawingml/textbody.hxx"
 
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
@@ -151,16 +151,14 @@ void PPTShape::addShape(
                     {
                         sServiceName = "com.sun.star.presentation.TitleTextShape";
                         aMasterTextListStyle = rSlidePersist.getMasterPersist().get() ? rSlidePersist.getMasterPersist()->getTitleTextStyle() : rSlidePersist.getTitleTextStyle();
+                        bClearText = true;
                     }
                     break;
                     case XML_subTitle :
                     {
-                        if ( ( meShapeLocation == Master ) || ( meShapeLocation == Layout ) )
-                            sServiceName = OUString();
-                        else {
-                            sServiceName = "com.sun.star.presentation.SubtitleShape";
-                            aMasterTextListStyle = rSlidePersist.getMasterPersist().get() ? rSlidePersist.getMasterPersist()->getBodyTextStyle() : rSlidePersist.getBodyTextStyle();
-                        }
+                        sServiceName = "com.sun.star.presentation.SubtitleShape";
+                        aMasterTextListStyle = rSlidePersist.getMasterPersist().get() ? rSlidePersist.getMasterPersist()->getBodyTextStyle() : rSlidePersist.getBodyTextStyle();
+                        bClearText = true;
                     }
                     break;
                        case XML_obj :
@@ -492,8 +490,7 @@ oox::drawingml::ShapePtr PPTShape::findPlaceholderByIndex( const sal_Int32 nIdx,
     while( aRevIter != rShapes.rend() )
     {
         if ( (*aRevIter)->getSubTypeIndex().has() && (*aRevIter)->getSubTypeIndex().get() == nIdx &&
-             ( !bMasterOnly ||
-               ( dynamic_cast< PPTShape* >( (*aRevIter).get() ) && dynamic_cast< PPTShape* >( (*aRevIter).get() )->getShapeLocation() == Master ) ) )
+             ( !bMasterOnly || ShapeLocationIsMaster((*aRevIter).get()) ) )
         {
             aShapePtr = *aRevIter;
             break;

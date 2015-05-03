@@ -25,13 +25,14 @@
 
 #include "oox/helper/attributelist.hxx"
 #include "oox/drawingml/shapecontext.hxx"
-#include "oox/drawingml/shapestylecontext.hxx"
-#include "oox/drawingml/fillpropertiesgroupcontext.hxx"
+#include <drawingml/shapepropertiescontext.hxx>
+#include "drawingml/shapestylecontext.hxx"
+#include "drawingml/fillpropertiesgroupcontext.hxx"
 #include "oox/drawingml/lineproperties.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
-#include "oox/drawingml/customshapegeometry.hxx"
-#include "oox/drawingml/textbodycontext.hxx"
-#include "oox/drawingml/textbodypropertiescontext.hxx"
+#include "drawingml/customshapegeometry.hxx"
+#include "drawingml/textbodycontext.hxx"
+#include "drawingml/textbodypropertiescontext.hxx"
 #include "hyperlinkcontext.hxx"
 
 #if SUPD == 310
@@ -60,11 +61,6 @@ ShapeContext::~ShapeContext()
 {
     if ( mpMasterShapePtr.get() && mpShapePtr.get() )
         mpMasterShapePtr->addChild( mpShapePtr );
-}
-
-ShapePtr ShapeContext::getShape()
-{
-    return mpShapePtr;
 }
 
 ContextHandlerRef ShapeContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
@@ -108,7 +104,6 @@ ContextHandlerRef ShapeContext::onCreateContext( sal_Int32 aElementToken, const 
     {
         mpShapePtr->getTextBody()->getTextProperties().moRotation = rAttribs.getInteger( XML_rot );
         return 0;
-        break;
     }
     case XML_cNvSpPr:
         break;
@@ -136,7 +131,6 @@ ContextHandlerRef ShapeContext::onCreateContext( sal_Int32 aElementToken, const 
 
     return this;
 }
-
 
 } }
 

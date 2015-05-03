@@ -12,19 +12,9 @@
 #include <tools/stream.hxx>
 #include <comphelper/sequenceasvector.hxx>
 
-#include "oox/drawingml/customshapeproperties.hxx"
-#include "oox/helper/helper.hxx"
-#include "oox/helper/propertymap.hxx"
-#include "oox/helper/propertyset.hxx"
+#include "drawingml/customshapeproperties.hxx"
 #include "oox/token/tokenmap.hxx"
 #include <com/sun/star/awt/Rectangle.hpp>
-#include <com/sun/star/awt/Size.hpp>
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/graphic/XGraphicTransformer.hpp>
-#include <com/sun/star/drawing/XShape.hpp>
-#include <com/sun/star/drawing/XEnhancedCustomShapeDefaulter.hpp>
-#include <com/sun/star/drawing/EnhancedCustomShapeTextFrame.hpp>
 
 #if SUPD == 310
 #include <com/sun/star/drawing/EnhancedCustomShapeAdjustmentValue2.hpp>
@@ -57,7 +47,11 @@ void lcl_parseAdjustmentValue(comphelper::SequenceAsVector<drawing::EnhancedCust
         if (aToken.startsWith(aNamePrefix))
         {
             OString aName = aToken.copy(aNamePrefix.getLength(), aToken.getLength() - aNamePrefix.getLength() - strlen("\""));
-            aAdjustmentValue.Name = OStringToOUString(aName, RTL_TEXTENCODING_UTF8);
+#if SUPD == 310
+            aAdjustmentValue.Name = OUString(aName.getStr(), aName.getLength(), RTL_TEXTENCODING_UTF8);
+#else	// SUPD == 310
+            aAdjustmentValue.Name = OUString::fromUtf8(aName);
+#endif	// SUPD == 310
         }
         else if (aToken.startsWith(aValuePrefix))
         {
@@ -441,7 +435,12 @@ void lcl_parseEquations(comphelper::SequenceAsVector<OUString>& rEquations, cons
         else if (rValue[i] == '"' && bInString)
         {
             bInString = false;
-            rEquations.push_back(OStringToOUString(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\"")), RTL_TEXTENCODING_UTF8));
+#if SUPD == 310
+            OString aValueCopy(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\"")));
+            rEquations.push_back(OUString(aValueCopy.getStr(), aValueCopy.getLength(), RTL_TEXTENCODING_UTF8));
+#else	// SUPD == 310
+            rEquations.push_back(OUString::fromUtf8(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\""))));
+#endif	// SUPD == 310
         }
     }
 }
@@ -767,7 +766,12 @@ void CustomShapeProperties::initializePresetDataMap()
                 bFirst = false;
             else
                 maPresetDataMap[StaticTokenMap::get().getTokenFromUnicode(aName)] = aPropertyMap;
-            aName = OStringToOUString(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")), RTL_TEXTENCODING_UTF8);
+#if SUPD == 310
+            OString aLineCopy(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")));
+            aName = OUString(aLineCopy.getStr(), aLineCopy.getLength(), RTL_TEXTENCODING_UTF8);
+#else	// SUPD == 310
+            aName = OUString::fromUtf8(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")));
+#endif	// SUPD == 310
         }
         else
         {

@@ -19,11 +19,13 @@
 
 #include <sal/config.h>
 
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
+#include <osl/diagnose.h>
 #include "oox/ppt/pptimport.hxx"
 #include "oox/drawingml/chart/chartconverter.hxx"
 #include "oox/dump/pptxdumper.hxx"
-#include "oox/drawingml/table/tablestylelistfragmenthandler.hxx"
+#include "drawingml/table/tablestylelistfragmenthandler.hxx"
 #include "oox/helper/graphichelper.hxx"
 #include "oox/ole/vbaproject.hxx"
 
@@ -87,7 +89,7 @@ PowerPointImport::~PowerPointImport()
 {
 }
 
-bool PowerPointImport::importDocument() throw()
+bool PowerPointImport::importDocument()
 {
     /*  to activate the PPTX dumper, define the environment variable
         OOO_PPTXDUMPER and insert the full path to the file
@@ -100,7 +102,6 @@ bool PowerPointImport::importDocument() throw()
     FragmentHandlerRef xPresentationFragmentHandler( new PresentationFragmentHandler( *this, aFragmentPath ) );
     maTableStyleListPath = xPresentationFragmentHandler->getFragmentPathFromFirstTypeFromOfficeDoc( "tableStyles" );
     return importFragment( xPresentationFragmentHandler );
-
 
 }
 
@@ -217,7 +218,7 @@ class PptGraphicHelper : public GraphicHelper
 public:
     explicit            PptGraphicHelper( const PowerPointImport& rFilter );
     virtual sal_Int32   getSchemeColor( sal_Int32 nToken ) const SAL_OVERRIDE;
-    virtual drawing::FillStyle getDefaultChartAreaFillStyle() const SAL_OVERRIDE;
+    virtual sal_Int32 getDefaultChartAreaFillStyle() const SAL_OVERRIDE;
 private:
     const PowerPointImport& mrFilter;
 };
@@ -233,9 +234,9 @@ sal_Int32 PptGraphicHelper::getSchemeColor( sal_Int32 nToken ) const
     return mrFilter.getSchemeColor( nToken );
 }
 
-drawing::FillStyle PptGraphicHelper::getDefaultChartAreaFillStyle() const
+sal_Int32 PptGraphicHelper::getDefaultChartAreaFillStyle() const
 {
-    return drawing::FillStyle_NONE;
+    return XML_noFill;
 }
 
 } // namespace

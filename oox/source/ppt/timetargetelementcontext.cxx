@@ -26,15 +26,13 @@
 #include <com/sun/star/uno/Any.hxx>
 
 #include "oox/helper/attributelist.hxx"
-#include "oox/drawingml/embeddedwavaudiofile.hxx"
+#include "drawingml/embeddedwavaudiofile.hxx"
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::oox::core;
 
 namespace oox { namespace ppt {
-
-
 
     // CT_TLShapeTargetElement
     class ShapeTargetElementContext
@@ -94,15 +92,12 @@ namespace oox { namespace ppt {
         ShapeTargetElement & maShapeTarget;
     };
 
-
-
     TimeTargetElementContext::TimeTargetElementContext( FragmentHandler2& rParent, const AnimTargetElementPtr & pValue )
         : FragmentHandler2( rParent ),
             mpTarget( pValue )
     {
         OSL_ENSURE( mpTarget, "no valid target passed" );
     }
-
 
     TimeTargetElementContext::~TimeTargetElementContext( ) throw( )
     {
@@ -128,11 +123,7 @@ namespace oox { namespace ppt {
         case PPT_TOKEN( sndTgt ):
         {
             mpTarget->mnType = XML_sndTgt;
-            drawingml::EmbeddedWAVAudioFile aAudio;
-            drawingml::getEmbeddedWAVAudioFile( getRelations(), rAttribs.getFastAttributeList(), aAudio);
-
-            OUString sSndName = ( aAudio.mbBuiltIn ? aAudio.msName : aAudio.msEmbed );
-            mpTarget->msValue = sSndName;
+            mpTarget->msValue = drawingml::getEmbeddedWAVAudioFile( getRelations(), rAttribs );
             break;
         }
         case PPT_TOKEN( spTgt ):
@@ -149,7 +140,6 @@ namespace oox { namespace ppt {
 
         return this;
     }
-
 
 } }
 

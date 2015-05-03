@@ -28,7 +28,6 @@
 #include <rtl/ustring.hxx>
 #include <oox/core/filterbase.hxx>
 #include <oox/core/relations.hxx>
-#include <oox/drawingml/table/tablestylelist.hxx>
 #include <oox/dllapi.h>
 
 namespace com { namespace sun { namespace star {
@@ -43,6 +42,10 @@ namespace com { namespace sun { namespace star {
 namespace oox {
     namespace drawingml { class Theme; }
     namespace drawingml { namespace chart { class ChartConverter; } }
+    namespace drawingml { namespace table {
+        class TableStyleList;
+        typedef boost::shared_ptr< TableStyleList > TableStyleListPtr;
+    } }
     namespace vml { class Drawing; }
 }
 
@@ -165,7 +168,7 @@ public:
      */
     OUString     addRelation( const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > xOutputStream, const OUString& rType, const OUString& rTarget, bool bExternal = false );
 
-    /** Returns a stack of used textfields, used by the pptx importer to replace links to slidepages with rhe real page name */
+    /** Returns a stack of used textfields, used by the pptx importer to replace links to slidepages with the real page name */
     TextFieldStack& getTextFieldStack() const;
 
     /** Opens and returns the specified output stream from the base storage with specified media type.
@@ -259,7 +262,11 @@ private:
                             const ::com::sun::star::uno::Reference< ::com::sun::star::io::XStream >& rxOutStream ) const SAL_OVERRIDE;
 
 private:
+#if SUPD == 310
     ::std::auto_ptr< XmlFilterBaseImpl > mxImpl;
+#else	// SUPD == 310
+    ::std::unique_ptr< XmlFilterBaseImpl > mxImpl;
+#endif	// SUPD == 310
     sal_Int32 mnRelId;
     sal_Int32 mnMaxDocId;
 };

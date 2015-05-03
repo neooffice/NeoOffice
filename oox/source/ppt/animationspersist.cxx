@@ -89,7 +89,6 @@ namespace oox { namespace ppt {
         }
     }
 
-
     Any AnimTargetElement::convert(const SlidePersistPtr & pSlide, sal_Int16 & nSubType) const
     {
         Any aTarget;
@@ -140,7 +139,6 @@ namespace oox { namespace ppt {
         }
         return aTarget;
     }
-
 
 // BEGIN CUT&PASTE from sd/source/filter/ppt/pptinanimations.cxx
 /** this adds an any to another any.
@@ -194,7 +192,6 @@ namespace oox { namespace ppt {
         return aAny;
     }
 
-
     Any AnimationCondition::convertList(const SlidePersistPtr & pSlide, const AnimationConditionList & l)
     {
         Any aAny;
@@ -207,6 +204,5 @@ namespace oox { namespace ppt {
     }
 
 } }
-
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -25,6 +25,8 @@
 #include <com/sun/star/animations/TransitionType.hpp>
 #include <com/sun/star/animations/TransitionSubType.hpp>
 
+#include <osl/diagnose.h>
+
 #include "oox/helper/helper.hxx"
 #include "oox/helper/propertymap.hxx"
 #include "oox/token/namespaces.hxx"
@@ -38,7 +40,6 @@ using namespace ::com::sun::star::presentation;
 
 namespace oox { namespace ppt {
 
-
     SlideTransition::SlideTransition()
         : mnTransitionType( 0 )
         , mnTransitionSubType( 0 )
@@ -50,7 +51,6 @@ namespace oox { namespace ppt {
     {
 
     }
-
 
     SlideTransition::SlideTransition(const OUString & sFilterName)
         : mnTransitionType( 0 )
@@ -69,7 +69,6 @@ namespace oox { namespace ppt {
             mbTransitionDirectionNormal = p->mbDirection;
         }
     }
-
 
     void SlideTransition::setSlideProperties( PropertyMap & aProps )
     {
@@ -109,7 +108,6 @@ namespace oox { namespace ppt {
         }
     }
 
-
     void SlideTransition::setOoxTransitionSpeed( sal_Int32 nToken)
     {
         switch( nToken  )
@@ -144,7 +142,6 @@ namespace oox { namespace ppt {
         }
         return nOdpDirection;
     }
-
 
     sal_Int16 SlideTransition::ooxToOdpBorderDirections( ::sal_Int32 nOoxType )
     {
@@ -226,7 +223,6 @@ namespace oox { namespace ppt {
         }
         return nOdpDirection;
     }
-
 
     sal_Int16 SlideTransition::ooxToOdpDirection( ::sal_Int32 nOoxType )
     {
@@ -408,7 +404,6 @@ namespace oox { namespace ppt {
             break;
         }
     }
-
 
 } }
 

@@ -20,10 +20,13 @@
 #include "oox/drawingml/chart/chartconverter.hxx"
 
 #include <com/sun/star/chart2/XChartDocument.hpp>
-#include "oox/drawingml/chart/chartspaceconverter.hxx"
-#include "oox/drawingml/chart/chartspacemodel.hxx"
+#include <com/sun/star/chart2/data/XDataReceiver.hpp>
+#include <com/sun/star/util/XNumberFormatsSupplier.hpp>
+#include "drawingml/chart/chartspaceconverter.hxx"
+#include "drawingml/chart/chartspacemodel.hxx"
 #include "oox/helper/containerhelper.hxx"
 #include "oox/core/xmlfilterbase.hxx"
+#include <osl/diagnose.h>
 
 #if SUPD == 310
 #include <com/sun/star/chart2/data/XDataProvider2.hpp>
@@ -35,8 +38,6 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
@@ -44,8 +45,6 @@ using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 
 using ::oox::core::XmlFilterBase;
-
-
 
 static const sal_Unicode API_TOKEN_ARRAY_OPEN      = '{';
 static const sal_Unicode API_TOKEN_ARRAY_CLOSE     = '}';
@@ -89,8 +88,6 @@ static OUString lclGenerateApiArray( const Matrix< Any >& rMatrix )
     return aBuffer.makeStringAndClear();
 }
 
-
-
 ChartConverter::ChartConverter()
 {
 }
@@ -111,6 +108,11 @@ void ChartConverter::convertFromModel( XmlFilterBase& rFilter,
     OSL_ENSURE( rxChartDoc.is(), "ChartConverter::convertFromModel - missing chart document" );
     if( rxChartDoc.is() )
     {
+        Reference< data::XDataReceiver > xDataReceiver( rxChartDoc, uno::UNO_QUERY_THROW );
+        Reference< util::XNumberFormatsSupplier > xNumberFormatsSupplier( rFilter.getModel(), uno::UNO_QUERY );
+        if (xNumberFormatsSupplier.is())
+            xDataReceiver->attachNumberFormatsSupplier( xNumberFormatsSupplier );
+
         ConverterRoot aConvBase( rFilter, *this, rChartModel, rxChartDoc, rChartSize );
         ChartSpaceConverter aSpaceConv( aConvBase, rChartModel );
         aSpaceConv.convertFromModel( rxExternalPage, rChartPos );
@@ -180,8 +182,6 @@ Reference< XDataSequence > ChartConverter::createDataSequence(
 
     return 0;
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

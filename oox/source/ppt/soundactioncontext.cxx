@@ -24,15 +24,13 @@
 
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/propertymap.hxx"
-#include "oox/drawingml/embeddedwavaudiofile.hxx"
+#include "drawingml/embeddedwavaudiofile.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uno;
 
-
 namespace oox { namespace ppt {
-
 
     SoundActionContext::SoundActionContext( FragmentHandler2& rParent, PropertyMap & aProperties ) throw()
     : FragmentHandler2( rParent )
@@ -43,11 +41,9 @@ namespace oox { namespace ppt {
     {
     }
 
-
     SoundActionContext::~SoundActionContext() throw()
     {
     }
-
 
     void SoundActionContext::onEndElement()
     {
@@ -71,7 +67,6 @@ namespace oox { namespace ppt {
         }
     }
 
-
     ::oox::core::ContextHandlerRef SoundActionContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
     {
         switch( aElementToken )
@@ -79,10 +74,7 @@ namespace oox { namespace ppt {
         case PPT_TOKEN( snd ):
             if( mbHasStartSound )
             {
-                drawingml::EmbeddedWAVAudioFile aAudio;
-                drawingml::getEmbeddedWAVAudioFile( getRelations(), rAttribs.getFastAttributeList(), aAudio);
-
-                msSndName = ( aAudio.mbBuiltIn ? aAudio.msName : aAudio.msEmbed );
+                msSndName = drawingml::getEmbeddedWAVAudioFile( getRelations(), rAttribs );
             }
             return this;
         case PPT_TOKEN( endSnd ):
@@ -99,8 +91,6 @@ namespace oox { namespace ppt {
 
         return this;
     }
-
-
 
 } }
 

@@ -44,6 +44,7 @@ ENABLE_EXCEPTIONS=TRUE
 
 .IF "$(UPD)" == "310"
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
@@ -117,6 +118,7 @@ SHL1STDLIBS+= $(OPENSSLLIBST)
 SHL1STDLIBS += \
 		$(GOODIESLIB) \
 		$(SOTLIB) \
+		$(SVLLIB) \
 		$(SVTOOLLIB) \
 		$(SVXCORELIB) \
 		$(SVXMSFILTERLIB) \

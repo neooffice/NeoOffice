@@ -21,19 +21,16 @@
 
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/io/XStream.hpp>
+#include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/binaryoutputstream.hxx"
 
 namespace oox {
 
-
-
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -61,8 +58,6 @@ void lclSplitFirstElement( OUString& orElement, OUString& orRemainder, const OUS
 }
 
 } // namespace
-
-
 
 StorageBase::StorageBase( const Reference< XInputStream >& rxInStream, bool bBaseStreamAccess ) :
     mxInStream( rxInStream ),
@@ -102,19 +97,9 @@ bool StorageBase::isRootStorage() const
     return implIsStorage() && maStorageName.isEmpty();
 }
 
-bool StorageBase::isReadOnly() const
-{
-    return mbReadOnly;
-}
-
 Reference< XStorage > StorageBase::getXStorage() const
 {
     return implGetXStorage();
-}
-
-const OUString& StorageBase::getName() const
-{
-    return maStorageName;
 }
 
 OUString StorageBase::getPath() const
@@ -269,8 +254,6 @@ StorageRef StorageBase::getSubStorage( const OUString& rElementName, bool bCreat
         rxSubStrg = implOpenSubStorage( rElementName, bCreateMissing );
     return rxSubStrg;
 }
-
-
 
 } // namespace oox
 

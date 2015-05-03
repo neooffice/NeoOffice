@@ -17,23 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/chartspacefragment.hxx"
+#include "drawingml/chart/chartspacefragment.hxx"
 
-#include "oox/drawingml/shapepropertiescontext.hxx"
-#include "oox/drawingml/textbodycontext.hxx"
-#include "oox/drawingml/chart/chartspacemodel.hxx"
-#include "oox/drawingml/chart/plotareacontext.hxx"
-#include "oox/drawingml/chart/titlecontext.hxx"
+#include "drawingml/shapepropertiescontext.hxx"
+#include "drawingml/textbodycontext.hxx"
+#include "drawingml/chart/chartspacemodel.hxx"
+#include "drawingml/chart/plotareacontext.hxx"
+#include "drawingml/chart/titlecontext.hxx"
 
 namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::oox::core;
-
-
 
 ChartSpaceFragment::ChartSpaceFragment( XmlFilterBase& rFilter, const OUString& rFragmentPath, ChartSpaceModel& rModel ) :
     FragmentBase< ChartSpaceModel >( rFilter, rFragmentPath, rModel ),
@@ -117,8 +113,6 @@ ContextHandlerRef ChartSpaceFragment::onCreateContext( sal_Int32 nElement, const
     }
     return 0;
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

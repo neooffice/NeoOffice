@@ -25,6 +25,7 @@
 #include <oox/export/drawingml.hxx>
 #include <sax/fshelper.hxx>
 #include <vcl/mapmod.hxx>
+#include <tools/fract.hxx>
 #if SUPD == 310
 #include <hash_map>
 #else	// SUPD == 310
@@ -46,7 +47,7 @@ namespace oox { namespace drawingml {
 class OOX_DLLPUBLIC ShapeExport : public DrawingML {
 
 private:
-    static int mnSpreadsheetCounter;
+    static int mnEmbeddeDocumentCounter;
     struct ShapeCheck
     {
         bool operator()( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape> s1, const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape> s2 ) const
@@ -81,6 +82,7 @@ private:
 
     ShapeHashMap maShapeMap;
     ShapeHashMap* mpShapeMap;
+    OUString m_presetWarp;
 
 public:
 
@@ -175,6 +177,6 @@ public:
 
 }}
 
-#endif /* ndef INCLUDED_OOX_EXPORT_SHAPES_HXX */
+#endif // INCLUDED_OOX_EXPORT_SHAPES_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

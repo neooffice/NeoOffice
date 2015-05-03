@@ -17,13 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/titlemodel.hxx"
+#include "drawingml/chart/titlemodel.hxx"
+#include <oox/token/tokens.hxx>
 
 namespace oox {
 namespace drawingml {
 namespace chart {
-
-
 
 TextModel::TextModel()
 {
@@ -32,8 +31,6 @@ TextModel::TextModel()
 TextModel::~TextModel()
 {
 }
-
-
 
 TitleModel::TitleModel() :
     mbOverlay( false )
@@ -44,8 +41,6 @@ TitleModel::~TitleModel()
 {
 }
 
-
-
 LegendModel::LegendModel() :
     mnPosition( XML_r ),
     mbOverlay( false )
@@ -55,8 +50,6 @@ LegendModel::LegendModel() :
 LegendModel::~LegendModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

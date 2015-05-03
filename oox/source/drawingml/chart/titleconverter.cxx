@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/titleconverter.hxx"
+#include "drawingml/chart/titleconverter.hxx"
 
 #include <com/sun/star/chart/ChartLegendExpansion.hpp>
 #if SUPD != 310
@@ -28,10 +28,11 @@
 #include <com/sun/star/chart2/XLegend.hpp>
 #include <com/sun/star/chart2/XTitle.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
-#include "oox/drawingml/textbody.hxx"
-#include "oox/drawingml/textparagraph.hxx"
-#include "oox/drawingml/chart/datasourceconverter.hxx"
-#include "oox/drawingml/chart/titlemodel.hxx"
+#include <osl/diagnose.h>
+#include "drawingml/textbody.hxx"
+#include "drawingml/textparagraph.hxx"
+#include "drawingml/chart/datasourceconverter.hxx"
+#include "drawingml/chart/titlemodel.hxx"
 #include "oox/helper/containerhelper.hxx"
 #include <com/sun/star/chart2/RelativePosition.hpp>
 #include <com/sun/star/drawing/Alignment.hpp>
@@ -41,8 +42,6 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::chart2::data;
@@ -50,8 +49,6 @@ using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 
 using ::oox::core::XmlFilterBase;
-
-
 
 TextConverter::TextConverter( const ConverterRoot& rParent, TextModel& rModel ) :
     ConverterBase< TextModel >( rParent, rModel )
@@ -173,8 +170,6 @@ Reference< XFormattedString > TextConverter::appendFormattedString(
     return xFmtStr;
 }
 
-
-
 TitleConverter::TitleConverter( const ConverterRoot& rParent, TitleModel& rModel ) :
     ConverterBase< TitleModel >( rParent, rModel )
 {
@@ -228,8 +223,6 @@ void TitleConverter::convertFromModel( const Reference< XTitled >& rxTitled, con
         }
     }
 }
-
-
 
 LegendConverter::LegendConverter( const ConverterRoot& rParent, LegendModel& rModel ) :
     ConverterBase< LegendModel >( rParent, rModel )
@@ -318,8 +311,6 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
     {
     }
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

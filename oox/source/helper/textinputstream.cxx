@@ -26,18 +26,15 @@
 #include <com/sun/star/io/TextInputStream.hpp>
 #endif	// SUPD == 310
 #include <cppuhelper/implbase1.hxx>
+#include <osl/diagnose.h>
 #include <rtl/tencinfo.h>
 #include "oox/helper/binaryinputstream.hxx"
 
 namespace oox {
 
-
-
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -87,8 +84,6 @@ private:
 private:
     BinaryInputStream*  mpInStrm;
 };
-
-
 
 UnoBinaryInputStream::UnoBinaryInputStream( BinaryInputStream& rInStrm ) :
     mpInStrm( &rInStrm )
@@ -152,12 +147,14 @@ void SAL_CALL UnoBinaryInputStream::closeInput() throw (NotConnectedException, I
 void UnoBinaryInputStream::ensureConnected() const throw (NotConnectedException)
 {
     if( !mpInStrm )
-        throw NotConnectedException( "Stream closed", Reference< XInterface >() );
+#if SUPD == 310
+        throw NotConnectedException();
+#else	// SUPD == 310
+        throw NotConnectedException( "Stream closed" );
+#endif	// SUPD == 310
 }
 
 } // namespace
-
-
 
 TextInputStream::TextInputStream( const Reference< XComponentContext >& rxContext, const Reference< XInputStream >& rxInStrm, rtl_TextEncoding eTextEnc )
 {
@@ -278,8 +275,6 @@ void TextInputStream::init( const Reference< XComponentContext >& rxContext, con
     mcPendingChar = 0;
     mxTextStrm = createXTextInputStream( rxContext, rxInStrm, eTextEnc );
 }
-
-
 
 } // namespace oox
 

@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/axisconverter.hxx"
+#include "drawingml/chart/axisconverter.hxx"
 
 #include <com/sun/star/chart/ChartAxisArrangeOrderType.hpp>
 #include <com/sun/star/chart/ChartAxisLabelPosition.hpp>
@@ -32,11 +32,12 @@
 #include <com/sun/star/chart2/XAxis.hpp>
 #include <com/sun/star/chart2/XCoordinateSystem.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
-#include "oox/drawingml/chart/axismodel.hxx"
-#include "oox/drawingml/chart/titleconverter.hxx"
-#include "oox/drawingml/chart/typegroupconverter.hxx"
+#include "drawingml/chart/axismodel.hxx"
+#include "drawingml/chart/titleconverter.hxx"
+#include "drawingml/chart/typegroupconverter.hxx"
 #include "oox/drawingml/lineproperties.hxx"
 #include "comphelper/processfactory.hxx"
+#include <osl/diagnose.h>
 
 #if SUPD == 310
 #include <com/sun/star/chart2/AxisType2.hpp>
@@ -47,13 +48,9 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -133,8 +130,6 @@ bool isPercent( const RefVector<TypeGroupConverter>& rTypeGroups )
 }
 
 } // namespace
-
-
 
 AxisConverter::AxisConverter( const ConverterRoot& rParent, AxisModel& rModel ) :
     ConverterBase< AxisModel >( rParent, rModel )
@@ -378,7 +373,7 @@ void AxisConverter::convertFromModel(
         // number format ------------------------------------------------------
 
         if( (aScaleData.AxisType == cssc2::AxisType::REALNUMBER) || (aScaleData.AxisType == cssc2::AxisType::PERCENT) )
-            getFormatter().convertNumberFormat(aAxisProp, mrModel.maNumberFormat, false);
+            getFormatter().convertNumberFormat(aAxisProp, mrModel.maNumberFormat, true);
 
         // position of crossing axis ------------------------------------------
 
@@ -431,8 +426,6 @@ void AxisConverter::convertFromModel(
     }
 }
 
-
-
 AxisDispUnitsConverter::AxisDispUnitsConverter( const ConverterRoot& rParent, AxisDispUnitsModel& rModel ) :
     ConverterBase< AxisDispUnitsModel >( rParent, rModel )
 {
@@ -455,7 +448,6 @@ void AxisDispUnitsConverter::convertFromModel( const Reference< XAxis >& rxAxis 
         aPropSet.setProperty( PROP_BuiltInUnit, mrModel.mnBuiltInUnit );
     }
 }
-
 
 } // namespace chart
 } // namespace drawingml

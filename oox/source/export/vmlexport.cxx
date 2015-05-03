@@ -27,16 +27,23 @@
 #include <rtl/ustring.hxx>
 
 #include <tools/stream.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 #include <svx/svdotext.hxx>
 #include <vcl/cvtgrf.hxx>
 #if SUPD == 310
 #include <svx/msdffimp.hxx>
-#include <svx/escherex.hxx>
+#include <svx/util.hxx>
 #else	// SUPD == 310
 #include <filter/msfilter/msdffimp.hxx>
+#include <filter/msfilter/util.hxx>
+#endif	// SUPD == 310
+#if SUPD == 310
+#include <svx/escherex.hxx>
+#else	// SUPD == 310
 #include <filter/msfilter/escherex.hxx>
 #endif	// SUPD == 310
 
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
@@ -46,7 +53,6 @@
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
-
 
 using namespace sax_fastparser;
 using namespace oox::vml;
@@ -906,7 +912,7 @@ void VMLExport::Commit( EscherPropertyContainer& rProps, const Rectangle& rRect 
 #endif	// SUPD == 310
                     aStream.Seek(0);
                     if (!IsWaterMarkShape(m_pSdrObject->GetName()))
-                         m_pShapeAttrList->add(XML_ID, OUStringToOString(idStr, RTL_TEXTENCODING_UTF8));
+                         m_pShapeAttrList->add(XML_ID, OUStringToOString(idStr, RTL_TEXTENCODING_UTF8).getStr());
 
                     bAlreadyWritten[ESCHER_Prop_wzName] = true;
                 }
@@ -1064,6 +1070,32 @@ std::vector<OString> lcl_getShapeTypes()
     return aRet;
 }
 
+bool lcl_isTextBox(const SdrObject* pSdrObject)
+{
+    uno::Reference<beans::XPropertySet> xPropertySet(const_cast<SdrObject*>(pSdrObject)->getUnoShape(), uno::UNO_QUERY);
+    if (xPropertySet.is())
+    {
+        uno::Reference<beans::XPropertySetInfo> xPropertySetInfo = xPropertySet->getPropertySetInfo();
+        return xPropertySetInfo->hasPropertyByName("TextBox") && xPropertySet->getPropertyValue("TextBox").get<bool>();
+    }
+    return false;
+}
+
+OUString lcl_getAnchorIdFromGrabBag(const SdrObject* pSdrObject)
+{
+    OUString aResult;
+
+    uno::Reference<beans::XPropertySet> xShape(const_cast<SdrObject*>(pSdrObject)->getUnoShape(), uno::UNO_QUERY);
+    if (xShape->getPropertySetInfo()->hasPropertyByName("InteropGrabBag"))
+    {
+        comphelper::SequenceAsHashMap aInteropGrabBag(xShape->getPropertyValue("InteropGrabBag"));
+        if (aInteropGrabBag.find("AnchorId") != aInteropGrabBag.end())
+            aInteropGrabBag["AnchorId"] >>= aResult;
+    }
+
+    return aResult;
+}
+
 sal_Int32 VMLExport::StartShape()
 {
     if ( m_nShapeType == ESCHER_ShpInst_Nil )
@@ -1180,6 +1212,10 @@ sal_Int32 VMLExport::StartShape()
     // add style
     m_pShapeAttrList->add( XML_style, m_pShapeStyle->makeStringAndClear() );
 
+    OUString sAnchorId = lcl_getAnchorIdFromGrabBag(m_pSdrObject);
+    if (!sAnchorId.isEmpty())
+        m_pShapeAttrList->addNS(XML_wp14, XML_anchorId, OUStringToOString(sAnchorId, RTL_TEXTENCODING_UTF8));
+
     if ( nShapeElement >= 0 && !m_pShapeAttrList->hasAttribute( XML_type ) )
     {
         if ( bReferToShapeType )
@@ -1198,9 +1234,9 @@ sal_Int32 VMLExport::StartShape()
         m_pSerializer->startElementNS( XML_v, nShapeElement, XFastAttributeListRef( m_pShapeAttrList ) );
     }
 
-    // now check if we have some text and we have a text exporter registered
+    // now check if we have some editeng text (not associated textbox) and we have a text exporter registered
     const SdrTextObj* pTxtObj = PTR_CAST(SdrTextObj, m_pSdrObject);
-    if (pTxtObj && m_pTextExport && m_nShapeType != ESCHER_ShpInst_TextPlainText)
+    if (pTxtObj && m_pTextExport && msfilter::util::HasTextBoxContent(m_nShapeType) && !IsWaterMarkShape(m_pSdrObject->GetName()) && !lcl_isTextBox(m_pSdrObject))
     {
         const OutlinerParaObject* pParaObj = 0;
         bool bOwnParaObj = false;
@@ -1238,6 +1274,26 @@ void VMLExport::EndShape( sal_Int32 nShapeElement )
 {
     if ( nShapeElement >= 0 )
     {
+        if (m_pTextExport && lcl_isTextBox(m_pSdrObject))
+        {
+            uno::Reference<beans::XPropertySet> xPropertySet(const_cast<SdrObject*>(m_pSdrObject)->getUnoShape(), uno::UNO_QUERY);
+            comphelper::SequenceAsHashMap aCustomShapeProperties(xPropertySet->getPropertyValue("CustomShapeGeometry"));
+            sax_fastparser::FastAttributeList* pTextboxAttrList = m_pSerializer->createAttrList();
+            if (aCustomShapeProperties.find("TextPreRotateAngle") != aCustomShapeProperties.end())
+            {
+                sal_Int32 nTextRotateAngle = aCustomShapeProperties["TextPreRotateAngle"].get<sal_Int32>();
+                if (nTextRotateAngle == -270)
+                    pTextboxAttrList->add(XML_style, "mso-layout-flow-alt:bottom-to-top");
+            }
+            sax_fastparser::XFastAttributeListRef xTextboxAttrList(pTextboxAttrList);
+            pTextboxAttrList = 0;
+            m_pSerializer->startElementNS(XML_v, XML_textbox, xTextboxAttrList);
+
+            m_pTextExport->WriteVMLTextBox(uno::Reference<drawing::XShape>(xPropertySet, uno::UNO_QUERY_THROW));
+
+            m_pSerializer->endElementNS(XML_v, XML_textbox);
+        }
+
         // end of the shape
         m_pSerializer->endElementNS( XML_v, nShapeElement );
     }

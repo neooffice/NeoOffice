@@ -21,12 +21,14 @@
 #define INCLUDED_OOX_TOKEN_TOKENMAP_HXX
 
 #include <vector>
+#include <oox/token/tokens.hxx>
 #include <rtl/instance.hxx>
 #include <rtl/ustring.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
 #if SUPD == 310
 #include <oox/dllapi.h>
+#include <sal/log.hxx>
 #endif	// SUPD == 310
 
 namespace oox {
@@ -39,15 +41,18 @@ public:
     explicit            TokenMap();
                         ~TokenMap();
 
-    /** Returns the Unicode name of the passed token identifier. */
-    OUString     getUnicodeTokenName( sal_Int32 nToken ) const;
-
     /** Returns the token identifier for the passed Unicode token name. */
     sal_Int32           getTokenFromUnicode( const OUString& rUnicodeName ) const;
 
     /** Returns the UTF8 name of the passed token identifier as byte sequence. */
     ::com::sun::star::uno::Sequence< sal_Int8 >
-                        getUtf8TokenName( sal_Int32 nToken ) const;
+                        getUtf8TokenName( sal_Int32 nToken ) const
+    {
+        SAL_WARN_IF(nToken < 0 || nToken >= XML_TOKEN_COUNT, "oox", "Wrong nToken parameter");
+        if (0 <= nToken && nToken < XML_TOKEN_COUNT)
+            return maTokenNames[ nToken ];
+        return css::uno::Sequence< sal_Int8 >();
+    }
 
     /** Returns the token identifier for the passed UTF8 token name. */
     sal_Int32           getTokenFromUtf8(
@@ -74,12 +79,7 @@ public:
 private:
     sal_Int32 getTokenPerfectHash( const char *pToken, sal_Int32 nLength ) const;
 
-    struct TokenName
-    {
-        OUString maUniName;
-        ::com::sun::star::uno::Sequence< sal_Int8 > maUtf8Name;
-    };
-    typedef ::std::vector< TokenName > TokenNameVector;
+    typedef ::std::vector< ::com::sun::star::uno::Sequence< sal_Int8 > > TokenNameVector;
 
     TokenNameVector     maTokenNames;
     sal_Int32           mnAlphaTokens[26];

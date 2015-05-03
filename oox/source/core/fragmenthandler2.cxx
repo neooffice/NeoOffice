@@ -23,16 +23,10 @@
 namespace oox {
 namespace core {
 
-
-
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
 
-
-
 using ::com::sun::star::uno::Sequence;
-
-
 
 FragmentHandler2::FragmentHandler2( XmlFilterBase& rFilter, const OUString& rFragmentPath, bool bEnableTrimSpace ) :
     FragmentHandler( rFilter, rFragmentPath ),
@@ -108,8 +102,6 @@ bool FragmentHandler2::prepareMceContext( sal_Int32 nElement, const AttributeLis
     }
     return true;
 }
-
-
 
 // com.sun.star.xml.sax.XFastContextHandler interface -------------------------
 
@@ -224,8 +216,6 @@ void FragmentHandler2::initializeImport()
 void FragmentHandler2::finalizeImport()
 {
 }
-
-
 
 } // namespace core
 } // namespace oox

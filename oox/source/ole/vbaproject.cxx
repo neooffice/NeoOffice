@@ -31,6 +31,7 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <comphelper/configurationhelper.hxx>
 #include <comphelper/string.hxx>
+#include <osl/diagnose.h>
 #include <rtl/tencinfo.h>
 #include <rtl/ustrbuf.h>
 #include "oox/helper/binaryinputstream.hxx"
@@ -47,8 +48,6 @@
 namespace oox {
 namespace ole {
 
-
-
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::document;
 using namespace ::com::sun::star::embed;
@@ -60,8 +59,6 @@ using namespace ::com::sun::star::script::vba;
 using namespace ::com::sun::star::uno;
 
 using ::comphelper::ConfigurationHelper;
-
-
 
 namespace {
 
@@ -80,8 +77,6 @@ bool lclReadConfigItem( const Reference< XInterface >& rxConfigAccess, const OUS
 }
 
 } // namespace
-
-
 
 VbaFilterConfig::VbaFilterConfig( const Reference< XComponentContext >& rxContext, const OUString& rConfigCompName )
 {
@@ -122,8 +117,6 @@ bool VbaFilterConfig::isExportVba() const
     return lclReadConfigItem( mxConfigAccess, "Save" );
 }
 
-
-
 VbaMacroAttacherBase::VbaMacroAttacherBase( const OUString& rMacroName ) :
     maMacroName( rMacroName )
 {
@@ -145,8 +138,6 @@ void VbaMacroAttacherBase::resolveAndAttachMacro( const Reference< XVBAMacroReso
     }
 }
 
-
-
 VbaProject::VbaProject( const Reference< XComponentContext >& rxContext,
         const Reference< XModel >& rxDocModel, const OUString& rConfigCompName ) :
     VbaFilterConfig( rxContext, rConfigCompName ),
@@ -161,7 +152,6 @@ VbaProject::VbaProject( const Reference< XComponentContext >& rxContext,
 VbaProject::~VbaProject()
 {
 }
-
 
 bool VbaProject::importVbaProject( StorageBase& rVbaPrjStrg )
 {
@@ -298,7 +288,6 @@ void VbaProject::readVbaModules( StorageBase& rVbaPrjStrg )
     rtl_TextEncoding eTextEnc = RTL_TEXTENCODING_MS_1252;
     sal_uInt16 nModuleCount = 0;
     bool bExecutable = isImportVbaExecutable();
-
 
     sal_uInt16 nRecId = 0;
     StreamDataSequence aRecData;
@@ -594,8 +583,6 @@ void VbaProject::copyStorage( StorageBase& rVbaPrjStrg )
     {
     }
 }
-
-
 
 } // namespace ole
 } // namespace oox

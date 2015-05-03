@@ -26,9 +26,7 @@
 
 namespace oox {
 
-
 using ::com::sun::star::uno::Sequence;
-
 
 namespace {
 // include auto-generated Perfect_Hash
@@ -46,8 +44,6 @@ namespace {
 #endif
 } // namespace
 
-
-
 TokenMap::TokenMap() :
     maTokenNames( static_cast< size_t >( XML_TOKEN_COUNT ) )
 {
@@ -62,23 +58,8 @@ TokenMap::TokenMap() :
     for( TokenNameVector::iterator aIt = maTokenNames.begin(), aEnd = maTokenNames.end(); aIt != aEnd; ++aIt, ++ppcTokenName )
     {
         OString aUtf8Token( *ppcTokenName );
-        aIt->maUniName = OStringToOUString( aUtf8Token, RTL_TEXTENCODING_UTF8 );
-        aIt->maUtf8Name = Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( aUtf8Token.getStr() ), aUtf8Token.getLength() );
+        *aIt = Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( aUtf8Token.getStr() ), aUtf8Token.getLength() );
     }
-
-#if OSL_DEBUG_LEVEL > 0
-    // check that the perfect_hash is in sync with the token name list
-    bool bOk = true;
-    for( sal_Int32 nToken = 0; bOk && (nToken < XML_TOKEN_COUNT); ++nToken )
-    {
-        // check that the getIdentifier <-> getToken roundtrip works
-        OString aUtf8Name = OUStringToOString( maTokenNames[ nToken ].maUniName, RTL_TEXTENCODING_UTF8 );
-        const struct xmltoken* pToken = Perfect_Hash::in_word_set( aUtf8Name.getStr(), aUtf8Name.getLength() );
-        bOk = pToken && (pToken->nToken == nToken);
-        OSL_ENSURE( bOk, OStringBuffer( "TokenMap::TokenMap - token list broken, #" ).
-            append( nToken ).append( ", '" ).append( aUtf8Name ).append( '\'' ).getStr() );
-    }
-#endif
 
     for (unsigned char c = 'a'; c <= 'z'; c++)
     {
@@ -92,13 +73,6 @@ TokenMap::~TokenMap()
 {
 }
 
-OUString TokenMap::getUnicodeTokenName( sal_Int32 nToken ) const
-{
-    if( (0 <= nToken) && (static_cast< size_t >( nToken ) < maTokenNames.size()) )
-        return maTokenNames[ static_cast< size_t >( nToken ) ].maUniName;
-    return OUString();
-}
-
 sal_Int32 TokenMap::getTokenFromUnicode( const OUString& rUnicodeName ) const
 {
     OString aUtf8Name = OUStringToOString( rUnicodeName, RTL_TEXTENCODING_UTF8 );
@@ -106,20 +80,11 @@ sal_Int32 TokenMap::getTokenFromUnicode( const OUString& rUnicodeName ) const
     return pToken ? pToken->nToken : XML_TOKEN_INVALID;
 }
 
-Sequence< sal_Int8 > TokenMap::getUtf8TokenName( sal_Int32 nToken ) const
-{
-    if( (0 <= nToken) && (static_cast< size_t >( nToken ) < maTokenNames.size()) )
-        return maTokenNames[ static_cast< size_t >( nToken ) ].maUtf8Name;
-    return Sequence< sal_Int8 >();
-}
-
 sal_Int32 TokenMap::getTokenPerfectHash( const char *pStr, sal_Int32 nLength ) const
 {
     const struct xmltoken* pToken = Perfect_Hash::in_word_set( pStr, nLength );
     return pToken ? pToken->nToken : XML_TOKEN_INVALID;
 }
-
-
 
 } // namespace oox
 

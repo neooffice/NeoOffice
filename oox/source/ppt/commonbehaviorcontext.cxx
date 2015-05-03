@@ -58,12 +58,9 @@ namespace oox { namespace ppt {
     {
     }
 
-
     CommonBehaviorContext::~CommonBehaviorContext( ) throw( )
     {
     }
-
-
 
     void CommonBehaviorContext::onEndElement()
     {
@@ -122,7 +119,6 @@ namespace oox { namespace ppt {
         }
     }
 
-
     void CommonBehaviorContext::onCharacters( const OUString& aChars )
     {
         if( mbIsInAttrName )
@@ -130,7 +126,6 @@ namespace oox { namespace ppt {
             msCurrentAttribute += aChars;
         }
     }
-
 
     ::oox::core::ContextHandlerRef CommonBehaviorContext::onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs )
     {
@@ -148,7 +143,11 @@ namespace oox { namespace ppt {
             if( mbInAttrList )
             {
                 mbIsInAttrName = true;
+#if SUPD == 310
                 msCurrentAttribute = OUString();
+#else	// SUPD == 310
+                msCurrentAttribute.clear();
+#endif	// SUPD == 310
             }
             else
             {

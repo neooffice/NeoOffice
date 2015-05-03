@@ -17,21 +17,24 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/objectformatter.hxx"
+#include "drawingml/chart/objectformatter.hxx"
 
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <osl/thread.h>
+#include <osl/diagnose.h>
 #include <rtl/strbuf.hxx>
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/fillproperties.hxx"
 #include "oox/drawingml/lineproperties.hxx"
 #include "oox/drawingml/shapepropertymap.hxx"
-#include "oox/drawingml/textbody.hxx"
-#include "oox/drawingml/textparagraph.hxx"
+#include "drawingml/textbody.hxx"
+#include "drawingml/textparagraph.hxx"
 #include "oox/drawingml/theme.hxx"
-#include "oox/drawingml/chart/chartspacemodel.hxx"
+#include "drawingml/chart/chartspacemodel.hxx"
 #include "oox/helper/modelobjecthelper.hxx"
+#include <oox/helper/graphichelper.hxx>
 
 #if SUPD == 310
 // OpenOffice 3.1.1 chart2 module cannot handle the LinkNumberFormatToSource
@@ -43,8 +46,6 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star::chart2;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::graphic;
@@ -53,8 +54,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
 
 using ::oox::core::XmlFilterBase;
-
-
 
 namespace {
 
@@ -121,8 +120,6 @@ static const AutoFormatPatternEntry spAutoFormatPattern4[] =
 #undef AUTOFORMAT_PATTERN_COLOR
 #undef AUTOFORMAT_PATTERN_COLORMOD
 #undef AUTOFORMAT_PATTERN_END
-
-
 
 struct AutoFormatEntry
 {
@@ -196,6 +193,14 @@ static const AutoFormatEntry spChartSpaceFills[] =
 };
 
 #endif	// SUPD == 310
+
+static const AutoFormatEntry spChartSpaceFill[] =
+{
+    AUTOFORMAT_COLOR( 1, 32, THEMED_STYLE_SUBTLE, XML_bg1 ),
+    AUTOFORMAT_COLOR( 33, 40, THEMED_STYLE_SUBTLE, XML_lt1 ),
+    AUTOFORMAT_COLOR( 41, 48, THEMED_STYLE_SUBTLE, XML_dk1 ),
+    AUTOFORMAT_END()
+};
 
 static const AutoFormatEntry spDataTableLines[] =
 {
@@ -435,8 +440,6 @@ const AutoFormatEntry* lclGetAutoFormatEntry( const AutoFormatEntry* pEntries, s
     return 0;
 }
 
-
-
 struct AutoTextEntry
 {
     sal_Int32           mnFirstStyleIdx;    /// First chart style index.
@@ -528,7 +531,7 @@ static const sal_Int32 spnFilledPropIds[] =
     PROP_FillStyle,
     PROP_Color,
     PROP_Transparency,
-    PROP_INVALID,
+    PROP_FillTransparenceGradientName,
     PROP_GradientName,
     PROP_FillBitmapName,
     PROP_FillBitmapMode,
@@ -546,8 +549,6 @@ static const ShapePropertyInfo saCommonPropInfo( spnCommonPropIds, false, true, 
 static const ShapePropertyInfo saLinearPropInfo( spnLinearPropIds, false, true, true, true );
 /** Property info for filled data series, to be used in ShapePropertyMap. */
 static const ShapePropertyInfo saFilledPropInfo( spnFilledPropIds, false, true, true, true );
-
-
 
 /** Contains information about formatting of a specific chart object type. */
 struct ObjectTypeFormatEntry
@@ -573,7 +574,7 @@ static const ObjectTypeFormatEntry spObjTypeFormatEntries[] =
 #if SUPD == 310
     TYPEFORMAT_FRAME( OBJECTTYPE_CHARTSPACE,     &saCommonPropInfo, 0,                 spChartSpaceLines,   spChartSpaceFills,     0 /* eq to Ch2 */ ),
 #else	// SUPD == 310
-    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTSPACE,     &saCommonPropInfo, 0,                 spNoFormats,         spNoFormats,           0 /* eq to Ch2 */ ),
+    TYPEFORMAT_FRAME( OBJECTTYPE_CHARTSPACE,     &saCommonPropInfo, 0,                 spNoFormats,         spChartSpaceFill,      0 /* eq to Ch2 */ ),
 #endif	// SUPD == 310
     TYPEFORMAT_FRAME( OBJECTTYPE_CHARTTITLE,     &saCommonPropInfo, spChartTitleTexts, 0 /* eq to Ch2 */,   0 /* eq to Ch2 */,     0 /* eq to Ch2 */ ),
     TYPEFORMAT_FRAME( OBJECTTYPE_LEGEND,         &saCommonPropInfo, spOtherTexts,      spNoFormats,         spNoFormats,           0 /* eq to Ch2 */ ),
@@ -605,8 +606,6 @@ static const ObjectTypeFormatEntry spObjTypeFormatEntries[] =
 #undef TYPEFORMAT_FRAME
 #undef TYPEFORMAT_LINE
 
-
-
 void lclConvertPictureOptions( FillProperties& orFillProps, const PictureOptionsModel& rPicOptions )
 {
     bool bStacked = (rPicOptions.mnPictureFormat == XML_stack) || (rPicOptions.mnPictureFormat == XML_stackScale);
@@ -615,11 +614,7 @@ void lclConvertPictureOptions( FillProperties& orFillProps, const PictureOptions
 
 } // namespace
 
-
-
 struct ObjectFormatterData;
-
-
 
 class DetailFormatterBase
 {
@@ -647,8 +642,6 @@ protected:
     ColorPatternVec     maColorPattern;     /// Different cycling colors for data series.
 };
 
-
-
 class LineFormatter : public DetailFormatterBase
 {
 public:
@@ -666,14 +659,13 @@ private:
     LinePropertiesPtr   mxAutoLine;         /// Automatic line properties.
 };
 
-
-
 class FillFormatter : public DetailFormatterBase
 {
 public:
     explicit            FillFormatter(
                             ObjectFormatterData& rData,
-                            const AutoFormatEntry* pAutoFormatEntry );
+                            const AutoFormatEntry* pAutoFormatEntry,
+                            const ObjectType eObjType );
 
     /** Converts area formatting to the passed property set. */
     void                convertFormatting(
@@ -685,8 +677,6 @@ public:
 private:
     FillPropertiesPtr   mxAutoFill;         /// Automatic fill properties.
 };
-
-
 
 class EffectFormatter : public DetailFormatterBase
 {
@@ -701,8 +691,6 @@ public:
                             const ModelRef< Shape >& rxShapeProp,
                             sal_Int32 nSeriesIdx ) const;
 };
-
-
 
 class TextFormatter : public DetailFormatterBase
 {
@@ -725,8 +713,6 @@ private:
     TextCharacterPropertiesPtr mxAutoText;  /// Automatic text properties.
 };
 
-
-
 /** Formatter for a specific object type. */
 class ObjectTypeFormatter
 {
@@ -734,7 +720,8 @@ public:
     explicit            ObjectTypeFormatter(
                             ObjectFormatterData& rData,
                             const ObjectTypeFormatEntry& rEntry,
-                            const ChartSpaceModel& rChartSpace );
+                            const ChartSpaceModel& rChartSpace,
+                            const ObjectType eObjType );
 
     /** Sets frame formatting properties to the passed property set. */
     void                convertFrameFormatting(
@@ -773,8 +760,6 @@ private:
     const ObjectTypeFormatEntry& mrEntry;   /// Additional settings.
 };
 
-
-
 struct ObjectFormatterData
 {
     typedef RefMap< ObjectType, ObjectTypeFormatter > ObjectTypeFormatterMap;
@@ -804,8 +789,6 @@ struct ObjectFormatterData
 
     ObjectTypeFormatter* getTypeFormatter( ObjectType eObjType );
 };
-
-
 
 DetailFormatterBase::DetailFormatterBase( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry ) :
     mrData( rData ),
@@ -897,8 +880,6 @@ sal_Int32 DetailFormatterBase::getSchemeColor( sal_Int32 nColorToken, sal_Int32 
     return aColor.getColor( mrData.mrFilter.getGraphicHelper() );
 }
 
-
-
 LineFormatter::LineFormatter( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry ) :
     DetailFormatterBase( rData, pAutoFormatEntry )
 {
@@ -925,18 +906,22 @@ void LineFormatter::convertFormatting( ShapePropertyMap& rPropMap, const ModelRe
     aLineProps.pushToPropMap( rPropMap, mrData.mrFilter.getGraphicHelper(), getPhColor( nSeriesIdx ) );
 }
 
-
-
-FillFormatter::FillFormatter( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry ) :
+FillFormatter::FillFormatter( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry, const ObjectType eObjType ) :
     DetailFormatterBase( rData, pAutoFormatEntry )
 {
     if( pAutoFormatEntry )
     {
         mxAutoFill.reset( new FillProperties );
-        mxAutoFill->moFillType = XML_noFill;
+        if( eObjType != OBJECTTYPE_CHARTSPACE )
+            mxAutoFill->moFillType = XML_noFill;
         if( const Theme* pTheme = mrData.mrFilter.getCurrentTheme() )
             if( const FillProperties* pFillProps = pTheme->getFillStyle( pAutoFormatEntry->mnThemedIdx ) )
                 *mxAutoFill = *pFillProps;
+
+        if (eObjType == OBJECTTYPE_CHARTSPACE)
+        {
+            mxAutoFill->moFillType = rData.mrFilter.getGraphicHelper().getDefaultChartAreaFillStyle();
+        }
     }
 }
 
@@ -952,8 +937,6 @@ void FillFormatter::convertFormatting( ShapePropertyMap& rPropMap, const ModelRe
     aFillProps.pushToPropMap( rPropMap, mrData.mrFilter.getGraphicHelper(), 0, getPhColor( nSeriesIdx ) );
 }
 
-
-
 EffectFormatter::EffectFormatter( ObjectFormatterData& rData, const AutoFormatEntry* pAutoFormatEntry ) :
     DetailFormatterBase( rData, pAutoFormatEntry )
 {
@@ -962,8 +945,6 @@ EffectFormatter::EffectFormatter( ObjectFormatterData& rData, const AutoFormatEn
 void EffectFormatter::convertFormatting( ShapePropertyMap& /*rPropMap*/, const ModelRef< Shape >& /*rxShapeProp*/, sal_Int32 /*nSeriesIdx*/ ) const
 {
 }
-
-
 
 namespace {
 
@@ -1014,11 +995,9 @@ void TextFormatter::convertFormatting( PropertySet& rPropSet, const ModelRef< Te
     convertFormatting( rPropSet, lclGetTextProperties( rxTextProp ) );
 }
 
-
-
-ObjectTypeFormatter::ObjectTypeFormatter( ObjectFormatterData& rData, const ObjectTypeFormatEntry& rEntry, const ChartSpaceModel& rChartSpace ) :
+ObjectTypeFormatter::ObjectTypeFormatter( ObjectFormatterData& rData, const ObjectTypeFormatEntry& rEntry, const ChartSpaceModel& rChartSpace, const ObjectType eObjType ) :
     maLineFormatter(   rData, lclGetAutoFormatEntry( rEntry.mpAutoLines,   rChartSpace.mnStyle ) ),
-    maFillFormatter(   rData, lclGetAutoFormatEntry( rEntry.mpAutoFills,   rChartSpace.mnStyle ) ),
+    maFillFormatter(   rData, lclGetAutoFormatEntry( rEntry.mpAutoFills,   rChartSpace.mnStyle ), eObjType ),
     maEffectFormatter( rData, lclGetAutoFormatEntry( rEntry.mpAutoEffects, rChartSpace.mnStyle ) ),
     maTextFormatter(   rData, lclGetAutoTextEntry(   rEntry.mpAutoTexts,   rChartSpace.mnStyle ), rChartSpace.mxTextProp ),
     mrModelObjHelper( rData.maModelObjHelper ),
@@ -1061,8 +1040,6 @@ void ObjectTypeFormatter::convertAutomaticFill( PropertySet& rPropSet, sal_Int32
     rPropSet.setProperties( aPropMap );
 }
 
-
-
 #if SUPD == 310
 ObjectFormatterData::ObjectFormatterData( const XmlFilterBase& rFilter, const css::uno::Reference< XChartDocument >& rxChartDoc, const ChartSpaceModel& rChartSpace ) :
 #else	// SUPD == 310
@@ -1079,7 +1056,7 @@ ObjectFormatterData::ObjectFormatterData( const XmlFilterBase& rFilter, const Re
 {
     const ObjectTypeFormatEntry* pEntryEnd = STATIC_ARRAY_END( spObjTypeFormatEntries );
     for( const ObjectTypeFormatEntry* pEntry = spObjTypeFormatEntries; pEntry != pEntryEnd; ++pEntry )
-        maTypeFormatters[ pEntry->meObjType ].reset( new ObjectTypeFormatter( *this, *pEntry, rChartSpace ) );
+        maTypeFormatters[ pEntry->meObjType ].reset( new ObjectTypeFormatter( *this, *pEntry, rChartSpace, pEntry->meObjType ) );
 
     try
     {
@@ -1108,8 +1085,6 @@ ObjectTypeFormatter* ObjectFormatterData::getTypeFormatter( ObjectType eObjType 
     OSL_ENSURE( maTypeFormatters.has( eObjType ), "ObjectFormatterData::getTypeFormatter - unknown object type" );
     return maTypeFormatters.get( eObjType ).get();
 }
-
-
 
 #if SUPD == 310
 ObjectFormatter::ObjectFormatter( const XmlFilterBase& rFilter, const css::uno::Reference< XChartDocument >& rxChartDoc, const ChartSpaceModel& rChartSpace ) :
@@ -1180,7 +1155,7 @@ void ObjectFormatter::convertTextRotation( PropertySet& rPropSet, const ModelRef
             OOXML counts clockwise, Chart2 counts counterclockwise. */
         double fAngle = static_cast< double >( bStacked ? 0 : rxTextProp->getTextProperties().moRotation.get( 0 ) );
         // MS Office UI allows values only in range of [-90,90].
-        if ( fAngle <= -5400000.0 || fAngle >= 5400000.0 )
+        if ( fAngle < -5400000.0 || fAngle > 5400000.0 )
         {
             fAngle = 0.0;
         }
@@ -1189,13 +1164,18 @@ void ObjectFormatter::convertTextRotation( PropertySet& rPropSet, const ModelRef
     }
 }
 
-void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFormat& rNumberFormat, bool bPercentFormat )
+void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFormat& rNumberFormat, bool bAxis, bool bShowPercent )
 {
     if( mxData->mxNumFmts.is() )
     {
-        sal_Int32 nPropId = bPercentFormat ? PROP_PercentageNumberFormat : PROP_NumberFormat;
+        const bool bGeneral = rNumberFormat.maFormatCode.equalsIgnoreAsciiCase("general");
+        const bool bPercent = !bAxis && bShowPercent && !rNumberFormat.mbSourceLinked;
+        sal_Int32 nPropId = bPercent ? PROP_PercentageNumberFormat : PROP_NumberFormat;
+        OUString sFormatCode(rNumberFormat.maFormatCode);
+        if (bPercent && bGeneral)
+            sFormatCode = OUString("0%");
 #ifdef NO_OOO_4_1_1_CHARTS
-        if( rNumberFormat.maFormatCode.isEmpty() )
+        if( sFormatCode.isEmpty() )
         {
             rPropSet.setProperty( nPropId, Any() );
         }
@@ -1204,12 +1184,9 @@ void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFo
         try
 #endif	// NO_OOO_4_1_1_CHARTS
         {
-            bool bGeneral = rNumberFormat.maFormatCode.equalsIgnoreAsciiCase("general");
-            sal_Int32 nIndex = bGeneral && !bPercentFormat ?
+            sal_Int32 nIndex = bGeneral && !bPercent ?
                 mxData->mxNumTypes->getStandardIndex( mxData->maFromLocale ) :
-                mxData->mxNumFmts->addNewConverted(
-                        bGeneral ? OUString("0%") : rNumberFormat.maFormatCode,
-                        mxData->maEnUsLocale, mxData->maFromLocale );
+                mxData->mxNumFmts->addNewConverted( sFormatCode, mxData->maEnUsLocale, mxData->maFromLocale );
             if( nIndex >= 0 )
                 rPropSet.setProperty( nPropId, nIndex );
         }
@@ -1220,9 +1197,11 @@ void ObjectFormatter::convertNumberFormat( PropertySet& rPropSet, const NumberFo
         }
 
 #ifndef NO_OOO_4_1_1_CHARTS
-        // Format code is ignored if "LinkNumberFormatToSource" is set to "true" :-/
-        // See AxisHelper::getExplicitNumberFormatKeyForAxis()
-        rPropSet.setProperty(PROP_LinkNumberFormatToSource, makeAny(rNumberFormat.maFormatCode.isEmpty()));
+        // Setting "LinkNumberFormatToSource" does not really work, at least not for axis :-/
+        if (!bAxis)
+            rPropSet.setProperty(PROP_LinkNumberFormatToSource, makeAny(rNumberFormat.mbSourceLinked));
+        else
+            rPropSet.setProperty(PROP_LinkNumberFormatToSource, makeAny(rNumberFormat.maFormatCode.isEmpty()));
 #endif	// !NO_OOO_4_1_1_CHARTS
     }
 }
@@ -1237,8 +1216,6 @@ bool ObjectFormatter::isAutomaticFill( const ModelRef< Shape >& rxShapeProp )
 {
     return !rxShapeProp || !rxShapeProp->getFillProperties().moFillType.has();
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

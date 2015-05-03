@@ -23,6 +23,7 @@
 #include <string.h>
 #include "oox/helper/attributelist.hxx"
 
+#include <osl/diagnose.h>
 #include <comphelper/sequenceashashmap.hxx>
 #include <comphelper/docpasswordhelper.hxx>
 
@@ -30,8 +31,6 @@ using namespace ::com::sun::star;
 
 namespace oox {
 namespace core {
-
-
 
 namespace {
 
@@ -106,16 +105,12 @@ sal_uInt16 lclGetHash( const sal_uInt8* pnPassData, sal_Int32 nBufferSize )
 
 } // namespace
 
-
-
 sal_uInt16 CodecHelper::getPasswordHash( const AttributeList& rAttribs, sal_Int32 nElement )
 {
     sal_Int32 nPasswordHash = rAttribs.getIntegerHex( nElement, 0 );
     OSL_ENSURE( (0 <= nPasswordHash) && (nPasswordHash <= SAL_MAX_UINT16), "CodecHelper::getPasswordHash - invalid password hash" );
     return static_cast< sal_uInt16 >( ((0 <= nPasswordHash) && (nPasswordHash <= SAL_MAX_UINT16)) ? nPasswordHash : 0 );
 }
-
-
 
 BinaryCodec_XOR::BinaryCodec_XOR( CodecType eCodecType ) :
     meCodecType( eCodecType ),
@@ -258,8 +253,6 @@ bool BinaryCodec_XOR::skip( sal_Int32 nBytes )
     mnOffset = static_cast< sal_Int32 >( (mnOffset + nBytes) & 0x0F );
     return true;
 }
-
-
 
 BinaryCodec_RCF::BinaryCodec_RCF()
 {
@@ -412,8 +405,6 @@ bool BinaryCodec_RCF::skip( sal_Int32 nBytes )
     }
     return bResult;
 }
-
-
 
 } // namespace core
 } // namespace oox

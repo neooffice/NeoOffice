@@ -26,10 +26,10 @@
 #include "oox/ole/olehelper.hxx"
 #include "oox/ole/olestorage.hxx"
 
+#include <osl/diagnose.h>
+
 namespace oox {
 namespace ole {
-
-
 
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::uno;
@@ -38,8 +38,6 @@ using ::oox::core::ContextHandler2;
 using ::oox::core::ContextHandlerRef;
 using ::oox::core::FragmentHandler2;
 using ::oox::core::XmlFilterBase;
-
-
 
 AxControlPropertyContext::AxControlPropertyContext( FragmentHandler2& rFragment, ControlModelBase& rModel ) :
     ContextHandler2( rFragment ),
@@ -83,8 +81,6 @@ ContextHandlerRef AxControlPropertyContext::onCreateContext( sal_Int32 nElement,
     }
     return 0;
 }
-
-
 
 AxControlFragment::AxControlFragment( XmlFilterBase& rFilter, const OUString& rFragmentPath, EmbeddedControl& rControl ) :
     FragmentHandler2( rFilter, rFragmentPath, true ),
@@ -148,8 +144,6 @@ ContextHandlerRef AxControlFragment::onCreateContext( sal_Int32 nElement, const 
     }
     return 0;
 }
-
-
 
 } // namespace ole
 } // namespace oox

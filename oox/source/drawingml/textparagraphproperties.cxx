@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/textparagraphproperties.hxx"
+#include "drawingml/textparagraphproperties.hxx"
 
 #include <com/sun/star/text/XNumberingRulesSupplier.hpp>
 #include <com/sun/star/container/XIndexReplace.hpp>
@@ -28,6 +28,9 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/style/TabStop.hpp>
 #include <com/sun/star/text/PositionAndSpaceMode.hpp>
+#include <com/sun/star/style/ParagraphAdjust.hpp>
+
+#include <osl/diagnose.h>
 
 #include "oox/helper/helper.hxx"
 #include "oox/helper/propertyset.hxx"
@@ -245,7 +248,6 @@ void BulletList::setBulletSize(sal_Int16 nSize)
     mnSize <<= nSize;
 }
 
-
 void BulletList::setFontSize(sal_Int16 nSize)
 {
     mnFontSize <<= nSize;
@@ -384,6 +386,8 @@ void TextParagraphProperties::apply( const TextParagraphProperties& rSourceProps
         moFirstLineIndentation = rSourceProps.moFirstLineIndentation;
     if( rSourceProps.mnLevel )
         mnLevel = rSourceProps.mnLevel;
+    if( rSourceProps.moParaAdjust )
+        moParaAdjust = rSourceProps.moParaAdjust;
 }
 
 void TextParagraphProperties::pushToPropSet( const ::oox::core::XmlFilterBase* pFilterBase,
@@ -489,6 +493,15 @@ void TextParagraphProperties::pushToPropSet( const ::oox::core::XmlFilterBase* p
             aPropSet.setProperty( PROP_ParaTabStops, aSeq );
         }
     }
+
+    if ( moParaAdjust )
+    {
+        aPropSet.setProperty( PROP_ParaAdjust, moParaAdjust.get());
+    }
+    else
+    {
+        aPropSet.setProperty( PROP_ParaAdjust, com::sun::star::style::ParagraphAdjust_LEFT);
+    }
 }
 
 float TextParagraphProperties::getCharHeightPoints( float fDefault ) const
@@ -512,10 +525,6 @@ void TextParagraphProperties::dump() const
 
     Reference< com::sun::star::drawing::XDrawPage > xDebugPage(ppt::SlidePersist::mxDebugPage.get(), UNO_QUERY);
 #endif	// SUPD == 310
-    Reference< ::com::sun::star::drawing::XShape > xShape( oox::ppt::PowerPointImport::mpDebugFilterBase->getModelFactory()->createInstance( "com.sun.star.presentation.TitleTextShape" ), UNO_QUERY );
-    Reference< ::com::sun::star::text::XText > xText( xShape, UNO_QUERY );
-
-    Reference< com::sun::star::drawing::XDrawPage > xDebugPage(ppt::SlidePersist::mxDebugPage.get(), UNO_QUERY);
     if (xDebugPage.is())
         xDebugPage->add( xShape );
 

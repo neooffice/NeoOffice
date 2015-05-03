@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/shape3dproperties.hxx"
+#include "drawingml/shape3dproperties.hxx"
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -49,7 +49,6 @@ using ::oox::core::XmlFilterBase;
 
 namespace oox {
 namespace drawingml {
-
 
 OUString Shape3DProperties::getCameraPrstName( sal_Int32 nElement )
 {
@@ -409,8 +408,6 @@ css::uno::Sequence< css::beans::PropertyValue > Shape3DProperties::getShape3DAtt
     aSeq.realloc( nSize );
     return aSeq;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

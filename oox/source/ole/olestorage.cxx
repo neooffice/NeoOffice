@@ -30,6 +30,7 @@
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/implbase2.hxx>
+#include <osl/diagnose.h>
 #include "oox/helper/binaryinputstream.hxx"
 #include "oox/helper/binaryoutputstream.hxx"
 #include "oox/helper/containerhelper.hxx"
@@ -38,16 +39,12 @@
 namespace oox {
 namespace ole {
 
-
-
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -94,8 +91,6 @@ private:
     Reference< XSeekable > mxSeekable;
     OUString            maElementName;
 };
-
-
 
 OleOutputStream::OleOutputStream( const Reference< XComponentContext >& rxContext,
         const Reference< XNameContainer >& rxStorage, const OUString& rElementName ) :
@@ -183,7 +178,7 @@ void SAL_CALL OleOutputStream::closeOutput() throw( NotConnectedException, Buffe
     mxSeekable.clear();
     // close stream (and let it throw something if needed)
     xOutStrm->closeOutput();
-    // on success, insert the stream into the OLE storage (must be seeked back before)
+    // on success, insert the stream into the OLE storage (must be seek-ed back before)
     xSeekable->seek( 0 );
     if( !ContainerHelper::insertByName( mxStorage, maElementName, Any( mxTempFile ) ) )
         throw IOException();
@@ -202,8 +197,6 @@ void OleOutputStream::ensureConnected() const throw( NotConnectedException )
 }
 
 } // namespace
-
-
 
 OleStorage::OleStorage( const Reference< XComponentContext >& rxContext,
         const Reference< XInputStream >& rxInStream, bool bBaseStreamAccess ) :
@@ -247,8 +240,6 @@ OleStorage::OleStorage( const OleStorage& rParentStorage,
 OleStorage::~OleStorage()
 {
 }
-
-
 
 void OleStorage::initStorage( const Reference< XInputStream >& rxInStream )
 {
@@ -423,8 +414,6 @@ void OleStorage::implCommit() const
     {
     }
 }
-
-
 
 } // namespace ole
 } // namespace oox

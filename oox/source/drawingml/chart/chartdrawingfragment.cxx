@@ -17,7 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/chartdrawingfragment.hxx"
+#include "drawingml/chart/chartdrawingfragment.hxx"
+
+#include <osl/diagnose.h>
 
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/drawingml/connectorshapecontext.hxx"
@@ -29,14 +31,10 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
 using namespace ::oox::core;
-
-
 
 ShapeAnchor::ShapeAnchor( bool bRelSize ) :
     mbRelSize( bRelSize )
@@ -109,7 +107,6 @@ EmuRectangle ShapeAnchor::calcAnchorRectEmu( const EmuRectangle& rChartRect ) co
 
     return aAnchorRect;
 }
-
 
 ChartDrawingFragment::ChartDrawingFragment( XmlFilterBase& rFilter,
 #if SUPD == 310
@@ -226,8 +223,6 @@ void ChartDrawingFragment::onEndElement()
         mxAnchor.reset();
     }
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

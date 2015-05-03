@@ -19,10 +19,11 @@
 
 #include "oox/ppt/dgmimport.hxx"
 #include "oox/drawingml/theme.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
+#include "drawingml/diagram/diagram.hxx"
 #include "oox/dump/pptxdumper.hxx"
 
 #include <com/sun/star/drawing/XShape.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 
 #include <services.hxx>
 
@@ -58,7 +59,7 @@ QuickDiagrammingImport::QuickDiagrammingImport( const ::com::sun::star::uno::Ref
     : XmlFilterBase( rxContext )
 {}
 
-bool QuickDiagrammingImport::importDocument() throw()
+bool QuickDiagrammingImport::importDocument() throw (css::uno::RuntimeException, std::exception)
 {
     /*  to activate the PPTX dumper, define the environment variable
         OOO_PPTXDUMPER and insert the full path to the file

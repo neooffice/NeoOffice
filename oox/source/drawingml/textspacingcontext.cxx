@@ -18,13 +18,12 @@
  */
 
 #include "oox/drawingml/drawingmltypes.hxx"
-#include "oox/drawingml/textspacing.hxx"
+#include "drawingml/textspacing.hxx"
 #include "textspacingcontext.hxx"
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::uno;
-
 
 namespace oox { namespace drawingml {
 

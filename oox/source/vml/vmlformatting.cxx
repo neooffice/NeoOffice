@@ -24,6 +24,7 @@
 #include <com/sun/star/table/ShadowFormat.hpp>
 #include <com/sun/star/text/XTextRange.hpp>
 #include <rtl/strbuf.hxx>
+#include <osl/diagnose.h>
 #include "oox/drawingml/color.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/fillproperties.hxx"
@@ -32,10 +33,12 @@
 #include "oox/helper/attributelist.hxx"
 #include "oox/helper/graphichelper.hxx"
 
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
+
 namespace oox {
 namespace vml {
-
-
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::geometry;
@@ -50,8 +53,6 @@ using ::com::sun::star::drawing::PolygonFlags;
 using ::com::sun::star::drawing::PolygonFlags_NORMAL;
 using ::com::sun::star::drawing::PolygonFlags_CONTROL;
 
-
-
 namespace {
 
 bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& rValue )
@@ -63,8 +64,6 @@ bool lclExtractDouble( double& orfValue, sal_Int32& ornEndPos, const OUString& r
 }
 
 } // namespace
-
-
 
 bool ConversionHelper::separatePair( OUString& orValue1, OUString& orValue2,
         const OUString& rValue, sal_Unicode cSep )
@@ -388,9 +387,13 @@ void ConversionHelper::decodeVmlPath( ::std::vector< ::std::vector< Point > >& r
                     break;
 
                 case CLOSE: // 0 param
-                    rPointLists.back().push_back( rPointLists.back()[ 0 ] );
-                    rFlagLists.back().push_back( rFlagLists.back()[ 0 ] );
-                    aCurrentPoint = rPointLists.back().back();
+                    SAL_WARN_IF(rPointLists.back().empty() || rPointLists.back().empty(), "oox", "empty pointlists at close");
+                    if (!rPointLists.back().empty() && !rFlagLists.back().empty())
+                    {
+                        rPointLists.back().push_back( rPointLists.back()[ 0 ] );
+                        rFlagLists.back().push_back( rFlagLists.back()[ 0 ] );
+                        aCurrentPoint = rPointLists.back().back();
+                    }
                     break;
 
                 case END: // 0 param
@@ -506,8 +509,6 @@ void ConversionHelper::decodeVmlPath( ::std::vector< ::std::vector< Point > >& r
         }
     }
 }
-
-
 
 namespace {
 
@@ -630,16 +631,12 @@ sal_Int32 lclGetDmlLineJoint( const OptValue< sal_Int32 >& roJoinStyle )
 
 } // namespace
 
-
-
 void StrokeArrowModel::assignUsed( const StrokeArrowModel& rSource )
 {
     moArrowType.assignIfUsed( rSource.moArrowType );
     moArrowWidth.assignIfUsed( rSource.moArrowWidth );
     moArrowLength.assignIfUsed( rSource.moArrowLength );
 }
-
-
 
 void StrokeModel::assignUsed( const StrokeModel& rSource )
 {
@@ -680,8 +677,6 @@ void StrokeModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper
 
     aLineProps.pushToPropMap( rPropMap, rGraphicHelper );
 }
-
-
 
 void FillModel::assignUsed( const FillModel& rSource )
 {
@@ -818,8 +813,6 @@ void FillModel::pushToPropMap( ShapePropertyMap& rPropMap, const GraphicHelper& 
 
     aFillProps.pushToPropMap( rPropMap, rGraphicHelper );
 }
-
-
 
 ShadowModel::ShadowModel()
         : mbHasShadow(false)

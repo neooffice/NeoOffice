@@ -20,11 +20,12 @@
 #include "layoutnodecontext.hxx"
 
 #include "oox/helper/attributelist.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
+#include "drawingml/diagram/diagram.hxx"
 #include "oox/drawingml/shapecontext.hxx"
-#include "oox/drawingml/customshapeproperties.hxx"
+#include "drawingml/customshapeproperties.hxx"
 #include "diagramdefinitioncontext.hxx"
 #include "constraintlistcontext.hxx"
+#include <osl/diagnose.h>
 
 using namespace ::oox::core;
 using namespace ::com::sun::star::uno;
@@ -42,8 +43,6 @@ public:
         : LayoutNodeContext( rParent, rAttribs, pAtom )
     {}
 };
-
-
 
 class AlgorithmContext
     : public ContextHandler2
@@ -83,7 +82,6 @@ private:
     sal_Int32  mnRevision;
     AlgAtomPtr mpNode;
 };
-
 
 class ChooseContext
     : public ContextHandler2
@@ -135,9 +133,6 @@ private:
     ConditionAtomPtr mpConditionNode;
 };
 
-
-
-
 class ForEachContext
     : public LayoutNodeContext
 {
@@ -149,7 +144,6 @@ public:
             pAtom->iterator().loadFromXAttr( rAttribs.getFastAttributeList() );
         }
 };
-
 
 // CT_LayoutVariablePropertySet
 class LayoutVariablePropertySetContext
@@ -181,7 +175,6 @@ private:
     LayoutNode::VarMap & mVariables;
 };
 
-
 // CT_LayoutNode
 LayoutNodeContext::LayoutNodeContext( ContextHandler2Helper& rParent,
                                       const AttributeList& rAttribs,
@@ -192,7 +185,6 @@ LayoutNodeContext::LayoutNodeContext( ContextHandler2Helper& rParent,
     OSL_ENSURE( pAtom, "Node must NOT be NULL" );
     mpNode->setName( rAttribs.getString( XML_name ).get() );
 }
-
 
 LayoutNodeContext::~LayoutNodeContext()
 {
@@ -239,7 +231,6 @@ sal_Int32 LayoutNodeContext::tagToVarIdx( sal_Int32 aTag )
     }
     return nIdx;
 }
-
 
 ContextHandlerRef
 LayoutNodeContext::onCreateContext( ::sal_Int32 aElement,
@@ -345,7 +336,6 @@ LayoutNodeContext::onCreateContext( ::sal_Int32 aElement,
 
     return this;
 }
-
 
 } }
 

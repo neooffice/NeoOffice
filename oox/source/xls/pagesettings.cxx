@@ -1144,7 +1144,11 @@ void PageSettingsConverter::writePageSettingsProperties(
         bLandscape = bChartSheet;
 
     // paper size
+#if SUPD == 310
+    if( rModel.mbValidSettings && (0 < rModel.mnPaperSize) && (rModel.mnPaperSize < static_cast< sal_Int32 >( SAL_N_ELEMENTS( spPaperSizeTable ) )) )
+#else	// SUPD == 310
     if( rModel.mbValidSettings && (0 < rModel.mnPaperSize) && (rModel.mnPaperSize < static_cast< sal_Int32 >( STATIC_ARRAY_SIZE( spPaperSizeTable ) )) )
+#endif	// SUPD == 310
     {
         const ApiPaperSize& rPaperSize = spPaperSizeTable[ rModel.mnPaperSize ];
         Size aSize( rPaperSize.mnWidth, rPaperSize.mnHeight );

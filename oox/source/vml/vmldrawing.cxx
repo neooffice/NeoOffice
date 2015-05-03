@@ -27,6 +27,7 @@
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
+#include <osl/diagnose.h>
 #include <rtl/ustring.hxx>
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/helper/containerhelper.hxx"
@@ -41,8 +42,6 @@
 namespace oox {
 namespace vml {
 
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::beans;
@@ -52,8 +51,6 @@ using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::uno;
 
 using ::oox::core::XmlFilterBase;
-
-
 
 namespace {
 
@@ -74,8 +71,6 @@ sal_Int32 lclGetShapeId( const OUString& rShapeId )
 
 } // namespace
 
-
-
 OleObjectInfo::OleObjectInfo( bool bDmlShape ) :
     mbAutoLoad( false ),
     mbDmlShape( bDmlShape )
@@ -87,8 +82,6 @@ void OleObjectInfo::setShapeId( sal_Int32 nShapeId )
     maShapeId = lclGetShapeId( nShapeId );
 }
 
-
-
 ControlInfo::ControlInfo()
 {
 }
@@ -97,8 +90,6 @@ void ControlInfo::setShapeId( sal_Int32 nShapeId )
 {
     maShapeId = lclGetShapeId( nShapeId );
 }
-
-
 
 #if SUPD == 310
 Drawing::Drawing( XmlFilterBase& rFilter, const css::uno::Reference< XDrawPage >& rxDrawPage, DrawingType eType ) :
@@ -348,8 +339,6 @@ void Drawing::notifyXShapeInserted( const Reference< XShape >& /*rxShape*/,
         const awt::Rectangle& /*rShapeRect*/, const ShapeBase& /*rShape*/, bool /*bGroupChild*/ )
 {
 }
-
-
 
 } // namespace vml
 } // namespave oox

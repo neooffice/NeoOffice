@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/textcharacterproperties.hxx"
+#include "drawingml/textcharacterproperties.hxx"
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/awt/FontSlant.hpp>
 #include <com/sun/star/awt/FontWeight.hpp>
@@ -40,8 +40,6 @@ using namespace ::com::sun::star::beans;
 
 namespace oox {
 namespace drawingml {
-
-
 
 void TextCharacterProperties::assignUsed( const TextCharacterProperties& rSourceProps )
 {
@@ -214,8 +212,6 @@ float TextCharacterProperties::getCharHeightPoints( float fDefault ) const
 {
     return moHeight.has() ? GetFontHeight( moHeight.get() ) : fDefault;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/chart/seriesconverter.hxx"
+#include "drawingml/chart/seriesconverter.hxx"
 
 #include <com/sun/star/chart/DataLabelPlacement.hpp>
 #include <com/sun/star/chart/ErrorBarStyle.hpp>
@@ -31,12 +31,13 @@
 #else	// SUPD == 310
 #include <com/sun/star/chart2/data/LabeledDataSequence.hpp>
 #endif	// SUPD == 310
+#include <osl/diagnose.h>
 #include <basegfx/numeric/ftools.hxx>
-#include "oox/drawingml/chart/datasourceconverter.hxx"
-#include "oox/drawingml/chart/seriesmodel.hxx"
-#include "oox/drawingml/chart/titleconverter.hxx"
-#include "oox/drawingml/chart/typegroupconverter.hxx"
-#include "oox/drawingml/chart/typegroupmodel.hxx"
+#include "drawingml/chart/datasourceconverter.hxx"
+#include "drawingml/chart/seriesmodel.hxx"
+#include "drawingml/chart/titleconverter.hxx"
+#include "drawingml/chart/typegroupconverter.hxx"
+#include "drawingml/chart/typegroupmodel.hxx"
 #include "oox/helper/containerhelper.hxx"
 #include <oox/drawingml/lineproperties.hxx>
 
@@ -156,7 +157,7 @@ void lclConvertLabelFormatting( PropertySet& rPropSet, ObjectFormatter& rFormatt
     if( !rDataLabel.mbDeleted )
     {
         // data label number format (percentage format wins over value format)
-        rFormatter.convertNumberFormat( rPropSet, rDataLabel.maNumberFormat, bShowPercent );
+        rFormatter.convertNumberFormat( rPropSet, rDataLabel.maNumberFormat, false, bShowPercent );
 
         // data label text formatting (frame formatting not supported by Chart2)
         rFormatter.convertTextFormatting( rPropSet, rDataLabel.mxTextProp, OBJECTTYPE_DATALABEL );

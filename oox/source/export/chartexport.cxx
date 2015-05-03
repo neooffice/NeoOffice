@@ -21,7 +21,7 @@
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/export/chartexport.hxx"
 #include "oox/export/utils.hxx"
-#include "oox/drawingml/chart/typegroupconverter.hxx"
+#include "drawingml/chart/typegroupconverter.hxx"
 
 #include <cstdio>
 
@@ -71,6 +71,7 @@
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/BitmapMode.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceName.hpp>
 
 #include <com/sun/star/table/CellAddress.hpp>
@@ -83,9 +84,15 @@
 #include <com/sun/star/container/XNamed.hpp>
 
 #include <comphelper/processfactory.hxx>
+#if SUPD != 310
+#include <comphelper/random.hxx>
+#endif	 // SUPD != 310
 #include <xmloff/SchXMLSeriesHelper.hxx>
 #include "ColorPropertySet.hxx"
 #include <set>
+#if SUPD != 310
+#include <boost/unordered_set.hpp>
+#endif	 // SUPD != 310
 
 #include <rtl/math.hxx>
 
@@ -582,8 +589,12 @@ sal_Int32 lcl_getChartType( const OUString& sChartType )
 
 sal_Int32 lcl_generateRandomValue()
 {
+#if SUPD == 310
     static sal_Int32 MAX_NUMBER = 100000000;
     return sal_Int32( rand() % MAX_NUMBER );
+#else	// SUPD == 310
+    return comphelper::rng::uniform_int_distribution(0, 100000000-1);
+#endif	// SUPD == 310
 }
 
 #if SUPD == 310
@@ -594,11 +605,13 @@ ChartExport::ChartExport( sal_Int32 nXmlNamespace, FSHelperPtr pFS, Reference< f
     : DrawingML( pFS, pFB, eDocumentType )
     , mnXmlNamespace( nXmlNamespace )
     , mnSeriesCount(0)
-    , maFraction( 1, 576 )
     , mxChartModel( xModel )
     , mbHasCategoryLabels( false )
     , mbHasZAxis( false )
     , mbIs3DChart( false )
+    , mbStacked(false)
+    , mbPercent(false)
+    , mbClustered(false)
 {
 }
 
@@ -1419,7 +1432,7 @@ void ChartExport::exportPlotArea( )
                     }
                 case chart::TYPEID_SURFACE:
                     {
-                        exportSuffaceChart( xChartType );
+                        exportSurfaceChart( xChartType );
                         break;
                     }
                 default:
@@ -1510,14 +1523,14 @@ void ChartExport::exportBitmapFill( Reference< XPropertySet > xPropSet )
 {
     if( xPropSet.is() )
      {
-        OUString sFillGradientName;
-        xPropSet->getPropertyValue("FillBitmapName") >>= sFillGradientName;
+        OUString sFillBitmapName;
+        xPropSet->getPropertyValue("FillBitmapName") >>= sFillBitmapName;
 
         uno::Reference< lang::XMultiServiceFactory > xFact( getModel(), uno::UNO_QUERY );
         try
         {
-            uno::Reference< container::XNameAccess > xGradient( xFact->createInstance("com.sun.star.drawing.BitmapTable"), uno::UNO_QUERY );
-            uno::Any rValue = xGradient->getByName( sFillGradientName );
+            uno::Reference< container::XNameAccess > xBitmap( xFact->createInstance("com.sun.star.drawing.BitmapTable"), uno::UNO_QUERY );
+            uno::Any rValue = xBitmap->getByName( sFillBitmapName );
             OUString sBitmapURL;
             if( (rValue >>= sBitmapURL) )
             {
@@ -2020,9 +2033,9 @@ void ChartExport::exportUpDownBars( Reference< chart2::XChartType > xChartType)
 }
 
 #if SUPD == 310
-void ChartExport::exportSuffaceChart( css::uno::Reference< chart2::XChartType > xChartType )
+void ChartExport::exportSurfaceChart( css::uno::Reference< chart2::XChartType > xChartType )
 #else	// SUPD == 310
-void ChartExport::exportSuffaceChart( Reference< chart2::XChartType > xChartType )
+void ChartExport::exportSurfaceChart( Reference< chart2::XChartType > xChartType )
 #endif	// SUPD == 310
 {
     FSHelperPtr pFS = GetFS();
@@ -2072,7 +2085,6 @@ void ChartExport::exportSeries( Reference< chart2::XChartType > xChartType, sal_
             xDSCnt->getDataSeries(), bJapaneseCandleSticks, nAttachedAxis );
         return;
     }
-
 
     // export dataseries for current chart-type
 #if SUPD == 310
@@ -2218,7 +2230,7 @@ void ChartExport::exportSeries( Reference< chart2::XChartType > xChartType, sal_
                     // Excel does not like our current data label export
                     // for scatter charts
                     if( eChartType != chart::TYPEID_SCATTER )
-                        exportDataLabels(aSeriesSeq[nSeriesIdx], nSeriesLength);
+                        exportDataLabels(aSeriesSeq[nSeriesIdx], nSeriesLength, eChartType);
 
                     exportTrendlines( aSeriesSeq[nSeriesIdx] );
 
@@ -2270,7 +2282,6 @@ void ChartExport::exportSeries( Reference< chart2::XChartType > xChartType, sal_
                                 exportSeriesValues( xValues, XML_xVal );
                         }
                     }
-
 
                     if( eChartType == chart::TYPEID_BUBBLE )
                     {
@@ -2807,7 +2818,6 @@ void ChartExport::exportAxis( AxisIdPair aAxisIdPair )
         }
     }
 
-
     _exportAxis( xAxisProp, xAxisTitle, xMajorGrid, xMinorGrid, nAxisType, sAxPos, aAxisIdPair );
 }
 
@@ -3130,6 +3140,35 @@ void ChartExport::_exportAxis(
 
 namespace {
 
+struct LabelPlacementParam
+{
+    bool mbExport;
+    sal_Int32 meDefault;
+
+#if SUPD == 310
+    std::set<sal_Int32> maAllowedValues;
+#else	// SUPD == 310
+    boost::unordered_set<sal_Int32> maAllowedValues;
+#endif	 // SUPD == 310
+
+    LabelPlacementParam() :
+        mbExport(true),
+        meDefault(css::chart::DataLabelPlacement::OUTSIDE) {}
+
+    void allowAll()
+    {
+        maAllowedValues.insert(css::chart::DataLabelPlacement::OUTSIDE);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::INSIDE);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::CENTER);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::NEAR_ORIGIN);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::TOP);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::BOTTOM);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::LEFT);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::RIGHT);
+        maAllowedValues.insert(css::chart::DataLabelPlacement::AVOID_OVERLAP);
+    }
+};
+
 const char* toOOXMLPlacement( sal_Int32 nPlacement )
 {
     switch (nPlacement)
@@ -3150,18 +3189,17 @@ const char* toOOXMLPlacement( sal_Int32 nPlacement )
     return "outEnd";
 }
 
-void writeLabelProperties( FSHelperPtr pFS, const uno::Reference<beans::XPropertySet>& xPropSet )
+void writeLabelProperties(
+    FSHelperPtr pFS, const uno::Reference<beans::XPropertySet>& xPropSet, const LabelPlacementParam& rLabelParam )
 {
     if (!xPropSet.is())
         return;
 
     chart2::DataPointLabel aLabel;
-    sal_Int32 nLabelPlacement = css::chart::DataLabelPlacement::OUTSIDE;
     sal_Int32 nLabelBorderWidth = 0;
     sal_Int32 nLabelBorderColor = 0x00FFFFFF;
 
     xPropSet->getPropertyValue("Label") >>= aLabel;
-    xPropSet->getPropertyValue("LabelPlacement") >>= nLabelPlacement;
     xPropSet->getPropertyValue("LabelBorderWidth") >>= nLabelBorderWidth;
     xPropSet->getPropertyValue("LabelBorderColor") >>= nLabelBorderColor;
 
@@ -3179,7 +3217,17 @@ void writeLabelProperties( FSHelperPtr pFS, const uno::Reference<beans::XPropert
         pFS->endElement(FSNS(XML_c, XML_spPr));
     }
 
-    pFS->singleElement(FSNS(XML_c, XML_dLblPos), XML_val, toOOXMLPlacement(nLabelPlacement), FSEND);
+    if (rLabelParam.mbExport)
+    {
+        sal_Int32 nLabelPlacement = rLabelParam.meDefault;
+        if (xPropSet->getPropertyValue("LabelPlacement") >>= nLabelPlacement)
+        {
+            if (!rLabelParam.maAllowedValues.count(nLabelPlacement))
+                nLabelPlacement = rLabelParam.meDefault;
+            pFS->singleElement(FSNS(XML_c, XML_dLblPos), XML_val, toOOXMLPlacement(nLabelPlacement), FSEND);
+        }
+    }
+
     pFS->singleElement(FSNS(XML_c, XML_showLegendKey), XML_val, BS(aLabel.ShowLegendSymbol), FSEND);
     pFS->singleElement(FSNS(XML_c, XML_showVal), XML_val, BS(aLabel.ShowNumber), FSEND);
     pFS->singleElement(FSNS(XML_c, XML_showCatName), XML_val, BS(aLabel.ShowCategoryName), FSEND);
@@ -3189,8 +3237,8 @@ void writeLabelProperties( FSHelperPtr pFS, const uno::Reference<beans::XPropert
 
 }
 
-void ChartExport::exportDataLabels( const uno::Reference<chart2::XDataSeries> & xSeries,
-    sal_Int32 nSeriesLength )
+void ChartExport::exportDataLabels(
+    const uno::Reference<chart2::XDataSeries> & xSeries, sal_Int32 nSeriesLength, sal_Int32 eChartType )
 {
     if (!xSeries.is() || nSeriesLength <= 0)
         return;
@@ -3205,6 +3253,42 @@ void ChartExport::exportDataLabels( const uno::Reference<chart2::XDataSeries> & 
     uno::Sequence<sal_Int32> aAttrLabelIndices;
     xPropSet->getPropertyValue("AttributedDataPoints") >>= aAttrLabelIndices;
 
+    // We must not export label placement property when the chart type doesn't
+    // support this option in MS Office, else MS Office would think the file
+    // is corrupt & refuse to open it.
+
+    const chart::TypeGroupInfo& rInfo = chart::GetTypeGroupInfo(static_cast<chart::TypeId>(eChartType));
+    LabelPlacementParam aParam;
+    aParam.mbExport = !mbIs3DChart;
+    aParam.meDefault = rInfo.mnDefLabelPos;
+    aParam.allowAll();
+    switch (getChartType()) // diagram chart type
+    {
+        case chart::TYPEID_PIE:
+            // All pie charts support label placement.
+            aParam.mbExport = true;
+        break;
+        case chart::TYPEID_DOUGHNUT:
+        case chart::TYPEID_AREA:
+        case chart::TYPEID_RADARLINE:
+        case chart::TYPEID_RADARAREA:
+            // These chart types don't support label placement.
+            aParam.mbExport = false;
+        break;
+        case chart::TYPEID_BAR:
+            if (mbStacked || mbPercent || mbClustered)
+            {
+                aParam.maAllowedValues.clear();
+                aParam.maAllowedValues.insert(css::chart::DataLabelPlacement::CENTER);
+                aParam.maAllowedValues.insert(css::chart::DataLabelPlacement::INSIDE);
+                aParam.maAllowedValues.insert(css::chart::DataLabelPlacement::NEAR_ORIGIN);
+                aParam.meDefault = css::chart::DataLabelPlacement::CENTER;
+            }
+        break;
+        default:
+            ;
+    }
+
     const sal_Int32* p = aAttrLabelIndices.getConstArray();
     const sal_Int32* pEnd = p + aAttrLabelIndices.getLength();
     for (; p != pEnd; ++p)
@@ -3214,15 +3298,15 @@ void ChartExport::exportDataLabels( const uno::Reference<chart2::XDataSeries> & 
         if (!xLabelPropSet.is())
             continue;
 
-        // Individual label property thhat overwrites the baseline.
+        // Individual label property that overwrites the baseline.
         pFS->startElement(FSNS(XML_c, XML_dLbl), FSEND);
         pFS->singleElement(FSNS(XML_c, XML_idx), XML_val, I32S(nIdx), FSEND);
-        writeLabelProperties(pFS, xLabelPropSet);
+        writeLabelProperties(pFS, xLabelPropSet, aParam);
         pFS->endElement(FSNS(XML_c, XML_dLbl));
     }
 
     // Baseline label properties for all labels.
-    writeLabelProperties(pFS, xPropSet);
+    writeLabelProperties(pFS, xPropSet, aParam);
 
     pFS->endElement(FSNS(XML_c, XML_dLbls));
 }
@@ -3333,22 +3417,23 @@ void ChartExport::exportGrouping( bool isBar )
     Reference< XPropertySet > xPropSet( mxDiagram , uno::UNO_QUERY);
 #endif	// SUPD == 310
     // grouping
-    bool bStacked = false;
     if( GetProperty( xPropSet, "Stacked" ) )
-        mAny >>= bStacked;
-    bool bPercentage = false;
+        mAny >>= mbStacked;
     if( GetProperty( xPropSet, "Percent" ) )
-        mAny >>= bPercentage;
+        mAny >>= mbPercent;
 
     const char* grouping = NULL;
-    if( bStacked )
+    if (mbStacked)
         grouping = "stacked";
-    else if( bPercentage )
+    else if (mbPercent)
         grouping = "percentStacked";
     else
     {
         if( isBar && !isDeep3dChart() )
+        {
             grouping = "clustered";
+            mbClustered = true;
+        }
         else
             grouping = "standard";
     }
@@ -3685,7 +3770,7 @@ const char* getErrorBarStyle(sal_Int32 nErrorBarStyle)
         case cssc::ErrorBarStyle::FROM_DATA:
             return "cust";
         default:
-            assert(false); // can't happen
+            assert(false && "can't happen");
     }
     return NULL;
 }

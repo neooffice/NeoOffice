@@ -64,12 +64,15 @@ $(MISC)$/do_tokens $(do_phony) : tokens.txt tokens.pl tokens.hxx.head tokens.hxx
 
 $(SLO)$/namespacemap.obj : $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt $(GENHEADERPATH)$/namespaces.hxx $(MISC)$/do_namespaces
 
+.IF "$(UPD)" == "310"
+$(MISC)$/do_namespaces $(do_phony) : namespaces.txt namespaces.pl namespaces.hxx.head namespaces.hxx.tail $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt $(GENHEADERPATH)$/namespaces.hxx namespaces-strict.txt
+    @@-$(RM) $@
+	$(MKDIRHIER) $(GENHEADERPATH)
+	$(PERL) namespaces.pl namespaces.txt $(MISC)$/namespaceids.inc $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt namespaces-strict.txt $(INCCOM)$/namespaces-strictnames.inc && $(TYPE) namespaces.hxx.head $(MISC)$/namespaceids.inc namespaces.hxx.tail > $(GENHEADERPATH)$/namespaces.hxx && $(TOUCH) $@
+.ELSE		# "$(UPD)" == "310"
 $(MISC)$/do_namespaces $(do_phony) : namespaces.txt namespaces.pl namespaces.hxx.head namespaces.hxx.tail $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt $(GENHEADERPATH)$/namespaces.hxx
     @@-$(RM) $@
 	$(MKDIRHIER) $(GENHEADERPATH)
-.IF "$(UPD)" == "310"
-	$(PERL) namespaces.pl namespaces.txt $(MISC)$/namespaceids.inc $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt namespaces-strict.txt $(INCCOM)$/namespaces-strictnames.inc && $(TYPE) namespaces.hxx.head $(MISC)$/namespaceids.inc namespaces.hxx.tail > $(GENHEADERPATH)$/namespaces.hxx && $(TOUCH) $@
-.ELSE		# "$(UPD)" == "310"
 	$(PERL) namespaces.pl namespaces.txt $(MISC)$/namespaceids.inc $(INCCOM)$/namespacenames.inc $(MISC)$/namespaces.txt && $(TYPE) namespaces.hxx.head $(MISC)$/namespaceids.inc namespaces.hxx.tail > $(GENHEADERPATH)$/namespaces.hxx && $(TOUCH) $@
 .ENDIF		# "$(UPD)" == "310"
 

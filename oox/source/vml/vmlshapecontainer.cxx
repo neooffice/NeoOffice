@@ -22,16 +22,14 @@
 #include "oox/vml/vmldrawing.hxx"
 #include "oox/vml/vmlshape.hxx"
 
+#include <osl/diagnose.h>
+
 namespace oox {
 namespace vml {
-
-
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::uno;
-
-
 
 namespace {
 
@@ -51,8 +49,6 @@ void lclMapShapesById( RefMap< OUString, ShapeType >& orMap, const RefVector< Sh
 }
 
 } // namespace
-
-
 
 ShapeContainer::ShapeContainer( Drawing& rDrawing ) :
     mrDrawing( rDrawing )
@@ -134,8 +130,6 @@ void ShapeContainer::convertAndInsert( const Reference< XShapes >& rxShapes, con
     for( ShapeVector::const_iterator aIt = maShapes.begin(), aEnd = maShapes.end(); aIt != aEnd; ++aIt )
         (*aIt)->convertAndInsert( rxShapes, pParentAnchor );
 }
-
-
 
 } // namespace vml
 } // namespace oox

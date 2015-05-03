@@ -76,12 +76,12 @@ public:
     /** Derived classes may implement to resolve a palette index to an RGB color. */
     virtual sal_Int32   getPaletteColor( sal_Int32 nPaletteIdx ) const;
 
-    virtual css::drawing::FillStyle getDefaultChartAreaFillStyle() const;
+    virtual sal_Int32 getDefaultChartAreaFillStyle() const;
 
     // Device info and device dependent unit conversion -----------------------
 
     /** Returns information about the output device. */
-    const ::com::sun::star::awt::DeviceInfo& getDeviceInfo() const;
+    const ::com::sun::star::awt::DeviceInfo& getDeviceInfo() const { return maDeviceInfo;}
 
     /** Converts the passed value from horizontal screen pixels to 1/100 mm. */
     sal_Int32           convertScreenPixelXToHmm( double fPixelX ) const;

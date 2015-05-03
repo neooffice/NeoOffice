@@ -25,7 +25,6 @@ namespace oox {
 namespace drawingml {
 namespace chart {
 
-
 NumberFormat::NumberFormat() :
     mbSourceLinked( true )
 {
@@ -33,11 +32,9 @@ NumberFormat::NumberFormat() :
 
 void NumberFormat::setAttributes( const AttributeList& rAttribs )
 {
+    mbSourceLinked = rAttribs.getBool( XML_sourceLinked, true);
     maFormatCode = rAttribs.getString( XML_formatCode, OUString() );
-    // TODO: if XML_sourceLinked is true, <c:formatCode> should be used instead.
 }
-
-
 
 LayoutModel::LayoutModel() :
     mfX( 0.0 ),
@@ -56,8 +53,6 @@ LayoutModel::LayoutModel() :
 LayoutModel::~LayoutModel()
 {
 }
-
-
 
 } // namespace chart
 } // namespace drawingml

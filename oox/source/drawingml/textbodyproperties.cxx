@@ -20,7 +20,7 @@
 #include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/drawing/TextHorizontalAdjust.hpp>
 #include "oox/drawingml/drawingmltypes.hxx"
-#include "oox/drawingml/textbodyproperties.hxx"
+#include "drawingml/textbodyproperties.hxx"
 #include "oox/token/tokens.hxx"
 
 using namespace ::com::sun::star::drawing;
@@ -28,8 +28,6 @@ using namespace ::com::sun::star::text;
 
 namespace oox {
 namespace drawingml {
-
-
 
 TextBodyProperties::TextBodyProperties()
     : mbAnchorCtr(false)
@@ -95,8 +93,6 @@ void TextBodyProperties::pushRotationAdjustments( sal_Int32 nRotation )
         nOff = (nOff+1) % n;
     }
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

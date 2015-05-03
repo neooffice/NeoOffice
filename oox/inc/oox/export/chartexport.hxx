@@ -86,7 +86,6 @@ public:
 private:
     sal_Int32           mnXmlNamespace;
     sal_Int32           mnSeriesCount;
-    Fraction            maFraction;
     ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel > mxChartModel;
     com::sun::star::uno::Reference< com::sun::star::chart::XDiagram > mxDiagram;
     com::sun::star::uno::Reference< com::sun::star::chart2::XDiagram > mxNewDiagram;
@@ -102,7 +101,9 @@ private:
     AxisVector          maAxes;
     bool                mbHasZAxis;
     bool                mbIs3DChart;
-
+    bool                mbStacked;
+    bool                mbPercent;
+    bool                mbClustered;
 
 private:
     sal_Int32 getChartType();
@@ -139,7 +140,7 @@ private:
     void exportRadarChart( com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
     void exportScatterChart( com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
     void exportStockChart( com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
-    void exportSuffaceChart( com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
+    void exportSurfaceChart( com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
     void exportHiLowLines();
     void exportUpDownBars(com::sun::star::uno::Reference< com::sun::star::chart2::XChartType > xChartType );
 
@@ -159,7 +160,7 @@ private:
     void exportDataPoints(
         const ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >& xSeriesProperties,
         sal_Int32 nSeriesLength );
-    void exportDataLabels( const css::uno::Reference<css::chart2::XDataSeries>& xSeries, sal_Int32 nSeriesLength );
+    void exportDataLabels( const css::uno::Reference<css::chart2::XDataSeries>& xSeries, sal_Int32 nSeriesLength, sal_Int32 eChartType );
     void exportGrouping( bool isBar = false );
     void exportTrendlines( ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XDataSeries > xSeries );
     void exportMarker( ::com::sun::star::uno::Reference< ::com::sun::star::chart2::XDataSeries > xSeries );
@@ -201,6 +202,6 @@ public:
 
 }}
 
-#endif /* ndef INCLUDED_OOX_EXPORT_CHARTEXPORT_HXX */
+#endif // INCLUDED_OOX_EXPORT_CHARTEXPORT_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

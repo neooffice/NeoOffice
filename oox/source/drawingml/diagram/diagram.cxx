@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-
 #include <functional>
 #include <boost/bind.hpp>
 
@@ -26,15 +25,16 @@
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
 #include <rtl/ustrbuf.hxx>
+#include <osl/diagnose.h>
 #if SUPD == 310
 #include <svx/unoprnms.hxx>
 #else	// SUPD == 310
 #include <editeng/unoprnms.hxx>
 #endif	// SUPD == 310
-#include "oox/drawingml/textbody.hxx"
-#include "oox/drawingml/textparagraph.hxx"
-#include "oox/drawingml/textrun.hxx"
-#include "oox/drawingml/diagram/diagram.hxx"
+#include "drawingml/textbody.hxx"
+#include "drawingml/textparagraph.hxx"
+#include "drawingml/textrun.hxx"
+#include "drawingml/diagram/diagram.hxx"
 #include "oox/drawingml/fillproperties.hxx"
 #include "oox/ppt/pptshapegroupcontext.hxx"
 #include "oox/ppt/pptshape.hxx"
@@ -90,12 +90,10 @@ void DiagramData::dump()
                   boost::bind( &dgm::Point::dump, _1 ) );
 }
 
-
 void Diagram::setData( const DiagramDataPtr & pData)
 {
     mpData = pData;
 }
-
 
 void Diagram::setLayout( const DiagramLayoutPtr & pLayout)
 {
@@ -147,11 +145,9 @@ static sal_Int32 calcDepth( const OUString& rNodeName,
     return 0;
 }
 
-
 void Diagram::build(  )
 {
     // build name-object maps
-
 
 #if OSL_DEBUG_LEVEL > 1
     std::ofstream output("/tmp/tree.dot");
@@ -159,8 +155,9 @@ void Diagram::build(  )
     output << "digraph datatree {" << std::endl;
 #endif
 
-    dgm::Points::iterator aCurrPoint( getData()->getPoints( ).begin() );
-    dgm::Points::iterator aEndPoint( getData()->getPoints( ).end() );
+    dgm::Points& rPoints = getData()->getPoints();
+    dgm::Points::iterator aCurrPoint(rPoints.begin());
+    dgm::Points::iterator aEndPoint(rPoints.end());
     while( aCurrPoint != aEndPoint )
     {
 #if OSL_DEBUG_LEVEL > 1
@@ -231,8 +228,9 @@ void Diagram::build(  )
         ++aCurrPoint;
     }
 
-    dgm::Connections::const_iterator aCurrCxn( getData()->getConnections( ).begin() );
-    const dgm::Connections::const_iterator aEndCxn( getData()->getConnections( ).end() );
+    const dgm::Connections& rConnections = getData()->getConnections();
+    dgm::Connections::const_iterator aCurrCxn(rConnections.begin());
+    const dgm::Connections::const_iterator aEndCxn(rConnections.end());
     while( aCurrCxn != aEndCxn )
     {
 #if OSL_DEBUG_LEVEL > 1
@@ -302,8 +300,9 @@ void Diagram::build(  )
     }
 
     // assign outline levels
-    DiagramData::StringMap::iterator aPresOfIter=getData()->getPresOfNameMap().begin();
-    const DiagramData::StringMap::iterator aPresOfEnd=getData()->getPresOfNameMap().end();
+    DiagramData::StringMap& rStringMap = getData()->getPresOfNameMap();
+    DiagramData::StringMap::iterator aPresOfIter=rStringMap.begin();
+    const DiagramData::StringMap::iterator aPresOfEnd=rStringMap.end();
     while( aPresOfIter != aPresOfEnd )
     {
         DiagramData::StringMap::value_type::second_type::iterator aPresOfNodeIterCalcLevel=aPresOfIter->second.begin();
@@ -426,7 +425,6 @@ void loadDiagram( ShapePtr& pShape,
 
         pDiagram->getDataRelsMap() = pShape->resolveRelationshipsOfTypeFromOfficeDoc( rFilter,
                 xRefDataModel->getFragmentPath(), "image" );
-
 
         // Pass the info to pShape
         for( ::std::vector<OUString>::const_iterator aIt = pData->getExtDrawings().begin(), aEnd = pData->getExtDrawings().end();

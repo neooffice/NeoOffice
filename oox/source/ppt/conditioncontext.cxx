@@ -156,8 +156,6 @@ namespace oox { namespace ppt {
 
     }
 
-
-
     /** CT_TLTimeConditionList */
     CondListContext::CondListContext(
             FragmentHandler2& rParent, sal_Int32  aElement,
@@ -191,7 +189,6 @@ namespace oox { namespace ppt {
         }
         return this;
     }
-
 
 } }
 

@@ -7,7 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "oox/drawingml/effectproperties.hxx"
+#include "effectproperties.hxx"
 #include "oox/drawingml/drawingmltypes.hxx"
 #include "oox/drawingml/shapepropertymap.hxx"
 #include "oox/helper/graphichelper.hxx"
@@ -17,8 +17,6 @@
 
 namespace oox {
 namespace drawingml {
-
-
 
 void EffectShadowProperties::assignUsed(const EffectShadowProperties& rSourceProps)
 {
@@ -37,20 +35,24 @@ void EffectProperties::assignUsed( const EffectProperties& rSourceProps )
 void EffectProperties::pushToPropMap( PropertyMap& rPropMap,
         const GraphicHelper& rGraphicHelper ) const
 {
-    for( std::vector< Effect* >::const_iterator it = maEffects.begin(); it != maEffects.end(); ++it )
-        if( (*it)->msName == "outerShdw" )
+#if SUPD == 310
+    for( std::vector< Effect >::const_iterator it = maEffects.begin(); it != maEffects.end(); ++it )
+#else	// SUPD == 310
+    for( boost::ptr_vector< Effect >::const_iterator it = maEffects.begin(); it != maEffects.end(); ++it )
+#endif	// SUPD == 310
+        if( it->msName == "outerShdw" )
         {
             sal_Int32 nAttrDir = 0, nAttrDist = 0;
-            std::map< OUString, css::uno::Any >::iterator attribIt = (*it)->maAttribs.find( "dir" );
-            if( attribIt != (*it)->maAttribs.end() )
+            std::map< OUString, css::uno::Any >::const_iterator attribIt = it->maAttribs.find( "dir" );
+            if( attribIt != it->maAttribs.end() )
                 attribIt->second >>= nAttrDir;
 
-            attribIt = (*it)->maAttribs.find( "dist" );
-            if( attribIt != (*it)->maAttribs.end() )
+            attribIt = it->maAttribs.find( "dist" );
+            if( attribIt != it->maAttribs.end() )
                 attribIt->second >>= nAttrDist;
 
             // Negative X or Y dist indicates left or up, respectively
-            double nAngle = ( nAttrDir / PER_DEGREE ) * F_PI180;
+            double nAngle = ( static_cast<double>(nAttrDir) / PER_DEGREE ) * F_PI180;
             sal_Int32 nDist = convertEmuToHmm( nAttrDist );
             sal_Int32 nXDist = cos(nAngle) * nDist;
             sal_Int32 nYDist = sin(nAngle) * nDist;
@@ -58,8 +60,8 @@ void EffectProperties::pushToPropMap( PropertyMap& rPropMap,
             rPropMap.setProperty( PROP_Shadow, true );
             rPropMap.setProperty( PROP_ShadowXDistance, nXDist);
             rPropMap.setProperty( PROP_ShadowYDistance, nYDist);
-            rPropMap.setProperty( PROP_ShadowColor, (*it)->moColor.getColor(rGraphicHelper, -1 ) );
-            rPropMap.setProperty( PROP_ShadowTransparence, (*it)->moColor.getTransparency());
+            rPropMap.setProperty( PROP_ShadowColor, it->moColor.getColor(rGraphicHelper, -1 ) );
+            rPropMap.setProperty( PROP_ShadowTransparence, it->moColor.getTransparency());
         }
 }
 
@@ -83,8 +85,6 @@ css::beans::PropertyValue Effect::getEffect()
 
     return pRet;
 }
-
-
 
 } // namespace drawingml
 } // namespace oox

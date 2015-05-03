@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "oox/drawingml/customshapeproperties.hxx"
+#include "drawingml/customshapeproperties.hxx"
 #include "oox/helper/helper.hxx"
 #include "oox/helper/propertymap.hxx"
 #include "oox/helper/propertyset.hxx"
@@ -31,6 +31,8 @@
 #include <com/sun/star/drawing/XEnhancedCustomShapeDefaulter.hpp>
 #include <com/sun/star/drawing/EnhancedCustomShapeTextFrame.hpp>
 #include <basegfx/numeric/ftools.hxx>
+#include <osl/diagnose.h>
+
 #if SUPD == 310
 #include <com/sun/star/drawing/EnhancedCustomShapeAdjustmentValue2.hpp>
 #endif	// SUPD == 310
@@ -59,9 +61,9 @@ CustomShapeProperties::~CustomShapeProperties()
 {
 }
 
-OUString CustomShapeProperties::getShapePresetTypeName() const
+uno::Sequence< sal_Int8 > CustomShapeProperties::getShapePresetTypeName() const
 {
-    return StaticTokenMap::get().getUnicodeTokenName( mnShapePresetType );
+    return StaticTokenMap::get().getUtf8TokenName( mnShapePresetType );
 }
 
 sal_Int32 CustomShapeProperties::SetCustomShapeGuideValue( std::vector< CustomShapeGuide >& rGuideList, const CustomShapeGuide& rGuide )
@@ -112,7 +114,6 @@ static OUString GetConnectorShapeType( sal_Int32 nType )
     return sType;
 }
 
-
 void CustomShapeProperties::pushToPropSet( const ::oox::core::FilterBase& /* rFilterBase */,
 #if SUPD == 310
     const css::uno::Reference < XPropertySet >& xPropSet, const css::uno::Reference < XShape > & xShape, const awt::Size &aSize )
@@ -148,7 +149,7 @@ void CustomShapeProperties::pushToPropSet( const ::oox::core::FilterBase& /* rFi
         }
         else if (maPresetDataMap.find(mnShapePresetType) != maPresetDataMap.end())
         {
-            OSL_TRACE("found property map for preset: %s (%d)", USS(getShapePresetTypeName()), mnShapePresetType);
+            OSL_TRACE("found property map for preset: %d", mnShapePresetType);
 
             aPropertyMap = maPresetDataMap[mnShapePresetType];
 #ifdef DEBUG
@@ -163,15 +164,34 @@ void CustomShapeProperties::pushToPropSet( const ::oox::core::FilterBase& /* rFi
         Sequence< PropertyValue > aSeq = aPropertyMap.makePropertyValueSequence();
         aPropSet.setProperty( PROP_CustomShapeGeometry, aSeq );
 
+        const OUString sCustomShapeGeometry("CustomShapeGeometry");
+        uno::Any aGeoPropSet = xPropSet->getPropertyValue( sCustomShapeGeometry );
+        uno::Sequence< beans::PropertyValue > aGeoPropSeq;
+
+        sal_Int32 i, nCount = 0;
+        if (aGeoPropSet >>= aGeoPropSeq)
+        {
+            nCount = aGeoPropSeq.getLength();
+            for ( i = 0; i < nCount; i++ )
+            {
+                const OUString sAdjustmentValues("AdjustmentValues");
+                if ( aGeoPropSeq[ i ].Name.equals( sAdjustmentValues ) )
+                {
+                    OUString presetTextWarp;
+                    if ( aGeoPropSeq[ i ].Value >>= presetTextWarp )
+                    {
+                        aPropertyMap.setProperty( PROP_PresetTextWarp, Any( presetTextWarp ) );
+                    }
+                }
+            }
+        }
+
         if ( maAdjustmentGuideList.size() )
         {
             const OUString sType = "Type";
-            const OUString sCustomShapeGeometry("CustomShapeGeometry");
-            uno::Any aGeoPropSet = xPropSet->getPropertyValue( sCustomShapeGeometry );
-            uno::Sequence< beans::PropertyValue > aGeoPropSeq;
             if ( aGeoPropSet >>= aGeoPropSeq )
             {
-                sal_Int32 i, nCount = aGeoPropSeq.getLength();
+                nCount = aGeoPropSeq.getLength();
                 for ( i = 0; i < nCount; i++ )
                 {
                     const OUString sAdjustmentValues("AdjustmentValues");

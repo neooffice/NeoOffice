@@ -40,8 +40,6 @@
 namespace oox {
 namespace dump {
 
-
-
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::io;
@@ -65,9 +63,6 @@ const sal_Int32 OOX_DUMP_BYTESPERLINE   = 16;
 const sal_Int64 OOX_DUMP_MAXARRAY       = 16;
 
 } // namespace
-
-
-
 
 // file names -----------------------------------------------------------------
 
@@ -151,9 +146,6 @@ Reference< XTextOutputStream2 > InputOutputHelper::openTextOutputStream(
     return openTextOutputStream( rxContext, openOutputStream( rxContext, rFileName ), eTextEnc );
 }
 
-
-
-
 ItemFormat::ItemFormat() :
     meDataType( DATATYPE_VOID ),
     meFmtType( FORMATTYPE_NONE )
@@ -165,7 +157,7 @@ void ItemFormat::set( DataType eDataType, FormatType eFmtType, const OUString& r
     meDataType = eDataType;
     meFmtType = eFmtType;
     maItemName = rItemName;
-    maListName = OUString();
+    maListName.clear();
 }
 
 OUStringVector::const_iterator ItemFormat::parse( const OUStringVector& rFormatVec )
@@ -200,9 +192,6 @@ OUStringVector ItemFormat::parse( const OUString& rFormatStr )
     OUStringVector::const_iterator aIt = parse( aFormatVec );
     return OUStringVector( aIt, const_cast< const OUStringVector& >( aFormatVec ).end() );
 }
-
-
-
 
 // append string to string ----------------------------------------------------
 
@@ -800,15 +789,9 @@ void StringHelper::convertStringToIntList( Int64Vector& orVec, const OUString& r
     }
 }
 
-
-
-
 Base::~Base()
 {
 }
-
-
-
 
 ConfigItemBase::~ConfigItemBase()
 {
@@ -862,7 +845,7 @@ ConfigItemBase::LineType ConfigItemBase::readConfigLine(
             // ignore comments (starting with hash or semicolon)
             sal_Unicode cChar = aLine[ 0 ];
             if( (cChar == '#') || (cChar == ';') )
-                aLine = OUString();
+                aLine.clear();
         }
     }
 
@@ -882,8 +865,6 @@ void ConfigItemBase::processConfigItem(
     else
         implProcessConfigItemStr( rStrm, rKey, rData );
 }
-
-
 
 NameListBase::~NameListBase()
 {
@@ -953,16 +934,12 @@ void NameListBase::exclude( const OUString& rKeys )
         maMap.erase( *aIt );
 }
 
-
-
 void ItemFormatMap::insertFormats( const NameListRef& rxNameList )
 {
     if( Base::isValid( rxNameList ) )
         for( NameListBase::const_iterator aIt = rxNameList->begin(), aEnd = rxNameList->end(); aIt != aEnd; ++aIt )
-            (*this)[ aIt->first ].parse( aIt->second );
+            maMap[ aIt->first ].parse( aIt->second );
 }
-
-
 
 ConstList::ConstList( const SharedConfigData& rCfgData ) :
     NameListBase( rCfgData ),
@@ -1014,8 +991,6 @@ void ConstList::implIncludeList( const NameListBase& rList )
     }
 }
 
-
-
 MultiList::MultiList( const SharedConfigData& rCfgData ) :
     ConstList( rCfgData ),
     mbIgnoreEmpty( true )
@@ -1045,8 +1020,6 @@ void MultiList::implSetName( sal_Int64 nKey, const OUString& rName )
     StringHelper::convertStringToStringList( aNames, rName, false );
     setNamesFromVec( nKey, aNames );
 }
-
-
 
 FlagsList::FlagsList( const SharedConfigData& rCfgData ) :
     NameListBase( rCfgData ),
@@ -1138,8 +1111,6 @@ void FlagsList::implIncludeList( const NameListBase& rList )
     if( const FlagsList* pFlagsList = dynamic_cast< const FlagsList* >( &rList ) )
         mnIgnore = pFlagsList->mnIgnore;
 }
-
-
 
 bool CombiList::ExtItemFormatKey::operator<( const ExtItemFormatKey& rRight ) const
 {
@@ -1252,8 +1223,6 @@ void CombiList::implIncludeList( const NameListBase& rList )
     FlagsList::implIncludeList( rList );
 }
 
-
-
 UnitConverter::UnitConverter( const SharedConfigData& rCfgData ) :
     NameListBase( rCfgData ),
     mfFactor( 1.0 )
@@ -1282,15 +1251,10 @@ void UnitConverter::implIncludeList( const NameListBase& /*rList*/ )
 {
 }
 
-
-
 NameListRef NameListWrapper::getNameList( const Config& rCfg ) const
 {
     return mxList.get() ? mxList : (mxList = rCfg.getNameList( maName ));
 }
-
-
-
 
 SharedConfigData::SharedConfigData( const OUString& rFileName,
         const Reference< XComponentContext >& rxContext, const StorageRef& rxRootStrg,
@@ -1431,8 +1395,6 @@ void SharedConfigData::createUnitConverter( const OUString& rData )
     }
 }
 
-
-
 Config::Config( const Config& rParent ) :
     Base()  // c'tor needs to be called explicitly to avoid compiler warning
 {
@@ -1523,9 +1485,6 @@ NameListRef Config::implGetNameList( const OUString& rListName ) const
     return mxCfgData->getNameList( rListName );
 }
 
-
-
-
 Output::Output( const Reference< XComponentContext >& rxContext, const OUString& rFileName ) :
     mxStrm( InputOutputHelper::openTextOutputStream( rxContext, rFileName, RTL_TEXTENCODING_UTF8 ) ),
     mnCol( 0 ),
@@ -1537,8 +1496,6 @@ Output::Output( const Reference< XComponentContext >& rxContext, const OUString&
     if( mxStrm.is() )
         mxStrm->writeString( OUString( OOX_DUMP_BOM ) );
 }
-
-
 
 void Output::newLine()
 {
@@ -1694,8 +1651,6 @@ void Output::endMultiItems()
         newLine();
 }
 
-
-
 void Output::writeChar( sal_Unicode cChar, sal_Int32 nCount )
 {
     StringHelper::appendEncChar( maLine, cChar, nCount );
@@ -1743,8 +1698,6 @@ void Output::writeDateTime( const util::DateTime& rDateTime )
     writeDec( rDateTime.Seconds, 2, '0' );
 }
 
-
-
 bool Output::implIsValid() const
 {
     return mxStrm.is();
@@ -1760,8 +1713,6 @@ void Output::writeItemName( const String& rItemName )
     else
         writeString( rItemName );
 }
-
-
 
 StorageIterator::StorageIterator( const StorageRef& rxStrg ) :
     mxStrg( rxStrg )
@@ -1808,9 +1759,6 @@ bool StorageIterator::implIsValid() const
     return mxStrg.get() && mxStrg->isStorage() && (maIt != maNames.end());
 }
 
-
-
-
 ObjectBase::~ObjectBase()
 {
 }
@@ -1839,9 +1787,6 @@ bool ObjectBase::implIsValid() const
 void ObjectBase::implDump()
 {
 }
-
-
-
 
 void StorageObjectBase::construct( const ObjectBase& rParent, const StorageRef& rxStrg, const OUString& rSysPath )
 {
@@ -1992,9 +1937,6 @@ void StorageObjectBase::extractItem( const StorageRef& rxStrg, const OUString& r
     }
 }
 
-
-
-
 OutputObjectBase::~OutputObjectBase()
 {
 }
@@ -2070,9 +2012,6 @@ void OutputObjectBase::writeGuidItem( const String& rName, const OUString& rGuid
     aItem.cont();
     mxOut->writeString( cfg().getStringOption( rGuid, OUString() ) );
 }
-
-
-
 
 InputObjectBase::~InputObjectBase()
 {
@@ -2265,7 +2204,7 @@ util::DateTime InputObjectBase::dumpFileTime( const String& rName )
     // file time is in 10^-7 seconds (100 nanoseconds), convert to nanoseconds
     nFileTime *= 100;
     // entire days
-    sal_Int64 nDays = nFileTime / sal_Int64( ::Time::nanoSecPerDay );
+    sal_Int64 nDays = nFileTime / sal_Int64( ::tools::Time::nanoSecPerDay );
     // number of entire years
     sal_Int64 nYears = (nDays - (nDays / (4 * 365)) + (nDays / (100 * 365)) - (nDays / (400 * 365))) / 365;
     // remaining days in the year
@@ -2288,16 +2227,16 @@ util::DateTime InputObjectBase::dumpFileTime( const String& rName )
     // the day
     aDateTime.Day = static_cast< sal_uInt16 >( nDaysInYear + 1 );
     // number of nanoseconds in the day
-    sal_Int64 nTimeInDay = nFileTime % sal_Int64( ::Time::nanoSecPerDay );
+    sal_Int64 nTimeInDay = nFileTime % sal_Int64( ::tools::Time::nanoSecPerDay );
     // nanoseconds
-    aDateTime.NanoSeconds = static_cast< sal_uInt32 >( nTimeInDay % ::Time::nanoSecPerSec );
-    nTimeInDay /= ::Time::nanoSecPerSec;
+    aDateTime.NanoSeconds = static_cast< sal_uInt32 >( nTimeInDay % ::tools::Time::nanoSecPerSec );
+    nTimeInDay /= ::tools::Time::nanoSecPerSec;
     // seconds
-    aDateTime.Seconds = static_cast< sal_uInt16 >( nTimeInDay % ::Time::secondPerMinute );
-    nTimeInDay /= ::Time::secondPerMinute;
+    aDateTime.Seconds = static_cast< sal_uInt16 >( nTimeInDay % ::tools::Time::secondPerMinute );
+    nTimeInDay /= ::tools::Time::secondPerMinute;
     // minutes
-    aDateTime.Minutes = static_cast< sal_uInt16 >( nTimeInDay % ::Time::minutePerHour );
-    nTimeInDay /= ::Time::minutePerHour;
+    aDateTime.Minutes = static_cast< sal_uInt16 >( nTimeInDay % ::tools::Time::minutePerHour );
+    nTimeInDay /= ::tools::Time::minutePerHour;
     // hours
     aDateTime.Hours = static_cast< sal_uInt16 >( nTimeInDay );
 
@@ -2356,9 +2295,6 @@ void InputObjectBase::dumpItem( const ItemFormat& rItemFmt )
     }
 }
 
-
-
-
 BinaryStreamObject::BinaryStreamObject( const ObjectBase& rParent, const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName )
 {
     InputObjectBase::construct( rParent, rxStrm, rSysFileName );
@@ -2375,9 +2311,6 @@ void BinaryStreamObject::implDump()
 {
     dumpBinaryStream();
 }
-
-
-
 
 void TextStreamObjectBase::construct( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, rtl_TextEncoding eTextEnc, const OUString& rSysFileName )
@@ -2408,8 +2341,6 @@ void TextStreamObjectBase::constructTextStrmObj( rtl_TextEncoding eTextEnc )
     if( mxStrm.get() )
         mxTextStrm.reset( new TextInputStream( getContext(), *mxStrm, eTextEnc ) );
 }
-
-
 
 TextLineStreamObject::TextLineStreamObject( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, rtl_TextEncoding eTextEnc, const OUString& rSysFileName )
@@ -2442,8 +2373,6 @@ void TextLineStreamObject::implDumpLine( const OUString& rLine, sal_uInt32 nLine
     mxOut->writeString( rLine );
     mxOut->newLine();
 }
-
-
 
 XmlStreamObject::XmlStreamObject( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxStrm, const OUString& rSysFileName )
@@ -2531,9 +2460,6 @@ void XmlStreamObject::implDumpText( TextInputStream& rTextStrm )
     }
 }
 
-
-
-
 void RecordObjectBase::construct( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxBaseStrm, const OUString& rSysFileName,
         const BinaryInputStreamRef& rxRecStrm, const String& rRecNames, const String& rSimpleRecs )
@@ -2564,7 +2490,7 @@ void RecordObjectBase::implDump()
         // record body
         if( !mbBinaryOnly && cfg().hasName( xRecNames, mnRecId ) )
         {
-            ItemFormatMap::const_iterator aIt = aSimpleRecs.find( mnRecId );
+            ::std::map< sal_Int64, ItemFormat >::const_iterator aIt = aSimpleRecs.find( mnRecId );
             if( aIt != aSimpleRecs.end() )
                 dumpItem( aIt->second );
             else
@@ -2611,8 +2537,6 @@ void RecordObjectBase::writeHeader()
     addNameToItem( mnRecId, maRecNames );
 }
 
-
-
 void SequenceRecordObjectBase::construct( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxBaseStrm, const OUString& rSysFileName,
         const String& rRecNames, const String& rSimpleRecs )
@@ -2646,9 +2570,6 @@ bool SequenceRecordObjectBase::implStartRecord( BinaryInputStream& rBaseStrm, sa
     return bValid;
 }
 
-
-
-
 DumperBase::~DumperBase()
 {
 }
@@ -2668,9 +2589,6 @@ void DumperBase::construct( const ConfigRef& rxConfig )
     if( isValid( rxConfig ) && rxConfig->isDumperEnabled() )
         ObjectBase::construct( rxConfig );
 }
-
-
-
 
 } // namespace dump
 } // namespace oox
