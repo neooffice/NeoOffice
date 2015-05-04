@@ -48,7 +48,7 @@ void lcl_parseAdjustmentValue(comphelper::SequenceAsVector<drawing::EnhancedCust
         {
             OString aName = aToken.copy(aNamePrefix.getLength(), aToken.getLength() - aNamePrefix.getLength() - strlen("\""));
 #if SUPD == 310
-            aAdjustmentValue.Name = OUString(aName.getStr(), aName.getLength(), RTL_TEXTENCODING_UTF8);
+            aAdjustmentValue.Name = OStringToOUString(aName, RTL_TEXTENCODING_UTF8);
 #else	// SUPD == 310
             aAdjustmentValue.Name = OUString::fromUtf8(aName);
 #endif	// SUPD == 310
@@ -436,8 +436,7 @@ void lcl_parseEquations(comphelper::SequenceAsVector<OUString>& rEquations, cons
         {
             bInString = false;
 #if SUPD == 310
-            OString aValueCopy(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\"")));
-            rEquations.push_back(OUString(aValueCopy.getStr(), aValueCopy.getLength(), RTL_TEXTENCODING_UTF8));
+            rEquations.push_back(OStringToOUString(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\"")), RTL_TEXTENCODING_UTF8));
 #else	// SUPD == 310
             rEquations.push_back(OUString::fromUtf8(rValue.copy(nStart + strlen("\""), i - nStart - strlen("\""))));
 #endif	// SUPD == 310
@@ -767,8 +766,7 @@ void CustomShapeProperties::initializePresetDataMap()
             else
                 maPresetDataMap[StaticTokenMap::get().getTokenFromUnicode(aName)] = aPropertyMap;
 #if SUPD == 310
-            OString aLineCopy(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")));
-            aName = OUString(aLineCopy.getStr(), aLineCopy.getLength(), RTL_TEXTENCODING_UTF8);
+            aName = OStringToOUString(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")), RTL_TEXTENCODING_UTF8);
 #else	// SUPD == 310
             aName = OUString::fromUtf8(aLine.copy(aCommentPrefix.getLength(), aLine.getLength() - aCommentPrefix.getLength() - strlen(" */")));
 #endif	// SUPD == 310
