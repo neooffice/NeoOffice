@@ -46,6 +46,7 @@ LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
 
 .IF "$(UPD)" == "310"
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/oox$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
