@@ -19,7 +19,7 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FORMCONTROLHELPER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FORMCONTROLHELPER_HXX
 
-#include <FFDataHandler.hxx>
+#include "FFDataHandler.hxx"
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/text/XFormField.hpp>
 #include <com/sun/star/uno/Reference.hxx>
@@ -33,22 +33,22 @@ class FormControlHelper
 public:
     typedef boost::shared_ptr<FormControlHelper> Pointer_t;
     FormControlHelper(FieldId eFieldId,
-                      css::uno::Reference<css::text::XTextDocument> rTextDocument,
+                      css::uno::Reference<css::text::XTextDocument> const& rTextDocument,
                       FFDataHandler::Pointer_t pFFData);
     ~FormControlHelper();
 
-    bool insertControl(css::uno::Reference<css::text::XTextRange> xTextRange);
-    bool processField(css::uno::Reference<css::text::XFormField> xFormField);
-    bool hasFFDataHandler() const { return (m_pFFData != 0); }
+    bool insertControl(css::uno::Reference<css::text::XTextRange> const& xTextRange);
+    bool processField(css::uno::Reference<css::text::XFormField> const& xFormField);
+    bool hasFFDataHandler() const { return (m_pFFData != nullptr); }
 private:
     FFDataHandler::Pointer_t m_pFFData;
     struct FormControlHelper_Impl;
     typedef boost::shared_ptr<FormControlHelper_Impl> ImplPointer_t;
     ImplPointer_t m_pImpl;
 
-    bool createCheckbox(css::uno::Reference<css::text::XTextRange> xTextRange,
+    bool createCheckbox(css::uno::Reference<css::text::XTextRange> const& xTextRange,
                         const OUString & rControlName);
-    bool createDropdown(css::uno::Reference<css::text::XTextRange> xTextRange,
+    bool createDropdown(css::uno::Reference<css::text::XTextRange> const& xTextRange,
                         const OUString & rControlName);
 };
 

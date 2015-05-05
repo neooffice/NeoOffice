@@ -20,8 +20,6 @@
 #include <stdio.h>
 #include <iostream>
 #include "OOXMLParserState.hxx"
-#include "ooxmlLoggers.hxx"
-
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
@@ -41,7 +39,7 @@ OOXMLParserState::OOXMLParserState() :
     mbForwardEvents(true),
     mnContexts(0),
     mnHandle(0),
-    mpDocument(NULL),
+    mpDocument(nullptr),
     inTxbxContent(false),
     savedInParagraphGroup(false),
     savedInCharacterGroup(false),
@@ -58,35 +56,19 @@ void OOXMLParserState::setLastParagraphInSection(bool bLastParagraphInSection)
     mbLastParagraphInSection = bLastParagraphInSection;
 }
 
-bool OOXMLParserState::isLastParagraphInSection() const
-{
-    return mbLastParagraphInSection;
-}
 
-bool OOXMLParserState::isInSectionGroup() const
-{
-    return mbInSectionGroup;
-}
 
 void OOXMLParserState::setInSectionGroup(bool bInSectionGroup)
 {
     mbInSectionGroup = bInSectionGroup;
 }
 
-bool OOXMLParserState::isInParagraphGroup() const
-{
-    return mbInParagraphGroup;
-}
 
 void OOXMLParserState::setInParagraphGroup(bool bInParagraphGroup)
 {
     mbInParagraphGroup = bInParagraphGroup;
 }
 
-bool OOXMLParserState::isInCharacterGroup() const
-{
-    return mbInCharacterGroup;
-}
 
 void OOXMLParserState::setInCharacterGroup(bool bInCharacterGroup)
 {
@@ -98,10 +80,6 @@ void OOXMLParserState::setForwardEvents(bool bForwardEvents)
     mbForwardEvents = bForwardEvents;
 }
 
-bool OOXMLParserState::isForwardEvents() const
-{
-    return mbForwardEvents;
-}
 
 const std::string OOXMLParserState::getHandle() const
 {
@@ -122,10 +100,6 @@ void OOXMLParserState::setDocument(OOXMLDocumentImpl* pDocument)
     mpDocument = pDocument;
 }
 
-OOXMLDocumentImpl* OOXMLParserState::getDocument() const
-{
-    return mpDocument;
-}
 
 void OOXMLParserState::setXNoteId(const sal_Int32 nId)
 {
@@ -144,52 +118,41 @@ const OUString & OOXMLParserState::getTarget() const
 
 void OOXMLParserState::resolveCharacterProperties(Stream & rStream)
 {
-    if (mpCharacterProps.get() != NULL)
+    if (mpCharacterProps.get() != nullptr)
     {
-#ifdef DEBUG_PROPERTIES
-        debug_logger->startElement("resolveCharacterProperties");
-#endif
-
         rStream.props(mpCharacterProps);
         mpCharacterProps.reset(new OOXMLPropertySetImpl());
-
-#ifdef DEBUG_PROPERTIES
-        debug_logger->endElement();
-#endif
     }
 }
 
-void OOXMLParserState::setCharacterProperties
-(OOXMLPropertySet::Pointer_t pProps)
+void OOXMLParserState::setCharacterProperties(OOXMLPropertySet::Pointer_t pProps)
 {
-    if (mpCharacterProps.get() == NULL)
+    if (mpCharacterProps.get() == nullptr)
         mpCharacterProps = pProps;
     else
         mpCharacterProps->add(pProps);
 }
 
-void OOXMLParserState::setCellProperties
-(OOXMLPropertySet::Pointer_t pProps)
+void OOXMLParserState::setCellProperties(OOXMLPropertySet::Pointer_t pProps)
 {
     if (!mCellProps.empty())
     {
         OOXMLPropertySet::Pointer_t & rCellProps = mCellProps.top();
 
-        if (rCellProps.get() == NULL)
+        if (rCellProps.get() == nullptr)
             rCellProps = pProps;
         else
             rCellProps->add(pProps);
     }
 }
 
-void OOXMLParserState::setRowProperties
-(OOXMLPropertySet::Pointer_t pProps)
+void OOXMLParserState::setRowProperties(OOXMLPropertySet::Pointer_t pProps)
 {
     if (!mRowProps.empty())
     {
         OOXMLPropertySet::Pointer_t & rRowProps = mRowProps.top();
 
-        if (rRowProps.get() == NULL)
+        if (rRowProps.get() == nullptr)
             rRowProps = pProps;
         else
             rRowProps->add(pProps);
@@ -202,7 +165,7 @@ void OOXMLParserState::resolveCellProperties(Stream & rStream)
     {
         OOXMLPropertySet::Pointer_t & rCellProps = mCellProps.top();
 
-        if (rCellProps.get() != NULL)
+        if (rCellProps.get() != nullptr)
         {
             rStream.props(rCellProps);
             rCellProps.reset(new OOXMLPropertySetImpl());
@@ -216,7 +179,7 @@ void OOXMLParserState::resolveRowProperties(Stream & rStream)
     {
         OOXMLPropertySet::Pointer_t & rRowProps = mRowProps.top();
 
-        if (rRowProps.get() != NULL)
+        if (rRowProps.get() != nullptr)
         {
             rStream.props(rRowProps);
             rRowProps.reset(new OOXMLPropertySetImpl());
@@ -230,7 +193,7 @@ void OOXMLParserState::resolveTableProperties(Stream & rStream)
     {
         OOXMLPropertySet::Pointer_t & rTableProps = mTableProps.top();
 
-        if (rTableProps.get() != NULL)
+        if (rTableProps.get() != nullptr)
         {
             rStream.props(rTableProps);
             // Don't clean the table props to send them again for each row
@@ -239,13 +202,12 @@ void OOXMLParserState::resolveTableProperties(Stream & rStream)
     }
 }
 
-void OOXMLParserState::setTableProperties
-(OOXMLPropertySet::Pointer_t pProps)
+void OOXMLParserState::setTableProperties(OOXMLPropertySet::Pointer_t pProps)
 {
     if (!mTableProps.empty())
     {
         OOXMLPropertySet::Pointer_t & rTableProps = mTableProps.top();
-        if (rTableProps.get() == NULL)
+        if (rTableProps.get() == nullptr)
             rTableProps = pProps;
         else
             rTableProps->add(pProps);
@@ -277,8 +239,8 @@ void OOXMLParserState::incContextCount()
 
 void OOXMLParserState::startTxbxContent()
 {
-    if( inTxbxContent )
-        SAL_WARN( "writerfilter", "Nested w:txbxContent" );
+    SAL_WARN_IF(inTxbxContent, "writerfilter", "Nested w:txbxContent");
+
     inTxbxContent = true;
     // Do not save and reset section group state, it'd cause a new page.
 //    savedInSectionGroup = mbInSectionGroup;
@@ -304,47 +266,6 @@ void OOXMLParserState::endTxbxContent()
     mbLastParagraphInSection = savedLastParagraphInSection;
     inTxbxContent = false;
 }
-
-#if OSL_DEBUG_LEVEL > 1
-void OOXMLParserState::dumpXml( const TagLogger::Pointer_t& pLogger )
-{
-    pLogger->startElement("parserstate");
-
-    std::string sTmp;
-
-    if (isInSectionGroup())
-        sTmp += "s";
-    else
-        sTmp += "-";
-
-    if (isInParagraphGroup())
-        sTmp += "p";
-    else
-        sTmp += "-";
-
-    if (isInCharacterGroup())
-        sTmp += "c";
-    else
-        sTmp += "-";
-
-    if (isForwardEvents())
-        sTmp += "f";
-    else
-        sTmp += "-";
-
-    pLogger->attribute("state", sTmp);
-    pLogger->attribute("XNoteId", getXNoteId() );
-    if (mpCharacterProps != OOXMLPropertySet::Pointer_t())
-        pLogger->chars(mpCharacterProps->toString());
-
-    pLogger->endElement();
- }
-
-XPathLogger & OOXMLParserState::getXPathLogger()
-{
-    return m_xPathLogger;
-}
-#endif
 
 }}
 

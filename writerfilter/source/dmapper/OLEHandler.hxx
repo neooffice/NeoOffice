@@ -77,7 +77,7 @@ class OLEHandler : public LoggedProperties
     virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
 
     // Interoperability
-    virtual void saveInteropProperties( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument,
+    virtual void saveInteropProperties( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > const& xTextDocument,
                                         const OUString& sObjectName, const OUString& sOldObjectName = OUString() );
 
 public:
@@ -88,14 +88,15 @@ public:
 
     inline bool isOLEObject( ) { return m_xInputStream.is( ); };
 
-    OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument );
     /// In case of a valid CLSID, import the native data to the previously created empty OLE object.
     void importStream(css::uno::Reference<css::uno::XComponentContext> xComponentContext,
                       css::uno::Reference<css::text::XTextDocument> xTextDocument,
                       css::uno::Reference<css::text::XTextContent> xOLE);
 
     /// Get the CLSID of the OLE object, in case we can find one based on m_sProgId.
-    OUString getCLSID();
+    OUString getCLSID(css::uno::Reference<css::uno::XComponentContext> xComponentContext) const;
+
+    OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > const & xTextDocument );
 
     ::com::sun::star::awt::Size     getSize() const { return m_aShapeSize;}
     ::com::sun::star::awt::Point    getPosition() const { return m_aShapePosition;}

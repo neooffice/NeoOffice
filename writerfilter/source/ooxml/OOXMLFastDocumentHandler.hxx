@@ -134,7 +134,7 @@ private:
     css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     Stream * mpStream;
-#ifdef DEBUG_ELEMENT
+#ifdef DEBUG_WRITERFILTER
     Stream::Pointer_t mpTmpStream;
 #endif
     OOXMLDocumentImpl* mpDocument;

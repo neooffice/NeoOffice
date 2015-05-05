@@ -51,25 +51,21 @@ writerfilter::Reference<Properties>::Pointer_t RTFSprm::getProps()
     return m_pValue->getProperties();
 }
 
-Sprm::Kind RTFSprm::getKind()
-{
-    return Sprm::UNKNOWN;
-}
-
+#ifdef DEBUG_WRITERFILTER
 std::string RTFSprm::getName() const
 {
     return "RTFSprm";
 }
+#endif
 
+#ifdef DEBUG_WRITERFILTER
 std::string RTFSprm::toString() const
 {
     OStringBuffer aBuf("RTFSprm");
 
     std::string sResult;
 
-#ifdef DEBUG_LOGGING
     sResult = (*QNameToString::Instance())(m_nKeyword);
-#endif
 
     aBuf.append(" ('");
     if (sResult.length() == 0)
@@ -82,6 +78,7 @@ std::string RTFSprm::toString() const
 
     return aBuf.makeStringAndClear().getStr();
 }
+#endif
 
 RTFValue::Pointer_t RTFSprms::find(Id nKeyword, bool bFirst, bool bForWrite)
 {
@@ -144,12 +141,13 @@ static RTFValue::Pointer_t getDefaultSPRM(Id const id)
 {
     switch (id)
     {
-        case NS_ooxml::LN_CT_Spacing_before:
-        case NS_ooxml::LN_CT_Spacing_after:
-            return RTFValue::Pointer_t(new RTFValue(0));
+    case NS_ooxml::LN_CT_Spacing_before:
+    case NS_ooxml::LN_CT_Spacing_after:
+    case NS_ooxml::LN_EG_RPrBase_b:
+        return RTFValue::Pointer_t(new RTFValue(0));
 
-        default:
-            return RTFValue::Pointer_t();
+    default:
+        return RTFValue::Pointer_t();
     }
 }
 
@@ -195,8 +193,7 @@ RTFSprms RTFSprms::cloneAndDeduplicate(RTFSprms& rReference) const
                     RTFSprms().cloneAndDeduplicate(i->second->getAttributes()));
                 if (!sprms.empty() || !attributes.empty())
                 {
-                    ret.set(i->first,
-                        RTFValue::Pointer_t(new RTFValue(attributes, sprms)));
+                    ret.set(i->first, RTFValue::Pointer_t(new RTFValue(attributes, sprms)));
                 }
             }
         }

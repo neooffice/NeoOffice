@@ -40,8 +40,8 @@ public:
     static void setAlignH(const OUString & sText);
     static void setAlignV(const OUString & sText);
     sal_Int16 orientation() const;
-    sal_Int16 relation() const;
-    sal_Int32 position() const;
+    sal_Int16 relation() const { return m_nRelation;}
+    sal_Int32 position() const { return m_nPosition;}
  private:
     virtual void lcl_attribute( Id aName, Value& rVal ) SAL_OVERRIDE;
     virtual void lcl_sprm( Sprm& rSprm ) SAL_OVERRIDE;
@@ -73,7 +73,8 @@ typedef boost::shared_ptr<WrapHandler> WrapHandlerPtr;
 class GraphicZOrderHelper
 {
 public:
-    void addItem( css::uno::Reference< css::beans::XPropertySet > props, sal_Int32 relativeHeight );
+    void addItem(css::uno::Reference<css::beans::XPropertySet> const& props,
+                 sal_Int32 relativeHeight);
     sal_Int32 findZOrder( sal_Int32 relativeHeight, bool bOldStyle = false );
 private:
     typedef std::map< sal_Int32, css::uno::Reference< css::beans::XPropertySet > > Items;

@@ -23,14 +23,25 @@
 #include "OOXMLDocumentImpl.hxx"
 #include "OOXMLPropertySetImpl.hxx"
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_WRITERFILTER
 #include <resourcemodel/TagLogger.hxx>
-#include <resourcemodel/XPathLogger.hxx>
 #endif
 
 namespace writerfilter {
 namespace ooxml
 {
+
+/**
+ * Struct to store our 'alternate state'. If multiple mc:AlternateContent
+ * elements arrive, then while the inner ones are active, the original state is
+ * saved away, and once they inner goes out of scope, the original state is
+ * restored.
+ */
+struct SavedAlternateState
+{
+    bool m_bDiscardChildren;
+    bool m_bTookChoice; ///< Did we take the Choice or want Fallback instead?
+};
 
 class OOXMLParserState
 {
@@ -42,7 +53,6 @@ class OOXMLParserState
     unsigned int mnContexts;
     unsigned int mnHandle;
     OOXMLDocumentImpl* mpDocument;
-    OUString msTarget;
     OOXMLPropertySet::Pointer_t mpCharacterProps;
     std::stack<OOXMLPropertySet::Pointer_t> mCellProps;
     std::stack<OOXMLPropertySet::Pointer_t> mRowProps;
@@ -52,9 +62,7 @@ class OOXMLParserState
     bool savedInParagraphGroup;
     bool savedInCharacterGroup;
     bool savedLastParagraphInSection;
-#if OSL_DEBUG_LEVEL > 1
-    XPathLogger m_xPathLogger;
-#endif
+    std::vector<SavedAlternateState> maSavedAlternateStates;
 
 public:
     typedef boost::shared_ptr<OOXMLParserState> Pointer_t;
@@ -62,26 +70,28 @@ public:
     OOXMLParserState();
     virtual ~OOXMLParserState();
 
-    bool isInSectionGroup() const;
+    bool isInSectionGroup() const { return mbInSectionGroup;}
     void setInSectionGroup(bool bInSectionGroup);
 
     void setLastParagraphInSection(bool bLastParagraphInSection);
-    bool isLastParagraphInSection() const;
+    bool isLastParagraphInSection() const { return mbLastParagraphInSection;}
 
-    bool isInParagraphGroup() const;
+    std::vector<SavedAlternateState>& getSavedAlternateStates() { return maSavedAlternateStates; }
+
+    bool isInParagraphGroup() const { return mbInParagraphGroup;}
     void setInParagraphGroup(bool bInParagraphGroup);
 
-    bool isInCharacterGroup() const;
+    bool isInCharacterGroup() const { return mbInCharacterGroup;}
     void setInCharacterGroup(bool bInCharacterGroup);
 
     void setForwardEvents(bool bForwardEvents);
-    bool isForwardEvents() const;
+    bool isForwardEvents() const { return mbForwardEvents;}
 
     const std::string getHandle() const;
     void setHandle();
 
     void setDocument(OOXMLDocumentImpl* pDocument);
-    OOXMLDocumentImpl* getDocument() const;
+    OOXMLDocumentImpl* getDocument() const { return mpDocument;}
 
     void setXNoteId(const sal_Int32 rId);
     sal_Int32 getXNoteId() const;
@@ -104,12 +114,6 @@ public:
 
     void startTxbxContent();
     void endTxbxContent();
-
-#if OSL_DEBUG_LEVEL > 1
-public:
-    void dumpXml( const TagLogger::Pointer_t& pLogger );
-    XPathLogger & getXPathLogger();
-#endif
 
 };
 

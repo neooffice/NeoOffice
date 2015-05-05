@@ -19,12 +19,9 @@
 
 #include <iostream>
 #include <boost/shared_ptr.hpp>
-#ifdef DEBUG_ELEMENT
-#include "ooxmlLoggers.hxx"
-#endif
 #include "OOXMLFastDocumentHandler.hxx"
 #include "OOXMLFastContextHandler.hxx"
-#include "ooxml/OOXMLFastTokens.hxx"
+#include "oox/token/tokens.hxx"
 #include "OOXMLFactory.hxx"
 
 namespace writerfilter {
@@ -41,7 +38,7 @@ OOXMLFastDocumentHandler::OOXMLFastDocumentHandler(
     sal_Int32 nXNoteId )
     : m_xContext(context)
     , mpStream( pStream )
-#ifdef DEBUG_ELEMENT
+#ifdef DEBUG_WRITERFILTER
     , mpTmpStream()
 #endif
     , mpDocument( pDocument )
@@ -53,7 +50,7 @@ OOXMLFastDocumentHandler::OOXMLFastDocumentHandler(
 // ::com::sun::star::xml::sax::XFastContextHandler:
 void SAL_CALL OOXMLFastDocumentHandler::startFastElement
 (::sal_Int32
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Element
 #endif
 , const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
@@ -63,7 +60,7 @@ Element
     throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":start element:"
          << fastTokenToId(Element)
          << endl;
@@ -72,11 +69,11 @@ Element
 
 void SAL_CALL OOXMLFastDocumentHandler::startUnknownElement
 (const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Namespace
 #endif
 , const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Name
 #endif
 ,
@@ -87,7 +84,7 @@ throw (uno::RuntimeException, xml::sax::SAXException)
 throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":start unknown element:"
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
@@ -97,7 +94,7 @@ throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 }
 
 void SAL_CALL OOXMLFastDocumentHandler::endFastElement(::sal_Int32
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Element
 #endif
 )
@@ -107,7 +104,7 @@ throw (uno::RuntimeException, xml::sax::SAXException)
 throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":end element:"
          << fastTokenToId(Element)
          << endl;
@@ -116,11 +113,11 @@ throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 
 void SAL_CALL OOXMLFastDocumentHandler::endUnknownElement
 (const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Namespace
 #endif
 , const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Name
 #endif
 )
@@ -130,7 +127,7 @@ throw (uno::RuntimeException, xml::sax::SAXException)
 throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":end unknown element:"
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
@@ -165,17 +162,17 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
     throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":createFastChildContext:"
          << fastTokenToId(Element)
          << endl;
 #endif
 
-    if ( mpStream == 0 && mpDocument == 0 )
+    if ( mpStream == nullptr && mpDocument == nullptr )
     {
         // document handler has been created as unknown child - see <OOXMLFastDocumentHandler::createUnknownChildContext(..)>
         // --> do not provide a child context
-        return NULL;
+        return nullptr;
     }
 
     return OOXMLFactory::getInstance()->createFastChildContextFromStart(getContextHandler().get(), Element);
@@ -184,12 +181,12 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
 uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
 OOXMLFastDocumentHandler::createUnknownChildContext
 (const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Namespace
 #endif
 ,
  const OUString &
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
 Name
 #endif
 , const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
@@ -199,7 +196,7 @@ Name
     throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif	// SUPD == 310
 {
-#ifdef DEBUG_CONTEXT_STACK
+#ifdef DEBUG_WRITERFILTER
     clog << this << ":createUnknownChildContext:"
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
@@ -208,7 +205,7 @@ Name
 #endif
 
     return uno::Reference< xml::sax::XFastContextHandler >
-        ( new OOXMLFastDocumentHandler( m_xContext, 0, 0, 0 ) );
+        ( new OOXMLFastDocumentHandler( m_xContext, nullptr, nullptr, 0 ) );
 }
 
 void SAL_CALL OOXMLFastDocumentHandler::characters(const OUString & /*aChars*/)
@@ -251,7 +248,7 @@ void SAL_CALL OOXMLFastDocumentHandler::setDocumentLocator
 
 void OOXMLFastDocumentHandler::setIsSubstream( bool bSubstream )
 {
-    if ( mpStream != 0 && mpDocument != 0 )
+    if ( mpStream != nullptr && mpDocument != nullptr )
     {
         getContextHandler( )->getParserState( )->setInSectionGroup( bSubstream );
     }

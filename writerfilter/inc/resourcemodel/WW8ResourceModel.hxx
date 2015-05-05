@@ -40,7 +40,7 @@
    @image html doctok.png
 
    A resource is a set of events that describe an object. A resource
-   is only an abstract concept. It is not instanciated to a class.
+   is only an abstract concept. It is not instantiated to a class.
 
    A reference to a resource represents the object that the resource
    describes. The reference can be resolved thereby generating the
@@ -102,11 +102,6 @@ public:
        @param rHandler         handler which receives the events
      */
     virtual void resolve(T & rHandler) = 0;
-
-    /**
-       Returns the type of the reference aka the name of the access class.
-     */
-    virtual std::string getType() const = 0;
 
 protected:
     ~Reference() {}
@@ -202,6 +197,9 @@ public:
     */
     virtual void endSectionGroup() = 0;
 
+    /// The current section is the last one in this body text.
+    virtual void markLastSectionGroup( ) { };
+
     /**
        Receives start mark for group with the same paragraph properties.
      */
@@ -227,7 +225,7 @@ public:
     /**
       Receives a shape.
      */
-    virtual void startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape ) = 0;
+    virtual void startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > const& xShape ) = 0;
 
     virtual void endShape( ) = 0;
 
@@ -299,9 +297,11 @@ public:
     /**
        Pointer to a value.
      */
-    SAL_WNODEPRECATED_DECLARATIONS_PUSH
+#if SUPD == 310
     typedef std::auto_ptr<Value> Pointer_t;
-    SAL_WNODEPRECATED_DECLARATIONS_POP
+#else	// SUPD == 310
+    typedef std::unique_ptr<Value> Pointer_t;
+#endif	// SUPD == 310
 
     virtual ~Value() {}
 
@@ -338,7 +338,9 @@ public:
     /**
        Returns string representation of this value.
      */
+#ifdef DEBUG_WRITERFILTER
     virtual std::string toString() const = 0;
+#endif
 };
 
 /**
@@ -348,10 +350,11 @@ public:
 class Sprm
 {
 public:
-    SAL_WNODEPRECATED_DECLARATIONS_PUSH
+#if SUPD == 310
     typedef std::auto_ptr<Sprm> Pointer_t;
-    SAL_WNODEPRECATED_DECLARATIONS_POP
-    enum Kind { UNKNOWN, CHARACTER, PARAGRAPH, TABLE };
+#else	// SUPD == 310
+    typedef std::unique_ptr<Sprm> Pointer_t;
+#endif	// SUPD == 310
 
     /**
        Returns id of the SPRM.
@@ -380,23 +383,24 @@ public:
     virtual writerfilter::Reference<Properties>::Pointer_t getProps() = 0;
 
     /**
-       Returns the kind of this SPRM.
-    */
-    virtual Kind getKind() = 0;
-
-    /**
        Returns name of sprm.
     */
+#ifdef DEBUG_WRITERFILTER
     virtual std::string getName() const = 0;
+#endif
 
     /**
        Returns string repesentation of sprm.
      */
+#ifdef DEBUG_WRITERFILTER
     virtual std::string toString() const = 0;
+#endif
 
 protected:
     ~Sprm() {}
 };
+
+typedef sal_Int32 Token_t;
 
 }
 

@@ -121,9 +121,6 @@ void FontTable::lcl_sprm(Sprm& rSprm)
         return ;
     sal_uInt32 nSprmId = rSprm.getId();
 
-    Value::Pointer_t pValue = rSprm.getValue();
-    sal_Int32 nIntValue = pValue->getInt();
-    (void)nIntValue;
     switch(nSprmId)
     {
         case NS_ooxml::LN_CT_Font_charset:
@@ -143,7 +140,7 @@ void FontTable::lcl_sprm(Sprm& rSprm)
                     nSprmId == NS_ooxml::LN_CT_Font_embedRegular ? ""
                     : nSprmId == NS_ooxml::LN_CT_Font_embedBold ? "b"
                     : nSprmId == NS_ooxml::LN_CT_Font_embedItalic ? "i"
-                    : nSprmId == NS_ooxml::LN_CT_Font_embedBoldItalic ? "bi" : "?" );
+                    : /*NS_ooxml::LN_CT_Font_embedBoldItalic*/ "bi" );
                 pProperties->resolve( handler );
             }
 #endif	// SUPD != 310
@@ -229,7 +226,7 @@ void FontTable::lcl_info(const std::string& )
 {
 }
 
-void FontTable::lcl_startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > )
+void FontTable::lcl_startShape(uno::Reference<drawing::XShape> const&)
 {
 }
 

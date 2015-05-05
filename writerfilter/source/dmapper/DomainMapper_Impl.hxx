@@ -31,25 +31,33 @@
 #include <stack>
 #include <queue>
 #include <boost/optional.hpp>
+#if SUPD == 310
+#include <hash_map>
+#else	// SUPD == 310
+#include <boost/unordered_map.hpp>
+#endif	// SUPD == 310
 
-#ifndef INCLUDED_RESOURCESIDS
 #include <ooxml/resourceids.hxx>
-#endif
+
 #include <dmapper/DomainMapper.hxx>
-#include <DomainMapperTableManager.hxx>
-#include <PropertyMap.hxx>
-#include <FontTable.hxx>
-#include <NumberingManager.hxx>
-#include <StyleSheetTable.hxx>
-#include <SettingsTable.hxx>
-#include <ThemeTable.hxx>
-#include <GraphicImport.hxx>
-#include <OLEHandler.hxx>
-#include <FFDataHandler.hxx>
-#include <FormControlHelper.hxx>
+#include "DomainMapperTableManager.hxx"
+#include "PropertyMap.hxx"
+#include "FontTable.hxx"
+#include "NumberingManager.hxx"
+#include "StyleSheetTable.hxx"
+#include "SettingsTable.hxx"
+#include "ThemeTable.hxx"
+#include "GraphicImport.hxx"
+#include "OLEHandler.hxx"
+#include "FFDataHandler.hxx"
+#include "FormControlHelper.hxx"
 #include <map>
 
 #include <string.h>
+
+#if SUPD == 310
+#include <boost/tuple/tuple.hpp>
+#endif	// SUPD == 310
 
 namespace com{ namespace sun{ namespace star{
         namespace awt{
@@ -104,15 +112,31 @@ enum ContextType
     CONTEXT_PARAGRAPH,
     CONTEXT_CHARACTER,
     CONTEXT_STYLESHEET,
-    CONTEXT_LIST,
-    NUMBER_OF_CONTEXTS
+    CONTEXT_LIST
 };
+enum { NUMBER_OF_CONTEXTS = CONTEXT_LIST + 1 };
 
 enum BreakType
 {
     PAGE_BREAK,
     COLUMN_BREAK
 };
+
+/**
+ * Storage for state that is relevant outside a header/footer, but not inside it.
+ *
+ * In case some state of DomainMapper_Impl should be reset before handling the
+ * header/footer and should be restored once handling of header/footer is done,
+ * then you can use this class to do so.
+ */
+class HeaderFooterContext
+{
+    bool m_bTextInserted;
+public:
+    HeaderFooterContext(bool bTextInserted);
+    bool getTextInserted();
+};
+
 /*--------------------------------------------------
    field stack element
  * --------------------------------------------------*/
@@ -128,12 +152,15 @@ class FieldContext
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XFormField >          m_xFormField;
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >       m_xTOC;//TOX
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >       m_xTC;//TOX entry
+    ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >       m_xCustomField;
     OUString                                                                 m_sHyperlinkURL;
     FFDataHandler::Pointer_t                                                        m_pFFDataHandler;
     FormControlHelper::Pointer_t                                                    m_pFormControlHelper;
+    /// (Character) properties of the field itself.
+    PropertyMapPtr m_pProperties;
 
 public:
-    FieldContext(::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xStart);
+    FieldContext(::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xStart);
     ~FieldContext();
 
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > GetStartRange() const { return m_xStartRange; }
@@ -147,15 +174,17 @@ public:
     void                    SetCommandCompleted() { m_bFieldCommandCompleted = true; }
     bool                    IsCommandCompleted() const { return m_bFieldCommandCompleted;    }
 
+    ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >   GetCustomField() const { return m_xCustomField; }
+    void    SetCustomField( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xCustomField ) { m_xCustomField = xCustomField; }
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextField >      GetTextField() const { return m_xTextField;}
-    void    SetTextField(::com::sun::star::uno::Reference< ::com::sun::star::text::XTextField > xTextField) { m_xTextField = xTextField;}
+    void    SetTextField(::com::sun::star::uno::Reference< ::com::sun::star::text::XTextField > const& xTextField) { m_xTextField = xTextField;}
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XFormField >      GetFormField() const { return m_xFormField;}
-    void    SetFormField(::com::sun::star::uno::Reference< ::com::sun::star::text::XFormField > xFormField) { m_xFormField = xFormField;}
+    void    SetFormField(::com::sun::star::uno::Reference< ::com::sun::star::text::XFormField > const& xFormField) { m_xFormField = xFormField;}
 
-    void    SetTOC( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xTOC ) { m_xTOC = xTOC; }
+    void    SetTOC( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xTOC ) { m_xTOC = xTOC; }
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >   GetTOC() { return m_xTOC; }
 
-    void    SetTC( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xTC ) { m_xTC = xTC; }
+    void    SetTC( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xTC ) { m_xTC = xTC; }
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >   GetTC( ) { return m_xTC; }
 
     void    SetHyperlinkURL( const OUString& rURL ) { m_sHyperlinkURL = rURL; }
@@ -166,6 +195,7 @@ public:
 
     void setFormControlHelper(FormControlHelper::Pointer_t pFormControlHelper) { m_pFormControlHelper = pFormControlHelper; }
     FormControlHelper::Pointer_t getFormControlHelper() const { return m_pFormControlHelper; }
+    PropertyMapPtr getProperties() { return m_pProperties; }
 
     ::std::vector<OUString> GetCommandParts() const;
 };
@@ -200,6 +230,7 @@ typedef boost::shared_ptr<FieldContext>  FieldContextPtr;
 typedef std::stack<ContextType>                 ContextStack;
 typedef std::stack<PropertyMapPtr>              PropertyStack;
 typedef std::stack< TextAppendContext >         TextAppendStack;
+typedef std::stack<HeaderFooterContext> HeaderFooterStack;
 typedef std::stack<FieldContextPtr>                FieldStack;
 typedef std::stack< AnchoredContext >           TextContentStack;
 
@@ -228,7 +259,8 @@ struct BookmarkInsertPosition
     bool                                                                    m_bIsStartOfText;
     OUString                                                         m_sBookmarkName;
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  m_xTextRange;
-    BookmarkInsertPosition(bool bIsStartOfText, const OUString& rName, ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange >  xTextRange):
+    BookmarkInsertPosition(bool bIsStartOfText, const OUString& rName,
+            ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xTextRange):
         m_bIsStartOfText( bIsStartOfText ),
         m_sBookmarkName( rName ),
         m_xTextRange( xTextRange )
@@ -246,20 +278,6 @@ typedef std::hash_map< sal_Int32, AnnotationPosition > AnnotationPositions_t;
 #else	// SUPD == 310
 typedef boost::unordered_map< sal_Int32, AnnotationPosition > AnnotationPositions_t;
 #endif	// SUPD == 310
-
-struct RedlineParams
-{
-    OUString m_sAuthor;
-    OUString m_sDate;
-    sal_Int32       m_nId;
-    sal_Int32       m_nToken;
-
-    /// This can hold properties of runs that had formatted 'track changes' properties
-    css::uno::Sequence<css::beans::PropertyValue> m_aRevertProperties;
-};
-typedef boost::shared_ptr< RedlineParams > RedlineParamsPtr;
-
-
 
 struct LineNumberSettings
 {
@@ -286,7 +304,10 @@ struct FloatingTableInfo
     css::uno::Sequence<css::beans::PropertyValue> m_aFrameProperties;
     sal_Int32 m_nTableWidth;
 
-    FloatingTableInfo(css::uno::Reference<css::text::XTextRange> xStart, css::uno::Reference<css::text::XTextRange> xEnd, const css::uno::Sequence<css::beans::PropertyValue>& aFrameProperties, sal_Int32 nTableWidth)
+    FloatingTableInfo(css::uno::Reference<css::text::XTextRange> const& xStart,
+            css::uno::Reference<css::text::XTextRange> const& xEnd,
+            const css::uno::Sequence<css::beans::PropertyValue>& aFrameProperties,
+            sal_Int32 nTableWidth)
         : m_xStart(xStart),
         m_xEnd(xEnd),
         m_aFrameProperties(aFrameProperties),
@@ -319,13 +340,19 @@ private:
 
     TextContentStack                                                                m_aAnchoredStack;
 
+    HeaderFooterStack m_aHeaderFooterStack;
     FieldStack                                                                      m_aFieldStack;
     bool                                                                            m_bSetUserFieldContent;
     bool                                                                            m_bSetCitation;
     bool                                                                            m_bIsFirstSection;
     bool                                                                            m_bIsColumnBreakDeferred;
     bool                                                                            m_bIsPageBreakDeferred;
+    /// If we want to set "sdt end" on the next character context.
+    bool                                                                            m_bSdtEndDeferred;
+    /// If we want to set "paragraph sdt end" on the next paragraph context.
+    bool                                                                            m_bParaSdtEndDeferred;
     bool                                                                            m_bStartTOC;
+    bool                                                                            m_bStartTOCHeaderFooter;
     /// If we got any text that is the pre-rendered result of the TOC field.
     bool                                                                            m_bStartedTOC;
     bool                                                                            m_bStartIndex;
@@ -336,6 +363,8 @@ private:
     LineNumberSettings                                                              m_aLineNumberSettings;
 
     BookmarkMap_t                                                                   m_aBookmarkMap;
+    OUString                                                                        m_sCurrentBkmkId;
+    OUString                                                                        m_sCurrentBkmkName;
 
     _PageMar                                                                        m_aPageMargins;
     sal_Int32                                                                       m_nSymboldata;
@@ -381,6 +410,8 @@ private:
 
     // Redline stack
     std::stack< std::vector< RedlineParamsPtr > > m_aRedlines;
+    // The redline currently read, may be also stored by a context instead of m_aRedlines.
+    RedlineParamsPtr                m_currentRedline;
     RedlineParamsPtr                m_pParaMarkerRedline;
     bool                            m_bIsParaMarkerChange;
 
@@ -390,6 +421,7 @@ private:
     bool                            m_bDummyParaAddedForTableInSection;
     bool                            m_bTextFrameInserted;
     bool                            m_bIsLastParaInSection;
+    bool                            m_bIsLastSectionGroup;
     bool                            m_bIsInComments;
     /// If the current paragraph contains section property definitions.
     bool                            m_bParaSectpr;
@@ -397,7 +429,7 @@ private:
     /// If the current paragraph is inside a structured document element.
     bool                            m_bSdt;
     bool                            m_bIsFirstRun;
-    bool                            m_bIsTableHasDirectFormatting;
+    bool                            m_bIsOutsideAParagraph;
 
     css::uno::Reference< css::text::XTextCursor > xTOCMarkerCursor;
     css::uno::Reference< css::text::XTextCursor > mxTOCTextCursor;
@@ -409,7 +441,8 @@ private:
 
     void                            GetCurrentLocale(::com::sun::star::lang::Locale& rLocale);
     void                            SetNumberFormat( const OUString& rCommand,
-                                        ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >& xPropertySet );
+                                        ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xPropertySet,
+                                        bool bDetectFormat = false );
     ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet >
                                     FindOrCreateFieldMaster( const sal_Char* pFieldMasterService,
                                                             const OUString& rFieldMasterName )
@@ -425,10 +458,10 @@ private:
 public:
     DomainMapper_Impl(
             DomainMapper& rDMapper,
-            css::uno::Reference < css::uno::XComponentContext >  xContext,
-            css::uno::Reference< css::lang::XComponent >  xModel,
+            css::uno::Reference < css::uno::XComponentContext > const& xContext,
+            css::uno::Reference< css::lang::XComponent > const& xModel,
             SourceDocumentType eDocumentType,
-            css::uno::Reference< css::text::XTextRange > xInsertTextRange,
+            css::uno::Reference< css::text::XTextRange > const& xInsertTextRange,
             bool bIsNewDoc );
     virtual ~DomainMapper_Impl();
 
@@ -453,11 +486,11 @@ public:
     }
     void SetDocumentSettingsProperty( const OUString& rPropName, const css::uno::Any& rValue );
 
-    void CreateRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xRange, RedlineParamsPtr& pRedline  );
+    void CreateRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xRange, RedlineParamsPtr pRedline  );
 
-    void CheckParaMarkerRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xRange );
+    void CheckParaMarkerRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xRange );
 
-    void CheckRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xRange );
+    void CheckRedline( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xRange );
 
     void StartParaMarkerChange( );
     void EndParaMarkerChange( );
@@ -467,35 +500,39 @@ public:
     void AddDummyParaForTableInSection();
     void RemoveLastParagraph( );
     void SetIsLastParagraphInSection( bool bIsLast );
-    bool GetIsLastParagraphInSection();
+    bool GetIsLastParagraphInSection() { return m_bIsLastParaInSection;}
+    void SetIsLastSectionGroup( bool bIsLast );
+    bool GetIsLastSectionGroup() { return m_bIsLastSectionGroup;}
     void SetIsFirstParagraphInSection( bool bIsFirst );
-    bool GetIsFirstParagraphInSection();
+    bool GetIsFirstParagraphInSection() { return m_bIsFirstParaInSection;}
     void SetIsDummyParaAddedForTableInSection( bool bIsAdded );
-    bool GetIsDummyParaAddedForTableInSection();
+    bool GetIsDummyParaAddedForTableInSection() { return m_bDummyParaAddedForTableInSection;}
     void SetIsTextFrameInserted( bool bIsInserted );
-    bool GetIsTextFrameInserted();
+    bool GetIsTextFrameInserted() { return m_bTextFrameInserted;}
     void SetParaSectpr(bool bParaSectpr);
-    bool GetParaSectpr();
+    bool GetParaSectpr() { return m_bParaSectpr;}
 
     void SetSymbolData( sal_Int32 nSymbolData );
-    sal_Int32 GetSymbolData();
+    sal_Int32 GetSymbolData() { return m_nSymboldata;}
     /// Setter method for m_bSdt.
     void SetSdt(bool bSdt);
     /// Getter method for m_bSdt.
-    bool GetSdt();
-    /// Getter method for m_bIsTableHasDirectFormatting
-    bool GetIsTableHasDirectFormatting();
-    /// Setter method for m_bIsTableHasDirectFormatting
-    void SetIsTableHasDirectFormatting(bool bIsTableHasDirectFormatting);
-    bool GetParaChanged();
+    bool GetSdt() { return m_bSdt;}
+    bool GetParaChanged() { return m_bParaChanged;}
 
     void deferBreak( BreakType deferredBreakType );
     bool isBreakDeferred( BreakType deferredBreakType );
     void clearDeferredBreaks();
     void clearDeferredBreak(BreakType deferredBreakType);
+
+    void setSdtEndDeferred(bool bSdtEndDeferred);
+    bool isSdtEndDeferred();
+    void setParaSdtEndDeferred(bool bParaSdtEndDeferred);
+    bool isParaSdtEndDeferred();
+
     void finishParagraph( PropertyMapPtr pPropertyMap );
     void appendTextPortion( const OUString& rString, PropertyMapPtr pPropertyMap );
-    void appendTextContent( const ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent >,
+    void appendTextContent( const ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent >&,
                             const css::uno::Sequence< css::beans::PropertyValue >& );
     void appendOLE( const OUString& rStreamName, OLEHandlerPtr pOleHandler );
     void appendStarMath( const Value& v );
@@ -565,11 +602,11 @@ public:
     bool        IsAnyTableImport()const { return m_bInAnyTableImport;}
     bool        IsInShape()const { return m_aAnchoredStack.size() > 0;}
 
-    void PushShapeContext( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape );
+    void PushShapeContext( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & xShape );
     void PopShapeContext();
-    void UpdateEmbeddedShapeProps( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape );
+    void UpdateEmbeddedShapeProps( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & xShape );
     /// Add a pending shape: it's currently inserted into the document, but it should be removed before the import finishes.
-    void PushPendingShape( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape );
+    void PushPendingShape( const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > & xShape );
     /// Get the first pending shape, if there are any.
     ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > PopPendingShape();
 
@@ -597,35 +634,35 @@ public:
         (FieldContextPtr pContext,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties);
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     void handleAutoNum
         (FieldContextPtr pContext,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties);
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     void handleAuthor
         (OUString const& rFirstParam,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties,
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         FieldId eFieldId);
     void handleDocProperty
         (FieldContextPtr pContext,
         OUString const& rFirstParam,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties);
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties);
     void handleToc
         (FieldContextPtr pContext,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties,
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         const OUString & sTOCServiceName);
     void handleIndex
         (FieldContextPtr pContext,
         PropertyNameSupplier& rPropNameSupplier,
         css::uno::Reference< css::uno::XInterface > & xFieldInterface,
-        css::uno::Reference< css::beans::XPropertySet > xFieldProperties,
+        css::uno::Reference< css::beans::XPropertySet > const& xFieldProperties,
         const OUString & sTOCServiceName);
 
     void handleBibliography
@@ -644,7 +681,8 @@ public:
     //the end of field is reached (0x15 appeared) - the command might still be open
     void PopFieldContext();
 
-    void AddBookmark( const OUString& rBookmarkName, const OUString& rId );
+    void SetBookmarkName( const OUString& rBookmarkName );
+    void StartOrEndBookmark( const OUString& rId );
 
     void AddAnnotationPosition(
         const bool bStart,
@@ -659,7 +697,7 @@ public:
     void appendTableManager( )
     {
         boost::shared_ptr< DomainMapperTableManager > pMngr(
-                new DomainMapperTableManager( m_eDocumentType == DOCUMENT_OOXML || m_eDocumentType == DOCUMENT_RTF ) );
+                new DomainMapperTableManager( m_eDocumentType == DOCUMENT_OOXML || m_eDocumentType == DOCUMENT_RTF ));
         m_aTableManagers.push( pMngr );
     }
 
@@ -675,7 +713,7 @@ public:
             m_aTableManagers.pop( );
     }
 
-    void SetLineNumbering( sal_Int32 nLnnMod, sal_Int32 nLnc, sal_Int32 ndxaLnn );
+    void SetLineNumbering( sal_Int32 nLnnMod, sal_uInt32 nLnc, sal_Int32 ndxaLnn );
     bool IsLineNumberingSet() const {return m_bLineNumberingSet;}
 
     DeletableTabStop                m_aCurrentTabStop;
@@ -702,15 +740,13 @@ public:
     void CheckUnregisteredFrameConversion( );
 
     void RegisterFrameConversion(
-        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xFrameStartRange,
-        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xFrameEndRange,
+        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xFrameStartRange,
+        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xFrameEndRange,
         const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aFrameProperties
         );
     bool ExecuteFrameConversion();
 
-    void AddNewRedline( );
-
-    RedlineParamsPtr GetTopRedline( );
+    void AddNewRedline( sal_uInt32 sprmId );
 
     sal_Int32 GetCurrentRedlineToken( );
     void SetCurrentRedlineAuthor( const OUString& sAuthor );
@@ -718,18 +754,21 @@ public:
     void SetCurrentRedlineId( sal_Int32 nId );
     void SetCurrentRedlineToken( sal_Int32 nToken );
     void SetCurrentRedlineRevertProperties( const css::uno::Sequence<css::beans::PropertyValue>& aProperties );
-    void RemoveCurrentRedline( );
+    void SetCurrentRedlineIsRead();
+    void RemoveTopRedline( );
     void ResetParaMarkerRedline( );
     void SetCurrentRedlineInitials( const OUString& sInitials );
     bool IsFirstRun() { return m_bIsFirstRun;}
     void SetIsFirstRun(bool bval) { m_bIsFirstRun = bval;}
+    bool IsOutsideAParagraph() { return m_bIsOutsideAParagraph;}
+    void SetIsOutsideAParagraph(bool bval) { m_bIsOutsideAParagraph = bval;}
 
     void ApplySettingsTable();
     SectionPropertyMap * GetSectionContext();
     /// If the current paragraph has a numbering style associated, this method returns its character style (part of the numbering rules)
     com::sun::star::uno::Reference<com::sun::star::beans::XPropertySet> GetCurrentNumberingCharStyle();
     /// If the current paragraph has a numbering style associated, this method returns its numbering rules
-    com::sun::star::uno::Reference<com::sun::star::container::XIndexAccess> GetCurrentNumberingRules(sal_Int32* pListLevel = 0);
+    com::sun::star::uno::Reference<com::sun::star::container::XIndexAccess> GetCurrentNumberingRules(sal_Int32* pListLevel = nullptr);
 
     /**
      Used for attributes/sprms which cannot be evaluated immediatelly (e.g. they depend
@@ -747,12 +786,12 @@ public:
     sal_Int32 getCurrentNumberingProperty(const OUString& aProp);
 
     /// If we're importing into a new document, or just pasting to an existing one.
-    bool IsNewDoc();
+    bool IsNewDoc() { return m_bIsNewDoc;}
 
     /// If we're inside <w:rPr>, inside <w:style w:type="table">
     bool m_bInTableStyleRunProps;
 
-    SdtHelper* m_pSdtHelper;
+    boost::shared_ptr<SdtHelper> m_pSdtHelper;
 
     /// Document background color, applied to every page style.
     boost::optional<sal_Int32> m_oBackgroundColor;
@@ -790,7 +829,7 @@ public:
     OUString m_aInteropGrabBagName;
 
     /// A toplevel dmapper grabbag, like 'pPr'.
-    std::vector<css::beans::PropertyValue> m_aInteropGrabBag;
+    comphelper::SequenceAsVector<css::beans::PropertyValue> m_aInteropGrabBag;
 
     /// A sub-grabbag of m_aInteropGrabBag, like 'spacing'.
     std::vector<css::beans::PropertyValue> m_aSubInteropGrabBag;
@@ -805,10 +844,22 @@ public:
     /// If the document needs to split paragraph.
     bool m_bIsSplitPara;
 
+    /// Check if "SdtEndBefore" property is set
+    bool IsSdtEndBefore();
+
+    bool IsDiscardHeaderFooter();
+
 private:
     void PushPageHeaderFooter(bool bHeader, SectionPropertyMap::PageType eType);
     std::vector<css::uno::Reference< css::drawing::XShape > > m_vTextFramesForChaining ;
+    /// Current paragraph had at least one field in it.
+    bool m_bParaHadField;
 };
+
+// export just for test
+SAL_DLLPUBLIC_EXPORT boost::tuple<OUString, std::vector<OUString>, std::vector<OUString> >
+    lcl_SplitFieldCommand(const OUString& rCommand);
+
 } //namespace dmapper
 } //namespace writerfilter
 #endif

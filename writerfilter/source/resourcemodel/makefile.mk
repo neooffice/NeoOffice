@@ -51,11 +51,9 @@ NOOPTFILES= \
 	$(SLO)$/qnametostr.obj
 
 SLOFILES= \
-	$(SLO)$/Fraction.obj \
 	$(SLO)$/LoggedResources.obj \
 	$(SLO)$/ResourceModelHelper.obj \
 	$(SLO)$/TagLogger.obj \
-	$(SLO)$/XPathLogger.obj \
 	$(SLO)$/qnametostr.obj \
 	$(SLO)$/util.obj
 
@@ -64,8 +62,10 @@ SLOFILES += \
 	$(SLO)$/qnametostrcore.obj
 .ELSE		# "$(UPD)" == "310"
 SLOFILES += \
+	$(SLO)$/Fraction.obj \
 	$(SLO)$/Protocol.obj \
 	$(SLO)$/WW8Analyzer.obj \
+	$(SLO)$/XPathLogger.obj \
 	$(SLO)$/resourcemodel.obj \
 	$(SLO)$/sprmcodetostr.obj
 .ENDIF		# "$(UPD)" == "310"
@@ -116,6 +116,12 @@ DOCTOKHXXOUTDIRCREATED=$(DOCTOKHXXOUTDIR)$/created
 OOXMLHXXOUTDIRCREATED=$(OOXMLHXXOUTDIR)$/created
 
 OOXMLMODEL=..$/ooxml$/model.xml
+.IF "$(UPD)" == "310"
+OOXMLMODELVALIDATED=$(MISC)$/model.validated
+OOXMLPREPROCESSPY=..$/ooxml$/modelpreprocess.py
+OOXMLQNAMETOSTRPY=..$/ooxml$/qnametostr.py
+OOXMLRESOURCEIDSPY=..$/ooxml$/resourceids.py
+.ELSE		# "$(UPD)" == "310"
 OOXMLPREPROCESSXSL=..$/ooxml$/modelpreprocess.xsl
 OOXMLPREPROCESSXSLCOPIED=$(MISC)$/modelpreprocess.xsl
 OOXMLQNAMETOSTRXSL=..$/ooxml$/qnametostr.xsl
@@ -131,22 +137,25 @@ DOCTOKSPRMIDSXSL=..$/doctok$/sprmids.xsl
 DOCTOKRESOURCETOOLS=..$/doctok$/resourcetools.xsl
 
 NSPROCESS=namespace_preprocess.pl
+.ENDIF		# "$(UPD)" == "310"
 
 MODELPROCESSED=$(MISC)$/model_preprocessed.xml
 
 QNAMETOSTRCXX=$(RESOURCEMODELCXXOUTDIR)$/qnametostr.cxx
+.IF "$(UPD)" != "310"
 OOXMLQNAMETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/OOXMLqnameToStr.tmp
 DOCTOKQNAMETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/DOCTOKqnameToStr.tmp
 SPRMCODETOSTRCXX=$(RESOURCEMODELCXXOUTDIR)$/sprmcodetostr.cxx
 SPRMCODETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/sprmcodetostr.tmp
 DOCTOKRESOURCEIDSHXX=$(DOCTOKHXXOUTDIR)$/resourceids.hxx
 SPRMIDSHXX=$(DOCTOKHXXOUTDIR)$/sprmids.hxx
+.ENDIF		# "$(UPD)" != "310"
 OOXMLRESOURCEIDSHXX=$(OOXMLHXXOUTDIR)$/resourceids.hxx
 
-NSXSL=$(MISC)$/namespacesmap.xsl
 .IF "$(UPD)" == "310"
 NAMESPACESTXT=$(PRJ)$/..$/oox$/$(INPATH)$/misc/namespaces.txt
 .ELSE		# "$(UPD)" == "310"
+NSXSL=$(MISC)$/namespacesmap.xsl
 NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/namespaces.txt
 .ENDIF		# "$(UPD)" == "310"
 
@@ -165,25 +174,26 @@ GENERATEDFILES += \
 	$(SPRMCODETOSTRTMP)
 .ENDIF		# "$(UPD)" != "310"
 
-.IF "$(UPD)" == "310"
-$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
-    @echo "Making:   " $(@:f)   
-	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
-.ELSE		# "$(UPD)" == "310"
+.IF "$(UPD)" != "310"
 $(OOXMLQNAMETOSTRTMP): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
-.ENDIF		# "$(UPD)" == "310"
 
 $(DOCTOKQNAMETOSTRTMP): $(DOCTOKQNAMETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
 	$(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
-
-.IF "$(UPD)" != "310"
-$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrheader qnametostrfooter $(OOXMLFACTORYTOOLSXSL) $(DOCTOKRESOURCETOOLS)
-	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
 .ENDIF		# "$(UPD)" != "310"
 
+.IF "$(UPD)" == "310"
+$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRPY) $(MODELPROCESSED)
+	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
+	$(COMMAND_ECHO)python $(OOXMLQNAMETOSTRPY) $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
+$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrheader qnametostrfooter $(OOXMLFACTORYTOOLSXSL) $(DOCTOKRESOURCETOOLS)
+	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
+.ENDIF		# "$(UPD)" == "310"
+
+.IF "$(UPD)" != "310"
 $(SPRMCODETOSTRTMP): $(DOCTOKSPRMCODETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
 	$(XSLTPROC) $(DOCTOKSPRMCODETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
@@ -192,6 +202,7 @@ $(SPRMCODETOSTRCXX): sprmcodetostrheader $(SPRMCODETOSTRTMP) sprmcodetostrfooter
 	@$(TYPE) $< > $@
 
 $(SLO)$/sprmcodetostr.obj: $(SPRMCODETOSTRCXX)
+.ENDIF		# "$(UPD)" != "310"
 $(SLO)$/qnametostr.obj: $(QNAMETOSTRCXX)
 
 $(SLOFILES): $(GENERATEDHEADERS)
@@ -200,31 +211,53 @@ $(DOCTOKHXXOUTDIRCREATED):
 	@$(MKDIRHIER) $(DOCTOKHXXOUTDIR)
 	@$(TOUCH) $@
 
+.IF "$(UPD)" != "310"
 $(DOCTOKRESOURCEIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKRESOURCETOOLS) $(DOCTOKRESOURCEIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKRESOURCEIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
+.ENDIF		# "$(UPD)" != "310"
 
 $(OOXMLHXXOUTDIRCREATED):
 	@$(MKDIRHIER) $(OOXMLHXXOUTDIR)
 	@$(TOUCH) $@
 
+.IF "$(UPD)" != "310"
 $(OOXMLPREPROCESSXSLCOPIED): $(OOXMLPREPROCESSXSL)
 	@$(COPY) $(OOXMLPREPROCESSXSL) $@
 
 $(NSXSL) : $(OOXMLMODEL) $(NAMESPACESTXT) $(NSPROCESS)
 	@$(PERL) $(NSPROCESS) $(NAMESPACESTXT) > $@
+.ENDIF		# "$(UPD)" != "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLMODELVALIDATED): ..$/..$/documentation$/ooxml$/model.rng $(OOXMLMODEL)
+	@echo "Making:   " $(@:f)
+	$(COMMAND_ECHO)xmllint --noout --relaxng ..$/..$/documentation$/ooxml$/model.rng $(OOXMLMODEL) >& $@ || (cat $@; false)
+
+$(MODELPROCESSED): $(OOXMLPREPROCESSPY) $(NAMESPACESTXT) $(OOXMLMODELVALIDATED)
+	@echo "Making:   " $(@:f)
+	$(COMMAND_ECHO)python $(OOXMLPREPROCESSPY) $(NAMESPACESTXT) $(OOXMLMODEL) > $@
+.ELSE		# "$(UPD)" == "310"
 $(MODELPROCESSED): $(NSXSL) $(OOXMLPREPROCESSXSLCOPIED) $(OOXMLMODEL)
 	@echo "Making:   " $(@:f)
 	$(COMMAND_ECHO)$(XSLTPROC) $(NSXSL) $(OOXMLMODEL) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLRESOURCEIDSHXX): $(OOXMLHXXOUTDIRCREATED) $(OOXMLRESOURCEIDSPY) $(MODELPROCESSED)
+    @echo "Making:   " $(@:f)   
+	$(COMMAND_ECHO)python $(OOXMLRESOURCEIDSPY) $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLRESOURCEIDSHXX): $(OOXMLHXXOUTDIRCREATED) $(OOXMLFACTORYTOOLSXSL) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL:s!\!/!) $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" != "310"
 $(SPRMIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKSPRMIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKSPRMIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
+.ENDIF		# "$(UPD)" != "310"
 
 .PHONY: genclean genmake gendirs
 

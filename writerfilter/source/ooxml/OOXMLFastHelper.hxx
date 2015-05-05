@@ -22,7 +22,7 @@
 #include <iostream>
 #include <resourcemodel/QNameToString.hxx>
 #include "OOXMLFastContextHandler.hxx"
-#include "ooxmlLoggers.hxx"
+
 namespace writerfilter {
 
 namespace ooxml
@@ -32,15 +32,8 @@ template <class T>
 class OOXMLFastHelper
 {
 public:
-    static css::uno::Reference<css::xml::sax::XFastContextHandler> createAndSetParent
-    (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId);
-
     static css::uno::Reference<css::xml::sax::XFastContextHandler> createAndSetParentAndDefine
     (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId, Id nDefine);
-
-    static css::uno::Reference<css::xml::sax::XFastContextHandler> createAndSetParentRef
-    (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken,
-     const css::uno::Reference < css::xml::sax::XFastAttributeList > & Attribs);
 
     static void newProperty(OOXMLFastContextHandler * pHandler,
                             Id nId,
@@ -55,106 +48,17 @@ public:
 };
 
 template <class T>
-uno::Reference<css::xml::sax::XFastContextHandler>
-OOXMLFastHelper<T>::createAndSetParent
-(OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId)
+css::uno::Reference<css::xml::sax::XFastContextHandler> OOXMLFastHelper<T>::createAndSetParentAndDefine (OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId, Id nDefine)
 {
-#ifdef DEBUG_HELPER
-    debug_logger->startElement("helper.createAndSetParent");
-    debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("id", (*QNameToString::Instance())(nId));
-#endif
-
-    OOXMLFastContextHandler * pTmp = new T(pHandler);
-
-    pTmp->setToken(nToken);
-    pTmp->setId(nId);
-
-#ifdef DEBUG_CREATE
-    debug_logger->startElement("createAndSetParent");
-    debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("token", fastTokenToId(pTmp->getToken()));
-    debug_logger->attribute("id", (*QNameToString::Instance())(nId));
-
-    debug_logger->startElement("created");
-    debug_logger->addTag(pTmp->toTag());
-    debug_logger->endElement("created");
-    debug_logger->endElement("helper.createAndSetParent");
-#endif
-
-    css::uno::Reference<css::xml::sax::XFastContextHandler> aResult(pTmp);
-
-    return aResult;
-}
-
-template <class T>
-uno::Reference<css::xml::sax::XFastContextHandler>
-OOXMLFastHelper<T>::createAndSetParentAndDefine
-(OOXMLFastContextHandler * pHandler, sal_uInt32 nToken, Id nId, Id nDefine)
-{
-#ifdef DEBUG_HELPER
-    debug_logger->startElement("helper.createAndSetParentAndDefine");
-    debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("id", (*QNameToString::Instance())(nId));
-
-    static char buffer[16];
-    snprintf(buffer, sizeof(buffer), "0x%08" SAL_PRIxUINT32, nId);
-
-    debug_logger->attribute("idnum", buffer);
-#endif
-
     OOXMLFastContextHandler * pTmp = new T(pHandler);
 
     pTmp->setToken(nToken);
     pTmp->setId(nId);
     pTmp->setDefine(nDefine);
 
-
-#ifdef DEBUG_HELPER
-    debug_logger->startElement("created");
-    debug_logger->addTag(pTmp->toTag());
-    debug_logger->endElement("created");
-    debug_logger->endElement("helper.createAndSetParentAndDefine");
-#endif
-
     css::uno::Reference<css::xml::sax::XFastContextHandler> aResult(pTmp);
 
     return aResult;
-}
-
-template <class T>
-uno::Reference<css::xml::sax::XFastContextHandler>
-OOXMLFastHelper<T>::createAndSetParentRef
-(OOXMLFastContextHandler * pHandler, sal_uInt32 nToken,
- const css::uno::Reference < css::xml::sax::XFastAttributeList > & Attribs)
-{
-#ifdef DEBUG_HELPER
-    debug_logger->startElement("helper.createAndSetParentRef");
-    debug_logger->attribute("context", pHandler->getType());
-    debug_logger->attribute("type", fastTokenToId(nToken));
-#endif
-
-    boost::shared_ptr<OOXMLFastContextHandler> pTmp(new T(pHandler));
-
-    css::uno::Reference<css::xml::sax::XFastContextHandler> xChild =
-        pTmp->createFastChildContext(nToken, Attribs);
-
-    if (xChild.is())
-    {
-        OOXMLFastContextHandler* pResult = dynamic_cast<OOXMLFastContextHandler *>(xChild.get());
-        pResult->setToken(nToken);
-        pResult->setParent(pHandler);
-    }
-
-
-#ifdef DEBUG_HELPER
-    debug_logger->startElement("created");
-    debug_logger->addTag(pTmp->toTag());
-    debug_logger->endElement("created");
-    debug_logger->endElement("helper.createAndSetParentRef");
-#endif
-
-    return xChild;
 }
 
 template <class T>
@@ -164,26 +68,7 @@ void OOXMLFastHelper<T>::newProperty(OOXMLFastContextHandler * pHandler,
 {
     OOXMLValue::Pointer_t pVal(new T(rValue));
 
-#ifdef DEBUG_HELPER
-    string aStr = (*QNameToString::Instance())(nId);
-
-    debug_logger->startElement("newProperty-from-string");
-    debug_logger->attribute("name", aStr);
-    debug_logger->attribute
-        ("value",
-         OUStringToOString
-         (rValue, RTL_TEXTENCODING_ASCII_US).getStr());
-
-    if (aStr.empty())
-        debug_logger->element( "unknown-qname" );
-#endif
-
     pHandler->newProperty(nId, pVal);
-
-#ifdef DEBUG_HELPER
-    debug_logger->endElement();
-#endif
-
 }
 
 template <class T>
@@ -191,20 +76,7 @@ void OOXMLFastHelper<T>::newProperty(OOXMLFastContextHandler * pHandler,
                                      Id nId,
                                      sal_Int32 nVal)
 {
-    OOXMLValue::Pointer_t pVal(new T(nVal));
-
-#ifdef DEBUG_HELPER
-    string aStr = (*QNameToString::Instance())(nId);
-
-    debug_logger->startElement("helper.newProperty-from-int");
-    debug_logger->attribute("name", aStr);
-    debug_logger->attribute("value", pVal->toString());
-
-    if (aStr.empty())
-        debug_logger->element("unknown-qname");
-
-    debug_logger->endElement();
-#endif
+    OOXMLValue::Pointer_t pVal(T::Create(nVal));
 
     pHandler->newProperty(nId, pVal);
 }

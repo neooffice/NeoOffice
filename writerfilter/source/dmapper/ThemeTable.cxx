@@ -21,7 +21,7 @@
 #include <ooxml/resourceids.hxx>
 #include "dmapperLoggers.hxx"
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
 #include <resourcemodel/QNameToString.hxx>
 #endif
 
@@ -62,7 +62,7 @@ ThemeTable::~ThemeTable()
 
 void ThemeTable::lcl_attribute(Id Name, Value & val)
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("ThemeTable.attribute");
     dmapper_logger->attribute("name", (*QNameToString::Instance())(Name));
     dmapper_logger->attribute("value", val.toString());
@@ -89,7 +89,7 @@ void ThemeTable::lcl_attribute(Id Name, Value & val)
             break;
         default:
         {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
             dmapper_logger->element("unhandled");
 #endif
         }
@@ -100,20 +100,22 @@ void ThemeTable::lcl_attribute(Id Name, Value & val)
         m_pImpl->m_supplementalFontName = "";
         m_pImpl->m_supplementalFontId = 0;
     }
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->endElement();
 #endif
 }
 
 void ThemeTable::lcl_sprm(Sprm& rSprm)
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("ThemeTable.sprm");
     dmapper_logger->chars(rSprm.toString());
 #endif
 
-    sal_uInt32 nSprmId = rSprm.getId();
+    m_pImpl->m_supplementalFontName = "";
+    m_pImpl->m_supplementalFontId = 0;
 
+    sal_uInt32 nSprmId = rSprm.getId();
     switch(nSprmId)
     {
     case NS_ooxml::LN_CT_BaseStyles_fontScheme:
@@ -152,32 +154,31 @@ void ThemeTable::lcl_sprm(Sprm& rSprm)
     break;
     default:
         {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
             dmapper_logger->element("unhandled");
 #endif
         }
     }
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->endElement();
 #endif
 }
 
 void ThemeTable::lcl_entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t ref)
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("ThemeTable.entry");
 #endif
 
     ref->resolve(*this);
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->endElement();
 #endif
 }
 
 OUString ThemeTable::getStringForTheme(const Id id)
 {
-    std::map<sal_uInt32, OUString> tmpThemeFontMap;
     switch (id)
     {
         case NS_ooxml::LN_Value_ST_Theme_majorEastAsia:

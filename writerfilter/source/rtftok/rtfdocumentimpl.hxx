@@ -21,6 +21,7 @@
 #include <oox/helper/graphichelper.hxx>
 #include <oox/mathml/importutils.hxx>
 #include <rtl/strbuf.hxx>
+#include <comphelper/sequenceasvector.hxx>
 
 #include <rtftok/RTFDocument.hxx>
 #include <rtfreferencetable.hxx>
@@ -55,7 +56,8 @@ enum RTFBufferTypes
     BUFFER_ENDRUN,
     BUFFER_PAR,
     BUFFER_STARTSHAPE,
-    BUFFER_ENDSHAPE
+    BUFFER_ENDSHAPE,
+    BUFFER_RESOLVESUBSTREAM
 };
 
 /// Form field types
@@ -136,6 +138,10 @@ public:
     sal_uInt32 nHoriOrientRelationToken; ///< Horizontal dmapper token for Writer pictures.
     sal_uInt32 nVertOrientRelationToken; ///< Vertical dmapper token for Writer pictures.
     int nWrap;
+    /// If shape is below text (true) or text is below shape (false).
+    bool bInBackground;
+    /// Wrap polygon, written by RTFSdrImport::resolve(), read by RTFDocumentImpl::resolvePict().
+    RTFSprms aWrapPolygonSprms;
 };
 
 /// Stores the properties of a drawing object.
@@ -153,7 +159,7 @@ public:
     sal_Int32 nDhgt;
     sal_Int32 nFLine;
     sal_Int32 nPolyLineCount;
-    css::uno::Sequence<css::awt::Point> aPolyLinePoints;
+    comphelper::SequenceAsVector<css::awt::Point> aPolyLinePoints;
     bool bHadShapeText;
 };
 
@@ -255,7 +261,7 @@ public:
     RTFDrawingObject aDrawingObject;
     RTFFrame aFrame;
 
-    /// CJK or CTL?
+    /// Maps to OOXML's ascii, cs or eastAsia.
     enum { LOCH, HICH, DBCH } eRunType;
     /// ltrch or rtlch
     bool isRightToLeft;
@@ -270,10 +276,12 @@ public:
     /// Text from special destinations.
     OUStringBuffer aDestinationText;
     /// point to the buffer of the current destination
-    OUStringBuffer * pDestinationText;
+    OUStringBuffer* pDestinationText;
 
     /// Index of the current style.
     int nCurrentStyleIndex;
+    /// Index of the current character style.
+    int nCurrentCharacterStyleIndex;
 
     /// Points to the active buffer, if there is one.
     RTFBuffer_t* pCurrentBuffer;
@@ -326,7 +334,6 @@ public:
 
     // RTFDocument
     virtual void resolve(Stream& rHandler) SAL_OVERRIDE;
-    virtual std::string getType() const SAL_OVERRIDE;
 
     // RTFListener
     virtual int dispatchDestination(RTFKeyword nKeyword) SAL_OVERRIDE;
@@ -346,7 +353,10 @@ public:
     virtual void finishSubstream() SAL_OVERRIDE;
     virtual bool isSubstream() const SAL_OVERRIDE;
 
-    Stream& Mapper();
+    Stream& Mapper()
+    {
+        return *m_pMapperStream;
+    }
     void setSubstream(bool bIsSubtream);
     void setSuperstream(RTFDocumentImpl* pSuperstream);
     void setStreamType(Id nId);
@@ -354,17 +364,22 @@ public:
     void setAuthorInitials(OUString& rAuthorInitials);
     void setIgnoreFirst(OUString& rIgnoreFirst);
     void seek(sal_Size nPos);
-    css::uno::Reference<css::lang::XMultiServiceFactory> getModelFactory();
+    css::uno::Reference<css::lang::XMultiServiceFactory> getModelFactory()
+    {
+        return m_xModelFactory;
+    }
     bool isInBackground();
     void setDestinationText(OUString& rString);
     /// Resolve a picture: If not inline, then anchored.
-    int resolvePict(bool bInline,
-            css::uno::Reference<css::drawing::XShape> const& xShape);
+    int resolvePict(bool bInline, css::uno::Reference<css::drawing::XShape> const& xShape);
 
     /// If this is the first run of the document, starts the initial paragraph.
     void checkFirstRun();
     /// If the initial paragraph is started.
-    bool getFirstRun();
+    bool getFirstRun()
+    {
+        return m_bFirstRun;
+    }
     /// If we need to add a dummy paragraph before a section break.
     void setNeedPar(bool bNeedPar);
     /// Return the dmapper index of an RTF index for fonts.

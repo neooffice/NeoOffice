@@ -7,19 +7,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <tools/stream.hxx>
-#include <tools/resmgr.hxx>
 #include <svx/dialogs.hrc>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <rtl/strbuf.hxx>
-
 #include <rtftokenizer.hxx>
 #include <rtfskipdestination.hxx>
 #include <com/sun/star/io/BufferSizeExceededException.hpp>
 
 #if SUPD == 310
 #include <sal/log.hxx>
+#include <tools/stream.hxx>
 #endif	// SUPD == 310
 
 using namespace com::sun::star;
@@ -61,10 +59,6 @@ RTFTokenizer::~RTFTokenizer()
 {
 }
 
-SvStream& RTFTokenizer::Strm()
-{
-    return *m_pInStream;
-}
 
 int RTFTokenizer::resolveParse()
 {
@@ -214,10 +208,6 @@ int RTFTokenizer::asHex(char ch)
     return ret;
 }
 
-int RTFTokenizer::getGroup() const
-{
-    return m_nGroup;
-}
 
 void RTFTokenizer::pushGroup()
 {
@@ -328,10 +318,8 @@ int RTFTokenizer::dispatchKeyword(OString& rKeyword, bool bParam, int nParam)
 {
     if (m_rImport.getDestinationState() == DESTINATION_SKIP)
         return 0;
-#if OSL_DEBUG_LEVEL > 1
     SAL_INFO("writerfilter.rtf", OSL_THIS_FUNC << ": keyword '\\" << rKeyword.getStr() <<
              "' with param? " << (bParam ? 1 : 0) <<" param val: '" << (bParam ? nParam : 0) << "'");
-#endif
     RTFSymbol aSymbol;
     aSymbol.sKeyword = rKeyword.getStr();
     std::vector<RTFSymbol>::iterator low = std::lower_bound(m_aRTFControlWords.begin(), m_aRTFControlWords.end(), aSymbol);
@@ -393,10 +381,6 @@ OUString RTFTokenizer::getPosition()
     return aRet.makeStringAndClear();
 }
 
-sal_Size RTFTokenizer::getGroupStart()
-{
-    return m_nGroupStart;
-}
 
 } // namespace rtftok
 } // namespace writerfilter

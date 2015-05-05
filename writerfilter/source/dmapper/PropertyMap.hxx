@@ -26,6 +26,7 @@
 #include <com/sun/star/uno/Any.h>
 #include "PropertyIds.hxx"
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 #include <map>
 #include <vector>
 
@@ -67,39 +68,57 @@ enum BorderPosition
 enum GrabBagType
 {
     NO_GRAB_BAG,
+    ROW_GRAB_BAG,
+    CELL_GRAB_BAG,
     PARA_GRAB_BAG,
     CHAR_GRAB_BAG
 };
 
+struct RedlineParams
+{
+    OUString m_sAuthor;
+    OUString m_sDate;
+    sal_Int32       m_nId;
+    sal_Int32       m_nToken;
+
+    /// This can hold properties of runs that had formatted 'track changes' properties
+    css::uno::Sequence<css::beans::PropertyValue> m_aRevertProperties;
+};
+typedef boost::shared_ptr< RedlineParams > RedlineParamsPtr;
+
 class PropValue
 {
     css::uno::Any m_aValue;
-    GrabBagType m_rGrabBagType;
+    GrabBagType m_GrabBagType;
 
 public:
-    PropValue(const css::uno::Any& rValue, GrabBagType rGrabBagType = NO_GRAB_BAG) :
-        m_aValue(rValue), m_rGrabBagType(rGrabBagType) {}
+    PropValue(const css::uno::Any& rValue, GrabBagType i_GrabBagType = NO_GRAB_BAG) :
+        m_aValue(rValue), m_GrabBagType(i_GrabBagType) {}
 
-    PropValue() : m_aValue(), m_rGrabBagType(NO_GRAB_BAG) {}
-
-    PropValue& operator=(const PropValue& rProp) { m_aValue = rProp.m_aValue; m_rGrabBagType = rProp.m_rGrabBagType; return *this; }
+    PropValue() : m_aValue(), m_GrabBagType(NO_GRAB_BAG) {}
 
     const css::uno::Any& getValue() const { return m_aValue; }
-    bool hasGrabBag() const { return m_rGrabBagType != NO_GRAB_BAG; }
-    GrabBagType getGrabBagType() const { return m_rGrabBagType; }
+    bool hasGrabBag() const { return m_GrabBagType != NO_GRAB_BAG; }
+    GrabBagType getGrabBagType() const { return m_GrabBagType; }
 };
-typedef std::map< PropertyIds, PropValue > _PropertyMap;
 
-class PropertyMap : public _PropertyMap
+class PropertyMap
 {
     /// Cache the property values for the GetPropertyValues() call(s).
     ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >   m_aValues;
+
     //marks context as footnote context - ::text( ) events contain either the footnote character or can be ignored
     //depending on sprmCSymbol
     sal_Unicode                                                                 m_cFootnoteSymbol; // 0 == invalid
     sal_Int32                                                                   m_nFootnoteFontId; // negative values are invalid ids
     OUString                                                             m_sFootnoteFontName;
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XFootnote >       m_xFootnote;
+
+    std::map< PropertyIds, PropValue >                                          m_vMap;
+
+    typedef std::map<PropertyIds,PropValue>::const_iterator                     MapIterator;
+
+    std::vector< RedlineParamsPtr > m_aRedlines;
 
 protected:
     void Invalidate()
@@ -109,18 +128,33 @@ protected:
     }
 
 public:
+    typedef std::pair<PropertyIds,css::uno::Any> Property;
+
     PropertyMap();
     virtual ~PropertyMap();
 
     ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue > GetPropertyValues(bool bCharGrabBag = true);
+        //Sequence: Grab Bags: The CHAR_GRAB_BAG has Name "CharInteropGrabBag" and the PARA_GRAB_BAG has Name "ParaInteropGrabBag"
+        //  the contained properties are their Value.
     bool hasEmptyPropertyValues() const {return !m_aValues.getLength();}
-    /** Add property, usually overwrites already available attributes. It shouldn't overwrite in case of default attributes
-     */
-    void Insert( PropertyIds eId, const ::com::sun::star::uno::Any& rAny, bool bOverwrite = true, GrabBagType rGrabBagType = NO_GRAB_BAG );
+
+    //Add property, optionally overwriting existing attributes
+    void Insert( PropertyIds eId, const ::com::sun::star::uno::Any& rAny, bool bOverwrite = true, GrabBagType i_GrabBagType = NO_GRAB_BAG );
     void Insert( PropertyIds eId, const PropValue& rValue, bool bOverwrite = true );
+    //Remove a named property from *this, does nothing if the property id has not been set
+    void Erase( PropertyIds eId);
+
+    //Imports properties from pMap, overwriting those with the same PropertyIds as the current map
     void InsertProps(const boost::shared_ptr<PropertyMap> pMap);
-    const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFootnote>&  GetFootnote() const;
-    void SetFootnote( ::com::sun::star::uno::Reference< ::com::sun::star::text::XFootnote> xF ) { m_xFootnote = xF; }
+
+    //Returns a copy of the property if it exists, .first is its PropertyIds and .second is its Value (type css::uno::Any)
+    boost::optional<Property> getProperty( PropertyIds eId ) const;
+
+    //Has the property named been set (via Insert)?
+    bool isSet( PropertyIds eId ) const;
+
+    const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFootnote>&  GetFootnote() const { return m_xFootnote;}
+    void SetFootnote( ::com::sun::star::uno::Reference< ::com::sun::star::text::XFootnote> const& xF ) { m_xFootnote = xF; }
 
     sal_Unicode GetFootnoteSymbol() const { return m_cFootnoteSymbol;}
     void        SetFootnoteSymbol(sal_Unicode cSet) { m_cFootnoteSymbol = cSet;}
@@ -133,15 +167,17 @@ public:
 
     virtual void insertTableProperties( const PropertyMap* );
 
-#if OSL_DEBUG_LEVEL > 1
+    const std::vector< RedlineParamsPtr >& Redlines() const { return m_aRedlines; }
+    std::vector< RedlineParamsPtr >& Redlines() { return m_aRedlines; }
+
+    void printProperties();
+#ifdef DEBUG_WRITERFILTER
     virtual void dumpXml( const TagLogger::Pointer_t pLogger ) const;
 #endif
     static com::sun::star::table::ShadowFormat getShadowFromBorder(com::sun::star::table::BorderLine2 aBorder);
 
 };
 typedef boost::shared_ptr<PropertyMap>  PropertyMapPtr;
-
-
 
 class SectionPropertyMap : public PropertyMap
 {
@@ -197,13 +233,13 @@ class SectionPropertyMap : public PropertyMap
 
     //line numbering
     sal_Int32                               m_nLnnMod;
-    sal_Int32                               m_nLnc;
+    sal_uInt32                              m_nLnc;
     sal_Int32                               m_ndxaLnn;
     sal_Int32                               m_nLnnMin;
 
-    void _ApplyProperties( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xStyle );
+    void _ApplyProperties( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xStyle );
     ::com::sun::star::uno::Reference< com::sun::star::text::XTextColumns > ApplyColumnProperties(
-            ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xFollowPageStyle );
+            ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xFollowPageStyle, DomainMapper_Impl& rDM_Impl );
     void CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Impl& rDM_Impl );
     void CopyHeaderFooter( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xPrevStyle,
         ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xStyle );
@@ -211,7 +247,7 @@ class SectionPropertyMap : public PropertyMap
     bool HasHeader( bool bFirstPage ) const;
     bool HasFooter( bool bFirstPage ) const;
 
-    void SetBorderDistance( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > xStyle,
+    void SetBorderDistance( ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySet > const& xStyle,
         PropertyIds eMarginId, PropertyIds eDistId, sal_Int32 nDistance, sal_Int32 nOffsetFrom, sal_uInt32 nLineWidth );
 
 public:
@@ -382,10 +418,10 @@ public:
     void        SetDropCapLength(sal_Int8 nSet) { m_nDropCapLength = nSet;}
 
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > GetStartingRange() const { return m_xStartingRange; }
-    void SetStartingRange( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xSet ) { m_xStartingRange = xSet; }
+    void SetStartingRange( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xSet ) { m_xStartingRange = xSet; }
 
     ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > GetEndingRange() const { return m_xEndingRange; }
-    void SetEndingRange( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xSet ) { m_xEndingRange = xSet; }
+    void SetEndingRange( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xSet ) { m_xEndingRange = xSet; }
 
     void                    SetParaStyleName( const OUString& rSet ) { m_sParaStyleName = rSet;}
     const OUString&  GetParaStyleName() const { return m_sParaStyleName;}
@@ -410,7 +446,6 @@ class StyleSheetPropertyMap : public PropertyMap, public ParagraphProperties
     OUString         msCT_Fonts_ascii;
     bool                    mbCT_TrPrBase_tblHeader;
     sal_Int32               mnCT_TrPrBase_jc;
-    sal_Int32               mnCT_TcPrBase_vAlign;
 
     sal_Int32               mnCT_TblWidth_w;
     sal_Int32               mnCT_TblWidth_type;
@@ -420,7 +455,6 @@ class StyleSheetPropertyMap : public PropertyMap, public ParagraphProperties
 
     bool                    mbCT_TrPrBase_tblHeaderSet;
     bool                    mbCT_TrPrBase_jcSet;
-    bool                    mbCT_TcPrBase_vAlignSet;
 
     bool                    mbCT_TblWidth_wSet;
     bool                    mbCT_TblWidth_typeSet;
@@ -446,8 +480,6 @@ public:
         {mbCT_TrPrBase_tblHeader = bSet; mbCT_TrPrBase_tblHeaderSet = true; }
     void SetCT_TrPrBase_jc(        sal_Int32 nSet )
         {mnCT_TrPrBase_jc = nSet;        mbCT_TrPrBase_jcSet = true;     }
-    void SetCT_TcPrBase_vAlign(    sal_Int32 nSet )
-        {mnCT_TcPrBase_vAlign = nSet;    mbCT_TcPrBase_vAlignSet = true; }
 
     void SetCT_TblWidth_w( sal_Int32 nSet )
         { mnCT_TblWidth_w = nSet;    mbCT_TblWidth_wSet = true; }
@@ -484,12 +516,6 @@ public:
         if( mbCT_TrPrBase_jcSet )
             rToFill = mnCT_TrPrBase_jc;
         return mbCT_TrPrBase_jcSet;
-    }
-    bool GetCT_TcPrBase_vAlign( sal_Int32& rToFill)const
-    {
-        if( mbCT_TcPrBase_vAlignSet )
-            rToFill = mnCT_TcPrBase_vAlign;
-        return mbCT_TcPrBase_vAlignSet;
     }
     sal_Int32   GetListId() const               { return mnListId; }
     void        SetListId(sal_Int32 nId)        { mnListId = nId; }

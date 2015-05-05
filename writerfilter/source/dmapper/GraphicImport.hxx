@@ -57,8 +57,6 @@ class DomainMapper;
 
 enum GraphicImportType
 {
-    IMPORT_AS_GRAPHIC,
-    IMPORT_AS_SHAPE,
     IMPORT_AS_DETECTED_INLINE,
     IMPORT_AS_DETECTED_ANCHOR
 };
@@ -76,13 +74,13 @@ class GraphicImport : public LoggedProperties, public LoggedTable
     css::uno::Reference<css::drawing::XShape> m_xShape;
     void ProcessShapeOptions(Value & val);
 
-    css::uno::Reference<css::text::XTextContent > createGraphicObject(const css::beans::PropertyValues& aMediaProperties );
+    css::uno::Reference<css::text::XTextContent > createGraphicObject(const css::beans::PropertyValues& aMediaProperties, const css::uno::Reference<css::beans::XPropertySet>& xShapeProps);
 
     void putPropertyToFrameGrabBag( const OUString& sPropertyName, const css::uno::Any& aPropertyValue );
 
 public:
-    explicit GraphicImport( css::uno::Reference<css::uno::XComponentContext> xComponentContext,
-                            css::uno::Reference<css::lang::XMultiServiceFactory> xTextFactory,
+    explicit GraphicImport( css::uno::Reference<css::uno::XComponentContext> const& xComponentContext,
+                            css::uno::Reference<css::lang::XMultiServiceFactory> const& xTextFactory,
                             DomainMapper& rDomainMapper,
                             GraphicImportType eGraphicImportType,
                             std::queue<OUString>& rPositivePercentages);
@@ -92,7 +90,7 @@ public:
     virtual void data(const sal_uInt8* buffer, size_t len, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
 
     css::uno::Reference<css::text::XTextContent> GetGraphicObject();
-    css::uno::Reference<css::drawing::XShape> GetXShapeObject();
+    css::uno::Reference<css::drawing::XShape> GetXShapeObject() { return m_xShape;}
     bool IsGraphic() const;
 
  private:
@@ -117,7 +115,7 @@ public:
                            writerfilter::Reference<Table>::Pointer_t ref) SAL_OVERRIDE;
     virtual void lcl_substream(Id name, writerfilter::Reference<Stream>::Pointer_t ref) SAL_OVERRIDE;
     virtual void lcl_info(const std::string & info) SAL_OVERRIDE;
-    virtual void lcl_startShape(css::uno::Reference<css::drawing::XShape> xShape) SAL_OVERRIDE;
+    virtual void lcl_startShape(css::uno::Reference<css::drawing::XShape> const& xShape) SAL_OVERRIDE;
     virtual void lcl_endShape() SAL_OVERRIDE;
 
     void handleWrapTextValue(sal_uInt32 nVal);

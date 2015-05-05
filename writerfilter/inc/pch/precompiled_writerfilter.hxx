@@ -14,7 +14,8 @@
  also fixes all possible problems, so it's usually better to use it).
 */
 
-#include "ooxml/OOXMLFastTokens.hxx"
+#include "oox/core/fasttokenhandler.hxx"
+#include "oox/token/tokens.hxx"
 #include <algorithm>
 #include <boost/optional.hpp>
 #include <boost/shared_ptr.hpp>
@@ -33,6 +34,7 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
+#include <com/sun/star/beans/XPropertyContainer.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
@@ -43,6 +45,7 @@
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/document/IndexedPropertyValues.hpp>
 #include <com/sun/star/document/PrinterIndependentLayout.hpp>
+#include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XEmbeddedObjectResolver.hpp>
 #include <com/sun/star/document/XEventBroadcaster.hpp>
@@ -147,7 +150,9 @@
 #include <com/sun/star/uno/Type.hxx>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/uri/UriReferenceFactory.hpp>
+#include <com/sun/star/util/NumberFormatter.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
+#include <com/sun/star/util/XNumberFormatter.hpp>
 #include <com/sun/star/util/XRefreshable.hpp>
 #include <com/sun/star/view/XFormLayerAccess.hpp>
 #include <com/sun/star/xml/dom/DocumentBuilder.hpp>
@@ -158,6 +163,7 @@
 #include <comphelper/classids.hxx>
 #include <comphelper/embeddedobjectcontainer.hxx>
 #include <comphelper/sequenceashashmap.hxx>
+#include <comphelper/sequenceasvector.hxx>
 #include <comphelper/servicehelper.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/string.hxx>
@@ -190,8 +196,6 @@
 #include <oox/token/namespaces.hxx>
 #include <oox/token/tokens.hxx>
 #include <oox/vml/vmlformatting.hxx>
-#include <ooxml/OOXMLFastTokens.hxx>
-#include <ooxml/OOXMLnamespaceids.hxx>
 #include <ooxml/resourceids.hxx>
 #include <osl/diagnose.h>
 #include <osl/file.hxx>
@@ -206,6 +210,7 @@
 #include <sal/config.h>
 #include <sal/log.hxx>
 #include <sal/macros.h>
+#include <sax/fastattribs.hxx>
 #include <set>
 #include <sfx2/sfxbasemodel.hxx>
 #include <sot/storage.hxx>

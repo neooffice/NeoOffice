@@ -17,7 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#if OSL_DEBUG_LEVEL > 1
+#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYMAPHELPER_HXX
+#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYMAPHELPER_HXX
+
 #include "PropertyMap.hxx"
 #include <com/sun/star/beans/PropertyValues.hpp>
 
@@ -28,18 +30,17 @@ namespace dmapper
 
 void lcl_DumpTableColumnSeparators(const TagLogger::Pointer_t pLogger,
         const css::uno::Any & rTableColumnSeparators);
+#ifdef DEBUG_WRITERFILTER
 void lcl_DumpPropertyValues(const TagLogger::Pointer_t pLogger,
         css::beans::PropertyValues & rValues);
 
 typedef css::uno::Sequence<css::beans::PropertyValues> PropertyValueSeq_t;
 void lcl_DumpPropertyValueSeq(const TagLogger::Pointer_t pLogger,
      PropertyValueSeq_t & rPropValSeq);
+#endif // DEBUG_WRITERFILTER
+}
+}
 
-typedef css::uno::Sequence<PropertyValueSeq_t> PropertyValueSeqSeq_t;
-void lcl_DumpPropertyValueSeqSeq(const TagLogger::Pointer_t pLogger,
-        PropertyValueSeqSeq_t & rPropValSeqSeq);
-}
-}
-#endif // OSL_DEBUG_LEVEL > 1
+#endif // INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYMAPHELPER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

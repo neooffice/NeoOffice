@@ -20,18 +20,14 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFACTORY_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFACTORY_HXX
 
-#if SUPD == 310
-#include <hash_map>
-#else	// SUPD == 310
-#include <boost/unordered_map.hpp>
-#endif	// SUPD == 310
 #include <boost/shared_ptr.hpp>
 
 #include <resourcemodel/WW8ResourceModel.hxx>
 
-#include <ooxml/OOXMLFastTokens.hxx>
+#include <oox/token/tokens.hxx>
 
 #include "OOXMLFastContextHandler.hxx"
+#include <boost/intrusive_ptr.hpp>
 
 namespace writerfilter {
 namespace ooxml {
@@ -62,70 +58,10 @@ enum ResourceType_t {
 
 struct AttributeInfo
 {
+    Token_t m_nToken;
     ResourceType_t m_nResource;
     Id m_nRef;
-
-    AttributeInfo(ResourceType_t nResource, Id nRef);
-    AttributeInfo();
 };
-
-#if SUPD == 310
-typedef std::hash_map<Token_t, AttributeInfo> AttributeToResourceMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Token_t, AttributeInfo> AttributeToResourceMap;
-#endif	// SUPD == 310
-typedef boost::shared_ptr<AttributeToResourceMap> AttributeToResourceMapPointer;
-#if SUPD == 310
-typedef std::hash_map<Id, AttributeToResourceMapPointer> AttributesMap;
-
-typedef std::hash_map<OUString, sal_Int32, OUStringHash> ListValueMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Id, AttributeToResourceMapPointer> AttributesMap;
-
-typedef boost::unordered_map<OUString, sal_Int32, OUStringHash> ListValueMap;
-#endif	// SUPD == 310
-typedef boost::shared_ptr<ListValueMap> ListValueMapPointer;
-#if SUPD == 310
-typedef std::hash_map<Id, ListValueMapPointer> ListValuesMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Id, ListValueMapPointer> ListValuesMap;
-#endif	// SUPD == 310
-
-struct CreateElement
-{
-    ResourceType_t m_nResource;
-    Id m_nId;
-
-    CreateElement(ResourceType_t nResource, Id nId);
-    CreateElement();
-};
-
-#if SUPD == 310
-typedef std::hash_map<Token_t, CreateElement> CreateElementMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Token_t, CreateElement> CreateElementMap;
-#endif	// SUPD == 310
-typedef boost::shared_ptr<CreateElementMap> CreateElementMapPointer;
-#if SUPD == 310
-typedef std::hash_map<Id, CreateElementMapPointer> CreateElementsMap;
-typedef std::hash_map<Id, string> IdToStringMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Id, CreateElementMapPointer> CreateElementsMap;
-typedef boost::unordered_map<Id, string> IdToStringMap;
-#endif	// SUPD == 310
-typedef boost::shared_ptr<IdToStringMap> IdToStringMapPointer;
-
-#if SUPD == 310
-typedef std::hash_map<Id, Token_t> TokenToIdMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Id, Token_t> TokenToIdMap;
-#endif	// SUPD == 310
-typedef boost::shared_ptr<TokenToIdMap> TokenToIdMapPointer;
-#if SUPD == 310
-typedef std::hash_map<Id, TokenToIdMapPointer> TokenToIdsMap;
-#else	// SUPD == 310
-typedef boost::unordered_map<Id, TokenToIdMapPointer> TokenToIdsMap;
-#endif	// SUPD == 310
 
 class OOXMLFactory_ns {
 public:
@@ -135,66 +71,56 @@ public:
     virtual void charactersAction(OOXMLFastContextHandler * pHandler, const OUString & rString);
     virtual void endAction(OOXMLFastContextHandler * pHandler);
     virtual void attributeAction(OOXMLFastContextHandler * pHandler, Token_t nToken, OOXMLValue::Pointer_t pValue);
-#ifdef DEBUG_FACTORY
-    virtual string getDefineName(Id nId) const;
-    virtual string getName() const;
-#endif
-
-    AttributeToResourceMapPointer getAttributeToResourceMap(Id nId);
-    ListValueMapPointer getListValueMap(Id nId);
-    CreateElementMapPointer getCreateElementMap(Id nId);
-    TokenToIdMapPointer getTokenToIdMap(Id nId);
 
 protected:
     virtual ~OOXMLFactory_ns();
 
-    AttributesMap m_AttributesMap;
-    ListValuesMap m_ListValuesMap;
-    CreateElementsMap m_CreateElementsMap;
-    TokenToIdsMap m_TokenToIdsMap;
-
-    virtual AttributeToResourceMapPointer createAttributeToResourceMap(Id nId) = 0;
-    virtual ListValueMapPointer createListValueMap(Id nId) = 0;
-    virtual CreateElementMapPointer createCreateElementMap(Id nId) = 0;
-    virtual TokenToIdMapPointer createTokenToIdMap(Id nId) = 0;
+public:
+    virtual bool getListValue(Id nId, const OUString& rValue, sal_uInt32& rOutValue) = 0;
+    virtual Id getResourceId(Id nDefine, sal_Int32 nToken) = 0;
+    virtual const AttributeInfo* getAttributeInfoArray(Id nId) = 0;
+    virtual bool getElementId(Id nDefine, Id nId, ResourceType_t& rOutResource, Id& rOutElement) = 0;
 };
 
 class OOXMLFactory
 {
 public:
-    typedef boost::shared_ptr<OOXMLFactory> Pointer_t;
+    typedef boost::intrusive_ptr<OOXMLFactory>Pointer_t;
 
     static Pointer_t getInstance();
 
-    uno::Reference< xml::sax::XFastContextHandler> createFastChildContext
-    (OOXMLFastContextHandler * pHandler, Token_t Element);
+    css::uno::Reference< css::xml::sax::XFastContextHandler> createFastChildContext(OOXMLFastContextHandler * pHandler, Token_t Element);
 
-    uno::Reference< xml::sax::XFastContextHandler> createFastChildContextFromStart
-    (OOXMLFastContextHandler * pHandler, Token_t Element);
+    css::uno::Reference< css::xml::sax::XFastContextHandler> createFastChildContextFromStart(OOXMLFastContextHandler * pHandler, Token_t Element);
 
-    void attributes(OOXMLFastContextHandler * pHandler,
-                    const uno::Reference< xml::sax::XFastAttributeList > & Attribs);
+    void attributes(OOXMLFastContextHandler * pHandler, const css::uno::Reference< css::xml::sax::XFastAttributeList > & Attribs);
 
-    void characters(OOXMLFastContextHandler * pHandler,
-                    const OUString & rString);
+    void characters(OOXMLFastContextHandler * pHandler, const OUString & rString);
 
     void startAction(OOXMLFastContextHandler * pHandler, Token_t nToken);
     void endAction(OOXMLFastContextHandler * pHandler, Token_t nToken);
 
     virtual ~OOXMLFactory();
-
+public:
+    sal_uInt32 mnRefCnt;
 private:
     static Pointer_t m_Instance;
 
     OOXMLFactory();
     OOXMLFactory_ns::Pointer_t getFactoryForNamespace(Id id);
 
-    uno::Reference< xml::sax::XFastContextHandler>
-    createFastChildContextFromFactory(OOXMLFastContextHandler * pHandler,
-                                      OOXMLFactory_ns::Pointer_t pFactory,
-                                      Token_t Element);
+    css::uno::Reference< css::xml::sax::XFastContextHandler> createFastChildContextFromFactory(OOXMLFastContextHandler * pHandler, OOXMLFactory_ns::Pointer_t pFactory, Token_t Element);
 };
 
+  inline void intrusive_ptr_add_ref(OOXMLFactory* p)
+  {
+      p->mnRefCnt++;
+  }
+  inline void intrusive_ptr_release(OOXMLFactory* p)
+  {
+      if (!(--p->mnRefCnt))
+          delete p;
+  }
 }
 }
 

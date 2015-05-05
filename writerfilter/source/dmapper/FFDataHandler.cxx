@@ -42,30 +42,10 @@ FFDataHandler::~FFDataHandler()
 {
 }
 
-const OUString & FFDataHandler::getName() const
-{
-    return m_sName;
-}
 
-const OUString & FFDataHandler::getHelpText() const
-{
-    return m_sHelpText;
-}
 
-const OUString & FFDataHandler::getStatusText() const
-{
-    return m_sStatusText;
-}
 
-sal_uInt32 FFDataHandler::getCheckboxHeight() const
-{
-    return m_nCheckboxHeight;
-}
 
-bool FFDataHandler::getCheckboxAutoHeight() const
-{
-    return m_bCheckboxAutoHeight;
-}
 
 bool FFDataHandler::getCheckboxChecked() const
 {
@@ -77,20 +57,8 @@ bool FFDataHandler::getCheckboxChecked() const
         return false;
 }
 
-const OUString & FFDataHandler::getDropDownResult() const
-{
-    return m_sDropDownResult;
-}
 
-const FFDataHandler::DropDownEntries_t & FFDataHandler::getDropDownEntries() const
-{
-    return m_DropDownEntries;
-}
 
-const OUString & FFDataHandler::getTextDefault() const
-{
-    return m_sTextDefault;
-}
 
 void FFDataHandler::lcl_sprm(Sprm & r_Sprm)
 {
@@ -162,7 +130,7 @@ void FFDataHandler::lcl_sprm(Sprm & r_Sprm)
         }
         break;
     default:
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->element("unhandled");
 #endif
         break;
@@ -191,7 +159,7 @@ void FFDataHandler::lcl_attribute(Id name, Value & val)
         }
         break;
     default:
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->element("unhandled");
 #endif
         break;

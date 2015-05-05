@@ -74,6 +74,7 @@ struct SettingsTable_Impl
     bool                embedTrueTypeFonts;
     bool                embedSystemFonts;
     bool                m_bDoNotUseHTMLParagraphAutoSpacing;
+    bool                m_bNoColumnBalance;
     bool                m_bSplitPgBreakAndParaMark;
     bool                m_bMirrorMargin;
     uno::Sequence<beans::PropertyValue> m_pThemeFontLangProps;
@@ -81,7 +82,7 @@ struct SettingsTable_Impl
     uno::Sequence<beans::PropertyValue> m_pCompatSettings;
     uno::Sequence<beans::PropertyValue> m_pCurrentCompatSetting;
 
-    SettingsTable_Impl( DomainMapper& rDMapper, const uno::Reference< lang::XMultiServiceFactory > xTextFactory ) :
+    SettingsTable_Impl( DomainMapper& rDMapper, const uno::Reference< lang::XMultiServiceFactory > & xTextFactory ) :
     m_rDMapper( rDMapper )
     , m_xTextFactory( xTextFactory )
     , m_nDefaultTabStop( 720 ) //default is 1/2 in
@@ -89,12 +90,12 @@ struct SettingsTable_Impl
     , m_bNoPunctuationKerning(false)
     , m_doNotIncludeSubdocsInStats(false)
     , m_bRecordChanges(false)
-    , m_nEdit(NS_ooxml::LN_Value_wordprocessingml_ST_DocProtect_none)
+    , m_nEdit(NS_ooxml::LN_Value_doc_ST_DocProtect_none)
     , m_bFormatting(false)
     , m_bEnforcement(false)
-    , m_nCryptProviderType(NS_ooxml::LN_Value_wordprocessingml_ST_CryptProv_rsaAES)
-    , m_nCryptAlgorithmClass(NS_ooxml::LN_Value_wordprocessingml_ST_AlgClass_hash)
-    , m_nCryptAlgorithmType(NS_ooxml::LN_Value_wordprocessingml_ST_AlgType_typeAny)
+    , m_nCryptProviderType(NS_ooxml::LN_Value_doc_ST_CryptProv_rsaAES)
+    , m_nCryptAlgorithmClass(NS_ooxml::LN_Value_doc_ST_AlgClass_hash)
+    , m_nCryptAlgorithmType(NS_ooxml::LN_Value_doc_ST_AlgType_typeAny)
     , m_nCryptSpinCount(0)
     , m_bLinkStyles(false)
     , m_nZoomFactor(0)
@@ -104,6 +105,7 @@ struct SettingsTable_Impl
     , embedTrueTypeFonts(false)
     , embedSystemFonts(false)
     , m_bDoNotUseHTMLParagraphAutoSpacing(false)
+    , m_bNoColumnBalance(false)
     , m_bSplitPgBreakAndParaMark(false)
     , m_bMirrorMargin(false)
     , m_pThemeFontLangProps(3)
@@ -113,7 +115,7 @@ struct SettingsTable_Impl
 
 };
 
-SettingsTable::SettingsTable(DomainMapper& rDMapper, const uno::Reference< lang::XMultiServiceFactory > xTextFactory)
+SettingsTable::SettingsTable(DomainMapper& rDMapper, const uno::Reference< lang::XMultiServiceFactory > & xTextFactory)
 : LoggedProperties(dmapper_logger, "SettingsTable")
 , LoggedTable(dmapper_logger, "SettingsTable")
 , m_pImpl( new SettingsTable_Impl(rDMapper, xTextFactory) )
@@ -165,7 +167,7 @@ void SettingsTable::lcl_attribute(Id nName, Value & val)
         break;
     default:
     {
-#ifdef DEBUG_DMAPPER_SETTINGS_TABLE
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->element("unhandled");
 #endif
     }
@@ -276,9 +278,12 @@ void SettingsTable::lcl_sprm(Sprm& rSprm)
         }
     }
     break;
+    case NS_ooxml::LN_CT_Compat_noColumnBalance:
+        m_pImpl->m_bNoColumnBalance = nIntValue;
+        break;
     default:
     {
-#ifdef DEBUG_DMAPPER_SETTINGS_TABLE
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->element("unhandled");
 #endif
     }
@@ -338,6 +343,11 @@ bool SettingsTable::GetDoNotUseHTMLParagraphAutoSpacing() const
     return m_pImpl->m_bDoNotUseHTMLParagraphAutoSpacing;
 }
 
+bool SettingsTable::GetNoColumnBalance() const
+{
+    return m_pImpl->m_bNoColumnBalance;
+}
+
 bool SettingsTable::GetSplitPgBreakAndParaMark() const
 {
     return m_pImpl->m_bSplitPgBreakAndParaMark;
@@ -358,7 +368,7 @@ uno::Sequence<beans::PropertyValue> SettingsTable::GetCompatSettings() const
     return m_pImpl->m_pCompatSettings;
 }
 
-void SettingsTable::ApplyProperties( uno::Reference< text::XTextDocument > xDoc )
+void SettingsTable::ApplyProperties(uno::Reference<text::XTextDocument> const& xDoc)
 {
     uno::Reference< beans::XPropertySet> xDocProps( xDoc, uno::UNO_QUERY );
 

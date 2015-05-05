@@ -31,7 +31,6 @@
 #include "OOXMLBinaryObjectReference.hxx"
 #include "OOXMLFastDocumentHandler.hxx"
 #include "OOXMLPropertySetImpl.hxx"
-#include "ooxmlLoggers.hxx"
 
 #include <tools/resmgr.hxx>
 #include <vcl/svapp.hxx>
@@ -52,16 +51,12 @@ namespace writerfilter {
 namespace ooxml
 {
 
-#if OSL_DEBUG_LEVEL > 1
-TagLogger::Pointer_t debug_logger(TagLogger::getInstance("DEBUG"));
-#endif
-
 OOXMLDocumentImpl::OOXMLDocumentImpl(OOXMLStream::Pointer_t pStream, const uno::Reference<task::XStatusIndicator>& xStatusIndicator)
     : mpStream(pStream)
     , mxStatusIndicator(xStatusIndicator)
     , mnXNoteId(0)
     , mXNoteType(0)
-    , mxThemeDom(0)
+    , mxThemeDom(nullptr)
     , mbIsSubstream(false)
     , mnPercentSize(0)
     , mnProgressLastPos(0)
@@ -103,8 +98,7 @@ void OOXMLDocumentImpl::resolveFastSubStream(Stream & rStreamHandler,
 
         uno::Reference < xml::sax::XFastDocumentHandler > xDocumentHandler
             (pDocHandler);
-        uno::Reference < xml::sax::XFastTokenHandler > xTokenHandler
-            (mpStream->getFastTokenHandler(xContext));
+        uno::Reference < xml::sax::XFastTokenHandler > xTokenHandler(mpStream->getFastTokenHandler());
 
         xParser->setFastDocumentHandler(xDocumentHandler);
         xParser->setTokenHandler(xTokenHandler);
@@ -288,12 +282,6 @@ writerfilter::Reference<Stream>::Pointer_t
 OOXMLDocumentImpl::getXNoteStream(OOXMLStream::StreamType_t nType, const Id & rType,
                                   const sal_Int32 nId)
 {
-#ifdef DEBUG_ELEMENT
-    debug_logger->startElement("getXNoteStream");
-    debug_logger->attribute("id", nId);
-    debug_logger->endElement();
-#endif
-
     OOXMLStream::Pointer_t pStream =
         (OOXMLDocumentFactory::createStream(mpStream, nType));
     // See above, no status indicator for the note stream, either.
@@ -314,8 +302,8 @@ void OOXMLDocumentImpl::resolveFootnote(Stream & rStream,
     Id nId;
     switch (rType)
     {
-    case NS_ooxml::LN_Value_wordprocessingml_ST_FtnEdn_separator:
-    case NS_ooxml::LN_Value_wordprocessingml_ST_FtnEdn_continuationSeparator:
+    case NS_ooxml::LN_Value_doc_ST_FtnEdn_separator:
+    case NS_ooxml::LN_Value_doc_ST_FtnEdn_continuationSeparator:
         nId = rType;
         break;
     default:
@@ -336,8 +324,8 @@ void OOXMLDocumentImpl::resolveEndnote(Stream & rStream,
     Id nId;
     switch (rType)
     {
-    case NS_ooxml::LN_Value_wordprocessingml_ST_FtnEdn_separator:
-    case NS_ooxml::LN_Value_wordprocessingml_ST_FtnEdn_continuationSeparator:
+    case NS_ooxml::LN_Value_doc_ST_FtnEdn_separator:
+    case NS_ooxml::LN_Value_doc_ST_FtnEdn_continuationSeparator:
         nId = rType;
         break;
     default:
@@ -449,10 +437,6 @@ void OOXMLDocumentImpl::resolveFooter(Stream & rStream,
 
 void OOXMLDocumentImpl::resolve(Stream & rStream)
 {
-#ifdef DEBUG_RESOLVE
-    debug_logger->startElement("OOXMLDocumentImpl.resolve");
-#endif
-
     uno::Reference< xml::sax::XFastParser > xParser
         (mpStream->getFastParser());
 
@@ -494,8 +478,7 @@ void OOXMLDocumentImpl::resolve(Stream & rStream)
         pDocHandler->setIsSubstream( mbIsSubstream );
         uno::Reference < xml::sax::XFastDocumentHandler > xDocumentHandler
             (pDocHandler);
-        uno::Reference < xml::sax::XFastTokenHandler > xTokenHandler
-            (mpStream->getFastTokenHandler(xContext));
+        uno::Reference < xml::sax::XFastTokenHandler > xTokenHandler(mpStream->getFastTokenHandler());
 
         resolveFastSubStream(rStream, OOXMLStream::SETTINGS);
         mxThemeDom = importSubStream(OOXMLStream::THEME);
@@ -525,18 +508,11 @@ void OOXMLDocumentImpl::resolve(Stream & rStream)
             xParser->parseStream(aParserInput);
         }
         catch (...) {
-#ifdef DEBUG_ELEMENT
-            debug_logger->element("exception");
-#endif
         }
     }
 
     if (mxStatusIndicator.is())
         mxStatusIndicator->end();
-
-#ifdef DEBUG_RESOLVE
-    debug_logger->endElement();
-#endif
 }
 
 void OOXMLDocumentImpl::incrementProgress()
@@ -544,7 +520,7 @@ void OOXMLDocumentImpl::incrementProgress()
     mnProgressCurrentPos++;
     // 1) If we know the end
     // 2) We progressed enough that updating makes sense
-    // 3) We did not reach the end yet (possible in case the doc stat is is misleading)
+    // 3) We did not reach the end yet (possible in case the doc stat is misleading)
     if (mnProgressEndPos && mnProgressCurrentPos > (mnProgressLastPos + mnPercentSize) && mnProgressLastPos < mnProgressEndPos)
     {
         mnProgressLastPos = mnProgressCurrentPos;
@@ -559,8 +535,8 @@ void OOXMLDocumentImpl::resolveCustomXmlStream(Stream & rStream)
     mxRelationshipAccess.set((dynamic_cast<OOXMLStreamImpl&>(*mpStream.get())).accessDocumentStream(), uno::UNO_QUERY_THROW);
     if (mxRelationshipAccess.is())
     {
-        static const OUString sCustomType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml");
-        static const OUString sCustomTypeStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/customXml");
+        static const char sCustomType[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml";
+        static const char sCustomTypeStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/customXml";
         OUString sTarget("Target");
         bool bFound = false;
         sal_Int32 counter = 0;
@@ -576,10 +552,10 @@ void OOXMLDocumentImpl::resolveCustomXmlStream(Stream & rStream)
                 beans::StringPair aPair = aSeq[i];
                 // Need to resolve only customxml files from document relationships.
                 // Skipping other files.
-                if (aPair.Second.compareTo(sCustomType) == 0 ||
-                        aPair.Second.compareTo(sCustomTypeStrict) == 0)
+                if (aPair.Second == sCustomType ||
+                        aPair.Second == sCustomTypeStrict)
                     bFound = true;
-                else if(aPair.First.compareTo(sTarget) == 0 && bFound)
+                else if(aPair.First == sTarget && bFound)
                 {
                     // Adding value to extern variable customTarget. It will be used in ooxmlstreamimpl
                     // to ensure customxml target is visited in lcl_getTarget.
@@ -611,14 +587,14 @@ void OOXMLDocumentImpl::resolveCustomXmlStream(Stream & rStream)
 
 void OOXMLDocumentImpl::resolveGlossaryStream(Stream & /*rStream*/)
 {
-    static OUString sSettingsType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings");
-    static OUString sStylesType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles");
-    static OUString sFonttableType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable");
-    static OUString sWebSettings("http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSettings");
-    static OUString sSettingsTypeStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/settings");
-    static OUString sStylesTypeStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/styles");
-    static OUString sFonttableTypeStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/fontTable");
-    static OUString sWebSettingsStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/webSettings");
+    static const char sSettingsType[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings";
+    static const char sStylesType[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
+    static const char sFonttableType[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable";
+    static const char sWebSettings[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSettings";
+    static const char sSettingsTypeStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/settings";
+    static const char sStylesTypeStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/styles";
+    static const char sFonttableTypeStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/fontTable";
+    static const char sWebSettingsStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/webSettings";
 
     OOXMLStream::Pointer_t pStream;
     try
@@ -652,26 +628,26 @@ void OOXMLDocumentImpl::resolveGlossaryStream(Stream & /*rStream*/)
 
               OOXMLStream::StreamType_t nType(OOXMLStream::UNKNOWN);
               bool bFound = true;
-              if(gType.compareTo(sSettingsType) == 0 ||
-                      gType.compareTo(sSettingsTypeStrict) == 0)
+              if(gType == sSettingsType ||
+                      gType == sSettingsTypeStrict)
               {
                   nType = OOXMLStream::SETTINGS;
                   contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml";
               }
-              else if(gType.compareTo(sStylesType) == 0 ||
-                      gType.compareTo(sStylesTypeStrict) == 0)
+              else if(gType == sStylesType ||
+                      gType == sStylesTypeStrict)
               {
                   nType = OOXMLStream::STYLES;
                   contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
               }
-              else if(gType.compareTo(sWebSettings) == 0 ||
-                      gType.compareTo(sWebSettingsStrict) == 0)
+              else if(gType == sWebSettings ||
+                      gType == sWebSettingsStrict)
               {
                   nType = OOXMLStream::WEBSETTINGS;
                   contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml";
               }
-              else if(gType.compareTo(sFonttableType) == 0 ||
-                      gType.compareTo(sFonttableTypeStrict) == 0)
+              else if(gType == sFonttableType ||
+                      gType == sFonttableTypeStrict)
               {
                   nType = OOXMLStream::FONTTABLE;
                   contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml";
@@ -743,24 +719,24 @@ void OOXMLDocumentImpl::resolveEmbeddingsStream(OOXMLStream::Pointer_t pStream)
             for (sal_Int32 i = 0; i < aSeq.getLength(); i++)
             {
                 beans::StringPair aPair = aSeq[i];
-                if (aPair.Second.compareTo(sChartType) == 0 ||
-                        aPair.Second.compareTo(sChartTypeStrict) == 0)
+                if (aPair.Second == sChartType ||
+                        aPair.Second == sChartTypeStrict)
                 {
                     bFound = true;
                 }
-                else if(aPair.Second.compareTo(sFootersType) == 0 ||
-                        aPair.Second.compareTo(sFootersTypeStrict) == 0)
+                else if(aPair.Second == sFootersType ||
+                        aPair.Second == sFootersTypeStrict)
                 {
                     bHeaderFooterFound = true;
                     streamType = OOXMLStream::FOOTER;
                 }
-                else if(aPair.Second.compareTo(sHeaderType) == 0 ||
-                        aPair.Second.compareTo(sHeaderTypeStrict) == 0)
+                else if(aPair.Second == sHeaderType ||
+                        aPair.Second == sHeaderTypeStrict)
                 {
                     bHeaderFooterFound = true;
                     streamType = OOXMLStream::HEADER;
                 }
-                else if(aPair.First.compareTo(sTarget) == 0 && ( bFound || bHeaderFooterFound ))
+                else if(aPair.First == sTarget && ( bFound || bHeaderFooterFound ))
                 {
                     // Adding value to extern variable customTarget. It will be used in ooxmlstreamimpl
                     // to ensure chart.xml target is visited in lcl_getTarget.
@@ -814,8 +790,8 @@ void OOXMLDocumentImpl::resolveActiveXStream(Stream & rStream)
     mxRelationshipAccess.set((dynamic_cast<OOXMLStreamImpl&>(*mpStream.get())).accessDocumentStream(), uno::UNO_QUERY_THROW);
     if (mxRelationshipAccess.is())
     {
-        static const OUString sCustomType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/control");
-        static const OUString sCustomTypeStrict("http://purl.oclc.org/ooxml/officeDocument/relationships/control");
+        static const char sCustomType[] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/control";
+        static const char sCustomTypeStrict[] = "http://purl.oclc.org/ooxml/officeDocument/relationships/control";
         OUString sTarget("Target");
         bool bFound = false;
         sal_Int32 counter = 0;
@@ -831,10 +807,10 @@ void OOXMLDocumentImpl::resolveActiveXStream(Stream & rStream)
                 beans::StringPair aPair = aSeq[i];
                 // Need to resolve only ActiveX files from document relationships.
                 // Skipping other files.
-                if (aPair.Second.compareTo(sCustomType) == 0 ||
-                        aPair.Second.compareTo(sCustomTypeStrict) == 0)
+                if (aPair.Second == sCustomType ||
+                        aPair.Second == sCustomTypeStrict)
                     bFound = true;
-                else if(aPair.First.compareTo(sTarget) == 0 && bFound)
+                else if(aPair.First == sTarget && bFound)
                 {
                     // Adding value to extern variable customTarget. It will be used in ooxmlstreamimpl
                     // to ensure ActiveX.xml target is visited in lcl_getTarget.
@@ -880,11 +856,6 @@ uno::Reference<io::XInputStream> OOXMLDocumentImpl::getInputStreamForId(const OU
     OOXMLStream::Pointer_t pStream(OOXMLDocumentFactory::createStream(mpStream, rId));
 
     return pStream->getDocumentStream();
-}
-
-std::string OOXMLDocumentImpl::getType() const
-{
-    return "OOXMLDocumentImpl";
 }
 
 void OOXMLDocumentImpl::setModel(uno::Reference<frame::XModel> xModel)

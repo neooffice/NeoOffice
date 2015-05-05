@@ -28,10 +28,12 @@
 #endif	// SUPD == 310
 #include <ooxml/resourceids.hxx>
 #include <rtl/ustring.hxx>
+#include <osl/diagnose.h>
 #if SUPD == 310
 #include <comphelper/mediadescriptor.hxx>
 #else	// SUPD == 310
 #include <unotools/mediadescriptor.hxx>
+#include <officecfg/Office/Common.hxx>
 #endif	// SUPD == 310
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
@@ -51,11 +53,11 @@
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 
-#include "dmapperLoggers.hxx"
-
 #if SUPD == 310
 #include <sal/log.hxx>
 #endif	// SUPD == 310
+
+#include "dmapperLoggers.hxx"
 
 namespace writerfilter {
 namespace dmapper {
@@ -194,81 +196,53 @@ void OLEHandler::lcl_sprm(Sprm & rSprm)
 }
 
 
-void OLEHandler::saveInteropProperties( uno::Reference< text::XTextDocument > xTextDocument, const OUString& sObjectName, const OUString& sOldObjectName )
+void OLEHandler::saveInteropProperties(uno::Reference<text::XTextDocument> const& xTextDocument, const OUString& sObjectName, const OUString& sOldObjectName)
 {
-    const OUString sGrabBagPropName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    const OUString sEmbeddingsPropName = "EmbeddedObjects";
+    static const char sEmbeddingsPropName[] = "EmbeddedObjects";
 
     // get interop grab bag from document
     uno::Reference< beans::XPropertySet > xDocProps( xTextDocument, uno::UNO_QUERY );
-    uno::Sequence< beans::PropertyValue > aGrabBag;
-    xDocProps->getPropertyValue( sGrabBagPropName ) >>= aGrabBag;
+    comphelper::SequenceAsHashMap aGrabBag(xDocProps->getPropertyValue(UNO_NAME_MISC_OBJ_INTEROPGRABBAG));
 
     // get EmbeddedObjects property inside grab bag
-    sal_Int32 i = 0;
-    sal_Int32 nBagLength = aGrabBag.getLength();
-    uno::Sequence< beans::PropertyValue > objectsList;
-    for( ; i < nBagLength; ++i )
-        if ( aGrabBag[i].Name == sEmbeddingsPropName )
-        {
-            aGrabBag[i].Value >>= objectsList;
-            break;
-        }
+    comphelper::SequenceAsHashMap objectsList;
+    if (aGrabBag.find(sEmbeddingsPropName) != aGrabBag.end())
+        objectsList << aGrabBag[sEmbeddingsPropName];
 
-    // save ProgID of current object
-    sal_Int32 length = objectsList.getLength();
+    uno::Sequence< beans::PropertyValue > aGrabBagAttribute(2);
+    aGrabBagAttribute[0].Name = "ProgID";
+    aGrabBagAttribute[0].Value = uno::Any( m_sProgId );
+    aGrabBagAttribute[1].Name = "DrawAspect";
+    aGrabBagAttribute[1].Value = uno::Any( m_sDrawAspect );
 
     // If we got an "old name", erase that first.
     if (!sOldObjectName.isEmpty())
     {
-        comphelper::SequenceAsHashMap aMap(objectsList);
-        comphelper::SequenceAsHashMap::iterator it = aMap.find(sOldObjectName);
-        if (it != aMap.end())
-            aMap.erase(it);
-        objectsList = aMap.getAsConstPropertyValueList();
+        comphelper::SequenceAsHashMap::iterator it = objectsList.find(sOldObjectName);
+        if (it != objectsList.end())
+            objectsList.erase(it);
     }
 
-    objectsList.realloc( length + 1 );
-    objectsList[length].Name = sObjectName;
-    objectsList[length].Value = uno::Any( m_sProgId );
+    objectsList[sObjectName] = uno::Any( aGrabBagAttribute );
 
     // put objects list back into the grab bag
-    if( i == nBagLength )
-    {
-        aGrabBag.realloc( nBagLength + 1 );
-        aGrabBag[nBagLength].Name = sEmbeddingsPropName;
-        aGrabBag[nBagLength].Value = uno::Any( objectsList );
-    }
-    else
-        aGrabBag[i].Value = uno::Any( objectsList );
+    aGrabBag[sEmbeddingsPropName] = uno::Any(objectsList.getAsConstPropertyValueList());
 
     // put grab bag back into the document
-    xDocProps->setPropertyValue( sGrabBagPropName, uno::Any( aGrabBag ) );
+    xDocProps->setPropertyValue(UNO_NAME_MISC_OBJ_INTEROPGRABBAG, uno::Any(aGrabBag.getAsConstPropertyValueList()));
 }
 
 void OLEHandler::importStream(uno::Reference<uno::XComponentContext> xComponentContext, uno::Reference<text::XTextDocument> xTextDocument, uno::Reference<text::XTextContent> xOLE)
 {
-    OUString aFilterService, aFilterName;
+    OUString aFilterService;
     if (m_sProgId == "Word.Document.12")
-    {
         aFilterService = "com.sun.star.comp.Writer.WriterFilter";
-        aFilterName = "writer_MS_Word_2007";
-    }
 
     if (!m_xInputStream.is() || aFilterService.isEmpty())
         return;
 
     // Create the filter service.
     uno::Reference<uno::XInterface> xInterface = xComponentContext->getServiceManager()->createInstanceWithContext(aFilterService, xComponentContext);
-
-    // Initialize it.
-    uno::Sequence<beans::PropertyValue> aArgs(1);
-    aArgs[0].Name = "Type";
-    aArgs[0].Value <<= OUString(aFilterName);
-    uno::Sequence<uno::Any> aAnySeq(1);
-    aAnySeq[0] <<= aArgs;
-    uno::Reference<lang::XInitialization> xInitialization(xInterface, uno::UNO_QUERY);
-    xInitialization->initialize(aAnySeq);
 
     // Set target document.
     uno::Reference<document::XImporter> xImporter(xInterface, uno::UNO_QUERY);
@@ -291,17 +265,22 @@ void OLEHandler::importStream(uno::Reference<uno::XComponentContext> xComponentC
     saveInteropProperties(xTextDocument, xPropertySet->getPropertyValue("StreamName").get<OUString>(), m_aURL);
 }
 
-OUString OLEHandler::getCLSID()
+OUString OLEHandler::getCLSID(uno::Reference<uno::XComponentContext> xComponentContext) const
 {
     OUString aRet;
 
+#if SUPD == 310
     if (m_sProgId == "Word.Document.12")
+#else	// SUPD == 310
+    if (officecfg::Office::Common::Filter::Microsoft::Import::WinWordToWriter::get(xComponentContext) && m_sProgId == "Word.Document.12")
+#endif	// SUPD == 310
         aRet = "8BC6B165-B1B2-4EDD-aa47-dae2ee689dd6";
 
     return aRet;
 }
 
-OUString OLEHandler::copyOLEOStream( uno::Reference< text::XTextDocument > xTextDocument )
+OUString OLEHandler::copyOLEOStream(
+        uno::Reference<text::XTextDocument> const& xTextDocument)
 {
     OUString sRet;
     if( !m_xInputStream.is( ) )
@@ -335,9 +314,9 @@ OUString OLEHandler::copyOLEOStream( uno::Reference< text::XTextDocument > xText
 
             saveInteropProperties( xTextDocument, aURL );
 
-            static const OUString sProtocol("vnd.sun.star.EmbeddedObject:");
+            static const char sProtocol[] = "vnd.sun.star.EmbeddedObject:";
             OUString aPersistName( xEmbeddedResolver->resolveEmbeddedObjectURL( aURL ) );
-            sRet = aPersistName.copy( sProtocol.getLength() );
+            sRet = aPersistName.copy( strlen(sProtocol) );
 
         }
         uno::Reference< lang::XComponent > xComp( xEmbeddedResolver, uno::UNO_QUERY_THROW );

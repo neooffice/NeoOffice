@@ -26,6 +26,10 @@
 #include "WrapPolygonHandler.hxx"
 #include "dmapperLoggers.hxx"
 
+#if SUPD == 310
+#include <sal/log.hxx>
+#endif	// SUPD == 310
+
 namespace writerfilter {
 
 using resourcemodel::resolveSprmProps;
@@ -66,11 +70,6 @@ WrapPolygon::Points_t::iterator WrapPolygon::end()
     return mPoints.end();
 }
 
-size_t WrapPolygon::size() const
-{
-    return mPoints.size();
-}
-
 WrapPolygon::Pointer_t WrapPolygon::move(const awt::Point & rPoint)
 {
     WrapPolygon::Pointer_t pResult(new WrapPolygon);
@@ -88,7 +87,7 @@ WrapPolygon::Pointer_t WrapPolygon::move(const awt::Point & rPoint)
     return pResult;
 }
 
-WrapPolygon::Pointer_t WrapPolygon::scale(const resourcemodel::Fraction & rFractionX, const resourcemodel::Fraction & rFractionY)
+WrapPolygon::Pointer_t WrapPolygon::scale(const Fraction & rFractionX, const Fraction & rFractionY)
 {
     WrapPolygon::Pointer_t pResult(new WrapPolygon);
 
@@ -97,7 +96,7 @@ WrapPolygon::Pointer_t WrapPolygon::scale(const resourcemodel::Fraction & rFract
 
     while (aIt != aItEnd)
     {
-        awt::Point aPoint(resourcemodel::Fraction(aIt->X) * rFractionX, resourcemodel::Fraction(aIt->Y) * rFractionY);
+        awt::Point aPoint((Fraction(long(aIt->X)) * rFractionX).operator long(), (Fraction(long(aIt->Y)) * rFractionY).operator long());
         pResult->addPoint(aPoint);
         ++aIt;
     }
@@ -109,19 +108,19 @@ WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygon(const awt::Size & rSr
 {
     WrapPolygon::Pointer_t pResult;
 
-    const sal_uInt32 nWrap100Percent = 21600;
+    const long nWrap100Percent = 21600;
 
-    resourcemodel::Fraction aMove(nWrap100Percent, rSrcSize.Width);
-    aMove = aMove * resourcemodel::Fraction(15, 1);
-    awt::Point aMovePoint(aMove, 0);
+    Fraction aMove(nWrap100Percent, rSrcSize.Width);
+    aMove = aMove * Fraction(15, 1);
+    awt::Point aMovePoint(aMove.operator long(), 0);
     pResult = move(aMovePoint);
 
-    resourcemodel::Fraction aScaleX(nWrap100Percent, resourcemodel::Fraction(nWrap100Percent) + aMove);
-    resourcemodel::Fraction aScaleY(nWrap100Percent, resourcemodel::Fraction(nWrap100Percent) - aMove);
+    Fraction aScaleX(nWrap100Percent, Fraction(nWrap100Percent) + aMove);
+    Fraction aScaleY(nWrap100Percent, Fraction(nWrap100Percent) - aMove);
     pResult = pResult->scale(aScaleX, aScaleY);
 
-    resourcemodel::Fraction aScaleSrcX(rSrcSize.Width, nWrap100Percent);
-    resourcemodel::Fraction aScaleSrcY(rSrcSize.Height, nWrap100Percent);
+    Fraction aScaleSrcX(rSrcSize.Width, nWrap100Percent);
+    Fraction aScaleSrcY(rSrcSize.Height, nWrap100Percent);
     pResult = pResult->scale(aScaleSrcX, aScaleSrcY);
 
     return pResult;
@@ -130,20 +129,8 @@ WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygon(const awt::Size & rSr
 drawing::PointSequenceSequence WrapPolygon::getPointSequenceSequence() const
 {
     drawing::PointSequenceSequence aPolyPolygon(1L);
-    drawing::PointSequence * pPolygon = aPolyPolygon.getArray();
-    pPolygon->realloc(size());
-
-    sal_uInt32 n = 0;
-    Points_t::const_iterator aIt = begin();
-    Points_t::const_iterator aItEnd = end();
-
-    while (aIt != aItEnd)
-    {
-        (*pPolygon)[n] = *aIt;
-        ++n;
-        ++aIt;
-    }
-
+    drawing::PointSequence aPolygon = mPoints.getAsConstList();
+    aPolyPolygon[0] = aPolygon;
     return aPolyPolygon;
 }
 
@@ -172,9 +159,7 @@ void WrapPolygonHandler::lcl_attribute(Id Name, Value & val)
         mnY = nIntValue;
         break;
     default:
-#ifdef DEBUG_WRAP_POLYGON_HANDLER
-        dmapper_logger->element("unhandled");
-#endif
+        SAL_WARN("writerfilter", "WrapPolygonHandler::lcl_attribute: unhandled token: " << Name);
         break;
     }
 }
@@ -193,17 +178,11 @@ void WrapPolygonHandler::lcl_sprm(Sprm & _sprm)
         }
         break;
     default:
-#ifdef DEBUG_WRAP_POLYGON_HANDLER
-        dmapper_logger->element("unhandled");
-#endif
+        SAL_WARN("writerfilter", "WrapPolygonHandler::lcl_sprm: unhandled token: " << _sprm.getId());
         break;
     }
 }
 
-WrapPolygon::Pointer_t WrapPolygonHandler::getPolygon()
-{
-    return mpPolygon;
-}
 
 }}
 

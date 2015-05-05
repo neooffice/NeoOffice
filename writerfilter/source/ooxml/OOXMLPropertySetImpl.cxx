@@ -22,18 +22,13 @@
 #include <iostream>
 #include <resourcemodel/QNameToString.hxx>
 #include <com/sun/star/drawing/XShape.hpp>
-#include <ooxml/OOXMLFastTokens.hxx>
-#include "ooxmlLoggers.hxx"
-#include <ooxml/resourceids.hxx>
-
-#if SUPD == 310
-#include <sal/log.hxx>
-#endif	// SUPD == 310
+#include <oox/token/tokens.hxx>
 
 namespace writerfilter {
 namespace ooxml
 {
 using namespace ::std;
+using namespace com::sun::star;
 
 OOXMLProperty::~OOXMLProperty()
 {
@@ -71,7 +66,7 @@ Value::Pointer_t OOXMLPropertyImpl::getValue()
 {
     Value::Pointer_t pResult;
 
-    if (mpValue.get() != NULL)
+    if (mpValue.get() != nullptr)
         pResult = Value::Pointer_t(mpValue->clone());
     else
         pResult = Value::Pointer_t(new OOXMLValue());
@@ -83,7 +78,7 @@ writerfilter::Reference<BinaryObj>::Pointer_t OOXMLPropertyImpl::getBinary()
 {
     writerfilter::Reference<BinaryObj>::Pointer_t pResult;
 
-    if (mpValue.get() != NULL)
+    if (mpValue.get() != nullptr)
         pResult = mpValue->getBinary();
 
     return pResult;
@@ -93,7 +88,7 @@ writerfilter::Reference<Stream>::Pointer_t OOXMLPropertyImpl::getStream()
 {
     writerfilter::Reference<Stream>::Pointer_t pResult;
 
-    if (mpValue.get() != NULL)
+    if (mpValue.get() != nullptr)
         pResult = mpValue->getStream();
 
     return pResult;
@@ -103,19 +98,18 @@ writerfilter::Reference<Properties>::Pointer_t OOXMLPropertyImpl::getProps()
 {
     writerfilter::Reference<Properties>::Pointer_t pResult;
 
-    if (mpValue.get() != NULL)
+    if (mpValue.get() != nullptr)
         pResult = mpValue->getProperties();
 
     return pResult;
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLPropertyImpl::getName() const
 {
     string sResult;
 
-#ifdef DEBUG_LOGGING
     sResult = (*QNameToString::Instance())(mId);
-#endif
 
     if (sResult.length() == 0)
         sResult = fastTokenToId(mId);
@@ -130,14 +124,16 @@ string OOXMLPropertyImpl::getName() const
 
     return sResult;
 }
+#endif
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLPropertyImpl::toString() const
 {
     string sResult = "(";
 
     sResult += getName();
     sResult += ", ";
-    if (mpValue.get() != NULL)
+    if (mpValue.get() != nullptr)
         sResult += mpValue->toString();
     else
         sResult +="(null)";
@@ -145,11 +141,7 @@ string OOXMLPropertyImpl::toString() const
 
     return sResult;
 }
-
-Sprm::Kind OOXMLPropertyImpl::getKind()
-{
-    return SprmKind(getId());
-}
+#endif
 
 Sprm * OOXMLPropertyImpl::clone()
 {
@@ -158,7 +150,7 @@ Sprm * OOXMLPropertyImpl::clone()
 
 void OOXMLPropertyImpl::resolve(writerfilter::Properties & rProperties)
 {
-    writerfilter::Properties * pProperties = NULL;
+    writerfilter::Properties * pProperties = nullptr;
     pProperties = &rProperties;
 
     switch (meType)
@@ -220,10 +212,12 @@ writerfilter::Reference<BinaryObj>::Pointer_t OOXMLValue::getBinary()
     return writerfilter::Reference<BinaryObj>::Pointer_t();
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLValue::toString() const
 {
     return "OOXMLValue";
 }
+#endif
 
 OOXMLValue * OOXMLValue::clone() const
 {
@@ -249,10 +243,12 @@ writerfilter::Reference<BinaryObj>::Pointer_t OOXMLBinaryValue::getBinary()
     return mpBinaryObj;
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLBinaryValue::toString() const
 {
     return "BinaryObj";
 }
+#endif
 
 OOXMLValue * OOXMLBinaryValue::clone() const
 {
@@ -263,19 +259,31 @@ OOXMLValue * OOXMLBinaryValue::clone() const
   class OOXMLBooleanValue
 */
 
+static bool GetBooleanValue(const char *pValue)
+{
+    return !strcmp(pValue, "true")
+           || !strcmp(pValue, "True")
+           || !strcmp(pValue, "1")
+           || !strcmp(pValue, "on")
+           || !strcmp(pValue, "On");
+}
+
+OOXMLValue::Pointer_t OOXMLBooleanValue::Create(bool bValue)
+{
+    static OOXMLValue::Pointer_t False(new OOXMLBooleanValue (false));
+    static OOXMLValue::Pointer_t True(new OOXMLBooleanValue (true));
+
+    return bValue ? True : False;
+}
+
+OOXMLValue::Pointer_t OOXMLBooleanValue::Create(const char *pValue)
+{
+    return Create (GetBooleanValue(pValue));
+}
+
 OOXMLBooleanValue::OOXMLBooleanValue(bool bValue)
 : mbValue(bValue)
 {
-}
-
-OOXMLBooleanValue::OOXMLBooleanValue(const OUString & rValue)
-: mbValue(false)
-{
-    mbValue = (rValue == "true"
-        || rValue == "True"
-        || rValue == "1"
-        || rValue == "on"
-        || rValue == "On");
 }
 
 OOXMLBooleanValue::~OOXMLBooleanValue()
@@ -299,10 +307,12 @@ uno::Any OOXMLBooleanValue::getAny() const
     return aResult;
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLBooleanValue::toString() const
 {
     return mbValue ? "true" : "false";
 }
+#endif
 
 OOXMLValue * OOXMLBooleanValue::clone() const
 {
@@ -334,10 +344,12 @@ OUString OOXMLStringValue::getString() const
     return mStr;
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLStringValue::toString() const
 {
     return OUStringToOString(mStr, RTL_TEXTENCODING_ASCII_US).getStr();
 }
+#endif
 
 OOXMLValue * OOXMLStringValue::clone() const
 {
@@ -363,10 +375,12 @@ uno::Any OOXMLInputStreamValue::getAny() const
     return aAny;
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLInputStreamValue::toString() const
 {
     return "InputStream";
 }
+#endif
 
 OOXMLValue * OOXMLInputStreamValue::clone() const
 {
@@ -382,9 +396,9 @@ bool OOXMLPropertySetImplCompare::operator()(const OOXMLProperty::Pointer_t x,
 {
     bool bResult = false;
 
-    if (x.get() == NULL && y.get() != NULL)
+    if (x.get() == nullptr && y.get() != nullptr)
         bResult = true;
-    else if (x.get() != NULL && y.get() != NULL)
+    else if (x.get() != nullptr && y.get() != nullptr)
         bResult = x->getId() < y->getId();
 
     return bResult;
@@ -395,8 +409,9 @@ bool OOXMLPropertySetImplCompare::operator()(const OOXMLProperty::Pointer_t x,
 */
 
 OOXMLPropertySetImpl::OOXMLPropertySetImpl()
-: msType("OOXMLPropertySetImpl")
 {
+    static OString aName("OOXMLPropertySetImpl");
+    maType = aName;
 }
 
 OOXMLPropertySetImpl::~OOXMLPropertySetImpl()
@@ -405,28 +420,16 @@ OOXMLPropertySetImpl::~OOXMLPropertySetImpl()
 
 void OOXMLPropertySetImpl::resolve(Properties & rHandler)
 {
-    size_t nIt = 0;
-
     // The pProp->resolve(rHandler) call below can cause elements to
     // be appended to mProperties. I don't think it can cause elements
     // to be deleted. But let's check with < here just to be safe that
     // the indexing below works.
-    while (nIt < mProperties.size())
+    for (size_t nIt = 0; nIt < mProperties.size(); ++nIt)
     {
         OOXMLProperty::Pointer_t pProp = mProperties[nIt];
 
-        if (pProp.get() != NULL)
+        if (pProp.get() != nullptr)
             pProp->resolve(rHandler);
-#ifdef DEBUG_RESOLVE
-        else
-        {
-            debug_logger->startElement("error");
-            debug_logger->chars(std::string("zero-property"));
-            debug_logger->endElement();
-        }
-#endif
-
-        ++nIt;
     }
 }
 
@@ -452,53 +455,22 @@ OOXMLPropertySetImpl::end() const
     return mProperties.end();
 }
 
-string OOXMLPropertySetImpl::getType() const
-{
-    return msType;
-}
-
 void OOXMLPropertySetImpl::add(OOXMLProperty::Pointer_t pProperty)
 {
-#ifdef DEBUG_PROPERTY_SET
-    debug_logger->startElement("propertyset.add");
-    debug_logger->chars(pProperty->toString());
-#endif
-
-    if (pProperty.get() != NULL && pProperty->getId() != 0x0)
+    if (pProperty.get() != nullptr && pProperty->getId() != 0x0)
     {
-        /*
-         HACK: Ugly hack. This retarded overdesigned writerfilter thing
-         processes attributes in random order (as given by boost::unordered_map
-         when iterating it), but StyleSheetTable::lcl_attribute() needs
-         to know whether NS_ooxml::LN_CT_Style_type is STYLE_TYPE_TABLE first.
-         And all this overdesigned machinery doesn't even give a reasonable
-         way to find out if an attribute is there before encountering it
-         in random order in lcl_attribute(), so just make sure here that
-         the attribute comes first.
-        */
-        if( pProperty->getId() == NS_ooxml::LN_CT_Style_type )
-            mProperties.insert( mProperties.begin(), pProperty );
-        else
-            mProperties.push_back(pProperty);
+        mProperties.push_back(pProperty);
     }
-#ifdef DEBUG_PROPERTY_SET
-    else
-    {
-        debug_logger->element("warning.property_not_added");
-    }
-
-    debug_logger->endElement("propertyset.add");
-#endif
 }
 
 void OOXMLPropertySetImpl::add(OOXMLPropertySet::Pointer_t pPropertySet)
 {
-    if (pPropertySet.get() != NULL)
+    if (pPropertySet.get() != nullptr)
     {
         OOXMLPropertySetImpl * pSet =
             dynamic_cast<OOXMLPropertySetImpl *>(pPropertySet.get());
 
-        if (pSet != NULL)
+        if (pSet != nullptr)
         {
             mProperties.resize(mProperties.size() + pSet->mProperties.size());
             for (OOXMLProperties_t::iterator aIt = pSet->mProperties.begin();
@@ -515,9 +487,10 @@ OOXMLPropertySet * OOXMLPropertySetImpl::clone() const
 
 void OOXMLPropertySetImpl::setType(const string & rsType)
 {
-    msType = rsType;
+    maType = OString(rsType.c_str(), rsType.size());
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLPropertySetImpl::toString()
 {
     string sResult = "[";
@@ -534,7 +507,7 @@ string OOXMLPropertySetImpl::toString()
         if (aIt != aItBegin)
             sResult += ", ";
 
-        if ((*aIt).get() != NULL)
+        if ((*aIt).get() != nullptr)
             sResult += (*aIt)->toString();
         else
             sResult += "0x0";
@@ -544,6 +517,7 @@ string OOXMLPropertySetImpl::toString()
 
     return sResult;
 }
+#endif
 
 /*
   class OOXMLPropertySetValue
@@ -565,6 +539,7 @@ writerfilter::Reference<Properties>::Pointer_t OOXMLPropertySetValue::getPropert
         (mpPropertySet->clone());
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLPropertySetValue::toString() const
 {
     char sBuffer[256];
@@ -573,6 +548,7 @@ string OOXMLPropertySetValue::toString() const
 
     return "OOXMLPropertySetValue(" + string(sBuffer) + ")";
 }
+#endif
 
 OOXMLValue * OOXMLPropertySetValue::clone() const
 {
@@ -583,15 +559,41 @@ OOXMLValue * OOXMLPropertySetValue::clone() const
   class OOXMLIntegerValue
 */
 
+OOXMLValue::Pointer_t OOXMLIntegerValue::Create(sal_Int32 nValue)
+{
+    static OOXMLValue::Pointer_t Zero(new OOXMLIntegerValue (0));
+    static OOXMLValue::Pointer_t One(new OOXMLIntegerValue (1));
+    static OOXMLValue::Pointer_t Two(new OOXMLIntegerValue (2));
+    static OOXMLValue::Pointer_t Three(new OOXMLIntegerValue (3));
+    static OOXMLValue::Pointer_t Four(new OOXMLIntegerValue (4));
+    static OOXMLValue::Pointer_t Five(new OOXMLIntegerValue (5));
+    static OOXMLValue::Pointer_t Six(new OOXMLIntegerValue (6));
+    static OOXMLValue::Pointer_t Seven(new OOXMLIntegerValue (7));
+    static OOXMLValue::Pointer_t Eight(new OOXMLIntegerValue (8));
+    static OOXMLValue::Pointer_t Nine(new OOXMLIntegerValue (9));
+
+    switch (nValue) {
+    case 0: return Zero;
+    case 1: return One;
+    case 2: return Two;
+    case 3: return Three;
+    case 4: return Four;
+    case 5: return Five;
+    case 6: return Six;
+    case 7: return Seven;
+    case 8: return Eight;
+    case 9: return Nine;
+    default: break;
+    }
+
+    OOXMLValue::Pointer_t value(new OOXMLIntegerValue(nValue));
+
+    return value;
+}
+
 OOXMLIntegerValue::OOXMLIntegerValue(sal_Int32 nValue)
 : mnValue(nValue)
 {
-}
-
-OOXMLIntegerValue::OOXMLIntegerValue(const OUString & rValue)
-: mnValue(0)
-{
-    mnValue = rValue.toInt32();
 }
 
 OOXMLIntegerValue::~OOXMLIntegerValue()
@@ -615,6 +617,7 @@ OOXMLValue * OOXMLIntegerValue::clone() const
     return new OOXMLIntegerValue(*this);
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLIntegerValue::toString() const
 {
     char buffer[256];
@@ -622,6 +625,7 @@ string OOXMLIntegerValue::toString() const
 
     return buffer;
 }
+#endif
 
 /*
   class OOXMLHexValue
@@ -632,12 +636,12 @@ OOXMLHexValue::OOXMLHexValue(sal_uInt32 nValue)
 {
 }
 
-OOXMLHexValue::OOXMLHexValue(const OUString & rValue)
+OOXMLHexValue::OOXMLHexValue(const char * pValue)
 {
 #if SUPD == 310
-    mnValue = (sal_uInt32)rValue.toInt32(16);
+    mnValue = (sal_uInt32)OUString(pValue).toInt32(16);
 #else	// SUPD == 310
-    mnValue = rValue.toUInt32(16);
+    mnValue = rtl_str_toUInt32(pValue, 16);
 #endif	// SUPD == 310
 }
 
@@ -655,6 +659,7 @@ OOXMLValue * OOXMLHexValue::clone() const
     return new OOXMLHexValue(*this);
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLHexValue::toString() const
 {
     char buffer[256];
@@ -662,15 +667,25 @@ string OOXMLHexValue::toString() const
 
     return buffer;
 }
+#endif
 
 // OOXMLUniversalMeasureValue
 
-OOXMLUniversalMeasureValue::OOXMLUniversalMeasureValue(const OUString& rValue)
+OOXMLUniversalMeasureValue::OOXMLUniversalMeasureValue(const char * pValue)
 {
-    if (rValue.endsWith("pt"))
-        mnValue = rValue.copy(0, rValue.getLength() - 2).toInt32() * 20;
-    else
-        mnValue = rValue.toInt32();
+#if SUPD == 310
+    mnValue = (sal_uInt32)OUString(pValue).toInt32(10);
+#else	// SUPD == 310
+    mnValue = rtl_str_toUInt32(pValue, 10); // will ignore the trailing 'pt'
+#endif	// SUPD == 310
+
+    int nLen = strlen(pValue);
+    if (nLen > 2 &&
+        pValue[nLen-2] == 'p' &&
+        pValue[nLen-1] == 't')
+    {
+        mnValue = mnValue * 20;
+    }
 }
 
 OOXMLUniversalMeasureValue::~OOXMLUniversalMeasureValue()
@@ -687,14 +702,12 @@ OOXMLValue* OOXMLUniversalMeasureValue::clone() const
     return new OOXMLUniversalMeasureValue(*this);
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLUniversalMeasureValue::toString() const
 {
-#if SUPD == 310
-    return OString::number((sal_Int32)mnValue).getStr();
-#else	// SUPD == 310
     return OString::number(mnValue).getStr();
-#endif	// SUPD == 310
 }
+#endif
 
 /*
   class OOXMLShapeValue
@@ -715,10 +728,12 @@ uno::Any OOXMLShapeValue::getAny() const
     return uno::Any(mrShape);
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLShapeValue::toString() const
 {
     return "Shape";
 }
+#endif
 
 OOXMLValue * OOXMLShapeValue::clone() const
 {
@@ -744,10 +759,12 @@ uno::Any OOXMLStarMathValue::getAny() const
     return uno::Any(component);
 }
 
+#ifdef DEBUG_WRITERFILTER
 string OOXMLStarMathValue::toString() const
 {
     return "StarMath";
 }
+#endif
 
 OOXMLValue * OOXMLStarMathValue::clone() const
 {
@@ -780,7 +797,7 @@ void OOXMLTableImpl::resolve(Table & rTable)
         writerfilter::Reference<Properties>::Pointer_t pProperties
             ((*it)->getProperties());
 
-        if (pProperties.get() != NULL)
+        if (pProperties.get() != nullptr)
             pTable->entry(nPos, pProperties);
 
         ++nPos;
@@ -790,13 +807,8 @@ void OOXMLTableImpl::resolve(Table & rTable)
 
 void OOXMLTableImpl::add(ValuePointer_t pPropertySet)
 {
-    if (pPropertySet.get() != NULL)
+    if (pPropertySet.get() != nullptr)
         mPropertySets.push_back(pPropertySet);
-}
-
-string OOXMLTableImpl::getType() const
-{
-    return "OOXMLTableImpl";
 }
 
 OOXMLTable * OOXMLTableImpl::clone() const
@@ -827,10 +839,6 @@ void OOXMLPropertySetEntryToString::attribute(Id nId, Value & rValue)
         mStr = rValue.getString();
 }
 
-const OUString & OOXMLPropertySetEntryToString::getString() const
-{
-    return mStr;
-}
 
 OOXMLPropertySetEntryToInteger::OOXMLPropertySetEntryToInteger(Id nId)
 : mnId(nId), mnValue(0)
@@ -851,10 +859,6 @@ void OOXMLPropertySetEntryToInteger::attribute(Id nId, Value & rValue)
         mnValue = rValue.getInt();
 }
 
-int OOXMLPropertySetEntryToInteger::getValue() const
-{
-    return mnValue;
-}
 
 }}
 

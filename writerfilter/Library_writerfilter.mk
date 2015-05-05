@@ -28,27 +28,8 @@ $(eval $(call gb_Library_use_sdk_api,writerfilter))
 $(eval $(call gb_Library_set_componentfile,writerfilter,writerfilter/util/writerfilter))
 
 $(eval $(call gb_Library_add_defs,writerfilter,\
-	-DWRITERFILTER_DOCTOK_DLLIMPLEMENTATION \
-	-DWRITERFILTER_OOXML_DLLIMPLEMENTATION \
-	-DWRITERFILTER_RESOURCEMODEL_DLLIMPLEMENTATION \
-	-DWRITERFILTER_RTFTOK_DLLIMPLEMENTATION \
-	-DWRITERFILTER_WRITERFILTER_DLLIMPLEMENTATION \
-	$(if $(filter-out 0 1,$(gb_DEBUGLEVEL)), \
-		-DDEBUG_DOMAINMAPPER \
-		-DDEBUG_ELEMENT \
-		-DDEBUG_RESOLVE \
-		-DDEBUG_CONTEXT_STACK \
-		-DDEBUG_ATTRIBUTES \
-		-DDEBUG_PROPERTIES \
-		-DDEBUG_CONTEXT_HANDLER \
-		-DDEBUG_IMPORT \
-		-DDEBUG_LOGGING \
-		-DDEBUG_DMAPPER_PROPERTY_MAP \
-		-DDEBUG_DMAPPER_TABLE_HANDLER \
-		-DDEBUG_TABLE \
-		-DDEBUG_DMAPPER_SETTINGS_TABLE \
-		-DDEBUG_FACTORY \
-		-DDEBUG_DMAPPER_GRAPHIC_IMPORT \
+	$(if $(filter-out 0,$(gb_DEBUGLEVEL)), \
+		-DDEBUG_WRITERFILTER \
 	) \
 ))
 
@@ -136,22 +117,19 @@ $(eval $(call gb_Library_add_exception_objects,writerfilter,\
     writerfilter/source/ooxml/OOXMLFactory \
     writerfilter/source/ooxml/OOXMLFastContextHandler \
     writerfilter/source/ooxml/OOXMLFastDocumentHandler \
-    writerfilter/source/ooxml/OOXMLFastTokenHandler \
     writerfilter/source/ooxml/OOXMLParserState \
     writerfilter/source/ooxml/OOXMLPropertySetImpl \
     writerfilter/source/ooxml/OOXMLStreamImpl \
-    writerfilter/source/resourcemodel/Fraction \
     writerfilter/source/resourcemodel/LoggedResources \
     writerfilter/source/resourcemodel/ResourceModelHelper \
     writerfilter/source/resourcemodel/TagLogger \
-    writerfilter/source/resourcemodel/XPathLogger \
     writerfilter/source/resourcemodel/qnametostrcore \
     writerfilter/source/resourcemodel/util \
 ))
 
 $(eval $(call gb_Library_add_generated_exception_objects,writerfilter,\
-    $(patsubst %,CustomTarget/writerfilter/source/OOXMLFactory_%,$(writerfilter_OOXMLNAMESPACES)) \
-    CustomTarget/writerfilter/source/OOXMLFactory_generated \
+    $(patsubst %,CustomTarget/writerfilter/source/ooxml/OOXMLFactory_%,$(writerfilter_OOXMLNAMESPACES)) \
+    CustomTarget/writerfilter/source/ooxml/OOXMLFactory_generated \
     CustomTarget/writerfilter/source/ooxml/qnametostr \
 ))
 

@@ -26,11 +26,7 @@
 
 namespace writerfilter
 {
-    std::string xmlify(const std::string & str);
-
-#if OSL_DEBUG_LEVEL > 1
     std::string toString(css::uno::Reference< css::text::XTextRange > textRange);
-#endif
 }
 
 #endif // INCLUDED_WRITERFILTER_INC_RESOURCEMODEL_UTIL_HXX

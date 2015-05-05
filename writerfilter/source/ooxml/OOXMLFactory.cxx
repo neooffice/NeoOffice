@@ -21,76 +21,20 @@
 
 #include <rtl/instance.hxx>
 #include <osl/mutex.hxx>
+#include <sax/fastattribs.hxx>
 #include "OOXMLFactory.hxx"
 #include "OOXMLFastHelper.hxx"
 
 namespace writerfilter {
 namespace ooxml {
 
-AttributeInfo::AttributeInfo()
-:m_nResource(RT_NoResource), m_nRef(0)
-{
-}
-
-AttributeInfo::AttributeInfo(ResourceType_t nResource, Id nRef)
- :m_nResource(nResource), m_nRef(nRef)
-{
-}
-
-CreateElement::CreateElement()
-:m_nResource(RT_NoResource), m_nId(0)
-{
-}
-
-CreateElement::CreateElement(ResourceType_t nResource, Id nId)
-: m_nResource(nResource), m_nId(nId)
-{
-}
+using namespace com::sun::star;
 
 // class OOXMLFactory_ns
 
 OOXMLFactory_ns::~OOXMLFactory_ns()
 {
 }
-
-AttributeToResourceMapPointer OOXMLFactory_ns::getAttributeToResourceMap(Id nId)
-{
-    if (m_AttributesMap.find(nId) == m_AttributesMap.end())
-        m_AttributesMap[nId] = createAttributeToResourceMap(nId);
-
-    return m_AttributesMap[nId];
-}
-
-ListValueMapPointer OOXMLFactory_ns::getListValueMap(Id nId)
-{
-    if (m_ListValuesMap.find(nId) == m_ListValuesMap.end())
-        m_ListValuesMap[nId] = createListValueMap(nId);
-
-    return m_ListValuesMap[nId];
-}
-
-CreateElementMapPointer OOXMLFactory_ns::getCreateElementMap(Id nId)
-{
-    if (m_CreateElementsMap.find(nId) == m_CreateElementsMap.end())
-        m_CreateElementsMap[nId] = createCreateElementMap(nId);
-
-    return m_CreateElementsMap[nId];
-}
-
-TokenToIdMapPointer OOXMLFactory_ns::getTokenToIdMap(Id nId)
-{
-    if (m_TokenToIdsMap.find(nId) == m_TokenToIdsMap.end())
-        m_TokenToIdsMap[nId] = createTokenToIdMap(nId);
-
-    return m_TokenToIdsMap[nId];
-}
-
-#ifdef DEBUG_FACTORY
-string OOXMLFactory_ns::getDefineName(Id /*nId*/) const
-{
-    return "";
-}
-#endif
 
 // class OOXMLFactory
 
@@ -101,8 +45,8 @@ OOXMLFactory::Pointer_t OOXMLFactory::m_Instance;
 OOXMLFactory::OOXMLFactory()
 {
     // multi-thread-safe mutex for all platforms
-
     osl::MutexGuard aGuard(OOXMLFactory_Mutex::get());
+    mnRefCnt = 0;
 }
 
 OOXMLFactory::~OOXMLFactory()
@@ -111,8 +55,12 @@ OOXMLFactory::~OOXMLFactory()
 
 OOXMLFactory::Pointer_t OOXMLFactory::getInstance()
 {
-    if (m_Instance.get() == NULL)
+    if (m_Instance.get() == nullptr)
+#if SUPD == 310
+        m_Instance = new OOXMLFactory();
+#else	// SUPD == 310
         m_Instance.reset(new OOXMLFactory());
+#endif 	// SUPD == 310
 
     return m_Instance;
 }
@@ -123,143 +71,85 @@ void OOXMLFactory::attributes(OOXMLFastContextHandler * pHandler,
     Id nDefine = pHandler->getDefine();
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
 
-    if (pFactory.get() != NULL)
+    if (pFactory.get() == nullptr)
+        return;
+
+    assert( dynamic_cast< sax_fastparser::FastAttributeList *>( Attribs.get() ) != nullptr );
+    sax_fastparser::FastAttributeList *pAttribs;
+    pAttribs = static_cast< sax_fastparser::FastAttributeList *>( Attribs.get() );
+
+    const AttributeInfo *pAttr = pFactory->getAttributeInfoArray(nDefine);
+    if (!pAttr)
+        return;
+
+    for (; pAttr->m_nToken != -1; ++pAttr)
     {
-#ifdef DEBUG_FACTORY
-        debug_logger->startElement("factory.attributes");
-        debug_logger->attribute("define", pFactory->getDefineName(nDefine));
-        char sBuffer[256];
-        snprintf(sBuffer, sizeof(sBuffer), "%08" SAL_PRIxUINT32, nDefine);
-        debug_logger->attribute("define-num", sBuffer);
-#endif
+        sal_Int32 nToken = pAttr->m_nToken;
+        if (!pAttribs->hasAttribute(nToken))
+            continue;
 
-        TokenToIdMapPointer pTokenToIdMap = pFactory->getTokenToIdMap(nDefine);
-        AttributeToResourceMapPointer pMap = pFactory->getAttributeToResourceMap(nDefine);
+        Id nId = pFactory->getResourceId(nDefine, nToken);
 
-        AttributeToResourceMap::const_iterator aIt;
-        AttributeToResourceMap::const_iterator aEndIt = pMap->end();
-
-        for (aIt = pMap->begin(); aIt != aEndIt; ++aIt)
+        switch (pAttr->m_nResource)
         {
-            Id nId = (*pTokenToIdMap)[aIt->first];
-#ifdef DEBUG_FACTORY
-            debug_logger->startElement("factory.attribute");
-            debug_logger->attribute("name", fastTokenToId(aIt->first));
-            debug_logger->attribute("tokenid", (*QNameToString::Instance())(nId));
-            snprintf(sBuffer, sizeof(sBuffer), "%08" SAL_PRIxUINT32, nId);
-            debug_logger->attribute("tokenid-num", sBuffer);
-#endif
-            if (Attribs->hasAttribute(aIt->first))
+        case RT_Boolean:
             {
-                switch (aIt->second.m_nResource)
+                const char *pValue = "";
+                pAttribs->getAsChar(nToken, pValue);
+                OOXMLValue::Pointer_t xValue(OOXMLBooleanValue::Create(pValue));
+                pHandler->newProperty(nId, xValue);
+                pFactory->attributeAction(pHandler, nToken, xValue);
+            }
+            break;
+        case RT_String:
+            {
+                OUString aValue(pAttribs->getValue(nToken));
+                OOXMLValue::Pointer_t xValue(new OOXMLStringValue(aValue));
+                pHandler->newProperty(nId, xValue);
+                pFactory->attributeAction(pHandler, nToken, xValue);
+            }
+            break;
+        case RT_Integer:
+            {
+                sal_Int32 nValue;
+                pAttribs->getAsInteger(nToken,nValue);
+                OOXMLValue::Pointer_t xValue = OOXMLIntegerValue::Create(nValue);
+                pHandler->newProperty(nId, xValue);
+                pFactory->attributeAction(pHandler, nToken, xValue);
+            }
+            break;
+        case RT_Hex:
+            {
+                const char *pValue = "";
+                pAttribs->getAsChar(nToken, pValue);
+                OOXMLValue::Pointer_t xValue(new OOXMLHexValue(pValue));
+                pHandler->newProperty(nId, xValue);
+                pFactory->attributeAction(pHandler, nToken, xValue);
+            }
+            break;
+        case RT_UniversalMeasure:
+            {
+                const char *pValue = "";
+                pAttribs->getAsChar(nToken, pValue);
+                OOXMLValue::Pointer_t xValue(new OOXMLUniversalMeasureValue(pValue));
+                pHandler->newProperty(nId, xValue);
+                pFactory->attributeAction(pHandler, nToken, xValue);
+            }
+            break;
+        case RT_List:
+            {
+                sal_uInt32 nValue;
+                if (pFactory->getListValue(pAttr->m_nRef, Attribs->getValue(nToken), nValue))
                 {
-                case RT_Boolean:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->element("boolean");
-#endif
-                        OUString aValue(Attribs->getValue(aIt->first));
-                        OOXMLFastHelper<OOXMLBooleanValue>::newProperty(pHandler, nId, aValue);
-
-                        OOXMLValue::Pointer_t pValue(new OOXMLBooleanValue(aValue));
-                        pFactory->attributeAction(pHandler, aIt->first, pValue);
-                    }
-                    break;
-                case RT_String:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->element("string");
-#endif
-                        OUString aValue(Attribs->getValue(aIt->first));
-                        OOXMLFastHelper<OOXMLStringValue>::newProperty
-                            (pHandler, nId, aValue);
-
-                        OOXMLValue::Pointer_t pValue(new OOXMLStringValue(aValue));
-                        pFactory->attributeAction(pHandler, aIt->first, pValue);
-                    }
-                    break;
-                case RT_Integer:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->element("integer");
-#endif
-                        OUString aValue(Attribs->getValue(aIt->first));
-                        OOXMLFastHelper<OOXMLIntegerValue>::newProperty
-                            (pHandler, nId, aValue);
-
-                        OOXMLValue::Pointer_t pValue(new OOXMLIntegerValue(aValue));
-                        pFactory->attributeAction(pHandler, aIt->first, pValue);
-                    }
-                    break;
-                case RT_Hex:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->element("hex");
-#endif
-                        OUString aValue(Attribs->getValue(aIt->first));
-                        OOXMLFastHelper<OOXMLHexValue>::newProperty
-                            (pHandler, nId, aValue);
-
-                        OOXMLValue::Pointer_t pValue(new OOXMLHexValue(aValue));
-                        pFactory->attributeAction(pHandler, aIt->first, pValue);
-                    }
-                    break;
-                case RT_UniversalMeasure:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->element("universalMeasure");
-#endif
-                        OUString aValue(Attribs->getValue(aIt->first));
-                        OOXMLFastHelper<OOXMLUniversalMeasureValue>::newProperty(pHandler, nId, aValue);
-
-                        OOXMLValue::Pointer_t pValue(new OOXMLUniversalMeasureValue(aValue));
-                        pFactory->attributeAction(pHandler, aIt->first, pValue);
-                    }
-                    break;
-                case RT_List:
-                    {
-#ifdef DEBUG_FACTORY
-                        debug_logger->startElement("list");
-#endif
-                        ListValueMapPointer pListValueMap =
-                            pFactory->getListValueMap(aIt->second.m_nRef);
-
-                        if (pListValueMap.get() != NULL)
-                        {
-                            OUString aValue(Attribs->getValue(aIt->first));
-                            sal_uInt32 nValue = (*pListValueMap)[aValue];
-
-#ifdef DEBUG_FACTORY
-                            debug_logger->attribute("value", aValue);
-                            debug_logger->attribute("value-num", nValue);
-#endif
-
-                            OOXMLFastHelper<OOXMLIntegerValue>::newProperty
-                                (pHandler, nId, nValue);
-
-                            OOXMLValue::Pointer_t pValue(new OOXMLIntegerValue(nValue));
-                            pFactory->attributeAction(pHandler, aIt->first, pValue);
-                        }
-#ifdef DEBUG_FACTORY
-                        debug_logger->endElement();
-#endif
-                    }
-                    break;
-                default:
-#ifdef DEBUG_FACTORY
-                    debug_logger->element("unknown-attribute-type");
-#endif
-                    break;
+                    OOXMLValue::Pointer_t xValue = OOXMLIntegerValue::Create(nValue);
+                    pHandler->newProperty(nId, xValue);
+                    pFactory->attributeAction(pHandler, nToken, xValue);
                 }
             }
-#ifdef DEBUG_FACTORY
-            debug_logger->endElement();
-#endif
+            break;
+        default:
+            break;
         }
-
-#ifdef DEBUG_FACTORY
-        debug_logger->endElement();
-#endif
     }
 }
 
@@ -267,11 +157,6 @@ uno::Reference< xml::sax::XFastContextHandler>
 OOXMLFactory::createFastChildContext(OOXMLFastContextHandler * pHandler,
                                      Token_t Element)
 {
-#ifdef DEBUG_FACTORY
-    debug_logger->startElement("factory.createFastChildContext");
-    debug_logger->attribute("token", fastTokenToId(Element));
-#endif
-
     Id nDefine = pHandler->getDefine();
 
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
@@ -279,12 +164,8 @@ OOXMLFactory::createFastChildContext(OOXMLFastContextHandler * pHandler,
     uno::Reference< xml::sax::XFastContextHandler> ret;
 
     //Avoid handling unknown tokens and recursing to death
-    if ((Element & 0xffff) < OOXML_FAST_TOKENS_END)
+    if ((Element & 0xffff) < oox::XML_TOKEN_COUNT)
         ret = createFastChildContextFromFactory(pHandler, pFactory, Element);
-
-#ifdef DEBUG_FACTORY
-    debug_logger->endElement();
-#endif
 
     return ret;
 }
@@ -292,22 +173,13 @@ OOXMLFactory::createFastChildContext(OOXMLFastContextHandler * pHandler,
 void OOXMLFactory::characters(OOXMLFastContextHandler * pHandler,
                               const OUString & rString)
 {
-#ifdef DEBUG_FACTORY
-    debug_logger->startElement("factory.characters");
-    debug_logger->chars(rString);
-#endif
-
     Id nDefine = pHandler->getDefine();
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
 
-    if (pFactory.get() != NULL)
+    if (pFactory.get() != nullptr)
     {
         pFactory->charactersAction(pHandler, rString);
     }
-
-#ifdef DEBUG_FACTORY
-    debug_logger->endElement();
-#endif
 }
 
 void OOXMLFactory::startAction(OOXMLFastContextHandler * pHandler, Token_t /*nToken*/)
@@ -315,15 +187,9 @@ void OOXMLFactory::startAction(OOXMLFastContextHandler * pHandler, Token_t /*nTo
     Id nDefine = pHandler->getDefine();
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
 
-    if (pFactory.get() != NULL)
+    if (pFactory.get() != nullptr)
     {
-#ifdef DEBUG_ELEMENT
-        debug_logger->startElement("factory.startAction");
-#endif
         pFactory->startAction(pHandler);
-#ifdef DEBUG_ELEMENT
-        debug_logger->endElement();
-#endif
     }
 }
 
@@ -332,15 +198,9 @@ void OOXMLFactory::endAction(OOXMLFastContextHandler * pHandler, Token_t /*nToke
     Id nDefine = pHandler->getDefine();
     OOXMLFactory_ns::Pointer_t pFactory = getFactoryForNamespace(nDefine);
 
-    if (pFactory.get() != NULL)
+    if (pFactory.get() != nullptr)
     {
-#ifdef DEBUG_ELEMENT
-        debug_logger->startElement("factory.endAction");
-#endif
         pFactory->endAction(pHandler);
-#ifdef DEBUG_ELEMENT
-        debug_logger->endElement();
-#endif
     }
 }
 
@@ -359,13 +219,6 @@ void OOXMLFactory_ns::charactersAction(OOXMLFastContextHandler *, const OUString
 void OOXMLFactory_ns::attributeAction(OOXMLFastContextHandler *, Token_t, OOXMLValue::Pointer_t)
 {
 }
-
-#ifdef DEBUG_FACTORY
-string OOXMLFactory_ns::getName() const
-{
-    return "noname";
-}
-#endif
 
 }
 }

@@ -23,6 +23,7 @@
 #include <resourcemodel/util.hxx>
 #include <resourcemodel/QNameToString.hxx>
 #if SUPD == 310
+#include <hash_map>
 #else	// SUPD == 310
 #include <boost/unordered_map.hpp>
 #endif	// SUPD == 310
@@ -32,17 +33,17 @@ using namespace css;
 namespace writerfilter
 {
     TagLogger::TagLogger(const char* name)
-        : pWriter( NULL ), pName( name )
+        : pWriter( nullptr ), pName( name )
     {
     }
 
     TagLogger::~TagLogger()
     {
-        pWriter = NULL;
-        pName = NULL;
+        pWriter = nullptr;
+        pName = nullptr;
     }
 
-#ifdef DEBUG_IMPORT
+#ifdef DEBUG_WRITERFILTER
     void TagLogger::setFileName( const std::string & filename )
     {
         if ( pWriter )
@@ -51,7 +52,7 @@ namespace writerfilter
         std::string fileName;
         char * temp = getenv("TAGLOGGERTMP");
 
-        if (temp != NULL)
+        if (temp != nullptr)
             fileName += temp;
         else
             fileName += "/tmp";
@@ -77,15 +78,19 @@ namespace writerfilter
 
     void TagLogger::startDocument()
     {
-        xmlTextWriterStartDocument( pWriter, NULL, NULL, NULL );
+        if (!pWriter)
+            return;
+        xmlTextWriterStartDocument( pWriter, nullptr, nullptr, nullptr );
         xmlTextWriterStartElement( pWriter, BAD_CAST( "root" ) );
     }
 
     void TagLogger::endDocument()
     {
+        if (!pWriter)
+            return;
         xmlTextWriterEndDocument( pWriter );
         xmlFreeTextWriter( pWriter );
-        pWriter = NULL;
+        pWriter = nullptr;
     }
 
 #endif
@@ -115,7 +120,7 @@ namespace writerfilter
         return aIt->second;
     }
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     void TagLogger::element(const std::string & name)
     {
         startElement(name);
@@ -154,11 +159,10 @@ namespace writerfilter
         endElement( );
     }
 
-#endif
-
-#if OSL_DEBUG_LEVEL > 1
     void TagLogger::startElement(const std::string & name)
     {
+        if (!pWriter)
+            return;
         xmlChar* xmlName = xmlCharStrdup( name.c_str() );
         xmlTextWriterStartElement( pWriter, xmlName );
         xmlFree( xmlName );
@@ -167,6 +171,8 @@ namespace writerfilter
 
     void TagLogger::attribute(const std::string & name, const std::string & value)
     {
+        if (!pWriter)
+            return;
         xmlChar* xmlName = xmlCharStrdup( name.c_str() );
         xmlChar* xmlValue = xmlCharStrdup( value.c_str() );
         xmlTextWriterWriteAttribute( pWriter, xmlName, xmlValue );
@@ -175,7 +181,7 @@ namespace writerfilter
         xmlFree( xmlName );
     }
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_WRITERFILTER
     void TagLogger::attribute(const std::string & name, const OUString & value)
     {
         attribute( name, OUStringToOString( value, RTL_TEXTENCODING_ASCII_US ).getStr() );
@@ -183,6 +189,8 @@ namespace writerfilter
 
     void TagLogger::attribute(const std::string & name, sal_uInt32 value)
     {
+        if (!pWriter)
+            return;
         xmlChar* xmlName = xmlCharStrdup( name.c_str() );
         xmlTextWriterWriteFormatAttribute( pWriter, xmlName,
                "%" SAL_PRIuUINT32, value );
@@ -191,9 +199,8 @@ namespace writerfilter
 
     void TagLogger::attribute(const std::string & name, const uno::Any aAny)
     {
-        std::string aTmpStrInt;
-        std::string aTmpStrFloat;
-        std::string aTmpStrString;
+        if (!pWriter)
+            return;
 
         sal_Int32 nInt = 0;
         float nFloat = 0.0;
@@ -219,6 +226,8 @@ namespace writerfilter
 
     void TagLogger::chars(const std::string & rChars)
     {
+        if (!pWriter)
+            return;
         xmlChar* xmlChars = xmlCharStrdup( rChars.c_str() );
         xmlTextWriterWriteString( pWriter, xmlChars );
         xmlFree( xmlChars );
@@ -231,11 +240,11 @@ namespace writerfilter
 
     void TagLogger::endElement()
     {
+        if (!pWriter)
+            return;
         xmlTextWriterEndElement( pWriter );
     }
-#endif
 
-#ifdef DEBUG_CONTEXT_HANDLER
     class PropertySetDumpHandler : public Properties
     {
         IdToString::Pointer_t mpIdToString;
@@ -248,8 +257,8 @@ namespace writerfilter
 
         void resolve(writerfilter::Reference<Properties>::Pointer_t props);
 
-        virtual void attribute(Id name, Value & val);
-        virtual void sprm(Sprm & sprm);
+        virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
+        virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
     };
 
     PropertySetDumpHandler::PropertySetDumpHandler(TagLogger* pLogger,
@@ -266,7 +275,7 @@ namespace writerfilter
     void PropertySetDumpHandler::resolve(
             writerfilter::Reference<Properties>::Pointer_t pProps)
     {
-        if (pProps.get() != NULL)
+        if (pProps.get() != nullptr)
             pProps->resolve( *this );
     }
 

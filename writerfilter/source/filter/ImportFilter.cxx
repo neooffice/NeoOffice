@@ -33,7 +33,7 @@
 #include <dmapper/DomainMapper.hxx>
 #include <WriterFilter.hxx>
 #include <ooxml/OOXMLDocument.hxx>
-#ifdef DEBUG_IMPORT
+#ifdef DEBUG_WRITERFILTER
 #include <iostream>
 #include <osl/process.h>
 #endif
@@ -79,7 +79,11 @@ sal_Bool WriterFilter::filter( const uno::Sequence< beans::PropertyValue >& aDes
     }
     else if (m_xDstDoc.is())
     {
-        MediaDescriptor aMediaDesc( aDescriptor );
+#if SUPD == 310
+        comphelper::MediaDescriptor aMediaDesc( aDescriptor );
+#else	// SUPD == 310
+        utl::MediaDescriptor aMediaDesc( aDescriptor );
+#endif	// SUPD == 310
         bool bRepairStorage = aMediaDesc.getUnpackedValueOrDefault( "RepairPackage", false );
 
         uno::Reference< io::XInputStream > xInputStream;
@@ -96,33 +100,27 @@ sal_Bool WriterFilter::filter( const uno::Sequence< beans::PropertyValue >& aDes
         if ( !xInputStream.is() )
             return sal_False;
 
-#ifdef DEBUG_IMPORT
-        OUString sURL = aMediaDesc.getUnpackedValueOrDefault( MediaDescriptor::PROP_URL(), OUString() );
+#ifdef DEBUG_WRITERFILTER
+        OUString sURL = aMediaDesc.getUnpackedValueOrDefault( utl::MediaDescriptor::PROP_URL(), OUString() );
         ::std::string sURLc = OUStringToOString(sURL, RTL_TEXTENCODING_ASCII_US).getStr();
 
-        writerfilter::TagLogger::Pointer_t debugLogger
-        (writerfilter::TagLogger::getInstance("DEBUG"));
-        debugLogger->setFileName(sURLc);
-        debugLogger->startDocument();
-
-        writerfilter::TagLogger::Pointer_t dmapperLogger
+        writerfilter::TagLogger::Pointer_t dmapper_logger
         (writerfilter::TagLogger::getInstance("DOMAINMAPPER"));
-        dmapperLogger->setFileName(sURLc);
-        dmapperLogger->startDocument();
+        if (getenv("SW_DEBUG_WRITERFILTER"))
+            dmapper_logger->setFileName(sURLc);
+        dmapper_logger->startDocument();
 #endif
 
-    writerfilter::dmapper::SourceDocumentType eType =
-        (m_sFilterName == "writer_MS_Word_2007" || m_sFilterName == "writer_MS_Word_2007_Template" ||
-         m_sFilterName == "writer_OOXML" || m_sFilterName == "writer_OOXML_Text_Template" ) ?
-            writerfilter::dmapper::DOCUMENT_OOXML : writerfilter::dmapper::DOCUMENT_DOC;
-
-    writerfilter::dmapper::DomainMapper* aDomainMapper = new writerfilter::dmapper::DomainMapper(m_xContext, xInputStream, m_xDstDoc, bRepairStorage, eType, uno::Reference<text::XTextRange>());
-    writerfilter::Stream::Pointer_t pStream(aDomainMapper);
-    //create the tokenizer and domain mapper
-    if( eType == writerfilter::dmapper::DOCUMENT_OOXML )
-    {
+        writerfilter::dmapper::SourceDocumentType eType = writerfilter::dmapper::DOCUMENT_OOXML;
+        writerfilter::dmapper::DomainMapper* aDomainMapper = new writerfilter::dmapper::DomainMapper(m_xContext, xInputStream, m_xDstDoc, bRepairStorage, eType, uno::Reference<text::XTextRange>());
+        writerfilter::Stream::Pointer_t pStream(aDomainMapper);
+        //create the tokenizer and domain mapper
         writerfilter::ooxml::OOXMLStream::Pointer_t pDocStream = writerfilter::ooxml::OOXMLDocumentFactory::createStream(m_xContext, xInputStream, bRepairStorage);
-        uno::Reference<task::XStatusIndicator> xStatusIndicator = aMediaDesc.getUnpackedValueOrDefault(MediaDescriptor::PROP_STATUSINDICATOR(), uno::Reference<task::XStatusIndicator>());
+#if SUPD == 310
+        uno::Reference<task::XStatusIndicator> xStatusIndicator = aMediaDesc.getUnpackedValueOrDefault(comphelper::MediaDescriptor::PROP_STATUSINDICATOR(), uno::Reference<task::XStatusIndicator>());
+#else	// SUPD == 310
+        uno::Reference<task::XStatusIndicator> xStatusIndicator = aMediaDesc.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_STATUSINDICATOR(), uno::Reference<task::XStatusIndicator>());
+#endif	// SUPD == 310
         writerfilter::ooxml::OOXMLDocument::Pointer_t pDocument(writerfilter::ooxml::OOXMLDocumentFactory::createDocument(pDocStream, xStatusIndicator));
 
         uno::Reference<frame::XModel> xModel(m_xDstDoc, uno::UNO_QUERY_THROW);
@@ -137,41 +135,31 @@ sal_Bool WriterFilter::filter( const uno::Sequence< beans::PropertyValue >& aDes
         pDocument->resolve(*pStream);
 
         // Adding some properties to the document's grab bag for interoperability purposes:
-        uno::Sequence<beans::PropertyValue> aGrabBagProperties(10);
+        comphelper::SequenceAsHashMap aGrabBagProperties;
 
         // Adding the saved Theme DOM
-        aGrabBagProperties[0].Name = "OOXTheme";
-        aGrabBagProperties[0].Value = uno::makeAny( pDocument->getThemeDom() );
+        aGrabBagProperties["OOXTheme"] = uno::makeAny( pDocument->getThemeDom() );
 
         // Adding the saved custom xml DOM
-        aGrabBagProperties[1].Name = "OOXCustomXml";
-        aGrabBagProperties[1].Value = uno::makeAny( pDocument->getCustomXmlDomList() );
-        aGrabBagProperties[2].Name = "OOXCustomXmlProps";
-        aGrabBagProperties[2].Value = uno::makeAny( pDocument->getCustomXmlDomPropsList() );
+        aGrabBagProperties["OOXCustomXml"] = uno::makeAny( pDocument->getCustomXmlDomList() );
+        aGrabBagProperties["OOXCustomXmlProps"] = uno::makeAny( pDocument->getCustomXmlDomPropsList() );
 
         // Adding the saved ActiveX DOM
-        aGrabBagProperties[3].Name = "OOXActiveX";
-        aGrabBagProperties[3].Value = uno::makeAny( pDocument->getActiveXDomList() );
-        aGrabBagProperties[4].Name = "OOXActiveXBin";
-        aGrabBagProperties[4].Value = uno::makeAny( pDocument->getActiveXBinList() );
+        aGrabBagProperties["OOXActiveX"] = uno::makeAny( pDocument->getActiveXDomList() );
+        aGrabBagProperties["OOXActiveXBin"] = uno::makeAny( pDocument->getActiveXBinList() );
 
         // Adding the saved w:themeFontLang setting
-        aGrabBagProperties[5].Name = "ThemeFontLangProps";
-        aGrabBagProperties[5].Value = uno::makeAny( aDomainMapper->GetThemeFontLangProperties() );
+        aGrabBagProperties["ThemeFontLangProps"] = uno::makeAny( aDomainMapper->GetThemeFontLangProperties() );
 
         // Adding the saved Glossary Documnet DOM to the document's grab bag
-        aGrabBagProperties[6].Name = "OOXGlossary";
-        aGrabBagProperties[6].Value = uno::makeAny( pDocument->getGlossaryDocDom() );
-        aGrabBagProperties[7].Name = "OOXGlossaryDom";
-        aGrabBagProperties[7].Value = uno::makeAny( pDocument->getGlossaryDomList() );
+        aGrabBagProperties["OOXGlossary"] = uno::makeAny( pDocument->getGlossaryDocDom() );
+        aGrabBagProperties["OOXGlossaryDom"] = uno::makeAny( pDocument->getGlossaryDomList() );
 
         // Adding the saved embedding document to document's grab bag
-        aGrabBagProperties[8].Name = "OOXEmbeddings";
-        aGrabBagProperties[8].Value = uno::makeAny( pDocument->getEmbeddingsList() );
+        aGrabBagProperties["OOXEmbeddings"] = uno::makeAny( pDocument->getEmbeddingsList() );
 
         // Adding the saved compat settings
-        aGrabBagProperties[9].Name = "CompatSettings";
-        aGrabBagProperties[9].Value = uno::makeAny( aDomainMapper->GetCompatSettings() );
+        aGrabBagProperties["CompatSettings"] = uno::makeAny( aDomainMapper->GetCompatSettings() );
 
         putPropertiesToDocumentGrabBag( aGrabBagProperties );
 
@@ -180,28 +168,38 @@ sal_Bool WriterFilter::filter( const uno::Sequence< beans::PropertyValue >& aDes
         if( xVbaPrjStrg.get() && xVbaPrjStrg->isStorage() )
         {
             ::oox::ole::VbaProject aVbaProject( m_xContext, xModel, "Writer" );
-            uno::Reference< frame::XFrame > xFrame = aMediaDesc.getUnpackedValueOrDefault(  MediaDescriptor::PROP_FRAME(), uno::Reference< frame::XFrame > () );
+#if SUPD == 310
+            uno::Reference< frame::XFrame > xFrame = aMediaDesc.getUnpackedValueOrDefault(  comphelper::MediaDescriptor::PROP_FRAME(), uno::Reference< frame::XFrame > () );
+#else	// SUPD == 310
+            uno::Reference< frame::XFrame > xFrame = aMediaDesc.getUnpackedValueOrDefault(  utl::MediaDescriptor::PROP_FRAME(), uno::Reference< frame::XFrame > () );
+#endif	// SUPD == 310
 
             // if no XFrame try fallback to what we can glean from the Model
             if ( !xFrame.is() )
             {
                 uno::Reference< frame::XController > xController =  xModel->getCurrentController();
-                xFrame =  xController.is() ? xController->getFrame() : NULL;
+                xFrame =  xController.is() ? xController->getFrame() : nullptr;
             }
 
             oox::GraphicHelper gHelper( m_xContext, xFrame, xVbaPrjStrg );
             aVbaProject.importVbaProject( *xVbaPrjStrg, gHelper );
         }
-    }
 
-    pStream.reset();
-#ifdef DEBUG_IMPORT
+        // Document signature.
+        writerfilter::ooxml::OOXMLStream::Pointer_t pSignatureStream;
+        pSignatureStream = writerfilter::ooxml::OOXMLDocumentFactory::createStream(m_xContext, xInputStream, bRepairStorage, writerfilter::ooxml::OOXMLStream::SIGNATURE);
+        if (pSignatureStream->getDocumentStream().is())
+        {
+            // TODO found, handle it.
+        }
 
-    dmapperLogger->endDocument();
-    debugLogger->endDocument();
+        pStream.reset();
+
+#ifdef DEBUG_WRITERFILTER
+        dmapper_logger->endDocument();
 #endif
 
-    return sal_True;
+        return sal_True;
     }
     return sal_False;
 }
@@ -250,6 +248,7 @@ void WriterFilter::setTargetDocument( const uno::Reference< lang::XComponent >& 
    xSettings->setPropertyValue( "ClippedPictures", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "BackgroundParaOverDrawings", uno::makeAny( sal_True ) );
    xSettings->setPropertyValue( "TabOverMargin", uno::makeAny( sal_True ) );
+   xSettings->setPropertyValue("PropLineSpacingShrinksFirstLine", uno::makeAny(sal_True));
 }
 
 void WriterFilter::setSourceDocument( const uno::Reference< lang::XComponent >& xDoc )
@@ -265,26 +264,11 @@ void WriterFilter::setSourceDocument( const uno::Reference< lang::XComponent >& 
 
 
 #if SUPD == 310
-void WriterFilter::initialize( const uno::Sequence< uno::Any >& aArguments ) throw (uno::Exception, uno::RuntimeException)
+void WriterFilter::initialize( const uno::Sequence< uno::Any >& /*aArguments*/ ) throw (uno::Exception, uno::RuntimeException)
 #else	// SUPD == 310
-void WriterFilter::initialize( const uno::Sequence< uno::Any >& aArguments ) throw (uno::Exception, uno::RuntimeException, std::exception)
+void WriterFilter::initialize( const uno::Sequence< uno::Any >& /*aArguments*/ ) throw (uno::Exception, uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-   uno::Sequence < beans::PropertyValue > aAnySeq;
-   sal_Int32 nLength = aArguments.getLength();
-   if ( nLength && ( aArguments[0] >>= aAnySeq ) )
-   {
-       const beans::PropertyValue * pValue = aAnySeq.getConstArray();
-       nLength = aAnySeq.getLength();
-       for ( sal_Int32 i = 0 ; i < nLength; i++)
-       {
-           if ( pValue[i].Name == "Type" )
-           {
-               pValue[i].Value >>= m_sFilterName;
-               break;
-           }
-       }
-   }
 }
 
 
@@ -356,7 +340,7 @@ uno::Sequence< OUString > WriterFilter::getSupportedServiceNames(  ) throw (uno:
     return WriterFilter_getSupportedServiceNames();
 }
 
-void WriterFilter::putPropertiesToDocumentGrabBag( const uno::Sequence< beans::PropertyValue >& aProperties )
+void WriterFilter::putPropertiesToDocumentGrabBag( const comphelper::SequenceAsHashMap& rProperties )
 {
     try
     {
@@ -369,22 +353,13 @@ void WriterFilter::putPropertiesToDocumentGrabBag( const uno::Sequence< beans::P
             if( xPropsInfo.is() && xPropsInfo->hasPropertyByName( aGrabBagPropName ) )
             {
                 // get existing grab bag
-                uno::Sequence<beans::PropertyValue> aGrabBag;
-                xDocProps->getPropertyValue( aGrabBagPropName ) >>= aGrabBag;
-                sal_Int32 length = aGrabBag.getLength();
-
-                // update grab bag size to contain the new items
-                aGrabBag.realloc( length + aProperties.getLength() );
+                comphelper::SequenceAsHashMap aGrabBag(xDocProps->getPropertyValue(aGrabBagPropName));
 
                 // put the new items
-                for( sal_Int32 i=0; i < aProperties.getLength(); ++i )
-                {
-                    aGrabBag[length + i].Name = aProperties[i].Name;
-                    aGrabBag[length + i].Value = aProperties[i].Value;
-                }
+                aGrabBag.update(rProperties);
 
                 // put it back to the document
-                xDocProps->setPropertyValue( aGrabBagPropName, uno::Any( aGrabBag ) );
+                xDocProps->setPropertyValue(aGrabBagPropName, uno::Any(aGrabBag.getAsConstPropertyValueList()));
             }
         }
     }

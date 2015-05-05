@@ -20,7 +20,6 @@
 #include <TblStylePrHandler.hxx>
 #include <PropertyMap.hxx>
 #include <ooxml/resourceids.hxx>
-#include <dmapperLoggers.hxx>
 #include <resourcemodel/QNameToString.hxx>
 
 #include "dmapperLoggers.hxx"
@@ -41,7 +40,7 @@ m_pProperties( new PropertyMap )
 
 TblStylePrHandler::~TblStylePrHandler( )
 {
-    delete m_pTablePropsHandler, m_pTablePropsHandler = NULL;
+    delete m_pTablePropsHandler, m_pTablePropsHandler = nullptr;
 }
 
 OUString TblStylePrHandler::getTypeString()
@@ -68,7 +67,7 @@ OUString TblStylePrHandler::getTypeString()
 
 void TblStylePrHandler::lcl_attribute(Id rName, Value & rVal)
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("TblStylePrHandler.attribute");
     dmapper_logger->attribute("name", (*QNameToString::Instance())(rName));
     dmapper_logger->chars(rVal.toString());
@@ -79,9 +78,48 @@ void TblStylePrHandler::lcl_attribute(Id rName, Value & rVal)
     {
         case NS_ooxml::LN_CT_TblStyleOverrideType:
             {
-                // The tokenid should be the same in the model.xml than
-                // in the TblStyleType enum
-                m_nType = TblStyleType( rVal.getInt( ) );
+                switch (rVal.getInt())
+                {
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_wholeTable:
+                    m_nType = TBL_STYLE_WHOLETABLE;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_firstRow:
+                    m_nType = TBL_STYLE_FIRSTROW;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_lastRow:
+                    m_nType = TBL_STYLE_LASTROW;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_firstCol:
+                    m_nType = TBL_STYLE_FIRSTCOL;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_lastCol:
+                    m_nType = TBL_STYLE_LASTCOL;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_band1Vert:
+                    m_nType = TBL_STYLE_BAND1VERT;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_band2Vert:
+                    m_nType = TBL_STYLE_BAND2VERT;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_band1Horz:
+                    m_nType = TBL_STYLE_BAND1HORZ;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_band2Horz:
+                    m_nType = TBL_STYLE_BAND2HORZ;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_neCell:
+                    m_nType = TBL_STYLE_NECELL;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_nwCell:
+                    m_nType = TBL_STYLE_NWCELL;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_seCell:
+                    m_nType = TBL_STYLE_SECELL;
+                    break;
+                case NS_ooxml::LN_Value_ST_TblStyleOverrideType_swCell:
+                    m_nType = TBL_STYLE_SWCELL;
+                    break;
+                }
             }
             break;
     }
@@ -89,7 +127,7 @@ void TblStylePrHandler::lcl_attribute(Id rName, Value & rVal)
 
 void TblStylePrHandler::lcl_sprm(Sprm & rSprm)
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("TblStylePrHandler.sprm");
     dmapper_logger->attribute("sprm", rSprm.toString());
 #endif
@@ -103,7 +141,7 @@ void TblStylePrHandler::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_TrPrBase:
         case NS_ooxml::LN_CT_TcPrBase:
         {
-            std::vector<beans::PropertyValue> aSavedGrabBag;
+            comphelper::SequenceAsVector<beans::PropertyValue> aSavedGrabBag;
             bool bGrabBag = rSprm.getId() == NS_ooxml::LN_CT_PPrBase ||
                 rSprm.getId() == NS_ooxml::LN_EG_RPrBase ||
                 rSprm.getId() == NS_ooxml::LN_CT_TblPrBase ||
@@ -148,7 +186,7 @@ void TblStylePrHandler::lcl_sprm(Sprm & rSprm)
             }
     }
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->endElement();
 #endif
 }
@@ -173,12 +211,7 @@ beans::PropertyValue TblStylePrHandler::getInteropGrabBag(const OUString& aName)
     beans::PropertyValue aRet;
     aRet.Name = aName;
 
-    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
-    beans::PropertyValue* pSeq = aSeq.getArray();
-    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
-        *pSeq++ = *i;
-
-    aRet.Value = uno::makeAny(aSeq);
+    aRet.Value = uno::makeAny(m_aInteropGrabBag.getAsConstList());
     return aRet;
 }
 

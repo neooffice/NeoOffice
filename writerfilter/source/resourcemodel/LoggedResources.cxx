@@ -21,10 +21,12 @@
 #include <resourcemodel/LoggedResources.hxx>
 #include <resourcemodel/QNameToString.hxx>
 
+using namespace ::com::sun::star;
+
 namespace writerfilter
 {
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
 // class: LoggedResourcesHelper
 
 LoggedResourcesHelper::LoggedResourcesHelper(TagLogger::Pointer_t pLogger, const std::string & sPrefix)
@@ -71,7 +73,7 @@ void LoggedResourcesHelper::attribute(const std::string & rName, sal_uInt32 nVal
 // class: LoggedStream
 
 LoggedStream::LoggedStream(
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     TagLogger::Pointer_t pLogger,
     const std::string & sPrefix
 ) : mHelper(pLogger, sPrefix)
@@ -89,7 +91,7 @@ LoggedStream::~LoggedStream()
 
 void LoggedStream::startSectionGroup()
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("section");
 #endif
 
@@ -100,14 +102,14 @@ void LoggedStream::endSectionGroup()
 {
     lcl_endSectionGroup();
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("section");
 #endif
 }
 
 void LoggedStream::startParagraphGroup()
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("paragraph");
 #endif
 
@@ -118,7 +120,7 @@ void LoggedStream::endParagraphGroup()
 {
     lcl_endParagraphGroup();
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("paragraph");
 #endif
 }
@@ -126,7 +128,7 @@ void LoggedStream::endParagraphGroup()
 
 void LoggedStream::startCharacterGroup()
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("charactergroup");
 #endif
 
@@ -137,14 +139,14 @@ void LoggedStream::endCharacterGroup()
 {
     lcl_endCharacterGroup();
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("charactergroup");
 #endif
 }
 
-void LoggedStream::startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape )
+void LoggedStream::startShape(uno::Reference<drawing::XShape> const& xShape)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("shape");
 #endif
 
@@ -155,14 +157,14 @@ void LoggedStream::endShape()
 {
     lcl_endShape();
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("shape");
 #endif
 }
 
 void LoggedStream::text(const sal_uInt8 * data, size_t len)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("text");
 
     OUString sText( (const sal_Char*) data, len, RTL_TEXTENCODING_MS_1252 );
@@ -174,14 +176,14 @@ void LoggedStream::text(const sal_uInt8 * data, size_t len)
 
     lcl_text(data, len);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("text");
 #endif
 }
 
 void LoggedStream::utext(const sal_uInt8 * data, size_t len)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("utext");
     mHelper.startElement("data");
 
@@ -197,83 +199,83 @@ void LoggedStream::utext(const sal_uInt8 * data, size_t len)
 
     lcl_utext(data, len);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("utext");
 #endif
 }
 
 void LoggedStream::positivePercentage(const OUString& rText)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("positivePercentage");
     mHelper.chars(rText);
 #endif
 
     lcl_positivePercentage(rText);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("positivePercentage");
 #endif
 }
 
 void LoggedStream::props(writerfilter::Reference<Properties>::Pointer_t ref)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("props");
 #endif
 
     lcl_props(ref);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("props");
 #endif
 }
 
 void LoggedStream::table(Id name, writerfilter::Reference<Table>::Pointer_t ref)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("table");
     mHelper.attribute("name", (*QNameToString::Instance())(name));
 #endif
 
     lcl_table(name, ref);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("table");
 #endif
 }
 
 void LoggedStream::substream(Id name, writerfilter::Reference<Stream>::Pointer_t ref)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("substream");
     mHelper.attribute("name", (*QNameToString::Instance())(name));
 #endif
 
     lcl_substream(name, ref);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("substream");
 #endif
 }
 
 void LoggedStream::info(const std::string & _info)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("info");
     mHelper.attribute("text", _info);
 #endif
 
     lcl_info(_info);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("info");
 #endif
 }
 
 // class LoggedProperties
 LoggedProperties::LoggedProperties(
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     TagLogger::Pointer_t pLogger,
     const std::string & sPrefix
 ) : mHelper(pLogger, sPrefix)
@@ -291,7 +293,7 @@ LoggedProperties::~LoggedProperties()
 
 void LoggedProperties::attribute(Id name, Value & val)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("attribute");
     mHelper.attribute("name", (*QNameToString::Instance())(name));
     mHelper.attribute("value", val.toString());
@@ -303,7 +305,7 @@ void LoggedProperties::attribute(Id name, Value & val)
 
 void LoggedProperties::sprm(Sprm & rSprm)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("sprm");
     mHelper.attribute("name", (*QNameToString::Instance())(rSprm.getId()));
     mHelper.chars(rSprm.toString());
@@ -311,13 +313,13 @@ void LoggedProperties::sprm(Sprm & rSprm)
 
     lcl_sprm(rSprm);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("sprm");
 #endif
 }
 
 LoggedTable::LoggedTable(
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     TagLogger::Pointer_t pLogger,
     const std::string & sPrefix
 ) : mHelper(pLogger, sPrefix)
@@ -335,14 +337,14 @@ LoggedTable::~LoggedTable()
 
 void LoggedTable::entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref)
 {
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.startElement("entry");
     mHelper.attribute("pos", pos);
 #endif
 
     lcl_entry(pos, ref);
 
-#ifdef DEBUG_LOGGING
+#ifdef DEBUG_WRITERFILTER
     mHelper.endElement("entry");
 #endif
 }

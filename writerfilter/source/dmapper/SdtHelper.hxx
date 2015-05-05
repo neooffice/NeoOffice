@@ -57,30 +57,59 @@ class SdtHelper
     /// Locale string as it comes from the ooxml document.
     OUStringBuffer m_sLocale;
     /// Grab bag to store unsupported SDTs, aiming to save them back on export.
-    com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> m_aGrabBag;
+    comphelper::SequenceAsVector<css::beans::PropertyValue> m_aGrabBag;
 
     bool m_bHasElements;
+    /// The last stored SDT element is outside paragraphs.
+    bool m_bOutsideAParagraph;
 
     /// Create and append the drawing::XControlShape, containing the various models.
-    void createControlShape(com::sun::star::awt::Size aSize, com::sun::star::uno::Reference<com::sun::star::awt::XControlModel>);
-    void createControlShape(com::sun::star::awt::Size aSize, com::sun::star::uno::Reference<com::sun::star::awt::XControlModel>,
-                            const com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue>& rGrabBag);
+    void createControlShape(css::awt::Size aSize, css::uno::Reference<css::awt::XControlModel> const&);
+    void createControlShape(css::awt::Size aSize, css::uno::Reference<css::awt::XControlModel> const&, const css::uno::Sequence<css::beans::PropertyValue>& rGrabBag);
 public:
     SdtHelper(DomainMapper_Impl& rDM_Impl);
     virtual ~SdtHelper();
 
-    std::vector<OUString>& getDropDownItems();
-    OUStringBuffer& getSdtTexts();
-    OUStringBuffer& getDate();
-    OUStringBuffer& getDateFormat();
-    OUStringBuffer& getLocale();
+    std::vector<OUString>& getDropDownItems()
+    {
+        return m_aDropDownItems;
+    }
+    OUStringBuffer& getSdtTexts()
+    {
+        return m_aSdtTexts;
+    }
+    OUStringBuffer& getDate()
+    {
+        return m_sDate;
+    }
+    OUStringBuffer& getDateFormat()
+    {
+        return m_sDateFormat;
+    }
+    OUStringBuffer& getLocale()
+    {
+        return m_sLocale;
+    }
     /// If createControlShape() was ever called.
-    bool hasElements();
+    bool hasElements()
+    {
+        return m_bHasElements;
+    }
+
+    void setOutsideAParagraph(bool bOutsideAParagraph)
+    {
+        m_bOutsideAParagraph = bOutsideAParagraph;
+    }
+
+    bool isOutsideAParagraph()
+    {
+        return m_bOutsideAParagraph;
+    }
 
     /// Create drop-down control from w:sdt's w:dropDownList.
     void createDropDownControl();
     /// Create date control from w:sdt's w:date.
-    void createDateControl(OUString& rContentText);
+    void createDateControl(OUString& rContentText, css::beans::PropertyValue aCharFormat);
 
     void appendToInteropGrabBag(com::sun::star::beans::PropertyValue rValue);
     com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> getInteropGrabBagAndClear();

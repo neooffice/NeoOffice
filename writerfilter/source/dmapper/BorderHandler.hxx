@@ -24,6 +24,7 @@
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
+#include <comphelper/sequenceasvector.hxx>
 
 namespace writerfilter {
 namespace dmapper
@@ -57,7 +58,7 @@ private:
     bool                                        m_aFilledLines[BORDER_COUNT];
     ::com::sun::star::table::BorderLine2        m_aBorderLines[BORDER_COUNT];
     OUString m_aInteropGrabBagName;
-    std::vector<css::beans::PropertyValue> m_aInteropGrabBag;
+    comphelper::SequenceAsVector<css::beans::PropertyValue> m_aInteropGrabBag;
     void appendGrabBag(const OUString& aKey, const OUString& aValue);
 
     // Properties
@@ -71,7 +72,7 @@ public:
     ::boost::shared_ptr<PropertyMap>            getProperties();
     ::com::sun::star::table::BorderLine2        getBorderLine();
     sal_Int32                                   getLineDistance() const { return m_nLineDistance;}
-    bool                                        getShadow();
+    bool                                        getShadow() { return m_bShadow;}
     void enableInteropGrabBag(const OUString& aName);
     css::beans::PropertyValue getInteropGrabBag(const OUString& aName = OUString());
 };

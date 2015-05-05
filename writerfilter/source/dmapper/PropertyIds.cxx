@@ -397,7 +397,16 @@ OUString PropertyNameSupplier::GetName( PropertyIds eId ) const
             case PROP_TABLE_INTEROP_GRAB_BAG         :   sName = "TableInteropGrabBag"; break;
             case PROP_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING : sName = "ApplyParagraphMarkFormatToNumbering"; break;
             case PROP_CELL_DIRECTION: sName = "CellDirection"; break;
+            case PROP_SDT_END_BEFORE: sName = "SdtEndBefore"; break;
+            case PROP_PARA_SDT_END_BEFORE: sName = "ParaSdtEndBefore"; break;
+            case META_PROP_TABLE_LOOK: sName = "TableStyleLook"; break;
+            case PROP_PARA_CNF_STYLE: sName = "ParaCnfStyle"; break;
+            case PROP_CELL_CNF_STYLE: sName = "CellCnfStyle"; break;
+            case PROP_ROW_CNF_STYLE: sName = "RowCnfStyle"; break;
             case PROP_CELL_HIDE_MARK: sName = "CellHideMark"; break;
+            case PROP_FOLLOW_TEXT_FLOW: sName = "IsFollowingTextFlow"; break;
+            case PROP_FILL_STYLE: sName = "FillStyle"; break;
+            case PROP_FILL_COLOR: sName = "FillColor"; break;
         }
         ::std::pair<PropertyNameMap_t::iterator,bool> aInsertIt =
                 m_pImpl->aNameMap.insert( PropertyNameMap_t::value_type( eId, sName ));

@@ -17,9 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <rtl/ustring.hxx>
 #include <cppuhelper/implementationentry.hxx>
-#include <osl/module.hxx>
 #include <RtfFilter.hxx>
 #if SUPD == 310
 #include <comphelper/mediadescriptor.hxx>
@@ -29,13 +27,11 @@
 #endif	// SUPD == 310
 #include <dmapper/DomainMapper.hxx>
 #include <rtftok/RTFDocument.hxx>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/io/WrongFormatException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/text/XTextRange.hpp>
+#include <osl/diagnose.h>
 #include <unotools/localfilehelper.hxx>
-#include <tools/stream.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 #include <unotools/streamwrap.hxx>
 
@@ -88,7 +84,7 @@ sal_Bool RtfFilter::filter(const uno::Sequence< beans::PropertyValue >& aDescrip
         bool bRepairStorage = aMediaDesc.getUnpackedValueOrDefault("RepairPackage", false);
         bool bIsNewDoc = !aMediaDesc.getUnpackedValueOrDefault("InsertMode", false);
         uno::Reference<text::XTextRange> xInsertTextRange = aMediaDesc.getUnpackedValueOrDefault("TextInsertModeRange", uno::Reference<text::XTextRange>());
-#ifdef DEBUG_IMPORT
+#ifdef DEBUG_WRITERFILTER
 #if SUPD == 310
         OUString sURL = aMediaDesc.getUnpackedValueOrDefault(comphelper::MediaDescriptor::PROP_URL(), OUString());
 #else	// SUPD == 310
@@ -96,10 +92,11 @@ sal_Bool RtfFilter::filter(const uno::Sequence< beans::PropertyValue >& aDescrip
 #endif	// SUPD == 310
         std::string sURLc = OUStringToOString(sURL, RTL_TEXTENCODING_ASCII_US).getStr();
 
-        writerfilter::TagLogger::Pointer_t dmapperLogger
+        writerfilter::TagLogger::Pointer_t dmapper_logger
         (writerfilter::TagLogger::getInstance("DOMAINMAPPER"));
-        dmapperLogger->setFileName(sURLc);
-        dmapperLogger->startDocument();
+        if (getenv("SW_DEBUG_WRITERFILTER"))
+            dmapper_logger->setFileName(sURLc);
+        dmapper_logger->startDocument();
 #endif
         uno::Reference< io::XInputStream > xInputStream;
 
@@ -114,7 +111,7 @@ sal_Bool RtfFilter::filter(const uno::Sequence< beans::PropertyValue >& aDescrip
         // If this is set, write to this file, instead of the real document during paste.
         char* pEnv = getenv("SW_DEBUG_RTF_PASTE_TO");
         OUString aOutStr;
-        if (!bIsNewDoc && pEnv && utl::LocalFileHelper::ConvertPhysicalNameToURL(OStringToOUString(pEnv, RTL_TEXTENCODING_UTF8), aOutStr))
+        if (!bIsNewDoc && pEnv && utl::LocalFileHelper::ConvertPhysicalNameToURL(OUString::fromUtf8(pEnv), aOutStr))
         {
             SvStream* pOut = utl::UcbStreamHelper::CreateStream(aOutStr, STREAM_WRITE);
             SvStream* pIn = utl::UcbStreamHelper::CreateStream(xInputStream);
@@ -128,7 +125,7 @@ sal_Bool RtfFilter::filter(const uno::Sequence< beans::PropertyValue >& aDescrip
         if (!bIsNewDoc && pEnv)
         {
             OUString aInStr;
-            utl::LocalFileHelper::ConvertPhysicalNameToURL(OStringToOUString(pEnv, RTL_TEXTENCODING_UTF8), aInStr);
+            utl::LocalFileHelper::ConvertPhysicalNameToURL(OUString::fromUtf8(pEnv), aInStr);
             SvStream* pStream = utl::UcbStreamHelper::CreateStream(aInStr, STREAM_READ);
             uno::Reference<io::XStream> xStream(new utl::OStreamWrapper(*pStream));
             xInputStream.set(xStream, uno::UNO_QUERY);
@@ -155,8 +152,8 @@ sal_Bool RtfFilter::filter(const uno::Sequence< beans::PropertyValue >& aDescrip
             writerfilter::rtftok::RTFDocumentFactory::createDocument(m_xContext, xInputStream, m_xDstDoc, xFrame, xStatusIndicator));
         pDocument->resolve(*pStream);
         bResult = true;
-#ifdef DEBUG_IMPORT
-        dmapperLogger->endDocument();
+#ifdef DEBUG_WRITERFILTER
+        dmapper_logger->endDocument();
 #endif
         sal_uInt32 nEndTime = osl_getGlobalTimer();
         SAL_INFO("writerfilter.profile", OSL_THIS_FUNC << " finished in " << nEndTime - nStartTime << " ms");

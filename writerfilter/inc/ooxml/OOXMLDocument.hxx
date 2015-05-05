@@ -75,7 +75,7 @@ class OOXMLStream
 {
 public:
     enum StreamType_t { UNKNOWN, DOCUMENT, STYLES, WEBSETTINGS, FONTTABLE, NUMBERING,
-        FOOTNOTES, ENDNOTES, COMMENTS, THEME, CUSTOMXML, CUSTOMXMLPROPS, ACTIVEX, ACTIVEXBIN, GLOSSARY, CHARTS, EMBEDDINGS, SETTINGS, VBAPROJECT, FOOTER, HEADER };
+        FOOTNOTES, ENDNOTES, COMMENTS, THEME, CUSTOMXML, CUSTOMXMLPROPS, ACTIVEX, ACTIVEXBIN, GLOSSARY, CHARTS, EMBEDDINGS, SETTINGS, VBAPROJECT, FOOTER, HEADER, SIGNATURE };
     typedef boost::shared_ptr<OOXMLStream> Pointer_t;
 
     virtual ~OOXMLStream() {}
@@ -111,7 +111,7 @@ public:
     virtual const OUString & getTarget() const = 0;
 
     virtual css::uno::Reference<css::xml::sax::XFastTokenHandler>
-    getFastTokenHandler(css::uno::Reference<css::uno::XComponentContext> rContext) = 0;
+    getFastTokenHandler() = 0;
 
 };
 
@@ -131,13 +131,6 @@ public:
        @param rStream     stream handler to resolve this document to
      */
     virtual void resolve(Stream & rStream) SAL_OVERRIDE = 0;
-
-    /**
-       Returns string representation of the type of this reference.
-
-       DEBUGGING PURPOSE ONLY.
-     */
-    virtual std::string getType() const SAL_OVERRIDE = 0;
 
     /**
        Resolves a footnote to a stream handler.
@@ -272,6 +265,8 @@ public:
 };
 
 void ooxmlidsToXML(::std::iostream & out);
+
+std::string fastTokenToId(sal_uInt32 nToken);
 
 }}
 #endif // INCLUDED_WRITERFILTER_INC_OOXML_OOXMLDOCUMENT_HXX

@@ -71,7 +71,11 @@ void BorderHandler::lcl_attribute(Id rName, Value & rVal)
         break;
         case NS_ooxml::LN_CT_Border_color:
             m_nLineColor = nIntValue;
+#if SUPD == 310
             appendGrabBag("color", OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8));
+#else	// SUPD == 310
+            appendGrabBag("color", OUString::fromUtf8(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true)));
+#endif	// SUPD == 310
         break;
         case NS_ooxml::LN_CT_Border_space: // border distance in points
             m_nLineDistance = ConversionHelper::convertTwipToMM100( nIntValue * 20 );
@@ -95,7 +99,7 @@ void BorderHandler::lcl_attribute(Id rName, Value & rVal)
 void BorderHandler::lcl_sprm(Sprm & rSprm)
 {
     BorderPosition pos = BORDER_COUNT; // invalid pos
-    bool rtl = false; // TODO detect
+    const bool rtl = false; // TODO detect
     OUString aBorderPos;
     switch( rSprm.getId())
     {
@@ -139,7 +143,7 @@ void BorderHandler::lcl_sprm(Sprm & rSprm)
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
         if( pProperties.get())
         {
-            std::vector<beans::PropertyValue> aSavedGrabBag;
+            comphelper::SequenceAsVector<beans::PropertyValue> aSavedGrabBag;
             if (!m_aInteropGrabBagName.isEmpty())
             {
                 aSavedGrabBag = m_aInteropGrabBag;
@@ -192,10 +196,6 @@ table::BorderLine2 BorderHandler::getBorderLine()
     return aBorderLine;
 }
 
-bool BorderHandler::getShadow()
-{
-    return m_bShadow;
-}
 
 void BorderHandler::enableInteropGrabBag(const OUString& aName)
 {
@@ -210,12 +210,7 @@ beans::PropertyValue BorderHandler::getInteropGrabBag(const OUString& aName)
     else
         aRet.Name = aName;
 
-    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
-    beans::PropertyValue* pSeq = aSeq.getArray();
-    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
-        *pSeq++ = *i;
-
-    aRet.Value = uno::makeAny(aSeq);
+    aRet.Value = uno::makeAny(m_aInteropGrabBag.getAsConstList());
     return aRet;
 }
 

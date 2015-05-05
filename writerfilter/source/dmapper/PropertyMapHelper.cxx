@@ -21,7 +21,6 @@
 #include <resourcemodel/TagLogger.hxx>
 #include "PropertyMapHelper.hxx"
 
-#if OSL_DEBUG_LEVEL > 1
 namespace writerfilter
 {
 namespace dmapper
@@ -31,6 +30,9 @@ using namespace ::com::sun::star;
 
 void lcl_DumpTableColumnSeparators(const TagLogger::Pointer_t pLogger, const uno::Any & rTableColumnSeparators)
 {
+    (void) pLogger;
+    (void) rTableColumnSeparators;
+#ifdef DEBUG_WRITERFILTER
     uno::Sequence<text::TableColumnSeparator> aSeq;
     rTableColumnSeparators >>= aSeq;
 
@@ -48,8 +50,10 @@ void lcl_DumpTableColumnSeparators(const TagLogger::Pointer_t pLogger, const uno
     }
 
     pLogger->endElement();
+#endif // DEBUG_WRITERFILTER
 }
 
+#ifdef DEBUG_WRITERFILTER
 void lcl_DumpPropertyValues(const TagLogger::Pointer_t pLogger, beans::PropertyValues & rValues)
 {
     pLogger->startElement("propertyValues");
@@ -95,23 +99,9 @@ void lcl_DumpPropertyValueSeq(const TagLogger::Pointer_t pLogger, PropertyValueS
 
     pLogger->endElement();
 }
-
-void lcl_DumpPropertyValueSeqSeq(const TagLogger::Pointer_t pLogger, PropertyValueSeqSeq_t rPropValSeqSeq)
-{
-    pLogger->startElement("PropertyValueSeq");
-
-    PropertyValueSeq_t * pValues = rPropValSeqSeq.getArray();
-
-    for (sal_Int32 n = 0; n < rPropValSeqSeq.getLength(); ++n)
-    {
-        lcl_DumpPropertyValueSeq(pLogger, pValues[n]);
-    }
-
-    pLogger->endElement();
-}
+#endif // DEBUG_WRITERFILTER
 
 }
 }
-#endif // OSL_DEBUG_LEVEL > 1
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

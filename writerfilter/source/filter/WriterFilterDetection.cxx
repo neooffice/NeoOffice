@@ -24,14 +24,11 @@
 #include <WriterFilterDetection.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
+#include <osl/diagnose.h>
 #include <sot/storage.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 
-using namespace ::rtl;
-using namespace ::cppu;
 using namespace ::com::sun::star;
-
-
 
 WriterFilterDetection::WriterFilterDetection(
     const uno::Reference< uno::XComponentContext >& rxContext) :
@@ -105,7 +102,11 @@ OUString WriterFilterDetection::detect( uno::Sequence< beans::PropertyValue >& r
         OSL_FAIL("exception while opening storage");
     }
     if( !bWord )
-        sTypeName = OUString();
+#if SUPD == 310
+        sTypeName == OUString();
+#else	// SUPD == 310
+        sTypeName.clear();
+#endif	// SUPD == 310
    return sTypeName;
 }
 

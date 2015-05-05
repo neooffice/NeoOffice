@@ -25,9 +25,14 @@ public:
     RTFReferenceProperties(RTFSprms rAttributes);
     virtual ~RTFReferenceProperties();
     virtual void resolve(Properties& rHandler) SAL_OVERRIDE;
-    virtual std::string getType() const SAL_OVERRIDE;
-    RTFSprms& getAttributes();
-    RTFSprms& getSprms();
+    RTFSprms& getAttributes()
+    {
+        return m_aAttributes;
+    }
+    RTFSprms& getSprms()
+    {
+        return m_aSprms;
+    }
 private:
     RTFSprms m_aAttributes;
     RTFSprms m_aSprms;

@@ -20,16 +20,19 @@
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEMANAGER_HXX
 
 #include "TablePropertiesHandler.hxx"
-#include <TablePositionHandler.hxx>
+#include "TablePositionHandler.hxx"
 
 #include <resourcemodel/TableManager.hxx>
-#include <PropertyMap.hxx>
-#include <StyleSheetTable.hxx>
+#include "PropertyMap.hxx"
+#include "StyleSheetTable.hxx"
 #include <com/sun/star/text/XTextRange.hpp>
 #include <vector>
+#include <comphelper/sequenceashashmap.hxx>
 
 namespace writerfilter {
 namespace dmapper {
+
+class DomainMapper;
 
 class DomainMapperTableManager : public DomainMapperTableManager_Base_t
 {
@@ -45,6 +48,8 @@ class DomainMapperTableManager : public DomainMapperTableManager_Base_t
     sal_Int32       m_nTableWidth; //might be set directly or has to be calculated from the column positions
     bool            m_bOOXML;
     OUString m_sTableStyleName;
+    /// Grab-bag of table look attributes for preserving.
+    comphelper::SequenceAsHashMap m_aTableLook;
     std::vector< TablePositionHandlerPtr > m_aTablePositions;
     std::vector< TablePositionHandlerPtr > m_aTmpPosition; ///< Temporarily stores the position to compare it later
     std::vector< TablePropertyMapPtr > m_aTmpTableProperties; ///< Temporarily stores the table properties until end of row
@@ -81,6 +86,7 @@ public:
     inline void SetStyleProperties( PropertyMapPtr pProperties ) { m_pStyleProps = pProperties; };
 
     virtual bool sprm(Sprm & rSprm) SAL_OVERRIDE;
+    bool attribute(Id nName, Value & val);
 
     virtual void startLevel( ) SAL_OVERRIDE;
     virtual void endLevel( ) SAL_OVERRIDE;
@@ -93,6 +99,8 @@ public:
     IntVectorPtr getCurrentCellWidths( );
 
     const OUString& getTableStyleName() const { return m_sTableStyleName; }
+    /// Turn the attributes collected so far in m_aTableLook into a property and clear the container.
+    void finishTableLook();
     const com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> getCurrentTablePosition();
     TablePositionHandler* getCurrentTableRealPosition();
 

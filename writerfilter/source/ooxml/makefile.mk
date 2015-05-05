@@ -71,7 +71,6 @@ NAMESPACES= \
 .IF "$(UPD)" == "310"
 NAMESPACES += \
 	a14 \
-	mce \
 	w14 \
 	wp14
 .ENDIF		# "$(UPD)" == "310"
@@ -87,17 +86,19 @@ SLOFILES= \
     $(SLO)$/OOXMLFactory_generated.obj \
     $(SLO)$/OOXMLFactory.obj \
 	$(SLO)$/OOXMLBinaryObjectReference.obj\
-	$(SLO)$/OOXMLFactory_values.obj \
 	$(SLO)$/OOXMLPropertySetImpl.obj \
 	$(SLO)$/OOXMLParserState.obj \
 	$(SLO)$/Handler.obj \
 	$(SLO)$/OOXMLDocumentImpl.obj \
 	$(SLO)$/OOXMLStreamImpl.obj \
 	$(SLO)$/OOXMLFastDocumentHandler.obj \
-	$(SLO)$/OOXMLFastContextHandler.obj \
-	$(SLO)$/OOXMLFastTokenHandler.obj
+	$(SLO)$/OOXMLFastContextHandler.obj
 
 .IF "$(UPD)" != "310"
+SLOFILES += \
+	$(SLO)$/OOXMLFactory_values.obj \
+	$(SLO)$/OOXMLFastTokenHandler.obj
+
 SHL1TARGET=$(TARGET)
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC" || "$(GUI)"=="OS2"
@@ -128,9 +129,6 @@ DEFLIB1NAME=$(TARGET)
 # --- Targets ------------------------------------------------------
 
 .INCLUDE :	target.mk
-.IF "$(UPD)" == "310"
-GPERF=gperf
-.ENDIF		# "$(UPD)" == "310"
 
 .PHONY : test
 
@@ -145,6 +143,8 @@ OOXMLFACTORYCXXS=$(OOXMLCXXOUTDIR)$/OOXMLFactory_{$(NAMESPACES)}.cxx
 OOXMLFACTORYHXXS=$(OOXMLHXXOUTDIR)$/OOXMLFactory_{$(NAMESPACES)}.hxx
 
 OOXMLMODEL=model.xml
+.IF "$(UPD)" == "310"
+.ELSE		# "$(UPD)" == "310"
 OOXMLPREPROCESSXSL=modelpreprocess.xsl
 OOXMLFACTORYTOOLSXSL=factorytools.xsl
 OOXMLRESORUCETOKENSXSL=resourcestokens.xsl
@@ -155,19 +155,28 @@ OOXMLFACTORYVALUESXSL=factory_values.xsl
 OOXMLFACTORYVALUESIMPLXSL=factoryimpl_values.xsl
 OOXMLRESOURCEIDSXSL=resourceids.xsl
 OOXMLGPERFFASTTOKENXSL=gperffasttokenhandler.xsl
+.ENDIF		# "$(UPD)" == "310"
 
 OOXMLRESOURCEIDSHXX=$(OOXMLHXXOUTDIR)$/resourceids.hxx
 
+.IF "$(UPD)" == "310"
+NAMESPACESTXT=$(PRJ)$/..$/oox$/$(INPATH)$/misc/namespaces.txt
+.ELSE		# "$(UPD)" == "310"
 TOKENXML=$(OOXMLCXXOUTDIR)$/token.xml
 TOKENXMLTMP=$(OOXMLCXXOUTDIR)$/token.tmp
+.ENDIF		# "$(UPD)" == "310"
 
 OOXMLFACTORYGENERATEDHXX=$(OOXMLHXXOUTDIR)$/OOXMLFactory_generated.hxx
 OOXMLFACTORYGENERATEDCXX=$(OOXMLCXXOUTDIR)$/OOXMLFactory_generated.cxx
 OOXMLFASTTOKENSHXX=$(OOXMLHXXOUTDIR)$/OOXMLFastTokens.hxx
+.IF "$(UPD)" != "310"
 OOXMLNAMESPACEIDSHXX=$(OOXMLHXXOUTDIR)$/OOXMLnamespaceids.hxx
+.ENDIF		# "$(UPD)" != "310"
 OOXMLFACTORYVALUESHXX=$(OOXMLCXXOUTDIR)$/OOXMLFactory_values.hxx
+.IF "$(UPD)" != "310"
 OOXMLFACTORYVALUESCXX=$(OOXMLCXXOUTDIR)$/OOXMLFactory_values.cxx
 GPERFFASTTOKENHXX=$(OOXMLHXXOUTDIR)$/gperffasttoken.hxx
+.ENDIF		# "$(UPD)" != "310"
 MODELPROCESSED=$(MISC)$/model_preprocessed.xml
 
 OOXMLGENHEADERS= \
@@ -175,28 +184,33 @@ OOXMLGENHEADERS= \
 	$(OOXMLFACTORYHXXS) \
 	$(OOXMLFASTTOKENSHXX) \
 	$(OOXMLFACTORYVALUESHXX) \
+	$(OOXMLRESOURCEIDSHXX)
+
+.IF "$(UPD)" != "310"
+GENERATEDFILES += \
 	$(GPERFFASTTOKENHXX) \
-	$(OOXMLRESOURCEIDSHXX) \
 	$(OOXMLNAMESPACEIDSHXX)
+.ENDIF		# "$(UPD)" != "310"
 
 GENERATEDFILES= \
 	$(OOXMLGENHEADERS) \
 	$(OOXMLFACTORYGENERATEDCXX) \
-	$(OOXMLFACTORYCXXS) \
+	$(OOXMLFACTORYCXXS)
+
+.IF "$(UPD)" != "310"
+GENERATEDFILES += \
 	$(OOXMLFACTORYVALUESCXX) \
 	$(TOKENXMLTMP) \
 	$(TOKENXML)
+.ENDIF		# "$(UPD)" != "310"
 
-.IF "$(UPD)" == "310"
-$(TOKENXMLTMP): $(PRJ)$/..$/oox$/source$/token$/tokens.txt
-    @$(TYPE) $(PRJ)$/..$/oox$/source$/token$/tokens.txt | $(SED) "s#\(.*\)#<fasttoken>\1</fasttoken>#" > $@
-.ELSE		# "$(UPD)" == "310"
+.IF "$(UPD)" != "310"
 $(TOKENXMLTMP): $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/tokens.txt
     @$(TYPE) $(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/tokens.txt | $(SED) "s#\(.*\)#<fasttoken>\1</fasttoken>#" > $@
-.ENDIF		# "$(UPD)" == "310"
 
 $(TOKENXML): tokenxmlheader $(TOKENXMLTMP) tokenxmlfooter
 	@$(TYPE) tokenxmlheader $(TOKENXMLTMP) tokenxmlfooter > $@
+.ENDIF		# "$(UPD)" != "310"
 
 $(OOXMLHXXOUTDIRCREATED):
 	$(MKDIRHIER) $(OOXMLHXXOUTDIR)
@@ -204,17 +218,31 @@ $(OOXMLHXXOUTDIRCREATED):
 
 $(OOXMLGENHEADERS): $(OOXMLHXXOUTDIRCREATED)
 
+.IF "$(UPD)" != "310"
 $(OOXMLFASTTOKENSHXX): $(OOXMLFASTTOKENSXSL) $(TOKENXML)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFASTTOKENSXSL) $(TOKENXML) > $@
+.ENDIF		# "$(UPD)" != "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLFACTORYGENERATEDHXX): factoryinc.py $(MODELPROCESSED)
+    @echo "Making:   " $(@:f)   
+    $(COMMAND_ECHO)python $< $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLFACTORYGENERATEDHXX): factoryinc.xsl
     @echo "Making:   " $(@:f)   
     $(COMMAND_ECHO)$(XSLTPROC) $< $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLFACTORYGENERATEDCXX): factoryimpl.py $(NAMESPACESTXT) $(MODELPROCESSED)
+    @echo "Making:   " $(@:f)   
+    $(COMMAND_ECHO)python $< $(NAMESPACESTXT) $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLFACTORYGENERATEDCXX): factoryimpl.xsl
     @echo "Making:   " $(@:f)   
     $(COMMAND_ECHO)$(XSLTPROC) $< $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
 $(OOXMLFACTORYGENERATEDCXX): $(MODELPROCESSED)
 
@@ -224,51 +252,69 @@ $(OOXMLFACTORYCXXS): $(MODELPROCESSED)
 
 $(OOXMLFACTORYHXXS): $(MODELPROCESSED)
 
+.IF "$(UPD)" == "310"
+$(OOXMLCXXOUTDIR)$/OOXMLFactory%.cxx: factoryimpl_ns.py
+    @echo "Making:   " $(@:f)   
+	$(COMMAND_ECHO)python $< $(MODELPROCESSED) $@ > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLCXXOUTDIR)$/OOXMLFactory%.cxx: factoryimpl_ns.xsl
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLHXXOUTDIR)$/OOXMLFactory%.hxx: factory_ns.py
+    @echo "Making:   " $(@:f)   
+	$(COMMAND_ECHO)python $< $(MODELPROCESSED) $@ > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLHXXOUTDIR)$/OOXMLFactory%.hxx: factory_ns.xsl
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) --stringparam file $@ $< $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" != "310"
 $(OOXMLFACTORYVALUESHXX): $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESXSL) $(MODELPROCESSED) > $@
 
-.IF "$(UPD)" != "310"
 $(OOXMLFACTORYVALUESCXX): $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLFACTORYVALUESIMPLXSL) $(MODELPROCESSED) > $@
 .ENDIF		# "$(UPD)" != "310"
 
+.IF "$(UPD)" == "310"
+$(OOXMLRESOURCEIDSHXX):  resourceids.py $(MODELPROCESSED)
+    @echo "Making:   " $(@:f)   
+    $(COMMAND_ECHO)python $< $(MODELPROCESSED) > $@
+.ELSE		# "$(UPD)" == "310"
 $(OOXMLRESOURCEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLRESOURCEIDSXSL) \
 	$(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED) > $@
+.ENDIF		# "$(UPD)" == "310"
 
+.IF "$(UPD)" != "310"
 $(OOXMLNAMESPACEIDSHXX):  $(OOXMLHXXOUTDIRCREATED) $(OOXMLNAMESPACEIDSXSL) \
 	$(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLNAMESPACEIDSXSL) $(MODELPROCESSED) > $@
 
-.IF "$(UPD)" == "310"
-$(GPERFFASTTOKENHXX): $(OOXMLGPERFFASTTOKENXSL) $(TOKENXML)
-    @echo "Making:   " $(@:f)   
-	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(TOKENXML) | tr -d '\r' | $(GPERF) -c -E -G -I  -LC++ -S1 -t  > $@
-.ELSE		# "$(UPD)" == "310"
 $(GPERFFASTTOKENHXX): $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
 	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLGPERFFASTTOKENXSL) $(MODELPROCESSED) | tr -d '\r' | $(GPERF) -I -t -E -S1 -c -G -LC++ > $@
-.ENDIF		# "$(UPD)" == "310"
+.ENDIF		# "$(UPD)" != "310"
 
 $(SLOFACTORIESNAMESPACES): $(OOXMLFACTORYSCXXS) $(OOXMLGENHEADERS)
 
+.IF "$(UPD)" != "310"
 $(GENERATEDFILES): $(OOXMLFACTORYTOOLSXSL)
+.ENDIF		# "$(UPD)" != "310"
 
 $(SLOFILES): $(OOXMLGENHEADERS)
 
+.IF "$(UPD)" != "310"
 $(SLO)/OOXMLFactory_values.obj: $(OOXMLFACTORYVALUESCXX) $(OOXMLFACTORYVALUESHXX)
+.ENDIF		# "$(UPD)" != "310"
 
 $(SLO)$/OOXMLFactory_generated.obj: $(OOXMLFACTORYGENERATEDCXX) $(OOXMLGENHEADERS)
 

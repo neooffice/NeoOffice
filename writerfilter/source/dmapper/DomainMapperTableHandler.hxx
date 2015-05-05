@@ -21,6 +21,7 @@
 
 #include <resourcemodel/TableManager.hxx>
 #include <PropertyMap.hxx>
+#include <comphelper/sequenceasvector.hxx>
 
 #include <com/sun/star/text/XTextAppendAndConvert.hpp>
 
@@ -83,14 +84,15 @@ class DomainMapperTableHandler : public TableDataHandler<Handle_t , TablePropert
     sal_Int32 m_nCellIndex;
     sal_Int32 m_nRowIndex;
 
-    TableStyleSheetEntry * endTableGetTableStyle(TableInfo & rInfo, css::uno::Sequence<css::beans::PropertyValue>& rFrameProperties);
+    TableStyleSheetEntry * endTableGetTableStyle(TableInfo & rInfo, comphelper::SequenceAsVector<css::beans::PropertyValue>& rFrameProperties);
     CellPropertyValuesSeq_t endTableGetCellProperties(TableInfo & rInfo, std::vector<HorizontallyMergedCell>& rMerges);
     RowPropertyValuesSeq_t endTableGetRowProperties();
 
 public:
     typedef boost::shared_ptr<DomainMapperTableHandler> Pointer_t;
 
-    DomainMapperTableHandler(TextReference_t xText, DomainMapper_Impl& rDMapper_Impl);
+    DomainMapperTableHandler(TextReference_t const& xText,
+                             DomainMapper_Impl& rDMapper_Impl);
     virtual ~DomainMapperTableHandler();
 
     virtual void startTable(unsigned int nRows, unsigned int nDepth,

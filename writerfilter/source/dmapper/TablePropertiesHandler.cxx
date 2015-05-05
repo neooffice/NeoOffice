@@ -32,15 +32,18 @@
 #include <com/sun/star/text/SizeType.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <dmapperLoggers.hxx>
-#include <ooxml/OOXMLFastTokens.hxx>
+#include <oox/token/tokens.hxx>
+#include <dmapper/DomainMapper.hxx>
 
+using namespace com::sun::star;
+using namespace oox;
 
 namespace writerfilter {
 namespace dmapper {
 
     TablePropertiesHandler::TablePropertiesHandler( bool bOOXML ) :
-        m_pCurrentInteropGrabBag(0),
-        m_pTableManager( NULL ),
+        m_pCurrentInteropGrabBag(nullptr),
+        m_pTableManager( nullptr ),
         m_bOOXML( bOOXML )
     {
     }
@@ -49,12 +52,12 @@ namespace dmapper {
     TablePropertiesHandler::~TablePropertiesHandler( )
     {
         // Do not delete the table manager... this will be done somewhere else
-        m_pTableManager = NULL;
+        m_pTableManager = nullptr;
     }
 
     bool TablePropertiesHandler::sprm(Sprm & rSprm)
     {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->startElement("TablePropertiesHandler.sprm");
         dmapper_logger->attribute("sprm", rSprm.toString());
 #endif
@@ -62,14 +65,13 @@ namespace dmapper {
         bool bRet = true;
         sal_uInt32 nSprmId = rSprm.getId();
         Value::Pointer_t pValue = rSprm.getValue();
-        sal_Int32 nIntValue = ((pValue.get() != NULL) ? pValue->getInt() : 0);
+        sal_Int32 nIntValue = ((pValue.get() != nullptr) ? pValue->getInt() : 0);
         switch( nSprmId )
         {
             case NS_ooxml::LN_CT_TrPrBase_jc: //90706
             case NS_ooxml::LN_CT_TblPrBase_jc:
             case 0x5400: // sprmTJc
             {
-                //table justification 0: left, 1: center, 2: right
                 sal_Int16 nOrient = ConversionHelper::convertTableJustification( nIntValue );
                 TablePropertyMapPtr pTableMap( new TablePropertyMap );
                 pTableMap->setValue( TablePropertyMap::HORI_ORIENT, nOrient );
@@ -123,10 +125,10 @@ namespace dmapper {
                     switch( nSprmId )
                     {
                         case NS_ooxml::LN_CT_TrPr_ins:
-                            nToken = OOXML_tableRowInsert;
+                            nToken = XML_tableRowInsert;
                             break;
                         case NS_ooxml::LN_CT_TrPr_del:
-                            nToken = OOXML_tableRowDelete;
+                            nToken = XML_tableRowDelete;
                             break;
                     };
                     TrackChangesHandlerPtr pTrackChangesHandler( new TrackChangesHandler( nToken ) );
@@ -151,13 +153,13 @@ namespace dmapper {
                     switch( nSprmId )
                     {
                         case NS_ooxml::LN_CT_TcPrBase_cellIns:
-                            nToken = OOXML_tableCellInsert;
+                            nToken = XML_tableCellInsert;
                             break;
                         case NS_ooxml::LN_CT_TcPrBase_cellDel:
-                            nToken = OOXML_tableCellDelete;
+                            nToken = XML_tableCellDelete;
                             break;
                         default:
-                            throw ::com::sun::star::lang::IllegalArgumentException("illegal redline token type", NULL, 0);
+                            throw ::com::sun::star::lang::IllegalArgumentException("illegal redline token type", nullptr, 0);
                             break;
                     };
                     TrackChangesHandlerPtr pTrackChangesHandler( new TrackChangesHandler( nToken ) );
@@ -199,10 +201,10 @@ namespace dmapper {
             case NS_ooxml::LN_CT_TcPrBase_vAlign://90694
             {
                 sal_Int16 nVertOrient = text::VertOrientation::NONE;
-                switch( nIntValue ) //0 - top 1 - center 3 - bottom (ST_VerticalJc)
+                switch( nIntValue )
                 {
-                    case 1: nVertOrient = text::VertOrientation::CENTER; break;
-                    case 3: nVertOrient = text::VertOrientation::BOTTOM; break;
+                    case NS_ooxml::LN_Value_ST_VerticalJc_center: nVertOrient = text::VertOrientation::CENTER; break;
+                    case NS_ooxml::LN_Value_ST_VerticalJc_bottom: nVertOrient = text::VertOrientation::BOTTOM; break;
                     default:;
                 };
                 TablePropertyMapPtr pCellPropMap( new TablePropertyMap() );
@@ -214,10 +216,10 @@ namespace dmapper {
                     OUString aVertOrient;
                     switch( nIntValue )
                     {
-                        case 0: aVertOrient = "top"; break;
-                        case 1: aVertOrient = "center"; break;
-                        case 2: aVertOrient = "both"; break;
-                        case 3: aVertOrient = "bottom"; break;
+                        case NS_ooxml::LN_Value_ST_VerticalJc_top: aVertOrient = "top"; break;
+                        case NS_ooxml::LN_Value_ST_VerticalJc_center: aVertOrient = "center"; break;
+                        case NS_ooxml::LN_Value_ST_VerticalJc_both: aVertOrient = "both"; break;
+                        case NS_ooxml::LN_Value_ST_VerticalJc_bottom: aVertOrient = "bottom"; break;
                     };
                     if (!aVertOrient.isEmpty())
                     {
@@ -243,7 +245,7 @@ namespace dmapper {
                     TablePropertyMapPtr pTablePropMap( new TablePropertyMap );
                     pTablePropMap->InsertProps(pBorderHandler->getProperties());
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
                     pTablePropMap->dumpXml( dmapper_logger );
 #endif
                     insertTableProps( pTablePropMap );
@@ -409,7 +411,7 @@ namespace dmapper {
             break;
         }
 
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
         dmapper_logger->endElement();
 #endif
 

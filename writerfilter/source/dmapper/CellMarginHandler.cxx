@@ -21,6 +21,7 @@
 #include <ConversionHelper.hxx>
 #include <ooxml/resourceids.hxx>
 #include "dmapperLoggers.hxx"
+#include <osl/diagnose.h>
 
 namespace writerfilter {
 namespace dmapper {
@@ -98,7 +99,7 @@ void CellMarginHandler::lcl_sprm(Sprm & rSprm)
     if( pProperties.get())
     {
         pProperties.get()->resolve( *this );
-        bool rtl = false; // TODO
+        const bool rtl = false; // TODO
         switch( rSprm.getId() )
         {
             case NS_ooxml::LN_CT_TblCellMar_top:

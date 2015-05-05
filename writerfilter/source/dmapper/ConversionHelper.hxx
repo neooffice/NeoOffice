@@ -39,17 +39,15 @@ namespace dmapper{
 namespace ConversionHelper{
 
     // create a border line and return the distance value
-    sal_Int32 MakeBorderLine( sal_Int32 nSprmValue, ::com::sun::star::table::BorderLine2& rToFill );
     void MakeBorderLine( sal_Int32 nLineThickness,   sal_Int32 nLineType,
                               sal_Int32 nLineColor,
                               ::com::sun::star::table::BorderLine2& rToFill, bool bIsOOXML );
     //convert the number format string form MS format to SO format
     OUString ConvertMSFormatStringToSO(
             const OUString& rFormat, ::com::sun::star::lang::Locale& rLocale, bool bHijri);
-    sal_Int32 convertTwipToMM100(sal_Int32 _t);
-    sal_uInt32 convertTwipToMM100Unsigned(sal_Int32 _t);
-    // probably the most useless unit in the world - English Metric Units (EMU) 360 000 EMU == 1cm
-    sal_Int32 convertEMUToMM100(sal_Int32 _t);
+    // export just for test
+    SAL_DLLPUBLIC_EXPORT sal_Int32 convertTwipToMM100(sal_Int32 _t);
+    SAL_DLLPUBLIC_EXPORT sal_uInt32 convertTwipToMM100Unsigned(sal_Int32 _t);
     sal_Int16 convertTableJustification( sal_Int32 nIntValue );
     sal_Int16 ConvertNumberingType(sal_Int32 nFmt);
 

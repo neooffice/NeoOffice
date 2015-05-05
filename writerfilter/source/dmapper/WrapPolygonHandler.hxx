@@ -23,7 +23,8 @@
 #include <deque>
 #include <com/sun/star/drawing/PointSequenceSequence.hpp>
 #include <resourcemodel/LoggedResources.hxx>
-#include <resourcemodel/Fraction.hxx>
+#include <tools/fract.hxx>
+#include <comphelper/sequenceasvector.hxx>
 
 namespace writerfilter {
 namespace dmapper {
@@ -31,7 +32,7 @@ namespace dmapper {
 class WrapPolygon
 {
 public:
-    typedef ::std::deque<css::awt::Point> Points_t;
+    typedef comphelper::SequenceAsVector<css::awt::Point> Points_t;
     typedef ::boost::shared_ptr<WrapPolygon> Pointer_t;
 
 private:
@@ -48,10 +49,8 @@ public:
     Points_t::iterator begin();
     Points_t::iterator end();
 
-    size_t size() const;
-
     WrapPolygon::Pointer_t move(const css::awt::Point & rMove);
-    WrapPolygon::Pointer_t scale(const resourcemodel::Fraction & rFractionX, const resourcemodel::Fraction & rFractionY);
+    WrapPolygon::Pointer_t scale(const Fraction & rFractionX, const Fraction & rFractionY);
     WrapPolygon::Pointer_t correctWordWrapPolygon(const css::awt::Size & rSrcSize);
     css::drawing::PointSequenceSequence getPointSequenceSequence() const;
 };
@@ -62,7 +61,7 @@ public:
     WrapPolygonHandler();
     virtual ~WrapPolygonHandler();
 
-    WrapPolygon::Pointer_t getPolygon();
+    WrapPolygon::Pointer_t getPolygon() { return mpPolygon;}
 
 private:
     WrapPolygon::Pointer_t mpPolygon;

@@ -24,16 +24,12 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <resourcemodel/WW8ResourceModel.hxx>
 #include <string>
-#if SUPD == 310
-#include <hash_map>
-#else	// SUPD == 310
-#include <boost/unordered_map.hpp>
-#endif	// SUPD == 310
 #include <boost/shared_ptr.hpp>
 #include <libxml/xmlwriter.h>
 
 namespace writerfilter
 {
+#ifdef DEBUG_WRITERFILTER
     class IdToString
     {
     public:
@@ -43,6 +39,7 @@ namespace writerfilter
     protected:
         ~IdToString() {}
     };
+#endif
 
     class TagLogger
     {
@@ -60,30 +57,24 @@ namespace writerfilter
 
         static Pointer_t getInstance(const char * name);
 
-#ifdef DEBUG_IMPORT
+#ifdef DEBUG_WRITERFILTER
         void setFileName(const std::string & filename);
         void startDocument();
         void endDocument();
-#endif
 
-#ifdef DEBUG_DOMAINMAPPER
         void element(const std::string & name);
         void unoPropertySet(css::uno::Reference<css::beans::XPropertySet> rPropSet);
-#endif
-#if OSL_DEBUG_LEVEL > 1
         void startElement(const std::string & name);
 #endif
         void attribute(const std::string & name, const std::string & value);
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG_WRITERFILTER
         void attribute(const std::string & name, const OUString & value);
         void attribute(const std::string & name, sal_uInt32 value);
         void attribute(const std::string & name, const css::uno::Any aAny);
         void chars(const std::string & chars);
         void chars(const OUString & chars);
         void endElement();
-#endif
 
-#ifdef DEBUG_CONTEXT_HANDLER
         void propertySet(writerfilter::Reference<Properties>::Pointer_t props,
                 IdToString::Pointer_t pIdToString);
 #endif

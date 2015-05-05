@@ -48,7 +48,7 @@ public:
     TextEffectsHandler(sal_uInt32 aElementId);
     virtual ~TextEffectsHandler();
 
-    boost::optional<PropertyIds> getGrabBagPropertyId();
+    boost::optional<PropertyIds> getGrabBagPropertyId() { return maPropertyId;}
 
     css::beans::PropertyValue getInteropGrabBag();
 

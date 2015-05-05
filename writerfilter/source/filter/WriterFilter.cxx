@@ -22,11 +22,7 @@
 #include <WriterFilterDetection.hxx>
 #include <RtfFilter.hxx>
 
-using namespace ::rtl;
-using namespace ::cppu;
 using namespace ::com::sun::star;
-
-
 
 WriterFilter::WriterFilter( const uno::Reference< uno::XComponentContext >& rxContext)  :
     m_xContext( rxContext )
@@ -43,28 +39,13 @@ extern "C"
 /* shared lib exports implemented with helpers */
 static const struct ::cppu::ImplementationEntry s_component_entries [] =
 {
-    { WriterFilter_createInstance, WriterFilter_getImplementationName, WriterFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0 },
-    { WriterFilterDetection_createInstance, WriterFilterDetection_getImplementationName, WriterFilterDetection_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0} ,
-    { RtfFilter_createInstance, RtfFilter_getImplementationName, RtfFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0 },
-    { 0, 0, 0, 0, 0, 0 } // terminate with NULL
+    { WriterFilter_createInstance, WriterFilter_getImplementationName, WriterFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0 },
+    { WriterFilterDetection_createInstance, WriterFilterDetection_getImplementationName, WriterFilterDetection_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0} ,
+    { RtfFilter_createInstance, RtfFilter_getImplementationName, RtfFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0 },
+    { nullptr, nullptr, nullptr, nullptr, nullptr, 0 } // terminate with NULL
 };
 
-#if SUPD == 310
-
-void SAL_CALL component_getImplementationEnvironment(const sal_Char ** ppEnvTypeName, uno_Environment ** /*ppEnv*/ )
-{
-    *ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
-}
-
-sal_Bool SAL_CALL component_writeInfo( ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
-{
-    return ::cppu::component_writeInfoHelper( xMgr, xRegistry, s_component_entries );
-}
-
-void * SAL_CALL component_getFactory(sal_Char const * implName, ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
-#else	// SUPD == 310
-SAL_DLLPUBLIC_EXPORT void * SAL_CALL writerfilter_component_getFactory(sal_Char const * implName, ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
-#endif	// SUPD == 310
+SAL_DLLPUBLIC_EXPORT void * SAL_CALL writerfilter_component_getFactory(sal_Char const * implName, void * xMgr, void * xRegistry )
 {
     return ::cppu::component_getFactoryHelper(implName, xMgr, xRegistry, s_component_entries );
 }

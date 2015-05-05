@@ -19,10 +19,10 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYIDS_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYIDS_HXX
 
-
 #if SUPD == 310
 #include <WriterFilterDllApi.hxx>
 #endif	// SUPD == 310
+
 
 namespace writerfilter {
 namespace dmapper{
@@ -369,7 +369,16 @@ enum PropertyIds
         ,PROP_INDEX_ENTRY_TYPE
         ,PROP_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
         ,PROP_CELL_DIRECTION
+        ,PROP_SDT_END_BEFORE
+        ,PROP_PARA_SDT_END_BEFORE
+        ,META_PROP_TABLE_LOOK
+        ,PROP_PARA_CNF_STYLE
+        ,PROP_CELL_CNF_STYLE
+        ,PROP_ROW_CNF_STYLE
         ,PROP_CELL_HIDE_MARK
+        ,PROP_FOLLOW_TEXT_FLOW
+        ,PROP_FILL_STYLE
+        ,PROP_FILL_COLOR
     };
 struct PropertyNameSupplier_Impl;
 class PropertyNameSupplier

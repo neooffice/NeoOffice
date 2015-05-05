@@ -36,11 +36,7 @@
 #include <com/sun/star/uno/Type.hxx>
 
 #include "FormControlHelper.hxx"
-#if SUPD == 310
-#include <xmloff/ecmaflds.hxx>
-#else	// SUPD == 310
 #include <xmloff/odffields.hxx>
-#endif	// SUPD == 310
 
 namespace writerfilter {
 namespace dmapper {
@@ -93,7 +89,7 @@ uno::Reference<form::XForm> FormControlHelper::FormControlHelper_Impl::getForm()
         if (xFormsSupplier.is())
         {
             uno::Reference<container::XNameContainer> xFormsNamedContainer(xFormsSupplier->getForms());
-            static OUString sDOCXForm("DOCX-Standard");
+            static const char sDOCXForm[] = "DOCX-Standard";
 
             OUString sFormName(sDOCXForm);
             sal_uInt16 nUnique = 0;
@@ -133,19 +129,19 @@ uno::Reference<container::XIndexContainer> FormControlHelper::FormControlHelper_
 }
 
 FormControlHelper::FormControlHelper(FieldId eFieldId,
-                                     uno::Reference<text::XTextDocument> rTextDocument,
+                                     uno::Reference<text::XTextDocument> const& xTextDocument,
                                      FFDataHandler::Pointer_t pFFData)
     : m_pFFData(pFFData), m_pImpl(new FormControlHelper_Impl)
 {
     m_pImpl->m_eFieldId = eFieldId;
-    m_pImpl->rTextDocument = rTextDocument;
+    m_pImpl->rTextDocument = xTextDocument;
 }
 
 FormControlHelper::~FormControlHelper()
 {
 }
 
-bool FormControlHelper::createCheckbox(uno::Reference<text::XTextRange> xTextRange,
+bool FormControlHelper::createCheckbox(uno::Reference<text::XTextRange> const& xTextRange,
                                        const OUString & rControlName)
 {
     if ( !m_pFFData )
@@ -210,7 +206,7 @@ bool FormControlHelper::createCheckbox(uno::Reference<text::XTextRange> xTextRan
     return true;
 }
 
-bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField)
+bool FormControlHelper::processField(uno::Reference<text::XFormField> const& xFormField)
 {
     bool bRes = true;
 #if SUPD  == 310
@@ -228,11 +224,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
 
         if (m_pImpl->m_eFieldId == FIELD_FORMTEXT )
         {
-#if SUPD  == 310
-            xFormField->setFieldType(ECMA_FORMTEXT);
-#else	// SUPD  == 310
             xFormField->setFieldType(ODF_FORMTEXT);
-#endif	// SUPD  == 310
             if (  !m_pFFData->getName().isEmpty() )
             {
                 xNamed->setName( m_pFFData->getName() );
@@ -240,11 +232,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
         }
         else if (m_pImpl->m_eFieldId == FIELD_FORMCHECKBOX )
         {
-#if SUPD  == 310
-            xFormField->setFieldType(ECMA_FORMCHECKBOX);
-#else	// SUPD  == 310
             xFormField->setFieldType(ODF_FORMCHECKBOX);
-#endif	// SUPD  == 310
             uno::Reference<beans::XPropertySet> xPropSet(xFormField, uno::UNO_QUERY);
             uno::Any aAny;
             aAny <<= m_pFFData->getCheckboxChecked();
@@ -253,11 +241,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
         }
         else if (m_pImpl->m_eFieldId == FIELD_FORMDROPDOWN )
         {
-#if SUPD  == 310
-            xFormField->setFieldType(ECMA_FORMDROPDOWN);
-#else	// SUPD  == 310
             xFormField->setFieldType(ODF_FORMDROPDOWN);
-#endif	// SUPD  == 310
             uno::Sequence< OUString > sItems;
             sItems.realloc( m_pFFData->getDropDownEntries().size() );
 #if SUPD == 310
@@ -273,7 +257,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
             if ( sItems.getLength() )
             {
 #if SUPD  == 310
-                xPropertySet->setPropertyValue(ECMA_FORMDROPDOWN_LISTENTRY, uno::makeAny( sItems ) );
+                xPropertySet->setPropertyValue(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny( sItems ) );
 #else	// SUPD  == 310
                 if ( xNameCont->hasByName(ODF_FORMDROPDOWN_LISTENTRY) )
                     xNameCont->replaceByName(ODF_FORMDROPDOWN_LISTENTRY, uno::makeAny( sItems ) );
@@ -285,7 +269,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
                 if ( nResult )
                 {
 #if SUPD  == 310
-                    xPropertySet->setPropertyValue(ECMA_FORMDROPDOWN_RESULT, uno::makeAny( nResult ) );
+                    xPropertySet->setPropertyValue(ODF_FORMDROPDOWN_RESULT, uno::makeAny( nResult ) );
 #else	// SUPD  == 310
                     if ( xNameCont->hasByName(ODF_FORMDROPDOWN_RESULT) )
                         xNameCont->replaceByName(ODF_FORMDROPDOWN_RESULT, uno::makeAny( nResult ) );
@@ -301,7 +285,7 @@ bool FormControlHelper::processField(uno::Reference<text::XFormField> xFormField
     return bRes;
 }
 
-bool FormControlHelper::insertControl(uno::Reference<text::XTextRange> xTextRange)
+bool FormControlHelper::insertControl(uno::Reference<text::XTextRange> const& xTextRange)
 {
     bool bCreated = false;
     if ( !m_pFFData )
@@ -311,7 +295,7 @@ bool FormControlHelper::insertControl(uno::Reference<text::XTextRange> xTextRang
     if (! xFormComps.is())
         return false;
 
-    static OUString sControl("Control");
+    static const char sControl[] = "Control";
 
     sal_Int32 nControl = 0;
     bool bDone = false;

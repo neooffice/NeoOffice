@@ -33,7 +33,7 @@
 #include <i18nlangtag/languagetag.hxx>
 #include <i18nutil/paper.hxx>
 #endif	// SUPD == 310
-#include <ooxml/OOXMLFastTokens.hxx>
+#include <oox/token/tokens.hxx>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XOOXMLDocumentPropertiesImporter.hpp>
 #include <com/sun/star/table/ShadowFormat.hpp>
@@ -83,6 +83,7 @@
 #endif	// SUPD == 310
 
 using namespace ::com::sun::star;
+using namespace oox;
 
 namespace writerfilter {
 
@@ -102,11 +103,11 @@ struct _PageSz
 
 
 DomainMapper::DomainMapper( const uno::Reference< uno::XComponentContext >& xContext,
-                            uno::Reference< io::XInputStream > xInputStream,
-                            uno::Reference< lang::XComponent > xModel,
+                            uno::Reference<io::XInputStream> const& xInputStream,
+                            uno::Reference<lang::XComponent> const& xModel,
                             bool bRepairStorage,
                             SourceDocumentType eDocumentType,
-                            uno::Reference< text::XTextRange > xInsertTextRange,
+                            uno::Reference<text::XTextRange> const& xInsertTextRange,
                             bool bIsNewDoc ) :
 LoggedProperties(dmapper_logger, "DomainMapper"),
 LoggedTable(dmapper_logger, "DomainMapper"),
@@ -196,12 +197,14 @@ DomainMapper::~DomainMapper()
 
 void DomainMapper::lcl_attribute(Id nName, Value & val)
 {
-    static OUString sLocalBookmarkName;
+    if (m_pImpl->getTableManager().attribute(nName, val))
+        return;
+
+    static const int nSingleLineSpacing = 240;
     sal_Int32 nIntValue = val.getInt();
     OUString sStringValue = val.getString();
 
     SectionPropertyMap * pSectionContext = m_pImpl->GetSectionContext();
-    PropertyMap::iterator oldPropValue;
         switch( nName )
         {
         case NS_ooxml::LN_CT_Lvl_start:
@@ -233,14 +236,15 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         case NS_ooxml::LN_endnote:
             break;
         case NS_ooxml::LN_CT_Bookmark_name:
-            // sStringValue contains the bookmark name
-            sLocalBookmarkName = sStringValue;
+            // SAL_DEBUG("LN_CT_Bookmark_name " << sStringValue);
+            m_pImpl->SetBookmarkName( sStringValue );
         break;
         case NS_ooxml::LN_CT_MarkupRangeBookmark_id:
-            //contains the bookmark identifier - has to be added to the bookmark name imported before
-            //if it is already available then the bookmark should be inserted
-            m_pImpl->AddBookmark( sLocalBookmarkName, sStringValue );
-            sLocalBookmarkName = OUString();
+            // SAL_DEBUG("LN_CT_MarkupRangeBookmark_id " << sStringValue);
+            // add a bookmark range -- this remembers a bookmark starting here
+            // or, if the bookmark was already started or, if the bookmark was
+            // already started before, writes out the bookmark
+            m_pImpl->StartOrEndBookmark( sStringValue );
         break;
         case NS_ooxml::LN_CT_MarkupRange_displacedByCustomXml:
             break;
@@ -290,7 +294,11 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         case NS_ooxml::LN_CT_Color_val:
             if (m_pImpl->GetTopContext())
                 m_pImpl->GetTopContext()->Insert(PROP_CHAR_COLOR, uno::makeAny( nIntValue ) );
+#if SUPD == 310
             m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "val", OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8));
+#else	// SUPD == 310
+            m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "val", OUString::fromUtf8(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true)));
+#endif	// SUPD == 310
             break;
         case NS_ooxml::LN_CT_Underline_color:
             if (m_pImpl->GetTopContext())
@@ -320,7 +328,16 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
 
         case NS_ooxml::LN_CT_Fonts_ascii:
             if (m_pImpl->GetTopContext())
+            {
                 m_pImpl->GetTopContext()->Insert(PROP_CHAR_FONT_NAME, uno::makeAny( sStringValue ));
+                if (m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH) && m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH)->isSet(PROP_NUMBERING_RULES))
+                {
+                    // Font of the paragraph mark should be used for the numbering as well.
+                    uno::Reference<beans::XPropertySet> xCharStyle(m_pImpl->GetCurrentNumberingCharStyle());
+                    if (xCharStyle.is())
+                        xCharStyle->setPropertyValue("CharFontName", uno::makeAny(sStringValue));
+                }
+            }
             break;
         case NS_ooxml::LN_CT_Fonts_asciiTheme:
             m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "asciiTheme", ThemeTable::getStringForTheme(nIntValue));
@@ -375,6 +392,8 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             break;
         case NS_ooxml::LN_CT_Spacing_beforeLines:
                 m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "beforeLines", OUString::number(nIntValue));
+                if (m_pImpl->GetTopContext())
+                    m_pImpl->GetTopContext()->Insert(PROP_PARA_TOP_MARGIN, uno::makeAny(ConversionHelper::convertTwipToMM100(nIntValue * nSingleLineSpacing / 100)), false);
             break;
         case NS_ooxml::LN_CT_Spacing_after:
             m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "after", OUString::number(nIntValue));
@@ -384,64 +403,72 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             break;
         case NS_ooxml::LN_CT_Spacing_afterLines:
             m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "afterLines", OUString::number(nIntValue));
+            if (m_pImpl->GetTopContext())
+                m_pImpl->GetTopContext()->Insert(PROP_PARA_BOTTOM_MARGIN, uno::makeAny(ConversionHelper::convertTwipToMM100(nIntValue * nSingleLineSpacing / 100)), false);
             break;
         case NS_ooxml::LN_CT_Spacing_line: //91434
         case NS_ooxml::LN_CT_Spacing_lineRule: //91435
         {
-#define SINGLE_LINE_SPACING 240
             style::LineSpacing aSpacing;
             PropertyMapPtr pTopContext = m_pImpl->GetTopContext();
-            bool bFound = false;
-            PropertyMap::iterator aLineSpacingIter;
-            if (pTopContext)
+            boost::optional<PropertyMap::Property> aLineSpacingVal;
+            if (pTopContext && (aLineSpacingVal = pTopContext->getProperty(PROP_PARA_LINE_SPACING)) )
             {
-                aLineSpacingIter = pTopContext->find(PROP_PARA_LINE_SPACING);
-                bFound = aLineSpacingIter != pTopContext->end();
-            }
-            if (bFound)
-            {
-                aLineSpacingIter->second.getValue() >>= aSpacing;
+                aLineSpacingVal->second >>= aSpacing;
             }
             else
             {
                 //default to single line spacing
                 aSpacing.Mode = style::LineSpacingMode::FIX;
-                aSpacing.Height = sal_Int16(ConversionHelper::convertTwipToMM100( SINGLE_LINE_SPACING ));
+                aSpacing.Height = sal_Int16(ConversionHelper::convertTwipToMM100( nSingleLineSpacing ));
             }
             if( nName == NS_ooxml::LN_CT_Spacing_line )
             {
-                if( m_pImpl->getTableManager().isInCell() )
-                {
-                    // direct formatting is applied for table cell data
-                    m_pImpl->SetIsTableHasDirectFormatting(true);
-                }
                 m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "line", OUString::number(nIntValue));
                 //now set the value depending on the Mode
                 if( aSpacing.Mode == style::LineSpacingMode::PROP )
-                    aSpacing.Height = sal_Int16(sal_Int32(nIntValue) * 100 / SINGLE_LINE_SPACING );
+                    aSpacing.Height = sal_Int16(sal_Int32(nIntValue) * 100 / nSingleLineSpacing );
                 else
                     aSpacing.Height = sal_Int16(ConversionHelper::convertTwipToMM100( nIntValue ));
+
+                if( m_pImpl->getTableManager().isInCell() )
+                {
+                    // direct formatting is applied for table cell data
+                    TablePropertyMapPtr pTblCellWithDirectFormatting(new TablePropertyMap);
+                    pTblCellWithDirectFormatting->Insert(PROP_PARA_LINE_SPACING, uno::makeAny( aSpacing ), false);
+                    m_pImpl->getTableManager().cellProps(pTblCellWithDirectFormatting);
+                }
             }
             else //NS_ooxml::LN_CT_Spacing_lineRule:
             {
                     // exactly, atLeast, auto
-                    if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_LineSpacingRule_auto)
+                    if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_LineSpacingRule_auto)
                     {
                         m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "lineRule", "auto");
                         aSpacing.Mode = style::LineSpacingMode::PROP;
                         //reinterpret the already set value
-                        aSpacing.Height = sal_Int16( aSpacing.Height * 100 /  ConversionHelper::convertTwipToMM100( SINGLE_LINE_SPACING ));
+                        aSpacing.Height = sal_Int16( aSpacing.Height * 100 /  ConversionHelper::convertTwipToMM100( nSingleLineSpacing ));
                     }
-                    else if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_LineSpacingRule_atLeast)
+                    else if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_LineSpacingRule_atLeast)
                     {
                         m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "lineRule", "atLeast");
                         aSpacing.Mode = style::LineSpacingMode::MINIMUM;
                     }
-                    else // NS_ooxml::LN_Value_wordprocessingml_ST_LineSpacingRule_exact
+                    else // NS_ooxml::LN_Value_doc_ST_LineSpacingRule_exact
                     {
                         m_pImpl->appendGrabBag(m_pImpl->m_aSubInteropGrabBag, "lineRule", "exact");
                         aSpacing.Mode = style::LineSpacingMode::FIX;
                     }
+
+                if( m_pImpl->getTableManager().isInCell() )
+                {
+                    // If the table manager got the line rule after
+                    // ooxml::CT_Spacing_line, then it should get the rule
+                    // after lineRule as well.
+                    TablePropertyMapPtr pTblCellWithDirectFormatting(new TablePropertyMap);
+                    pTblCellWithDirectFormatting->Insert(PROP_PARA_LINE_SPACING, uno::makeAny(aSpacing), false);
+                    m_pImpl->getTableManager().cellProps(pTblCellWithDirectFormatting);
+                }
             }
             if (pTopContext)
                 pTopContext->Insert(PROP_PARA_LINE_SPACING, uno::makeAny( aSpacing ));
@@ -535,7 +562,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             }
             break;
         case NS_ooxml::LN_CT_PageSz_orient:
-            CT_PageSz.orient = (nIntValue != 0);
+            CT_PageSz.orient = (nIntValue != static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_PageOrientation_portrait));
             break;
         case NS_ooxml::LN_CT_PageSz_w:
             {
@@ -595,7 +622,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             {
                 // 49 is just the old value that should be removed, once the
                 // root cause in SwTabFrm::MakeAll() is fixed.
-                if (m_pImpl->GetSettingsTable()->GetView() == NS_ooxml::LN_Value_wordprocessingml_ST_View_web)
+                if (m_pImpl->GetSettingsTable()->GetView() == NS_ooxml::LN_Value_doc_ST_View_web)
                     default_spacing = 49;
                 else
                     default_spacing = 280;
@@ -617,7 +644,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
 
             if (!m_pImpl->GetSettingsTable()->GetDoNotUseHTMLParagraphAutoSpacing())
             {
-                if (m_pImpl->GetSettingsTable()->GetView() == NS_ooxml::LN_Value_wordprocessingml_ST_View_web)
+                if (m_pImpl->GetSettingsTable()->GetView() == NS_ooxml::LN_Value_doc_ST_View_web)
                     default_spacing = 49;
                 else
                     default_spacing = 280;
@@ -696,10 +723,10 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     case NS_ooxml::LN_CT_FramePr_hAnchor:
                         switch(nIntValue)
                         {
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_HAnchor_text:   //relative to column
+                            case  NS_ooxml::LN_Value_doc_ST_HAnchor_text:   //relative to column
                                 nIntValue = text::RelOrientation::FRAME; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_HAnchor_margin: nIntValue = text::RelOrientation::PAGE_PRINT_AREA; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_HAnchor_page:   nIntValue = text::RelOrientation::PAGE_FRAME; break;
+                            case  NS_ooxml::LN_Value_doc_ST_HAnchor_margin: nIntValue = text::RelOrientation::PAGE_PRINT_AREA; break;
+                            case  NS_ooxml::LN_Value_doc_ST_HAnchor_page:   nIntValue = text::RelOrientation::PAGE_FRAME; break;
                             default:;
                         }
                         pParaProperties->SethAnchor( nIntValue );
@@ -707,10 +734,10 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     case NS_ooxml::LN_CT_FramePr_vAnchor:
                         switch(nIntValue)
                         {
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_VAnchor_text:  //relative to paragraph
+                            case  NS_ooxml::LN_Value_doc_ST_VAnchor_text:  //relative to paragraph
                                     nIntValue = text::RelOrientation::FRAME; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_VAnchor_margin:nIntValue = text::RelOrientation::PAGE_PRINT_AREA ; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_VAnchor_page: nIntValue = text::RelOrientation::PAGE_FRAME; break;
+                            case  NS_ooxml::LN_Value_doc_ST_VAnchor_margin:nIntValue = text::RelOrientation::PAGE_PRINT_AREA ; break;
+                            case  NS_ooxml::LN_Value_doc_ST_VAnchor_page: nIntValue = text::RelOrientation::PAGE_FRAME; break;
                             default:;
                         }
                         pParaProperties->SetvAnchor( nIntValue );
@@ -721,11 +748,11 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     case NS_ooxml::LN_CT_FramePr_xAlign:
                         switch( nIntValue )
                         {
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_XAlign_center  : nIntValue = text::HoriOrientation::CENTER; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_XAlign_right   : nIntValue = text::HoriOrientation::RIGHT; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_XAlign_inside  : nIntValue = text::HoriOrientation::INSIDE; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_XAlign_outside : nIntValue = text::HoriOrientation::OUTSIDE; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_XAlign_left    : nIntValue = text::HoriOrientation::LEFT; break;
+                            case  NS_ooxml::LN_Value_doc_ST_XAlign_center  : nIntValue = text::HoriOrientation::CENTER; break;
+                            case  NS_ooxml::LN_Value_doc_ST_XAlign_right   : nIntValue = text::HoriOrientation::RIGHT; break;
+                            case  NS_ooxml::LN_Value_doc_ST_XAlign_inside  : nIntValue = text::HoriOrientation::INSIDE; break;
+                            case  NS_ooxml::LN_Value_doc_ST_XAlign_outside : nIntValue = text::HoriOrientation::OUTSIDE; break;
+                            case  NS_ooxml::LN_Value_doc_ST_XAlign_left    : nIntValue = text::HoriOrientation::LEFT; break;
                             default:    nIntValue = text::HoriOrientation::NONE;
                         }
                         pParaProperties->SetxAlign( nIntValue );
@@ -736,12 +763,12 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     case NS_ooxml::LN_CT_FramePr_yAlign:
                         switch( nIntValue )
                         {
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_top     :
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_inside  :nIntValue = text::VertOrientation::TOP; break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_center  :nIntValue = text::VertOrientation::CENTER;break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_bottom  :
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_outside :nIntValue = text::VertOrientation::BOTTOM;break;
-                            case  NS_ooxml::LN_Value_wordprocessingml_ST_YAlign_inline  :
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_top     :
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_inside  :nIntValue = text::VertOrientation::TOP; break;
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_center  :nIntValue = text::VertOrientation::CENTER;break;
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_bottom  :
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_outside :nIntValue = text::VertOrientation::BOTTOM;break;
+                            case  NS_ooxml::LN_Value_doc_ST_YAlign_inline  :
                             {
                             // HACK: This is for bnc#780851, where a table has one cell that has w:framePr,
                             // which causes that paragraph to be converted to a text frame, and the original
@@ -768,13 +795,13 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     case NS_ooxml::LN_CT_FramePr_hRule:
                          switch( nIntValue )
                          {
-                            case NS_ooxml::LN_Value_wordprocessingml_ST_HeightRule_exact:
+                            case NS_ooxml::LN_Value_doc_ST_HeightRule_exact:
                                 nIntValue = text::SizeType::FIX;
                             break;
-                            case NS_ooxml::LN_Value_wordprocessingml_ST_HeightRule_atLeast:
+                            case NS_ooxml::LN_Value_doc_ST_HeightRule_atLeast:
                                 nIntValue = text::SizeType::MIN;
                             break;
-                            case NS_ooxml::LN_Value_wordprocessingml_ST_HeightRule_auto:
+                            case NS_ooxml::LN_Value_doc_ST_HeightRule_auto:
                             //no break;
                             default:;
                                 nIntValue = text::SizeType::VARIABLE;
@@ -783,13 +810,13 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                     break;
                     case NS_ooxml::LN_CT_FramePr_wrap:
                     {
-                        //should be either LN_Value_wordprocessingml_ST_Wrap_notBeside or LN_Value_wordprocessingml_ST_Wrap_around or LN_Value_wordprocessingml_ST_Wrap_auto
-                        OSL_ENSURE( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_Wrap_around ||
-                                    sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_Wrap_notBeside ||
-                                    sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_Wrap_auto,
+                        //should be either LN_Value_doc_ST_Wrap_notBeside or LN_Value_doc_ST_Wrap_around or LN_Value_doc_ST_Wrap_auto
+                        OSL_ENSURE( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_around ||
+                                    sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_notBeside ||
+                                    sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_auto,
                             "wrap not around, not_Beside or auto?");
-                        if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_Wrap_around ||
-                            sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_Wrap_auto )
+                        if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_around ||
+                            sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_auto )
                             pParaProperties->SetWrap ( text::WrapTextMode_DYNAMIC ) ;
                         else
                             pParaProperties->SetWrap ( text::WrapTextMode_NONE ) ;
@@ -867,8 +894,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                         pSectionContext->SetdxaLnn( nIntValue );
                 break;
                 case NS_ooxml::LN_CT_LineNumber_restart:
-                    //page:empty, probably 0,section:1,continuous:2;
-                    aSettings.bRestartAtEachPage = nIntValue < 1;
+                    aSettings.bRestartAtEachPage = nIntValue == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_LineNumberRestart_newPage);
                     OSL_ENSURE(pSectionContext, "SectionContext unavailable!");
                     if( pSectionContext )
                         pSectionContext->SetLnc( nIntValue );
@@ -913,9 +939,23 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         break;
         case NS_ooxml::LN_CT_DocGrid_type:
         {
-            if (pSectionContext != NULL)
+            if (pSectionContext != nullptr)
             {
-                pSectionContext->SetGridType(nIntValue);
+                switch( nIntValue )
+                {
+                    case NS_ooxml::LN_Value_doc_ST_DocGrid_default:
+                    case NS_ooxml::LN_Value_doc_ST_DocGrid_snapToChars:
+                        pSectionContext->SetGridType( 0 );
+                        break;
+                    case NS_ooxml::LN_Value_doc_ST_DocGrid_lines:
+                        pSectionContext->SetGridType( 1 );
+                        break;
+                    case NS_ooxml::LN_Value_doc_ST_DocGrid_linesAndChars:
+                        pSectionContext->SetGridType( 2 );
+                        break;
+                    default :
+                        OSL_FAIL("unknown SwTextGrid value");
+                }
             }
         }
         break;
@@ -924,6 +964,14 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         break;
         case NS_ooxml::LN_CT_SdtBlock_sdtEndContent:
             m_pImpl->SetSdt(false);
+
+            // It's not possible to insert the relevant property to the character context here:
+            // the previous, already sent character context may be still active, so the property would be lost.
+            if (m_pImpl->m_pSdtHelper->isOutsideAParagraph())
+                m_pImpl->setParaSdtEndDeferred(true);
+            else
+                m_pImpl->setSdtEndDeferred(true);
+
             if (!m_pImpl->m_pSdtHelper->getDropDownItems().empty())
                 m_pImpl->m_pSdtHelper->createDropDownControl();
         break;
@@ -934,18 +982,21 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             m_pImpl->m_pSdtHelper->getDropDownItems().push_back(sStringValue);
         break;
         case NS_ooxml::LN_CT_SdtDate_fullDate:
-            m_pImpl->m_pSdtHelper->getDate().append(sStringValue);
+            if (!IsInHeaderFooter())
+                m_pImpl->m_pSdtHelper->getDate().append(sStringValue);
+            else
+                m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_SdtDate_fullDate", sStringValue);
         break;
         case NS_ooxml::LN_CT_Background_color:
             m_pImpl->m_oBackgroundColor.reset(nIntValue);
         break;
         case NS_ooxml::LN_CT_PageNumber_start:
-            if (pSectionContext != NULL)
+            if (pSectionContext != nullptr)
                 pSectionContext->SetPageNumber(nIntValue);
         break;
         case NS_ooxml::LN_CT_FtnEdn_type:
             // This is the "separator" footnote, ignore its linebreak.
-            if (static_cast<sal_uInt32>(nIntValue) == NS_ooxml::LN_Value_wordprocessingml_ST_FtnEdn_separator)
+            if (static_cast<sal_uInt32>(nIntValue) == NS_ooxml::LN_Value_doc_ST_FtnEdn_separator)
                 m_pImpl->m_bIgnoreNextPara = true;
         break;
         case NS_ooxml::LN_CT_DataBinding_prefixMappings:
@@ -957,20 +1008,51 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         case NS_ooxml::LN_CT_DataBinding_storeItemID:
             m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_DataBinding_storeItemID", sStringValue);
             break;
+        case NS_ooxml::LN_CT_PTab_leader:
+        case NS_ooxml::LN_CT_PTab_relativeTo:
+        case NS_ooxml::LN_CT_PTab_alignment:
+            break;
+        case NS_ooxml::LN_CT_Cnf_lastRowLastColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "lastRowLastColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_lastRowFirstColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "lastRowFirstColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_firstRowLastColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "firstRowLastColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_oddHBand:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "oddHBand", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_firstRowFirstColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "firstRowFirstColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_evenVBand:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "evenVBand", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_evenHBand:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "evenHBand", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_lastColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "lastColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_firstColumn:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "firstColumn", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_oddVBand:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "oddVBand", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_lastRow:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "lastRow", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_firstRow:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "firstRow", OUString::number(nIntValue));
+            break;
+        case NS_ooxml::LN_CT_Cnf_val:
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "val", sStringValue);
+            break;
         default:
-            {
-#if OSL_DEBUG_LEVEL > 0
-            OString sMessage("DomainMapper::attribute() - Id: ");
-            sMessage += OString::number( nName, 10 );
-            sMessage += " / 0x";
-            sMessage += OString::number( nName, 16 );
-            sMessage += " value: ";
-            sMessage += OString::number( nIntValue, 10 );
-            sMessage += " / 0x";
-            sMessage += OString::number( nIntValue, 16 );
-            SAL_WARN("writerfilter", sMessage.getStr());
-#endif
-            }
+            SAL_WARN("writerfilter", "DomainMapper::lcl_attribute: unhandled token: " << nName);
         }
 }
 
@@ -980,7 +1062,9 @@ void DomainMapper::lcl_sprm(Sprm & rSprm)
         sprmWithProps( rSprm, m_pImpl->GetTopContext() );
 }
 
-sal_Int32 lcl_getCurrentNumberingProperty(uno::Reference<container::XIndexAccess> xNumberingRules, sal_Int32 nNumberingLevel, const OUString& aProp)
+sal_Int32 lcl_getCurrentNumberingProperty(
+        uno::Reference<container::XIndexAccess> const& xNumberingRules,
+        sal_Int32 nNumberingLevel, const OUString& aProp)
 {
     sal_Int32 nRet = 0;
 
@@ -1016,11 +1100,11 @@ sal_Int32 lcl_getCurrentNumberingProperty(uno::Reference<container::XIndexAccess
 static bool ExchangeLeftRight( const PropertyMapPtr rContext, DomainMapper_Impl* m_pImpl )
 {
     bool bExchangeLeftRight = false;
-    PropertyMap::const_iterator aPropParaIte = rContext->find(PROP_WRITING_MODE);
-    if( aPropParaIte != rContext->end())
+    boost::optional<PropertyMap::Property> aPropPara = rContext->getProperty(PROP_WRITING_MODE);
+    if( aPropPara )
     {
         sal_Int32 aAdjust ;
-        if( (aPropParaIte->second.getValue() >>= aAdjust) && aAdjust == text::WritingMode2::RL_TB )
+        if( (aPropPara->second >>= aAdjust) && aAdjust == text::WritingMode2::RL_TB )
             bExchangeLeftRight = true;
     }
     else
@@ -1029,16 +1113,40 @@ static bool ExchangeLeftRight( const PropertyMapPtr rContext, DomainMapper_Impl*
         StyleSheetEntryPtr pTable = m_pImpl->GetStyleSheetTable()->FindDefaultParaStyle();
         if ( pTable )
         {
-            PropertyMap::const_iterator aPropStyle = pTable->pProperties->find(PROP_WRITING_MODE);
-            if( aPropStyle != pTable->pProperties->end())
+            boost::optional<PropertyMap::Property> aPropStyle = pTable->pProperties->getProperty(PROP_WRITING_MODE);
+            if( aPropStyle )
             {
                 sal_Int32 aDirect;
-                if( (aPropStyle->second.getValue() >>= aDirect) && aDirect == text::WritingMode2::RL_TB )
+                if( (aPropStyle->second >>= aDirect) && aDirect == text::WritingMode2::RL_TB )
                     bExchangeLeftRight = true;
             }
         }
     }
     return bExchangeLeftRight;
+}
+
+/// Check if the style or its parent has a list id, recursively.
+static sal_Int32 lcl_getListId(const StyleSheetEntryPtr pEntry, const StyleSheetTablePtr pStyleTable)
+{
+    const StyleSheetPropertyMap* pEntryProperties = dynamic_cast<const StyleSheetPropertyMap*>(pEntry->pProperties.get());
+    if (!pEntryProperties)
+        return -1;
+
+    sal_Int32 nListId = pEntryProperties->GetListId();
+    // The style itself has a list id.
+    if (nListId >= 0)
+        return nListId;
+
+    // The style has no parent.
+    if (pEntry->sBaseStyleIdentifier.isEmpty())
+        return -1;
+
+    const StyleSheetEntryPtr pParent = pStyleTable->FindStyleSheetByISTD(pEntry->sBaseStyleIdentifier);
+    // No such parent style or loop in the style hierarchy.
+    if (!pParent || pParent == pEntry)
+        return -1;
+
+    return lcl_getListId(pParent, pStyleTable);
 }
 
 void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
@@ -1067,9 +1175,6 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
 
     switch(nSprmId)
     {
-    case 2:  // sprmPIstd
-    case 0x4600:
-        break;  // sprmPIstd - style code
     case NS_ooxml::LN_CT_PPrBase_jc:
         handleParaJustification(nIntValue, rContext, ExchangeLeftRight( rContext, m_pImpl ));
         break;
@@ -1080,10 +1185,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         rContext->Insert(PROP_PARA_KEEP_TOGETHER, uno::makeAny( nIntValue ? true : false) );
         break;
     case NS_ooxml::LN_CT_PPrBase_pageBreakBefore:
-        if ( nIntValue == 1 )
-        {
-            rContext->Insert(PROP_BREAK_TYPE, uno::makeAny( com::sun::star::style::BreakType_PAGE_BEFORE ) );
-        }
+        rContext->Insert(PROP_BREAK_TYPE, uno::makeAny(nIntValue ? style::BreakType_PAGE_BEFORE : style::BreakType_NONE));
     break;
     case NS_ooxml::LN_CT_NumPr_ilvl:
             if (nIntValue < 0 || 10 <= nIntValue) // Writer can't do everything
@@ -1092,7 +1194,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                         "unsupported numbering level " << nIntValue);
                 break;
             }
-            if( m_pImpl->IsStyleSheetImport() )
+            if( IsStyleSheetImport() )
             {
                 //style sheets cannot have a numbering rule attached
                 StyleSheetPropertyMap* pStyleSheetPropertyMap = dynamic_cast< StyleSheetPropertyMap* >( rContext.get() );
@@ -1107,7 +1209,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             //convert the ListTable entry to a NumberingRules propery and apply it
             ListsManager::Pointer pListTable = m_pImpl->GetListTable();
             ListDef::Pointer pList = pListTable->GetList( nIntValue );
-            if( m_pImpl->IsStyleSheetImport() )
+            if( IsStyleSheetImport() )
             {
                 //style sheets cannot have a numbering rule attached
                 StyleSheetPropertyMap* pStyleSheetPropertyMap = dynamic_cast< StyleSheetPropertyMap* >( rContext.get() );
@@ -1116,17 +1218,17 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             }
             if( pList.get( ) )
             {
-                if( !m_pImpl->IsStyleSheetImport() )
+                if( !IsStyleSheetImport() )
                 {
                     uno::Any aRules = uno::makeAny( pList->GetNumberingRules( ) );
                     rContext->Insert( PROP_NUMBERING_RULES, aRules );
                     // erase numbering from pStyle if already set
-                    rContext->erase(PROP_NUMBERING_STYLE_NAME);
+                    rContext->Erase(PROP_NUMBERING_STYLE_NAME);
                 }
             }
             else
             {
-                if( m_pImpl->IsStyleSheetImport() )
+                if( IsStyleSheetImport() )
                 {
                     // set the number id for AbstractNum references
                     StyleSheetPropertyMap* pStyleSheetPropertyMap = dynamic_cast< StyleSheetPropertyMap* >( rContext.get() );
@@ -1161,83 +1263,48 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_CT_PBdr_bottom:
     case NS_ooxml::LN_CT_PBdr_right:
     case NS_ooxml::LN_CT_PBdr_between:
+    {
+        writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+        if( pProperties.get())
         {
-            //in binary format the borders are directly provided in OOXML they are inside of properties
-            if( IsOOXMLImport() || IsRTFImport() )
+            BorderHandlerPtr pBorderHandler( new BorderHandler( true ) );
+            pProperties->resolve(*pBorderHandler);
+            PropertyIds eBorderId = PropertyIds( 0 );
+            PropertyIds eBorderDistId = PropertyIds( 0 );
+            switch( nSprmId )
             {
-                writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
-                {
-                    BorderHandlerPtr pBorderHandler( new BorderHandler( true ) );
-                    pProperties->resolve(*pBorderHandler);
-                    PropertyIds eBorderId = PropertyIds( 0 );
-                    PropertyIds eBorderDistId = PropertyIds( 0 );
-                    switch( nSprmId )
-                    {
-                        case NS_ooxml::LN_CT_PBdr_top:
-                            eBorderId = PROP_TOP_BORDER;
-                            eBorderDistId = PROP_TOP_BORDER_DISTANCE;
-                        break;
-                        case NS_ooxml::LN_CT_PBdr_left:
-                            eBorderId = PROP_LEFT_BORDER;
-                            eBorderDistId = PROP_LEFT_BORDER_DISTANCE;
-                        break;
-                        case NS_ooxml::LN_CT_PBdr_bottom:
-                            eBorderId = PROP_BOTTOM_BORDER         ;
-                            eBorderDistId = PROP_BOTTOM_BORDER_DISTANCE;
-                        break;
-                        case NS_ooxml::LN_CT_PBdr_right:
-                            eBorderId = PROP_RIGHT_BORDER;
-                            eBorderDistId = PROP_RIGHT_BORDER_DISTANCE ;
-                        break;
-                        case NS_ooxml::LN_CT_PBdr_between:
-                            //not supported
-                        break;
-                        default:;
-                    }
-                    if( eBorderId )
-                        rContext->Insert( eBorderId, uno::makeAny( pBorderHandler->getBorderLine()) , true);
-                    if(eBorderDistId)
-                        rContext->Insert(eBorderDistId, uno::makeAny( pBorderHandler->getLineDistance()), true);
-                    if (nSprmId == NS_ooxml::LN_CT_PBdr_right && pBorderHandler->getShadow())
-                    {
-                        table::ShadowFormat aFormat = rContext->getShadowFromBorder(pBorderHandler->getBorderLine());
-                        rContext->Insert(PROP_PARA_SHADOW_FORMAT, uno::makeAny(aFormat));
-                    }
-                }
+            case NS_ooxml::LN_CT_PBdr_top:
+                eBorderId = PROP_TOP_BORDER;
+                eBorderDistId = PROP_TOP_BORDER_DISTANCE;
+                break;
+            case NS_ooxml::LN_CT_PBdr_left:
+                eBorderId = PROP_LEFT_BORDER;
+                eBorderDistId = PROP_LEFT_BORDER_DISTANCE;
+                break;
+            case NS_ooxml::LN_CT_PBdr_bottom:
+                eBorderId = PROP_BOTTOM_BORDER         ;
+                eBorderDistId = PROP_BOTTOM_BORDER_DISTANCE;
+                break;
+            case NS_ooxml::LN_CT_PBdr_right:
+                eBorderId = PROP_RIGHT_BORDER;
+                eBorderDistId = PROP_RIGHT_BORDER_DISTANCE ;
+                break;
+            case NS_ooxml::LN_CT_PBdr_between:
+                //not supported
+                break;
+            default:;
             }
-            else
+            if( eBorderId )
+                rContext->Insert( eBorderId, uno::makeAny( pBorderHandler->getBorderLine()) , true);
+            if(eBorderDistId)
+                rContext->Insert(eBorderDistId, uno::makeAny( pBorderHandler->getLineDistance()), true);
+            if (nSprmId == NS_ooxml::LN_CT_PBdr_right && pBorderHandler->getShadow())
             {
-                table::BorderLine2 aBorderLine;
-                sal_Int32 nLineDistance = ConversionHelper::MakeBorderLine( nIntValue, aBorderLine );
-                PropertyIds eBorderId = PROP_LEFT_BORDER;
-                PropertyIds eBorderDistId = PROP_LEFT_BORDER_DISTANCE  ;
-                switch( nSprmId )
-                {
-                case NS_ooxml::LN_CT_PBdr_between:
-                    OSL_FAIL( "TODO: inner border is not handled");
-                    break;
-                case NS_ooxml::LN_CT_PBdr_left:
-                    eBorderId = PROP_LEFT_BORDER;
-                    eBorderDistId = PROP_LEFT_BORDER_DISTANCE  ;
-                    break;
-                case NS_ooxml::LN_CT_PBdr_right:
-                    eBorderId = PROP_RIGHT_BORDER          ;
-                    eBorderDistId = PROP_RIGHT_BORDER_DISTANCE ;
-                    break;
-                case NS_ooxml::LN_CT_PBdr_top:
-                    eBorderId = PROP_TOP_BORDER            ;
-                    eBorderDistId = PROP_TOP_BORDER_DISTANCE;
-                    break;
-                case NS_ooxml::LN_CT_PBdr_bottom:
-                default:
-                    eBorderId = PROP_BOTTOM_BORDER         ;
-                    eBorderDistId = PROP_BOTTOM_BORDER_DISTANCE;
-                }
-                rContext->Insert(eBorderId, uno::makeAny( aBorderLine ));
-                rContext->Insert(eBorderDistId, uno::makeAny( nLineDistance ));
+                table::ShadowFormat aFormat = writerfilter::dmapper::PropertyMap::getShadowFromBorder(pBorderHandler->getBorderLine());
+                rContext->Insert(PROP_PARA_SHADOW_FORMAT, uno::makeAny(aFormat));
             }
         }
+    }
     break;
     case NS_ooxml::LN_CT_PBdr_bar:
         break;
@@ -1294,19 +1361,19 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             sal_Int16 nAlignment = 0;
             switch (nIntValue)
             {
-                case NS_ooxml::LN_Value_wordprocessingml_ST_TextAlignment_top:
+                case NS_ooxml::LN_Value_doc_ST_TextAlignment_top:
                     nAlignment = 2;
                     break;
-                case NS_ooxml::LN_Value_wordprocessingml_ST_TextAlignment_center:
+                case NS_ooxml::LN_Value_doc_ST_TextAlignment_center:
                     nAlignment = 3;
                     break;
-                case NS_ooxml::LN_Value_wordprocessingml_ST_TextAlignment_baseline:
+                case NS_ooxml::LN_Value_doc_ST_TextAlignment_baseline:
                     nAlignment = 1;
                     break;
-                case NS_ooxml::LN_Value_wordprocessingml_ST_TextAlignment_bottom:
+                case NS_ooxml::LN_Value_doc_ST_TextAlignment_bottom:
                     nAlignment = 4;
                     break;
-                case NS_ooxml::LN_Value_wordprocessingml_ST_TextAlignment_auto:
+                case NS_ooxml::LN_Value_doc_ST_TextAlignment_auto:
                 default:
                     break;
             }
@@ -1318,7 +1385,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_CT_PPrBase_outlineLvl:
         {
             sal_Int16 nLvl = static_cast< sal_Int16 >( nIntValue );
-            if( m_pImpl->IsStyleSheetImport() )
+            if( IsStyleSheetImport() )
             {
 
                 StyleSheetPropertyMap* pStyleSheetPropertyMap = dynamic_cast< StyleSheetPropertyMap* >( rContext.get() );
@@ -1348,13 +1415,13 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
 
         break;
     case NS_ooxml::LN_EG_SectPrContents_bidi:
-        if (pSectionContext != NULL)
+        if (pSectionContext != nullptr)
             pSectionContext->Insert(PROP_WRITING_MODE, uno::makeAny( text::WritingMode2::RL_TB));
         break;
     case NS_ooxml::LN_EG_RPrBase_highlight:
         {
             sal_Int32 nColor = 0;
-            if( (mbIsHighlightSet = getColorFromIndex(nIntValue, nColor)) )
+            if( (mbIsHighlightSet = getColorFromId(nIntValue, nColor)) )
                 rContext->Insert(PROP_CHAR_BACK_COLOR, uno::makeAny( nColor ));
             else if (mnBackgroundColor)
                 rContext->Insert(PROP_CHAR_BACK_COLOR, uno::makeAny( mnBackgroundColor ));
@@ -1492,7 +1559,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                     break;
                     case NS_ooxml::LN_EG_RPrBase_smallCaps:
                         // If smallcaps would be just disabled and an other casemap is already inserted, don't do anything.
-                        if (nIntValue || rContext->find(ePropertyId) == rContext->end())
+                        if (nIntValue || !rContext->isSet(ePropertyId) )
                             rContext->Insert(ePropertyId, uno::makeAny( nIntValue ? style::CaseMap::SMALLCAPS : style::CaseMap::NONE));
                         m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "smallCaps", OUString::number(nIntValue));
                     break;
@@ -1527,7 +1594,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                 {
                     // If the default para style contains PROP_CHAR_HEIGHT, that should have priority over the table style.
                     StyleSheetEntryPtr pTable = m_pImpl->GetStyleSheetTable()->FindDefaultParaStyle();
-                    if (pTable && pTable->pProperties->find(PROP_CHAR_HEIGHT) != pTable->pProperties->end())
+                    if (pTable && pTable->pProperties->isSet(PROP_CHAR_HEIGHT) )
                         bIgnore = true;
                 }
                 if (!bIgnore)
@@ -1542,7 +1609,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
                 }
             }
             // Make sure char sizes defined in the stylesheets don't affect char props from direct formatting.
-            if (!m_pImpl->IsStyleSheetImport())
+            if (!IsStyleSheetImport())
                 m_pImpl->deferCharacterProperty( nSprmId, uno::makeAny( nIntValue ));
             m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, (nSprmId == NS_ooxml::LN_EG_RPrBase_sz ? OUString("sz") : OUString("szCs")), OUString::number(nIntValue));
         }
@@ -1615,14 +1682,14 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             // Ignore continuous section break at the end of the document, if the previous section had the same type as well
             // It makes the importer lose margin settings with no benefit
             SectionPropertyMap* pLastContext = m_pImpl->GetLastSectionContext();
-            int nPrevBreakType = 0;
+            int nPrevBreakType = NS_ooxml::LN_Value_ST_SectionMark_continuous;
             bool bHasPrevSection = false;
             if (pLastContext)
             {
                 bHasPrevSection = true;
                 nPrevBreakType = pLastContext->GetBreakType();
             }
-            if (m_pImpl->GetParaSectpr() || nIntValue != 0 || (bHasPrevSection && nPrevBreakType != nIntValue))
+            if (m_pImpl->GetParaSectpr() || nIntValue != static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_continuous) || (bHasPrevSection && nPrevBreakType != nIntValue))
                 pSectionContext->SetBreakType( nIntValue );
         }
         break;
@@ -1640,9 +1707,6 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         rContext->Insert( PROP_HEIGHT, uno::makeAny( PaperInfo::sloppyFitPageDimension( nHeight ) ) );
     }
     break;
-    case 0x703a: //undocumented, grid related?
-        OSL_FAIL( "TODO: not handled yet"); //nIntValue like 0x008a2373 ?
-        break;
     case NS_ooxml::LN_EG_SectPrContents_textDirection:
     {
         /* 0 HoriLR 1 Vert TR 2 Vert TR 3 Vert TT 4 HoriLT
@@ -1651,13 +1715,12 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         sal_Int16 nDirection = text::WritingMode_LR_TB;
         switch( nIntValue )
         {
-            case 0:
-            case 4:
+            case NS_ooxml::LN_Value_ST_TextDirection_lrTb:
+            case NS_ooxml::LN_Value_ST_TextDirection_lrTbV:
                 nDirection = text::WritingMode_LR_TB;
             break;
-            case 1:
-            case 2:
-            case 3:
+            case NS_ooxml::LN_Value_ST_TextDirection_tbRl:
+            case NS_ooxml::LN_Value_ST_TextDirection_btLr:
                 nDirection = text::WritingMode_TB_RL;
             break;
             default:;
@@ -1665,7 +1728,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
 
         PropertyMap * pTargetContext = rContext.get();
 
-        if (pSectionContext != NULL &&
+        if (pSectionContext != nullptr &&
             nSprmId == NS_ooxml::LN_EG_SectPrContents_textDirection)
         {
             pTargetContext = pSectionContext;
@@ -1675,35 +1738,6 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     }
     break;  // sprmSTextFlow
         // the following are not part of the official documentation
-    case 0x6870: //TxtForeColor
-        {
-            sal_Int32 nColor = msfilter::util::BGRToRGB(nIntValue);
-            rContext->Insert(PROP_CHAR_COLOR, uno::makeAny( nColor ) );
-        }
-        break;
-    case 0x6877: //underlining color
-        {
-            rContext->Insert(PROP_CHAR_UNDERLINE_HAS_COLOR, uno::makeAny( true ) );
-            rContext->Insert(PROP_CHAR_UNDERLINE_COLOR, uno::makeAny( nIntValue ) );
-        }
-        break;
-    case 0x6815:
-        break; //undocumented
-    case 0x6467:
-        break; //undocumented
-    case 0xF617:
-        break; //undocumented
-    case 0xd634: // sprmTNewSpacing - table spacing ( see WW8TabBandDesc::ProcessSpacing() )
-        break;
-    case 0x4888:
-    case 0x6887:
-        //properties of list levels - undocumented
-        break;
-    case 0xd234:
-    case 0xd235:
-    case 0xd236:
-    case 0xd237:
-        break;//undocumented section properties
     case NS_ooxml::LN_CT_Tabs_tab:
         resolveSprmProps(*this, rSprm);
         m_pImpl->IncorporateTabStop(m_pImpl->m_aCurrentTabStop);
@@ -1715,7 +1749,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         // fdo#81033: for RTF, a tab stop is inherited from the style if it
         // is also applied to the paragraph directly, and cleared if it is
         // not applied to the paragraph directly => don't InitTabStopFromStyle
-        if (!m_pImpl->IsStyleSheetImport() && !IsRTFImport())
+        if (!IsStyleSheetImport() && !IsRTFImport())
         {
             uno::Any aValue = m_pImpl->GetPropertyFromStyleSheet(PROP_PARA_TAB_STOPS);
             uno::Sequence< style::TabStop > aStyleTabStops;
@@ -1753,7 +1787,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
 
                 if( pBorderHandler->getShadow() )
                 {
-                    table::ShadowFormat aFormat = rContext->getShadowFromBorder(pBorderHandler->getBorderLine());
+                    table::ShadowFormat aFormat = writerfilter::dmapper::PropertyMap::getShadowFromBorder(pBorderHandler->getBorderLine());
                     rContext->Insert(PROP_CHAR_SHADOW_FORMAT, uno::makeAny(aFormat));
                 }
             }
@@ -1986,25 +2020,27 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             m_pImpl->GetTopContext()->Insert( PROP_PARA_STYLE_NAME, uno::makeAny( sConvertedStyleName ));
         //apply numbering to paragraph if it was set at the style, but only if the paragraph itself
         //does not specify the numbering
-        if( rContext->find(PROP_NUMBERING_RULES) == rContext->end()) // !contains
+        if( !rContext->isSet(PROP_NUMBERING_RULES) ) // !contains
         {
             const StyleSheetEntryPtr pEntry = pStyleTable->FindStyleSheetByISTD(sStringValue);
             OSL_ENSURE( pEntry.get(), "no style sheet found" );
-            const StyleSheetPropertyMap* pStyleSheetProperties = dynamic_cast<const StyleSheetPropertyMap*>(pEntry ? pEntry->pProperties.get() : 0);
+            const StyleSheetPropertyMap* pStyleSheetProperties = dynamic_cast<const StyleSheetPropertyMap*>(pEntry ? pEntry->pProperties.get() : nullptr);
 
-            if( pStyleSheetProperties && pStyleSheetProperties->GetListId() >= 0 )
+            sal_Int32 nListId = pEntry ? lcl_getListId(pEntry, pStyleTable) : -1;
+            if( pStyleSheetProperties && nListId >= 0 )
             {
                 rContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny(
-                            ListDef::GetStyleName( pStyleSheetProperties->GetListId( ) ) ), false);
+                            ListDef::GetStyleName( nListId ) ), false);
 
                 // We're inheriting properties from a numbering style. Make sure a possible right margin is inherited from the base style.
                 sal_Int32 nParaRightMargin = 0;
                 if (!pEntry->sBaseStyleIdentifier.isEmpty())
                 {
                     const StyleSheetEntryPtr pParent = pStyleTable->FindStyleSheetByISTD(pEntry->sBaseStyleIdentifier);
-                    const StyleSheetPropertyMap* pParentProperties = dynamic_cast<const StyleSheetPropertyMap*>(pParent ? pParent->pProperties.get() : 0);
-                    if (pParentProperties && pParentProperties->find(PROP_PARA_RIGHT_MARGIN) != pParentProperties->end())
-                        nParaRightMargin = pParentProperties->find(PROP_PARA_RIGHT_MARGIN)->second.getValue().get<sal_Int32>();
+                    const StyleSheetPropertyMap* pParentProperties = dynamic_cast<const StyleSheetPropertyMap*>(pParent ? pParent->pProperties.get() : nullptr);
+                    boost::optional<PropertyMap::Property> pPropMargin;
+                    if (pParentProperties && (pPropMargin = pParentProperties->getProperty(PROP_PARA_RIGHT_MARGIN)) )
+                        nParaRightMargin = pPropMargin->second.get<sal_Int32>();
                 }
                 if (nParaRightMargin != 0)
                 {
@@ -2186,14 +2222,21 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_CT_PPr_pPrChange:
     case NS_ooxml::LN_trackchange:
     case NS_ooxml::LN_EG_RPrContent_rPrChange:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlDelRangeStart:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlDelRangeEnd:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlMoveFromRangeStart:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlMoveFromRangeEnd:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlMoveToRangeStart:
+    case NS_ooxml::LN_EG_RangeMarkupElements_customXmlMoveToRangeEnd:
     {
         HandleRedline( rSprm );
     }
     break;
     case NS_ooxml::LN_endtrackchange:
-        m_pImpl->RemoveCurrentRedline( );
+        m_pImpl->RemoveTopRedline();
     break;
     case NS_ooxml::LN_CT_RPrChange_rPr:
+    {
         // Push all the current 'Character' properties to the stack, so that we don't store them
         // as 'tracked changes' by mistake
         m_pImpl->PushProperties(CONTEXT_CHARACTER);
@@ -2201,19 +2244,19 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         // Resolve all the properties that are under the 'rPrChange'->'rPr' XML node
         resolveSprmProps(*this, rSprm );
 
-        if (m_pImpl->GetTopContext())
-        {
-            // Get all the properties that were processed in the 'rPrChange'->'rPr' XML node
-            uno::Sequence< beans::PropertyValue > currentRedlineRevertProperties = m_pImpl->GetTopContext()->GetPropertyValues();
-
-            // Store these properties in the current redline object
-            m_pImpl->SetCurrentRedlineRevertProperties( currentRedlineRevertProperties );
-        }
+        // Get all the properties that were processed in the 'rPrChange'->'rPr' XML node
+        uno::Sequence< beans::PropertyValue > currentRedlineRevertProperties = m_pImpl->GetTopContext()->GetPropertyValues();
 
         // Pop back out the character properties that were on the run
         m_pImpl->PopProperties(CONTEXT_CHARACTER);
+
+        // Store these properties in the current redline object (do it after the PopProperties() above, since
+        // otherwise it'd be stored in the content dropped there).
+        m_pImpl->SetCurrentRedlineRevertProperties( currentRedlineRevertProperties );
+    }
     break;
     case NS_ooxml::LN_CT_PPrChange_pPr:
+    {
         // Push all the current 'Paragraph' properties to the stack, so that we don't store them
         // as 'tracked changes' by mistake
         m_pImpl->PushProperties(CONTEXT_PARAGRAPH);
@@ -2221,17 +2264,16 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         // Resolve all the properties that are under the 'pPrChange'->'pPr' XML node
         resolveSprmProps(*this, rSprm );
 
-        if (m_pImpl->GetTopContext())
-        {
-            // Get all the properties that were processed in the 'pPrChange'->'pPr' XML node
-            uno::Sequence< beans::PropertyValue > currentRedlineRevertProperties = m_pImpl->GetTopContext()->GetPropertyValues();
-
-            // Store these properties in the current redline object
-            m_pImpl->SetCurrentRedlineRevertProperties( currentRedlineRevertProperties );
-        }
+        // Get all the properties that were processed in the 'pPrChange'->'pPr' XML node
+        uno::Sequence< beans::PropertyValue > currentRedlineRevertProperties = m_pImpl->GetTopContext()->GetPropertyValues();
 
         // Pop back out the character properties that were on the run
         m_pImpl->PopProperties(CONTEXT_PARAGRAPH);
+
+        // Store these properties in the current redline object (do it after the PopProperties() above, since
+        // otherwise it'd be stored in the content dropped there).
+        m_pImpl->SetCurrentRedlineRevertProperties( currentRedlineRevertProperties );
+    }
     break;
     case NS_ooxml::LN_object:
     {
@@ -2269,7 +2311,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_ffdata:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() != NULL)
+        if (pProperties.get() != nullptr)
         {
             FFDataHandler::Pointer_t pFFDataHandler(new FFDataHandler());
 
@@ -2282,32 +2324,57 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_CT_SdtPr_comboBox:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() != NULL)
+        if (pProperties.get() != nullptr)
             pProperties->resolve(*this);
     }
     break;
     case NS_ooxml::LN_CT_SdtDropDownList_listItem:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() != NULL)
+        if (pProperties.get() != nullptr)
             pProperties->resolve(*this);
     }
     break;
     case NS_ooxml::LN_CT_SdtPr_date:
     {
-        writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() != NULL)
-            pProperties->resolve(*this);
+        if (!IsInHeaderFooter())
+            resourcemodel::resolveSprmProps(*this, rSprm);
+        else
+        {
+            OUString sName = "ooxml:CT_SdtPr_date";
+            enableInteropGrabBag(sName);
+            resourcemodel::resolveSprmProps(*this, rSprm);
+            m_pImpl->m_pSdtHelper->appendToInteropGrabBag(getInteropGrabBag());
+            m_pImpl->disableInteropGrabBag();
+        }
     }
     break;
     case NS_ooxml::LN_CT_SdtDate_dateFormat:
     {
-        m_pImpl->m_pSdtHelper->getDateFormat().append(sStringValue);
+        if (!IsInHeaderFooter())
+            m_pImpl->m_pSdtHelper->getDateFormat().append(sStringValue);
+        else
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_SdtDate_dateFormat", sStringValue);
+    }
+    break;
+    case NS_ooxml::LN_CT_SdtDate_storeMappedDataAs:
+    {
+        if (IsInHeaderFooter())
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_SdtDate_storeMappedDataAs", sStringValue);
+    }
+    break;
+    case NS_ooxml::LN_CT_SdtDate_calendar:
+    {
+        if (IsInHeaderFooter())
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_SdtDate_calendar", sStringValue);
     }
     break;
     case NS_ooxml::LN_CT_SdtDate_lid:
     {
-        m_pImpl->m_pSdtHelper->getLocale().append(sStringValue);
+        if (!IsInHeaderFooter())
+            m_pImpl->m_pSdtHelper->getLocale().append(sStringValue);
+        else
+            m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "ooxml:CT_SdtDate_lid", sStringValue);
     }
     break;
     case NS_ooxml::LN_CT_SdtPr_dataBinding:
@@ -2320,6 +2387,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
     case NS_ooxml::LN_CT_SdtPr_group:
     case NS_ooxml::LN_CT_SdtPr_text:
     case NS_ooxml::LN_CT_SdtPr_id:
+    case NS_ooxml::LN_CT_SdtPr_alias:
     {
         // this is an unsupported SDT property, create a grab bag for it
         OUString sName;
@@ -2335,16 +2403,26 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
             case NS_ooxml::LN_CT_SdtPr_group:       sName = "ooxml:CT_SdtPr_group"; break;
             case NS_ooxml::LN_CT_SdtPr_text:        sName = "ooxml:CT_SdtPr_text"; break;
             case NS_ooxml::LN_CT_SdtPr_id:          sName = "ooxml:CT_SdtPr_id"; break;
+            case NS_ooxml::LN_CT_SdtPr_alias:       sName = "ooxml:CT_SdtPr_alias"; break;
             default: assert(false);
         };
         enableInteropGrabBag(sName);
 
         // process subitems
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() != NULL)
+        if (pProperties.get() != nullptr)
             pProperties->resolve(*this);
 
-        m_pImpl->m_pSdtHelper->appendToInteropGrabBag(getInteropGrabBag());
+        if (nSprmId == NS_ooxml::LN_CT_SdtPr_alias)
+        {
+            beans::PropertyValue aValue;
+            aValue.Name = sName;
+            aValue.Value <<= sStringValue;
+            m_pImpl->m_pSdtHelper->appendToInteropGrabBag(aValue);
+        }
+        else
+            m_pImpl->m_pSdtHelper->appendToInteropGrabBag(getInteropGrabBag());
+        m_pImpl->m_pSdtHelper->setOutsideAParagraph(m_pImpl->IsOutsideAParagraph());
         m_pImpl->disableInteropGrabBag();
     }
     break;
@@ -2421,9 +2499,57 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, PropertyMapPtr rContext )
         }
     }
     break;
+    case NS_ooxml::LN_CT_SdtPr_rPr:
+    {
+        // Make sure properties from a pervious SDT are not merged with the current ones.
+        m_pImpl->m_pSdtHelper->getInteropGrabBagAndClear();
+    }
+    break;
+    case NS_ooxml::LN_CT_TblPrBase_tblLook:
+    {
+        writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+        if (pProperties.get())
+        {
+            pProperties->resolve(*this);
+            m_pImpl->getTableManager().finishTableLook();
+        }
+    }
+    break;
+    case NS_ooxml::LN_CT_TrPrBase_cnfStyle:
+    {
+        m_pImpl->enableInteropGrabBag("cnfStyle");
+        resourcemodel::resolveSprmProps(*this, rSprm);
+
+        TablePropertyMapPtr pPropMap(new TablePropertyMap());
+        pPropMap->Insert(PROP_ROW_CNF_STYLE, uno::makeAny(uno::makeAny(m_pImpl->m_aInteropGrabBag.getAsConstList())), true, ROW_GRAB_BAG);
+        m_pImpl->getTableManager().insertRowProps(pPropMap);
+
+        m_pImpl->disableInteropGrabBag();
+    }
+    break;
+    case NS_ooxml::LN_CT_TcPrBase_cnfStyle:
+    {
+        m_pImpl->enableInteropGrabBag("cnfStyle");
+        resourcemodel::resolveSprmProps(*this, rSprm);
+
+        TablePropertyMapPtr pPropMap(new TablePropertyMap());
+        pPropMap->Insert(PROP_CELL_CNF_STYLE, uno::makeAny(uno::makeAny(m_pImpl->m_aInteropGrabBag.getAsConstList())), true, CELL_GRAB_BAG);
+        m_pImpl->getTableManager().cellProps(pPropMap);
+
+        m_pImpl->disableInteropGrabBag();
+    }
+    break;
+    case NS_ooxml::LN_CT_PPrBase_cnfStyle:
+    {
+        m_pImpl->enableInteropGrabBag("cnfStyle");
+        resourcemodel::resolveSprmProps(*this, rSprm);
+        rContext->Insert(PROP_PARA_CNF_STYLE, uno::makeAny(m_pImpl->m_aInteropGrabBag.getAsConstList()), true, PARA_GRAB_BAG);
+        m_pImpl->disableInteropGrabBag();
+    }
+    break;
     default:
         {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
             dmapper_logger->startElement("unhandled");
             dmapper_logger->attribute("id", nSprmId);
             dmapper_logger->attribute("name", rSprm.getName());
@@ -2466,7 +2592,7 @@ void DomainMapper::processDeferredCharacterProperties( const std::map< sal_Int32
             {
                 std::map< sal_Int32, uno::Any >::const_iterator font = deferredCharacterProperties.find( NS_ooxml::LN_EG_RPrBase_sz );
                 PropertyMapPtr pDefaultCharProps = m_pImpl->GetStyleSheetTable()->GetDefaultCharProps();
-                PropertyMap::iterator aDefaultFont = pDefaultCharProps->find(PROP_CHAR_HEIGHT);
+                boost::optional<PropertyMap::Property> aDefaultFont = pDefaultCharProps->getProperty(PROP_CHAR_HEIGHT);
                 if( font != deferredCharacterProperties.end())
                 {
                     double fontSize = 0;
@@ -2474,10 +2600,10 @@ void DomainMapper::processDeferredCharacterProperties( const std::map< sal_Int32
                     nEscapement = nIntValue * 100 / fontSize;
                 }
                 // TODO if not direct formatting, check the style first, not directly the default char props.
-                else if (aDefaultFont != pDefaultCharProps->end())
+                else if (aDefaultFont)
                 {
                     double fHeight = 0;
-                    aDefaultFont->second.getValue() >>= fHeight;
+                    aDefaultFont->second >>= fHeight;
                     // fHeight is in points, nIntValue is in half points, nEscapement is in percents.
                     nEscapement = nIntValue * 100 / fHeight / 2;
                 }
@@ -2568,21 +2694,26 @@ void DomainMapper::lcl_startParagraphGroup()
     if (!(m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH) == m_pImpl->GetTopContext()))
         m_pImpl->PushProperties(CONTEXT_PARAGRAPH);
 
-    static OUString sDefault("Standard");
+    static const char sDefault[] = "Standard";
     if (m_pImpl->GetTopContext())
     {
         if (!m_pImpl->IsInShape())
         {
-            m_pImpl->GetTopContext()->Insert( PROP_PARA_STYLE_NAME, uno::makeAny( sDefault ) );
+            m_pImpl->GetTopContext()->Insert( PROP_PARA_STYLE_NAME, uno::makeAny( OUString(sDefault) ) );
             m_pImpl->SetCurrentParaStyleId(sDefault);
         }
         if (m_pImpl->isBreakDeferred(PAGE_BREAK))
                m_pImpl->GetTopContext()->Insert( PROP_BREAK_TYPE, uno::makeAny( com::sun::star::style::BreakType_PAGE_BEFORE) );
         else if (m_pImpl->isBreakDeferred(COLUMN_BREAK))
             m_pImpl->GetTopContext()->Insert( PROP_BREAK_TYPE, uno::makeAny( com::sun::star::style::BreakType_COLUMN_BEFORE) );
+
+        if (m_pImpl->isParaSdtEndDeferred())
+            m_pImpl->GetTopContext()->Insert(PROP_PARA_SDT_END_BEFORE, uno::makeAny(true), true, PARA_GRAB_BAG);
     }
     m_pImpl->SetIsFirstRun(true);
+    m_pImpl->SetIsOutsideAParagraph(false);
     m_pImpl->clearDeferredBreaks();
+    m_pImpl->setParaSdtEndDeferred(false);
 }
 
 void DomainMapper::lcl_endParagraphGroup()
@@ -2591,6 +2722,7 @@ void DomainMapper::lcl_endParagraphGroup()
     m_pImpl->getTableManager().endParagraphGroup();
     //frame conversion has to be executed after table conversion
     m_pImpl->ExecuteFrameConversion();
+    m_pImpl->SetIsOutsideAParagraph(true);
 }
 
 void DomainMapper::markLastParagraphInSection( )
@@ -2598,7 +2730,12 @@ void DomainMapper::markLastParagraphInSection( )
     m_pImpl->SetIsLastParagraphInSection( true );
 }
 
-void DomainMapper::lcl_startShape( uno::Reference< drawing::XShape > xShape )
+void DomainMapper::markLastSectionGroup( )
+{
+    m_pImpl->SetIsLastSectionGroup( true );
+}
+
+void DomainMapper::lcl_startShape(uno::Reference<drawing::XShape> const& xShape)
 {
     if (m_pImpl->GetTopContext())
     {
@@ -2636,6 +2773,8 @@ void DomainMapper::lcl_endShape( )
 
         lcl_endParagraphGroup();
         m_pImpl->PopShapeContext( );
+        // A shape is always inside a shape (anchored or inline).
+        m_pImpl->SetIsOutsideAParagraph(false);
     }
 }
 
@@ -2672,6 +2811,20 @@ void DomainMapper::lcl_startCharacterGroup()
     if (m_pImpl->m_bFrameBtLr)
         // No support for this in core, work around by char rotation, as we do so for table cells already.
         m_pImpl->GetTopContext()->Insert(PROP_CHAR_ROTATION, uno::makeAny(sal_Int16(900)));
+    if (m_pImpl->isSdtEndDeferred())
+    {
+        // Fields have an empty character group before the real one, so don't
+        // call setSdtEndDeferred(false) here, that will happen only in lcl_utext().
+        m_pImpl->GetTopContext()->Insert(PROP_SDT_END_BEFORE, uno::makeAny(true), true, CHAR_GRAB_BAG);
+    }
+
+    // Remember formatting of the date control as it only supports plain strings natively.
+#if SUPD == 310
+    if (m_pImpl->m_pSdtHelper->getDateFormat().getLength())
+#else	// SUPD == 310
+    if (!m_pImpl->m_pSdtHelper->getDateFormat().isEmpty())
+#endif	// SUPD == 310
+        enableInteropGrabBag("CharFormat");
 }
 
 void DomainMapper::lcl_endCharacterGroup()
@@ -2683,7 +2836,7 @@ void DomainMapper::lcl_text(const sal_uInt8 * data_, size_t len)
 {
     //TODO: Determine the right text encoding (FIB?)
     OUString sText( (const sal_Char*) data_, len, RTL_TEXTENCODING_MS_1252 );
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("text");
     dmapper_logger->chars(sText);
     dmapper_logger->endElement();
@@ -2704,9 +2857,18 @@ void DomainMapper::lcl_text(const sal_uInt8 * data_, size_t len)
                     return;
                 case 0x07:
                     m_pImpl->getTableManager().text(data_, len);
+                    return;
                 case 0x0d:
+                {
+                    PropertyMapPtr pContext = m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH);
+                    if (pContext && m_pImpl->isBreakDeferred(COLUMN_BREAK))
+                    {
+                        pContext->Insert(PROP_BREAK_TYPE, uno::makeAny(style::BreakType_COLUMN_BEFORE));
+                        m_pImpl->clearDeferredBreak(COLUMN_BREAK);
+                    }
                     m_pImpl->finishParagraph(m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH));
                     return;
+                }
                 case 0x13:
                     m_pImpl->PushFieldContext();
                     return;
@@ -2747,7 +2909,7 @@ void DomainMapper::lcl_text(const sal_uInt8 * data_, size_t len)
             m_pImpl->AppendFieldResult(sText);
         else
         {
-            if (pContext == 0)
+            if (pContext == nullptr)
                 pContext.reset(new PropertyMap());
 
             m_pImpl->appendTextPortion( sText, pContext );
@@ -2771,15 +2933,34 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
     aBuffer.append( (const sal_Unicode *) data_, len);
     sText = aBuffer.makeStringAndClear();
 
+    if (m_pImpl->isSdtEndDeferred())
+    {
+        // In case we have a field context, then save the property there, so
+        // SDT's ending right before a field start are handled as well.
+        PropertyMapPtr pContext = m_pImpl->GetTopContext();
+        if (m_pImpl->IsOpenField())
+            pContext = m_pImpl->GetTopFieldContext()->getProperties();
+        pContext->Insert(PROP_SDT_END_BEFORE, uno::makeAny(true), true, CHAR_GRAB_BAG);
+        m_pImpl->setSdtEndDeferred(false);
+    }
+
+    bool bNewLine = len == 1 && (sText[0] == 0x0d || sText[0] == 0x07);
     if (!m_pImpl->m_pSdtHelper->getDropDownItems().empty())
     {
-        m_pImpl->m_pSdtHelper->getSdtTexts().append(sText);
-        return;
+        if (bNewLine)
+            // Dropdown control has single-line texts, so in case of newline, create the control.
+            m_pImpl->m_pSdtHelper->createDropDownControl();
+        else
+        {
+            m_pImpl->m_pSdtHelper->getSdtTexts().append(sText);
+            return;
+        }
     }
+    // Form controls are not allowed in headers / footers; see sw::DocumentContentOperationsManager::InsertDrawObj()
 #if SUPD == 310
-    else if (m_pImpl->m_pSdtHelper->getDateFormat().getLength())
+    else if (m_pImpl->m_pSdtHelper->getDateFormat().getLength() && !IsInHeaderFooter())
 #else	// SUPD == 310
-    else if (!m_pImpl->m_pSdtHelper->getDateFormat().isEmpty())
+    else if (!m_pImpl->m_pSdtHelper->getDateFormat().isEmpty() && !IsInHeaderFooter())
 #endif	// SUPD == 310
     {
         /*
@@ -2787,20 +2968,35 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
          * create the control early, as in Writer, it's part of the cell, but
          * in OOXML, the sdt contains the cell.
          */
-        m_pImpl->m_pSdtHelper->createDateControl(sText);
+        m_pImpl->m_pSdtHelper->createDateControl(sText, getInteropGrabBag());
         return;
     }
     else if (!m_pImpl->m_pSdtHelper->isInteropGrabBagEmpty())
     {
         // there are unsupported SDT properties in the document
         // save them in the paragraph interop grab bag
-        if(m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_checkbox") ||
+        if (m_pImpl->IsDiscardHeaderFooter())
+        {
+            // Unless we're supposed to ignore this header/footer.
+            m_pImpl->m_pSdtHelper->getInteropGrabBagAndClear();
+            return;
+        }
+        if((m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_checkbox") ||
                 m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_text") ||
                 m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_dataBinding") ||
+                m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_citation") ||
+                m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_date") ||
                 (m_pImpl->m_pSdtHelper->containedInInteropGrabBag("ooxml:CT_SdtPr_id") &&
-                        m_pImpl->m_pSdtHelper->getInteropGrabBagSize() == 1))
-            m_pImpl->GetTopContextOfType(CONTEXT_CHARACTER)->Insert(PROP_SDTPR,
-                    uno::makeAny(m_pImpl->m_pSdtHelper->getInteropGrabBagAndClear()), true, CHAR_GRAB_BAG);
+                        m_pImpl->m_pSdtHelper->getInteropGrabBagSize() == 1)) && !m_pImpl->m_pSdtHelper->isOutsideAParagraph())
+        {
+            PropertyMapPtr pContext = m_pImpl->GetTopContextOfType(CONTEXT_CHARACTER);
+
+            if (m_pImpl->IsOpenField())
+                // We have a field, insert the SDT properties to the field's grab-bag, so they won't be lost.
+                pContext = m_pImpl->GetTopFieldContext()->getProperties();
+
+            pContext->Insert(PROP_SDTPR, uno::makeAny(m_pImpl->m_pSdtHelper->getInteropGrabBagAndClear()), true, CHAR_GRAB_BAG);
+        }
         else
             m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH)->Insert(PROP_SDTPR,
                     uno::makeAny(m_pImpl->m_pSdtHelper->getInteropGrabBagAndClear()), true, PARA_GRAB_BAG);
@@ -2821,7 +3017,7 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
     {
         m_pImpl->getTableManager().utext(data_, len);
 
-        if(len == 1 && (sText[0] == 0x0d || sText[0] == 0x07))
+        if (bNewLine)
         {
             if (m_pImpl->m_bIgnoreNextPara)
             {
@@ -2894,7 +3090,7 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
                 m_pImpl->AppendFieldResult(sText);
             else
             {
-                if (pContext == 0)
+                if (pContext == nullptr)
                     pContext.reset(new PropertyMap());
 
                 m_pImpl->appendTextPortion( sText, pContext );
@@ -2910,17 +3106,7 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
 
 void DomainMapper::lcl_props(writerfilter::Reference<Properties>::Pointer_t ref)
 {
-    string sType = ref->getType();
-    if( sType == "PICF" )
-    {
-        m_pImpl->ImportGraphic(ref, IMPORT_AS_GRAPHIC);
-    }
-    else if( sType == "FSPA" )
-    {
-        m_pImpl->ImportGraphic(ref, IMPORT_AS_SHAPE);
-    }
-    else
-        ref->resolve(*this);
+    ref->resolve(*this);
 }
 
 void DomainMapper::lcl_table(Id name, writerfilter::Reference<Table>::Pointer_t ref)
@@ -2969,120 +3155,72 @@ void DomainMapper::lcl_substream(Id rName, ::writerfilter::Reference<Stream>::Po
     m_pImpl->substream(rName, ref);
 }
 
-void DomainMapper_Impl::substream(Id rName,
-        ::writerfilter::Reference<Stream>::Pointer_t const& ref)
-{
-#ifndef NDEBUG
-    size_t contextSize(m_aContextStack.size());
-    size_t propSize[NUMBER_OF_CONTEXTS];
-    for (int i = 0; i < NUMBER_OF_CONTEXTS; ++i) {
-        propSize[i] = m_aPropertyStacks[i].size();
-    }
-#endif
-
-    appendTableManager();
-    // Appending a TableManager resets its TableHandler, so we need to append
-    // that as well, or tables won't be imported properly in headers/footers.
-    appendTableHandler();
-    getTableManager().startLevel();
-
-    //import of page header/footer
-
-    switch( rName )
-    {
-    case NS_ooxml::LN_headerl:
-
-        PushPageHeader(SectionPropertyMap::PAGE_LEFT);
-        break;
-    case NS_ooxml::LN_headerr:
-
-        PushPageHeader(SectionPropertyMap::PAGE_RIGHT);
-        break;
-    case NS_ooxml::LN_headerf:
-
-        PushPageHeader(SectionPropertyMap::PAGE_FIRST);
-        break;
-    case NS_ooxml::LN_footerl:
-
-        PushPageFooter(SectionPropertyMap::PAGE_LEFT);
-        break;
-    case NS_ooxml::LN_footerr:
-
-        PushPageFooter(SectionPropertyMap::PAGE_RIGHT);
-        break;
-    case NS_ooxml::LN_footerf:
-
-        PushPageFooter(SectionPropertyMap::PAGE_FIRST);
-        break;
-    case NS_ooxml::LN_footnote:
-    case NS_ooxml::LN_endnote:
-        PushFootOrEndnote( NS_ooxml::LN_footnote == rName );
-    break;
-    case NS_ooxml::LN_annotation :
-        PushAnnotation();
-    break;
-    }
-    ref->resolve(m_rDMapper);
-    switch( rName )
-    {
-    case NS_ooxml::LN_headerl:
-    case NS_ooxml::LN_headerr:
-    case NS_ooxml::LN_headerf:
-    case NS_ooxml::LN_footerl:
-    case NS_ooxml::LN_footerr:
-    case NS_ooxml::LN_footerf:
-        PopPageHeaderFooter();
-    break;
-    case NS_ooxml::LN_footnote:
-    case NS_ooxml::LN_endnote:
-        PopFootOrEndnote();
-    break;
-    case NS_ooxml::LN_annotation :
-        PopAnnotation();
-    break;
-    }
-
-    getTableManager().endLevel();
-    popTableManager();
-
-    // check that stacks are the same as before substream
-    assert(m_aContextStack.size() == contextSize);
-    for (int i = 0; i < NUMBER_OF_CONTEXTS; ++i) {
-        assert(m_aPropertyStacks[i].size() == propSize[i]);
-    }
-}
-
-void DomainMapper::lcl_info(const string & /*info_*/)
+void DomainMapper::lcl_info(const std::string & /*info_*/)
 {
 }
 
-void DomainMapper::handleUnderlineType(const sal_Int32 nIntValue, const ::boost::shared_ptr<PropertyMap> pContext)
+void DomainMapper::handleUnderlineType(const Id nId, const ::boost::shared_ptr<PropertyMap> pContext)
 {
-    sal_Int16 eUnderline = awt::FontUnderline::NONE;
+    sal_Int16 nUnderline = awt::FontUnderline::NONE;
 
-    switch(nIntValue)
+    switch (nId)
     {
-    case 0: eUnderline = awt::FontUnderline::NONE; break;
-    case 2: pContext->Insert(PROP_CHAR_WORD_MODE, uno::makeAny( true ) ); // TODO: how to get rid of it?
-    case 1: eUnderline = awt::FontUnderline::SINGLE;       break;
-    case 3: eUnderline = awt::FontUnderline::DOUBLE;       break;
-    case 4: eUnderline = awt::FontUnderline::DOTTED;       break;
-    case 7: eUnderline = awt::FontUnderline::DASH;         break;
-    case 9: eUnderline = awt::FontUnderline::DASHDOT;      break;
-    case 10:eUnderline = awt::FontUnderline::DASHDOTDOT;   break;
-    case 6: eUnderline = awt::FontUnderline::BOLD;         break;
-    case 11:eUnderline = awt::FontUnderline::WAVE;         break;
-    case 20:eUnderline = awt::FontUnderline::BOLDDOTTED;   break;
-    case 23:eUnderline = awt::FontUnderline::BOLDDASH;     break;
-    case 39:eUnderline = awt::FontUnderline::LONGDASH;     break;
-    case 55:eUnderline = awt::FontUnderline::BOLDLONGDASH; break;
-    case 25:eUnderline = awt::FontUnderline::BOLDDASHDOT;  break;
-    case 26:eUnderline = awt::FontUnderline::BOLDDASHDOTDOT;break;
-    case 27:eUnderline = awt::FontUnderline::BOLDWAVE;     break;
-    case 43:eUnderline = awt::FontUnderline::DOUBLEWAVE;   break;
-    default: ;
+    case NS_ooxml::LN_Value_ST_Underline_none:
+        nUnderline = awt::FontUnderline::NONE;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_words:
+        pContext->Insert(PROP_CHAR_WORD_MODE, uno::makeAny(true));
+        // fall-through intended
+    case NS_ooxml::LN_Value_ST_Underline_single:
+        nUnderline = awt::FontUnderline::SINGLE;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_double:
+        nUnderline = awt::FontUnderline::DOUBLE;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dotted:
+        nUnderline = awt::FontUnderline::DOTTED;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dash:
+        nUnderline = awt::FontUnderline::DASH;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dotDash:
+        nUnderline = awt::FontUnderline::DASHDOT;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dotDotDash:
+        nUnderline = awt::FontUnderline::DASHDOTDOT;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_thick:
+        nUnderline = awt::FontUnderline::BOLD;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_wave:
+        nUnderline = awt::FontUnderline::WAVE;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dottedHeavy:
+        nUnderline = awt::FontUnderline::BOLDDOTTED;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dashedHeavy:
+        nUnderline = awt::FontUnderline::BOLDDASH;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dashLong:
+        nUnderline = awt::FontUnderline::LONGDASH;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dashLongHeavy:
+        nUnderline = awt::FontUnderline::BOLDLONGDASH;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dashDotHeavy:
+        nUnderline = awt::FontUnderline::BOLDDASHDOT;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_dashDotDotHeavy:
+        nUnderline = awt::FontUnderline::BOLDDASHDOTDOT;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_wavyHeavy:
+        nUnderline = awt::FontUnderline::BOLDWAVE;
+        break;
+    case NS_ooxml::LN_Value_ST_Underline_wavyDouble:
+        nUnderline = awt::FontUnderline::DOUBLEWAVE;
+        break;
     }
-    pContext->Insert(PROP_CHAR_UNDERLINE, uno::makeAny( eUnderline ) );
+    pContext->Insert(PROP_CHAR_UNDERLINE, uno::makeAny(nUnderline));
 }
 
 void DomainMapper::handleParaJustification(const sal_Int32 nIntValue, const ::boost::shared_ptr<PropertyMap> pContext, const bool bExchangeLeftRight)
@@ -3092,22 +3230,24 @@ void DomainMapper::handleParaJustification(const sal_Int32 nIntValue, const ::bo
     OUString aStringValue = "left";
     switch(nIntValue)
     {
-    case 1:
+    case NS_ooxml::LN_Value_ST_Jc_center:
         nAdjust = style::ParagraphAdjust_CENTER;
         aStringValue = "center";
         break;
-    case 2:
+    case NS_ooxml::LN_Value_ST_Jc_right:
+    case NS_ooxml::LN_Value_ST_Jc_end:
         nAdjust = static_cast< sal_Int16 > (bExchangeLeftRight ? style::ParagraphAdjust_LEFT : style::ParagraphAdjust_RIGHT);
         aStringValue = "right";
         break;
     case 4:
         nLastLineAdjust = style::ParagraphAdjust_BLOCK;
         //no break;
-    case 3:
+    case NS_ooxml::LN_Value_ST_Jc_both:
         nAdjust = style::ParagraphAdjust_BLOCK;
         aStringValue = "both";
         break;
-    case 0:
+    case NS_ooxml::LN_Value_ST_Jc_left:
+    case NS_ooxml::LN_Value_ST_Jc_start:
     default:
         nAdjust = static_cast< sal_Int16 > (bExchangeLeftRight ? style::ParagraphAdjust_RIGHT : style::ParagraphAdjust_LEFT);
         break;
@@ -3117,30 +3257,30 @@ void DomainMapper::handleParaJustification(const sal_Int32 nIntValue, const ::bo
     m_pImpl->appendGrabBag(m_pImpl->m_aInteropGrabBag, "jc", aStringValue);
 }
 
-bool DomainMapper::getColorFromIndex(const sal_Int32 nIndex, sal_Int32 &nColor)
+bool DomainMapper::getColorFromId(const Id nId, sal_Int32 &nColor)
 {
     nColor = 0;
-    if ((nIndex < 1) || (nIndex > 16))
+    if ((nId < NS_ooxml::LN_Value_ST_HighlightColor_black) || (nId > NS_ooxml::LN_Value_ST_HighlightColor_lightGray))
         return false;
 
-    switch (nIndex)
+    switch (nId)
     {
-    case 1: nColor=0x000000; break; //black
-    case 2: nColor=0x0000ff; break; //blue
-    case 3: nColor=0x00ffff; break; //cyan
-    case 4: nColor=0x00ff00; break; //green
-    case 5: nColor=0xff00ff; break; //magenta
-    case 6: nColor=0xff0000; break; //red
-    case 7: nColor=0xffff00; break; //yellow
-    case 8: nColor=0xffffff; break; //white
-    case 9: nColor=0x000080;  break;//dark blue
-    case 10: nColor=0x008080; break; //dark cyan
-    case 11: nColor=0x008000; break; //dark green
-    case 12: nColor=0x800080; break; //dark magenta
-    case 13: nColor=0x800000; break; //dark red
-    case 14: nColor=0x808000; break; //dark yellow
-    case 15: nColor=0x808080; break; //dark gray
-    case 16: nColor=0xC0C0C0; break; //light gray
+    case NS_ooxml::LN_Value_ST_HighlightColor_black: nColor=0x000000; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_blue: nColor=0x0000ff; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_cyan: nColor=0x00ffff; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_green: nColor=0x00ff00; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_magenta: nColor=0xff00ff; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_red: nColor=0xff0000; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_yellow: nColor=0xffff00; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_white: nColor=0xffffff; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkBlue: nColor=0x000080;  break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkCyan: nColor=0x008080; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkGreen: nColor=0x008000; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkMagenta: nColor=0x800080; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkRed: nColor=0x800000; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkYellow: nColor=0x808000; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_darkGray: nColor=0x808080; break;
+    case NS_ooxml::LN_Value_ST_HighlightColor_lightGray: nColor=0xC0C0C0; break;
     default:
         return false;
     }
@@ -3151,13 +3291,13 @@ sal_Int16 DomainMapper::getEmphasisValue(const sal_Int32 nIntValue)
 {
     switch (nIntValue)
     {
-    case 1:
+    case NS_ooxml::LN_Value_ST_Em_dot:
         return com::sun::star::text::FontEmphasis::DOT_ABOVE;
-    case 2:
+    case NS_ooxml::LN_Value_ST_Em_comma:
         return com::sun::star::text::FontEmphasis::ACCENT_ABOVE;
-    case 3:
+    case NS_ooxml::LN_Value_ST_Em_circle:
         return com::sun::star::text::FontEmphasis::CIRCLE_ABOVE;
-    case 4:
+    case NS_ooxml::LN_Value_ST_Em_underDot:
         return com::sun::star::text::FontEmphasis::DOT_BELOW;
     default:
         return com::sun::star::text::FontEmphasis::NONE;
@@ -3168,27 +3308,27 @@ OUString DomainMapper::getBracketStringFromEnum(const sal_Int32 nIntValue, const
 {
     switch(nIntValue)
     {
-    case 1:
+    case NS_ooxml::LN_Value_ST_CombineBrackets_round:
         if (bIsPrefix)
             return OUString( "(" );
         return OUString( ")" );
 
-    case 2:
+    case NS_ooxml::LN_Value_ST_CombineBrackets_square:
         if (bIsPrefix)
             return OUString( "[" );
         return OUString( "]" );
 
-    case 3:
+    case NS_ooxml::LN_Value_ST_CombineBrackets_angle:
         if (bIsPrefix)
             return OUString( "<" );
         return OUString( ">" );
 
-    case 4:
+    case NS_ooxml::LN_Value_ST_CombineBrackets_curly:
         if (bIsPrefix)
             return OUString( "{" );
         return OUString( "}" );
 
-    case 0:
+    case NS_ooxml::LN_Value_ST_CombineBrackets_none:
     default:
         return OUString();
     }
@@ -3198,15 +3338,17 @@ com::sun::star::style::TabAlign DomainMapper::getTabAlignFromValue(const sal_Int
 {
     switch (nIntValue)
     {
-    case 0:
-    case 4: // bar not supported
-    case 5: // num not supported
+    case NS_ooxml::LN_Value_ST_TabJc_start:
+    case NS_ooxml::LN_Value_ST_TabJc_left:
+    case NS_ooxml::LN_Value_ST_TabJc_bar: // bar not supported
+    case NS_ooxml::LN_Value_ST_TabJc_num: // num not supported
         return com::sun::star::style::TabAlign_LEFT;
-    case 1:
+    case NS_ooxml::LN_Value_ST_TabJc_center:
         return com::sun::star::style::TabAlign_CENTER;
-    case 2:
+    case NS_ooxml::LN_Value_ST_TabJc_end:
+    case NS_ooxml::LN_Value_ST_TabJc_right:
         return com::sun::star::style::TabAlign_RIGHT;
-    case 3:
+    case NS_ooxml::LN_Value_ST_TabJc_decimal:
         return com::sun::star::style::TabAlign_DECIMAL;
     }
     return com::sun::star::style::TabAlign_LEFT;
@@ -3216,16 +3358,16 @@ sal_Unicode DomainMapper::getFillCharFromValue(const sal_Int32 nIntValue)
 {
     switch (nIntValue)
     {
-    case 1: // dot
+    case NS_ooxml::LN_Value_ST_TabTlc_dot:
         return sal_Unicode(0x002e);
-    case 2: // hyphen
+    case NS_ooxml::LN_Value_ST_TabTlc_hyphen:
         return sal_Unicode(0x002d);
-    case 3: // underscore
-    case 4: // heavy FIXME ???
+    case NS_ooxml::LN_Value_ST_TabTlc_underscore:
+    case NS_ooxml::LN_Value_ST_TabTlc_heavy: // FIXME ???
         return sal_Unicode(0x005f);
     case NS_ooxml::LN_Value_ST_TabTlc_middleDot: // middleDot
         return sal_Unicode(0x00b7);
-    case 0: // none
+    case NS_ooxml::LN_Value_ST_TabTlc_none:
     default:
         return sal_Unicode(0x0020); // blank space
     }
@@ -3264,7 +3406,7 @@ StyleSheetTablePtr DomainMapper::GetStyleSheetTable( )
 
 GraphicZOrderHelper* DomainMapper::graphicZOrderHelper()
 {
-    if( zOrderHelper.get() == NULL )
+    if( zOrderHelper.get() == nullptr )
         zOrderHelper.reset( new GraphicZOrderHelper );
     return zOrderHelper.get();
 }
@@ -3277,6 +3419,11 @@ uno::Reference<drawing::XShape> DomainMapper::PopPendingShape()
 bool DomainMapper::IsInHeaderFooter() const
 {
     return m_pImpl->IsInHeaderFooter();
+}
+
+bool DomainMapper::IsStyleSheetImport() const
+{
+    return m_pImpl->IsStyleSheetImport();
 }
 
 void DomainMapper::enableInteropGrabBag(const OUString& aName)
@@ -3314,27 +3461,27 @@ void DomainMapper::HandleRedline( Sprm& rSprm )
 {
     sal_uInt32 nSprmId = rSprm.getId();
 
-    m_pImpl->AddNewRedline( );
+    m_pImpl->AddNewRedline( nSprmId );
 
     if (nSprmId == NS_ooxml::LN_CT_PPr_pPrChange)
     {
-        m_pImpl->SetCurrentRedlineToken(OOXML_ParagraphFormat);
+        m_pImpl->SetCurrentRedlineToken(XML_ParagraphFormat);
     }
     else if (nSprmId == NS_ooxml::LN_CT_TrPr_ins)
     {
-        m_pImpl->SetCurrentRedlineToken(OOXML_tableRowInsert);
+        m_pImpl->SetCurrentRedlineToken(XML_tableRowInsert);
     }
     else if (nSprmId == NS_ooxml::LN_CT_TrPr_del)
     {
-        m_pImpl->SetCurrentRedlineToken(OOXML_tableRowDelete);
+        m_pImpl->SetCurrentRedlineToken(XML_tableRowDelete);
     }
     else if (nSprmId == NS_ooxml::LN_CT_TcPrBase_cellIns)
     {
-        m_pImpl->SetCurrentRedlineToken(OOXML_tableCellInsert);
+        m_pImpl->SetCurrentRedlineToken(XML_tableCellInsert);
     }
     else if (nSprmId == NS_ooxml::LN_CT_TcPrBase_cellDel)
     {
-        m_pImpl->SetCurrentRedlineToken(OOXML_tableCellDelete);
+        m_pImpl->SetCurrentRedlineToken(XML_tableCellDelete);
     }
 
     resolveSprmProps(*this, rSprm );
@@ -3342,18 +3489,19 @@ void DomainMapper::HandleRedline( Sprm& rSprm )
     sal_Int32 nToken = m_pImpl->GetCurrentRedlineToken();
     switch( nToken & 0xffff )
     {
-        case OOXML_mod:
-        case OOXML_ins:
-        case OOXML_del:
-        case OOXML_ParagraphFormat:
-        case OOXML_tableRowInsert:
-        case OOXML_tableRowDelete:
-        case OOXML_tableCellInsert:
-        case OOXML_tableCellDelete:
+        case XML_mod:
+        case XML_ins:
+        case XML_del:
+        case XML_ParagraphFormat:
+        case XML_tableRowInsert:
+        case XML_tableRowDelete:
+        case XML_tableCellInsert:
+        case XML_tableCellDelete:
             break;
         default: OSL_FAIL( "redline token other than mod, ins, del or table row" ); break;
     }
     m_pImpl->EndParaMarkerChange( );
+    m_pImpl->SetCurrentRedlineIsRead();
 }
 
 } //namespace dmapper

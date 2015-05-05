@@ -77,16 +77,17 @@ class DomainMapper : public LoggedProperties, public LoggedTable,
 
 public:
     DomainMapper(const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext >& xContext,
-                                ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > xInputStream,
-                                ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > xModel,
+                                ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > const& xInputStream,
+                                ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > const& xModel,
                                 bool bRepairStorage,
                                 SourceDocumentType eDocumentType,
-                                ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > xInsertTextRange,
+                                ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > const& xInsertTextRange,
                                 bool bIsNewDoc = true);
     virtual ~DomainMapper();
 
     // Stream
     virtual void markLastParagraphInSection() SAL_OVERRIDE;
+    virtual void markLastSectionGroup() SAL_OVERRIDE;
 
     // BinaryObj
     virtual void data(const sal_uInt8* buf, size_t len,
@@ -114,6 +115,7 @@ public:
     com::sun::star::uno::Reference<com::sun::star::drawing::XShape> PopPendingShape();
 
     bool IsInHeaderFooter() const;
+    bool IsStyleSheetImport() const;
     /**
      @see DomainMapper_Impl::processDeferredCharacterProperties()
     */
@@ -139,7 +141,7 @@ private:
     virtual void lcl_endParagraphGroup() SAL_OVERRIDE;
     virtual void lcl_startCharacterGroup() SAL_OVERRIDE;
     virtual void lcl_endCharacterGroup() SAL_OVERRIDE;
-    virtual void lcl_startShape( ::com::sun::star::uno::Reference< com::sun::star::drawing::XShape > xShape ) SAL_OVERRIDE;
+    virtual void lcl_startShape( ::com::sun::star::uno::Reference< com::sun::star::drawing::XShape > const& xShape ) SAL_OVERRIDE;
     virtual void lcl_endShape( ) SAL_OVERRIDE;
 
     virtual void lcl_text(const sal_uInt8 * data, size_t len) SAL_OVERRIDE;
@@ -159,9 +161,9 @@ private:
     // Table
     virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
 
-    void handleUnderlineType(const sal_Int32 nIntValue, const ::boost::shared_ptr<PropertyMap> pContext);
+    void handleUnderlineType(const Id nId, const ::boost::shared_ptr<PropertyMap> pContext);
     void handleParaJustification(const sal_Int32 nIntValue, const ::boost::shared_ptr<PropertyMap> pContext, const bool bExchangeLeftRight);
-    bool getColorFromIndex(const sal_Int32 nIndex, sal_Int32 &nColor);
+    bool getColorFromId(const Id, sal_Int32 &nColor);
     sal_Int16 getEmphasisValue(const sal_Int32 nIntValue);
     OUString getBracketStringFromEnum(const sal_Int32 nIntValue, const bool bIsPrefix = true);
     com::sun::star::style::TabAlign getTabAlignFromValue(const sal_Int32 nIntValue);

@@ -37,6 +37,14 @@
 
 #include <string>
 
+#ifdef MACOSX
+// typedef nullptr for pre-C++11 compiler
+#include <objc/objc-api.h>
+#if !__has_feature(cxx_nullptr)
+#define nullptr __DARWIN_NULL
+#endif
+#endif	// MACOSX
+
 namespace rtl
 {
 	class OString;

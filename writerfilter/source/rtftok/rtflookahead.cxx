@@ -8,10 +8,7 @@
  */
 
 #include <boost/shared_ptr.hpp>
-
-#include <com/sun/star/task/XStatusIndicator.hpp>
 #include <tools/stream.hxx>
-
 #include <rtflookahead.hxx>
 
 using namespace com::sun::star;
@@ -125,10 +122,6 @@ bool RTFLookahead::isSubstream() const
     return false;
 }
 
-bool RTFLookahead::hasTable()
-{
-    return m_bHasTable;
-}
 
 } // namespace rtftok
 } // namespace writerfilter

@@ -24,8 +24,8 @@
 #include <dmapper/DomainMapper.hxx>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/beans/PropertyValues.hpp>
-#include <PropertyMap.hxx>
-#include <FontTable.hxx>
+#include "PropertyMap.hxx"
+#include "FontTable.hxx"
 #include <resourcemodel/LoggedResources.hxx>
 
 namespace com{ namespace sun { namespace star { namespace text{
@@ -89,7 +89,7 @@ class StyleSheetTable :
 
 public:
     StyleSheetTable( DomainMapper& rDMapper,
-                        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument> xTextDocument, bool bIsNewDoc );
+                        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument> const& xTextDocument, bool bIsNewDoc );
     virtual ~StyleSheetTable();
 
     void ApplyStyleSheets( FontTablePtr rFontTable );
@@ -101,7 +101,6 @@ public:
     const StyleSheetEntryPtr FindParentStyleSheet(const OUString& sBaseStyle);
 
     OUString ConvertStyleName( const OUString& rWWName, bool bExtendedSearch = false );
-    OUString GetStyleIdFromIndex(const sal_uInt32 sti);
 
     OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
 

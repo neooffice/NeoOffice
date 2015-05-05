@@ -24,6 +24,7 @@
 #include <com/sun/star/drawing/ColorMode.hpp>
 #include <com/sun/star/drawing/PointSequenceSequence.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
+#include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #if SUPD != 310
 #include <com/sun/star/graphic/GraphicProvider.hpp>
@@ -43,11 +44,13 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/table/ShadowFormat.hpp>
 
+#include <svx/svdobj.hxx>
+#include <svx/unoapi.hxx>
 #include <cppuhelper/implbase1.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/math.hxx>
-#include <rtl/ustrbuf.hxx>
 #include <comphelper/string.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 
 #include <oox/drawingml/drawingmltypes.hxx>
 
@@ -211,6 +214,11 @@ struct GraphicBorderLine
         ,bHasShadow(false)
         {}
 
+    bool isEmpty()
+    {
+        return nLineWidth == 0 && nLineColor == 0 && bHasShadow == false;
+    }
+
 };
 
 class GraphicImport_Impl
@@ -231,10 +239,6 @@ public:
     sal_Int32 nTopPosition;
     sal_Int32 nRightPosition;
     sal_Int32 nBottomPosition;
-    sal_Int32 nLeftCrop;
-    sal_Int32 nTopCrop;
-    sal_Int32 nRightCrop;
-    sal_Int32 nBottomCrop;
 
     bool      bUseSimplePos;
     sal_Int32 zOrder;
@@ -245,6 +249,7 @@ public:
     sal_Int16 nVertOrient;
     sal_Int16 nVertRelation;
     sal_Int32 nWrap;
+    bool      bLayoutInCell;
     bool      bOpaque;
     bool      bContour;
     bool      bContourOutside;
@@ -292,6 +297,11 @@ public:
     OUString title;
     std::queue<OUString>& m_rPositivePercentages;
     OUString sAnchorId;
+    comphelper::SequenceAsHashMap m_aInteropGrabBag;
+    boost::optional<sal_Int32> m_oEffectExtentLeft;
+    boost::optional<sal_Int32> m_oEffectExtentTop;
+    boost::optional<sal_Int32> m_oEffectExtentRight;
+    boost::optional<sal_Int32> m_oEffectExtentBottom;
 
     GraphicImport_Impl(GraphicImportType eImportType, DomainMapper&   rDMapper, std::queue<OUString>& rPositivePercentages) :
         nXSize(0)
@@ -306,10 +316,6 @@ public:
         ,nTopPosition(0)
         ,nRightPosition(0)
         ,nBottomPosition(0)
-        ,nLeftCrop(0)
-        ,nTopCrop (0)
-        ,nRightCrop (0)
-        ,nBottomCrop(0)
         ,bUseSimplePos(false)
         ,zOrder(-1)
         ,nHoriOrient(   text::HoriOrientation::NONE )
@@ -318,6 +324,7 @@ public:
         ,nVertOrient(  text::VertOrientation::NONE )
         ,nVertRelation( text::RelOrientation::FRAME )
         ,nWrap(0)
+        ,bLayoutInCell(false)
         ,bOpaque( true )
         ,bContour(false)
         ,bContourOutside(true)
@@ -400,17 +407,19 @@ public:
                 uno::makeAny(nVertOrient));
     }
 
-    void applyRelativePosition(uno::Reference< beans::XPropertySet > xGraphicObjectProperties) const
+    void applyRelativePosition(uno::Reference< beans::XPropertySet > xGraphicObjectProperties, bool bRelativeOnly = false) const
     {
         PropertyNameSupplier& rPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-        xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_HORI_ORIENT_POSITION),
-                uno::makeAny(nLeftPosition));
+        if (!bRelativeOnly)
+            xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_HORI_ORIENT_POSITION),
+                                                       uno::makeAny(nLeftPosition));
         xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_HORI_ORIENT_RELATION ),
                 uno::makeAny(nHoriRelation));
         xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_PAGE_TOGGLE ),
                 uno::makeAny(bPageToggle));
-        xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_VERT_ORIENT_POSITION),
-                uno::makeAny(nTopPosition));
+        if (!bRelativeOnly)
+            xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_VERT_ORIENT_POSITION),
+                                                       uno::makeAny(nTopPosition));
         xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_VERT_ORIENT_RELATION ),
                 uno::makeAny(nVertRelation));
     }
@@ -446,10 +455,27 @@ public:
             SAL_WARN("writerfilter", "failed. Message :" << e.Message);
         }
     }
+
+    /// Getter for m_aInteropGrabBag, but also merges in the values from other members if they are set.
+    comphelper::SequenceAsHashMap getInteropGrabBag()
+    {
+        comphelper::SequenceAsHashMap aEffectExtent;
+        if (m_oEffectExtentLeft)
+            aEffectExtent["l"] <<= *m_oEffectExtentLeft;
+        if (m_oEffectExtentTop)
+            aEffectExtent["t"] <<= *m_oEffectExtentTop;
+        if (m_oEffectExtentRight)
+            aEffectExtent["r"] <<= *m_oEffectExtentRight;
+        if (m_oEffectExtentBottom)
+            aEffectExtent["b"] <<= *m_oEffectExtentBottom;
+        if (!aEffectExtent.empty())
+            m_aInteropGrabBag["CT_EffectExtent"] <<= aEffectExtent.getAsConstPropertyValueList();
+        return m_aInteropGrabBag;
+    }
 };
 
-GraphicImport::GraphicImport(uno::Reference<uno::XComponentContext> xComponentContext,
-                             uno::Reference<lang::XMultiServiceFactory> xTextFactory,
+GraphicImport::GraphicImport(uno::Reference<uno::XComponentContext> const& xComponentContext,
+                             uno::Reference<lang::XMultiServiceFactory> const& xTextFactory,
                              DomainMapper& rDMapper,
                              GraphicImportType eImportType,
                              std::queue<OUString>& rPositivePercentages)
@@ -503,18 +529,18 @@ void GraphicImport::putPropertyToFrameGrabBag( const OUString& sPropertyName, co
     if (!xSetInfo.is())
         return;
 
-    const OUString aGrabBagPropName("FrameInteropGrabBag");
+    OUString aGrabBagPropName;
+    uno::Reference<lang::XServiceInfo> xServiceInfo(m_xShape, uno::UNO_QUERY_THROW);
+    if (xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
+        aGrabBagPropName = "FrameInteropGrabBag";
+    else
+        aGrabBagPropName = "InteropGrabBag";
 
     if (xSetInfo->hasPropertyByName(aGrabBagPropName))
     {
-        uno::Sequence< beans::PropertyValue > aGrabBag;
-        xSet->getPropertyValue( aGrabBagPropName ) >>= aGrabBag;
-
-        sal_Int32 nLength = aGrabBag.getLength();
-        aGrabBag.realloc(nLength + 1);
-        aGrabBag[nLength] = pProperty;
-
-        xSet->setPropertyValue(aGrabBagPropName, uno::makeAny(aGrabBag));
+        comphelper::SequenceAsVector<beans::PropertyValue> aGrabBag(xSet->getPropertyValue(aGrabBagPropName));
+        aGrabBag.push_back(pProperty);
+        xSet->setPropertyValue(aGrabBagPropName, uno::makeAny(aGrabBag.getAsConstList()));
     }
 }
 
@@ -553,24 +579,30 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
         case NS_ooxml::LN_CT_Border_shadow:
             m_pImpl->aBorders[m_pImpl->nCurrentBorderLine].bHasShadow = nIntValue ? true : false;
         break;
-        case NS_ooxml::LN_CT_Border_frame: // ignored
+        case NS_ooxml::LN_CT_Border_frame:
             break;
-        case NS_ooxml::LN_CT_PositiveSize2D_cx:// 90407;
-        case NS_ooxml::LN_CT_PositiveSize2D_cy:// 90408;
+        case NS_ooxml::LN_CT_PositiveSize2D_cx:
+        case NS_ooxml::LN_CT_PositiveSize2D_cy:
         {
-            sal_Int32 nDim = ConversionHelper::convertEMUToMM100( nIntValue );
+            sal_Int32 nDim = oox::drawingml::convertEmuToHmm(nIntValue);
             if( nName == NS_ooxml::LN_CT_PositiveSize2D_cx )
                 m_pImpl->setXSize(nDim);
             else
                 m_pImpl->setYSize(nDim);
         }
         break;
-        case NS_ooxml::LN_CT_EffectExtent_l:// 90907;
-        case NS_ooxml::LN_CT_EffectExtent_t:// 90908;
-        case NS_ooxml::LN_CT_EffectExtent_r:// 90909;
-        case NS_ooxml::LN_CT_EffectExtent_b:// 90910;
-            //todo: extends the wrapping size of the object, e.g. if shadow is added
-        break;
+        case NS_ooxml::LN_CT_EffectExtent_l:
+            m_pImpl->m_oEffectExtentLeft = nIntValue;
+            break;
+        case NS_ooxml::LN_CT_EffectExtent_t:
+            m_pImpl->m_oEffectExtentTop = nIntValue;
+            break;
+        case NS_ooxml::LN_CT_EffectExtent_r:
+            m_pImpl->m_oEffectExtentRight = nIntValue;
+            break;
+        case NS_ooxml::LN_CT_EffectExtent_b:
+            m_pImpl->m_oEffectExtentBottom = nIntValue;
+            break;
         case NS_ooxml::LN_CT_NonVisualDrawingProps_id:// 90650;
             //id of the object - ignored
         break;
@@ -615,7 +647,10 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                 m_pImpl->bOpaque = false;
         break;
         case NS_ooxml::LN_CT_Anchor_locked: // 90990; - ignored
+        break;
         case NS_ooxml::LN_CT_Anchor_layoutInCell: // 90991; - ignored
+            m_pImpl->bLayoutInCell = nIntValue != 0;
+        break;
         case NS_ooxml::LN_CT_Anchor_hidden: // 90992; - ignored
         break;
         case NS_ooxml::LN_CT_Anchor_allowOverlap: // 90993;
@@ -684,7 +719,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                         sal_Int32 nRotation = 0;
                         xShapeProps->getPropertyValue("RotateAngle") >>= nRotation;
 
-                        ::css::beans::PropertyValues aGrabBag;
+                        css::beans::PropertyValues aGrabBag;
                         bool bContainsEffects = false;
                         xShapeProps->getPropertyValue("InteropGrabBag") >>= aGrabBag;
                         for( sal_Int32 i = 0; i < aGrabBag.getLength(); ++i )
@@ -715,7 +750,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
 
                         // fdo#70457: transform XShape into a SwXTextGraphicObject only if there's no rotation
                         if ( nRotation == 0 && !bContainsEffects )
-                            m_xGraphicObject = createGraphicObject( aMediaProperties );
+                            m_xGraphicObject = createGraphicObject( aMediaProperties, xShapeProps );
 
                         bUseShape = !m_xGraphicObject.is( );
 
@@ -791,12 +826,18 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                         if (m_pImpl->isYSizeValis())
                             aSize.Height = m_pImpl->getYSize();
 
-                        uno::Any aRotation;
+                        sal_Int32 nRotation = 0;
                         if (bKeepRotation)
-                            aRotation = xShapeProps->getPropertyValue("RotateAngle");
+                        {
+                            // Use internal API, getPropertyValue(RotateAngle)
+                            // would use GetObjectRotation(), which is not what
+                            // we want.
+                            if (SdrObject* pShape = GetSdrObjectFromXShape(m_xShape))
+                                nRotation = pShape->GetRotateAngle();
+                        }
                         m_xShape->setSize(aSize);
                         if (bKeepRotation)
-                            xShapeProps->setPropertyValue("RotateAngle", aRotation);
+                            xShapeProps->setPropertyValue("RotateAngle", uno::makeAny(nRotation));
 
                         m_pImpl->bIsGraphic = true;
 
@@ -821,33 +862,53 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                         if (xServiceInfo->supportsService("com.sun.star.drawing.GroupShape") ||
                                 xServiceInfo->supportsService("com.sun.star.drawing.GraphicObjectShape"))
                         {
+                            // You would expect that position and rotation are
+                            // independent, but they are not. Till we are not
+                            // there yet to handle all scaling, translation and
+                            // rotation with a single transformation matrix,
+                            // make sure there is no rotation set when we set
+                            // the position.
+                            sal_Int32 nRotation = 0;
+                            xShapeProps->getPropertyValue("RotateAngle") >>= nRotation;
+                            if (nRotation)
+                                xShapeProps->setPropertyValue("RotateAngle", uno::makeAny(sal_Int32(0)));
+
                             // Position of the groupshape should be set after children have been added.
                             // fdo#80555: also set position for graphic shapes here
                             m_xShape->setPosition(awt::Point(m_pImpl->nLeftPosition, m_pImpl->nTopPosition));
-                        }
-                        m_pImpl->applyRelativePosition(xShapeProps);
 
+                            if (nRotation)
+                                xShapeProps->setPropertyValue("RotateAngle", uno::makeAny(nRotation));
+                        }
+                        m_pImpl->applyRelativePosition(xShapeProps, /*bRelativeOnly=*/true);
+
+                        xShapeProps->setPropertyValue("SurroundContour", uno::makeAny(m_pImpl->bContour));
                         m_pImpl->applyMargins(xShapeProps);
                         bool bOpaque = m_pImpl->bOpaque && !m_pImpl->rDomainMapper.IsInHeaderFooter();
                         xShapeProps->setPropertyValue("Opaque", uno::makeAny(bOpaque));
                         xShapeProps->setPropertyValue("Surround", uno::makeAny(m_pImpl->nWrap));
                         m_pImpl->applyZOrder(xShapeProps);
                         m_pImpl->applyName(xShapeProps);
+
+                        // Get the grab-bag set by oox, merge with our one and then put it back.
+                        comphelper::SequenceAsHashMap aInteropGrabBag(xShapeProps->getPropertyValue("InteropGrabBag"));
+                        aInteropGrabBag.update(m_pImpl->getInteropGrabBag());
+                        xShapeProps->setPropertyValue("InteropGrabBag", uno::makeAny(aInteropGrabBag.getAsConstPropertyValueList()));
                     }
                 }
             }
         break;
         case NS_ooxml::LN_CT_Inline_distT:
-            m_pImpl->nTopMargin = ConversionHelper::convertEMUToMM100(nIntValue);
+            m_pImpl->nTopMargin = oox::drawingml::convertEmuToHmm(nIntValue);
         break;
         case NS_ooxml::LN_CT_Inline_distB:
-            m_pImpl->nBottomMargin = ConversionHelper::convertEMUToMM100(nIntValue);
+            m_pImpl->nBottomMargin = oox::drawingml::convertEmuToHmm(nIntValue);
         break;
         case NS_ooxml::LN_CT_Inline_distL:
-            m_pImpl->nLeftMargin = ConversionHelper::convertEMUToMM100(nIntValue);
+            m_pImpl->nLeftMargin = oox::drawingml::convertEmuToHmm(nIntValue);
         break;
         case NS_ooxml::LN_CT_Inline_distR:
-            m_pImpl->nRightMargin = ConversionHelper::convertEMUToMM100(nIntValue);
+            m_pImpl->nRightMargin = oox::drawingml::convertEmuToHmm(nIntValue);
         break;
         case NS_ooxml::LN_CT_GraphicalObjectData_uri:
             rValue.getString();
@@ -902,7 +963,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
             }
             break;
         default:
-#ifdef DEBUG_DMAPPER_GRAPHIC_IMPORT
+#ifdef DEBUG_WRITERFILTER
             dmapper_logger->element("unhandled");
 #endif
             break;
@@ -923,9 +984,6 @@ uno::Reference<text::XTextContent> GraphicImport::GetGraphicObject()
     return xResult;
 }
 
-uno::Reference<drawing::XShape> GraphicImport::GetXShapeObject(){
-    return m_xShape;
-}
 
 void GraphicImport::ProcessShapeOptions(Value& rValue)
 {
@@ -999,6 +1057,12 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             {
                 pProperties->resolve(*this);
             }
+
+            // We'll map these to PARALLEL, save the original wrap type.
+            if (nSprmId == NS_ooxml::LN_EG_WrapType_wrapTight)
+                m_pImpl->m_aInteropGrabBag["EG_WrapType"] <<= OUString("wrapTight");
+            else if (nSprmId == NS_ooxml::LN_EG_WrapType_wrapThrough)
+                m_pImpl->m_aInteropGrabBag["EG_WrapType"] <<= OUString("wrapThrough");
         }
         break;
         case NS_ooxml::LN_CT_WrapTight_wrapPolygon:
@@ -1009,6 +1073,9 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
                 resolveSprmProps(aHandler, rSprm);
 
                 m_pImpl->mpWrapPolygon = aHandler.getPolygon();
+
+                // Save the wrap path in case we can't handle it natively: drawinglayer shapes, TextFrames.
+                m_pImpl->m_aInteropGrabBag["CT_WrapPath"] <<= m_pImpl->mpWrapPolygon->getPointSequenceSequence();
             }
             break;
         case NS_ooxml::LN_CT_Anchor_positionH: // 90976;
@@ -1101,13 +1168,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             }
         break;
         default:
-#if OSL_DEBUG_LEVEL > 0
-            OString sMessage( "GraphicImport::sprm() - Id: ");
-            sMessage += OString::number( nSprmId, 10 );
-            sMessage += " / 0x";
-            sMessage += OString::number( nSprmId, 16 );
-            SAL_WARN("writerfilter", sMessage.getStr());
-#endif
+            SAL_WARN("writerfilter", "GraphicImport::lcl_sprm: unhandled token: " << nSprmId);
         break;
     }
 }
@@ -1115,17 +1176,8 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
 void GraphicImport::lcl_entry(int /*pos*/, writerfilter::Reference<Properties>::Pointer_t /*ref*/)
 {
 }
-/*-------------------------------------------------------------------------
-    crop is stored as "fixed float" as 16.16 fraction value
-    related to width/or height
-  -----------------------------------------------------------------------*/
-void lcl_CalcCrop( sal_Int32& nCrop, sal_Int32 nRef )
-{
-    nCrop = ((nCrop >> 16   ) * nRef )
-       + (((nCrop & 0xffff) * nRef ) >> 16);
-}
 
-uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const beans::PropertyValues& aMediaProperties )
+uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const beans::PropertyValues& aMediaProperties, const uno::Reference<beans::XPropertySet>& xShapeProps )
 {
     uno::Reference< text::XTextContent > xGraphicObject;
     try
@@ -1150,31 +1202,39 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                 uno::UNO_QUERY_THROW);
             xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName(PROP_GRAPHIC), uno::makeAny( xGraphic ));
             xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName(PROP_ANCHOR_TYPE),
-                uno::makeAny( m_pImpl->eGraphicImportType == IMPORT_AS_SHAPE || m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR ?
+                uno::makeAny( m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR ?
                                     text::TextContentAnchorType_AT_CHARACTER :
                                     text::TextContentAnchorType_AS_CHARACTER ));
             xGraphicObject = uno::Reference< text::XTextContent >( xGraphicObjectProperties, uno::UNO_QUERY_THROW );
 
-            //shapes have only one border, PICF might have four
+            //shapes have only one border
             table::BorderLine2 aBorderLine;
-            for( sal_Int32 nBorder = 0; nBorder < 4; ++nBorder )
+            GraphicBorderLine& rBorderLine = m_pImpl->aBorders[0];
+            if (rBorderLine.isEmpty() && xShapeProps.is() && xShapeProps->getPropertyValue("LineStyle").get<drawing::LineStyle>() != drawing::LineStyle_NONE)
             {
-                if( m_pImpl->eGraphicImportType == IMPORT_AS_GRAPHIC || !nBorder )
-                {
-                    aBorderLine.Color = m_pImpl->aBorders[m_pImpl->eGraphicImportType == IMPORT_AS_SHAPE ? BORDER_TOP : static_cast<BorderPosition>(nBorder) ].nLineColor;
-                    aBorderLine.InnerLineWidth = 0;
-                    aBorderLine.OuterLineWidth = (sal_Int16)m_pImpl->aBorders[m_pImpl->eGraphicImportType == IMPORT_AS_SHAPE ? BORDER_TOP : static_cast<BorderPosition>(nBorder) ].nLineWidth;
-                    aBorderLine.LineDistance = 0;
-                }
-                PropertyIds aBorderProps[4] =
-                {
-                    PROP_LEFT_BORDER,
-                    PROP_RIGHT_BORDER,
-                    PROP_TOP_BORDER,
-                    PROP_BOTTOM_BORDER
-                };
-                xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( aBorderProps[nBorder]), uno::makeAny(aBorderLine));
+                // In case we got no border tokens and we have the
+                // original shape, then use its line properties as the
+                // border.
+                aBorderLine.Color = xShapeProps->getPropertyValue("LineColor").get<sal_Int32>();
+                aBorderLine.LineWidth = xShapeProps->getPropertyValue("LineWidth").get<sal_Int32>();
             }
+            else
+            {
+                aBorderLine.Color = rBorderLine.nLineColor;
+                aBorderLine.InnerLineWidth = 0;
+                aBorderLine.OuterLineWidth = (sal_Int16)rBorderLine.nLineWidth;
+                aBorderLine.LineDistance = 0;
+            }
+            PropertyIds aBorderProps[4] =
+            {
+                PROP_LEFT_BORDER,
+                PROP_RIGHT_BORDER,
+                PROP_TOP_BORDER,
+                PROP_BOTTOM_BORDER
+            };
+
+            for( sal_Int32 nBorder = 0; nBorder < 4; ++nBorder )
+                xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( aBorderProps[nBorder]), uno::makeAny(aBorderLine));
 
             // setting graphic object shadow proerties
             if (m_pImpl->bShadow)
@@ -1216,15 +1276,9 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_SIZE_PROTECTED ),
                     uno::makeAny(true));
 
-            if( m_pImpl->eGraphicImportType == IMPORT_AS_SHAPE || m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR )
+            if (m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR)
             {
                 sal_Int32 nWidth = m_pImpl->nRightPosition - m_pImpl->nLeftPosition;
-                if( m_pImpl->eGraphicImportType == IMPORT_AS_SHAPE )
-                {
-                    sal_Int32 nHeight = m_pImpl->nBottomPosition - m_pImpl->nTopPosition;
-                    xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName(PROP_SIZE),
-                        uno::makeAny( awt::Size( nWidth, nHeight )));
-                }
                 //adjust margins
                 if( (m_pImpl->nHoriOrient == text::HoriOrientation::LEFT &&
                     (m_pImpl->nHoriRelation == text::RelOrientation::PAGE_PRINT_AREA ||
@@ -1279,6 +1333,9 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
                 }
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_SURROUND ),
                         uno::makeAny(m_pImpl->nWrap));
+                if( m_pImpl->bLayoutInCell && m_pImpl->nWrap != text::WrapTextMode_THROUGHT )
+                    xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_FOLLOW_TEXT_FLOW ),
+                            uno::makeAny(true));
 
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_SURROUND_CONTOUR ),
                     uno::makeAny(m_pImpl->bContour));
@@ -1330,7 +1387,7 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
 
                 uno::Any aContourPolyPolygon;
                 if( aGraphicSize.Width && aGraphicSize.Height &&
-                    m_pImpl->mpWrapPolygon.get() != NULL)
+                    m_pImpl->mpWrapPolygon.get() != nullptr)
                 {
                     WrapPolygon::Pointer_t pCorrected = m_pImpl->mpWrapPolygon->correctWordWrapPolygon(aGraphicSize);
                     aContourPolyPolygon <<= pCorrected->getPointSequenceSequence();
@@ -1338,28 +1395,6 @@ uno::Reference< text::XTextContent > GraphicImport::createGraphicObject( const b
 
                 xGraphicObjectProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_CONTOUR_POLY_POLYGON),
                                                            aContourPolyPolygon);
-
-                if( aGraphicSize.Width && aGraphicSize.Height )
-                {
-                    //todo: i71651 graphic size is not provided by the GraphicDescriptor
-                    lcl_CalcCrop( m_pImpl->nTopCrop, aGraphicSize.Height );
-                    lcl_CalcCrop( m_pImpl->nBottomCrop, aGraphicSize.Height );
-                    lcl_CalcCrop( m_pImpl->nLeftCrop, aGraphicSize.Width );
-                    lcl_CalcCrop( m_pImpl->nRightCrop, aGraphicSize.Width );
-
-
-                    // We need a separate try-catch here, otherwise a bad crop setting will also nuke the size settings as well.
-                    try
-                    {
-                        xGraphicProperties->setPropertyValue(rPropNameSupplier.GetName( PROP_GRAPHIC_CROP ),
-                                uno::makeAny(text::GraphicCrop(m_pImpl->nTopCrop, m_pImpl->nBottomCrop, m_pImpl->nLeftCrop, m_pImpl->nRightCrop)));
-                    }
-                    catch (const uno::Exception& e)
-                    {
-                        SAL_WARN("writerfilter", "failed. Message :" << e.Message);
-                    }
-                }
-
             }
 
             if(m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_INLINE || m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_ANCHOR)
@@ -1391,7 +1426,8 @@ void GraphicImport::data(const sal_uInt8* buf, size_t len, writerfilter::Referen
         uno::Reference< io::XInputStream > xIStream = new XInputStreamHelper( buf, len, m_pImpl->bIsBitmap );
         aMediaProperties[0].Value <<= xIStream;
 
-        m_xGraphicObject = createGraphicObject( aMediaProperties );
+        uno::Reference<beans::XPropertySet> xPropertySet;
+        m_xGraphicObject = createGraphicObject( aMediaProperties, xPropertySet );
 }
 
 
@@ -1454,7 +1490,7 @@ void GraphicImport::lcl_info(const string & /*info*/)
 {
 }
 
-void GraphicImport::lcl_startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > /*xShape*/ )
+void GraphicImport::lcl_startShape(uno::Reference<drawing::XShape> const&)
 {
 }
 

@@ -26,23 +26,24 @@ QNameToString::Pointer_t QNameToString::pInstance;
 
 QNameToString::Pointer_t QNameToString::Instance()
 {
-    if (pInstance.get() == NULL)
+    if (pInstance.get() == nullptr)
         pInstance = QNameToString::Pointer_t(new QNameToString());
 
     return pInstance;
 }
 
-#ifdef DEBUG_LOGGING
 std::string QNameToString::operator()(Id qName)
 {
+    (void) qName;
+#ifdef DEBUG_WRITERFILTER
     Map::const_iterator aIt = mMap.find(qName);
 
     if (aIt != mMap.end())
         return aIt->second;
 
+#endif
     return std::string();
 }
-#endif
 
 QNameToString::QNameToString()
 {

@@ -1,52 +1,27 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
- * This file is part of NeoOffice.
+ * This file is part of the LibreOffice project.
  *
- * This file incorporates work covered by the following license notices:
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under Section 3.3 of the Mozilla Public License v2.0.
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/awt/Size.hpp>
-#include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/drawing/XControlShape.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
-
 #if SUPD == 310
 #include <svx/unoprnms.hxx>
 #else	// SUPD == 310
 #include <editeng/unoprnms.hxx>
 #endif	// SUPD == 310
-#include <vcl/outdev.hxx>
 #include <vcl/svapp.hxx>
 #include <unotools/datetime.hxx>
-
 #include <DomainMapper_Impl.hxx>
-#include <StyleSheetTable.hxx>
 #include <SdtHelper.hxx>
 
 #if SUPD == 310
 #include <sal/log.hxx>
+#include <vcl/outdev.hxx>
 #endif	// SUPD == 310
 
 #ifdef USE_JAVA
@@ -71,17 +46,25 @@ awt::Size lcl_getOptimalWidth(StyleSheetTablePtr pStyleSheet, OUString& rDefault
 
     MapMode aMap(MAP_100TH_MM);
     OutputDevice* pOut = Application::GetDefaultDevice();
+#if SUPD == 310
     pOut->Push(PUSH_FONT | PUSH_MAPMODE);
+#else	// SUPD == 310
+    pOut->Push(PushFlags::FONT | PushFlags::MAPMODE);
+#endif	// SUPD == 310
 
     PropertyMapPtr pDefaultCharProps = pStyleSheet->GetDefaultCharProps();
+#if SUPD == 310
     Font aFont(pOut->GetFont());
-    PropertyMap::iterator aFontName = pDefaultCharProps->find(PROP_CHAR_FONT_NAME);
-    if (aFontName != pDefaultCharProps->end())
-        aFont.SetName(aFontName->second.getValue().get<OUString>());
-    PropertyMap::iterator aHeight = pDefaultCharProps->find(PROP_CHAR_HEIGHT);
-    if (aHeight != pDefaultCharProps->end())
+#else	// SUPD == 310
+    vcl::Font aFont(pOut->GetFont());
+#endif	// SUPD == 310
+    boost::optional<PropertyMap::Property> aFontName = pDefaultCharProps->getProperty(PROP_CHAR_FONT_NAME);
+    if (aFontName)
+        aFont.SetName(aFontName->second.get<OUString>());
+    boost::optional<PropertyMap::Property> aHeight = pDefaultCharProps->getProperty(PROP_CHAR_HEIGHT);
+    if (aHeight)
     {
-        nHeight = aHeight->second.getValue().get<double>() * 35; // points -> mm100
+        nHeight = aHeight->second.get<double>() * 35; // points -> mm100
         aFont.SetSize(Size(0, nHeight));
     }
     pOut->SetFont(aFont);
@@ -101,6 +84,7 @@ awt::Size lcl_getOptimalWidth(StyleSheetTablePtr pStyleSheet, OUString& rDefault
 SdtHelper::SdtHelper(DomainMapper_Impl& rDM_Impl)
     : m_rDM_Impl(rDM_Impl)
     , m_bHasElements(false)
+    , m_bOutsideAParagraph(false)
 {
 }
 
@@ -124,7 +108,7 @@ void SdtHelper::createDropDownControl()
     m_aDropDownItems.clear();
 }
 
-void SdtHelper::createDateControl(OUString& rContentText)
+void SdtHelper::createDateControl(OUString& rContentText, beans::PropertyValue aCharFormat)
 {
     uno::Reference<awt::XControlModel> xControlModel(m_rDM_Impl.GetTextFactory()->createInstance("com.sun.star.form.component.DateField"), uno::UNO_QUERY);
     uno::Reference<beans::XPropertySet> xPropertySet(xControlModel, uno::UNO_QUERY);
@@ -158,32 +142,32 @@ void SdtHelper::createDateControl(OUString& rContentText)
 #else	// USE_JAVA
         xPropertySet->setPropertyValue("Date", uno::makeAny(aDate));
 #endif	// USE_JAVA
-        xPropertySet->setPropertyValue("HelpText", uno::makeAny(OUString("Click here to enter a date")));
     }
     else
         xPropertySet->setPropertyValue("HelpText", uno::makeAny(rContentText));
 
     // append date format to grab bag
-    uno::Sequence<beans::PropertyValue> aGrabBag(4);
-    aGrabBag[0].Name = "OriginalDate";
-    aGrabBag[0].Value = uno::makeAny(aDate);
-    aGrabBag[1].Name = "OriginalContent";
-    aGrabBag[1].Value = uno::makeAny(rContentText);
-    aGrabBag[2].Name = "DateFormat";
-    aGrabBag[2].Value = uno::makeAny(sDateFormat);
-    aGrabBag[3].Name = "Locale";
-    aGrabBag[3].Value = uno::makeAny(m_sLocale.makeStringAndClear());
+    comphelper::SequenceAsHashMap aGrabBag;
+    aGrabBag["OriginalDate"] <<= aDate;
+    aGrabBag["OriginalContent"] <<= rContentText;
+    aGrabBag["DateFormat"] <<= sDateFormat;
+    aGrabBag["Locale"] <<= m_sLocale.makeStringAndClear();
+    aGrabBag["CharFormat"] <<= aCharFormat.Value;
+    // merge in properties like ooxml:CT_SdtPr_alias and friends.
+    aGrabBag.update(comphelper::SequenceAsHashMap(m_aGrabBag.getAsConstList()));
+    // and empty the property list, so they won't end up on the next sdt as well
+    m_aGrabBag.clear();
 
     std::vector<OUString> aItems;
-    createControlShape(lcl_getOptimalWidth(m_rDM_Impl.GetStyleSheetTable(), rContentText, aItems), xControlModel, aGrabBag);
+    createControlShape(lcl_getOptimalWidth(m_rDM_Impl.GetStyleSheetTable(), rContentText, aItems), xControlModel, aGrabBag.getAsConstPropertyValueList());
 }
 
-void SdtHelper::createControlShape(awt::Size aSize, uno::Reference<awt::XControlModel> xControlModel)
+void SdtHelper::createControlShape(awt::Size aSize, uno::Reference<awt::XControlModel> const& xControlModel)
 {
     createControlShape(aSize, xControlModel, uno::Sequence<beans::PropertyValue>());
 }
 
-void SdtHelper::createControlShape(awt::Size aSize, uno::Reference<awt::XControlModel> xControlModel, const uno::Sequence<beans::PropertyValue>& rGrabBag)
+void SdtHelper::createControlShape(awt::Size aSize, uno::Reference<awt::XControlModel> const& xControlModel, const uno::Sequence<beans::PropertyValue>& rGrabBag)
 {
     uno::Reference<drawing::XControlShape> xControlShape(m_rDM_Impl.GetTextFactory()->createInstance("com.sun.star.drawing.ControlShape"), uno::UNO_QUERY);
     xControlShape->setSize(aSize);
@@ -200,63 +184,37 @@ void SdtHelper::createControlShape(awt::Size aSize, uno::Reference<awt::XControl
     m_bHasElements = true;
 }
 
-std::vector<OUString>& SdtHelper::getDropDownItems()
-{
-    return m_aDropDownItems;
-}
 
-OUStringBuffer& SdtHelper::getSdtTexts()
-{
-    return m_aSdtTexts;
-}
 
-OUStringBuffer& SdtHelper::getDate()
-{
-    return m_sDate;
-}
 
-OUStringBuffer& SdtHelper::getDateFormat()
-{
-    return m_sDateFormat;
-}
 
-OUStringBuffer& SdtHelper::getLocale()
-{
-    return m_sLocale;
-}
 
-bool SdtHelper::hasElements()
-{
-    return m_bHasElements;
-}
 
 void SdtHelper::appendToInteropGrabBag(com::sun::star::beans::PropertyValue rValue)
 {
-    sal_Int32 nLength = m_aGrabBag.getLength();
-    m_aGrabBag.realloc(nLength + 1);
-    m_aGrabBag[nLength] = rValue;
+    m_aGrabBag.push_back(rValue);
 }
 
 com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> SdtHelper::getInteropGrabBagAndClear()
 {
-    com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> aRet = m_aGrabBag;
-    m_aGrabBag.realloc(0);
+    com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> aRet = m_aGrabBag.getAsConstList();
+    m_aGrabBag.clear();
     return aRet;
 }
 
 bool SdtHelper::isInteropGrabBagEmpty()
 {
-    return m_aGrabBag.getLength() == 0;
+    return m_aGrabBag.empty();
 }
 
 sal_Int32 SdtHelper::getInteropGrabBagSize()
 {
-    return m_aGrabBag.getLength();
+    return m_aGrabBag.size();
 }
 
 bool SdtHelper::containedInInteropGrabBag(const OUString& rValueName)
 {
-    for (sal_Int32 i=0; i < m_aGrabBag.getLength(); ++i)
+    for (size_t i=0; i < m_aGrabBag.size(); ++i)
         if (m_aGrabBag[i].Name == rValueName)
             return true;
 

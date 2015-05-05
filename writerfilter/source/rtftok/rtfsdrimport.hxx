@@ -31,8 +31,8 @@ public:
     void append(const OUString& aKey, const OUString& aValue);
     /// Append property on the current parent.
     void appendGroupProperty(const OUString& aKey, const OUString& aValue);
-    void resolveDhgt(css::uno::Reference<css::beans::XPropertySet> xPropertySet, sal_Int32 nZOrder, bool bOldStyle);
-    void resolveFLine(css::uno::Reference<css::beans::XPropertySet> xPropertySet, sal_Int32 nFLine);
+    void resolveDhgt(css::uno::Reference<css::beans::XPropertySet> const& xPropertySet, sal_Int32 nZOrder, bool bOldStyle);
+    void resolveFLine(css::uno::Reference<css::beans::XPropertySet> const& xPropertySet, sal_Int32 nFLine);
     /**
      * These are the default in Word, but not in Writer.
      *
@@ -40,20 +40,24 @@ public:
      */
     std::vector<css::beans::PropertyValue> getTextFrameDefaults(bool bNew);
     /// Push a new group shape to the parent stack.
-    void pushParent(css::uno::Reference<css::drawing::XShapes> xParent);
+    void pushParent(css::uno::Reference<css::drawing::XShapes> const& xParent);
     /// Pop the current group shape from the parent stack.
     void popParent();
     css::uno::Reference<css::drawing::XShape> const& getCurrentShape()
-        { return m_xShape; }
-    bool isFakePict() { return m_bFakePict; }
+    {
+        return m_xShape;
+    }
+    bool isFakePict()
+    {
+        return m_bFakePict;
+    }
 private:
     void createShape(const OUString& aService, css::uno::Reference<css::drawing::XShape>& xShape, css::uno::Reference<css::beans::XPropertySet>& xPropertySet);
-    void applyProperty(css::uno::Reference<css::drawing::XShape> xShape, const OUString& aKey, const OUString& aValue);
-    int initShape(
-        css::uno::Reference<css::drawing::XShape> & o_xShape,
-        css::uno::Reference<css::beans::XPropertySet> & o_xPropSet,
-        bool & o_rIsCustomShape,
-        RTFShape const& rShape, bool bClose, ShapeOrPict const shapeOrPict);
+    void applyProperty(css::uno::Reference<css::drawing::XShape> const& xShape, const OUString& aKey, const OUString& aValue);
+    int initShape(css::uno::Reference<css::drawing::XShape>& o_xShape,
+                  css::uno::Reference<css::beans::XPropertySet>& o_xPropSet,
+                  bool& o_rIsCustomShape,
+                  RTFShape const& rShape, bool bClose, ShapeOrPict const shapeOrPict);
 
     RTFDocumentImpl& m_rImport;
     std::stack< css::uno::Reference<css::drawing::XShapes> > m_aParents;
@@ -66,6 +70,6 @@ private:
 } // namespace rtftok
 } // namespace writerfilter
 
-#endif // _RTFSDRIPORT_HXX_
+#endif // INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFSDRIMPORT_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

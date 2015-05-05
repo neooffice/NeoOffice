@@ -27,6 +27,7 @@
 #include <com/sun/star/text/WrapTextMode.hpp>
 
 #include "dmapperLoggers.hxx"
+#include <oox/drawingml/drawingmltypes.hxx>
 
 #include <iostream>
 
@@ -128,7 +129,7 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
             }
             break;
         default:
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
             dmapper_logger->element("unhandled");
 #endif
             break;
@@ -152,22 +153,14 @@ sal_Int16 PositionHandler::orientation() const
     return m_nOrient;
 }
 
-sal_Int16 PositionHandler::relation() const
-{
-    return m_nRelation;
-}
 
-sal_Int32 PositionHandler::position() const
-{
-    return m_nPosition;
-}
 
 void PositionHandler::setPositionOffset(const OUString & sText, bool vertical)
 {
     if( vertical )
-        savedPositionOffsetV = ConversionHelper::convertEMUToMM100( sText.toInt32());
+        savedPositionOffsetV = oox::drawingml::convertEmuToHmm(sText.toInt32());
     else
-        savedPositionOffsetH = ConversionHelper::convertEMUToMM100( sText.toInt32());
+        savedPositionOffsetH = oox::drawingml::convertEmuToHmm(sText.toInt32());
 }
 
 int PositionHandler::getPositionOffset(bool vertical)
@@ -273,7 +266,7 @@ sal_Int32 WrapHandler::getWrapMode( )
 }
 
 
-void GraphicZOrderHelper::addItem( uno::Reference< beans::XPropertySet > props, sal_Int32 relativeHeight )
+void GraphicZOrderHelper::addItem(uno::Reference<beans::XPropertySet> const& props, sal_Int32 const relativeHeight)
 {
     items[ relativeHeight ] = props;
 }

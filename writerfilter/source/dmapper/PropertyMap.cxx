@@ -43,6 +43,7 @@
 #else	// SUPD == 310
 #include <i18nutil/paper.hxx>
 #endif	// SUPD == 310
+#include <osl/diagnose.h>
 #include <rtl/ustring.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
@@ -65,10 +66,6 @@
 #include "dmapperLoggers.hxx"
 #include "PropertyMapHelper.hxx"
 
-#if SUPD == 310
-#include <sal/log.hxx>
-#endif	// SUPD == 310
-
 using namespace ::com::sun::star;
 
 namespace writerfilter {
@@ -90,61 +87,89 @@ PropertyMap::~PropertyMap()
 
 uno::Sequence< beans::PropertyValue > PropertyMap::GetPropertyValues(bool bCharGrabBag)
 {
-    if(!m_aValues.getLength() && size())
+    if(!m_aValues.getLength() && !m_vMap.empty())
     {
         size_t nCharGrabBag = 0;
         size_t nParaGrabBag = 0;
-        for (PropertyMap::iterator i = begin(); i != end(); ++i)
+        size_t nCellGrabBag = 0;
+        size_t nCellGrabBagSaved = 0; // How many entries do we save from the returned sequence.
+        size_t nRowGrabBag = 0;
+        for (MapIterator i = m_vMap.begin(); i != m_vMap.end(); ++i)
         {
             if ( i->second.getGrabBagType() == CHAR_GRAB_BAG )
                 nCharGrabBag++;
             else if ( i->second.getGrabBagType() == PARA_GRAB_BAG )
                 nParaGrabBag++;
+            else if ( i->second.getGrabBagType() == CELL_GRAB_BAG )
+            {
+                nCellGrabBag++;
+                nCellGrabBagSaved++;
+            }
+            else if ( i->first == PROP_CELL_INTEROP_GRAB_BAG)
+            {
+                uno::Sequence<beans::PropertyValue> aSeq;
+                i->second.getValue() >>= aSeq;
+                nCellGrabBag += aSeq.getLength();
+                nCellGrabBagSaved++;
+            }
+            else if ( i->second.getGrabBagType() == ROW_GRAB_BAG )
+                nRowGrabBag++;
         }
 
         // In case there are properties to be grab-bagged and we can have a char grab-bag, allocate one slot for it.
         size_t nCharGrabBagSize = 0;
         if (bCharGrabBag)
             nCharGrabBagSize = nCharGrabBag ? 1 : 0;
+        size_t nParaGrabBagSize = nParaGrabBag ? 1 : 0;
+        size_t nCellGrabBagSize = nCellGrabBag ? 1 : 0;
+        size_t nRowGrabBagSize = nRowGrabBag ? 1 : 0;
 
         // If there are any grab bag properties, we need one slot for them.
-        m_aValues.realloc( size() - nCharGrabBag + nCharGrabBagSize
-                                  - nParaGrabBag + (nParaGrabBag ? 1 : 0));
+        m_aValues.realloc( m_vMap.size() - nCharGrabBag + nCharGrabBagSize
+                                  - nParaGrabBag + nParaGrabBagSize
+                                  - nCellGrabBagSaved + nCellGrabBagSize
+                                  - nRowGrabBag + nRowGrabBagSize);
         ::com::sun::star::beans::PropertyValue* pValues = m_aValues.getArray();
         uno::Sequence<beans::PropertyValue> aCharGrabBagValues(nCharGrabBag);
         uno::Sequence<beans::PropertyValue> aParaGrabBagValues(nParaGrabBag);
+        uno::Sequence<beans::PropertyValue> aCellGrabBagValues(nCellGrabBag);
+        uno::Sequence<beans::PropertyValue> aRowGrabBagValues(nRowGrabBag);
         beans::PropertyValue* pCharGrabBagValues = aCharGrabBagValues.getArray();
         beans::PropertyValue* pParaGrabBagValues = aParaGrabBagValues.getArray();
+        beans::PropertyValue* pCellGrabBagValues = aCellGrabBagValues.getArray();
+        beans::PropertyValue* pRowGrabBagValues = aRowGrabBagValues.getArray();
         //style names have to be the first elements within the property sequence
         //otherwise they will overwrite 'hard' attributes
         sal_Int32 nValue = 0;
+        sal_Int32 nRowGrabBagValue = 0;
+        sal_Int32 nCellGrabBagValue = 0;
         sal_Int32 nParaGrabBagValue = 0;
         sal_Int32 nCharGrabBagValue = 0;
         PropertyNameSupplier& rPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-        PropertyMap::iterator aParaStyleIter = find(PROP_PARA_STYLE_NAME);
-        if( aParaStyleIter != end())
+        MapIterator aParaStyleIter = m_vMap.find(PROP_PARA_STYLE_NAME);
+        if( aParaStyleIter != m_vMap.end())
         {
             pValues[nValue].Name = rPropNameSupplier.GetName( aParaStyleIter->first );
             pValues[nValue].Value = aParaStyleIter->second.getValue();
             ++nValue;
         }
 
-        PropertyMap::iterator aCharStyleIter = find(PROP_CHAR_STYLE_NAME);
-        if( aCharStyleIter != end())
+        MapIterator aCharStyleIter = m_vMap.find(PROP_CHAR_STYLE_NAME);
+        if( aCharStyleIter != m_vMap.end())
         {
             pValues[nValue].Name = rPropNameSupplier.GetName( aCharStyleIter->first );
             pValues[nValue].Value = aCharStyleIter->second.getValue();
             ++nValue;
         }
-        PropertyMap::iterator aNumRuleIter = find(PROP_NUMBERING_RULES);
-        if( aNumRuleIter != end())
+        MapIterator aNumRuleIter = m_vMap.find(PROP_NUMBERING_RULES);
+        if( aNumRuleIter != m_vMap.end())
         {
             pValues[nValue].Name = rPropNameSupplier.GetName( aNumRuleIter->first );
             pValues[nValue].Value = aNumRuleIter->second.getValue();
             ++nValue;
         }
-        PropertyMap::iterator aMapIter = begin();
-        for( ; aMapIter != end(); ++aMapIter )
+        MapIterator aMapIter = m_vMap.begin();
+        for( ; aMapIter != m_vMap.end(); ++aMapIter )
         {
             if( aMapIter != aParaStyleIter && aMapIter != aCharStyleIter && aMapIter != aNumRuleIter )
             {
@@ -163,11 +188,36 @@ uno::Sequence< beans::PropertyValue > PropertyMap::GetPropertyValues(bool bCharG
                     pParaGrabBagValues[nParaGrabBagValue].Value = aMapIter->second.getValue();
                     ++nParaGrabBagValue;
                 }
+                else if ( aMapIter->second.getGrabBagType() == CELL_GRAB_BAG )
+                {
+                    pCellGrabBagValues[nCellGrabBagValue].Name = rPropNameSupplier.GetName( aMapIter->first );
+                    pCellGrabBagValues[nCellGrabBagValue].Value = aMapIter->second.getValue();
+                    ++nCellGrabBagValue;
+                }
+                else if ( aMapIter->second.getGrabBagType() == ROW_GRAB_BAG )
+                {
+                    pRowGrabBagValues[nRowGrabBagValue].Name = rPropNameSupplier.GetName( aMapIter->first );
+                    pRowGrabBagValues[nRowGrabBagValue].Value = aMapIter->second.getValue();
+                    ++nRowGrabBagValue;
+                }
                 else
                 {
-                    pValues[nValue].Name = rPropNameSupplier.GetName( aMapIter->first );
-                    pValues[nValue].Value = aMapIter->second.getValue();
-                    ++nValue;
+                    if (aMapIter->first == PROP_CELL_INTEROP_GRAB_BAG)
+                    {
+                        uno::Sequence<beans::PropertyValue> aSeq;
+                        aMapIter->second.getValue() >>= aSeq;
+                        for (sal_Int32 i = 0; i < aSeq.getLength(); ++i)
+                        {
+                            pCellGrabBagValues[nCellGrabBagValue] = aSeq[i];
+                            ++nCellGrabBagValue;
+                        }
+                    }
+                    else
+                    {
+                        pValues[nValue].Name = rPropNameSupplier.GetName( aMapIter->first );
+                        pValues[nValue].Value = aMapIter->second.getValue();
+                        ++nValue;
+                    }
                 }
             }
         }
@@ -183,25 +233,43 @@ uno::Sequence< beans::PropertyValue > PropertyMap::GetPropertyValues(bool bCharG
             pValues[nValue].Value = uno::makeAny(aParaGrabBagValues);
             ++nValue;
         }
+        if (nCellGrabBag)
+        {
+            pValues[nValue].Name = "CellInteropGrabBag";
+            pValues[nValue].Value = uno::makeAny(aCellGrabBagValues);
+            ++nValue;
+        }
+        if (nRowGrabBag)
+        {
+            pValues[nValue].Name = "RowInteropGrabBag";
+            pValues[nValue].Value = uno::makeAny(aRowGrabBagValues);
+            ++nValue;
+        }
     }
     return m_aValues;
 }
 
-#ifdef DEBUG_DMAPPER_PROPERTY_MAP
+#ifdef DEBUG_WRITERFILTER
 static void lcl_AnyToTag(const uno::Any & rAny)
 {
     try {
         sal_Int32 aInt = 0;
-        rAny >>= aInt;
-        dmapper_logger->attribute("value", aInt);
+        if (rAny >>= aInt) {
+            dmapper_logger->attribute("value", rAny);
+        } else {
+            dmapper_logger->attribute("unsignedValue", 0);
+        }
 
         sal_uInt32 auInt = 0;
         rAny >>= auInt;
         dmapper_logger->attribute("unsignedValue", auInt);
 
         float aFloat = 0.0f;
-        rAny >>= aFloat;
-        dmapper_logger->attribute("floatValue", aFloat);
+        if (rAny >>= aFloat) {
+            dmapper_logger->attribute("floatValue", rAny);
+        } else {
+            dmapper_logger->attribute("unsignedValue", 0);
+        }
 
         OUString aStr;
         rAny >>= aStr;
@@ -212,9 +280,9 @@ static void lcl_AnyToTag(const uno::Any & rAny)
 }
 #endif
 
-void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite, GrabBagType rGrabBagType )
+void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite, GrabBagType i_GrabBagType )
 {
-#ifdef DEBUG_DMAPPER_PROPERTY_MAP
+#ifdef DEBUG_WRITERFILTER
     const OUString& rInsert = PropertyNameSupplier::
         GetPropertyNameSupplier().GetName(eId);
 
@@ -224,27 +292,44 @@ void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite
     dmapper_logger->endElement();
 #endif
 
-    PropertyMap::iterator aElement = find(eId);
-    if (aElement != end())
-    {
-        if (bOverwrite)
-            aElement->second = PropValue(rAny, rGrabBagType);
-
-        return;
-    }
-    _PropertyMap::insert(_PropertyMap::value_type(eId, PropValue(rAny, rGrabBagType)));
+    if (!bOverwrite)
+        m_vMap.insert(std::make_pair(eId, PropValue(rAny, i_GrabBagType)));
+    else
+        m_vMap[eId] = PropValue(rAny, i_GrabBagType);
 
     Invalidate();
 }
 
-#if OSL_DEBUG_LEVEL > 1
+void PropertyMap::Erase( PropertyIds eId )
+{
+    //Safe call to erase, it throws no exceptions, even if eId is not in m_vMap
+    m_vMap.erase(eId);
+
+    Invalidate();
+}
+
+boost::optional<PropertyMap::Property> PropertyMap::getProperty( PropertyIds eId ) const
+{
+    MapIterator aIter = m_vMap.find(eId);
+    if (aIter==m_vMap.end())
+        return boost::optional<Property>();
+    else
+        return std::make_pair( eId, aIter->second.getValue() ) ;
+}
+
+bool PropertyMap::isSet( PropertyIds eId) const
+{
+    return m_vMap.find(eId)!=m_vMap.end();
+}
+
+#ifdef DEBUG_WRITERFILTER
 void PropertyMap::dumpXml( const TagLogger::Pointer_t pLogger ) const
 {
     pLogger->startElement("PropertyMap");
 
     PropertyNameSupplier& rPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-    PropertyMap::const_iterator aMapIter = begin();
-    while (aMapIter != end())
+    MapIterator aMapIter = m_vMap.begin();
+    while (aMapIter != m_vMap.end())
     {
         pLogger->startElement("property");
 
@@ -289,48 +374,62 @@ void PropertyMap::dumpXml( const TagLogger::Pointer_t pLogger ) const
 }
 #endif
 
-
-
-template<class T>
-    struct removeExistingElements : public ::std::unary_function<T, void>
-{
-  PropertyMap& rMap;
-
-  removeExistingElements(PropertyMap& _rMap ) : rMap(_rMap) {}
-  void operator() (T x)
-  {
-    PropertyMap::iterator aElement = rMap.find(x.first);
-    if( aElement != rMap.end())
-        rMap.erase( aElement );
-  }
-};
-
 void PropertyMap::InsertProps(const PropertyMapPtr pMap)
 {
-    if( pMap.get() )
+    if(pMap)
     {
-        ::std::for_each( pMap->begin(), pMap->end(),
-                removeExistingElements<PropertyMap::value_type>(*this) );
-        _PropertyMap::insert(pMap->begin(), pMap->end());
+        MapIterator pEnd = pMap->m_vMap.end();
+        for ( MapIterator iter = pMap->m_vMap.begin(); iter!=pEnd; ++iter )
+            m_vMap[iter->first] = iter->second;
+
         insertTableProperties(pMap.get());
 
         Invalidate();
     }
 }
 
-const uno::Reference< text::XFootnote>&  PropertyMap::GetFootnote() const
-{
-    return m_xFootnote;
-}
 
 
 void PropertyMap::insertTableProperties( const PropertyMap* )
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->element("PropertyMap.insertTableProperties");
 #endif
 }
 
+void PropertyMap::printProperties()
+{
+#ifdef DEBUG_WRITERFILTER
+    dmapper_logger->startElement("properties");
+
+    MapIterator aMapIter = m_vMap.begin();
+    MapIterator aEndIter = m_vMap.end();
+    PropertyNameSupplier& rPropSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
+    for( ; aMapIter != aEndIter; ++aMapIter )
+    {
+        SAL_INFO("writerfilter", rPropSupplier.GetName(aMapIter->first));
+
+        table::BorderLine2 aLine;
+        sal_Int32 nColor;
+        if ( aMapIter->second.getValue() >>= aLine )
+        {
+            dmapper_logger->startElement("borderline");
+            dmapper_logger->attribute("color", aLine.Color);
+            dmapper_logger->attribute("inner", aLine.InnerLineWidth);
+            dmapper_logger->attribute("outer", aLine.OuterLineWidth);
+            dmapper_logger->endElement();
+        }
+        else if ( aMapIter->second.getValue() >>= nColor )
+        {
+            dmapper_logger->startElement("color");
+            dmapper_logger->attribute("number", nColor);
+            dmapper_logger->endElement();
+        }
+    }
+
+    dmapper_logger->endElement();
+#endif
+}
 
 SectionPropertyMap::SectionPropertyMap(bool bIsFirstSection) :
     m_bIsFirstSection( bIsFirstSection )
@@ -454,14 +553,18 @@ uno::Reference< beans::XPropertySet > SectionPropertyMap::GetPageStyle(
                 m_aFirstPageStyle = uno::Reference< beans::XPropertySet > (
                         xTextFactory->createInstance("com.sun.star.style.PageStyle"),
                         uno::UNO_QUERY);
+
+                // Call insertByName() before GetPageStyle(), otherwise the
+                // first and the follow page style will have the same name, and
+                // insertByName() will fail.
+                if (xPageStyles.is())
+                    xPageStyles->insertByName( m_sFirstPageStyleName, uno::makeAny(m_aFirstPageStyle) );
+
                 // Ensure that m_aFollowPageStyle has been created
                 GetPageStyle( xPageStyles, xTextFactory, false );
                 // Chain m_aFollowPageStyle to be after m_aFirstPageStyle
                 m_aFirstPageStyle->setPropertyValue("FollowStyle",
                     uno::makeAny(m_sFollowPageStyleName));
-
-                if (xPageStyles.is())
-                    xPageStyles->insertByName( m_sFirstPageStyleName, uno::makeAny(m_aFirstPageStyle) );
             }
             else if( !m_aFirstPageStyle.is() && xPageStyles.is() )
             {
@@ -488,8 +591,9 @@ uno::Reference< beans::XPropertySet > SectionPropertyMap::GetPageStyle(
         }
 
     }
-    catch( const uno::Exception& )
+    catch( const uno::Exception& rException )
     {
+        SAL_WARN("writerfilter", "SectionPropertyMap::GetPageStyle() failed: " << rException.Message);
     }
 
     return xRet;
@@ -587,7 +691,8 @@ void SectionPropertyMap::ApplyBorderToPageStyles(
             sal_uInt32 nLineWidth = 0;
             if (m_pBorderLines[nBorder])
                 nLineWidth = m_pBorderLines[nBorder]->LineWidth;
-            SetBorderDistance( xFirst, aMarginIds[nBorder], aBorderDistanceIds[nBorder],
+            if(xFirst.is())
+                SetBorderDistance( xFirst, aMarginIds[nBorder], aBorderDistanceIds[nBorder],
                   m_nBorderDistances[nBorder], nOffsetFrom, nLineWidth );
             if(xSecond.is())
                 SetBorderDistance( xSecond, aMarginIds[nBorder], aBorderDistanceIds[nBorder],
@@ -618,7 +723,7 @@ table::ShadowFormat PropertyMap::getShadowFromBorder(table::BorderLine2 aBorder)
     return aFormat;
 }
 
-void SectionPropertyMap::SetBorderDistance( uno::Reference< beans::XPropertySet > xStyle,
+void SectionPropertyMap::SetBorderDistance( uno::Reference< beans::XPropertySet > const& xStyle,
         PropertyIds eMarginId, PropertyIds eDistId, sal_Int32 nDistance, sal_Int32 nOffsetFrom, sal_uInt32 nLineWidth )
 {
     PropertyNameSupplier& rPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
@@ -645,7 +750,7 @@ void SectionPropertyMap::SetBorderDistance( uno::Reference< beans::XPropertySet 
 
 
 uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
-                            uno::Reference< beans::XPropertySet > xColumnContainer )
+                            uno::Reference< beans::XPropertySet > const& xColumnContainer, DomainMapper_Impl& rDM_Impl )
 {
     uno::Reference< text::XTextColumns > xColumns;
     try
@@ -670,7 +775,7 @@ uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
             }
 
             sal_Int32 nRefValue = xColumns->getReferenceValue();
-            double fRel = double( nRefValue ) / double( nColSum );
+            double fRel = nColSum ? double( nRefValue ) / double( nColSum ) : 0.0;
             uno::Sequence< text::TextColumn > aColumns( m_nColumnCount + 1 );
             text::TextColumn* pColumn = aColumns.getArray();
 
@@ -697,6 +802,9 @@ uno::Reference< text::XTextColumns > SectionPropertyMap::ApplyColumnProperties(
                 rPropNameSupplier.GetName( PROP_SEPARATOR_LINE_IS_ON ),
                 uno::makeAny( m_bSeparatorLineIsOn ));
         xColumnContainer->setPropertyValue( sTextColumns, uno::makeAny( xColumns ) );
+        // Set the columns to be unbalanced if that compatibility option is set or this is the last section.
+        if (rDM_Impl.GetSettingsTable()->GetNoColumnBalance() || rDM_Impl.GetIsLastSectionGroup())
+            xColumnContainer->setPropertyValue("DontBalanceTextColumns", uno::makeAny(true));
     }
     catch( const uno::Exception& )
     {
@@ -834,78 +942,74 @@ void SectionPropertyMap::PrepareHeaderFooterProperties( bool bFirstPage )
     sal_Int32 nHeaderTop = m_nHeaderTop;
     if(HasHeader(bFirstPage))
     {
-        m_nTopMargin = m_nHeaderTop;
-        if( nTopMargin > 0 && nTopMargin > m_nHeaderTop )
-            m_nHeaderTop = nTopMargin - m_nHeaderTop;
+        nTopMargin = nHeaderTop;
+        if( m_nTopMargin > 0 && m_nTopMargin > nHeaderTop )
+            nHeaderTop = m_nTopMargin - nHeaderTop;
         else
-            m_nHeaderTop = 0;
+            nHeaderTop = 0;
 
         //minimum header height 1mm
-        if( m_nHeaderTop < MIN_HEAD_FOOT_HEIGHT )
-            m_nHeaderTop = MIN_HEAD_FOOT_HEIGHT;
+        if( nHeaderTop < MIN_HEAD_FOOT_HEIGHT )
+            nHeaderTop = MIN_HEAD_FOOT_HEIGHT;
     }
 
 
-    if( nTopMargin >= 0 ) //fixed height header -> see WW8Par6.hxx
+    if( m_nTopMargin >= 0 ) //fixed height header -> see WW8Par6.hxx
     {
-        operator[](PROP_HEADER_IS_DYNAMIC_HEIGHT) = uno::makeAny( true );
-        operator[](PROP_HEADER_DYNAMIC_SPACING) = uno::makeAny( true );
-        operator[](PROP_HEADER_BODY_DISTANCE) = uno::makeAny( m_nHeaderTop - MIN_HEAD_FOOT_HEIGHT );// ULSpace.Top()
-        operator[](PROP_HEADER_HEIGHT) = uno::makeAny( m_nHeaderTop );
+        Insert(PROP_HEADER_IS_DYNAMIC_HEIGHT, uno::makeAny( true ));
+        Insert(PROP_HEADER_DYNAMIC_SPACING, uno::makeAny( true ));
+        Insert(PROP_HEADER_BODY_DISTANCE, uno::makeAny( nHeaderTop - MIN_HEAD_FOOT_HEIGHT ));// ULSpace.Top()
+        Insert(PROP_HEADER_HEIGHT, uno::makeAny( nHeaderTop ));
 
     }
     else
     {
         //todo: old filter fakes a frame into the header/footer to support overlapping
         //current setting is completely wrong!
-        operator[](PROP_HEADER_HEIGHT) = uno::makeAny( m_nHeaderTop );
-        operator[](PROP_HEADER_BODY_DISTANCE) = uno::makeAny( nTopMargin - m_nHeaderTop );
-        operator[](PROP_HEADER_IS_DYNAMIC_HEIGHT) = uno::makeAny( false );
-        operator[](PROP_HEADER_DYNAMIC_SPACING) = uno::makeAny( false );
+        Insert(PROP_HEADER_HEIGHT, uno::makeAny( nHeaderTop ));
+        Insert(PROP_HEADER_BODY_DISTANCE, uno::makeAny( m_nTopMargin - nHeaderTop ));
+        Insert(PROP_HEADER_IS_DYNAMIC_HEIGHT, uno::makeAny( false ));
+        Insert(PROP_HEADER_DYNAMIC_SPACING, uno::makeAny( false ));
     }
 
     sal_Int32 nBottomMargin = m_nBottomMargin;
     sal_Int32 nHeaderBottom = m_nHeaderBottom;
     if( HasFooter( bFirstPage ) )
     {
-        m_nBottomMargin = m_nHeaderBottom;
-        if( nBottomMargin > 0 && nBottomMargin > m_nHeaderBottom )
-            m_nHeaderBottom = nBottomMargin - m_nHeaderBottom;
+        nBottomMargin = nHeaderBottom;
+        if( m_nBottomMargin > 0 && m_nBottomMargin > nHeaderBottom )
+            nHeaderBottom = m_nBottomMargin - nHeaderBottom;
         else
-            m_nHeaderBottom = 0;
-        if( m_nHeaderBottom < MIN_HEAD_FOOT_HEIGHT )
-            m_nHeaderBottom = MIN_HEAD_FOOT_HEIGHT;
+            nHeaderBottom = 0;
+        if( nHeaderBottom < MIN_HEAD_FOOT_HEIGHT )
+            nHeaderBottom = MIN_HEAD_FOOT_HEIGHT;
     }
 
-    if( nBottomMargin >= 0 ) //fixed height footer -> see WW8Par6.hxx
+    if( m_nBottomMargin >= 0 ) //fixed height footer -> see WW8Par6.hxx
     {
-        operator[](PROP_FOOTER_IS_DYNAMIC_HEIGHT) = uno::makeAny( true );
-        operator[](PROP_FOOTER_DYNAMIC_SPACING) = uno::makeAny( true );
-        operator[](PROP_FOOTER_BODY_DISTANCE) = uno::makeAny( m_nHeaderBottom - MIN_HEAD_FOOT_HEIGHT);
-        operator[](PROP_FOOTER_HEIGHT) = uno::makeAny( m_nHeaderBottom );
+        Insert(PROP_FOOTER_IS_DYNAMIC_HEIGHT, uno::makeAny( true ));
+        Insert(PROP_FOOTER_DYNAMIC_SPACING, uno::makeAny( true ));
+        Insert(PROP_FOOTER_BODY_DISTANCE, uno::makeAny( nHeaderBottom - MIN_HEAD_FOOT_HEIGHT));
+        Insert(PROP_FOOTER_HEIGHT, uno::makeAny( nHeaderBottom ));
     }
     else
     {
         //todo: old filter fakes a frame into the header/footer to support overlapping
         //current setting is completely wrong!
-        operator[](PROP_FOOTER_IS_DYNAMIC_HEIGHT) = uno::makeAny( false );
-        operator[](PROP_FOOTER_DYNAMIC_SPACING) = uno::makeAny( false );
-        operator[](PROP_FOOTER_HEIGHT) = uno::makeAny( nBottomMargin - m_nHeaderBottom );
-        operator[](PROP_FOOTER_BODY_DISTANCE) = uno::makeAny( m_nHeaderBottom );
+        Insert(PROP_FOOTER_IS_DYNAMIC_HEIGHT, uno::makeAny( false ));
+        Insert(PROP_FOOTER_DYNAMIC_SPACING, uno::makeAny( false ));
+        Insert(PROP_FOOTER_HEIGHT, uno::makeAny( m_nBottomMargin - nHeaderBottom ));
+        Insert(PROP_FOOTER_BODY_DISTANCE, uno::makeAny( nHeaderBottom ));
     }
 
     //now set the top/bottom margin for the follow page style
-    operator[](PROP_TOP_MARGIN) = uno::makeAny( m_nTopMargin );
-    operator[](PROP_BOTTOM_MARGIN) = uno::makeAny( m_nBottomMargin );
-
-    // Restore original top margin, so we don't end up with a smaller margin in case we have to produce two page styles from one Word section.
-    m_nTopMargin = nTopMargin;
-    m_nHeaderTop = nHeaderTop;
-    m_nBottomMargin = nBottomMargin;
-    m_nHeaderBottom = nHeaderBottom;
+    Insert(PROP_TOP_MARGIN, uno::makeAny( nTopMargin ));
+    Insert(PROP_BOTTOM_MARGIN, uno::makeAny( nBottomMargin ));
 }
 
-uno::Reference<beans::XPropertySet> lcl_GetRangeProperties(bool bIsFirstSection, DomainMapper_Impl& rDM_Impl, uno::Reference<text::XTextRange> xStartingRange)
+uno::Reference<beans::XPropertySet> lcl_GetRangeProperties(bool bIsFirstSection,
+        DomainMapper_Impl& rDM_Impl,
+        uno::Reference<text::XTextRange> const& xStartingRange)
 {
     uno::Reference< beans::XPropertySet > xRangeProperties;
     if (bIsFirstSection && rDM_Impl.GetBodyText().is())
@@ -929,14 +1033,14 @@ void SectionPropertyMap::HandleMarginsHeaderFooter(DomainMapper_Impl& rDM_Impl)
         else
             m_nLeftMargin += m_nDzaGutter;
     }
-    operator[](PROP_LEFT_MARGIN) = uno::makeAny( m_nLeftMargin  );
-    operator[](PROP_RIGHT_MARGIN) = uno::makeAny( m_nRightMargin );
+    Insert(PROP_LEFT_MARGIN, uno::makeAny( m_nLeftMargin  ));
+    Insert(PROP_RIGHT_MARGIN, uno::makeAny( m_nRightMargin ));
 
     if (rDM_Impl.m_oBackgroundColor)
-        operator[](PROP_BACK_COLOR) = uno::makeAny(*rDM_Impl.m_oBackgroundColor);
+        Insert(PROP_BACK_COLOR, uno::makeAny(*rDM_Impl.m_oBackgroundColor));
     if (!rDM_Impl.m_bHasFtnSep)
         // Set footnote line width to zero, document has no footnote separator.
-        operator[](PROP_FOOTNOTE_LINE_RELATIVE_WIDTH) = uno::makeAny(sal_Int32(0));
+        Insert(PROP_FOOTNOTE_LINE_RELATIVE_WIDTH, uno::makeAny(sal_Int32(0)));
 
     /*** if headers/footers are available then the top/bottom margins of the
       header/footer are copied to the top/bottom margin of the page
@@ -972,7 +1076,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
     {
         bool bFirst = rDM_Impl.IsLineNumberingSet();
         rDM_Impl.SetLineNumbering( m_nLnnMod, m_nLnc, m_ndxaLnn );
-        if( m_nLnnMin > 0 || (bFirst && m_nLnc == 1))
+        if( m_nLnnMin > 0 || (bFirst && m_nLnc == NS_ooxml::LN_Value_ST_LineNumberRestart_newSection))
         {
             //set the starting value at the beginning of the section
             try
@@ -996,17 +1100,16 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         }
     }
 
-    // break type : 0 - No break 1 - New Column 2 - New page 3 - Even page 4 - odd page
     // depending on the break type no page styles should be created
     // If the section type is missing, but we have columns, then this should be
     // handled as a continuous section break.
-    if(m_nBreakType == 0 || (m_nBreakType == -1 && m_nColumnCount > 0))
+    if(m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_continuous) || (m_nBreakType == -1 && m_nColumnCount > 0))
     {
         //todo: insert a section or access the already inserted section
         uno::Reference< beans::XPropertySet > xSection =
                                     rDM_Impl.appendTextSectionAfter( m_xStartingRange );
         if( m_nColumnCount > 0 && xSection.is())
-            ApplyColumnProperties( xSection );
+            ApplyColumnProperties( xSection, rDM_Impl );
         uno::Reference<beans::XPropertySet> xRangeProperties(lcl_GetRangeProperties(m_bIsFirstSection, rDM_Impl, m_xStartingRange));
         if (xRangeProperties.is())
         {
@@ -1031,7 +1134,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
     // If the section is of type "New column" (0x01), then simply insert a column break.
     // But only if there actually are columns on the page, otherwise a column break
     // seems to be handled like a page break by MSO.
-    else if(m_nBreakType == 1 && m_nColumnCount > 0 )
+    else if(m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_nextColumn) && m_nColumnCount > 0 )
     {
         uno::Reference< beans::XPropertySet > xRangeProperties;
         if( m_xStartingRange.is() )
@@ -1062,23 +1165,23 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         }
         uno::Reference< text::XTextColumns > xColumns;
         if( m_nColumnCount > 0 )
-            xColumns = ApplyColumnProperties( xFollowPageStyle );
+            xColumns = ApplyColumnProperties( xFollowPageStyle, rDM_Impl );
 
         //prepare text grid properties
         sal_Int32 nHeight = 1;
-        PropertyMap::iterator aElement = find(PROP_HEIGHT);
-        if( aElement != end())
-            aElement->second.getValue() >>= nHeight;
+        boost::optional<PropertyMap::Property> pProp = getProperty(PROP_HEIGHT);
+        if(pProp)
+            pProp->second >>= nHeight;
 
         sal_Int32 nWidth = 1;
-        aElement = find(PROP_WIDTH);
-        if( aElement != end())
-            aElement->second.getValue() >>= nWidth;
+        pProp = getProperty(PROP_WIDTH);
+        if(pProp)
+            pProp->second >>= nWidth;
 
         text::WritingMode eWritingMode = text::WritingMode_LR_TB;
-        aElement = find(PROP_WRITING_MODE);
-        if( aElement != end())
-            aElement->second.getValue() >>= eWritingMode;
+        pProp = getProperty(PROP_WRITING_MODE);
+        if(pProp)
+            pProp->second >>= eWritingMode;
 
         sal_Int32 nTextAreaHeight = eWritingMode == text::WritingMode_LR_TB ?
             nHeight - m_nTopMargin - m_nBottomMargin :
@@ -1092,19 +1195,21 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             nGridLinePitch = 1;
         }
 
-        operator[](PROP_GRID_LINES) =
-                uno::makeAny( static_cast<sal_Int16>(nTextAreaHeight/nGridLinePitch));
+        Insert(PROP_GRID_LINES, uno::makeAny( static_cast<sal_Int16>(nTextAreaHeight/nGridLinePitch)));
+
+        // PROP_GRID_MODE
+        Insert( PROP_GRID_MODE, uno::makeAny( static_cast<sal_Int16> (m_nGridType) ));
 
         sal_Int32 nCharWidth = 423; //240 twip/ 12 pt
         //todo: is '0' the right index here?
         const StyleSheetEntryPtr pEntry = rDM_Impl.GetStyleSheetTable()->FindStyleSheetByISTD(OUString::number(0, 16));
         if( pEntry.get( ) )
         {
-            PropertyMap::iterator aElement_ = pEntry->pProperties->find(PROP_CHAR_HEIGHT_ASIAN);
-            if( aElement_ != pEntry->pProperties->end())
+            boost::optional<PropertyMap::Property> pPropHeight = pEntry->pProperties->getProperty(PROP_CHAR_HEIGHT_ASIAN);
+            if(pProp)
             {
                 double fHeight = 0;
-                if( aElement_->second.getValue() >>= fHeight )
+                if( pPropHeight->second >>= fHeight )
                     nCharWidth = ConversionHelper::convertTwipToMM100( (long)( fHeight * 20.0 + 0.5 ));
             }
         }
@@ -1122,11 +1227,11 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             nFraction = (nFraction * 20)/0xFFF;
             nCharWidth += ConversionHelper::convertTwipToMM100( nFraction );
         }
-        operator[](PROP_GRID_BASE_HEIGHT) = uno::makeAny( nCharWidth );
+        Insert(PROP_GRID_BASE_HEIGHT, uno::makeAny( nCharWidth ));
         sal_Int32 nRubyHeight = nGridLinePitch - nCharWidth;
         if(nRubyHeight < 0 )
             nRubyHeight = 0;
-        operator[](PROP_GRID_RUBY_HEIGHT) = uno::makeAny( nRubyHeight );
+        Insert(PROP_GRID_RUBY_HEIGHT, uno::makeAny( nRubyHeight ));
 
         // #i119558#, force to set document as standard page mode,
         // refer to ww8 import process function "SwWW8ImplReader::SetDocumentGrid"
@@ -1135,7 +1240,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             uno::Reference< beans::XPropertySet > xDocProperties;
             xDocProperties = uno::Reference< beans::XPropertySet >( rDM_Impl.GetTextDocument(), uno::UNO_QUERY_THROW );
             bool bSquaredPageMode = false;
-            operator[](PROP_GRID_STANDARD_MODE) = uno::makeAny( !bSquaredPageMode );
+            Insert(PROP_GRID_STANDARD_MODE, uno::makeAny( !bSquaredPageMode ));
             xDocProperties->setPropertyValue("DefaultPageMode", uno::makeAny( bSquaredPageMode ));
         }
         catch (const uno::Exception& rEx)
@@ -1176,7 +1281,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
                 // Handle page breaks with odd/even page numbering. We need to use an extra page style for setting the page style
                 // to left/right, because if we set it to the normal style, we'd set it to "First Page"/"Default Style", which would
                 // break them (all default pages would be only left or right).
-                if (m_nBreakType == 3 || m_nBreakType == 4)
+                if (m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_evenPage) || m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_oddPage))
                 {
                     OUString* pageStyle = m_bTitlePage ? &m_sFirstPageStyleName : &m_sFollowPageStyleName;
                     OUString evenOddStyleName = lcl_FindUnusedPageStyleName(rDM_Impl.GetPageStyles()->getElementNames());
@@ -1198,9 +1303,9 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
                     evenOddStyle->setPropertyValue("FooterIsOn", uno::makeAny(sal_False));
                     CopyHeaderFooter( pageProperties, evenOddStyle );
                     *pageStyle = evenOddStyleName; // And use it instead of the original one (which is set as follow of this one).
-                    if (m_nBreakType == 3)
+                    if (m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_evenPage))
                         evenOddStyle->setPropertyValue(rPropNameSupplier.GetName(PROP_PAGE_STYLE_LAYOUT), uno::makeAny(style::PageStyleLayout_LEFT));
-                    else if (m_nBreakType == 4)
+                    else if (m_nBreakType == static_cast<sal_Int32>(NS_ooxml::LN_Value_ST_SectionMark_oddPage))
                         evenOddStyle->setPropertyValue(rPropNameSupplier.GetName(PROP_PAGE_STYLE_LAYOUT), uno::makeAny(style::PageStyleLayout_RIGHT));
                 }
 
@@ -1223,29 +1328,119 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
             OSL_FAIL( "Exception in SectionPropertyMap::CloseSectionGroup");
         }
     }
+    rDM_Impl.SetIsLastSectionGroup(false);
     rDM_Impl.SetIsFirstParagraphInSection(true);
 }
 
-
-void SectionPropertyMap::_ApplyProperties( uno::Reference< beans::XPropertySet > xStyle )
+class NamedPropertyValue {
+    OUString m_aName;
+public:
+    NamedPropertyValue(const OUString& i_aStr)
+        : m_aName(i_aStr)   { }
+    bool operator() (beans::PropertyValue& aVal)
+    {   return aVal.Name == m_aName;    }
+};
+void SectionPropertyMap::_ApplyProperties(
+        uno::Reference< beans::XPropertySet > const& xStyle)
 {
-    PropertyNameSupplier& rPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-#ifdef NO_LIBO_4_0_TABLE_FIXES
     uno::Reference<beans::XMultiPropertySet> const xMultiSet(xStyle,
             uno::UNO_QUERY);
-    if (xMultiSet.is())
-    {   // FIXME why is "this" a STL container???
-        uno::Sequence<OUString> names(this->size());
-        uno::Sequence<uno::Any> values(this->size());
-        PropertyMap::iterator it = this->begin();
-        for (size_t i = 0; it != this->end(); ++it, ++i)
+
+    uno::Sequence<OUString> vNames;
+    uno::Sequence<uno::Any> vValues;
+    { //Convert GetPropertyValues() value into something useful
+        uno::Sequence<beans::PropertyValue> vPropVals = GetPropertyValues();
+        int nProperties = vPropVals.getLength();
+
+        //Temporarily store the items that are in grab bags
+        uno::Sequence<beans::PropertyValue> vCharVals;
+        uno::Sequence<beans::PropertyValue> vParaVals;
+#if SUPD == 310
+        int nPropVals = vPropVals.getLength();
+        beans::PropertyValue* pPropVals = vPropVals.getArray();
+        beans::PropertyValue* pCharGrabBag = NULL;
+        for (sal_Int32 nCharGrabVal = 0; nCharGrabVal < nPropVals; ++nCharGrabVal)
         {
-            names[i] = rPropNameSupplier.GetName(it->first);
-            values[i] = it->second.getValue();
+            NamedPropertyValue aNamedPropVal("CharInteropGrabBag");
+            if (aNamedPropVal(pPropVals[nCharGrabVal]))
+            {
+                pCharGrabBag = &pPropVals[nCharGrabVal];
+                break;
+            }
         }
+        if (pCharGrabBag) {
+#else	// SUPD == 310
+        beans::PropertyValue* pCharGrabBag = std::find_if(vPropVals.begin(),vPropVals.end(),NamedPropertyValue("CharInteropGrabBag") );
+        if (pCharGrabBag!=vPropVals.end()) {
+#endif	// SUPD == 310
+            (pCharGrabBag->Value)>>=vCharVals;
+            nProperties += vCharVals.getLength()-1; //-1 to accommodate for grab bag property in vPropVals
+        }
+#if SUPD == 310
+        beans::PropertyValue* pParaGrabBag = NULL;
+        for (sal_Int32 nParaGrabVal = 0; nParaGrabVal < nPropVals; ++nParaGrabVal)
+        {
+            NamedPropertyValue aNamedPropVal("ParaInteropGrabBag");
+            if (aNamedPropVal(pPropVals[nParaGrabVal]))
+            {
+                pParaGrabBag = &pPropVals[nParaGrabVal];
+                break;
+            }
+        }
+        if (pParaGrabBag) {
+#else	// SUPD == 310
+        beans::PropertyValue* pParaGrabBag = std::find_if(vPropVals.begin(),vPropVals.end(),NamedPropertyValue("ParaInteropGrabBag") );
+        if (pParaGrabBag!=vPropVals.end()) {
+#endif	// SUPD == 310
+            (pParaGrabBag->Value)>>=vParaVals;
+            nProperties += vParaVals.getLength()-1;
+        }
+
+        //Allocate enough space to store the properties
+        vNames.realloc(nProperties);
+        vValues.realloc(nProperties);
+
+        int i = 0;
+#if SUPD == 310
+        int nPropVal = 0;
+        for (beans::PropertyValue* pIter = pPropVals; nPropVal < nPropVals; ++pIter, ++i, ++nPropVal) {
+#else	// SUPD == 310
+        for (beans::PropertyValue* pIter = vPropVals.begin(); pIter!=vPropVals.end(); ++pIter, ++i) {
+#endif	// SUPD == 310
+            if(pIter!=pCharGrabBag && pIter!=pParaGrabBag) {
+                vNames[i] = pIter->Name;
+                vValues[i] = pIter->Value;
+            }
+        }
+#if SUPD == 310
+        int nCharVal = 0;
+        int nCharVals = vCharVals.getLength();
+        beans::PropertyValue* pCharVals = vCharVals.getArray();
+        for (beans::PropertyValue* iter = pCharVals; nCharVal < nCharVals; ++iter, ++i, ++nCharVal) {
+#else	// SUPD == 310
+        for (beans::PropertyValue* iter = vCharVals.begin(); iter!=vCharVals.end(); ++iter, ++i) {
+#endif	// SUPD == 310
+            vNames[i] = iter->Name;
+            vValues[i] = iter->Value;
+        }
+#if SUPD == 310
+        int nParaVal = 0;
+        int nParaVals = vParaVals.getLength();
+        beans::PropertyValue* pParaVals = vParaVals.getArray();
+        for (beans::PropertyValue* iter = pParaVals; nParaVal < nParaVals; ++iter, ++i, ++nParaVal) {
+#else	// SUPD == 310
+        for (beans::PropertyValue* iter = vParaVals.begin(); iter!=vParaVals.end(); ++iter, ++i) {
+#endif	// SUPD == 310
+            vNames[i] = iter->Name;
+            vValues[i] = iter->Value;
+        }
+    }
+#ifdef NO_LIBO_4_0_TABLE_FIXES
+    if (xMultiSet.is())
+    {
         try
         {
-            xMultiSet->setPropertyValues(names, values);
+            xMultiSet->setPropertyValues(vNames, vValues);
         }
         catch( const uno::Exception& )
         {
@@ -1254,19 +1449,17 @@ void SectionPropertyMap::_ApplyProperties( uno::Reference< beans::XPropertySet >
         return;
     }
 #endif	// NO_LIBO_4_0_TABLE_FIXES
-    PropertyMap::iterator aMapIter = begin();
-    while( aMapIter != end())
+    for (int i=0; i<vNames.getLength(); ++i)
     {
         try
         {
             if (xStyle.is())
-                xStyle->setPropertyValue( rPropNameSupplier.GetName( aMapIter->first ), aMapIter->second.getValue() );
+                xStyle->setPropertyValue( vNames[i], vValues[i] );
         }
         catch( const uno::Exception& )
         {
             OSL_FAIL( "Exception in <PageStyle>::setPropertyValue");
         }
-        ++aMapIter;
     }
 }
 sal_Int32 lcl_AlignPaperBin( sal_Int32 nSet )
@@ -1295,7 +1488,7 @@ void SectionPropertyMap::SetFirstPaperBin( sal_Int32 nSet )
 
 sal_Int32 SectionPropertyMap::GetPageWidth()
 {
-    return operator[](PROP_WIDTH).getValue().get<sal_Int32>();
+    return getProperty(PROP_WIDTH)->second.get<sal_Int32>();
 }
 
 StyleSheetPropertyMap::StyleSheetPropertyMap() :
@@ -1303,14 +1496,12 @@ StyleSheetPropertyMap::StyleSheetPropertyMap() :
     mnCT_Spacing_lineRule( 0 ),
     mbCT_TrPrBase_tblHeader( false ),
     mnCT_TrPrBase_jc( 0 ),
-    mnCT_TcPrBase_vAlign( 0 ),
     mnCT_TblWidth_w( 0 ),
     mnCT_TblWidth_type( 0 ),
     mbCT_Spacing_lineSet( false ),
     mbCT_Spacing_lineRuleSet( false ),
     mbCT_TrPrBase_tblHeaderSet( false ),
     mbCT_TrPrBase_jcSet( false ),
-    mbCT_TcPrBase_vAlignSet( false ),
     mbCT_TblWidth_wSet( false ),
     mbCT_TblWidth_typeSet( false ),
     mnListId( -1 ),
@@ -1328,7 +1519,7 @@ StyleSheetPropertyMap::~StyleSheetPropertyMap()
 
 ParagraphProperties::ParagraphProperties() :
     m_bFrameMode( false ),
-    m_nDropCap(NS_ooxml::LN_Value_wordprocessingml_ST_DropCap_none),
+    m_nDropCap(NS_ooxml::LN_Value_doc_ST_DropCap_none),
     m_nLines(0),
     m_w(-1),
     m_h(-1),
@@ -1408,7 +1599,7 @@ bool ParagraphProperties::operator==(const ParagraphProperties& rCompare)
 void ParagraphProperties::ResetFrameProperties()
 {
     m_bFrameMode = false;
-    m_nDropCap = NS_ooxml::LN_Value_wordprocessingml_ST_DropCap_none;
+    m_nDropCap = NS_ooxml::LN_Value_doc_ST_DropCap_none;
     m_nLines = 0;
     m_w = -1;
     m_h = -1;
@@ -1479,7 +1670,7 @@ void TablePropertyMap::setValue( TablePropertyMapTarget eWhich, sal_Int32 nSet )
 
 void TablePropertyMap::insertTableProperties( const PropertyMap* pMap )
 {
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dmapper_logger->startElement("TablePropertyMap.insertTableProperties");
     pMap->dumpXml(dmapper_logger);
 #endif
@@ -1497,7 +1688,7 @@ void TablePropertyMap::insertTableProperties( const PropertyMap* pMap )
             }
         }
     }
-#ifdef DEBUG_DOMAINMAPPER
+#ifdef DEBUG_WRITERFILTER
     dumpXml( dmapper_logger );
     dmapper_logger->endElement();
 #endif

@@ -27,6 +27,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #include <cppuhelper/implbase5.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 
 #if SUPD == 310
 #include <WriterFilterDllApi.hxx>
@@ -46,7 +47,6 @@ class WriterFilter : public cppu::WeakImplHelper5
 protected:
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > m_xContext;
     ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > m_xSrcDoc, m_xDstDoc;
-    OUString m_sFilterName;
     ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XDocumentHandler > m_xHandler;
 
 
@@ -113,7 +113,7 @@ public:
 #endif	// SUPD == 310
 
 private:
-    void putPropertiesToDocumentGrabBag( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aProperties );
+    void putPropertiesToDocumentGrabBag(const comphelper::SequenceAsHashMap& rProperties);
 
 };
 
