@@ -1,12 +1,12 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
- * This file is part of the LibreOffice project.
+ * This file is part of NeoOffice.
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * This file incorporates work covered by the following license notices:
  *
- * This file incorporates work covered by the following license notice:
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *   Licensed to the Apache Software Foundation (ASF) under one or more
  *   contributor license agreements. See the NOTICE file distributed
@@ -15,6 +15,24 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 3.3 of the Mozilla Public License v2.0.
  */
 #include <DomainMapperTableHandler.hxx>
 #include <DomainMapper_Impl.hxx>
@@ -1143,6 +1161,13 @@ void DomainMapperTableHandler::startRow(unsigned int nCells,
         pProps->dumpXml(dmapper_logger);
 #endif
 
+#ifdef USE_JAVA
+    // Fix crash when opening the following .docx document reported in
+    // LibreOffice bug 42450 by ensuring that all rows have at least 1 cell:
+    // http://www.ott.nih.gov/docs/EIR-WORD-2007.docx
+    if ( !nCells )
+        nCells = 1;
+#endif	// USE_JAVA
     m_pRowSeq = RowSequencePointer_t(new RowSequence_t(nCells));
     m_nCellIndex = 0;
 }

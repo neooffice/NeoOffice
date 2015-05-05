@@ -1435,7 +1435,7 @@ void SectionPropertyMap::_ApplyProperties(
             vValues[i] = iter->Value;
         }
     }
-#ifdef NO_LIBO_4_0_TABLE_FIXES
+#ifndef USE_JAVA
     if (xMultiSet.is())
     {
         try
@@ -1448,7 +1448,7 @@ void SectionPropertyMap::_ApplyProperties(
         }
         return;
     }
-#endif	// NO_LIBO_4_0_TABLE_FIXES
+#endif	// !USE_JAVA
     for (int i=0; i<vNames.getLength(); ++i)
     {
         try
