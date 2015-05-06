@@ -163,7 +163,7 @@ void RTFSdrImport::applyProperty(uno::Reference<drawing::XShape> const& xShape, 
     sal_Int16 nHoriOrient = 0;
     sal_Int16 nVertOrient = 0;
 #if SUPD == 310
-    boost::optional<bool> obFitShapeToText;
+    boost::optional<bool> obFitShapeToText(boost::none);
 #else	// SUPD == 310
     boost::logic::tribool obFitShapeToText(boost::logic::indeterminate);
 #endif	// SUPD == 310
@@ -232,7 +232,7 @@ void RTFSdrImport::applyProperty(uno::Reference<drawing::XShape> const& xShape, 
     if (nVertOrient != 0 && xPropertySet.is())
         xPropertySet->setPropertyValue("VertOrient", uno::makeAny(nVertOrient));
 #if SUPD == 310
-    if (obFitShapeToText && xPropertySet.is())
+    if (obFitShapeToText != boost::none && xPropertySet.is())
 #else	// SUPD == 310
     if (!boost::logic::indeterminate(obFitShapeToText) && xPropertySet.is())
 #endif	// SUPD == 310
