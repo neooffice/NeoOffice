@@ -103,7 +103,7 @@ OUString WriterFilterDetection::detect( uno::Sequence< beans::PropertyValue >& r
     }
     if( !bWord )
 #if SUPD == 310
-        sTypeName == OUString();
+        sTypeName = OUString();
 #else	// SUPD == 310
         sTypeName.clear();
 #endif	// SUPD == 310
