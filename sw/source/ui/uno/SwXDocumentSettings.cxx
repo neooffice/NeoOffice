@@ -154,7 +154,8 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_EMBED_SYSTEM_FONTS,
     HANDLE_TAB_OVER_MARGIN,
     HANDLE_SURROUND_TEXT_WRAP_SMALL,
-    HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
+    HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING,
+    HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE
 #endif	// SUPD == 310
 };
 
@@ -225,6 +226,7 @@ MasterPropertySetInfo * lcl_createSettingsInfo()
         { RTL_CONSTASCII_STRINGPARAM("TabOverMargin"), HANDLE_TAB_OVER_MARGIN, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("SurroundTextWrapSmall"), HANDLE_SURROUND_TEXT_WRAP_SMALL, CPPUTYPE_BOOLEAN, 0, 0},
         { RTL_CONSTASCII_STRINGPARAM("ApplyParagraphMarkFormatToNumbering"), HANDLE_APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, CPPUTYPE_BOOLEAN, 0, 0},
+        { RTL_CONSTASCII_STRINGPARAM("PropLineSpacingShrinksFirstLine"),       HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE,         CPPUTYPE_BOOLEAN,           0,   0},
 #endif	// SUPD == 310
 /*
  * As OS said, we don't have a view when we need to set this, so I have to
@@ -810,6 +812,15 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             mpDoc->set(IDocumentSettingAccess::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, bTmp);
         }
         break;
+        case HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE:
+        {
+            bool bTmp;
+            if (rValue >>= bTmp)
+            {
+                mpDoc->set(IDocumentSettingAccess::PROP_LINE_SPACING_SHRINKS_FIRST_LINE, bTmp);
+            }
+        }
+        break;
 #endif	// SUPD == 310
         default:
 			throw UnknownPropertyException();
@@ -1227,6 +1238,12 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         {
             sal_Bool bTmp = mpDoc->get( IDocumentSettingAccess::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING );
             rValue.setValue( &bTmp, ::getBooleanCppuType() );
+        }
+        break;
+        case HANDLE_PROP_LINE_SPACING_SHRINKS_FIRST_LINE:
+        {
+            sal_Bool bTmp = mpDoc->get( IDocumentSettingAccess::PROP_LINE_SPACING_SHRINKS_FIRST_LINE );
+            rValue <<= bTmp;
         }
         break;
 #endif	// SUPD == 310

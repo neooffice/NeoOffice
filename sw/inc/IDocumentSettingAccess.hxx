@@ -117,7 +117,8 @@ namespace com { namespace sun { namespace star { namespace i18n { struct Forbidd
          FLOATTABLE_NOMARGINS,
          EMBED_FONTS,
          EMBED_SYSTEM_FONTS,
-         APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING
+         APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING,
+         PROP_LINE_SPACING_SHRINKS_FIRST_LINE
 #endif	// SUPD == 310
      };
 
