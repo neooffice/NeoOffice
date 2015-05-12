@@ -67,10 +67,20 @@
 
 #if SUPD == 310
 #include <com/sun/star/awt/Gradient.hpp>
+#include <com/sun/star/drawing/BitmapMode.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
+#include <com/sun/star/drawing/Hatch.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
+#include <com/sun/star/drawing/RectanglePoint.hpp>
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
+#include <com/sun/star/table/TableBorder2.hpp>
+// Avoid UNO_* name collisions by not including svx/unoprnms.hxx
+#define INCLUDED_EDITENG_UNOPRNMS_HXX
+#include <svx/unoprov.hxx>
+#include <svx/unoshprp.hxx>
+#include <svx/xdef.hxx>
+#undef INCLUDED_EDITENG_UNOPRNMS_HXX
 #endif	// SUPD == 310
 
 using namespace ::com::sun::star;
@@ -667,7 +677,8 @@ void SwUnoPropertyMapProvider::Sort( sal_uInt16 nId )
                     { SW_PROP_NMID(UNO_NAME_CHAR_TOP_BORDER_DISTANCE), RES_CHRATR_BOX, CPPU_E2T(CPPUTYPE_INT32), PROPERTY_NONE, TOP_BORDER_DISTANCE |CONVERT_TWIPS },\
                     { SW_PROP_NMID(UNO_NAME_HIDDEN), FN_UNO_HIDDEN,     CPPU_E2T(CPPUTYPE_BOOLEAN), PROPERTY_NONE, 0}, \
                     { SW_PROP_NMID(UNO_NAME_PARA_CONTEXT_MARGIN), RES_UL_SPACE,          CPPU_E2T(CPPUTYPE_BOOLEAN), PROPERTY_NONE, MID_CTX_MARGIN},\
-                    { SW_PROP_NMID(UNO_NAME_STYLE_INTEROP_GRAB_BAG), FN_UNO_STYLE_INTEROP_GRAB_BAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0},
+                    { SW_PROP_NMID(UNO_NAME_STYLE_INTEROP_GRAB_BAG), FN_UNO_STYLE_INTEROP_GRAB_BAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0}, \
+                    { SW_PROP_NMID(UNO_NAME_PARA_INTEROP_GRAB_BAG), RES_PARATR_GRABBAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0},
 /* #endif	// SUPD == 310 */
 
 
@@ -675,6 +686,45 @@ void SwUnoPropertyMapProvider::Sort( sal_uInt16 nId )
                     { SW_PROP_NMID(UNO_NAME_IS_FIELD_USED),      FIELD_PROP_IS_FIELD_USED,      CPPU_E2T(CPPUTYPE_FLOAT), PropertyAttribute::READONLY, 0},\
                     { SW_PROP_NMID(UNO_NAME_IS_FIELD_DISPLAYED), FIELD_PROP_IS_FIELD_DISPLAYED, CPPU_E2T(CPPUTYPE_INT16), PropertyAttribute::READONLY, 0},\
 
+#if SUPD == 310
+//UUUU
+#define FILL_PROPERTIES_SW_BMP \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_LOGICAL_SIZE),               XATTR_FILLBMP_SIZELOG,      CPPU_E2T(CPPUTYPE_FLOAT),       0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_OFFSET_X),                   XATTR_FILLBMP_TILEOFFSETX,  CPPU_E2T(CPPUTYPE_INT32),   0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_OFFSET_Y),                   XATTR_FILLBMP_TILEOFFSETY,  CPPU_E2T(CPPUTYPE_INT32),   0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_POSITION_OFFSET_X),          XATTR_FILLBMP_POSOFFSETX,   CPPU_E2T(CPPUTYPE_INT32),   0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_POSITION_OFFSET_Y),          XATTR_FILLBMP_POSOFFSETY,   CPPU_E2T(CPPUTYPE_INT32),   0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_RECTANGLE_POINT),            XATTR_FILLBMP_POS,          CPPU_E2T(&::getCppuType((css::drawing::RectanglePoint*)0)), 0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_SIZE_X),                     XATTR_FILLBMP_SIZEX,        CPPU_E2T(CPPUTYPE_INT32),   0,  SFX_METRIC_ITEM}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_SIZE_Y),                     XATTR_FILLBMP_SIZEY,        CPPU_E2T(CPPUTYPE_INT32),   0,  SFX_METRIC_ITEM},    \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_STRETCH),                    XATTR_FILLBMP_STRETCH,      CPPU_E2T(CPPUTYPE_FLOAT),       0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_TILE),                       XATTR_FILLBMP_TILE,         CPPU_E2T(CPPUTYPE_FLOAT),       0,  0},\
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBMP_MODE),                       OWN_ATTR_FILLBMP_MODE,      CPPU_E2T(&::getCppuType((css::drawing::BitmapMode*)0)), 0,  0}, \
+
+//UUUU
+#define FILL_PROPERTIES_SW_DEFAULTS \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLCOLOR),                          XATTR_FILLCOLOR,            CPPU_E2T(CPPUTYPE_INT32),   0,  0}, \
+
+//UUUU
+#define FILL_PROPERTIES_SW \
+    FILL_PROPERTIES_SW_BMP \
+    FILL_PROPERTIES_SW_DEFAULTS \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBACKGROUND),                 XATTR_FILLBACKGROUND,           CPPU_E2T(CPPUTYPE_BOOLEAN),        0, 0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBITMAP),                     XATTR_FILLBITMAP,               CPPU_E2T(&::getCppuType((Reference<css::awt::XBitmap>*)0)), 0, MID_BITMAP}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBITMAPNAME),                 XATTR_FILLBITMAP,               CPPU_E2T(CPPUTYPE_OUSTRING),    0,  MID_NAME }, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLBITMAPURL),                  XATTR_FILLBITMAP,               CPPU_E2T(CPPUTYPE_OUSTRING),    0,  MID_GRAFURL }, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLGRADIENTSTEPCOUNT),          XATTR_GRADIENTSTEPCOUNT,        CPPU_E2T(CPPUTYPE_INT16),   0,  0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLGRADIENT),                   XATTR_FILLGRADIENT,             CPPU_E2T(&::getCppuType((css::awt::Gradient*)0)), 0, MID_FILLGRADIENT}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLGRADIENTNAME),               XATTR_FILLGRADIENT,             CPPU_E2T(CPPUTYPE_OUSTRING),    0, MID_NAME }, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLHATCH),                      XATTR_FILLHATCH,                CPPU_E2T(&::getCppuType((css::drawing::Hatch*)0)), 0, MID_FILLHATCH}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLHATCHNAME),                  XATTR_FILLHATCH,                CPPU_E2T(CPPUTYPE_OUSTRING),  0,  MID_NAME }, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLSTYLE),                      XATTR_FILLSTYLE,                CPPU_E2T(&::getCppuType((css::drawing::FillStyle*)0)), 0, 0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILL_TRANSPARENCE),              XATTR_FILLTRANSPARENCE,         CPPU_E2T(CPPUTYPE_INT32), 0, 0}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLTRANSPARENCEGRADIENT),       XATTR_FILLFLOATTRANSPARENCE,    CPPU_E2T(&::getCppuType((css::awt::Gradient*)0)), 0,  MID_FILLGRADIENT}, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLTRANSPARENCEGRADIENTNAME),   XATTR_FILLFLOATTRANSPARENCE,    CPPU_E2T(CPPUTYPE_OUSTRING),  0,  MID_NAME }, \
+    { SW_PROP_NMID(UNO_NAME_SW_FILLCOLOR_2),                    XATTR_SECONDARYFILLCOLOR,       CPPU_E2T(CPPUTYPE_INT32), 0,  0}, \
+
+#endif	// SUPD == 310
 
 const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nPropertyId)
 {
@@ -702,6 +752,15 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
 					COMMON_TEXT_CONTENT_PROPERTIES
                     { SW_PROP_NMID(UNO_NAME_CHAR_STYLE_NAME), RES_TXTATR_CHARFMT,     CPPU_E2T(CPPUTYPE_OUSTRING),         PropertyAttribute::MAYBEVOID,     0},\
                     { SW_PROP_NMID(UNO_NAME_CHAR_STYLE_NAMES), FN_UNO_CHARFMT_SEQUENCE,  CPPU_E2T(CPPUTYPE_OUSTRINGS),     PropertyAttribute::MAYBEVOID,     0},\
+
+#if SUPD == 310
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to style import/export
+                    //UUUU Added for paragraph backgrounds, this is for paragraph itself
+                    FILL_PROPERTIES_SW
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
 				aMapArr[nPropertyId] = aParagraphMap_Impl;
@@ -729,6 +788,14 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     TABSTOPS_MAP_ENTRY
                     COMMON_TEXT_CONTENT_PROPERTIES
                     { SW_PROP_NMID(UNO_NAME_PARA_AUTO_STYLE_NAME), RES_AUTO_STYLE,     CPPU_E2T(CPPUTYPE_OUSTRING),         PropertyAttribute::MAYBEVOID,     0},
+#if SUPD == 310
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to style import/export
+                    //UUUU Added for paragraph backgrounds, this is for Paragraph AutoStyles
+                    FILL_PROPERTIES_SW
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
                 };
                 aMapArr[nPropertyId] = aAutoParaStyleMap;
@@ -873,6 +940,14 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                 static SfxItemPropertyMap aParaStyleMap [] =
                 {
                     COMMON_PARA_STYLE_PROPERTIES
+#if SUPD == 310
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to style import/export
+                    //UUUU Added for paragraph backgrounds, this is for Paragraph Styles
+                    FILL_PROPERTIES_SW
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
                 };
                 aMapArr[nPropertyId] = aParaStyleMap;
@@ -884,6 +959,16 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                 {
                     COMMON_PARA_STYLE_PROPERTIES
                     { SW_PROP_NMID(UNO_NAME_PARA_STYLE_CONDITIONS), FN_UNO_PARA_STYLE_CONDITIONS, CPPU_E2T(CPPUTYPE_SEQNAMEDVALUE), PropertyAttribute::MAYBEVOID, 0},
+#if SUPD == 310
+
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to style import/export
+                    //UUUU Added for paragraph backgrounds, this is for Paragraph Styles
+                    FILL_PROPERTIES_SW
+
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
                 };
                 aMapArr[nPropertyId] = aParaStyleMap;
@@ -976,6 +1061,13 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     { SW_PROP_NMID(UNO_NAME_RELATIVE_WIDTH_RELATION), RES_FRM_SIZE,          CPPU_E2T(CPPUTYPE_INT16)  ,         PROPERTY_NONE,   MID_FRMSIZE_REL_WIDTH_RELATION  },
                     { SW_PROP_NMID(UNO_NAME_SHADOW_TRANSPARENCE), RES_SHADOW,       CPPU_E2T(CPPUTYPE_INT16),       PROPERTY_NONE, MID_SHADOW_TRANSPARENCE},
                     { SW_PROP_NMID(UNO_NAME_TEXT_VERT_ADJUST), RES_TEXT_VERT_ADJUST, CPPU_E2T(&::getCppuType((css::drawing::TextVerticalAdjust*)0)), PROPERTY_NONE ,0},
+
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to style import/export
+                    FILL_PROPERTIES_SW
+
 #endif	// SUPD == 310
                     {0,0,0,0,0,0}
                 };
@@ -1167,11 +1259,11 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     { SW_PROP_NMID(UNO_NAME_COLLAPSING_BORDERS), RES_COLLAPSING_BORDERS, CPPU_E2T(CPPUTYPE_BOOLEAN), PROPERTY_NONE, 0},
                     // <-- collapsing
                     _REDLINE_NODE_PROPERTIES
-#if SUDP == 310
+#if SUPD == 310
                     { SW_PROP_NMID(UNO_NAME_SHADOW_TRANSPARENCE), RES_SHADOW,       CPPU_E2T(CPPUTYPE_INT16),       PROPERTY_NONE, MID_SHADOW_TRANSPARENCE},
                     { SW_PROP_NMID(UNO_NAME_TABLE_BORDER2), FN_UNO_TABLE_BORDER2,         CPPU_E2T(&::getCppuType( (table::TableBorder2*)0)), PropertyAttribute::MAYBEVOID, CONVERT_TWIPS },
                     { SW_PROP_NMID(UNO_NAME_TABLE_INTEROP_GRAB_BAG), RES_FRMATR_GRABBAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0 },
-#endif	// SUDP == 310
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
 
@@ -1342,6 +1434,15 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
 					{ SW_PROP_NMID(UNO_NAME_SIZE_TYPE), RES_FRM_SIZE,   		CPPU_E2T(CPPUTYPE_INT16)  ,  		PROPERTY_NONE,   MID_FRMSIZE_SIZE_TYPE	},
 					{ SW_PROP_NMID(UNO_NAME_WIDTH_TYPE), RES_FRM_SIZE,   		CPPU_E2T(CPPUTYPE_INT16)  ,  		PROPERTY_NONE,   MID_FRMSIZE_WIDTH_TYPE },
                     { SW_PROP_NMID(UNO_NAME_WRITING_MODE), RES_FRAMEDIR, CPPU_E2T(CPPUTYPE_INT16), PROPERTY_NONE, 0 },
+#if SUPD == 310
+
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to FlyFrame import/export
+                    FILL_PROPERTIES_SW
+
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
 				aMapArr[nPropertyId] = aFramePropertyMap_Impl;
@@ -1378,6 +1479,13 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
 					{ SW_PROP_NMID(UNO_NAME_GRAPHIC_COLOR_MODE), RES_GRFATR_DRAWMODE,	 CPPU_E2T(CPPUTYPE_COLORMODE),		0,	 0},
 #if SUPD == 310
                     { SW_PROP_NMID(UNO_NAME_REPLACEMENT_GRAPHIC_URL), FN_UNO_REPLACEMENT_GRAPHIC_U_R_L, CPPU_E2T(CPPUTYPE_OUSTRING), 0, 0 },
+
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to Writer GraphicObject import/export
+                    FILL_PROPERTIES_SW
+
 #endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
@@ -1403,6 +1511,12 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     { SW_PROP_NMID(UNO_NAME_ALTERNATIVE_TEXT), FN_UNO_ALTERNATIVE_TEXT,CPPU_E2T(CPPUTYPE_OUSTRING),   PROPERTY_NONE , 0   },
 #if SUPD == 310
                     { SW_PROP_NMID(UNO_NAME_EMBEDDED_OBJECT),FN_EMBEDDED_OBJECT, CPPU_E2T(&::getCppuType((Reference<css::embed::XEmbeddedObject>*)0)), PROPERTY_NONE, 0},
+                    //UUUU added FillProperties for SW, same as FILL_PROPERTIES in svx
+                    // but need own defines in Writer due to later association of strings
+                    // and uno types (see loop at end of this method and definition of SW_PROP_NMID)
+                    // This entry is for adding that properties to OLE/EmbeddedObject import/export
+                    FILL_PROPERTIES_SW
+
 #endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
@@ -1467,6 +1581,10 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     { SW_PROP_NMID(UNO_NAME_RELATIVE_HEIGHT_RELATION), RES_FRM_SIZE, CPPU_E2T(CPPUTYPE_INT16),      PROPERTY_NONE, MID_FRMSIZE_REL_HEIGHT_RELATION },
                     { SW_PROP_NMID(UNO_NAME_RELATIVE_WIDTH), RES_FRM_SIZE,      CPPU_E2T(CPPUTYPE_INT16)  ,         PROPERTY_NONE, MID_FRMSIZE_REL_WIDTH  },
                     { SW_PROP_NMID(UNO_NAME_RELATIVE_WIDTH_RELATION), RES_FRM_SIZE, CPPU_E2T(CPPUTYPE_INT16),       PROPERTY_NONE, MID_FRMSIZE_REL_WIDTH_RELATION },
+                    { SW_PROP_NMID(UNO_NAME_TEXT_BOX), FN_TEXT_BOX, CPPU_E2T(CPPUTYPE_BOOLEAN), PROPERTY_NONE, 0},
+                    { SW_PROP_NMID(UNO_NAME_CHAIN_NEXT_NAME), RES_CHAIN,                CPPU_E2T(CPPUTYPE_OUSTRING),            PropertyAttribute::MAYBEVOID ,MID_CHAIN_NEXTNAME},
+                    { SW_PROP_NMID(UNO_NAME_CHAIN_PREV_NAME), RES_CHAIN,                CPPU_E2T(CPPUTYPE_OUSTRING),            PropertyAttribute::MAYBEVOID ,MID_CHAIN_PREVNAME},
+                    { SW_PROP_NMID(UNO_NAME_CHAIN_NAME),      RES_CHAIN,                CPPU_E2T(CPPUTYPE_OUSTRING),            PropertyAttribute::MAYBEVOID ,MID_CHAIN_NAME    },
 #endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
@@ -1749,6 +1867,10 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
                     { SW_PROP_NMID(UNO_NAME_IS_SPLIT_ALLOWED), RES_ROW_SPLIT,       CPPU_E2T(CPPUTYPE_BOOLEAN)  , PropertyAttribute::MAYBEVOID, 0},
                 //  { SW_PROP_NMID(UNO_NAME_HEIGHT), RES_FRM_SIZE,          CPPU_E2T(CPPUTYPE_INT32)  ,         PROPERTY_NONE, MID_FRMSIZE_HEIGHT|CONVERT_TWIPS         },
 				//	{ SW_PROP_NMID(UNO_NAME_SHADOW_FORMAT), RES_SHADOW, 			CPPU_E2T(CPPUTYPE_SHADOWFMT), 	PROPERTY_NONE, CONVERT_TWIPS},
+#if SUPD == 310
+                    { SW_PROP_NMID(UNO_NAME_ROW_INTEROP_GRAB_BAG), RES_FRMATR_GRABBAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0 },
+                    { SW_PROP_NMID(UNO_NAME_DOC_INTEROP_GRAB_BAG), WID_DOC_INTEROP_GRAB_BAG, CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PROPERTY_NONE, 0 },
+#endif	// SUPD == 310
                     {0,0,0,0,0,0}
 				};
 
@@ -1857,7 +1979,11 @@ const SfxItemPropertyMap* SwUnoPropertyMapProvider::GetPropertyMap(sal_uInt16 nP
 					{ SW_PROP_NMID(UNO_NAME_CHAR_LOCALE), RES_CHRATR_LANGUAGE ,   CPPU_E2T(CPPUTYPE_LOCALE), PropertyAttribute::MAYBEVOID,  MID_LANG_LOCALE },
 					{ SW_PROP_NMID(UNO_NAME_CHARACTER_COUNT), WID_DOC_CHAR_COUNT,			CPPU_E2T(CPPUTYPE_INT32),	PropertyAttribute::READONLY,   0},
                     { SW_PROP_NMID(UNO_NAME_DIALOG_LIBRARIES), WID_DOC_DIALOG_LIBRARIES,  CPPU_E2T(CPPUTYPE_REFLIBCONTAINER), PropertyAttribute::READONLY, 0},
+#if SUPD == 310
+                    { SW_PROP_NMID(UNO_NAME_VBA_DOCOBJ), WID_DOC_VBA_DOCOBJ,  CPPU_E2T(CPPUTYPE_OUSTRING), PropertyAttribute::READONLY, 0},
+#else	// SUPD == 310
                     { SW_PROP_NMID(UNO_NAME_VBA_DOCOBJ), WID_DOC_VBA_DOCOBJ,  CPPU_E2T(CPPUTYPE_PROPERTYVALUE), PropertyAttribute::READONLY, 0},
+#endif	// SUPD == 310
 					{ SW_PROP_NMID(UNO_NAME_INDEX_AUTO_MARK_FILE_U_R_L), WID_DOC_AUTO_MARK_URL, CPPU_E2T(CPPUTYPE_OUSTRING),	PROPERTY_NONE,   0},
 					{ SW_PROP_NMID(UNO_NAME_PARAGRAPH_COUNT), WID_DOC_PARA_COUNT,			CPPU_E2T(CPPUTYPE_INT32),	PropertyAttribute::READONLY,   0},
 					{ SW_PROP_NMID(UNO_NAME_RECORD_CHANGES), WID_DOC_CHANGES_RECORD,		CPPU_E2T(CPPUTYPE_BOOLEAN),	PROPERTY_NONE,   0},

@@ -1222,6 +1222,9 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 // --> OD 2004-10-28 #i36248#
 #define FN_SHAPE_STARTPOSITION_IN_HORI_L2R (FN_PARAM2+25)
 #define FN_SHAPE_ENDPOSITION_IN_HORI_L2R   (FN_PARAM2+26)
+#if SUPD == 310
+#define FN_TEXT_BOX                     (FN_PARAM2+28) /* TextBox Property*/
+#endif	// SUPD == 310
 
 // <--
 /*--------------------------------------------------------------------
