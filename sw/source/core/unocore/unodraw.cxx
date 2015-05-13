@@ -25,6 +25,14 @@
  * Modified April 2015 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -1210,6 +1218,24 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
                         delete pInternalPam;
                     }
                 }
+#if SUPD == 310
+                else if (pMap->nWID == FN_TEXT_BOX)
+                {
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::setPropertyValue FN_TEXT_BOX not implemented\n" );
+#endif
+#else	// USE_JAVA
+                    bool bValue(false);
+                    aValue >>= bValue;
+                    if (bValue)
+                        SwTextBoxHelper::create(pFmt);
+                    else
+                        SwTextBoxHelper::destroy(pFmt);
+#endif	// USE_JAVA
+
+                }
+#endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
                 else if ( FN_SHAPE_POSITION_LAYOUT_DIR == pMap->nWID )
                 {
@@ -1508,6 +1534,20 @@ uno::Any SwXShape::getPropertyValue(const rtl::OUString& rPropertyName)
                         }
                     }
                 }
+#if SUPD == 310
+                else if (pMap->nWID == FN_TEXT_BOX)
+                {
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::getPropertyValue FN_TEXT_BOX not implemented\n" );
+#endif
+                    bool bValue = false;
+#else	// USE_JAVA
+                    bool bValue = SwTextBoxHelper::findTextBox(pFmt);
+#endif	// USE_JAVA
+                    aRet <<= bValue;
+                }
+#endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
                 else if ( FN_SHAPE_TRANSFORMATION_IN_HORI_L2R == pMap->nWID )
                 {
@@ -1745,6 +1785,22 @@ uno::Sequence< beans::PropertyState > SwXShape::getPropertyStates(
                     pRet[nProperty] = beans::PropertyState_DIRECT_VALUE;
                 else if(bGroupMember)
                     pRet[nProperty] = beans::PropertyState_DEFAULT_VALUE;
+#if SUPD == 310
+                else if (pMap->nWID == FN_TEXT_BOX)
+                {
+                    // The TextBox property is set, if we can find a textbox for this shape.
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::getPropertyStates FN_TEXT_BOX not implemented\n" );
+#endif
+#else	// USE_JAVA
+                    if (pFmt && SwTextBoxHelper::findTextBox(pFmt))
+                        pRet[nProperty] = beans::PropertyState_DIRECT_VALUE;
+                    else
+#endif	// USE_JAVA
+                        pRet[nProperty] = beans::PropertyState_DEFAULT_VALUE;
+                }
+#endif	// SUPD == 310
                 else if(pFmt)
 				{
                     const SwAttrSet& rSet = pFmt->GetAttrSet();
