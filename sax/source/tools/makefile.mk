@@ -102,5 +102,5 @@ DEFLIB1NAME=    $(TARGET)
 ALLTAR: $(SLO)$/fastparser.obj
 
 $(SLO)$/fastparser.obj: ../fastparser/fastparser.cxx
-	cd ../fastparser && dmake $(MFLAGS) $(MAKEFILE) $@
+	cd $(PRJ)$/source$/fastparser && dmake $(MFLAGS) $(MAKEFILE) $@
 .ENDIF		# "$(UPD)" == "310"
