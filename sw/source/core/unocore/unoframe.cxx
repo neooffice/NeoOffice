@@ -918,6 +918,39 @@ SwXFrame::~SwXFrame()
     delete m_pCopySource;
     delete pProps;
 }
+
+#if SUPD == 310
+
+template<class Interface, class NameLookupIsHard>
+uno::Reference<Interface>
+SwXFrame::CreateXFrame(SwDoc & rDoc, SwFrmFmt *const pFrmFmt)
+{
+    assert(!pFrmFmt || &rDoc == pFrmFmt->GetDoc());
+    uno::Reference<Interface> xFrame;
+    if (pFrmFmt)
+    {
+        xFrame.set(pFrmFmt->GetXObject(), uno::UNO_QUERY); // cached?
+    }
+    if (!xFrame.is())
+    {
+        NameLookupIsHard *const pNew((pFrmFmt)
+                ? new NameLookupIsHard(*pFrmFmt)
+                : new NameLookupIsHard(&rDoc));
+        xFrame.set(pNew);
+        if (pFrmFmt)
+        {
+            pFrmFmt->SetXObject(xFrame);
+        }
+#if SUPD != 310
+        // need a permanent Reference to initialize m_wThis
+        pNew->SwXFrame::m_pImpl->m_wThis = xFrame;
+#endif	// SUPD != 310
+    }
+    return xFrame;
+}
+
+#endif	// SUPD == 310
+
 /*-- 11.12.98 15:05:03---------------------------------------------------
 
   -----------------------------------------------------------------------*/
@@ -2472,6 +2505,17 @@ SwXTextFrame::SwXTextFrame(SwFrmFmt& rFmt) :
 SwXTextFrame::~SwXTextFrame()
 {
 }
+
+#if SUPD == 310
+
+uno::Reference<text::XTextFrame>
+SwXTextFrame::CreateXTextFrame(SwDoc & rDoc, SwFrmFmt *const pFrmFmt)
+{
+    return CreateXFrame<text::XTextFrame, SwXTextFrame>(rDoc, pFrmFmt);
+}
+
+#endif	// SUPD == 310
+
 /* -----------------------------15.03.00 16:30--------------------------------
 
  ---------------------------------------------------------------------------*/
