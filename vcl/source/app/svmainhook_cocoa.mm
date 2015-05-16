@@ -343,8 +343,7 @@ void NSApplication_terminate()
 									if ( pInfoDict )
 									{
 										NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
-										NSString *pBundleShortVersion = [pInfoDict objectForKey:@"CFBundleShortVersionString"];
-										if ( pBundleIdentifier && pBundleShortVersion && [pBundleIdentifier isEqualToString:pIdentifier] && [pBundleShortVersion isEqualToString:pVersion] )
+										if ( pBundleIdentifier && [pBundleIdentifier isEqualToString:pIdentifier] )
 										{
 											CFDataRef aMacAddress = ImplCreateMacAddress();
 											if ( aMacAddress )
