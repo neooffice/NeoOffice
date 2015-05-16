@@ -51,9 +51,6 @@
 #define MODIFIER_RELEASE_INTERVAL 100
 #define UNDEFINED_KEY_CODE 0xffff
 
-static NSString *pCMenuBarString = @"CMenuBar";
-static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
-
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
 
 static NSPoint GetFlippedContentViewLocation( NSWindow *pWindow, NSEvent *pEvent )
@@ -768,7 +765,7 @@ static NSUInteger nMouseMask = 0;
 {
 	// If a Java window is loaded, swizzle Java's menubar management class so
 	// that Java will not be able to change the menubar
-	if ( pWindow && !bJavaAWTInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+	if ( pWindow && !bJavaAWTInitialized && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		bJavaAWTInitialized = YES;
 
@@ -777,7 +774,7 @@ static NSUInteger nMouseMask = 0;
 		{
 			// CMenuBar selectors
 
-			Class aClass = [pBundle classNamed:pCMenuBarString];
+			Class aClass = [pBundle classNamed:@"CMenuBar"];
 			if ( aClass )
 			{
 				SEL aSelector = @selector(activate:modallyDisabled:);
@@ -1007,38 +1004,48 @@ static NSUInteger nMouseMask = 0;
 			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
-	else if ( nOrderingMode == NSWindowOut && [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
+	else if ( nOrderingMode == NSWindowOut && [self isVisible] )
 	{
-		if ( mbInVersionBrowser )
+		if ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] )
 		{
-			mbCloseOnExitVersionBrowser = YES;
+			if ( mbInVersionBrowser )
+			{
+				mbCloseOnExitVersionBrowser = YES;
 
-			// Force version browser to exit
-			NSButton *pCloseButton = [self standardWindowButton:NSWindowCloseButton];
-			if ( pCloseButton )
-				[pCloseButton performClick:self];
+				// Force version browser to exit
+				NSButton *pCloseButton = [self standardWindowButton:NSWindowCloseButton];
+				if ( pCloseButton )
+					[pCloseButton performClick:self];
+			}
+
+			if ( mpLastWindowDraggedEvent )
+			{
+				[mpLastWindowDraggedEvent release];
+				mpLastWindowDraggedEvent = nil;
+			}
+
+			if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
+			{
+				// Clear modal level while window is visible or else the window
+				// will reappear when focus changes to another application on
+				// Mac OS X 10.5
+				[pNeedRestoreModalWindows removeObject:self];
+				[self _clearModalWindowLevel];
+			}
+
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+			{
+				[pNotificationCenter removeObserver:self name:@"NSWindowDidExitFullScreenNotification" object:self];
+				[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
+			}
 		}
-
-		if ( mpLastWindowDraggedEvent )
+		else if ( [[self className] isEqualToString:@"_NSPopoverWindow"] )
 		{
-			[mpLastWindowDraggedEvent release];
-			mpLastWindowDraggedEvent = nil;
-		}
-
-		if ( [self level] == NSModalPanelWindowLevel && [self respondsToSelector:@selector(_clearModalWindowLevel)] )
-		{
-			// Clear modal level while window is visible or else the window
-			// will reappear when focus changes to another application on
-			// Mac OS X 10.5
-			[pNeedRestoreModalWindows removeObject:self];
-			[self _clearModalWindowLevel];
-		}
-
-		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-		if ( pNotificationCenter )
-		{
-			[pNotificationCenter removeObserver:self name:@"NSWindowDidExitFullScreenNotification" object:self];
-			[pNotificationCenter removeObserver:self name:@"NSWindowWillEnterFullScreenNotification" object:self];
+			// Fix crashing on OS X 10.10 when displaying the Save dialog while
+			// the titlebar popover window is displayed by removing the
+			// titlebar popover window's content view before ordering it out
+			[self setContentView:nil];
 		}
 	}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
