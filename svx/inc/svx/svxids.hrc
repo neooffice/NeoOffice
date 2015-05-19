@@ -1362,13 +1362,12 @@
 #define SID_ATTR_ALIGN_VER_JUSTIFY_METHOD               ( SID_SVX_START + 1095 )
 #define SID_ATTR_CHAR_PREVIEW_FONT                      ( SID_SVX_START + 1096 )
 #define SID_ATTR_CHAR_ENDPREVIEW_FONT                   ( SID_SVX_START + 1097 )
-#define SID_SW_ATTR_FILL_STYLE                          ( SID_SVX_START + 1098 )
-#define SID_SW_ATTR_FILL_GRADIENT                       ( SID_SVX_START + 1099 )
+#define SID_ATTR_PAGE_SHARED_FIRST                      ( SID_SVX_START + 1098 )
 #endif	// SUPD == 310
 
 // IMPORTANT NOTE: adjust SID_SVX_FIRSTFREE, when adding new slot id
 #if SUPD == 310
-#define SID_SVX_FIRSTFREE                               SID_ATTR_CHAR_ENDPREVIEW_FONT + 1
+#define SID_SVX_FIRSTFREE                               SID_ATTR_PAGE_SHARED_FIRST + 1
 #else	// SUPD == 310
 #define SID_SVX_FIRSTFREE                               SID_ATTR_PARA_OUTLINE_LEVEL + 1
 #endif	// SUPD == 310
