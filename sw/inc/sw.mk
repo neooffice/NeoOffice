@@ -55,5 +55,6 @@ INCLOCAL += \
 	-I$(PRJ)$/..$/sax$/inc \
 	-I$(PRJ)$/..$/sfx2$/inc \
 	-I$(PRJ)$/..$/svtools$/inc \
-	-I$(PRJ)$/..$/svx$/inc
+	-I$(PRJ)$/..$/svx$/inc \
+	-I$(PRJ)$/..$/tools$/inc
 .ENDIF		# "$(UPD)" == "310"

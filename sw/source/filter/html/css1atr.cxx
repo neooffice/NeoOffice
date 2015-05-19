@@ -3870,8 +3870,6 @@ SwAttrFnTab aCSS1AttrFnTab = {
 /* RES_FRMATR_DUMMY4 */             0, // Dummy:
 /* RES_FRMATR_DUMMY5 */             0, // Dummy:
 #if SUPD == 310
-/* RES_FILL_STYLE */                0,
-/* RES_FILL_GRADIENT */             0,
 /* RES_FRMATR_GRABBAG */            0,
 /* RES_TEXT_VERT_ADJUST */          0,
 #endif	// SUPD == 310

@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  * This file incorporates work covered by the following license notice:
  *
@@ -456,8 +455,6 @@ SfxItemInfo __FAR_DATA aSlotTab[] =
     { 0, SFX_ITEM_POOLABLE },                           // RES_FRMATR_STYLE_NAME
     { 0, SFX_ITEM_POOLABLE },                           // RES_FRMATR_CONDITIONAL_STYLE_NAME
 #if SUPD == 310
-    { SID_SW_ATTR_FILL_STYLE, SFX_ITEM_POOLABLE },                           // RES_FILL_STYLE
-    { SID_SW_ATTR_FILL_GRADIENT, SFX_ITEM_POOLABLE },                           // RES_FILL_GRADIENT
     { 0, SFX_ITEM_POOLABLE },                           // RES_FRMATR_GRABBAG
     { 0, SFX_ITEM_POOLABLE },                           // RES_TEXT_VERT_ADJUST
 #endif	// SUPD == 310
@@ -714,15 +711,6 @@ void _InitCore()
     aAttrTab[ RES_FRMATR_CONDITIONAL_STYLE_NAME - POOLATTR_BEGIN ] = new SfxStringItem( RES_FRMATR_CONDITIONAL_STYLE_NAME, aEmptyStr );
 // FrmAttr-Dummies
 #if SUPD == 310
-#ifdef USE_JAVA
-    aAttrTab[ RES_FILL_STYLE - POOLATTR_BEGIN ] = new XFillStyleItem(XFILL_SOLID);
-    aAttrTab[ RES_FILL_STYLE - POOLATTR_BEGIN ]->SetWhich(RES_FILL_STYLE);
-    aAttrTab[ RES_FILL_GRADIENT - POOLATTR_BEGIN ] = new XFillGradientItem();
-    aAttrTab[ RES_FILL_GRADIENT - POOLATTR_BEGIN ]->SetWhich(RES_FILL_GRADIENT);
-#else	// USE_JAVA
-    aAttrTab[ RES_FILL_STYLE - POOLATTR_BEGIN ] = new XFillStyleItem(XFILL_SOLID, RES_FILL_STYLE);
-    aAttrTab[ RES_FILL_GRADIENT - POOLATTR_BEGIN ] = new XFillGradientItem(RES_FILL_GRADIENT);
-#endif	// USE_JAVA
     aAttrTab[ RES_FRMATR_GRABBAG - POOLATTR_BEGIN ] = new SfxGrabBagItem(RES_FRMATR_GRABBAG);
 #ifdef USE_JAVA
     aAttrTab[ RES_TEXT_VERT_ADJUST - POOLATTR_BEGIN ] = new SdrTextVertAdjustItem(SDRTEXTVERTADJUST_TOP);
