@@ -187,12 +187,6 @@ USHORT __FAR_DATA aTxtFmtCollSetRange[] = {
 	RES_CHRATR_BEGIN, RES_CHRATR_END-1,
 	RES_PARATR_BEGIN, RES_PARATR_END-1,
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
-#if SUPD == 310
-
-    //UUUU FillAttribute support
-    XATTR_FILL_FIRST, XATTR_FILL_LAST,
-
-#endif	// SUPD == 310
 	0
 };
 
@@ -213,12 +207,6 @@ USHORT __FAR_DATA aTxtNodeSetRange[] = {
     RES_PARATR_LIST_BEGIN, RES_PARATR_LIST_END-1,
     // <--
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
-#if SUPD == 310
-
-    //UUUU FillAttribute support (paragraph FillStyle)
-    XATTR_FILL_FIRST, XATTR_FILL_LAST,
-
-#endif	// SUPD == 310
 	0
 };
 
@@ -272,12 +260,6 @@ USHORT __FAR_DATA aTableBoxSetRange[] = {
 USHORT __FAR_DATA aFrmFmtSetRange[] = {
 	RES_FRMATR_BEGIN, RES_FRMATR_END-1,
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
-#if SUPD == 310
-
-    //UUUU FillAttribute support (TextFrame, OLE, Writer GraphicObject)
-    XATTR_FILL_FIRST, XATTR_FILL_LAST,
-
-#endif	// SUPD == 310
 	0
 };
 
