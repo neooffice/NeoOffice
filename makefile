@@ -90,13 +90,6 @@ UOUTPUTDIR=wntmsci12.pro
 DLLSUFFIX=mxp
 endif
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
-ifdef CERTICLOUDENABLED
-ENTITLEMENTS_BEGIN_ICLOUD=
-ENTITLEMENTS_END_ICLOUD=
-else
-ENTITLEMENTS_BEGIN_ICLOUD=<\!--
-ENTITLEMENTS_END_ICLOUD=-->
-endif
 
 # Build location macros
 BUILD_HOME:=build
@@ -657,7 +650,7 @@ endif
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin" \! -name "soffice.bin"` "Contents/basis-link/program/msfontextract" "Contents/basis-link/program/pagein" "Contents/basis-link/program/uri-encode" "Contents/basis-link/ure-link/bin/regmerge" "Contents/basis-link/ure-link/bin/regview" `find "Contents/share/uno_packages/cache/uno_packages" -type f -name "xpdfimport"` ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
-	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(ENTITLEMENTS_BEGIN_ICLOUD)#$(ENTITLEMENTS_BEGIN_ICLOUD)#g' | sed 's#$$(ENTITLEMENTS_END_ICLOUD)#$(ENTITLEMENTS_END_ICLOUD)#g' > "$(INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	mkdir -p "$(INSTALL_HOME)/tmp"
 	cd "$(INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 	mkdir "$(INSTALL_HOME)/package/$(PRODUCT_INSTALL_DIR_NAME).app"
@@ -778,7 +771,7 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.so"` ; do codesign --force -s "$(CERTAPPIDENTITY)" "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find . -type f -name "*.bin" \! -name "soffice.bin"` ; do codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
-	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(ENTITLEMENTS_BEGIN_ICLOUD)#$(ENTITLEMENTS_BEGIN_ICLOUD)#g' | sed 's#$$(ENTITLEMENTS_END_ICLOUD)#$(ENTITLEMENTS_END_ICLOUD)#g' | sed 's#$$(ENTITLEMENTS_BEGIN_ICLOUD)#$(ENTITLEMENTS_BEGIN_ICLOUD)#g' | sed 's#$$(ENTITLEMENTS_END_ICLOUD)#$(ENTITLEMENTS_END_ICLOUD)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 # Mac App Store requires files to be writable by root
 	chmod -Rf u+w,og-w,a+r "$(PATCH_INSTALL_HOME)/package"
