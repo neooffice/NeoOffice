@@ -1311,10 +1311,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( nMinCharPos < rArgs.mnMinCharPos )
 			{
-				ImplLayoutArgs aMinArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, rArgs.mnMinCharPos, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				// Improve BIDI analysis speed by trimming layout args string
+				int nMinArgsLen = rArgs.mnMinCharPos - nMinCharPos;
+				ImplLayoutArgs aMinArgs( rArgs.mpStr + nMinCharPos, nMinArgsLen, 0, nMinArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
 				aMinArgs.ResetPos();
 				while ( aMinArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
+					nStrongMinCharPos += nMinCharPos;
+					nStrongEndCharPos += nMinCharPos;
 					if ( nStrongEndCharPos == rArgs.mnMinCharPos )
 					{
 						if ( bStrongRunRTL == bIsStrongRTL && nStrongMinCharPos < rArgs.mnMinCharPos )
@@ -1327,10 +1331,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( nEndCharPos > rArgs.mnEndCharPos )
 			{
-				ImplLayoutArgs aEndArgs( rArgs.mpStr, rArgs.mnLength, rArgs.mnEndCharPos, nEndCharPos, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				// Improve BIDI analysis speed by trimming layout args string
+				int nEndArgsLen = nEndCharPos - rArgs.mnEndCharPos;
+				ImplLayoutArgs aEndArgs( rArgs.mpStr + rArgs.mnEndCharPos, nEndArgsLen, 0, nEndArgsLen, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
 				aEndArgs.ResetPos();
 				while ( aEndArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
 				{
+					nStrongMinCharPos += rArgs.mnEndCharPos;
+					nStrongEndCharPos += rArgs.mnEndCharPos;
 					if ( nStrongMinCharPos == rArgs.mnEndCharPos )
 					{
 						if ( bStrongRunRTL == bIsStrongRTL && nEndCharPos > rArgs.mnEndCharPos )
