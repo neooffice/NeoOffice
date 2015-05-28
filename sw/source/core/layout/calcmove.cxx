@@ -1102,7 +1102,7 @@ const int cnStopFormat = 15;
 // <--
 
 #ifdef USE_JAVA
-#define STOP_FORMAT_INTERVAL 5000
+#define STOP_FORMAT_INTERVAL 15000
 static const SwCntntFrm *pStopFormatRoot = NULL;
 static sal_uInt32 nStopFormatMillis = 0;
 #endif	// USE_JAVA
