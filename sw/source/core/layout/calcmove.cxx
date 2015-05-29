@@ -67,6 +67,34 @@
 #include <flyfrms.hxx>
 // <--
 
+#ifdef USE_JAVA
+
+#include <stack>
+
+#define STOP_FORMAT_INTERVAL 15000
+
+static sal_uInt32 nStopFormatMillis = 0;
+static std::stack< const SwClient* > aStopFormatStack;
+
+bool PushToStopFormatStack( const SwClient *pClient )
+{
+	bool bRet = false;
+	if ( aStopFormatStack.size() )
+    	bRet = ( osl_getGlobalTimer() >= nStopFormatMillis );
+	else
+		nStopFormatMillis = osl_getGlobalTimer() + STOP_FORMAT_INTERVAL;
+	aStopFormatStack.push( pClient );
+	return bRet;
+}
+
+void PopFromStopFormatStack()
+{
+	if ( aStopFormatStack.size() )
+		aStopFormatStack.pop();
+}
+
+#endif	// USE_JAVA
+
 //------------------------------------------------------------------------
 //				Move-Methoden
 //------------------------------------------------------------------------
@@ -1101,12 +1129,6 @@ BOOL SwCntntFrm::MakePrtArea( const SwBorderAttrs &rAttrs )
 const int cnStopFormat = 15;
 // <--
 
-#ifdef USE_JAVA
-#define STOP_FORMAT_INTERVAL 15000
-static const SwCntntFrm *pStopFormatRoot = NULL;
-static sal_uInt32 nStopFormatMillis = 0;
-#endif	// USE_JAVA
-
 inline void ValidateSz( SwFrm *pFrm )
 {
 	if ( pFrm )
@@ -1138,20 +1160,11 @@ void SwCntntFrm::MakeAll()
 	}
 
 #ifdef USE_JAVA
-	// Fix excessively long loop times that occur when pasting huge amounts of
-	// data into a table cell by applying OOo's "stop formatting" loop control
-	// in this object and its children after STOP_FORMAT_INTERVAL has passed
-	bool bStopFormat = false;
-	if ( pStopFormatRoot )
-	{
-		if ( osl_getGlobalTimer() >= nStopFormatMillis )
-			bStopFormat = true;
-	}
-	else
-	{
-		pStopFormatRoot = this;
-		nStopFormatMillis = osl_getGlobalTimer() + STOP_FORMAT_INTERVAL;
-	}
+    // Fix excessively long loop times that occur when pasting huge
+    // amounts of data into a table cell by applying OOo's "stop
+    // formatting" loop control in this object and its children after
+    // STOP_FORMAT_INTERVAL has passed
+    bool bStopFormat = PushToStopFormatStack( this );
 #endif	// USE_JAVA
 
 	LockJoin();
@@ -1770,7 +1783,6 @@ void SwCntntFrm::MakeAll()
             // FME 2007-08-30 #i81146# new loop control
 #ifdef USE_JAVA
             if ( !bStopFormat && nConsequetiveFormatsWithoutChange <= cnStopFormat )
-            if ( !bStopFormat && nConsequetiveFormatsWithoutChange <= cnStopFormat )
 #else	// USE_JAVA
             if ( nConsequetiveFormatsWithoutChange <= cnStopFormat )
 #endif	// USE_JAVA
@@ -1829,11 +1841,7 @@ void SwCntntFrm::MakeAll()
     SetFlyLock( FALSE );
 
 #ifdef USE_JAVA
-	if ( this == pStopFormatRoot )
-	{
-		pStopFormatRoot = NULL;
-		nStopFormatMillis = 0;
-	}
+    PopFromStopFormatStack();
 #endif	// USE_JAVA
 }
 

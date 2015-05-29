@@ -1321,6 +1321,14 @@ class SwNotifyAccAboutInvalidTextSelections
 // <--
 void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 {
+#ifdef USE_JAVA
+    // Fix excessively long loop times that occur when pasting huge
+    // amounts of data into a table cell by applying OOo's "stop
+    // formatting" loop control in this object and its children after
+    // STOP_FORMAT_INTERVAL has passed
+    PushToStopFormatStack( this );
+#endif	// USE_JAVA
+
 	SET_CURR_SHELL( this );
 
     ClearUpCrsrs();
@@ -1335,6 +1343,9 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 	{
 		if ( eFlags & SwCrsrShell::READONLY )
 			bIgnoreReadonly = TRUE;
+#ifdef USE_JAVA
+		PopFromStopFormatStack();
+#endif	// USE_JAVA
 		return;             // wenn nicht, dann kein Update !!
 	}
 
@@ -1504,6 +1515,9 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 			eMvState = MV_NONE;		// Status fuers Crsr-Travelling - GetCrsrOfst
 			if( pTblFrm && Imp()->IsAccessible() )
 				Imp()->InvalidateAccessibleCursorPosition( pTblFrm );
+#ifdef USE_JAVA
+			PopFromStopFormatStack();
+#endif	// USE_JAVA
 			return;
 		}
 	}
@@ -1548,6 +1562,9 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 						GetDoc()->GetDocShell()->SetReadOnlyUI( TRUE );
 						CallChgLnk();		// UI bescheid sagen!
 					}
+#ifdef USE_JAVA
+					PopFromStopFormatStack();
+#endif	// USE_JAVA
 					return;
 				}
 			}
@@ -1652,6 +1669,9 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 							GetDoc()->GetDocShell()->SetReadOnlyUI( TRUE );
 							CallChgLnk();		// UI bescheid sagen!
 						}
+#ifdef USE_JAVA
+						PopFromStopFormatStack();
+#endif	// USE_JAVA
 						return;
 					}
 				}
@@ -1807,6 +1827,10 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
 
     if( bSVCrsrVis )
 		pVisCrsr->Show();           // wieder anzeigen
+
+#ifdef USE_JAVA
+	PopFromStopFormatStack();
+#endif	// USE_JAVA
 }
 
 void SwCrsrShell::RefreshBlockCursor()
