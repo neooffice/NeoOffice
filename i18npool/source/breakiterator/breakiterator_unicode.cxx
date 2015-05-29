@@ -197,14 +197,18 @@ void SAL_CALL BreakIterator_Unicode::loadICUBreakIterator(const com::sun::star::
     }
 
 #ifdef USE_JAVA
-    // Reduce string comparison CPU usage by checking if the new OUString is
-    // the same string as the OUString that the UnicodeString was copied from
-    if (newBreak || rText.pData != icuBI->aSrcText.pData) {	// UChar != sal_Unicode in MinGW
+    // Reduce string comparison CPU usage by checking if the new OUString
+    // uses the same data buffer as the UnicodeString. For long strings, it is
+    // apparently much faster to reset the break iterator than it is to compare
+    // strings every time this method is called.
+    if (newBreak || rText.getLength() != icuBI->aSrcText.getLength() || rText.getStr() != icuBI->aSrcText.getStr() || icuBI->aSrcText.getLength() != icuBI->aICUText.length() || icuBI->aSrcText.getStr() != icuBI->aICUText.getBuffer()) {	// UChar != sal_Unicode in MinGW
+        // Use the OUString's data buffer instead of copying the string
+        icuBI->aICUText.fastCopyFrom(UnicodeString(FALSE, reinterpret_cast<const UChar *>(rText.getStr()), rText.getLength()));
         icuBI->aSrcText=rText;
 #else	// USE_JAVA
     if (newBreak || icuBI->aICUText.compare(UnicodeString(reinterpret_cast<const UChar *>(rText.getStr()), rText.getLength()))) {	// UChar != sal_Unicode in MinGW
-#endif	// USE_JAVA
         icuBI->aICUText=UnicodeString(reinterpret_cast<const UChar *>(rText.getStr()), rText.getLength());
+#endif	// USE_JAVA
         icuBI->aBreakIterator->setText(icuBI->aICUText);
     }
 }
