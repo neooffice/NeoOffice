@@ -504,22 +504,9 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 
 // -----------------------------------------------------------------------
 
-::std::map< JavaImplFontData*, JavaImplFontData* > JavaImplFontData::maInstancesMap;
-
-// -----------------------------------------------------------------------
-
 void JavaImplFontData::ClearNativeFonts()
 {
 	JavaImplFontData::maBadNativeFontIDMap.clear();
-
-	for ( ::std::map< JavaImplFontData*, JavaImplFontData* >::const_iterator it = JavaImplFontData::maInstancesMap.begin(); it != JavaImplFontData::maInstancesMap.end(); ++it )
-	{
-		if ( it->second->mnNativeFontID )
-		{
-			CFRelease( (CTFontRef)it->second->mnNativeFontID );
-			it->second->mnNativeFontID = 0;
-		}
-	}
 }
 
 // -----------------------------------------------------------------------
@@ -584,8 +571,6 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
 
-	JavaImplFontData::maInstancesMap[ this ] = this;
-
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
 	// as zero. The single size zero causes higher-level font elements to treat
 	// fonts as infinitely scalable and provide lists of default font sizes.
@@ -597,10 +582,6 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 
 JavaImplFontData::~JavaImplFontData()
 {
-	::std::map< JavaImplFontData*, JavaImplFontData* >::iterator it = JavaImplFontData::maInstancesMap.find( this );
-	if ( it != JavaImplFontData::maInstancesMap.end() )
-		JavaImplFontData::maInstancesMap.erase( it );
-
 	if ( mnNativeFontID )
 		CFRelease( (CTFontRef)mnNativeFontID );
 

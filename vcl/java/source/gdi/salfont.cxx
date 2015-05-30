@@ -41,22 +41,8 @@ using namespace rtl;
 
 // ============================================================================
 
-::std::map< JavaImplFont*, JavaImplFont* > JavaImplFont::maInstancesMap;
-
-// ----------------------------------------------------------------------------
-
 void JavaImplFont::clearNativeFonts()
 {
-	for ( ::std::map< JavaImplFont*, JavaImplFont* >::const_iterator vfit = JavaImplFont::maInstancesMap.begin(); vfit != JavaImplFont::maInstancesMap.end(); ++vfit )
-	{
-		if ( vfit->second->mnNativeFont )
-		{
-			if ( vfit->second->mbNativeFontOwner )
-				CFRelease( (CTFontRef)vfit->second->mnNativeFont );
-			vfit->second->mnNativeFont = 0;
-		}
-	}
-
 	GetSalData()->maJavaNativeFontMapping.clear();
 }
 
@@ -64,7 +50,6 @@ void JavaImplFont::clearNativeFonts()
 
 JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : maPSName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
 {
-	JavaImplFont::maInstancesMap[ this ] = this;
 }
 
 // ----------------------------------------------------------------------------
@@ -73,18 +58,12 @@ JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : maPSName( pFont->maPSName ),
 {
 	if ( mnNativeFont )
 		CFRetain( (CTFontRef)mnNativeFont );
-
-	JavaImplFont::maInstancesMap[ this ] = this;
 }
 
 // ----------------------------------------------------------------------------
 
 JavaImplFont::~JavaImplFont()
 {
-	::std::map< JavaImplFont*, JavaImplFont* >::iterator it = JavaImplFont::maInstancesMap.find( this );
-	if ( it != JavaImplFont::maInstancesMap.end() )
-		JavaImplFont::maInstancesMap.erase( it );
-
 	if ( mnNativeFont && mbNativeFontOwner )
 		CFRelease( (CTFontRef)mnNativeFont );
 }
