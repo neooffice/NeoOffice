@@ -67,9 +67,6 @@ class SalATSLayout;
 
 class JavaImplFontData : public ImplFontData
 {
-protected:
-	static ::std::map< JavaImplFontData*, JavaImplFontData* >	maInstancesMap;
-
 public:
 	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadNativeFontIDMap;
 	::rtl::OUString			maFontName;
@@ -167,8 +164,6 @@ public:
 
 class JavaImplFont
 {
-	static ::std::map< JavaImplFont*, JavaImplFont* >	maInstancesMap;
-
 	::rtl::OUString			maPSName;
 	sal_IntPtr				mnNativeFont;
 	short					mnOrientation;
