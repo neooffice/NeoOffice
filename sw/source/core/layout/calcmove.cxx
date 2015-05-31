@@ -74,23 +74,34 @@
 #define STOP_FORMAT_INTERVAL 15000
 
 static sal_uInt32 nStopFormatMillis = 0;
-static std::stack< const SwClient* > aStopFormatStack;
+static std::stack< std::pair< const SwClient*, bool > > aStopFormatStack;
+static sal_uInt32 nDisableStopFormatTimer = 0;
 
-bool PushToStopFormatStack( const SwClient *pClient )
+bool PushToStopFormatStack( const SwClient *pClient, bool bDisableTimer )
 {
 	bool bRet = false;
+
+	if ( bDisableTimer )
+		nDisableStopFormatTimer++;
+
 	if ( aStopFormatStack.size() )
-    	bRet = ( osl_getGlobalTimer() >= nStopFormatMillis );
+    	bRet = ( !nDisableStopFormatTimer && osl_getGlobalTimer() >= nStopFormatMillis );
 	else
 		nStopFormatMillis = osl_getGlobalTimer() + STOP_FORMAT_INTERVAL;
-	aStopFormatStack.push( pClient );
+
+	aStopFormatStack.push( std::pair< const SwClient*, bool >( pClient, bDisableTimer ) );
 	return bRet;
 }
 
 void PopFromStopFormatStack()
 {
 	if ( aStopFormatStack.size() )
+	{
+		const std::pair< const SwClient*, bool > &rTop = aStopFormatStack.top();
+		if ( rTop.second && nDisableStopFormatTimer )
+			nDisableStopFormatTimer--;
 		aStopFormatStack.pop();
+	}
 }
 
 #endif	// USE_JAVA
