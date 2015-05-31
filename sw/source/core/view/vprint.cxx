@@ -678,6 +678,12 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 {
 	SET_CURR_SHELL( this );
 
+#ifdef USE_JAVA
+    // Disable applying fix in OOo's "stop formatting" loop control while
+    // printing
+    PushToStopFormatStack( NULL, true );
+#endif	// USE_JAVA
+
 	//Seitenweise durchformatieren, by the way kann die Statusleiste
 	//angetriggert werden, damit der Anwender sieht worauf er wartet.
 	//Damit der Vorgang moeglichst transparent gestaltet werden kann
@@ -740,6 +746,10 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 		aAction.SetProgress( NULL );
 
 	pLayout->EndAllAction();
+
+#ifdef USE_JAVA
+    PopFromStopFormatStack();
+#endif	// USE_JAVA
 }
 
 /******************************************************************************/
@@ -976,12 +986,6 @@ BOOL ViewShell::Prt( SwPrtOptions& rOptions, SfxProgress* pProgress,
         if( !rOptions.GetJobName().Len() && !pPrt->IsJobActive() )
             return bStartJob;
     }
-
-#ifdef USE_JAVA
-    // Disable applying fix in OOo's "stop formatting" loop control while
-    // printing
-    PushToStopFormatStack( NULL, true );
-#endif	// USE_JAVA
 
     // Einstellungen am Drucker merken
     SwPrtOptSave aPrtSave( pPrt );
@@ -1439,10 +1443,6 @@ BOOL ViewShell::Prt( SwPrtOptions& rOptions, SfxProgress* pProgress,
     // restore settings of OutputDevicef
     if (pPDFOut)
         pPDFOut->Pop();
-
-#ifdef USE_JAVA
-    PopFromStopFormatStack();
-#endif	// USE_JAVA
 
 	return bStartJob;
 }
