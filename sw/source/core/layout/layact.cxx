@@ -2886,6 +2886,14 @@ SwLayIdle::SwLayIdle( SwRootFrm *pRt, SwViewImp *pI ) :
 #endif
 #endif
 {
+#ifdef USE_JAVA
+	// Fix excessively long loop times that occur when pasting huge
+	// amounts of data into a table cell by applying OOo's "stop
+	// formatting" loop control in this object and its children after
+	// STOP_FORMAT_INTERVAL has passed
+	PushToStopFormatStack( NULL );
+#endif	// USE_JAVA
+
 	pImp->pIdleAct = this;
 
 	SHOW_IDLE( COL_LIGHTRED );
@@ -3084,6 +3092,9 @@ SwLayIdle::SwLayIdle( SwRootFrm *pRt, SwViewImp *pI ) :
 	}
 #endif
 #endif
+#ifdef USE_JAVA
+	PopFromStopFormatStack();
+#endif	// USE_JAVA
 }
 
 SwLayIdle::~SwLayIdle()
