@@ -72,7 +72,7 @@
 #include <list>
 #include <map>
 
-#define STOP_FORMAT_INTERVAL 5000
+#define STOP_FORMAT_INTERVAL 1000
 
 static sal_uInt32 nStopFormatMillis = 0;
 static std::list< std::pair< SwFrm*, bool > > aStopFormatStack;
