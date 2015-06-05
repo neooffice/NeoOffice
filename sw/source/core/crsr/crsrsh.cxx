@@ -1326,7 +1326,7 @@ void SwCrsrShell::UpdateCrsr( USHORT eFlags, BOOL bIdleEnd )
     // amounts of data into a table cell by applying OOo's "stop
     // formatting" loop control in this object and its children after
     // STOP_FORMAT_INTERVAL has passed
-    PushToStopFormatStack( this );
+    PushToStopFormatStack( NULL );
 #endif	// USE_JAVA
 
 	SET_CURR_SHELL( this );

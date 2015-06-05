@@ -69,15 +69,20 @@
 
 #ifdef USE_JAVA
 
-#include <stack>
+#include <list>
+#include <map>
 
-#define STOP_FORMAT_INTERVAL 15000
+#define STOP_FORMAT_INTERVAL 5000
 
 static sal_uInt32 nStopFormatMillis = 0;
-static std::stack< std::pair< const SwClient*, bool > > aStopFormatStack;
+static std::list< std::pair< SwFrm*, bool > > aStopFormatStack;
+static std::map< SwFrm*, SwFrm* > aStopFormatStackMap;
 static sal_uInt32 nDisableStopFormatTimer = 0;
+static bool bStopFormatInvalidateSize = false;
+static bool bStopFormatInvalidatePrtArea = false;
+static std::map< SwFrm*, SwFrm* > aStopFormatInvalidateMap;
 
-bool PushToStopFormatStack( const SwClient *pClient, bool bDisableTimer )
+bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer )
 {
 	bool bRet = false;
 
@@ -89,18 +94,73 @@ bool PushToStopFormatStack( const SwClient *pClient, bool bDisableTimer )
 	else
 		nStopFormatMillis = osl_getGlobalTimer() + STOP_FORMAT_INTERVAL;
 
-	aStopFormatStack.push( std::pair< const SwClient*, bool >( pClient, bDisableTimer ) );
+	aStopFormatStack.push_back( std::pair< SwFrm*, bool >( pFrm, bDisableTimer ) );
+	if ( pFrm )
+		aStopFormatStackMap[ pFrm ] = pFrm;
+
 	return bRet;
 }
 
-void PopFromStopFormatStack()
+void PopFromStopFormatStack( bool bInvalidateSize, bool bInvalidatePrtArea )
 {
 	if ( aStopFormatStack.size() )
 	{
-		const std::pair< const SwClient*, bool > &rTop = aStopFormatStack.top();
+		const std::pair< SwFrm*, bool > &rTop = aStopFormatStack.back();
 		if ( rTop.second && nDisableStopFormatTimer )
+		{
 			nDisableStopFormatTimer--;
-		aStopFormatStack.pop();
+		}
+		else if ( rTop.first && !nDisableStopFormatTimer )
+		{
+			bStopFormatInvalidateSize |= bInvalidateSize;
+			bStopFormatInvalidatePrtArea |= bInvalidatePrtArea;
+			aStopFormatInvalidateMap[ rTop.first ] = rTop.first;
+		}
+
+		aStopFormatStack.pop_back();
+
+		if ( !aStopFormatStack.size() )
+		{
+			if ( bStopFormatInvalidateSize || bStopFormatInvalidatePrtArea )
+			{
+				for ( std::map< SwFrm*, SwFrm* >::iterator it = aStopFormatInvalidateMap.begin(); it != aStopFormatInvalidateMap.end(); ++it )
+				{
+					if ( it->first )
+					{
+						if ( bStopFormatInvalidateSize )
+							it->first->InvalidateSize();
+						if ( bStopFormatInvalidatePrtArea )
+							it->first->InvalidatePrt();
+					}
+				}
+			}
+
+			aStopFormatStackMap.clear();
+			bStopFormatInvalidateSize = false;
+			bStopFormatInvalidatePrtArea = false;
+			aStopFormatInvalidateMap.clear();
+		}
+	}
+}
+
+void RemoveFromStopFormatInvalidateMap( SwFrm *pFrm )
+{
+	if ( pFrm )
+	{
+		std::map< SwFrm*, SwFrm* >::iterator it = aStopFormatStackMap.find( pFrm );
+		if ( it != aStopFormatStackMap.end() )
+		{
+			aStopFormatStackMap.erase( it );
+			for ( std::list< std::pair< SwFrm*, bool > >::iterator it = aStopFormatStack.begin(); it != aStopFormatStack.end(); ++it )
+			{
+				if ( it->first == pFrm )
+					it->first = NULL;
+			}
+		}
+
+		it = aStopFormatInvalidateMap.find( pFrm );
+		if ( it != aStopFormatInvalidateMap.end() )
+			aStopFormatInvalidateMap.erase( it );
 	}
 }
 
@@ -1175,6 +1235,8 @@ void SwCntntFrm::MakeAll()
     // amounts of data into a table cell by applying OOo's "stop
     // formatting" loop control in this object and its children after
     // STOP_FORMAT_INTERVAL has passed
+    BOOL bOldValidSize = bValidSize;
+    BOOL bOldValidPrtArea = bValidPrtArea;
     bool bStopFormat = PushToStopFormatStack( this );
 #endif	// USE_JAVA
 
@@ -1852,7 +1914,10 @@ void SwCntntFrm::MakeAll()
     SetFlyLock( FALSE );
 
 #ifdef USE_JAVA
-    PopFromStopFormatStack();
+    if ( bStopFormat )
+        PopFromStopFormatStack( !bOldValidSize, !bOldValidPrtArea );
+    else
+        PopFromStopFormatStack();
 #endif	// USE_JAVA
 }
 
