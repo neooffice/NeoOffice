@@ -1261,7 +1261,8 @@ inline BOOL SwFrm::IsAccessibleFrm() const
 }
 
 #ifdef USE_JAVA
-bool PushToStopFormatStack( const SwClient *pClient, bool bDisableTimer = false );
-void PopFromStopFormatStack();
+bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer = false );
+void PopFromStopFormatStack( bool bInvalidateSize = false, bool bInvalidatePrtArea = false );
+void RemoveFromStopFormatInvalidateMap( SwFrm *pFrm );
 #endif	// USE_JAVA
 #endif
