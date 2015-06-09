@@ -458,10 +458,19 @@ void ShapeBase::convertShapeProperties( const Reference< XShape >& rxShape ) con
             };
             for (unsigned int i = 0; i < SAL_N_ELEMENTS(aBorders); ++i)
             {
+#if SUPD == 310
+                table::BorderLine aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(aBorders[i])).get<table::BorderLine>();
+#else	// SUPD == 310
                 table::BorderLine2 aBorderLine = xPropertySet->getPropertyValue(PropertyMap::getPropertyName(aBorders[i])).get<table::BorderLine2>();
+#endif	// SUPD == 310
                 aBorderLine.Color = aPropMap.getProperty(PROP_LineColor).get<sal_Int32>();
+#if SUPD == 310
+                if (oLineWidth && ::getCppuType(&aBorderLine) == ::getCppuType((table::BorderLine2*)0))
+                    static_cast< table::BorderLine2& >(aBorderLine).LineWidth = *oLineWidth;
+#else	// SUPD == 310
                 if (oLineWidth)
                     aBorderLine.LineWidth = *oLineWidth;
+#endif	// SUPD == 310
                 aPropMap.setProperty(aBorders[i], uno::makeAny(aBorderLine));
             }
             aPropMap.erase(PROP_LineColor);
