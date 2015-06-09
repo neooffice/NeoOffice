@@ -187,6 +187,12 @@ USHORT __FAR_DATA aTxtFmtCollSetRange[] = {
 	RES_CHRATR_BEGIN, RES_CHRATR_END-1,
 	RES_PARATR_BEGIN, RES_PARATR_END-1,
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
+#if SUPD == 310
+
+    //UUUU FillAttribute support
+    XATTR_FILL_FIRST, XATTR_FILL_LAST,
+
+#endif	// SUPD == 310
 	0
 };
 
@@ -207,6 +213,12 @@ USHORT __FAR_DATA aTxtNodeSetRange[] = {
     RES_PARATR_LIST_BEGIN, RES_PARATR_LIST_END-1,
     // <--
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
+#if SUPD == 310
+
+    //UUUU FillAttribute support (paragraph FillStyle)
+    XATTR_FILL_FIRST, XATTR_FILL_LAST,
+
+#endif	// SUPD == 310
 	0
 };
 
@@ -260,6 +272,12 @@ USHORT __FAR_DATA aTableBoxSetRange[] = {
 USHORT __FAR_DATA aFrmFmtSetRange[] = {
 	RES_FRMATR_BEGIN, RES_FRMATR_END-1,
 	RES_UNKNOWNATR_BEGIN, RES_UNKNOWNATR_END-1,
+#if SUPD == 310
+
+    //UUUU FillAttribute support (TextFrame, OLE, Writer GraphicObject)
+    XATTR_FILL_FIRST, XATTR_FILL_LAST,
+
+#endif	// SUPD == 310
 	0
 };
 
@@ -492,6 +510,9 @@ USHORT* SwAttrPool::pVersionMap4 = 0;
 // OD 2004-01-21 #i18732#
 USHORT* SwAttrPool::pVersionMap5 = 0;
 USHORT* SwAttrPool::pVersionMap6 = 0;
+#if SUPD == 310
+sal_uInt16* SwAttrPool::pVersionMap7 = 0;
+#endif	// SUPD == 310
 SwIndexReg* SwIndexReg::pEmptyIndexArray = 0;
 
 const sal_Char* __FAR_DATA pMarkToTable		= "table";
@@ -815,6 +836,16 @@ void _InitCore()
     for ( i = 38; i <= 136; ++i )
         SwAttrPool::pVersionMap6[ i-1 ] = i + 3;
 
+#if SUPD == 310
+    // 7. version:
+    // New character attribute for character box shadow plus 3 dummies
+    SwAttrPool::pVersionMap7 = new sal_uInt16[ 144 ];
+    for( i = 1; i <= 40; ++i )
+        SwAttrPool::pVersionMap7[ i-1 ] = i;
+    for ( i = 41; i <= 144; ++i )
+        SwAttrPool::pVersionMap7[ i-1 ] = i + 4;
+#endif	// SUPD == 310
+
     uno::Reference<
             lang::XMultiServiceFactory > xMSF =
 									::comphelper::getProcessServiceFactory();
@@ -928,6 +959,9 @@ void _FinitCore()
     // OD 2004-01-21 #i18732#
     delete[] SwAttrPool::pVersionMap5;
     delete[] SwAttrPool::pVersionMap6;
+#if SUPD == 310
+    delete[] SwAttrPool::pVersionMap7;
+#endif	// SUPD == 310
 
 	for ( USHORT i = 0; i < pGlobalOLEExcludeList->Count(); ++i )
 		delete (SvGlobalName*)(*pGlobalOLEExcludeList)[i];
