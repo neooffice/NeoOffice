@@ -224,10 +224,10 @@ void AxisConverter::convertFromModel(
                         category/date axis (even if it is a date axis
                         currently). */
 #if SUPD == 310
-                    if ( ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
+                    if ( ::getCppuType( &aScaleData ) == ::getCppuType( (ScaleData2*)0 ) )
                     {
                         aScaleData.AxisType = (bDateAxis && !mrModel.mbAuto) ? cssc2::AxisType2::DATE : cssc2::AxisType::CATEGORY;
-                        ((com::sun::star::chart2::ScaleData2&)aScaleData).AutoDateAxis = mrModel.mbAuto;
+                        static_cast< ScaleData2& >(aScaleData).AutoDateAxis = mrModel.mbAuto;
                     }
                     else
                     {
@@ -272,7 +272,7 @@ void AxisConverter::convertFromModel(
                     via aScaleData.AxisType, as this value sticks to CATEGORY
                     for automatic category/date axes). */
 #if SUPD == 310
-                if( mrModel.mnTypeId == C_TOKEN( dateAx ) && ::getCppuType( &aScaleData ) == ::getCppuType( (com::sun::star::chart2::ScaleData2*)0 ) )
+                if( mrModel.mnTypeId == C_TOKEN( dateAx ) && ::getCppuType( &aScaleData ) == ::getCppuType( (ScaleData2*)0 ) )
 #else	// SUPD == 310
                 if( mrModel.mnTypeId == C_TOKEN( dateAx ) )
 #endif	// SUPD == 310
@@ -284,13 +284,13 @@ void AxisConverter::convertFromModel(
                     lclSetValueOrClearAny( aScaleData.Maximum, mrModel.mofMax );
                     // major/minor increment
 #if SUPD == 310
-                    lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
-                    lclConvertTimeInterval( ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
+                    lclConvertTimeInterval( static_cast< ScaleData2& >(aScaleData).TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
+                    lclConvertTimeInterval( static_cast< ScaleData2& >(aScaleData).TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
                     // base time unit
                     if( mrModel.monBaseTimeUnit.has() )
-                        ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
+                        static_cast< ScaleData2& >(aScaleData).TimeIncrement.TimeResolution <<= lclGetApiTimeUnit( mrModel.monBaseTimeUnit.get() );
                     else
-                        ((com::sun::star::chart2::ScaleData2&)aScaleData).TimeIncrement.TimeResolution.clear();
+                        static_cast< ScaleData2& >(aScaleData).TimeIncrement.TimeResolution.clear();
 #else	// SUPD == 310
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MajorTimeInterval, mrModel.mofMajorUnit, mrModel.mnMajorTimeUnit );
                     lclConvertTimeInterval( aScaleData.TimeIncrement.MinorTimeInterval, mrModel.mofMinorUnit, mrModel.mnMinorTimeUnit );
