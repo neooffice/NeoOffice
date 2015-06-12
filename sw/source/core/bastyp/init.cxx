@@ -361,10 +361,20 @@ SfxItemInfo __FAR_DATA aSlotTab[] =
     { 0, SFX_ITEM_POOLABLE },                           // RES_CHRATR_IDCTHINT
 #endif	// SUPD == 310
 
+#if SUPD == 310
+    { 0, 0 },                                           // RES_TXTATR_REFMARK
+	{ 0, 0 },											// RES_TXTATR_TOXMARK
+    { 0, 0 },                                           // RES_TXTATR_META
+    { 0, 0 },                                           // RES_TXTATR_METAFIELD
+    { 0, 0 },                                           // RES_TXTATR_INPUTFIELD
+    { 0, SFX_ITEM_POOLABLE },                           // RES_TXTATR_AUTOFMT
+    { FN_TXTATR_INET, 0 },                              // RES_TXTATR_INETFMT
+#else	// SUPD == 310
     { 0, SFX_ITEM_POOLABLE },                           // RES_TXTATR_AUTOFMT
     { FN_TXTATR_INET, 0 },                              // RES_TXTATR_INETFMT
     { 0, 0 },                                           // RES_TXTATR_REFMARK
 	{ 0, 0 },											// RES_TXTATR_TOXMARK
+#endif	// SUPD == 310
 	{ 0, 0 },											// RES_TXTATR_CHARFMT
     { 0, SFX_ITEM_POOLABLE },                           // RES_TXTATR_DUMMY5
 	{ SID_ATTR_CHAR_CJK_RUBY, 0 },					 	// RES_TXTATR_CJK_RUBY,
@@ -372,8 +382,6 @@ SfxItemInfo __FAR_DATA aSlotTab[] =
 	{ 0, SFX_ITEM_POOLABLE },					 		// RES_TXTATR_DUMMY6,
 	{ 0, SFX_ITEM_POOLABLE },					 		// RES_TXTATR_DUMMY7,
 #if SUPD == 310
-    { 0, 0 },                                           // RES_TXTATR_META
-    { 0, 0 },                                           // RES_TXTATR_METAFIELD
     { 0, 0 },                                           // RES_TXTATR_INPUTFIELD
 #endif	// SUPD == 310
 
@@ -382,12 +390,12 @@ SfxItemInfo __FAR_DATA aSlotTab[] =
 	{ 0, 0 },											// RES_TXTATR_FTN
 	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_SOFTHYPH
 	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_HARDBLANK
-	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_DUMMY1
-	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_DUMMY2
 #if SUPD == 310
     { 0, 0 },                                           // RES_TXTATR_ANNOTATION
     { 0, SFX_ITEM_POOLABLE },                           // RES_TXTATR_DUMMY3
 #endif	// SUPD == 310
+	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_DUMMY1
+	{ 0, SFX_ITEM_POOLABLE },							// RES_TXTATR_DUMMY2
 
 	{ SID_ATTR_PARA_LINESPACE, SFX_ITEM_POOLABLE }, 	// RES_PARATR_LINESPACING
 	{ SID_ATTR_PARA_ADJUST, SFX_ITEM_POOLABLE }, 		// RES_PARATR_ADJUST
@@ -626,7 +634,6 @@ void _InitCore()
     aAttrTab[ RES_TXTATR_DUMMY5 - POOLATTR_BEGIN ] = new SfxBoolItem( RES_TXTATR_DUMMY5 );
     aAttrTab[ RES_TXTATR_DUMMY6 - POOLATTR_BEGIN ] = new SfxBoolItem( RES_TXTATR_DUMMY6 );
 	aAttrTab[ RES_TXTATR_DUMMY7 - POOLATTR_BEGIN ] = new SfxBoolItem( RES_TXTATR_DUMMY7 );
-// TextAttr - Dummies
 #if SUPD == 310
 #ifdef USE_JAVA
     aAttrTab[ RES_TXTATR_META - POOLATTR_BEGIN ] =          new SfxVoidItem(RES_TXTATR_META);
@@ -643,6 +650,7 @@ void _InitCore()
 #endif	// USE_JAVA
     aAttrTab[ RES_TXTATR_DUMMY3 - POOLATTR_BEGIN ] =        new SfxBoolItem( RES_TXTATR_DUMMY3 );
 #endif	// SUPD == 310
+// TextAttr - Dummies
 
     aAttrTab[ RES_PARATR_LINESPACING- POOLATTR_BEGIN ] = new SvxLineSpacingItem( LINE_SPACE_DEFAULT_HEIGHT, RES_PARATR_LINESPACING );
     aAttrTab[ RES_PARATR_ADJUST- POOLATTR_BEGIN ] = new SvxAdjustItem( SVX_ADJUST_LEFT, RES_PARATR_ADJUST );

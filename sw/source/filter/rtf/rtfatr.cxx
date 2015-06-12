@@ -4252,10 +4252,19 @@ SwAttrFnTab aRTFAttrFnTab = {
 /* RES_CHRATR_IDCTHINT */           0,
 #endif	// SUPD == 310
 
+#if SUPD == 310
+/* RES_TXTATR_REFMARK*/             0, // NOT USED!! OutRTF_SwRefMark,
+/* RES_TXTATR_TOXMARK */ 			0, // NOT USED!! OutRTF_SwTOXMark,
+/* RES_TXTATR_META */               0,
+/* RES_TXTATR_METAFIELD */          0,
+/* RES_TXTATR_AUTOFMT   */          OutRTF_SwTxtAutoFmt,
+/* RES_TXTATR_INETFMT   */          OutRTF_SwTxtINetFmt, // Dummy
+#else	// SUPD == 310
 /* RES_TXTATR_AUTOFMT   */          OutRTF_SwTxtAutoFmt,
 /* RES_TXTATR_INETFMT   */          OutRTF_SwTxtINetFmt, // Dummy
 /* RES_TXTATR_REFMARK*/             0, // NOT USED!! OutRTF_SwRefMark,
 /* RES_TXTATR_TOXMARK */ 			0, // NOT USED!! OutRTF_SwTOXMark,
+#endif	// SUPD == 310
 /* RES_TXTATR_CHARFMT	*/			OutRTF_SwTxtCharFmt,
 /* RES_TXTATR_TWO_LINES */			0,
 /* RES_TXTATR_CJK_RUBY */			OutRTF_SwTxtRuby,
@@ -4263,8 +4272,6 @@ SwAttrFnTab aRTFAttrFnTab = {
 /* RES_TXTATR_DUMMY5 */				0,
 /* RES_TXTATR_DUMMY6 */				0,
 #if SUPD == 310
-/* RES_TXTATR_META */               0,
-/* RES_TXTATR_METAFIELD */          0,
 /* RES_TXTATR_INPUTFIELD */         0,
 #endif	// SUPD == 310
 
@@ -4273,12 +4280,12 @@ SwAttrFnTab aRTFAttrFnTab = {
 /* RES_TXTATR_FTN */				OutRTF_SwFtn,
 /* RES_TXTATR_SOFTHYPH */			0,	// old attr. - coded now by character
 /* RES_TXTATR_HARDBLANK*/			OutRTF_SwHardBlank,
-/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
-/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 #if SUPD == 310
 /* RES_TXTATR_ANNOTATION */         0,
 /* RES_TXTATR_DUMMY3 */             0,
 #endif	// SUPD == 310
+/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
+/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 
 /* RES_PARATR_LINESPACING	*/      OutRTF_SwLineSpacing,
 /* RES_PARATR_ADJUST	*/          OutRTF_SwAdjust,

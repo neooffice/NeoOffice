@@ -5091,10 +5091,19 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_CHRATR_IDCTHINT */           0,
 #endif	// SUPD == 310
 
+#if SUPD == 310
+/* RES_TXTATR_REFMARK */            0,      // handled by SwAttrIter
+/* RES_TXTATR_TOXMARK   */          0,      // handled by SwAttrIter
+/* RES_TXTATR_META */               0,
+/* RES_TXTATR_METAFIELD */          0,
+/* RES_TXTATR_DUMMY4 */             0,
+/* RES_TXTATR_INETFMT */            OutSwFmtINetFmt,
+#else	// SUPD == 310
 /* RES_TXTATR_DUMMY4 */             0,
 /* RES_TXTATR_INETFMT */            OutSwFmtINetFmt,
 /* RES_TXTATR_REFMARK */            0,      // handled by SwAttrIter
 /* RES_TXTATR_TOXMARK   */          0,      // handled by SwAttrIter
+#endif	// SUPD == 310
 /* RES_TXTATR_CHARFMT   */          OutWW8_SwTxtCharFmt,
 /* RES_TXTATR_DUMMY5*/              0,
 /* RES_TXTATR_CJK_RUBY */           0,      // handled by SwAttrIter
@@ -5102,8 +5111,6 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_TXTATR_DUMMY6 */             0,
 /* RES_TXTATR_DUMMY7 */             0,
 #if SUPD == 310
-/* RES_TXTATR_META */               0,
-/* RES_TXTATR_METAFIELD */          0,
 /* RES_TXTATR_INPUTFIELD */         0,
 #endif	// SUPD == 310
 
@@ -5112,12 +5119,12 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_TXTATR_FTN       */          OutWW8_SwFtn,
 /* RES_TXTATR_SOFTHYPH */           0,  // old attr. - coded now by character
 /* RES_TXTATR_HARDBLANK */          OutWW8_SwHardBlank,
-/* RES_TXTATR_DUMMY1 */             0, // Dummy:
-/* RES_TXTATR_DUMMY2 */             0, // Dummy:
 #if SUPD == 310
 /* RES_TXTATR_ANNOTATION */         0,
 /* RES_TXTATR_DUMMY3 */             0,
 #endif	// SUPD == 310
+/* RES_TXTATR_DUMMY1 */             0, // Dummy:
+/* RES_TXTATR_DUMMY2 */             0, // Dummy:
 
 /* RES_PARATR_LINESPACING   */      OutWW8_SvxLineSpacing,
 /* RES_PARATR_ADJUST    */          OutWW8_SvxAdjust,

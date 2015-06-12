@@ -3417,10 +3417,19 @@ SwAttrFnTab aHTMLAttrFnTab = {
 /* RES_CHRATR_IDCTHINT */           0,
 #endif	// SUPD == 310
 
+#if SUPD == 310
+/* RES_TXTATR_REFMARK*/             0,
+/* RES_TXTATR_TOXMARK */ 			0,
+/* RES_TXTATR_META */               0,
+/* RES_TXTATR_METAFIELD */          0,
+/* RES_TXTATR_DUMMY4    */          0,
+/* RES_TXTATR_INETFMT   */          OutHTML_SwFmtINetFmt,
+#else	// SUPD == 310
 /* RES_TXTATR_DUMMY4    */          0,
 /* RES_TXTATR_INETFMT   */          OutHTML_SwFmtINetFmt,
 /* RES_TXTATR_REFMARK*/             0,
 /* RES_TXTATR_TOXMARK */ 			0,
+#endif	// SUPD == 310
 /* RES_TXTATR_CHARFMT	*/			OutHTML_SwTxtCharFmt,
 /* RES_TXTATR_TWO_LINES */			0,
 /* RES_TXTATR_CJK_RUBY */			0,
@@ -3428,8 +3437,6 @@ SwAttrFnTab aHTMLAttrFnTab = {
 /* RES_TXTATR_DUMMY5 */				0,
 /* RES_TXTATR_DUMMY6 */				0,
 #if SUPD == 310
-/* RES_TXTATR_META */               0,
-/* RES_TXTATR_METAFIELD */          0,
 /* RES_TXTATR_INPUTFIELD */         0,
 #endif	// SUPD == 310
 
@@ -3438,12 +3445,12 @@ SwAttrFnTab aHTMLAttrFnTab = {
 /* RES_TXTATR_FTN */				OutHTML_SwFmtFtn,
 /* RES_TXTATR_SOFTHYPH */			0,
 /* RES_TXTATR_HARDBLANK*/			OutHTML_SwHardBlank,
-/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
-/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 #if SUPD == 310
 /* RES_TXTATR_ANNOTATION */         0,
 /* RES_TXTATR_DUMMY3 */             0,
 #endif	// SUPD == 310
+/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
+/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 
 /* RES_PARATR_LINESPACING	*/      0,
 /* RES_PARATR_ADJUST	*/          OutHTML_SvxAdjust,

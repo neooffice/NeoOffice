@@ -113,13 +113,13 @@ RES_CHRATR_BEGIN = HINT_BEGIN,
 	RES_CHRATR_DUMMY1,						// 39
 	RES_CHRATR_DUMMY2,						// 40
 #if SUPD == 310
-	RES_CHRATR_RSID,
-	RES_CHRATR_BOX,
-	RES_CHRATR_SHADOW,
-	RES_CHRATR_HIGHLIGHT,
-	RES_CHRATR_GRABBAG,
-	RES_CHRATR_BIDIRTL,
-	RES_CHRATR_IDCTHINT,
+    RES_CHRATR_RSID,                        // 39
+    RES_CHRATR_BOX,                         // 40
+    RES_CHRATR_SHADOW,                      // 41
+    RES_CHRATR_HIGHLIGHT,                   // 42
+    RES_CHRATR_GRABBAG,                     // 43
+    RES_CHRATR_BIDIRTL,                     // 44
+    RES_CHRATR_IDCTHINT,                    // 45
 #endif	// SUPD == 310
 RES_CHRATR_END
 };
@@ -129,17 +129,45 @@ enum RES_TXTATR
 {
 RES_TXTATR_BEGIN = RES_CHRATR_END,
 
+#if SUPD == 310
+/** text attributes with start and end.
+   #i105453#:
+   Hints (SwTxtAttr) with the same start and end position are sorted by
+   WhichId, i.e., the TXTATR constants defined here.
+   The text formatting (SwAttrIter) poses some requirements on TXTATR order:
+   - AUTOFMT must precede CHARFMT, so that auto style can overwrite char style.
+   - INETFMT must precede CHARFMT, so that link style can overwrite char style.
+     (this is actually surprising: CHARFMT hints are not split at INETFMT
+      hints on insertion, but on exporting to ODF. if CHARFMT would precede
+      INETFMT, then exporting and importing will effectively change precedence)
+
+   Nesting hints (SwTxtAttrNesting) also have requirements on TXTATR order,
+   to ensure proper nesting (because CJK_RUBY and INETFMT have no CH_TXTATR):
+   - INETFMT should precede CJK_RUBY (for UNO API it does not matter...)
+   - META and METAFIELD must precede CJK_RUBY and INETFMT
+ */
+#else	// SUPD == 310
 // alle TextAttribute mit einem Ende
 // JP 12.07.96: die Ids RES_TXTATR_NOLINEBREAK und RES_TXTATR_NOHYPHEN
 //				wanderten in den Bereich der CharAttr. Die Ids selbst muessen
 //				aber als Dummies noch erhalten bleiben. Der SwG-/Sw3 Reader
 //				merkt sich die Ids immer als Offset zum Start der Gruppe!!!
 // Aus dem RES_TXTATR_NOLINEBREAK ist jetzt RES_TXTATR_INETFMT geworden.
+#endif	// SUPD == 310
 RES_TXTATR_WITHEND_BEGIN = RES_TXTATR_BEGIN ,
+#if SUPD == 310
+    RES_TXTATR_REFMARK = RES_TXTATR_WITHEND_BEGIN,  // 46
+    RES_TXTATR_TOXMARK,                             // 47
+    RES_TXTATR_META,                                // 48
+    RES_TXTATR_METAFIELD,                           // 49
+    RES_TXTATR_AUTOFMT,                             // 50
+    RES_TXTATR_INETFMT,                             // 51
+#else	// SUPD == 310
     RES_TXTATR_AUTOFMT = RES_TXTATR_WITHEND_BEGIN,  // 41
     RES_TXTATR_INETFMT,                             // 42
 	RES_TXTATR_REFMARK, 							// 43
 	RES_TXTATR_TOXMARK, 							// 44
+#endif	// SUPD == 310
 	RES_TXTATR_CHARFMT, 							// 45
     RES_TXTATR_DUMMY5,                              // 46
 	RES_TXTATR_CJK_RUBY, 							// 47
@@ -147,9 +175,7 @@ RES_TXTATR_WITHEND_BEGIN = RES_TXTATR_BEGIN ,
 	RES_TXTATR_DUMMY6,								// 49
 	RES_TXTATR_DUMMY7,								// 50
 #if SUPD == 310
-	RES_TXTATR_META,
-	RES_TXTATR_METAFIELD,
-	RES_TXTATR_INPUTFIELD,
+    RES_TXTATR_INPUTFIELD,                          // 55
 #endif	// SUPD == 310
 RES_TXTATR_WITHEND_END,
 
@@ -160,12 +186,12 @@ RES_TXTATR_NOEND_BEGIN = RES_TXTATR_WITHEND_END,
 	RES_TXTATR_FTN, 								// 53
 	RES_TXTATR_SOFTHYPH,							// 54
 	RES_TXTATR_HARDBLANK,							// 55
+#if SUPD == 310
+    RES_TXTATR_ANNOTATION,                          // 59
+    RES_TXTATR_DUMMY3,                              // 60
+#endif	// SUPD == 310
 	RES_TXTATR_DUMMY1,								// 56
 	RES_TXTATR_DUMMY2,								// 57
-#if SUPD == 310
-	RES_TXTATR_ANNOTATION,
-	RES_TXTATR_DUMMY3,
-#endif	// SUPD == 310
 RES_TXTATR_NOEND_END,
 RES_TXTATR_END = RES_TXTATR_NOEND_END
 };
@@ -191,8 +217,8 @@ RES_PARATR_BEGIN = RES_TXTATR_END,
     RES_PARATR_CONNECT_BORDER,                      // 73
     RES_PARATR_OUTLINELEVEL,                        // 74
 #if SUPD == 310
-	RES_PARATR_RSID,
-	RES_PARATR_GRABBAG,
+    RES_PARATR_RSID,                                // 80
+    RES_PARATR_GRABBAG,                             // 81
 #endif	// SUPD == 310
 RES_PARATR_END
 };
@@ -261,8 +287,8 @@ RES_FRMATR_BEGIN = RES_PARATR_LIST_END,
     RES_FRMATR_STYLE_NAME,                          // 119
     RES_FRMATR_CONDITIONAL_STYLE_NAME,              // 120
 #if SUPD == 310
-	RES_FRMATR_GRABBAG,
-	RES_TEXT_VERT_ADJUST,
+    RES_FRMATR_GRABBAG,                             // 128
+    RES_TEXT_VERT_ADJUST,                           // 129
 #endif	// SUPD == 310
 RES_FRMATR_END
 };

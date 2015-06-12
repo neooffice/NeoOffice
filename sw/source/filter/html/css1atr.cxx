@@ -3772,10 +3772,19 @@ SwAttrFnTab aCSS1AttrFnTab = {
 /* RES_CHRATR_IDCTHINT */           0,
 #endif	// SUPD == 310
 
+#if SUPD == 310
+/* RES_TXTATR_REFMARK*/				0,
+/* RES_TXTATR_TOXMARK */ 			0,
+/* RES_TXTATR_META */               0,
+/* RES_TXTATR_METAFIELD */          0,
+/* RES_TXTATR_NOLINEBREAK	*/      0,
+/* RES_TXTATR_NOHYPHEN	*/			0,
+#else	// SUPD == 310
 /* RES_TXTATR_NOLINEBREAK	*/      0,
 /* RES_TXTATR_NOHYPHEN	*/			0,
 /* RES_TXTATR_REFMARK*/				0,
 /* RES_TXTATR_TOXMARK */ 			0,
+#endif	// SUPD == 310
 /* RES_TXTATR_CHARFMT	*/			0,
 /* RES_TXTATR_TWO_LINES */			0,
 /* RES_TXTATR_CJK_RUBY */			0,
@@ -3783,8 +3792,6 @@ SwAttrFnTab aCSS1AttrFnTab = {
 /* RES_TXTATR_DUMMY5 */				0,
 /* RES_TXTATR_DUMMY6 */				0,
 #if SUPD == 310
-/* RES_TXTATR_META */               0,
-/* RES_TXTATR_METAFIELD */          0,
 /* RES_TXTATR_INPUTFIELD */         0,
 #endif	// SUPD == 310
 
@@ -3793,12 +3800,12 @@ SwAttrFnTab aCSS1AttrFnTab = {
 /* RES_TXTATR_FTN */				0,
 /* RES_TXTATR_SOFTHYPH */			0,
 /* RES_TXTATR_HARDBLANK*/			0,
-/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
-/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 #if SUPD == 310
 /* RES_TXTATR_ANNOTATION */         0,
 /* RES_TXTATR_DUMMY3 */             0,
 #endif	// SUPD == 310
+/* RES_TXTATR_DUMMY1 */        	    0, // Dummy:
+/* RES_TXTATR_DUMMY2 */        	    0, // Dummy:
 
 /* RES_PARATR_LINESPACING	*/      OutCSS1_SvxLineSpacing,
 /* RES_PARATR_ADJUST	*/          OutCSS1_SvxAdjust,
