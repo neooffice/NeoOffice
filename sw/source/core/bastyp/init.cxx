@@ -846,11 +846,20 @@ void _InitCore()
 #if SUPD == 310
     // 7. version:
     // New character attribute for character box shadow plus 3 dummies
+#ifdef USE_JAVA
+    SwAttrPool::pVersionMap7 = new sal_uInt16[ 142 ];
+#else	// USE_JAVA
     SwAttrPool::pVersionMap7 = new sal_uInt16[ 144 ];
+#endif	// USE_JAVA
     for( i = 1; i <= 40; ++i )
         SwAttrPool::pVersionMap7[ i-1 ] = i;
+#ifdef USE_JAVA
+    for ( i = 41; i <= 142; ++i )
+        SwAttrPool::pVersionMap7[ i-1 ] = i + 7;
+#else	// USE_JAVA
     for ( i = 41; i <= 144; ++i )
         SwAttrPool::pVersionMap7[ i-1 ] = i + 4;
+#endif	// USE_JAVA
 #endif	// SUPD == 310
 
     uno::Reference<
