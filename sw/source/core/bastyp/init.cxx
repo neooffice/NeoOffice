@@ -366,7 +366,6 @@ SfxItemInfo __FAR_DATA aSlotTab[] =
 	{ 0, 0 },											// RES_TXTATR_TOXMARK
     { 0, 0 },                                           // RES_TXTATR_META
     { 0, 0 },                                           // RES_TXTATR_METAFIELD
-    { 0, 0 },                                           // RES_TXTATR_INPUTFIELD
     { 0, SFX_ITEM_POOLABLE },                           // RES_TXTATR_AUTOFMT
     { FN_TXTATR_INET, 0 },                              // RES_TXTATR_INETFMT
 #else	// SUPD == 310
