@@ -2142,6 +2142,13 @@ void SwCrsrShell::ShGetFcs( BOOL bUpdate )
 
 SwCntntFrm *SwCrsrShell::GetCurrFrm( const BOOL bCalcFrm ) const
 {
+#ifdef USE_JAVA
+	// Fix excessively long loop times that occur when pasting huge
+	// amounts of data into a table cell by applying OOo's "stop
+	// formatting" loop control in this object and its children after
+	// STOP_FORMAT_INTERVAL has passed
+	PushToStopFormatStack( NULL );
+#endif	// USE_JAVA
 	SET_CURR_SHELL( (ViewShell*)this );
 	SwCntntFrm *pRet = 0;
 	SwCntntNode *pNd = pCurCrsr->GetCntntNode();
@@ -2160,6 +2167,9 @@ SwCntntFrm *SwCrsrShell::GetCurrFrm( const BOOL bCalcFrm ) const
 		else
 			pRet = pNd->GetFrm( &pCurCrsr->GetPtPos(), pCurCrsr->GetPoint(), FALSE);
 	}
+#ifdef USE_JAVA
+	PopFromStopFormatStack();
+#endif	// USE_JAVA
 	return pRet;
 }
 
