@@ -2746,12 +2746,12 @@ void SAL_CALL SwXTextDocument::render(
 
 #ifdef USE_JAVA
     // Fix bug 2548 by reverting to browser mode at the end of PDF export
-    if ( rxOptions.getLength() )
+    for( sal_Int32 nProperty = 0, nPropertyCount = rxOptions.getLength(); nProperty < nPropertyCount; ++nProperty )
     {
-        if ( rxOptions[ 0 ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) ) )
+        if ( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) ) )
         {
             sal_Bool bToggleBrowserMode;
-            rxOptions[ 0 ].Value >>= bToggleBrowserMode;
+            rxOptions[ nProperty ].Value >>= bToggleBrowserMode;
             if ( bToggleBrowserMode )
             {
                 pDocShell->ToggleBrowserMode( true, (SwView *)pView );
@@ -2761,6 +2761,8 @@ void SAL_CALL SwXTextDocument::render(
                 if ( pWrtShell )
                     pWrtShell->ViewShell::UpdateFlds( TRUE );
             }
+
+            break;
         }
     }
 #endif	// USE_JAVA
