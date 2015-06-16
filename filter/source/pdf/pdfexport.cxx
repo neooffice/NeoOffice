@@ -130,6 +130,9 @@ PDFExport::PDFExport( const Reference< XComponent >& rxSrcDoc, Reference< task::
 	mbUseTransitionEffects	    ( sal_True ),
     mbExportBookmarks           ( sal_True ),
     mnOpenBookmarkLevels        ( -1 ),
+#ifdef USE_JAVA
+    mbThumbnail                 ( sal_False ),
+#endif	// USE_JAVA
 	mbUseLosslessCompression    ( sal_False ),
 	mbReduceImageResolution	    ( sal_False ),
     mbSkipEmptyPages            ( sal_True ),
@@ -534,6 +537,10 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					rFilterData[ nData ].Value >>= mbExportBookmarks;
 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "OpenBookmarkLevels" ) ) )
 					rFilterData[ nData ].Value >>= mnOpenBookmarkLevels;
+#ifdef USE_JAVA
+				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) ) )
+					rFilterData[ nData ].Value >>= mbThumbnail;
+#endif	// USE_JAVA
             }
             aContext.URL		= aURL.GetMainURL(INetURLObject::DECODE_TO_IURI);
 
@@ -819,7 +826,11 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 				pPDFExtOutDevData->SetIsReduceImageResolution( mbReduceImageResolution );
                 pPDFExtOutDevData->SetIsExportNamedDestinations( mbExportBmkToDest );
 
+#ifdef USE_JAVA
+                Sequence< PropertyValue > aRenderOptions( 7 );
+#else	// USE_JAVA
                 Sequence< PropertyValue > aRenderOptions( 6 );
+#endif	// USE_JAVA
 				aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "RenderDevice" ) );
 				aRenderOptions[ 0 ].Value <<= Reference< awt::XDevice >( pXDevice );
 				aRenderOptions[ 1 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportNotesPages" ) );
@@ -833,6 +844,10 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                 aRenderOptions[ 4 ].Value <<= aPageRange;
                 aRenderOptions[ 5 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsSkipEmptyPages" ) );
                 aRenderOptions[ 5 ].Value <<= mbSkipEmptyPages;
+#ifdef USE_JAVA
+                aRenderOptions[ 6 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) );
+                aRenderOptions[ 6 ].Value <<= mbThumbnail;
+#endif	// USE_JAVA
 
 				if( aPageRange.getLength() || !aSelection.hasValue() )
 				{
@@ -934,9 +949,11 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 				// end of PDF export
 				if ( bToggleBrowserMode )
 				{
-					aRenderOptions.realloc( 1 );
+					aRenderOptions.realloc( 2 );
 					aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) );
 					aRenderOptions[ 0 ].Value <<= sal_True;
+					aRenderOptions[ 1 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) );
+					aRenderOptions[ 1 ].Value <<= mbThumbnail;
 					xRenderable->render( 0, aSelection, aRenderOptions );
 				}
 #endif	// USE_JAVA
