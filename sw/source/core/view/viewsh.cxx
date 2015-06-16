@@ -1032,7 +1032,7 @@ void ViewShell::CalcLayout()
 #ifdef USE_JAVA
     // Disable applying fix in OOo's "stop formatting" loop control while
     // exporting to PDF
-    PushToStopFormatStack( NULL, true );
+    PushToStopFormatStack( NULL, !mbThumbnail );
 #endif	// USE_JAVA
 
 	//Cache vorbereiten und restaurieren, damit er nicht versaut wird.

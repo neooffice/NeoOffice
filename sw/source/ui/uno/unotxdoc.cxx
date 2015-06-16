@@ -2618,7 +2618,11 @@ SwDoc * SwXTextDocument::GetRenderDoc( SfxViewShell *&rpView, const uno::Any& rS
  ---------------------------------------------------------------------------*/
 sal_Int32 SAL_CALL SwXTextDocument::getRendererCount(
         const uno::Any& rSelection,
+#ifdef USE_JAVA
+        const uno::Sequence< beans::PropertyValue >& rxOptions )
+#else	// USE_JAVA
         const uno::Sequence< beans::PropertyValue >& /*rxOptions*/ )
+#endif	// USE_JAVA
     throw (IllegalArgumentException, RuntimeException)
 {
     ::vos::OGuard aGuard(Application::GetSolarMutex());
@@ -2647,12 +2651,30 @@ sal_Int32 SAL_CALL SwXTextDocument::getRendererCount(
         pWrtShell = pSwView->GetWrtShellPtr();
     }
 
+#ifdef USE_JAVA
+    bool bThumbnail = false;
+    for( sal_Int32 nProperty = 0, nPropertyCount = rxOptions.getLength(); nProperty < nPropertyCount; ++nProperty )
+    {
+        if( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) ) )
+        {
+            rxOptions[ nProperty].Value >>= bThumbnail;
+            break;
+        }
+    }
+#endif	// USE_JAVA
+
     SwViewOptionAdjust_Impl aAdjust(*pWrtShell);
     pWrtShell->SetPDFExportOption( sal_True );
+#ifdef USE_JAVA
+    pWrtShell->SetThumbnail( bThumbnail );
+#endif	// USE_JAVA
     // --> FME 2005-05-23 #122919# Force field update before PDF export:
     pWrtShell->ViewShell::UpdateFlds(TRUE);
     // <--
     pWrtShell->CalcLayout();
+#ifdef USE_JAVA
+    pWrtShell->SetThumbnail( sal_False );
+#endif	// USE_JAVA
     pWrtShell->SetPDFExportOption( sal_False );
     nRet = pDoc->GetPageCount();
 
@@ -2746,12 +2768,12 @@ void SAL_CALL SwXTextDocument::render(
 
 #ifdef USE_JAVA
     // Fix bug 2548 by reverting to browser mode at the end of PDF export
-    if ( rxOptions.getLength() )
+    for( sal_Int32 nProperty = 0, nPropertyCount = rxOptions.getLength(); nProperty < nPropertyCount; ++nProperty )
     {
-        if ( rxOptions[ 0 ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) ) )
+        if ( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) ) )
         {
             sal_Bool bToggleBrowserMode;
-            rxOptions[ 0 ].Value >>= bToggleBrowserMode;
+            rxOptions[ nProperty ].Value >>= bToggleBrowserMode;
             if ( bToggleBrowserMode )
             {
                 pDocShell->ToggleBrowserMode( true, (SwView *)pView );
@@ -2761,6 +2783,8 @@ void SAL_CALL SwXTextDocument::render(
                 if ( pWrtShell )
                     pWrtShell->ViewShell::UpdateFlds( TRUE );
             }
+
+            break;
         }
     }
 #endif	// USE_JAVA
@@ -2786,6 +2810,9 @@ void SAL_CALL SwXTextDocument::render(
     bool bLastPage = false;
     rtl::OUString aPages;
     bool bSkipEmptyPages = false;
+#ifdef USE_JAVA
+    bool bThumbnail = false;
+#endif	// USE_JAVA
 
     for( sal_Int32 nProperty = 0, nPropertyCount = rxOptions.getLength(); nProperty < nPropertyCount; ++nProperty )
     {
@@ -2799,6 +2826,10 @@ void SAL_CALL SwXTextDocument::render(
             rxOptions[ nProperty].Value >>= aPages;
         else if( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsSkipEmptyPages" ) ) )
             rxOptions[ nProperty].Value >>= bSkipEmptyPages;
+#ifdef USE_JAVA
+        else if( rxOptions[ nProperty ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "IsThumbnail" ) ) )
+            rxOptions[ nProperty].Value >>= bThumbnail;
+#endif	// USE_JAVA
     }
 
     OutputDevice*   pOut = 0;
@@ -2850,7 +2881,13 @@ void SAL_CALL SwXTextDocument::render(
         }
         // <--
 
+#ifdef USE_JAVA
+        pVwSh->SetThumbnail( bThumbnail );
+#endif	// USE_JAVA
         pVwSh->Prt( aOptions, 0, pOut );
+#ifdef USE_JAVA
+        pVwSh->SetThumbnail( sal_False );
+#endif	// USE_JAVA
 
         // --> FME 2004-10-08 #i35176#
         //
