@@ -197,6 +197,7 @@ ViewShell::ViewShell( SwDoc& rDocument, Window *pWindow,
     mbInConstructor = true;
 #ifdef USE_JAVA
 	mbThumbnail = false;
+	mbInCalcLayout = false;
 #endif	// USE_JAVA
 
 	bPaintInProgress = bViewLocked = bInEndAction = bFrameView =
@@ -281,6 +282,7 @@ ViewShell::ViewShell( ViewShell& rShell, Window *pWindow,
     mbInConstructor = true;
 #ifdef USE_JAVA
 	mbThumbnail = false;
+	mbInCalcLayout = false;
 #endif	// USE_JAVA
 
     bPaintWorks = bEnableSmooth = TRUE;
