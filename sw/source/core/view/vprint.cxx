@@ -681,7 +681,7 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 #ifdef USE_JAVA
     // Disable applying fix in OOo's "stop formatting" loop control while
     // printing
-    PushToStopFormatStack( NULL, true );
+    PushToStopFormatStack( NULL, !mbThumbnail );
 #endif	// USE_JAVA
 
 	//Seitenweise durchformatieren, by the way kann die Statusleiste
@@ -1064,8 +1064,14 @@ BOOL ViewShell::Prt( SwPrtOptions& rOptions, SfxProgress* pProgress,
     }
 
 	// Seiten fuers Drucken formatieren
+#ifdef USE_JAVA
+    pShell->SetThumbnail( mbThumbnail );
+#endif	// USE_JAVA
     pShell->CalcPagesForPrint( (USHORT)aPages.Max(), pProgress, pStr,
 								nMergeAct, nMergeCnt );
+#ifdef USE_JAVA
+    pShell->SetThumbnail( sal_False );
+#endif	// USE_JAVA
 
     // Some field types, can require a valid layout
     // (expression fields in tables). For these we do an UpdateFlds

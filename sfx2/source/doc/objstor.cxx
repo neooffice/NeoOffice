@@ -1826,7 +1826,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 								uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
 								xExporter->setSourceDocument( xComp );
 
-								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 5 );
+								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 6 );
 								// Only save the first page unless the user
 								// overrides to all pages. Note that the PDF
 								// filter library requires that the page range
@@ -1847,6 +1847,8 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 								aFilterData[3].Value <<= sal_False;
 								aFilterData[4].Name = ::rtl::OUString::createFromAscii( "ExportFormFields" );
 								aFilterData[4].Value <<= sal_False;
+								aFilterData[5].Name = ::rtl::OUString::createFromAscii( "IsThumbnail" );
+								aFilterData[5].Value <<= sal_True;
 								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 2 );
 								aArgs[0].Name = ::rtl::OUString::createFromAscii( "FilterData" );
 								aArgs[0].Value <<= aFilterData;
