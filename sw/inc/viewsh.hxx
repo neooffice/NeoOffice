@@ -164,6 +164,7 @@ class SW_DLLPUBLIC ViewShell : public Ring
     bool mbInConstructor:1;
 #ifdef USE_JAVA
 	bool mbThumbnail:1;
+	bool mbInCalcLayout:1;
 #endif	// USE_JAVA
 
 	// #i74769#
