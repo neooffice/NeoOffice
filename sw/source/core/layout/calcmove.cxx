@@ -82,7 +82,7 @@ static bool bStopFormatInvalidateSize = false;
 static bool bStopFormatInvalidatePrtArea = false;
 static std::map< SwFrm*, SwFrm* > aStopFormatInvalidateMap;
 
-bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer )
+bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer, sal_uInt32 nTimerInterval )
 {
 	bool bRet = false;
 
@@ -92,7 +92,7 @@ bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer )
 	if ( aStopFormatStack.size() )
     	bRet = ( !nDisableStopFormatTimer && osl_getGlobalTimer() >= nStopFormatMillis );
 	else
-		nStopFormatMillis = osl_getGlobalTimer() + STOP_FORMAT_INTERVAL;
+		nStopFormatMillis = osl_getGlobalTimer() + ( nTimerInterval < STOP_FORMAT_INTERVAL ? STOP_FORMAT_INTERVAL : nTimerInterval );
 
 	aStopFormatStack.push_back( std::pair< SwFrm*, bool >( pFrm, bDisableTimer ) );
 	if ( pFrm )
@@ -101,8 +101,10 @@ bool PushToStopFormatStack( SwFrm *pFrm, bool bDisableTimer )
 	return bRet;
 }
 
-void PopFromStopFormatStack( bool bInvalidateSize, bool bInvalidatePrtArea )
+bool PopFromStopFormatStack( bool bInvalidateSize, bool bInvalidatePrtArea )
 {
+	bool bRet = false;
+
 	if ( aStopFormatStack.size() )
 	{
 		const std::pair< SwFrm*, bool > &rTop = aStopFormatStack.back();
@@ -116,6 +118,8 @@ void PopFromStopFormatStack( bool bInvalidateSize, bool bInvalidatePrtArea )
 			bStopFormatInvalidatePrtArea |= bInvalidatePrtArea;
 			aStopFormatInvalidateMap[ rTop.first ] = rTop.first;
 		}
+
+		bRet = ( bStopFormatInvalidateSize || bStopFormatInvalidatePrtArea );
 
 		aStopFormatStack.pop_back();
 
@@ -141,6 +145,8 @@ void PopFromStopFormatStack( bool bInvalidateSize, bool bInvalidatePrtArea )
 			aStopFormatInvalidateMap.clear();
 		}
 	}
+
+	return bRet;
 }
 
 void RemoveFromStopFormatInvalidateMap( SwFrm *pFrm )

@@ -97,6 +97,16 @@
 // #i74769#
 #include <svx/sdrpaintwindow.hxx>
 
+#ifdef USE_JAVA
+
+#include <vcl/msgbox.hxx>
+#include <dbui.hrc>
+#include "../../ui/dbui/mailmergechildwindow.hrc"
+
+#define CALC_LAYOUT_INTERVAL 30000
+
+#endif	// USE_JAVA
+
 BOOL ViewShell::bLstAct = FALSE;
 ShellResource *ViewShell::pShellRes = 0;
 Window *ViewShell::pCareWindow = 0;
@@ -1029,15 +1039,18 @@ void ViewShell::CalcLayout()
 	SET_CURR_SHELL( this );
 	SwWait aWait( *GetDoc()->GetDocShell(), TRUE );
 
-#ifdef USE_JAVA
-    // Disable applying fix in OOo's "stop formatting" loop control while
-    // exporting to PDF
-    PushToStopFormatStack( NULL, !mbThumbnail );
-#endif	// USE_JAVA
-
 	//Cache vorbereiten und restaurieren, damit er nicht versaut wird.
 	SwSaveSetLRUOfst aSaveLRU( *SwTxtFrm::GetTxtCache(),
 						  		SwTxtFrm::GetTxtCache()->GetCurMax() - 50 );
+
+#ifdef USE_JAVA
+    // Disable applying fix in OOo's "stop formatting" loop control while
+    // exporting to PDF. Otherwise stop formatting loop periodically to allow
+    // user to cancel if formatting is lasts longer than CALC_LAYOUT_INTERVAL
+    for ( ; ; )
+    {
+        PushToStopFormatStack( NULL, false, mbThumbnail ? 0 : CALC_LAYOUT_INTERVAL );
+#endif	// USE_JAVA
 
 	//Progress einschalten wenn noch keiner Lauft.
 	const BOOL bEndProgress = SfxProgress::GetActiveProgress( GetDoc()->GetDocShell() ) == 0;
@@ -1079,7 +1092,25 @@ void ViewShell::CalcLayout()
 		::EndProgress( GetDoc()->GetDocShell() );
 
 #ifdef USE_JAVA
-    PopFromStopFormatStack();
+        if ( !PopFromStopFormatStack() )
+            break;
+
+        if ( mbThumbnail )
+            break;
+
+        if ( bEndProgress )
+        {
+            QueryBox aQueryBox( pWin, WB_OK_CANCEL | WB_DEF_OK, SW_RESSTR( STR_STATSTR_REFORMAT ) );
+            // Load the DLG_MM_SENDMAILS to ensure that ST_CONTINUE is loaded
+            ModelessDialog aTmpDlg( NULL, SW_RES( DLG_MM_SENDMAILS ) );
+            String aContinue( SW_RES( ST_CONTINUE ) );
+            aTmpDlg.Close();
+            if ( aContinue.Len() )
+                aQueryBox.SetButtonText( BUTTONID_OK, aContinue );
+            if ( aQueryBox.Execute() == RET_CANCEL )
+                break;
+        }
+    }
 #endif	// USE_JAVA
 }
 
