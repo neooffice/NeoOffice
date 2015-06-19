@@ -231,8 +231,12 @@ void NSApplication_terminate()
 	if ( pBundle )
 	{
 		NSURL *pURL = [pBundle appStoreReceiptURL];
+		if ( pURL && [pURL isKindOfClass:[NSURL class]] )
+			pURL = [pURL filePathURL];
+		if ( pURL )
+			pURL = [pURL URLByStandardizingPath];
 		NSError *pError = nil;
-		if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL checkResourceIsReachableAndReturnError:&pError] )
+		if ( pURL && [pURL checkResourceIsReachableAndReturnError:&pError] )
 		{
 			NSData *pData = [NSData dataWithContentsOfURL:pURL];
 			if ( pData && pData.length && pData.bytes )
