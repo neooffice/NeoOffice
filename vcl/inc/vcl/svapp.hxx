@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified June 2015 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  * This file incorporates work covered by the following license notice:
  *
@@ -52,6 +51,9 @@
 #include <vcl/settings.hxx>
 #endif
 #include <vcl/vclevent.hxx>
+#ifdef USE_JAVA
+#include <vos/mutex.hxx>
+#endif	// USE_JAVA
 class Link;
 class AllSettings;
 class DataChangedEvent;
@@ -68,7 +70,9 @@ class NotifyEvent;
 class KeyEvent;
 class MouseEvent;
 
+#ifndef USE_JAVA
 namespace vos { class IMutex; }
+#endif	// !USE_JAVA
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/connection/XConnection.hpp>
 
@@ -493,6 +497,125 @@ private:
 };
 
 #if SUPD == 310
+
+class VCL_DLLPUBLIC SolarMutexGuard
+{
+    private:
+        SolarMutexGuard( const SolarMutexGuard& );
+        const SolarMutexGuard& operator = ( const SolarMutexGuard& );
+#ifdef USE_JAVA
+        vos::IMutex& m_solarMutex;
+#else	// USE_JAVA
+        comphelper::SolarMutex& m_solarMutex;
+#endif	// USE_JAVA
+
+    public:
+
+        /** Acquires the object specified as parameter.
+         */
+        SolarMutexGuard() :
+        m_solarMutex(Application::GetSolarMutex())
+    {
+        m_solarMutex.acquire();
+    }
+
+    /** Releases the mutex or interface. */
+    ~SolarMutexGuard()
+    {
+        m_solarMutex.release();
+    }
+};
+
+class VCL_DLLPUBLIC SolarMutexClearableGuard
+{
+    SolarMutexClearableGuard( const SolarMutexClearableGuard& );
+    const SolarMutexClearableGuard& operator = ( const SolarMutexClearableGuard& );
+    bool m_bCleared;
+public:
+    /** Acquires mutex
+     */
+    SolarMutexClearableGuard()
+        : m_bCleared(false)
+        , m_solarMutex( Application::GetSolarMutex() )
+        {
+            m_solarMutex.acquire();
+        }
+
+    /** Releases mutex. */
+    virtual ~SolarMutexClearableGuard()
+        {
+            if( !m_bCleared )
+            {
+                m_solarMutex.release();
+            }
+        }
+
+    /** Releases mutex. */
+    void SAL_CALL clear()
+        {
+            if( !m_bCleared )
+            {
+                m_solarMutex.release();
+                m_bCleared = true;
+            }
+        }
+protected:
+#ifdef USE_JAVA
+    vos::IMutex& m_solarMutex;
+#else	// USE_JAVA
+    comphelper::SolarMutex& m_solarMutex;
+#endif	// USE_JAVA
+};
+
+class VCL_DLLPUBLIC SolarMutexResettableGuard
+{
+    SolarMutexResettableGuard( const SolarMutexResettableGuard& );
+    const SolarMutexResettableGuard& operator = ( const SolarMutexResettableGuard& );
+    bool m_bCleared;
+public:
+    /** Acquires mutex
+     */
+    SolarMutexResettableGuard()
+        : m_bCleared(false)
+        , m_solarMutex( Application::GetSolarMutex() )
+        {
+            m_solarMutex.acquire();
+        }
+
+    /** Releases mutex. */
+    virtual ~SolarMutexResettableGuard()
+        {
+            if( !m_bCleared )
+            {
+                m_solarMutex.release();
+            }
+        }
+
+    /** Releases mutex. */
+    void SAL_CALL clear()
+        {
+            if( !m_bCleared)
+            {
+                m_solarMutex.release();
+                m_bCleared = true;
+            }
+        }
+    /** Releases mutex. */
+    void SAL_CALL reset()
+        {
+            if( m_bCleared)
+            {
+                m_solarMutex.acquire();
+                m_bCleared = false;
+            }
+        }
+protected:
+#ifdef USE_JAVA
+    vos::IMutex& m_solarMutex;
+#else	// USE_JAVA
+    comphelper::SolarMutex& m_solarMutex;
+#endif	// USE_JAVA
+};
 
 /**
  A helper class that calls Application::ReleaseSolarMutex() in its constructor
