@@ -617,7 +617,17 @@ sal_Int32 SwXDrawPage::getCount(void) throw( uno::RuntimeException )
 	else
 	{
 		((SwXDrawPage*)this)->GetSvxPage();
+
+#if SUPD == 310
+        std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pDoc);
+
+        if (aTextBoxes.empty())
+            return pDrawPage->getCount();
+        else
+            return SwTextBoxHelper::getCount(pDrawPage->GetSdrPage(), aTextBoxes);
+#else	// SUPD == 310
 		return pDrawPage->getCount();
+#endif	// SUPD == 310
 	}
 }
 /*-- 22.01.99 11:33:46---------------------------------------------------
@@ -1091,7 +1101,16 @@ SwXShape::~SwXShape()
  ---------------------------------------------------------------------------*/
 uno::Any SwXShape::queryInterface( const uno::Type& aType ) throw( uno::RuntimeException )
 {
+#if SUPD == 310
+    uno::Any aRet = SwTextBoxHelper::queryInterface(GetFrmFmt(), aType);
+    if (aRet.hasValue())
+        return aRet;
+
+    aRet = SwXShapeBaseClass::queryInterface(aType);
+#else	// SUPD == 310
+
     uno::Any aRet = SwXShapeBaseClass::queryInterface(aType);
+#endif	// SUPD == 310
     // --> OD 2005-08-15 #i53320# - follow-up of #i31698#
     // interface drawing::XShape is overloaded. Thus, provide
     // correct object instance.
@@ -1352,6 +1371,11 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
                         SwTextBoxHelper::destroy(pFmt);
 
                 }
+                else if (pMap->nWID == RES_CHAIN)
+                {
+                    if (pMap->nMemberId == MID_CHAIN_NEXTNAME || pMap->nMemberId == MID_CHAIN_PREVNAME)
+                        SwTextBoxHelper::syncProperty(pFmt, pMap->nWID, pMap->nMemberId, aValue);
+                }
 #endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
                 else if ( FN_SHAPE_POSITION_LAYOUT_DIR == pMap->nWID )
@@ -1457,6 +1481,10 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
                     else
                         pFmt->SetFmtAttr(aSet);
 				}
+#if SUPD == 310
+                // We have a pFmt and a pEntry as well: try to sync TextBox property.
+                SwTextBoxHelper::syncProperty(pFmt, pMap->nWID, pMap->nMemberId, aValue);
+#endif	// SUPD == 310
 			}
 			else
 			{
@@ -1566,6 +1594,15 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
 //                                    basegfx::fround( aMatrix.Line2.Column3 ) );
 //                _AdjustPositionProperties( aNewPos );
 //            }
+
+#if SUPD == 310
+            if (pFmt)
+            {
+                // We have a pFmt (but no pEntry): try to sync TextBox property.
+                SwTextBoxHelper::syncProperty(pFmt, rPropertyName, aValue);
+            }
+#endif	// SUPD == 310
+
             // --> OD 2004-08-05 #i31698# - restore object position, if caption
             // point is set.
             if ( rPropertyName.equals(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("CaptionPoint"))) &&
@@ -1656,6 +1693,17 @@ uno::Any SwXShape::getPropertyValue(const rtl::OUString& rPropertyName)
                 {
                     bool bValue = SwTextBoxHelper::findTextBox(pFmt);
                     aRet <<= bValue;
+                }
+                else if (pMap->nWID == RES_CHAIN)
+                {
+                    switch (pMap->nMemberId)
+                    {
+                    case MID_CHAIN_PREVNAME:
+                    case MID_CHAIN_NEXTNAME:
+                    case MID_CHAIN_NAME:
+                        SwTextBoxHelper::getProperty(pFmt, pMap->nWID, pMap->nMemberId, aRet);
+                    break;
+                    }
                 }
 #endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
@@ -1811,6 +1859,30 @@ uno::Any SwXShape::getPropertyValue(const rtl::OUString& rPropertyName)
                 // <--
             }
             // <--
+#if SUPD == 310
+            else if (rPropertyName == "ZOrder")
+            {
+                // Convert the real draw page position to the logical one that ignores textboxes.
+                if (pFmt)
+                {
+                    const SdrObject* pObj = pFmt->FindRealSdrObject();
+                    if (pObj)
+                    {
+                        bool bConvert = true;
+                        if (SvxShape* pSvxShape = GetSvxShape())
+                            // In case of group shapes, pSvxShape points to the child shape, while pObj points to the outermost group shape.
+                            if (pSvxShape->GetSdrObject() != pObj)
+                                // Textboxes are not expected inside group shapes, so no conversion is necessary there.
+                                bConvert = false;
+                        if (bConvert)
+                        {
+                            std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pFmt->GetDoc());
+                            aRet <<= SwTextBoxHelper::getOrdNum(pObj, aTextBoxes);
+                        }
+                    }
+                }
+            }
+#endif	// SUPD == 310
         }
 	}
 	return aRet;
@@ -2528,6 +2600,9 @@ void SAL_CALL SwXShape::setSize( const awt::Size& aSize )
     {
         mxShape->setSize( aSize );
     }
+#if SUPD == 310
+    SwTextBoxHelper::syncProperty(GetFrmFmt(), RES_FRM_SIZE, MID_FRMSIZE_SIZE, uno::makeAny(aSize));
+#endif	// SUPD == 310
 }
 // <--
 // --> OD 2004-07-22 #i31698# -
