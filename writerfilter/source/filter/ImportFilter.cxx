@@ -27,8 +27,8 @@
 #include <comphelper/mediadescriptor.hxx>
 #else	// SUPD == 310
 #include <unotools/mediadescriptor.hxx>
-#include <cppuhelper/supportsservice.hxx>
 #endif	// SUPD == 310
+#include <cppuhelper/supportsservice.hxx>
 #include <oox/core/filterdetect.hxx>
 #include <dmapper/DomainMapper.hxx>
 #include <WriterFilter.hxx>
@@ -277,19 +277,6 @@ OUString WriterFilter_getImplementationName () throw (uno::RuntimeException)
    return OUString ( "com.sun.star.comp.Writer.WriterFilter" );
 }
 
-#if SUPD == 310
-
-#define SERVICE_NAME1 "com.sun.star.document.ImportFilter"
-#define SERVICE_NAME2 "com.sun.star.document.ExportFilter"
-
-bool WriterFilter_supportsService( const OUString& ServiceName ) throw (uno::RuntimeException)
-{
-   return (ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) ||
-           ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ));
-}
-
-#endif	// SUPD == 310
-
 uno::Sequence< OUString > WriterFilter_getSupportedServiceNames(  ) throw (uno::RuntimeException)
 {
    uno::Sequence < OUString > aRet(2);
@@ -323,11 +310,7 @@ sal_Bool WriterFilter::supportsService( const OUString& rServiceName ) throw (un
 sal_Bool WriterFilter::supportsService( const OUString& rServiceName ) throw (uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    return WriterFilter_supportsService( rServiceName );
-#else	// SUPD == 310
     return cppu::supportsService( this, rServiceName );
-#endif	// SUPD == 310
 }
 
 

@@ -46,6 +46,7 @@ CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 I18NPAPERLIB=-li18npaper$(DLLPOSTFIX)
 
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/i18npool$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \

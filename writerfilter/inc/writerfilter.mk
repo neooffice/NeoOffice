@@ -36,6 +36,7 @@ CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 INCLOCAL += \
 	-I$(PRJ)$/source \
 	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/cppuhelper$/inc \
 	-I$(PRJ)$/..$/i18npool$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssdrawing \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \

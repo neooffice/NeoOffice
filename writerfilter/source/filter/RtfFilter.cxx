@@ -23,8 +23,8 @@
 #include <comphelper/mediadescriptor.hxx>
 #else	// SUPD == 310
 #include <unotools/mediadescriptor.hxx>
-#include <cppuhelper/supportsservice.hxx>
 #endif	// SUPD == 310
+#include <cppuhelper/supportsservice.hxx>
 #include <dmapper/DomainMapper.hxx>
 #include <rtftok/RTFDocument.hxx>
 #include <com/sun/star/io/WrongFormatException.hpp>
@@ -220,19 +220,12 @@ OUString RtfFilter::getImplementationName() throw(uno::RuntimeException, std::ex
 }
 
 #if SUPD == 310
-#define SERVICE_NAME1 "com.sun.star.document.ImportFilter"
-#define SERVICE_NAME2 "com.sun.star.document.ExportFilter"
 sal_Bool RtfFilter::supportsService(const OUString& rServiceName) throw(uno::RuntimeException)
 #else	// SUPD == 310
 sal_Bool RtfFilter::supportsService(const OUString& rServiceName) throw(uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    return (rServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) ||
-            rServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME2 ) ));
-#else	// SUPD == 310
     return cppu::supportsService(this, rServiceName);
-#endif	// SUPD == 310
 }
 
 #if SUPD == 310

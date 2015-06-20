@@ -18,9 +18,7 @@
  */
 
 #include <cppuhelper/implementationentry.hxx>
-#if SUPD != 310
 #include <cppuhelper/supportsservice.hxx>
-#endif	// SUPD != 310
 #include <WriterFilterDetection.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
@@ -111,17 +109,6 @@ OUString WriterFilterDetection::detect( uno::Sequence< beans::PropertyValue >& r
 }
 
 
-#if SUPD == 310
-
-#define SERVICE_NAME1 "com.sun.star.document.ExtendedTypeDetection"
-
-bool WriterFilterDetection_supportsService( const OUString& ServiceName ) throw (uno::RuntimeException)
-{
-   return (ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) );
-}
-
-#endif	// SUPD == 310
-
 uno::Sequence< OUString > WriterFilterDetection_getSupportedServiceNames(  ) throw (uno::RuntimeException)
 {
    uno::Sequence < OUString > aRet(1);
@@ -154,11 +141,7 @@ sal_Bool WriterFilterDetection::supportsService( const OUString& rServiceName ) 
 sal_Bool WriterFilterDetection::supportsService( const OUString& rServiceName ) throw (uno::RuntimeException, std::exception)
 #endif	//SUPD == 310
 {
-#if SUPD == 310
-    return WriterFilterDetection_supportsService( rServiceName );
-#else	//SUPD == 310
     return cppu::supportsService( this, rServiceName );
-#endif	//SUPD == 310
 }
 
 
