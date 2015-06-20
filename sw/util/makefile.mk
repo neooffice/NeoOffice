@@ -42,6 +42,7 @@ USE_DEFFILE=TRUE
 
 .IF "$(UPD)" == "310"
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/oox$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \

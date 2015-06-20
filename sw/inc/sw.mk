@@ -47,6 +47,7 @@ VISIBILITY_HIDDEN=TRUE
 INCLOCAL += \
 	-I$(PRJ)$/inc \
 	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/cppuhelper$/inc \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstext \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/csstable \
 	-I$(PRJ)$/..$/oox$/inc \
@@ -56,5 +57,6 @@ INCLOCAL += \
 	-I$(PRJ)$/..$/sfx2$/inc \
 	-I$(PRJ)$/..$/svtools$/inc \
 	-I$(PRJ)$/..$/svx$/inc \
-	-I$(PRJ)$/..$/tools$/inc
+	-I$(PRJ)$/..$/tools$/inc \
+	-I$(PRJ)$/..$/vcl$/inc
 .ENDIF		# "$(UPD)" == "310"
