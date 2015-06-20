@@ -44,6 +44,7 @@ ENABLE_EXCEPTIONS=TRUE
 
 .IF "$(UPD)" == "310"
 PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
@@ -53,7 +54,7 @@ PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/xmloff$/$(INPATH)$/lib
 
-# Link to modified libcomphelp, libsax, libtl, and libxo
+# Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
 SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"

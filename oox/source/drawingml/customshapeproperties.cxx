@@ -35,6 +35,7 @@
 
 #if SUPD == 310
 #include <com/sun/star/drawing/EnhancedCustomShapeAdjustmentValue2.hpp>
+#undef DEBUG
 #endif	// SUPD == 310
 
 using namespace ::oox::core;

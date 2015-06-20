@@ -29,9 +29,8 @@
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 #if SUPD == 310
 #include <sal/log.hxx>
-#else	// SUPD == 310
-#include <cppuhelper/supportsservice.hxx>
 #endif	// SUPD == 310
+#include <cppuhelper/supportsservice.hxx>
 #include <osl/conditn.hxx>
 #include <osl/diagnose.h>
 #include <rtl/ref.hxx>
@@ -1543,18 +1542,7 @@ sal_Bool FastSaxParser::supportsService( const OUString& ServiceName )
     throw (uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    Sequence< OUString > aSNL = getSupportedServiceNames();
-    const OUString * pArray = aSNL.getConstArray();
-
-    for( sal_Int32 i = 0; i < aSNL.getLength(); i++ )
-        if( pArray[i] == ServiceName )
-            return sal_True;
-
-    return sal_False;
-#else	// SUPD == 310
     return cppu::supportsService(this, ServiceName);
-#endif	// SUPD == 310
 }
 
 uno::Sequence<OUString> FastSaxParser::getSupportedServiceNames()

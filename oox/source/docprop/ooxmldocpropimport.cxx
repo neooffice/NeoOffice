@@ -31,9 +31,7 @@
 #include "oox/helper/helper.hxx"
 #include "docprophandler.hxx"
 
-#if SUPD != 310
 #include <cppuhelper/supportsservice.hxx>
-#endif	// SUPD != 310
 
 namespace oox {
 namespace docprop {
@@ -126,15 +124,7 @@ sal_Bool SAL_CALL DocumentPropertiesImport::supportsService( const OUString& rSe
 sal_Bool SAL_CALL DocumentPropertiesImport::supportsService( const OUString& rServiceName ) throw (RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    Sequence< OUString > aServiceNames = DocumentPropertiesImport_getSupportedServiceNames();
-    for( sal_Int32 nIndex = 0, nLength = aServiceNames.getLength(); nIndex < nLength; ++nIndex )
-        if( aServiceNames[ nIndex ] == rServiceName )
-            return sal_True;
-    return sal_False;
-#else	// SUPD == 310
     return cppu::supportsService(this, rServiceName);
-#endif	// SUPD == 310
 }
 
 #if SUPD == 310

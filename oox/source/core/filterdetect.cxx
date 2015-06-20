@@ -26,8 +26,8 @@
 #include <comphelper/mediadescriptor.hxx>
 #else	// SUPD == 310
 #include <unotools/mediadescriptor.hxx>
-#include <cppuhelper/supportsservice.hxx>
 #endif	// SUPD == 310
+#include <cppuhelper/supportsservice.hxx>
 
 #include "oox/core/fastparser.hxx"
 #include "oox/helper/attributelist.hxx"
@@ -448,14 +448,7 @@ sal_Bool SAL_CALL FilterDetect::supportsService( const OUString& rServiceName ) 
 sal_Bool SAL_CALL FilterDetect::supportsService( const OUString& rServiceName ) throw( RuntimeException, std::exception )
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    const Sequence< OUString > aServices = FilterDetect_getSupportedServiceNames();
-    const OUString* pArray = aServices.getConstArray();
-    const OUString* pArrayEnd = pArray + aServices.getLength();
-    return ::std::find( pArray, pArrayEnd, rServiceName ) != pArrayEnd;
-#else	// SUPD == 310
     return cppu::supportsService(this, rServiceName);
-#endif	// SUPD == 310
 }
 
 #if SUPD == 310

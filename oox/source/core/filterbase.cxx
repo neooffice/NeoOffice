@@ -28,10 +28,10 @@
 #include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <comphelper/docpasswordhelper.hxx>
+#include <cppuhelper/supportsservice.hxx>
 #if SUPD == 310
 #include <comphelper/mediadescriptor.hxx>
 #else	// SUPD == 310
-#include <cppuhelper/supportsservice.hxx>
 #include <unotools/mediadescriptor.hxx>
 #endif	// SUPD == 310
 #include <osl/mutex.hxx>
@@ -450,13 +450,7 @@ sal_Bool SAL_CALL FilterBase::supportsService( const OUString& rServiceName ) th
 sal_Bool SAL_CALL FilterBase::supportsService( const OUString& rServiceName ) throw( RuntimeException, std::exception )
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    return
-        (rServiceName == OUString(RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.ImportFilter" ))) ||
-        (rServiceName == OUString(RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.ExportFilter" )));
-#else	// SUPD == 310
     return cppu::supportsService(this, rServiceName);
-#endif	// SUPD == 310
 }
 
 #if SUPD == 310

@@ -54,13 +54,18 @@ CFLAGS += -DXML_UNICODE
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
+	-I$(PRJ)$/..$/cppuhelper$/inc \
 	-I$(PRJ)$/..$/expat$/$(INPATH)$/misc$/build$/expat-2.1.0$/lib \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssutil \
 	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlsax \
 	-I$(PRJ)$/..$/sal$/inc
 
-# Link to modified libexpat*.a
-SOLARLIB:=-L$(PRJ)$/..$/expat$/$(INPATH)$/lib $(SOLARLIB)
+PREPENDLIBS=$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/expat$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"
 
 #-----------------------------------------------------------

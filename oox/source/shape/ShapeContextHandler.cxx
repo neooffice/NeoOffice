@@ -29,9 +29,7 @@
 #include "oox/vml/vmlshape.hxx"
 #include "oox/drawingml/themefragmenthandler.hxx"
 #include <boost/scoped_ptr.hpp>
-#if SUPD != 310
 #include <cppuhelper/supportsservice.hxx>
-#endif	// SUPD != 310
 
 namespace oox { namespace shape {
 
@@ -746,16 +744,7 @@ sal_Bool SAL_CALL ShapeContextHandler::supportsService(const OUString & ServiceN
     throw (css::uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    uno::Sequence< ::rtl::OUString > aSeq = getSupportedServiceNames();
-
-    if (aSeq[0].equals(ServiceName))
-        return sal_True;
-
-    return sal_False;
-#else	// SUPD == 310
     return cppu::supportsService(this, ServiceName);
-#endif	// SUPD == 310
 }
 
 }}

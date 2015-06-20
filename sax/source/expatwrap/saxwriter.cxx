@@ -34,9 +34,9 @@
 
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/implbase2.hxx>
-#if SUPD != 310
 #include <cppuhelper/supportsservice.hxx>
 
+#if SUPD != 310
 #include <rtl/ref.hxx>
 #endif	// SUPD != 310
 #include <rtl/ustrbuf.hxx>
@@ -1077,18 +1077,7 @@ sal_Bool SAXWriter::supportsService(const OUString& ServiceName) throw()
 sal_Bool SAXWriter::supportsService(const OUString& ServiceName) throw(std::exception)
 #endif	// SUPD == 310
 {
-#if SUPD == 310
-    Sequence< OUString > aSNL = getSupportedServiceNames();
-    const OUString * pArray = aSNL.getConstArray();
-
-    for( sal_Int32 i = 0; i < aSNL.getLength(); i++ )
-        if( pArray[i] == ServiceName )
-            return sal_True;
-
-    return sal_False;
-#else	// SUPD == 310
     return cppu::supportsService(this, ServiceName);
-#endif	// SUPD == 310
 }
 
 // XServiceInfo
