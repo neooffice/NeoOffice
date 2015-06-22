@@ -689,10 +689,11 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 	SET_CURR_SHELL( this );
 
 #ifdef USE_JAVA
-	// Disable applying fix in OOo's "stop formatting" loop control while
-	// exporting to PDF. Otherwise stop formatting loop periodically to allow
-	// user to cancel if formatting is lasts longer than CALC_PAGES_INTERVAL
-	for ( ; ; )
+	// Skip layout entirely when exporting to PDF since layout as layout should
+	// have already been done in ViewShell::CalcLayout(). Otherwise stop
+	// formatting loop periodically to allow user to cancel if formatting is
+	// lasts longer than CALC_PAGES_INTERVAL.
+	while ( !mbThumbnail && !pOpt->IsPDFExport() )
 	{
 		PushToStopFormatStack( NULL, false, mbThumbnail ? 0 : CALC_PAGES_INTERVAL );
 #endif	// USE_JAVA
@@ -762,9 +763,6 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 
 #ifdef USE_JAVA
 		if ( !PopFromStopFormatStack() )
-			break;
-
-		if ( mbThumbnail )
 			break;
 
 		QueryBox aQueryBox( pWin, WB_OK_CANCEL | WB_DEF_OK, SW_RESSTR( STR_STATSTR_FORMAT ) );
