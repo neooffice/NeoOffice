@@ -1581,6 +1581,13 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		// Run VCLWindow selector to ensure that the window level is set
 		// correctly if the application is not active
 		[VCLWindow clearModalWindowLevel];
+
+		if ( [mpWindow isVisible] )
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+				[pApp requestUserAttention:NSInformationalRequest];
+		}
 	}
 }
 
@@ -1903,6 +1910,13 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( mpParent && ![mpWindow parentWindow] )
 				[mpParent addChildWindow:mpWindow ordered:NSWindowAbove];
+
+			if ( [mpWindow level] == NSModalPanelWindowLevel )
+			{
+				NSApplication *pApp = [NSApplication sharedApplication];
+				if ( pApp )
+					[pApp requestUserAttention:NSInformationalRequest];
+			}
 		}
 		else
 		{

@@ -76,6 +76,16 @@
 #include <viscrs.hxx>		// SwShellCrsr
 #include <fmtpdsc.hxx>		// SwFmtPageDesc
 
+#ifdef USE_JAVA
+
+#include <vcl/msgbox.hxx>
+#include <dbui.hrc>
+#include "../../ui/dbui/mailmergechildwindow.hrc"
+
+#define CALC_PAGES_INTERVAL 30000
+
+#endif	// USE_JAVA
+
 #define JOBSET_ERR_DEFAULT  		0
 #define JOBSET_ERR_ERROR 			1
 #define JOBSET_ERR_ISSTARTET 		2
@@ -679,9 +689,13 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 	SET_CURR_SHELL( this );
 
 #ifdef USE_JAVA
-    // Disable applying fix in OOo's "stop formatting" loop control while
-    // printing
-    PushToStopFormatStack( NULL, !mbThumbnail );
+	// Skip layout entirely when exporting to PDF since layout as layout should
+	// have already been done in ViewShell::CalcLayout(). Otherwise stop
+	// formatting loop periodically to allow user to cancel if formatting is
+	// lasts longer than CALC_PAGES_INTERVAL.
+	while ( !mbThumbnail && !pOpt->IsPDFExport() )
+	{
+		PushToStopFormatStack( NULL, false, mbThumbnail ? 0 : CALC_PAGES_INTERVAL );
 #endif	// USE_JAVA
 
 	//Seitenweise durchformatieren, by the way kann die Statusleiste
@@ -748,7 +762,19 @@ void ViewShell::CalcPagesForPrint( USHORT nMax, SfxProgress* pProgress,
 	pLayout->EndAllAction();
 
 #ifdef USE_JAVA
-    PopFromStopFormatStack();
+		if ( !PopFromStopFormatStack() )
+			break;
+
+		QueryBox aQueryBox( pWin, WB_OK_CANCEL | WB_DEF_OK, SW_RESSTR( STR_STATSTR_FORMAT ) );
+		// Load the DLG_MM_SENDMAILS to ensure that ST_CONTINUE is loaded
+		ModelessDialog aTmpDlg( NULL, SW_RES( DLG_MM_SENDMAILS ) );
+		String aContinue( SW_RES( ST_CONTINUE ) );
+		aTmpDlg.Close();
+		if ( aContinue.Len() )
+			aQueryBox.SetButtonText( BUTTONID_OK, aContinue );
+		if ( aQueryBox.Execute() == RET_CANCEL )
+			break;
+	}
 #endif	// USE_JAVA
 }
 
