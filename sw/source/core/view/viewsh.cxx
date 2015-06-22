@@ -1098,18 +1098,15 @@ void ViewShell::CalcLayout()
         if ( mbThumbnail )
             break;
 
-        if ( bEndProgress )
-        {
-            QueryBox aQueryBox( pWin, WB_OK_CANCEL | WB_DEF_OK, SW_RESSTR( STR_STATSTR_REFORMAT ) );
-            // Load the DLG_MM_SENDMAILS to ensure that ST_CONTINUE is loaded
-            ModelessDialog aTmpDlg( NULL, SW_RES( DLG_MM_SENDMAILS ) );
-            String aContinue( SW_RES( ST_CONTINUE ) );
-            aTmpDlg.Close();
-            if ( aContinue.Len() )
-                aQueryBox.SetButtonText( BUTTONID_OK, aContinue );
-            if ( aQueryBox.Execute() == RET_CANCEL )
-                break;
-        }
+        QueryBox aQueryBox( pWin, WB_OK_CANCEL | WB_DEF_OK, SW_RESSTR( STR_STATSTR_REFORMAT ) );
+        // Load the DLG_MM_SENDMAILS to ensure that ST_CONTINUE is loaded
+        ModelessDialog aTmpDlg( NULL, SW_RES( DLG_MM_SENDMAILS ) );
+        String aContinue( SW_RES( ST_CONTINUE ) );
+        aTmpDlg.Close();
+        if ( aContinue.Len() )
+            aQueryBox.SetButtonText( BUTTONID_OK, aContinue );
+        if ( aQueryBox.Execute() == RET_CANCEL )
+            break;
     }
 #endif	// USE_JAVA
 }
