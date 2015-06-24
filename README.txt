@@ -15,7 +15,11 @@ At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
 
    Warning: do *not* install Xcode 5 or a separately downloaded command line tools package as it will cause the "gcc" and "g++" to really use the clang compiler instead of the gcc compiler.
 
-2. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
+2. Download and install the Apple's Java 1.6 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs:
+
+   http://support.apple.com/kb/DL1572
+
+3. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /opt/local/bin/port install coreutils
    sudo /opt/local/bin/port install pkgconfig
@@ -27,15 +31,15 @@ At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can find the "autoconf" and other commands.
 
-3. Make sure that you have downloaded and installed the following Perl module from the http://www.cpan.org/modules/index.html website. Note that you will need to follow the instructions on the website to download and install the Archive::Zip module:
+4. Make sure that you have downloaded and installed the following Perl module from the http://www.cpan.org/modules/index.html website. Note that you will need to follow the instructions on the website to download and install the Archive::Zip module:
 
    Archive::Zip
 
-4. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
+5. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
 
    http://subversion.tigris.org/project_packages.html
 
-5. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
