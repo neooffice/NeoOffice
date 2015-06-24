@@ -54,7 +54,7 @@ diff -u -r1.9 makefile.mk
 +
 +#define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 +
-+typedef OSErr Gestalt_Type( OSType selector, long *response );
++typedef OSErr Gestalt_Type( OSType selector, SInt32 *response );
 +
 +#endif	// MACOSX
 +
@@ -68,7 +68,7 @@ diff -u -r1.9 makefile.mk
 -        "/../../../JavaVM"
 +        // Fix bug 1257 by explicitly loading the JVM instead of loading the
 +        // shared JavaVM library
-+        "/../Libraries/libjvm.dylib"
++        "/../Libraries/libserver.dylib"
  #else
          "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so", // for Blackdown PPC
          "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so", // for Blackdown AMD64
