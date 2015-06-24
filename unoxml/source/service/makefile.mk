@@ -45,7 +45,8 @@ CFLAGS+=-DSYSTEM_LIBXML $(LIBXML_CFLAGS)
 .ENDIF
 
 .IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
+PREPENDLIBS=$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
+	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
 	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib
 
 # Link to modified libraries
