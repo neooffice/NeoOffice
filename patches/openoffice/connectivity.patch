@@ -116,3 +116,14 @@
  #else
  #include <odbc/sqlext.h>
  #endif
+--- source/drivers/jdbc/ResultSet.cxx	2009-02-16 09:52:44.000000000 -0800
++++ source/drivers/jdbc/ResultSet.cxx	2015-06-23 19:08:25.000000000 -0700
+@@ -953,7 +953,7 @@
+ Reference< XInterface > SAL_CALL java_sql_ResultSet::getStatement(  ) throw(SQLException, RuntimeException)
+ {
+     RTL_LOGFILE_CONTEXT_AUTHOR( aLogger, "jdbc", "Ocke.Janssen@sun.com", "java_sql_ResultSet::getStatement" );
+-	return m_xStatement;
++	return Reference< XInterface >( m_xStatement );
+ }
+ // -------------------------------------------------------------------------
+ 
