@@ -36,14 +36,17 @@
 #ifndef INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
 #define INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
 
-#include "sal/config.h"
+#include <sal/config.h>
+#include <sal/types.h>
 
 #if defined __cplusplus
 extern "C" {
 #endif
 
 int java_main( int argc, char **argv );
-void java_main_init();
+
+sal_Bool SAL_DLLPUBLIC_EXPORT Application_canSave();
+sal_Bool SAL_DLLPUBLIC_EXPORT Application_canUseJava();
 
 #if defined __cplusplus
 }

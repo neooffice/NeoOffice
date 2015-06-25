@@ -93,6 +93,16 @@
 
 #include <tools/urlobj.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canSave_Type();
+
+static Application_canSave_Type *pApplication_canSave = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 //_______________________________________________
 // namespaces
 
@@ -2287,8 +2297,9 @@ void AutoRecovery::implts_saveOneDoc(const ::rtl::OUString&                     
         return;
 
 #if defined USE_JAVA && defined MACOSX
-    char *env = getenv( "SAL_ENABLE_MAS" );
-    if ( !env || strcmp( env, "1" ) )
+    if ( !pApplication_canSave )
+        pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_DEFAULT, "Application_canSave" );
+    if ( !pApplication_canSave || !pApplication_canSave() )
     {
         rInfo.DocumentState &= ~AutoRecovery::E_TRY_SAVE;
         rInfo.DocumentState |=  AutoRecovery::E_HANDLED;

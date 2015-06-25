@@ -31,11 +31,14 @@
  *
  ************************************************************************/
 
-#include <string.h>
-
 #include "main_java.h"
 
-void java_main_init()
+sal_Bool Application_canSave()
 {
-	putenv( strdup( "SAL_ENABLE_MAS=0" ) );
+	return sal_False;
+}
+
+sal_Bool Application_canUseJava()
+{
+	return sal_True;
 }

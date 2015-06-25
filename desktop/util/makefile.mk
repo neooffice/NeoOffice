@@ -60,6 +60,11 @@ RCFILES=ooverinfo2.rc
 LINKFLAGSAPPGUI!:=	$(LINKFLAGSAPPGUI:s/-bind_at_load//)
 .ENDIF # MACOSX
 
+.IF "$(GUIBASE)" == "java"
+JAVAAPPOBJS = $(OBJ)$/main_java.obj
+JAVAAPPSTDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+.ENDIF		# "$(GUIBASE)" == "java"
+
 #.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD" || "$(OS)" == "NETBSD"
 ## #74158# linux needs sal/vos/tools at end of link list, solaris needs it first,
 ## winXX is handled like solaris for now
@@ -83,10 +88,10 @@ APP1NOSAL=TRUE
 APP1RPATH=BRAND
 APP1OBJS=$(OBJ)$/copyright_ascii_sun.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP1OBJS+= \
-	$(OBJ)$/main_java.obj \
+APP1OBJS += \
+	$(JAVAAPPOBJS) \
 	$(OBJ)$/main_java_init.obj
-APP1STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+APP1STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
@@ -119,10 +124,10 @@ APP5NOSAL=TRUE
 APP5RPATH=BRAND
 APP5OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP5OBJS+= \
-	$(OBJ)$/main_java.obj \
+APP5OBJS += \
+	$(JAVAAPPOBJS) \
 	$(OBJ)$/main_java_init.obj
-APP5STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+APP5STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP5STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
@@ -192,10 +197,10 @@ APP8NOSAL=TRUE
 APP8RPATH=BRAND
 APP8OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP8OBJS+= \
-	$(OBJ)$/main_java.obj \
+APP8OBJS += \
+	$(JAVAAPPOBJS) \
 	$(OBJ)$/main_java_init2.obj
-APP8STDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+APP8STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP8STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"

@@ -93,7 +93,8 @@ static NSString *GetNSTemporaryDirectory()
 
 int java_main( int argc, char **argv )
 {
-	java_main_init();
+	Application_canSave();
+	Application_canUseJava();
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 

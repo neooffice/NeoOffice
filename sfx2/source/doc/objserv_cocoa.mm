@@ -47,6 +47,11 @@
 #import "objserv_cocoa.hrc"
 #import "../../../extensions/source/update/check/updatehdl.hrc"
 
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canSave_Type();
+
+static Application_canSave_Type *pApplication_canSave = NULL;
 static ResMgr *pObjServResMgr = NULL;
 static ResMgr *pUpdResMgr = NULL;
 
@@ -83,6 +88,8 @@ static XubString GetUpdResString( int nId )
  
 	return XubString( ResId( nId, *pUpdResMgr ) );
 }
+
+static NSAlert *pSaveDisabledAlert = nil;
 
 @interface ShowSaveDisabledDialog : NSObject
 {
@@ -142,43 +149,53 @@ static XubString GetUpdResString( int nId )
 
 - (void)showSaveDisabledDialog:(id)pObject
 {
+	if ( pSaveDisabledAlert )
+		return;
+
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] && ![@"http" isEqualToString:[pURL scheme]] && ![@"https" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 
-	NSAlert *pAlert;
-	if ( pWorkspace && pURL )
+	@try
 	{
-		NSString *pInformativeText = mpInformativeText;
-		if ( !pInformativeText )
-			pInformativeText = @"";
-		pAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:mpDefaultButton alternateButton:mpAlternateButton otherButton:nil informativeTextWithFormat:pInformativeText, nil];
-		if ( pAlert )
+		if ( pWorkspace && pURL )
 		{
-			NSArray *pButtons = [pAlert buttons];
-			if ( [pButtons count] > 1 )
+			NSString *pInformativeText = mpInformativeText;
+			if ( !pInformativeText )
+				pInformativeText = @"";
+			pSaveDisabledAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:mpDefaultButton alternateButton:mpAlternateButton otherButton:nil informativeTextWithFormat:pInformativeText, nil];
+			if ( pSaveDisabledAlert )
 			{
-				NSButton *pAlternateButton = [pButtons objectAtIndex:1];
-				if ( pAlternateButton )
+				NSArray *pButtons = [pSaveDisabledAlert buttons];
+				if ( [pButtons count] > 1 )
 				{
-					unichar cEscapeChar = 0x1b;
-					NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
-					if ( pEscapeKey )
-						[pAlternateButton setKeyEquivalent:pEscapeKey];
+					NSButton *pAlternateButton = [pButtons objectAtIndex:1];
+					if ( pAlternateButton )
+					{
+						unichar cEscapeChar = 0x1b;
+						NSString *pEscapeKey = [NSString stringWithCharacters:&cEscapeChar length:1];
+						if ( pEscapeKey )
+							[pAlternateButton setKeyEquivalent:pEscapeKey];
+					}
 				}
-			}
 
-			if ( [pAlert runModal] == NSAlertDefaultReturn )
-				[pWorkspace openURL:pURL];
+				if ( [pSaveDisabledAlert runModal] == NSAlertDefaultReturn )
+					[pWorkspace openURL:pURL];
+			}
+		}
+		else
+		{
+			pSaveDisabledAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+			if ( pSaveDisabledAlert )
+				[pSaveDisabledAlert runModal];
 		}
 	}
-	else
+	@catch ( NSException *pExc )
 	{
-		pAlert = [NSAlert alertWithMessageText:mpMessageText defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-		if ( pAlert )
-			[pAlert runModal];
 	}
+
+	pSaveDisabledAlert = nil;
 }
 
 @end
@@ -189,8 +206,9 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 
 	if ( pObjShell && ( nID == SID_DOCTEMPLATE || nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
 	{
-		char *env = getenv( "SAL_ENABLE_MAS" );
-		if ( !env || strcmp( env, "1" ) )
+		if ( !pApplication_canSave )
+			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_DEFAULT, "Application_canSave" );
+		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
 			bRet = sal_False;
 
