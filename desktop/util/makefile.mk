@@ -219,31 +219,31 @@ APP8LINKRES=$(MISC)$/ooffice8.res
 APP8STACK=10000000
 .ENDIF # WNT
 
-APP8TARGET=soffice3
-APP8NOSAL=TRUE
-APP8RPATH=BRAND
-APP8OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
+APP9TARGET=soffice3
+APP9NOSAL=TRUE
+APP9RPATH=BRAND
+APP9OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP8OBJS += \
+APP9OBJS += \
 	$(JAVAAPPOBJS) \
 	$(OBJ)$/main_java_init3.obj
-APP8STDLIBS = $(JAVAAPPSTDLIBS)
+APP9STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
-APP8STDLIBS = $(SALLIB) $(SOFFICELIB)
+APP9STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
 .IF "$(OS)" == "LINUX"
-APP8STDLIBS+= -lXext -lSM -lICE
+APP9STDLIBS+= -lXext -lSM -lICE
 .ENDIF # LINUX
 
-APP8DEPN= $(APP1TARGETN) $(APP8RES) ooverinfo.rc
-APP8DEF=    $(MISCX)$/$(TARGET).def
+APP9DEPN= $(APP1TARGETN) $(APP9RES) ooverinfo.rc
+APP9DEF=    $(MISCX)$/$(TARGET).def
 
 .IF "$(GUI)" == "WNT"
-APP8RES=    $(RES)$/oodesktop.res
-APP8ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
-APP8VERINFO=ooverinfo.rc
-APP8LINKRES=$(MISC)$/ooffice8.res
-APP8STACK=10000000
+APP9RES=    $(RES)$/oodesktop.res
+APP9ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
+APP9VERINFO=ooverinfo.rc
+APP9LINKRES=$(MISC)$/ooffice8.res
+APP9STACK=10000000
 .ENDIF # WNT
 
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
