@@ -219,6 +219,33 @@ APP8LINKRES=$(MISC)$/ooffice8.res
 APP8STACK=10000000
 .ENDIF # WNT
 
+APP8TARGET=soffice3
+APP8NOSAL=TRUE
+APP8RPATH=BRAND
+APP8OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
+.IF "$(GUIBASE)" == "java"
+APP8OBJS += \
+	$(JAVAAPPOBJS) \
+	$(OBJ)$/main_java_init3.obj
+APP8STDLIBS = $(JAVAAPPSTDLIBS)
+.ELSE		# "$(GUIBASE)" == "java"
+APP8STDLIBS = $(SALLIB) $(SOFFICELIB)
+.ENDIF		# "$(GUIBASE)" == "java"
+.IF "$(OS)" == "LINUX"
+APP8STDLIBS+= -lXext -lSM -lICE
+.ENDIF # LINUX
+
+APP8DEPN= $(APP1TARGETN) $(APP8RES) ooverinfo.rc
+APP8DEF=    $(MISCX)$/$(TARGET).def
+
+.IF "$(GUI)" == "WNT"
+APP8RES=    $(RES)$/oodesktop.res
+APP8ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
+APP8VERINFO=ooverinfo.rc
+APP8LINKRES=$(MISC)$/ooffice8.res
+APP8STACK=10000000
+.ENDIF # WNT
+
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
 
 # --- Targets -------------------------------------------------------------

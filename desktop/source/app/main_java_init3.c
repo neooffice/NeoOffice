@@ -11,9 +11,9 @@
  *
  *		 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, May 2014
+ *  Patrick Luby, June 2015
  *
- *  Copyright 2014 Planamesa Inc.
+ *  Copyright 2015 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -35,10 +35,10 @@
 
 sal_Bool Application_canSave()
 {
-	return sal_False;
+	return sal_True;
 }
 
 sal_Bool Application_canUseJava()
 {
-	return sal_False;
+	return sal_True;
 }

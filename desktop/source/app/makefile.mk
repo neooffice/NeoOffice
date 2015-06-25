@@ -101,12 +101,13 @@ OBJFILES += \
     $(OBJ)$/copyright_ascii_sun.obj
 .ENDIF
 
-.IF "$(GUIBASE)" == "java"
+.IF "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
 OBJFILES += \
     $(OBJ)$/main_java.obj \
     $(OBJ)$/main_java_init.obj \
-    $(OBJ)$/main_java_init2.obj
-.ENDIF		# "$(GUIBASE)" == "java"
+    $(OBJ)$/main_java_init2.obj \
+    $(OBJ)$/main_java_init3.obj
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
 
 SLOFILES = $(SHL1OBJS)
 
