@@ -6,5 +6,8 @@ build.neo_configure_phony:
 	sh -e -c 'if ! grep -q "^setenv ENVCDEFS " "$(OO_ENV_JAVA)" ; then echo "setenv ENVCDEFS -DUSE_JAVA" >> "$(OO_ENV_JAVA)" ; fi'
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_DIR_NAME2 '$(PRODUCT_DIR_NAME2)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_DIR_NAME3 '$(PRODUCT_DIR_NAME3)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_DOMAIN '$(PRODUCT_DOMAIN)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_MAC_APP_STORE_URL '$(PRODUCT_MAC_APP_STORE_URL)'" >> "$(OO_ENV_JAVA)"

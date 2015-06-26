@@ -7,11 +7,11 @@
         <line choice="choice0"/>
     </choices-outline>
     <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_LANG_PACK_VERSION)">
-        <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg"/>
+        <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)_langpack.pkg"/>
     </choice>
     <!--
         Note: CFBundleIdentifier must be different than the main installer's
         identifier or else the main installer's files will be deleted on
         Mac OS X 10.6 and higher
     -->
-    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_SHORT_VERSION)" auth="root">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)_langpack.pkg" version="$(PRODUCT_SHORT_VERSION)" auth="root">#contents.pkg</pkg-ref>

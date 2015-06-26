@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pkg-info format-version="2" overwrite-permissions="true" relocatable="true" identifier="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" install-location="/Applications" auth="root" preserve-xattr="true">
-    <bundle path="./$(PRODUCT_INSTALL_DIR_NAME).app" id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_SHORT_VERSION)"/>
+<pkg-info format-version="2" overwrite-permissions="true" relocatable="true" identifier="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" install-location="/Applications" auth="root" preserve-xattr="true">
+    <bundle path="./$(PRODUCT_INSTALL_DIR_NAME).app" id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_SHORT_VERSION)"/>
 	<!-- Allow downgrading -->
     <bundle-version/>
     <upgrade-bundle>
-        <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        <bundle id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
     </upgrade-bundle>
     <update-bundle/>
     <atomic-update-bundle/>
     <strict-identifier>
-        <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        <bundle id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
     </strict-identifier>
     <relocate>
-        <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+        <bundle id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
     </relocate>

@@ -911,7 +911,7 @@
 	<key>CFBundleIconFile</key>
 	<string>ship.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.neooffice.$(PRODUCT_DIR_NAME)</string>
+	<string>$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>

@@ -5,23 +5,23 @@
     <domains enable_localSystem="true"/>
     <choices-outline>
         <line choice="default">
-            <line choice="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+            <line choice="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
         </line>
     </choices-outline>
     <choice id="default" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)"/>
-    <choice id="org.neooffice.$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false" customLocation="/Applications">
-        <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+    <choice id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" title="$(PRODUCT_NAME) $(PRODUCT_VERSION)" visible="false" customLocation="/Applications">
+        <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
     </choice>
-    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>
-    <pkg-ref id="org.neooffice.$(PRODUCT_DIR_NAME)">
+    <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)" onConclusion="none">#contents.pkg</pkg-ref>
+    <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)">
         <bundle-version>
-            <bundle id="org.neooffice.$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_SHORT_VERSION)" path="$(PRODUCT_NAME).app"/>
+            <bundle id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" CFBundleShortVersionString="$(PRODUCT_SHORT_VERSION)" path="$(PRODUCT_NAME).app"/>
         </bundle-version>
         <must-close>
-            <app id="org.neooffice.$(PRODUCT_DIR_NAME)"/>
+            <app id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)"/>
         </must-close>
     </pkg-ref>
-    <product id="org.neooffice.$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)"/>
+    <product id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" version="$(PRODUCT_SHORT_VERSION)"/>
     <volume-check>
         <allowed-os-versions>
             <os-version min="$(PRODUCT_MIN_OSVERSION)"/>

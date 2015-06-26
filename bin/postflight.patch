@@ -97,7 +97,7 @@ if check_installation "$lastcontentshome" ; then
 			sudo -H -u "$sudouser" /bin/sh -l -c "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user"
 		fi
 
-		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read \"$HOME/Library/Containers/org.neooffice.$(PRODUCT_DIR_NAME)/Data/Library/Preferences/org.neooffice.$(PRODUCT_DIR_NAME).plist\" updateSuppressLaunchAfterInstallation 2>/dev/null"`
+		launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read \"$HOME/Library/Containers/$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME).plist\" updateSuppressLaunchAfterInstallation 2>/dev/null"`
 		if [ -z "$launch" -o "$launch" = "0" ] ; then
 			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""
 		fi
