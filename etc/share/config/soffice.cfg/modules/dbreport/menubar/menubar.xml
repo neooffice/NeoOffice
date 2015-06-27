@@ -12,6 +12,13 @@
       <menu:menuitem menu:id=".uno:Save"/>
       <menu:menuitem menu:id=".uno:SaveAs"/>
       <menu:menuitem menu:id=".uno:SaveAll"/>
+      <menu:menuseparator/>
+      <menu:menu menu:id=".uno:ExportReportTo">
+        <menu:menupopup>
+          <menu:menuitem menu:id=".uno:TextDocument"/>
+          <menu:menuitem menu:id=".uno:Spreadsheet"/>
+        </menu:menupopup>
+      </menu:menu>
     </menu:menupopup>
   </menu:menu>
   <menu:menu menu:id=".uno:EditMenu" >
@@ -27,14 +34,17 @@
           <menu:menuitem menu:id=".uno:SelectAll"/>
           <menu:menuitem menu:id=".uno:SelectAllLabels"/>
           <menu:menuitem menu:id=".uno:SelectAllEdits"/>
+          <menu:menuitem menu:id=".uno:SelectReport"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:Delete"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:PageHeaderFooter"/>
+      <menu:menuitem menu:id=".uno:ReportHeaderFooter"/>
       <menu:menuitem menu:id=".uno:ColumnHeaderFooter"/>
       <menu:menuseparator/>
+      <menu:menuitem menu:id=".uno:ExecuteReport"/>
     </menu:menupopup>
   </menu:menu>
   <menu:menu menu:id=".uno:ViewMenu" >
@@ -44,6 +54,7 @@
       <menu:menuitem menu:id=".uno:ControlProperties"/>
       <menu:menuitem menu:id=".uno:AddField"/>
       <menu:menuitem menu:id=".uno:DbSortingAndGrouping"/>
+      <menu:menuitem menu:id=".uno:ReportNavigator"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:AvailableToolbars"/>
       <menu:menuitem menu:id=".uno:StatusBarVisible"/>

@@ -17,6 +17,9 @@
 			<menu:menu menu:id=".uno:SendToMenu">
 				<menu:menupopup>
 					<menu:menuitem menu:id=".uno:SendMail"/>
+					<menu:menuitem menu:id=".uno:DBSendReportAsMail"/>
+					<menu:menuseparator/>
+					<menu:menuitem menu:id=".uno:DBSendReportToWriter"/>
 				</menu:menupopup>
 			</menu:menu>
 		</menu:menupopup>
@@ -36,6 +39,8 @@
       <menu:menuitem menu:id=".uno:DBEditSqlView"/>
 			<menu:menuitem menu:id=".uno:DBOpen"/>
 			<menu:menuitem menu:id=".uno:DBConvertToView"/>
+			<menu:menuitem menu:id=".uno:DBNewFormAutoPilotWithPreSelection"/>
+			<menu:menuitem menu:id=".uno:DBNewReportAutoPilotWithPreSelection"/>
 			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:SelectAll"/>
 			<menu:menuseparator/>
@@ -55,6 +60,7 @@
 					<menu:menuitem menu:id=".uno:DBViewTables"/>
 					<menu:menuitem menu:id=".uno:DBViewQueries"/>
 					<menu:menuitem menu:id=".uno:DBViewForms"/>
+					<menu:menuitem menu:id=".uno:DBViewReports"/>
 				</menu:menupopup>
 			</menu:menu>
 			<menu:menuseparator/>
@@ -80,6 +86,7 @@
 	<menu:menu menu:id=".uno:InsertMenu">
 		<menu:menupopup>
 			<menu:menuitem menu:id=".uno:DBNewForm" menu:helpid="12305" menu:label="" />
+			<menu:menuitem menu:id=".uno:DBNewReport" menu:helpid="12316" menu:label="" />
 			<menu:menuitem menu:id=".uno:DBNewQuery" menu:helpid="38873" menu:label="" />
 			<menu:menuitem menu:id=".uno:DBNewQuerySql" menu:helpid="38841" menu:label="" />
 			<menu:menuseparator/>
