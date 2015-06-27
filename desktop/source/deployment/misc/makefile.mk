@@ -42,8 +42,8 @@ TARGET = deplmisc
 
 .INCLUDE : settings.mk
 
-.IF "$(PRODUCT_DIR_NAME)" != ""
-CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
+.IF "$(PRODUCT_NAME)" != ""
+CDEFS += -DPRODUCT_NAME='"$(PRODUCT_NAME)"'
 .ENDIF
 
 # Reduction of exported symbols:

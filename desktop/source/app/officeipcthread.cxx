@@ -438,11 +438,11 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	::vos::OStartupInfo aInfo;
 	OfficeIPCThread* pThread = new OfficeIPCThread;
 
-#ifdef PRODUCT_DIR_NAME
-	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
-#else	// PRODUCT_DIR_NAME
+#ifdef PRODUCT_NAME
+	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_NAME "IPC_" ) );
+#else	// PRODUCT_NAME
 	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "SingleOfficeIPC_" ) );
-#endif	// PRODUCT_DIR_NAME
+#endif	// PRODUCT_NAME
 
 	// The name of the named pipe is created with the hashcode of the user installation directory (without /user). We have to retrieve
 	// this information from a unotools implementation.

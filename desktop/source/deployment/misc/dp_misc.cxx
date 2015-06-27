@@ -123,11 +123,11 @@ const OUString OfficePipeId::operator () ()
     // create hex-value string from the MD5 value to keep
     // the string size minimal
     ::rtl::OUStringBuffer buf;
-#ifdef PRODUCT_DIR_NAME
-    buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_DIR_NAME "IPC_") );
-#else	// PRODUCT_DIR_NAME
+#ifdef PRODUCT_NAME
+    buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_NAME "IPC_") );
+#else	// PRODUCT_NAME
     buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("SingleOfficeIPC_") );
-#endif	// PRODUCT_DIR_NAME
+#endif	// PRODUCT_NAME
     for ( sal_uInt32 i = 0; i < md5_key_len; ++i ) {
         buf.append( static_cast<sal_Int32>(md5_buf[ i ]), 0x10 );
     }

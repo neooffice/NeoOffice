@@ -50,6 +50,7 @@ static NSString *GetNSTemporaryDirectory()
 {
 	NSString *pTempDir = nil;
 
+#ifdef PRODUCT_NAME
 	NSFileManager *pFileManager = [NSFileManager defaultManager];
 	if ( pFileManager )
 	{
@@ -69,7 +70,7 @@ static NSString *GetNSTemporaryDirectory()
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 				{
 					// Append program name to cache path
-					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_DIR_NAME]];
+					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:PRODUCT_NAME]];
 					bDir = NO;
 					if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath withIntermediateDirectories:NO attributes:pDict error:nil] )
 					{
@@ -80,6 +81,7 @@ static NSString *GetNSTemporaryDirectory()
 			}
 		}
 	}
+#endif	// PRODUCT_NAME
 
 	if ( !pTempDir )
 	{
