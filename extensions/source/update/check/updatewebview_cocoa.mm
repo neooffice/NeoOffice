@@ -350,9 +350,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		// Determine which server type to use. The default server type can be
 		// overridden using the following Terminal command:
-		//   defaults write org.neooffice.NeoOffice updateServerType development|test
+		//   defaults write $(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME) updateServerType development|test
 		// To use the default server type, use the following Terminal command:
-		//   defaults delete org.neooffice.NeoOffice updateServerType
+		//   defaults delete $(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME) updateServerType
 		unsigned int nBaseURLCount = 0;
 		const NSString **pBaseURLs = nil;
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
