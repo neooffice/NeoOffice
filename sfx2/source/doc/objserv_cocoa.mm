@@ -207,7 +207,7 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 	if ( pObjShell && ( nID == SID_DOCTEMPLATE || nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
 	{
 		if ( !pApplication_canSave )
-			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_DEFAULT, "Application_canSave" );
+			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
 			bRet = sal_False;

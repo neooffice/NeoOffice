@@ -2298,7 +2298,7 @@ void AutoRecovery::implts_saveOneDoc(const ::rtl::OUString&                     
 
 #if defined USE_JAVA && defined MACOSX
     if ( !pApplication_canSave )
-        pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_DEFAULT, "Application_canSave" );
+        pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
     if ( !pApplication_canSave || !pApplication_canSave() )
     {
         rInfo.DocumentState &= ~AutoRecovery::E_TRY_SAVE;
