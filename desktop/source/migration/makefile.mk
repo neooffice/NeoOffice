@@ -40,8 +40,8 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
-.IF "$(PRODUCT_DIR_NAME)" != ""
-CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
+.IF "$(PRODUCT_DIR_NAME3)" != ""
+CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME3)"'
 .ENDIF
 
 # --- Files --------------------------------------------------------

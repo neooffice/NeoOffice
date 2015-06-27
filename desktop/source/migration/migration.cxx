@@ -325,7 +325,7 @@ install_info MigrationImpl::findInstallation()
 	aProductName = aProductName.toAsciiLowerCase();
 
     install_info aInfo;
-#ifdef PRODUCT_DIR_NAME
+#ifdef PRODUCT_DIR_NAME3
     // Use old installation if it exists
     OUString usAltInstall;
     osl::Security().getConfigDir( usAltInstall );
@@ -333,7 +333,7 @@ install_info MigrationImpl::findInstallation()
     {
         if ( usAltInstall[ usAltInstall.getLength() - 1 ] != '/' )
             usAltInstall += OUString::createFromAscii( "/" );
-        usAltInstall += OUString::createFromAscii( PRODUCT_DIR_NAME "-2.2" );
+        usAltInstall += OUString::createFromAscii( PRODUCT_DIR_NAME3 "-2.2" );
         try
         {
        	    INetURLObject aObj( usAltInstall );
@@ -346,7 +346,7 @@ install_info MigrationImpl::findInstallation()
        	}
        	catch( uno::Exception& ){}
    	}
-#else	// PRODUCT_DIR_NAME
+#else	// PRODUCT_DIR_NAME3
     strings_v::const_iterator i_ver = m_vrVersions->begin();
 	uno::Reference < util::XStringSubstitution > xSubst( ::comphelper::getProcessServiceFactory()->createInstance(::rtl::OUString::createFromAscii("com.sun.star.util.PathSubstitution")), uno::UNO_QUERY );
     while (i_ver != m_vrVersions->end())
@@ -385,7 +385,7 @@ install_info MigrationImpl::findInstallation()
 		i_ver++;
 	}
 
-#endif	// PRODUCT_DIR_NAME
+#endif	// PRODUCT_DIR_NAME3
 	return aInfo;
 }
 
