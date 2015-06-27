@@ -33,6 +33,11 @@
 
 #include "main_java.h"
 
+FUNCTION( PRODUCT_CHECKSUM3 )
+{
+	return sal_True;
+}
+
 sal_Bool Application_canSave()
 {
 	return sal_True;

@@ -43,10 +43,6 @@ ENABLE_EXCEPTIONS=TRUE
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
-.IF "$(GUIBASE)" == "java"
-CDEFS+=-DPRODUCT_MD5="$(shell md5 -q -s '$(PRODUCT_NAME)_org.neooffice.$(PRODUCT_DIR_NAME)')"
-.ENDIF		# "$(GUIBASE)" == "java"
-
 # --- Files --------------------------------------------------------
 
 SLOFILES=	$(SLO)$/dbggui.obj		\

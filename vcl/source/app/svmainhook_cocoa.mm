@@ -50,12 +50,6 @@
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
-#define DOSTRING( x ) #x
-#define STRING( x ) DOSTRING( x )
-
-#define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
-#define FUNCTION( x ) DOFUNCTION( x )
-
 typedef MacOSBOOL BundleCheck_Type();
 
 // The following are custom data types for Apple's App Store receipt payload
@@ -143,11 +137,6 @@ using namespace rtl;
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
 
-extern "C" FUNCTION( PRODUCT_MD5 )
-{
-	return YES;
-}
-
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -179,19 +168,9 @@ void NSApplication_run()
 								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
 
 							const char *pKeyMD5String = [pKeyMD5 UTF8String];
-							OUString aLibName = ::vcl::unohelper::CreateLibraryName( "vcl", TRUE );
-							if ( pKeyMD5String && aLibName.getLength() )
-							{
-								void *pLib = dlopen( OUStringToOString( aLibName, osl_getThreadTextEncoding() ).getStr(), RTLD_LAZY | RTLD_LOCAL );
-								if ( pLib )
-								{
-									BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( pLib, pKeyMD5String );
-									if ( pBundleCheck )
-										bBundleOK = pBundleCheck();
-
-									dlclose( pLib );
-								}
-							}
+							BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( RTLD_MAIN_ONLY, pKeyMD5String );
+							if ( pBundleCheck )
+								bBundleOK = pBundleCheck();
 						}
 					}
 				}

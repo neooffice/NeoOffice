@@ -39,6 +39,9 @@
 #include <sal/config.h>
 #include <sal/types.h>
 
+#define DOFUNCTION( x ) sal_Bool SAL_DLLPUBLIC_EXPORT _##x ()
+#define FUNCTION( x ) DOFUNCTION( x )
+
 #if defined __cplusplus
 extern "C" {
 #endif
