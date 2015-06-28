@@ -324,6 +324,7 @@
 		</prop>
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
+-->
 
         <node oor:name="MediaWiki_Web" oor:op="replace">
 		<prop oor:name="FileFormatVersion"><value>0</value></prop>
@@ -348,7 +349,6 @@
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
--->
 
     <node oor:name="MS Word 2008 XML" oor:op="replace">
         <prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
