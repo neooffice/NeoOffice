@@ -324,7 +324,6 @@
 		</prop>
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
--->
 
         <node oor:name="MediaWiki_Web" oor:op="replace">
 		<prop oor:name="FileFormatVersion"><value>0</value></prop>
@@ -338,6 +337,7 @@
 		</prop>
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
+-->
 
 	<node oor:name="MS Word 2003 XML" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
