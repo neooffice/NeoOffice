@@ -2,6 +2,7 @@
 <!DOCTYPE oor:component-data SYSTEM "../../../../component-update.dtd">
 <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.TypeDetection" oor:name="Filter">
 	<node oor:name="Filters">
+<!-- Disable Java-based filters
 	<node oor:name="DocBook File" oor:op="replace">
 		<prop oor:name="FileFormatVersion"><value>0</value></prop>
 		<prop oor:name="Type"><value>writer_DocBook_File</value></prop>
@@ -128,7 +129,6 @@
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
 
-<!-- Disable Java-based filters
 	<node oor:name="UOF text" oor:op="replace">
 		<prop oor:name="FileFormatVersion"><value>0</value></prop>
 		<prop oor:name="Type"><value>Unified_Office_Format_text</value></prop>
