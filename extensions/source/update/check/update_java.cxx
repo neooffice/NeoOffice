@@ -145,11 +145,9 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 					{
 						pMountPackageArgs[ 2 ] = dit->second.pData;
 
-						oslProcess aProcess;
+						oslProcess aProcess = NULL;
 						if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, NULL, NULL, NULL, 0, &aProcess) == osl_Process_E_None)
 							aMountPackageProcessList.push_back(aProcess);
-						else
-							osl_freeProcessHandle(aProcess);
 					}
 				}
 #endif	// MACOSX
@@ -178,14 +176,16 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 			// Open a stdin pipe to the subprocess and don't close it and let
 			// it leak to force the subprocess to not run the installers until
 			// after the application has quit
-			oslProcess aProcess;
-			oslFileHandle aStdinHandle;
+			oslProcess aProcess = NULL;
+			oslFileHandle aStdinHandle = NULL;
 			if (osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL) == osl_Process_E_None)
+			{
 				bJoin = true;
+				osl_freeProcessHandle(aProcess);
+			}
 #ifndef MACOSX
 			rtl_freeMemory(pArgs);
 #endif	// !MACOSX
-			osl_freeProcessHandle(aProcess);
 		}
 
 		TimeValue aTimeout;
