@@ -235,8 +235,7 @@ void NSApplication_terminate()
 			pURL = [pURL filePathURL];
 		if ( pURL )
 			pURL = [pURL URLByStandardizingPath];
-		NSError *pError = nil;
-		if ( pURL && [pURL checkResourceIsReachableAndReturnError:&pError] )
+		if ( pURL && [pURL checkResourceIsReachableAndReturnError:nil] )
 		{
 			NSData *pData = [NSData dataWithContentsOfURL:pURL];
 			if ( pData && pData.length && pData.bytes )
