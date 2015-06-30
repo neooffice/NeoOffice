@@ -58,10 +58,7 @@
 #include <string.h>
 
 #if defined USE_JAVA && defined MACOSX
-
-#include <dlfcn.h>
 #include <errno.h>
-
 #endif	// USE_JAVA && MACOSX
 
 #include "sunjre.hxx"
@@ -110,9 +107,7 @@ char const *g_arSearchPaths[] = {
 #ifdef MACOSX
     "",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.5.1/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/"
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/"
 #else
     "",
     "usr/",

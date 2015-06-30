@@ -35,23 +35,10 @@
 
 #ifdef MACOSX
 
-#ifndef USE_JAVA
-#include <dlfcn.h>
-#endif	// !USE_JAVA
 #include "sunversion.hxx"
 #include "diagnostics.h"
 
-#ifndef USE_JAVA
-
-#include <premac.h>
-#include <CoreServices/CoreServices.h>
-#include <postmac.h>
-
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
-
-typedef OSErr Gestalt_Type( OSType selector, long *response );
-
-#endif	// !USE_JAVA
 
 #endif	// MACOSX
 
@@ -95,7 +82,7 @@ char const* const* OtherInfo::getRuntimePaths(int * size)
 #ifdef MACOSX
         // Fix bug 1257 by explicitly loading the JVM instead of loading the
         // shared JavaVM library
-        "/../Libraries/libjvm.dylib"
+        "/../Libraries/libserver.dylib"
 #else
         "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so", // for Blackdown PPC
         "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so", // for Blackdown AMD64
@@ -157,51 +144,6 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
 #ifdef USE_JAVA
     // Only run Java 1.6.x or later
     if ( version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.6.0" ) ) )
-        return -1;
-#else	// USE_JAVA
-    // If we are running Leopard, don't allow loading of any JVM earlier than
-    // Java 1.5.0
-    static bool initializedOnce = false;
-    static bool isLaterThanLeopard = false;
-    static bool isLeopard = false;
-    if ( ! initializedOnce )
-    {
-        void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
-        if ( pLib )
-        {
-            Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
-            if ( pGestalt )
-            {
-                SInt32 res = 0;
-                pGestalt( gestaltSystemVersionMajor, &res );
-                if ( res == 10 )
-                {
-                    res = 0;
-                    pGestalt( gestaltSystemVersionMinor, &res );
-                    if ( res > 5 )
-                        isLaterThanLeopard = true;
-                    else if ( res ==  5 )
-                        isLeopard = true;
-                }
-                else
-                {
-                    isLaterThanLeopard = true;
-                }
-            }
-
-            dlclose( pLib );
-        }
-
-        initializedOnce = true;
-    }
-
-    // Only run Java 1.5.x on Leopard as Java 1.4.x is crashy and Java 1.6.x
-	// will hang on anything before Snow Leopard
-    if ( isLaterThanLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.6.0" ) ) )
-        return -1;
-    else if ( !isLaterThanLeopard && version1 > SunVersion( ::rtl::OUString::createFromAscii( "1.5.999" ) ) )
-        return -1;
-    else if ( isLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.5.0" ) ) )
         return -1;
 #endif	// USE_JAVA
 

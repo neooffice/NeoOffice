@@ -79,6 +79,7 @@ SHL1STDLIBS= \
 		$(SALLIB) \
 		$(SALHELPERLIB)
 		
+
 .IF "$(GUI)" == "WNT"
 .IF "$(COM)"!="GCC"
 SHL1STDLIBS += uwinapi.lib advapi32.lib
