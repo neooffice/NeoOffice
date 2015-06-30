@@ -47,7 +47,10 @@ fi
 
 # Launch installation
 if [ ! -z "$sudouser" ] ; then
-	sudo -H -u "$sudouser" /bin/sh -l -c "sleep 10 ; /usr/bin/open -b '$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)'" &
+	launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read '$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)' updateSuppressLaunchAfterInstallation 2>/dev/null"`
+	if [ -z "$launch" -o "$launch" = "0" ] ; then
+		sudo -H -u "$sudouser" /bin/sh -l -c "sleep 10 ; /usr/bin/open -b '$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)'" &
+	fi
 fi
 
 exit 0
