@@ -23,7 +23,7 @@ Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice 
 
 
 What's New in this Version:
-NeoOffice 3.x, OpenOffice und LibreOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Liste der Änderungen.
+NeoOffice, OpenOffice und LibreOffice Benutzer: Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Liste der Änderungen.
 
 This version of NeoOffice includes significantly faster handling of lengthy, 100+ page documents with tables.
 
