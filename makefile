@@ -521,7 +521,7 @@ else
 endif
 # Mac App Store will reject apps with shell scripts
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in sbase scalc sdraw simpress smath soffice swriter unopkg unopkg.bin ; do rm -f "MacOS/$$i" ; ln -sf "soffice.bin" "MacOS/$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; ln -sf "basis-link/program/gengal" ; ln -sf "gengal.bin" "basis-link/program/gengal"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "basis-link/program/gengal" ; ln -sf "gengal.bin" "basis-link/program/gengal"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in regcomp uno ; do rm -f "basis-link/ure-link/bin/$$i" ; ln -sf "$$i.bin" "basis-link/ure-link/bin/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/objserv_cocoa"*.res "etc/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/sfx2/$(UOUTPUTDIR)/bin/shutdowniconjava"*.res "etc/resource"
