@@ -50,6 +50,9 @@
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
 
+#define DOFUNCTION( x ) MacOSBOOL SAL_DLLPUBLIC_EXPORT _##x ()
+#define FUNCTION( x ) DOFUNCTION( x )
+
 typedef MacOSBOOL BundleCheck_Type();
 
 // The following are custom data types for Apple's App Store receipt payload
@@ -133,6 +136,27 @@ static CFDataRef ImplCreateMacAddress()
 
 using namespace rtl;
 
+#ifdef PRODUCT_CHECKSUM
+extern "C" FUNCTION( PRODUCT_CHECKSUM )
+{
+	return YES;
+}
+#endif	// PRODUCT_CHECKSUM
+
+#if defined PRODUCT_CHECKSUM2
+extern "C" FUNCTION( PRODUCT_CHECKSUM2 )
+{
+	return YES;
+}
+#endif	// PRODUCT_CHECKSUM2
+
+#if defined PRODUCT_CHECKSUM3
+extern "C" FUNCTION( PRODUCT_CHECKSUM3 )
+{
+	return YES;
+}
+#endif	// PRODUCT_CHECKSUM3
+
 @interface NSBundle (VCLBundle)
 - (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
 @end
@@ -168,7 +192,7 @@ void NSApplication_run()
 								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
 
 							const char *pKeyMD5String = [pKeyMD5 UTF8String];
-							BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( RTLD_MAIN_ONLY, pKeyMD5String );
+							BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( RTLD_SELF, pKeyMD5String );
 							if ( pBundleCheck )
 								bBundleOK = pBundleCheck();
 						}

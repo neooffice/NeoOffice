@@ -43,6 +43,22 @@ ENABLE_EXCEPTIONS=TRUE
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
+.IF "$(PRODUCT_NAME)" != "" && "$(PRODUCT_DOMAIN)" != ""
+
+.IF "$(PRODUCT_DIR_NAME)" != ""
+CDEFS += -DPRODUCT_CHECKSUM="$(shell md5 -q -s '$(PRODUCT_NAME)_$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)')"
+.ENDIF
+
+.IF "$(PRODUCT_DIR_NAME2)" != "" && "$(PRODUCT_DIR_NAME2)" != "$(PRODUCT_DIR_NAME)"
+CDEFS += -DPRODUCT_CHECKSUM2="$(shell md5 -q -s '$(PRODUCT_NAME)_$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME2)')"
+.ENDIF
+
+.IF "$(PRODUCT_DIR_NAME3)" != "" && "$(PRODUCT_DIR_NAME3)" != "$(PRODUCT_DIR_NAME)" && "$(PRODUCT_DIR_NAME3)" != "$(PRODUCT_DIR_NAME2)"
+CDEFS += -DPRODUCT_CHECKSUM3="$(shell md5 -q -s '$(PRODUCT_NAME)_$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME3)')"
+.ENDIF
+
+.ENDIF		# "$(PRODUCT_NAME)" != "" && "$(PRODUCT_DOMAIN)" != ""
+
 # --- Files --------------------------------------------------------
 
 SLOFILES=	$(SLO)$/dbggui.obj		\
