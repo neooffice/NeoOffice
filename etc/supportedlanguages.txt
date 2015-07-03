@@ -103,7 +103,7 @@ sv,1,Swedish
 th,1,Thai
 # ti-ER,0,Tswana
 # tn,0,Tsonga
-# tr,1,Turkish
+tr,1,Turkish
 # ts,0,Tsonga
 # uk,0,Ukrainian
 # ur-IN,1,Urdu
