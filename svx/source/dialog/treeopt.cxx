@@ -145,6 +145,16 @@
 #include <drawitem.hxx>
 #include <rtl/uri.hxx>
 
+#ifdef USE_JAVA
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
@@ -1897,11 +1907,17 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
             if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                 continue;
 
-#ifndef SOLAR_JAVA
+#ifdef USE_JAVA
             // Disable Java page if compiled without Java support
             if( RID_SVXPAGE_OPTIONS_JAVA == nPageId )
-                continue;
-#endif	// !SOLAR_JAVA
+            {
+                if ( !pApplication_canUseJava )
+                    pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+                if ( !pApplication_canUseJava || !pApplication_canUseJava() )
+                    continue;
+            }
+#endif	// USE_JAVA
+
             // Disable Online Update page if service not installed
             if( RID_SVXPAGE_ONLINEUPDATE == nPageId )
             {
