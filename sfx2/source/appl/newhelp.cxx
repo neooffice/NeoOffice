@@ -117,6 +117,16 @@
 #include <sfx2/objsh.hxx>
 #include <sfx2/docfac.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::ucbhelper;
 using namespace ::com::sun::star::ucb;
 
@@ -181,6 +191,17 @@ extern void AppendConfigToken_Impl( String& rURL, sal_Bool bQuestionMark ); // s
     Reference < XURLTransformer > xTrans( ::comphelper::getProcessServiceFactory()->createInstance( \
             DEFINE_CONST_UNICODE("com.sun.star.util.URLTransformer" )), UNO_QUERY ); \
     xTrans->parseStrict( aURL )
+
+#if defined USE_JAVA && defined MACOSX
+
+static sal_Bool lcl_canUseJava()
+{
+    if ( !pApplication_canUseJava )
+        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+    return ( pApplication_canUseJava && pApplication_canUseJava() );
+}
+
+#endif	// USE_JAVA && MACOSX
 
 //.........................................................................
 namespace sfx2
@@ -1606,9 +1627,10 @@ SfxHelpIndexWindow_Impl::SfxHelpIndexWindow_Impl( SfxHelpWindow_Impl* _pParent )
 
 	sfx2::AddToTaskPaneList( this );
 
-#ifndef SOLAR_JAVA
-	aTabCtrl.RemovePage( HELP_INDEX_PAGE_SEARCH );
-#endif	// !SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	if ( !lcl_canUseJava() )
+		aTabCtrl.RemovePage( HELP_INDEX_PAGE_SEARCH );
+#endif	// USE_JAVA && MACOSX
 	aTabCtrl.SetActivatePageHdl( LINK( this, SfxHelpIndexWindow_Impl, ActivatePageHdl ) );
 	aTabCtrl.Show();
 
@@ -1719,13 +1741,14 @@ HelpTabPage_Impl* SfxHelpIndexWindow_Impl::GetCurrentPage( USHORT& rCurId )
 			break;
 		}
 
-#ifdef SOLAR_JAVA
 		case HELP_INDEX_PAGE_SEARCH:
 		{
+#if defined USE_JAVA && defined MACOSX
+			if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 			pPage = GetSearchPage();
 			break;
 		}
-#endif	// SOLAR_JAVA
 
 		case HELP_INDEX_PAGE_BOOKMARKS:
 		{
@@ -1797,11 +1820,11 @@ IMPL_LINK( SfxHelpIndexWindow_Impl, KeywordHdl, IndexTabPage_Impl *, EMPTYARG )
 	if( !bIndex)
 		bIndex = pIPage->HasKeywordIgnoreCase();
 	// then set index or search page as current.
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	USHORT nPageId = ( bIndex || !lcl_canUseJava() ) ? HELP_INDEX_PAGE_INDEX :  HELP_INDEX_PAGE_SEARCH;
+#else	// USE_JAVA && MACOSX
 	USHORT nPageId = ( bIndex ) ? HELP_INDEX_PAGE_INDEX :  HELP_INDEX_PAGE_SEARCH;
-#else	// SOLAR_JAVA
-	USHORT nPageId = HELP_INDEX_PAGE_INDEX;
-#endif	// SOLAR_JAVA
+#endif	// USE_JAVA && MACOSX
 	if ( nPageId != aTabCtrl.GetCurPageId() )
 	{
 		aTabCtrl.SetCurPageId( nPageId );
@@ -1950,11 +1973,12 @@ String SfxHelpIndexWindow_Impl::GetSelectEntry() const
 			sRet = pIPage->GetSelectEntry();
 			break;
 
-#ifdef SOLAR_JAVA
 		case HELP_INDEX_PAGE_SEARCH:
+#if defined USE_JAVA && defined MACOSX
+			if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 			sRet = pSPage->GetSelectEntry();
 			break;
-#endif	// SOLAR_JAVA
 
 		case HELP_INDEX_PAGE_BOOKMARKS:
 			sRet = pBPage->GetSelectEntry();
@@ -2004,10 +2028,15 @@ void SfxHelpIndexWindow_Impl::GrabFocusBack()
 		pCPage->SetFocusOnBox();
 	else if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_INDEX && pIPage )
 		pIPage->SetFocusOnBox();
-#ifdef SOLAR_JAVA
 	else if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_SEARCH && pSPage )
+#if defined USE_JAVA && defined MACOSX
+	{
+		if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 		pSPage->SetFocusOnBox();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	}
+#endif	// USE_JAVA && MACOSX
 	else if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_BOOKMARKS && pBPage )
 		pBPage->SetFocusOnBox();
 }
@@ -2019,10 +2048,15 @@ sal_Bool SfxHelpIndexWindow_Impl::HasFocusOnEdit() const
 	sal_Bool bRet = sal_False;
 	if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_INDEX && pIPage )
 		bRet = pIPage->HasFocusOnEdit();
-#ifdef SOLAR_JAVA
 	else if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_SEARCH && pSPage )
+#if defined USE_JAVA && defined MACOSX
+	{
+		if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 		bRet = pSPage->HasFocusOnEdit();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	}
+#endif	// USE_JAVA && MACOSX
 	return bRet;
 }
 
@@ -2031,10 +2065,15 @@ sal_Bool SfxHelpIndexWindow_Impl::HasFocusOnEdit() const
 String SfxHelpIndexWindow_Impl::GetSearchText() const
 {
 	String sRet;
-#ifdef SOLAR_JAVA
 	if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_SEARCH && pSPage )
+#if defined USE_JAVA && defined MACOSX
+	{
+		if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 		sRet = pSPage->GetSearchText();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	}
+#endif	// USE_JAVA && MACOSX
 	return sRet;
 }
 
@@ -2043,10 +2082,15 @@ String SfxHelpIndexWindow_Impl::GetSearchText() const
 sal_Bool SfxHelpIndexWindow_Impl::IsFullWordSearch() const
 {
 	sal_Bool bRet = sal_False;
-#ifdef SOLAR_JAVA
 	if ( aTabCtrl.GetCurPageId() == HELP_INDEX_PAGE_SEARCH && pSPage )
+#if defined USE_JAVA && defined MACOSX
+	{
+		if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 		bRet = pSPage->IsFullWordSearch();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	}
+#endif	// USE_JAVA && MACOSX
 	return bRet;
 }
 
