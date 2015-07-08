@@ -382,6 +382,7 @@ void SvtMatchContext_Impl::ReadFolder( const String& rURL,
     if( !UCBContentHelper::IsFolder( rURL ) )
 #endif	// USE_JAVA && MACOSX
         return;
+
 	sal_Bool bPureHomePath = sal_False;
 #ifdef UNX
 	bPureHomePath = aText.Search( '~' ) == 0 && aText.Search( '/' ) == STRING_NOTFOUND;
