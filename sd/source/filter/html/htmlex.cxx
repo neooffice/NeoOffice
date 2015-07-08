@@ -2950,7 +2950,13 @@ bool HtmlExport::CopyScript( const String& rPath, const String& rSource, const S
 	{
 #ifdef USE_JAVA
 		if ( bPrependPerlCommand )
-			aScript.AppendAscii( "#!/usr/bin/perl\n" );
+		{
+			aScript.AppendAscii( "#!/usr/bin/perl" );
+			if( bUnix )
+				aScript.AppendAscii( "\n" );
+			else
+				aScript.AppendAscii( "\r\n" );
+		}
 #endif	// USE_JAVA
 
 		ByteString aLine;
