@@ -145,7 +145,7 @@
 #include <drawitem.hxx>
 #include <rtl/uri.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
 
@@ -153,7 +153,7 @@ typedef sal_Bool Application_canUseJava_Type();
 
 static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -1907,7 +1907,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
             if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
                 continue;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // Disable Java page if compiled without Java support
             if( RID_SVXPAGE_OPTIONS_JAVA == nPageId )
             {
@@ -1916,7 +1916,7 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
                 if ( !pApplication_canUseJava || !pApplication_canUseJava() )
                     continue;
             }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
             // Disable Online Update page if service not installed
             if( RID_SVXPAGE_ONLINEUPDATE == nPageId )
