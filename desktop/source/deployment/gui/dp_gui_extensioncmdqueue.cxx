@@ -106,9 +106,16 @@
 #include "tools/postwin.h"
 #endif
 
-#ifndef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
 #include <tools/rcid.h>
-#endif	// !SOLAR_JAVA
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
 
 
 using namespace ::com::sun::star;
@@ -611,8 +618,10 @@ void ProgressCmdEnv::update_( uno::Any const & rStatus )
             text = ::comphelper::anyToString( rStatus ); // fallback
 
         const ::vos::OGuard aGuard( Application::GetSolarMutex() );
-#ifndef SOLAR_JAVA
-        if ( text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.loader.Java2" ) ) ) >= 0 || text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE/uno_packages/" ) ) ) >= 0 )
+#if defined USE_JAVA && defined MACOSX
+        if ( !pApplication_canUseJava )
+            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+        if ( ( !pApplication_canUseJava || !pApplication_canUseJava() ) && ( text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.loader.Java2" ) ) ) >= 0 || text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE/uno_packages/" ) ) ) >= 0 ) )
         {
             ResMgr *pResMgr = DeploymentGuiResMgr::get();
             if ( pResMgr )
@@ -623,7 +632,7 @@ void ProgressCmdEnv::update_( uno::Any const & rStatus )
                     text = String( aResId );
             }
         }
-#endif	// !SOLAR_JAVA
+#endif	// USE_JAVA && MACOSX
         const ::std::auto_ptr< ErrorBox > aBox( new ErrorBox( m_pDialog, WB_OK, text ) );
         aBox->Execute();
     }

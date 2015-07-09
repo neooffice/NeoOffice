@@ -531,7 +531,7 @@ String RID_STR_UNSUPPORTED_PLATFORM
     Text [ en-US ] = "The extension \'%Name\' does not work on this computer.";
 };
 
-#ifndef SOLAR_JAVA
+// #ifdef USE_JAVA
 
 String RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY
 {
@@ -542,4 +542,4 @@ String RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY
     Text [ nl ] = "De extensie kan niet worden geladen, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
 };
 
-#endif	// !SOLAR_JAVA
+// #endif	// USE_JAVA
