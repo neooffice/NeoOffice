@@ -35,14 +35,14 @@
 #include <vos/thread.hxx>
 #include <vos/conditn.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
 
 typedef sal_Bool Application_acquireSolarMutexFunc();
 typedef void Application_releaseSolarMutexFunc();
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -431,14 +431,14 @@ void OTimerManager::checkForTimeout()
 
 	OTimer* pTimer = m_pHead;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	// Fix deadlocks reported in the following NeoOffice forum topics by
 	// locking the application mutex before executing the timer:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8428
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8456
 	Application_acquireSolarMutexFunc *pAcquireFunc = (Application_acquireSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" );
 	Application_releaseSolarMutexFunc *pReleaseFunc = (Application_releaseSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	if (pTimer->isExpired())
 	{
@@ -449,16 +449,16 @@ void OTimerManager::checkForTimeout()
         
 		m_Lock.release();
 		
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		sal_Bool bSolarMutexAcquired = sal_False;
 		if ( pAcquireFunc && pReleaseFunc )
 			bSolarMutexAcquired = pAcquireFunc();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		pTimer->onShot();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		if ( bSolarMutexAcquired && pAcquireFunc && pReleaseFunc )
 			pReleaseFunc();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		// restart timer if specified
 		if ( ! pTimer->m_RepeatDelta.isEmpty() )
