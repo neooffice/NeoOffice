@@ -35,13 +35,12 @@
 
 #include <dlfcn.h>
 #include <stdio.h>
+#include <string>
 
 #import <Cocoa/Cocoa.h>
 
 #include "main_java.h"
 
-#define MIN_MACOSX_MAJOR_VERSION 8
-#define MAX_MACOSX_MAJOR_VERSION 10
 #define TMPDIR "/var/tmp"
 #define UNOPKGARG "-unopkg"
 
@@ -58,6 +57,45 @@ static BOOL IsSupportedMacOSXVersion()
 	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( (CFBooleanRef)aPref ) )
 		return YES;
 
+	SInt32 nMajorMinOSVersion = 0;
+	SInt32 nMinorMinOSVersion = 0;
+#ifdef PRODUCT_MIN_OSVERSION
+	char *pMinOSVersion = strdup( PRODUCT_MIN_OSVERSION );
+	if ( pMinOSVersion )
+	{
+		char *pToken = strsep( &pMinOSVersion, "." );
+		if ( pToken )
+		{
+			nMajorMinOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+			pToken = strsep( &pMinOSVersion, "." );
+			if ( pToken )
+				nMinorMinOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+		}
+		free( pMinOSVersion );
+	}
+#endif	// PRODUCT_MIN_OSVERSION
+
+	SInt32 nMajorMaxOSVersion = 0;
+	SInt32 nMinorMaxOSVersion = 0;
+#ifdef PRODUCT_MAX_OSVERSION
+	char *pMaxOSVersion = strdup( PRODUCT_MAX_OSVERSION );
+	if ( pMaxOSVersion )
+	{
+		char *pToken = strsep( &pMaxOSVersion, "." );
+		if ( pToken )
+		{
+			nMajorMaxOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+			pToken = strsep( &pMaxOSVersion, "." );
+			if ( pToken )
+				nMinorMaxOSVersion = (SInt32)strtol( pToken, NULL, 10 );
+		}
+		free( pMaxOSVersion );
+	}
+#else	// PRODUCT_MIN_OSVERSION
+	nMajorMaxOSVersion = 0xffff;
+	nMinorMaxOSVersion = 0xffff;
+#endif	// PRODUCT_MIN_OSVERSION
+
 	BOOL bRet = NO;
 
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
@@ -66,13 +104,25 @@ static BOOL IsSupportedMacOSXVersion()
 		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
 		if ( pGestalt )
 		{
-			SInt32 res = 0;
-			pGestalt( gestaltSystemVersionMajor, &res );
-			if ( res == 10 )
+			SInt32 majorVersion = 0;
+			pGestalt( gestaltSystemVersionMajor, &majorVersion );
+			if ( majorVersion >= nMajorMinOSVersion && majorVersion <= nMajorMaxOSVersion )
 			{
-				res = 0;
-				pGestalt( gestaltSystemVersionMinor, &res );
-				bRet = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
+				if ( majorVersion > nMajorMinOSVersion && majorVersion < nMajorMaxOSVersion )
+				{
+					bRet = YES;
+				}
+				else
+				{
+					SInt32 minorVersion = 0;
+ 					pGestalt( gestaltSystemVersionMinor, &minorVersion );
+					if ( nMajorMinOSVersion == nMajorMaxOSVersion )
+						bRet = ( minorVersion >= nMinorMinOSVersion && minorVersion <= nMinorMaxOSVersion );
+					else if ( majorVersion == nMajorMinOSVersion )
+						bRet = ( minorVersion >= nMinorMinOSVersion );
+					else if ( majorVersion == nMajorMaxOSVersion )
+						bRet = ( minorVersion <= nMinorMaxOSVersion );
+				}
 			}
 		}
 
