@@ -166,14 +166,14 @@ PRODUCT_MAX_OSVERSION=10.10
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
-PRODUCT_SUPPORT_URL=http://www.neooffice.org/neojava/macappstore.php
+PRODUCT_SUPPORT_URL=$(PRODUCT_BASE_URL)/contact.php
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 PRODUCT_DOCUMENTATION_URL=http://neowiki.neooffice.org/
 PRODUCT_DOCUMENTATION_URL_TEXT=$(PRODUCT_NAME) Wiki
 PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL=http://neowiki.neooffice.org/index.php/NeoOffice_Launch_Shortcuts
 PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
-PRODUCT_MAC_APP_STORE_URL=macappstores://itunes.apple.com/app/neooffice/id639210716?mt=12
+PRODUCT_DOWNLOAD_URL=$(PRODUCT_BASE_URL)/download.php
 PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt-BR da zh-TW cs th zh-CN el hu sk ko tr
 PRODUCT_BUNDLED_LANG_PACKS2=$(PRODUCT_BUNDLED_LANG_PACKS)
 PRODUCT_BUNDLED_LANG_PACKS3=$(PRODUCT_BUNDLED_LANG_PACKS)
@@ -453,20 +453,20 @@ endif
 # End of converted make rules
 
 build.package: build.neo_patches
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "build.package_shared"
 	touch "$@"
 
 build.package2: build.neo_patches
 ifndef PRODUCT_BUILD2
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.package_shared"
 	touch "$@"
 endif
 
 build.package3: build.neo_patches
 ifndef PRODUCT_BUILD3
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.package_shared"
 	touch "$@"
 endif
@@ -808,19 +808,19 @@ endif
 	rm -Rf "$(INSTALL_HOME)/tmp"
 
 build.patch_package: build.package
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY)" "build.patch_package_shared"
 	touch "$@"
 
 build.patch_package2: build.package2
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 ifndef PRODUCT_BUILD2
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.patch_package_shared"
 	touch "$@"
 endif
 
 build.patch_package3: build.package3
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" -o "$$PRODUCT_DOWNLOAD_URL" != "$(PRODUCT_DOWNLOAD_URL" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 ifndef PRODUCT_BUILD3
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.patch_package_shared"
 	touch "$@"
