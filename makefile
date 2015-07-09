@@ -640,7 +640,7 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `echo "$(PRODUCT_BUNDLED_LANG_PACKS)" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" ; gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
-	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g" | sed "s#\$$(PRODUCT_MAX_OSVERSION)#$(PRODUCT_MAX_OSVERSION)#g" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_DOWNLOAD_URL)#$(PRODUCT_DOWNLOAD_URL)#g" | sed "s#\$$(PRODUCT_MIN_OSVERSION)#$(PRODUCT_MIN_OSVERSION)#g" | sed "s#\$$(PRODUCT_MAX_OSVERSION)#$(PRODUCT_MAX_OSVERSION)#g" > "$${i}" ; done'
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "MacOS/unoinfo" "basis-link/program/open-url" "basis-link/program/senddoc" LICENSE* README* basis-link/licenses basis-link/readmes "basis-link/ure-link/bin/startup.sh" share/readme
 # Fix bug 3273 by not installing any OOo or ooo-build fonts
