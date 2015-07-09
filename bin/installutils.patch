@@ -35,7 +35,7 @@
 ##########################################################################
 
 product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Patch ##'`
-userinstall="$HOME/Library/Containers/$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)/Data/Library/Preferences/$(PRODUCT_DIR_NAME)"
+userinstall="$(PRODUCT_USER_INSTALL_DIR)"
 target_file_type="$(TARGET_FILE_TYPE)"
 last_installed_product_found=
 
