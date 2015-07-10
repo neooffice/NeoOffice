@@ -42,6 +42,28 @@ typedef Reference< XSingleServiceFactory > (SAL_CALL *createFactoryFunc)
 			rtl_ModuleCount* _pT
 		);
 
+#if SUPD == 310
+
+//---------------------------------------------------------------------------------------
+void REGISTER_PROVIDER(
+		const OUString& aServiceImplName,
+		const Sequence< OUString>& Services,
+		const Reference< ::com::sun::star::registry::XRegistryKey > & xKey)
+{
+	OUString aMainKeyName;
+	aMainKeyName = OUString::createFromAscii("/");
+	aMainKeyName += aServiceImplName;
+	aMainKeyName += OUString::createFromAscii("/UNO/SERVICES");
+
+	Reference< ::com::sun::star::registry::XRegistryKey >  xNewKey( xKey->createKey(aMainKeyName) );
+	OSL_ENSURE(xNewKey.is(), "ADABAS::component_writeInfo : could not create a registry key !");
+
+	for (sal_Int32 i=0; i<Services.getLength(); ++i)
+		xNewKey->createKey(Services[i]);
+}
+
+#endif	// SUPD == 310
+
 //---------------------------------------------------------------------------------------
 struct ProviderRequest
 {
@@ -90,6 +112,35 @@ component_getImplementationEnvironment(
 {
 	*ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
 }
+
+#if SUPD == 310
+
+//---------------------------------------------------------------------------------------
+extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool SAL_CALL component_writeInfo(
+				void* /*pServiceManager*/,
+				void* pRegistryKey
+			)
+{
+	if (pRegistryKey)
+	try
+	{
+		Reference< ::com::sun::star::registry::XRegistryKey > xKey(reinterpret_cast< ::com::sun::star::registry::XRegistryKey*>(pRegistryKey));
+
+		REGISTER_PROVIDER(
+			ODriver::getImplementationName_Static(),
+			ODriver::getSupportedServiceNames_Static(), xKey);
+
+		return sal_True;
+	}
+	catch (::com::sun::star::registry::InvalidRegistryException& )
+	{
+		OSL_ENSURE(sal_False, "ODBC::component_writeInfo : could not create a registry key ! ## InvalidRegistryException !");
+	}
+
+	return sal_False;
+}
+
+#endif	// SUPD == 310
 
 //---------------------------------------------------------------------------------------
 extern "C" SAL_DLLPUBLIC_EXPORT void* SAL_CALL component_getFactory(
