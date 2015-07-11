@@ -441,7 +441,7 @@ Resource RSC_DATASOURCE_TYPE_UINAMES
 	};
 };
 
-#ifndef SOLAR_JAVA
+// #ifdef USE_JAVA
 
 String RID_STR_COULDNOTCONNECT_NOJAVA
 {
@@ -452,4 +452,4 @@ String RID_STR_COULDNOTCONNECT_NOJAVA
 	Text [ nl ] = "De database stuurprogramma kan niet worden geladen, omdat het vereist externe software die is geïdentificeerd als een veiligheidsrisico.";
 };
 
-#endif	// !SOLAR_JAVA
+// #endif	// USE_JAVA
