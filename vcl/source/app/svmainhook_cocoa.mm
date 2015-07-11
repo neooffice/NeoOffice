@@ -54,6 +54,7 @@
 #define FUNCTION( x ) DOFUNCTION( x )
 
 typedef MacOSBOOL BundleCheck_Type();
+typedef sal_Bool Application_canUseJava_Type();
 
 // The following are custom data types for Apple's App Store receipt payload
 // ASN.1 format as documented in the following URL:
@@ -70,6 +71,8 @@ typedef struct AppReceiptAttributes
 {
 	AppReceiptAttribute**	mpAttrs;
 };
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 static const SecAsn1Template aAttributeTemplate[] = {
 	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
@@ -231,7 +234,13 @@ void NSApplication_terminate()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSBundle *pBundle = [NSBundle mainBundle];
-	if ( pBundle )
+	if ( !pApplication_canUseJava )
+		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+	if ( pApplication_canUseJava && pApplication_canUseJava() )
+	{
+		nRet = 0;
+	}
+	else if ( pBundle )
 	{
 		NSURL *pURL = [pBundle appStoreReceiptURL];
 		if ( pURL && [pURL isKindOfClass:[NSURL class]] )
