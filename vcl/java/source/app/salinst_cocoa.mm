@@ -693,6 +693,12 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
 			mpOpenPanel = [NSOpenPanel openPanel];
+
+			// Don't display open panel if we are running in the sandbox. In the
+			// sandbox, NSOpenPanel should not be a subclass of NSOpenPanel.
+			if ( mpOpenPanel && [mpOpenPanel isKindOfClass:[NSOpenPanel openPanel]] )
+				mpOpenPanel = nil;
+
 			if ( mpOpenPanel )
 			{
 				[mpOpenPanel retain];
