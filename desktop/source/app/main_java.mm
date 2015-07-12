@@ -181,9 +181,6 @@ static NSString *GetNSTemporaryDirectory()
 
 int java_main( int argc, char **argv )
 {
-	Application_canSave();
-	Application_canUseJava();
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	// Use CFBundle as [NSBundle mainBundle] will cause Java menu load failures

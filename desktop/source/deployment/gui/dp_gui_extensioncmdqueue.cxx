@@ -619,17 +619,20 @@ void ProgressCmdEnv::update_( uno::Any const & rStatus )
 
         const ::vos::OGuard aGuard( Application::GetSolarMutex() );
 #if defined USE_JAVA && defined MACOSX
-        if ( !pApplication_canUseJava )
-            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
-        if ( ( !pApplication_canUseJava || !pApplication_canUseJava() ) && ( text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.loader.Java2" ) ) ) >= 0 || text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE/uno_packages/" ) ) ) >= 0 ) )
+        if ( text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.loader.Java2" ) ) ) >= 0 || text.indexOf( OUString( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE/uno_packages/" ) ) ) >= 0 )
         {
-            ResMgr *pResMgr = DeploymentGuiResMgr::get();
-            if ( pResMgr )
+            if ( !pApplication_canUseJava )
+                pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+            if ( !pApplication_canUseJava || !pApplication_canUseJava() )
             {
-                ResId aResId( RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY, *pResMgr );
-                aResId.SetRT( RSC_STRING );
-                if ( pResMgr->IsAvailable( aResId ) )
-                    text = String( aResId );
+                ResMgr *pResMgr = DeploymentGuiResMgr::get();
+                if ( pResMgr )
+                {
+                    ResId aResId( RID_STR_UNSUPPORTED_EXTENSION_DEPENDENCY, *pResMgr );
+                    aResId.SetRT( RSC_STRING );
+                    if ( pResMgr->IsAvailable( aResId ) )
+                        text = String( aResId );
+                }
             }
         }
 #endif	// USE_JAVA && MACOSX
