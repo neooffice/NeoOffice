@@ -71,6 +71,16 @@
 
 #include <algorithm>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::com::sun::star::document;
 using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::sdbcx;
@@ -338,11 +348,16 @@ ODatabaseModelImpl::ODatabaseModelImpl( const Reference< XMultiServiceFactory >&
 {
 	// some kind of default
 	DBG_CTOR(ODatabaseModelImpl,NULL);
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	if ( !pApplication_canUseJava )
+		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+	if ( pApplication_canUseJava && pApplication_canUseJava() )
+#endif	// USE_JAVA && MACOSX
 	m_sConnectURL = ::rtl::OUString::createFromAscii("jdbc:");
-#else	// SOLAR_JAVA
-	m_sConnectURL = ::rtl::OUString::createFromAscii("sdbc:dbase:");
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+	else
+		m_sConnectURL = ::rtl::OUString::createFromAscii("sdbc:dbase:");
+#endif	// USE_JAVA && MACOSX
 	m_aTableFilter.realloc(1);
 	m_aTableFilter[0] = ::rtl::OUString::createFromAscii("%");
 	impl_construct_nothrow();

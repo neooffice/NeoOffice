@@ -90,6 +90,16 @@
 #include "UITools.hxx"
 #endif
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 
 extern "C" void SAL_CALL createRegistryInfo_OToolboxController()
 {
@@ -232,21 +242,26 @@ namespace dbaui
 		{
 			pMenu.reset( new PopupMenu( ModuleRes( RID_MENU_APP_NEW ) ) );
 
-#ifndef SOLAR_JAVA
-			static XubString aDBNewReport( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReport" ) );
-			static XubString aDBNewReportAutoPilot( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilot" ) );
-			PopupMenu *pPopup = pMenu.get();
-			if ( pPopup )
+#if defined USE_JAVA && defined MACOSX
+			if ( !pApplication_canUseJava )
+				pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+			if ( !pApplication_canUseJava || !pApplication_canUseJava() )
 			{
-				USHORT i = pPopup->GetItemCount();
-				while ( i )
+				static XubString aDBNewReport( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReport" ) );
+				static XubString aDBNewReportAutoPilot( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilot" ) );
+				PopupMenu *pPopup = pMenu.get();
+				if ( pPopup )
 				{
-					XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
-					if ( aCommand == aDBNewReport || aCommand == aDBNewReportAutoPilot )
-						pPopup->RemoveItem( i );
+					USHORT i = pPopup->GetItemCount();
+					while ( i )
+					{
+						XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
+						if ( aCommand == aDBNewReport || aCommand == aDBNewReportAutoPilot )
+							pPopup->RemoveItem( i );
+					}
 				}
 			}
-#endif	// !SOLAR_JAVA
+#endif	// USE_JAVA && MACOSX
 
 			sal_Bool bHighContrast = isHighContrast();
 

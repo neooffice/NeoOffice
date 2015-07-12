@@ -238,6 +238,16 @@
 
 #include <boost/noncopyable.hpp>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 extern "C" void SAL_CALL createRegistryInfo_ODBApplication()
 {
 	static ::dbaui::OMultiInstanceAutoRegistration< ::dbaui::OApplicationController > aAutoRegistration;
@@ -270,6 +280,17 @@ using ::com::sun::star::sdb::application::NamedDatabaseObject;
 
 namespace DatabaseObject = ::com::sun::star::sdb::application::DatabaseObject;
 namespace DatabaseObjectContainer = ::com::sun::star::sdb::application::DatabaseObjectContainer;
+
+#if defined USE_JAVA && defined MACOSX
+
+static sal_Bool lcl_canUseJava()
+{
+	if ( !pApplication_canUseJava )
+		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+	return ( pApplication_canUseJava && pApplication_canUseJava() );
+}
+
+#endif	// USE_JAVA && MACOSX
 
 //------------------------------------------------------------------------------
 ::rtl::OUString SAL_CALL OApplicationController::getImplementationName() throw( RuntimeException )
@@ -842,7 +863,10 @@ FeatureState OApplicationController::GetState(sal_uInt16 _nId) const
 			case SID_FORM_CREATE_REPWIZ_PRE_SEL:
 			case SID_REPORT_CREATE_REPWIZ_PRE_SEL:
             case SID_APP_NEW_REPORT_PRE_SEL:
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+				if ( lcl_canUseJava() )
+				{
+#endif	// USE_JAVA && MACOSX
 				aReturn.bEnabled = !isDataSourceReadOnly()
 									&& SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SWRITER)
 									&& getContainer()->isALeafSelected();
@@ -862,9 +886,13 @@ FeatureState OApplicationController::GetState(sal_uInt16 _nId) const
                         }
                     }
 				}
-#else	// SOLAR_JAVA
-				aReturn.bEnabled = sal_False;
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+				}
+				else
+				{
+					aReturn.bEnabled = sal_False;
+				}
+#endif	// USE_JAVA && MACOSX
 				break;
 			case SID_DB_APP_DELETE:
 			case SID_DB_APP_RENAME:
@@ -1552,20 +1580,32 @@ void OApplicationController::Execute(sal_uInt16 _nId, const Sequence< PropertyVa
 // -----------------------------------------------------------------------------
 void OApplicationController::describeSupportedFeatures()
 {
+#if defined USE_JAVA && defined MACOSX
+	sal_Bool bCanUseJava = lcl_canUseJava();
+#endif	// USE_JAVA && MACOSX
+
 	OApplicationController_CBASE::describeSupportedFeatures();
 
     implDescribeSupportedFeature( ".uno:Save",               ID_BROWSER_SAVEDOC,        CommandGroup::DOCUMENT );
     implDescribeSupportedFeature( ".uno:SaveAs",             ID_BROWSER_SAVEASDOC,      CommandGroup::DOCUMENT );
 	implDescribeSupportedFeature( ".uno:SendMail",			 SID_MAIL_SENDDOC,			CommandGroup::DOCUMENT );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+    {
+#endif	// USE_JAVA && MACOSX
 	implDescribeSupportedFeature( ".uno:DBSendReportAsMail",SID_DB_APP_SENDREPORTASMAIL,
 																						CommandGroup::DOCUMENT );
 	implDescribeSupportedFeature( ".uno:DBSendReportToWriter",SID_DB_APP_SENDREPORTTOWRITER,
 																						CommandGroup::DOCUMENT );
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    }
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBNewForm",          SID_APP_NEW_FORM,          CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFolder",        SID_APP_NEW_FOLDER,        CommandGroup::INSERT );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+    {
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilot", SID_DB_FORM_NEW_PILOT,     CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewFormAutoPilotWithPreSelection",
                                                              SID_FORM_CREATE_REPWIZ_PRE_SEL,
@@ -1577,18 +1617,22 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBNewReportAutoPilotWithPreSelection",
                                                              SID_REPORT_CREATE_REPWIZ_PRE_SEL,
                                                                                         CommandGroup::APPLICATION );
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    }
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBNewQuery",         ID_NEW_QUERY_DESIGN,       CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewQuerySql",      ID_NEW_QUERY_SQL,          CommandGroup::INSERT );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBNewQueryAutoPilot",ID_APP_NEW_QUERY_AUTO_PILOT,
                                                                                         CommandGroup::INSERT );
-#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewTable",         ID_NEW_TABLE_DESIGN,       CommandGroup::INSERT );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBNewTableAutoPilot",ID_NEW_TABLE_DESIGN_AUTO_PILOT,
                                                                                         CommandGroup::INSERT );
-#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBNewView",          ID_NEW_VIEW_DESIGN,        CommandGroup::INSERT );
     implDescribeSupportedFeature( ".uno:DBNewViewSQL",       SID_DB_NEW_VIEW_SQL,       CommandGroup::INSERT );
 
@@ -1614,12 +1658,17 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBFormEdit",         SID_DB_APP_FORM_EDIT,      CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBFormOpen",         SID_DB_APP_FORM_OPEN,      CommandGroup::EDIT );
 
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+    {
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBReportDelete",     SID_DB_APP_REPORT_DELETE,  CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportRename",     SID_DB_APP_REPORT_RENAME,  CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportEdit",       SID_DB_APP_REPORT_EDIT,    CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:DBReportOpen",       SID_DB_APP_REPORT_OPEN,    CommandGroup::EDIT );
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    }
+#endif	// USE_JAVA && MACOSX
 
     implDescribeSupportedFeature( ".uno:SelectAll",          SID_SELECTALL,             CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:Undo",               ID_BROWSER_UNDO,           CommandGroup::EDIT );
@@ -1643,9 +1692,10 @@ void OApplicationController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DBViewTables",       SID_DB_APP_VIEW_TABLES,    CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBViewQueries",      SID_DB_APP_VIEW_QUERIES,   CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBViewForms",        SID_DB_APP_VIEW_FORMS,     CommandGroup::VIEW );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
     implDescribeSupportedFeature( ".uno:DBViewReports",      SID_DB_APP_VIEW_REPORTS,   CommandGroup::VIEW );
-#endif	// SOLAR_JAVA
     implDescribeSupportedFeature( ".uno:DBDisablePreview",   SID_DB_APP_DISABLE_PREVIEW,CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:DBShowDocInfoPreview",
                                                              SID_DB_APP_VIEW_DOCINFO_PREVIEW,
@@ -1655,11 +1705,12 @@ void OApplicationController::describeSupportedFeatures()
 
     implDescribeSupportedFeature( ".uno:OpenUrl",            SID_OPENURL,               CommandGroup::APPLICATION );
 
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+    if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
     // this one should not appear under Tools->Customize->Keyboard
     implDescribeSupportedFeature( ".uno:DBNewReportWithPreSelection",		 
                                                              SID_APP_NEW_REPORT_PRE_SEL,CommandGroup::INTERNAL );
-#endif	// SOLAR_JAVA
 	implDescribeSupportedFeature( ".uno:DBDSImport",		SID_DB_APP_DSIMPORT, CommandGroup::INTERNAL);
 	implDescribeSupportedFeature( ".uno:DBDSExport",		SID_DB_APP_DSEXPORT, CommandGroup::INTERNAL);
 	implDescribeSupportedFeature( ".uno:DBDBAdmin",			SID_DB_APP_DBADMIN, CommandGroup::INTERNAL);
@@ -2500,27 +2551,34 @@ bool OApplicationController::interceptUserInput( const NotifyEvent& _rEvent )
 // -----------------------------------------------------------------------------
 PopupMenu* OApplicationController::getContextMenu( Control& /*_rControl*/ ) const
 {
-#ifdef SOLAR_JAVA
-    return new PopupMenu( ModuleRes( RID_MENU_APP_EDIT ) );
-#else	// SOLAR_JAVA
-    static XubString aDBNewFormAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewFormAutoPilotWithPreSelection" ) );
-    static XubString aDBNewReportWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportWithPreSelection" ) );
-    static XubString aDBNewReportAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilotWithPreSelection" ) );
-
-    PopupMenu *pPopup = new PopupMenu( ModuleRes( RID_MENU_APP_EDIT ) );
-    if ( pPopup )
+#if defined USE_JAVA && defined MACOSX
+    if ( lcl_canUseJava() )
     {
-        USHORT i = pPopup->GetItemCount();
-        while ( i )
-        {
-            XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
-            if ( aCommand == aDBNewFormAutoPilotWithPreSelection || aCommand == aDBNewReportWithPreSelection || aCommand == aDBNewReportAutoPilotWithPreSelection )
-                pPopup->RemoveItem( i );
-        }
+#endif	// USE_JAVA && MACOSX
+    return new PopupMenu( ModuleRes( RID_MENU_APP_EDIT ) );
+#if defined USE_JAVA && defined MACOSX
     }
+    else
+    {
+        static XubString aDBNewFormAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewFormAutoPilotWithPreSelection" ) );
+        static XubString aDBNewReportWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportWithPreSelection" ) );
+        static XubString aDBNewReportAutoPilotWithPreSelection( RTL_CONSTASCII_USTRINGPARAM( ".uno:DBNewReportAutoPilotWithPreSelection" ) );
 
-    return pPopup;
-#endif	// SOLAR_JAVA
+        PopupMenu *pPopup = new PopupMenu( ModuleRes( RID_MENU_APP_EDIT ) );
+        if ( pPopup )
+        {
+            USHORT i = pPopup->GetItemCount();
+            while ( i )
+            {
+                XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
+                if ( aCommand == aDBNewFormAutoPilotWithPreSelection || aCommand == aDBNewReportWithPreSelection || aCommand == aDBNewReportAutoPilotWithPreSelection )
+                    pPopup->RemoveItem( i );
+            }
+        }
+
+        return pPopup;
+    }
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------------

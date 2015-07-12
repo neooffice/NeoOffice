@@ -134,6 +134,16 @@
 #include "TextConnectionHelper.hxx"
 #endif
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 
 //.........................................................................
 namespace dbaui
@@ -148,6 +158,17 @@ using namespace ::com::sun::star;
 //	using namespace ::com::sun::star::container;
 //	using namespace ::dbtools;
 //	using namespace ::svt;
+
+#if defined USE_JAVA && defined MACOSX
+
+static sal_Bool lcl_canUseJava()
+{
+	if ( !pApplication_canUseJava )
+		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+	return ( pApplication_canUseJava && pApplication_canUseJava() );
+}
+
+#endif	// USE_JAVA && MACOSX
 
 	OGenericAdministrationPage*	OTextConnectionPageSetup::CreateTextTabPage( Window* pParent, const SfxItemSet& _rAttrSet )
     {
@@ -363,20 +384,34 @@ DBG_NAME(OMySQLIntroPageSetup)
     {
         DBG_CTOR(OMySQLIntroPageSetup,NULL);
 
+#if defined USE_JAVA && defined MACOSX
+        sal_Bool bCanUseJava = lcl_canUseJava();
+#endif	// USE_JAVA && MACOSX
+
         SetControlFontWeight(&m_aFT_Headertext);
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
    		m_aRB_JDBCDatabase.SetToggleHdl(LINK(this, OMySQLIntroPageSetup, OnSetupModeSelected));
-#else	// SOLAR_JAVA
-   		m_aRB_ODBCDatabase.SetToggleHdl(LINK(this, OMySQLIntroPageSetup, OnSetupModeSelected));
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        else
+            m_aRB_ODBCDatabase.SetToggleHdl(LINK(this, OMySQLIntroPageSetup, OnSetupModeSelected));
+#endif	// USE_JAVA && MACOSX
         m_aRB_NATIVEDatabase.SetToggleHdl(LINK(this, OMySQLIntroPageSetup, OnSetupModeSelected));
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+        {
+#endif	// USE_JAVA && MACOSX
         m_aRB_JDBCDatabase.SetState(sal_True);
-#else	// SOLAR_JAVA
-        m_aRB_JDBCDatabase.SetState(sal_False);
-        m_aRB_ODBCDatabase.SetState(sal_True);
-        m_aRB_JDBCDatabase.Hide();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        }
+        else
+        {
+            m_aRB_JDBCDatabase.SetState(sal_False);
+            m_aRB_ODBCDatabase.SetState(sal_True);
+            m_aRB_JDBCDatabase.Hide();
+        }
+#endif	// USE_JAVA && MACOSX
 		FreeResource();
 	}
 
@@ -407,11 +442,11 @@ DBG_NAME(OMySQLIntroPageSetup)
             if ( xDriverManager.is() && xDriverManager->getDriverByURL( sUrl ).is() )
             {
                 m_aRB_NATIVEDatabase.Show();
-#ifdef SOLAR_JAVA
                 m_aRB_JDBCDatabase.SetState(sal_False);
-#else	// SOLAR_JAVA
-                m_aRB_ODBCDatabase.SetState(sal_False);
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+                if ( !lcl_canUseJava() )
+                    m_aRB_ODBCDatabase.SetState(sal_False);
+#endif	// USE_JAVA && MACOSX
                 m_aRB_NATIVEDatabase.SetState(sal_True);
             }
         }
@@ -439,13 +474,13 @@ DBG_NAME(OMySQLIntroPageSetup)
 
     OMySQLIntroPageSetup::ConnectionType OMySQLIntroPageSetup::getMySQLMode()
     {
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if (m_aRB_JDBCDatabase.IsChecked() && lcl_canUseJava())
+#else	// USE_JAVA && MACOSX
         if (m_aRB_JDBCDatabase.IsChecked())
+#endif	// USE_JAVA && MACOSX
             return VIA_JDBC;
         else if (m_aRB_NATIVEDatabase.IsChecked())
-#else	// SOLAR_JAVA
-        if (m_aRB_NATIVEDatabase.IsChecked())
-#endif	// SOLAR_JAVA
             return VIA_NATIVE;
         else
             return VIA_ODBC;
@@ -935,14 +970,21 @@ DBG_NAME(OFinalDBPageSetup)
     {
         DBG_CTOR(OFinalDBPageSetup,NULL);
 
+#if defined USE_JAVA && defined MACOSX
+        sal_Bool bCanUseJava = lcl_canUseJava();
+#endif	// USE_JAVA && MACOSX
+
         String stext = m_aFTFinalHeader.GetText();
         SetControlFontWeight(&m_aFTFinalHeader);
 		m_aCBOpenAfterwards.SetClickHdl(LINK(this, OFinalDBPageSetup, OnOpenSelected));
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
 		m_aCBStartTableWizard.SetClickHdl(getControlModifiedLink());
-#else	// SOLAR_JAVA
-		m_aCBStartTableWizard.Hide();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        else
+            m_aCBStartTableWizard.Hide();
+#endif	// USE_JAVA && MACOSX
 		m_aRBRegisterDataSource.SetState(sal_True);
         FreeResource();
 
@@ -955,9 +997,7 @@ DBG_NAME(OFinalDBPageSetup)
             ,::std::pair<Window*,sal_Int32>(&m_aRBDontregisterDataSource,nUnrelatedHeight)
             ,::std::pair<Window*,sal_Int32>(&m_aFTAdditionalSettings,nRelatedHeight)
             ,::std::pair<Window*,sal_Int32>(&m_aCBOpenAfterwards,nRelatedHeight)
-#ifdef SOLAR_JAVA
             ,::std::pair<Window*,sal_Int32>(&m_aCBStartTableWizard,nUnrelatedHeight)
-#endif	// SOLAR_JAVA
             ,::std::pair<Window*,sal_Int32>(&m_aFTFinalText,nUnrelatedHeight)
         };
 
@@ -967,6 +1007,11 @@ DBG_NAME(OFinalDBPageSetup)
 		sal_Int32 nCount = sizeof(pWindows) / sizeof(pWindows[0]);
 		for (sal_Int32 i=0; i < nCount; ++i)
 		{
+#if defined USE_JAVA && defined MACOSX
+            if ( pWindows[i].first == &m_aCBStartTableWizard && bCanUseJava )
+                continue;
+#endif	// USE_JAVA && MACOSX
+
             aPos.X() = pWindows[i].first->GetPosPixel().X();
             Size aSize = pWindows[i].first->GetSizePixel();
             FixedText* pText = dynamic_cast<FixedText*>(pWindows[i].first);

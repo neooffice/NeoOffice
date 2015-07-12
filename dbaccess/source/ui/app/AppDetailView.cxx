@@ -102,6 +102,16 @@
 #include "dbtreelistbox.hxx"
 #include "IApplicationController.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::dbaui;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::sdbc;
@@ -761,6 +771,12 @@ const TaskPaneData& OApplicationDetailView::impl_getTaskPaneData( ElementType _e
 // -----------------------------------------------------------------------------
 void OApplicationDetailView::impl_fillTaskPaneData( ElementType _eType, TaskPaneData& _rData ) const
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !pApplication_canUseJava )
+        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+    sal_Bool bCanUseJava = ( pApplication_canUseJava && pApplication_canUseJava() );
+#endif	// USE_JAVA && MACOSX
+
     TaskEntryList& rList( _rData.aTasks );
     rList.clear(); rList.reserve( 4 );
 
@@ -768,34 +784,42 @@ void OApplicationDetailView::impl_fillTaskPaneData( ElementType _eType, TaskPane
     {
     case E_TABLE:
 	    rList.push_back( TaskEntry( ".uno:DBNewTable", RID_STR_TABLES_HELP_TEXT_DESIGN, RID_STR_NEW_TABLE ) );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
         rList.push_back( TaskEntry( ".uno:DBNewTableAutoPilot", RID_STR_TABLES_HELP_TEXT_WIZARD, RID_STR_NEW_TABLE_AUTO ) );
-#endif	// SOLAR_JAVA
 		rList.push_back( TaskEntry( ".uno:DBNewView", RID_STR_VIEWS_HELP_TEXT_DESIGN, RID_STR_NEW_VIEW, true ) );
         _rData.nTitleId = RID_STR_TABLES_CONTAINER;
         break;
 
     case E_FORM:
 		rList.push_back( TaskEntry( ".uno:DBNewForm", RID_STR_FORMS_HELP_TEXT, RID_STR_NEW_FORM ) );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
 		rList.push_back( TaskEntry( ".uno:DBNewFormAutoPilot", RID_STR_FORMS_HELP_TEXT_WIZARD, RID_STR_NEW_FORM_AUTO ) );
-#endif	// SOLAR_JAVA
 		_rData.nTitleId = RID_STR_FORMS_CONTAINER;
 		break;
 
     case E_REPORT:
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+        {
+#endif	// USE_JAVA && MACOSX
         rList.push_back( TaskEntry( ".uno:DBNewReport", RID_STR_REPORT_HELP_TEXT, RID_STR_NEW_REPORT, true ) );
 		rList.push_back( TaskEntry( ".uno:DBNewReportAutoPilot", RID_STR_REPORTS_HELP_TEXT_WIZARD, RID_STR_NEW_REPORT_AUTO ) );
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        }
+#endif	// USE_JAVA && MACOSX
 		_rData.nTitleId = RID_STR_REPORTS_CONTAINER;
 		break;
 
 	case E_QUERY:
 		rList.push_back( TaskEntry( ".uno:DBNewQuery", RID_STR_QUERIES_HELP_TEXT, RID_STR_NEW_QUERY ) );
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+        if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
 		rList.push_back( TaskEntry( ".uno:DBNewQueryAutoPilot", RID_STR_QUERIES_HELP_TEXT_WIZARD, RID_STR_NEW_QUERY_AUTO ) );
-#endif	// SOLAR_JAVA
 		rList.push_back( TaskEntry( ".uno:DBNewQuerySql", RID_STR_QUERIES_HELP_TEXT_SQL, RID_STR_NEW_QUERY_SQL ) );
 		_rData.nTitleId = RID_STR_QUERIES_CONTAINER;
 		break;

@@ -55,6 +55,16 @@
 #endif
 #include <memory>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::dbaui;
 //==================================================================
 // class OApplicationIconControl
@@ -82,11 +92,16 @@ OApplicationIconControl::OApplicationIconControl(Window* _pParent)
     };
     for ( size_t i=0; i < sizeof(aCategories)/sizeof(aCategories[0]); ++i)
     {
-#ifndef SOLAR_JAVA
-        // All report options require Java
-        if ( aCategories[i].eType == E_REPORT )
+#if defined USE_JAVA && defined MACOSX
+        if ( !pApplication_canUseJava )
+            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+        if ( !pApplication_canUseJava || !pApplication_canUseJava() )
+        {
+            // All report options require Java
+            if ( aCategories[i].eType == E_REPORT )
             continue;
-#endif	// !SOLAR_JAVA
+        }
+#endif	// USE_JAVA && defined MACOSX
         SvxIconChoiceCtrlEntry* pEntry = InsertEntry(
             String( ModuleRes( aCategories[i].nLabelResId ) ),
             Image( ModuleRes( aCategories[i].nImageResId ) ),

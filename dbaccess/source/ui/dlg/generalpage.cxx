@@ -85,6 +85,17 @@
 #include "DriverSettings.hxx"
 #endif
 #include "UITools.hxx"
+
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 //.........................................................................
 namespace dbaui
 {
@@ -93,6 +104,17 @@ namespace dbaui
 	using namespace ::com::sun::star::sdbc;
 	using namespace ::com::sun::star::beans;
 	using namespace ::com::sun::star::container;
+
+#if defined USE_JAVA && defined MACOSX
+
+static sal_Bool lcl_canUseJava()
+{
+	if ( !pApplication_canUseJava )
+		pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+	return ( pApplication_canUseJava && pApplication_canUseJava() );
+}
+
+#endif	// USE_JAVA && MACOSX
 
     //=========================================================================
 	//= OGeneralPage
@@ -169,11 +191,11 @@ namespace dbaui
         {
             bool operator() ( const DisplayedType& _rLHS, const DisplayedType& _rRHS )
             {
-#ifndef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
                 // List MySQL last when only ODBC driver is available
-                if ( _rRHS.eType == ::dbaccess::DST_MYSQL_ODBC )
+                if ( _rRHS.eType == ::dbaccess::DST_MYSQL_ODBC && !lcl_canUseJava() )
                     return true;
-#endif	// SOLAR_JAVA
+#endif	// USE_JAVA && MACOSX
                 return _rLHS.eType < _rRHS.eType;
             }
         };
@@ -213,10 +235,10 @@ namespace dbaui
 			{
 				::dbaccess::DATASOURCE_TYPE eType = aTypeLoop.getType();
 
-#ifndef SOLAR_JAVA
-				if ( eType == ::dbaccess::DST_JDBC || eType == ::dbaccess::DST_MYSQL_JDBC || eType == ::dbaccess::DST_ORACLE_JDBC )
+#if defined USE_JAVA && defined MACOSX
+				if ( ( eType == ::dbaccess::DST_JDBC || eType == ::dbaccess::DST_MYSQL_JDBC || eType == ::dbaccess::DST_ORACLE_JDBC ) && !lcl_canUseJava() )
 					continue;
-#endif	// !SOLAR_JAVA
+#endif	// USE_JAVA && MACOSX
 
 				if ( xDriverManager.is() )
 				{	// we have a driver manager to check
@@ -418,11 +440,14 @@ namespace dbaui
 		}
 
 		if (m_aRB_CreateDatabase.IsChecked() && m_DBWizardMode)
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+            if ( lcl_canUseJava() )
+#endif	// USE_JAVA && MACOSX
             sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_JDBC);
-#else	// SOLAR_JAVA
-            sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_DBASE);
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+            else
+                sDisplayName = m_pCollection->getTypeDisplayName( ::dbaccess::DST_DBASE);
+#endif	// USE_JAVA && MACOSX
 		m_pDatasourceType->SelectEntry(sDisplayName);
 
 		// notify our listener that our type selection has changed (if so)
@@ -447,19 +472,29 @@ namespace dbaui
     // databases to connect to.
 	bool OGeneralPage::approveDataSourceType( ::dbaccess::DATASOURCE_TYPE eType, String& _inout_rDisplayName )
 	{
+#if defined USE_JAVA && defined MACOSX
+		sal_Bool bCanUseJava = lcl_canUseJava();
+#endif	// USE_JAVA && MACOSX
+
 		if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_JDBC ) )
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+			if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
 			_inout_rDisplayName = m_sMySQLEntry;
-#else	// SOLAR_JAVA
-            _inout_rDisplayName = String();
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+			else
+				_inout_rDisplayName = String();
+#endif	// USE_JAVA && MACOSX
 
         else if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_ODBC ) )
-#ifdef SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+            if ( bCanUseJava )
+#endif	// USE_JAVA && MACOSX
             _inout_rDisplayName = String();
-#else	// SOLAR_JAVA
-			_inout_rDisplayName = m_sMySQLEntry;
-#endif	// SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+            else
+                _inout_rDisplayName = m_sMySQLEntry;
+#endif	// USE_JAVA && MACOSX
 
         else if ( m_DBWizardMode && ( eType ==  ::dbaccess::DST_MYSQL_NATIVE ) )
             _inout_rDisplayName = String();

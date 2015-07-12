@@ -79,6 +79,16 @@
 
 #include <algorithm>
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef sal_Bool Application_canUseJava_Type();
+
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::sdb;
@@ -809,17 +819,22 @@ Reference< XConnection > ODatabaseSource::buildLowLevelConnection(const ::rtl::O
 
 	if ( !xReturn.is() )
 	{
-#ifndef SOLAR_JAVA
-		static ::rtl::OUString aEmbeddedHSQLDB( RTL_CONSTASCII_USTRINGPARAM( "sdbc:embedded:hsqldb" ) );
-		static ::rtl::OUString aJDBC( RTL_CONSTASCII_USTRINGPARAM( "jdbc:" ) );
-		static ::rtl::OUString aMySQLJDBC( RTL_CONSTASCII_USTRINGPARAM( "sdbc:mysql:jdbc:" ) );
-		static ::rtl::OUString aOracleJDBC( RTL_CONSTASCII_USTRINGPARAM( "jdbc:oracle:thin:" ) );
-		if ( ( aEmbeddedHSQLDB.getLength() && m_pImpl->m_sConnectURL.indexOf( aEmbeddedHSQLDB ) )
-			|| ( aJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aJDBC ) )
-			|| ( aMySQLJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aMySQLJDBC ) )
-			|| ( aOracleJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aOracleJDBC ) ) )
-				nExceptionMessageId = RID_STR_COULDNOTCONNECT_NOJAVA;
-#endif	// !SOLAR_JAVA
+#if defined USE_JAVA && defined MACOSX
+		if ( !pApplication_canUseJava )
+			pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
+		if ( !pApplication_canUseJava || !pApplication_canUseJava() )
+		{
+			static ::rtl::OUString aEmbeddedHSQLDB( RTL_CONSTASCII_USTRINGPARAM( "sdbc:embedded:hsqldb" ) );
+			static ::rtl::OUString aJDBC( RTL_CONSTASCII_USTRINGPARAM( "jdbc:" ) );
+			static ::rtl::OUString aMySQLJDBC( RTL_CONSTASCII_USTRINGPARAM( "sdbc:mysql:jdbc:" ) );
+			static ::rtl::OUString aOracleJDBC( RTL_CONSTASCII_USTRINGPARAM( "jdbc:oracle:thin:" ) );
+			if ( ( aEmbeddedHSQLDB.getLength() && m_pImpl->m_sConnectURL.indexOf( aEmbeddedHSQLDB ) )
+				|| ( aJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aJDBC ) )
+				|| ( aMySQLJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aMySQLJDBC ) )
+				|| ( aOracleJDBC.getLength() && m_pImpl->m_sConnectURL.indexOf( aOracleJDBC ) ) )
+					nExceptionMessageId = RID_STR_COULDNOTCONNECT_NOJAVA;
+		}
+#endif	// USE_JAVA && MACOSX
 
 		::rtl::OUString sMessage = DBACORE_RESSTRING( nExceptionMessageId );
 
