@@ -105,13 +105,15 @@ char const *g_arCollectDirs[] = {
 */
 char const *g_arSearchPaths[] = {
 #ifdef MACOSX
-    "",
 #ifdef USE_JAVA
-    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/",
+    // Don't include "" as it will cause OS X to display a dialog when Oracle's
+    // JRE but not their JDK is installed
+    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/"
 #else	// USE_JAVA
+    "",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
-#endif	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/"
+#endif	// USE_JAVA
 #else
     "",
     "usr/",
@@ -393,9 +395,11 @@ bool getJavaProps(const OUString & exePath,
 #if defined USE_JAVA && defined MACOSX
     // Test if the JavaVM.framework can be loaded. Use a subprocess as exit()
     // will be called. If Java is not installed, OS X should display a dialog
-    // with a button for downloading Java.
+    // with a button for downloading Java. Prevent unexpected display of OS X
+    // dialog by skipping this step if Oracle's JRE is already installed.
+    char pOracleJREPath[] = "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin/java";
     char pExePath[] = "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java";
-    if ( !access( pExePath, X_OK ) )
+    if ( access( pOracleJREPath, X_OK ) && !access( pExePath, X_OK ) )
     {
         pid_t pid = fork();
         if ( !pid )
