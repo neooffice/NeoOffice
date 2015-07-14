@@ -390,17 +390,18 @@ bool getJavaProps(const OUString & exePath,
     // Test if the JavaVM.framework can be loaded. Use a subprocess as exit()
     // will be called. If Java is not installed, OS X should display a dialog
     // with a button for downloading Java.
-    OString aExePath( "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java" );
-    if ( aExePath.getLength() && !access( aExePath.getStr(), X_OK ) )
+    char pExePath[] = "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java";
+    if ( !access( pExePath, X_OK ) )
     {
         pid_t pid = fork();
         if ( !pid )
         {
             close( 0 );
-            char *pExeArgs[ 2 ];
-            pExeArgs[ 0 ] = (char *)aExePath.getStr();
-            pExeArgs[ 1 ] = NULL;
-            execvp( aExePath.getStr(), pExeArgs );
+            char *pExeArgs[ 3 ];
+            pExeArgs[ 0 ] = pExePath;
+            pExeArgs[ 1 ] = (char *)"-version";
+            pExeArgs[ 2 ] = NULL;
+            execvp( pExePath, pExeArgs );
             _exit( 1 );
         }
         else if ( pid > 0 )
