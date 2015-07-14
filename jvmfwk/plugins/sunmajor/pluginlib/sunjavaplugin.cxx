@@ -509,12 +509,21 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             // Fix bug 1257 by explicitly loading the JVM instead of loading the
             // shared JavaVM library
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl"));
+#ifdef USE_JAVA
+    rtl::OUString sSymbolCreateJava2(
+            RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
+#endif	// USE_JAVA
 #else	// MACOSX
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
 #endif	// MACOSX
         
     JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getFunctionSymbol(
         moduleRt, sSymbolCreateJava.pData);
+#ifdef USE_JAVA
+    if (!pCreateJavaVM)
+        pCreateJavaVM = (JNI_CreateVM_Type *) osl_getFunctionSymbol(
+            moduleRt, sSymbolCreateJava2.pData);
+#endif	// USE_JAVA
     if (!pCreateJavaVM)
     {
         OSL_ASSERT(0);
@@ -694,7 +703,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+3].extraInfo = NULL;
 
     // Set miscellaneous optimizations for the JVM
-    options[i+4].optionString = "-Xrs";
+    options[i+4].optionString = (char *)"-Xrs";
     options[i+4].extraInfo = NULL;
 
     size_t nUserMem = 256;
@@ -708,15 +717,15 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // We need to turn off some of Java 1.4's graphics optimizations as
     // they cause full screen window positioning, clipping, and image
     // drawing speed to get messed up
-    options[i+6].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+    options[i+6].optionString = (char *)"-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
     options[i+6].extraInfo = NULL;
 
     // Fix bug 1800 by explicitly setting the look and feel to Aqua
-    options[i+7].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
+    options[i+7].optionString = (char *)"-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
     options[i+7].extraInfo = NULL;
 
     // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
-    options[i+8].optionString = "-Dapple.awt.graphics.UseQuartz=true";
+    options[i+8].optionString = (char *)"-Dapple.awt.graphics.UseQuartz=true";
     options[i+8].extraInfo = NULL;
 #endif	// MACOSX
 #endif	// USE_JAVA

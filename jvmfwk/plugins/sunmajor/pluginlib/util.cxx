@@ -106,7 +106,11 @@ char const *g_arCollectDirs[] = {
 char const *g_arSearchPaths[] = {
 #ifdef MACOSX
     "",
+#ifdef USE_JAVA
+    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/",
+#else	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
+#endif	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/"
 #else
     "",
