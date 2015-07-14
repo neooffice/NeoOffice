@@ -388,39 +388,29 @@ bool getJavaProps(const OUString & exePath,
 
 #if defined USE_JAVA && defined MACOSX
     // Test if the JavaVM.framework can be loaded. Use a subprocess as exit()
-    // will be called on OS X 10.10 if Apple's Java has not been installed.
-    OUString aProgName;
-    osl_getExecutableFile( &aProgName.pData );
-    sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
-    if ( lastIndex > 0 )
+    // will be called. If Java is not installed, OS X should display a dialog
+    // with a button for downloading Java.
+    OString aExePath( "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java" );
+    if ( aExePath.getLength() && !access( aExePath.getStr(), X_OK ) )
     {
-        OUString aProgPath;
-        if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( aProgName.copy( 0, lastIndex+1 ), aProgPath ) )
+        pid_t pid = fork();
+        if ( !pid )
         {
-            aProgPath += OUString( RTL_CONSTASCII_USTRINGPARAM( "osxjavavmcheck.bin" ) );
-            OString aExePath( OUStringToOString( aProgPath, osl_getThreadTextEncoding() ) );
-            if ( aExePath.getLength() && !access( aExePath.getStr(), X_OK ) )
-            {
-                pid_t pid = fork();
-                if ( !pid )
-                {
-                    close( 0 );
-                    char *pExeArgs[ 2 ];
-                    pExeArgs[ 0 ] = (char *)aExePath.getStr();
-                    pExeArgs[ 1 ] = NULL;
-                    execvp( aExePath.getStr(), pExeArgs );
-                    _exit( 1 );
-                }
-                else if ( pid > 0 )
-                {
-                    // Invoke waitpid to prevent zombie processes
-                    int status;
-                    while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-                        usleep( 10 );
-                    if ( WEXITSTATUS( status ) )
-                       return false;
-                }
-            }
+            close( 0 );
+            char *pExeArgs[ 2 ];
+            pExeArgs[ 0 ] = (char *)aExePath.getStr();
+            pExeArgs[ 1 ] = NULL;
+            execvp( aExePath.getStr(), pExeArgs );
+            _exit( 1 );
+        }
+        else if ( pid > 0 )
+        {
+            // Invoke waitpid to prevent zombie processes
+            int status;
+            while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+                usleep( 10 );
+            if ( WEXITSTATUS( status ) )
+               return false;
         }
     }
 #endif	// USE_JAVA && MACOSX
