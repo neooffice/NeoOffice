@@ -3,13 +3,9 @@
 <javaSelection xmlns="http://openoffice.org/2004/java/framework/1.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
- <updated>2015-07-13</updated>
+ <updated>2015-07-14</updated>
 
  <vendorInfos>
-  <vendor name="Apple Inc.">
-   <minVersion>1.6.0</minVersion>
-   <maxVersion>1.6.999</maxVersion>
-  </vendor>
   <vendor name="Oracle Corporation">
    <minVersion>1.8.0</minVersion>
    <maxVersion>1.8.999</maxVersion>
@@ -17,7 +13,6 @@
  </vendorInfos>
 
  <plugins>
-  <library vendor="Apple Inc.">vnd.sun.star.expand:$URE_INTERNAL_LIB_DIR/sunjavaplugin.dylib</library>
   <library vendor="Oracle Corporation">vnd.sun.star.expand:$URE_INTERNAL_LIB_DIR/sunjavaplugin.dylib</library>
  </plugins>
 </javaSelection>
