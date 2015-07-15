@@ -600,8 +600,7 @@ static void RegisterMainBundleWithLaunchServices()
 }
 + (void)activate:(id)pObject modallyDisabled:(MacOSBOOL)bModallyDisabled;
 + (void)addDefaultHelpMenu;
-+ (void)clearMenuBar:(MacOSBOOL)bClear;
-+ (id)getDefaultMenuBar;
++ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(MacOSBOOL)bClear;
 + (MacOSBOOL)isActiveMenuBar:(id)pObject;
 @end
 
@@ -615,13 +614,8 @@ static void RegisterMainBundleWithLaunchServices()
 {
 }
 
-+ (void)clearMenuBar:(MacOSBOOL)bClear
++ (void)clearMenuBarExcludingAppleMenu_OnAppKitThread:(MacOSBOOL)bClear
 {
-}
-
-+ (id)getDefaultMenuBar
-{
-	return nil;
 }
 
 + (MacOSBOOL)isActiveMenuBar:(id)pObject
@@ -765,7 +759,7 @@ static NSUInteger nMouseMask = 0;
 {
 	// If a Java window is loaded, swizzle Java's menubar management class so
 	// that Java will not be able to change the menubar
-	if ( pWindow && !bJavaAWTInitialized && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
+	if ( pWindow && !bJavaAWTInitialized && ( [[pWindow className] isEqualToString:@"AWTWindow_Normal"] || [[pWindow className] isEqualToString:@"AWTWindow_Panel"] ) )
 	{
 		bJavaAWTInitialized = YES;
 
@@ -797,17 +791,7 @@ static NSUInteger nMouseMask = 0;
 						method_setImplementation( aOldMethod, aNewIMP );
 				}
 
-				aSelector = @selector(clearMenuBar:);
-				aOldMethod = class_getClassMethod( aClass, aSelector );
-				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
-				if ( aOldMethod && aNewMethod )
-				{
-					IMP aNewIMP = method_getImplementation( aNewMethod );
-					if ( aNewIMP )
-						method_setImplementation( aOldMethod, aNewIMP );
-				}
-
-				aSelector = @selector(getDefaultMenuBar);
+				aSelector = @selector(clearMenuBarExcludingAppleMenu_OnAppKitThread:);
 				aOldMethod = class_getClassMethod( aClass, aSelector );
 				aNewMethod = class_getClassMethod( [VCLCMenuBar class], aSelector );
 				if ( aOldMethod && aNewMethod )
@@ -2787,6 +2771,33 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface NSApplication (VCLApplicationPoseAs)
+- (void)poseAsSetDelegate:(id< NSApplicationDelegate >)pObject;
+@end
+
+@interface VCLApplication : NSApplication
+- (void)setDelegate:(id< NSApplicationDelegate >)pObject;
+@end
+
+@implementation VCLApplication
+
+- (void)setDelegate:(id< NSApplicationDelegate >)pObject
+{
+	// Do not allow Java or a third pary extension to set the delegate
+	if ( pObject )
+	{
+		Class aClass = [pObject class];
+		NSString *pClassName = NSStringFromClass( aClass );
+		if ( aClass != [VCLApplicationDelegate class] && ![@"RemoteControlDelegateImpl" isEqualToString:pClassName] && ![@"ShutdownIconDelegate" isEqualToString:pClassName] )
+			return;
+	}
+
+	if ( [super respondsToSelector:@selector(poseAsSetDelegate:)] )
+		[super poseAsSetDelegate:pObject];
+}
+
+@end
+
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3059,6 +3070,20 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aNewIMP )
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	// VCLApplication selectors
+
+	aSelector = @selector(setDelegate:);
+	aPoseAsSelector = @selector(poseAsSetDelegate:);
+	aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
