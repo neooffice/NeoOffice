@@ -160,10 +160,6 @@ extern "C" FUNCTION( PRODUCT_CHECKSUM3 )
 }
 #endif	// PRODUCT_CHECKSUM3
 
-@interface NSBundle (VCLBundle)
-- (MacOSBOOL)loadNibNamed:(NSString *)pNibName owner:(id)pOwner topLevelObjects:(NSArray **)pTopLevelObjects;
-@end
-
 void NSApplication_run()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -210,8 +206,7 @@ void NSApplication_run()
 				_exit( 1 );
 			}
 
-			if ( [pBundle respondsToSelector:@selector(loadNibNamed:owner:topLevelObjects:)] )
- 				[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
+ 			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
 
 			VCLEventQueue_installVCLEventQueueClasses();
 
