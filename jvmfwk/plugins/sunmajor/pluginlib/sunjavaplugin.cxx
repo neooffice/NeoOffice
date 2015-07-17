@@ -566,7 +566,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     boost::scoped_array<JavaVMOption> sarOptions(
 #ifdef USE_JAVA
 #ifdef MACOSX
-        new JavaVMOption[cOptions + 9]);
+        new JavaVMOption[cOptions + 10]);
 #else	// MACOSX
         new JavaVMOption[cOptions + 6]);
 #endif	// MACOSX
@@ -735,6 +735,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
     options[i+8].optionString = (char *)"-Dapple.awt.graphics.UseQuartz=true";
     options[i+8].extraInfo = NULL;
+
+    // Using Oracle's Java AWT classes causes hanging on OS X 10.10
+    options[i+9].optionString = (char *)"-Djava.awt.headless=true";
+    options[i+9].extraInfo = NULL;
 #endif	// MACOSX
 #endif	// USE_JAVA
 #if defined MACOSX || defined USE_JAVA
@@ -745,7 +749,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     vm_args.options= options;
 #ifdef USE_JAVA
 #ifdef MACOSX
-    vm_args.nOptions= cOptions + 9;
+    vm_args.nOptions= cOptions + 10;
 #else	// MACOSX
     vm_args.nOptions= cOptions + 6;
 #endif	// MACOSX
