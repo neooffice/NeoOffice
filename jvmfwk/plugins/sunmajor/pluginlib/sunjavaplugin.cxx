@@ -61,6 +61,10 @@
 #include "osl/process.h"
 #include "rtl/strbuf.hxx"
 
+#if defined MACOSX
+#include "util_cocoa.hxx"
+#endif	// MACOSX
+
 #endif	// USE_JAVA
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
@@ -469,6 +473,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
 #endif	// USE_JAVA
     rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
+#if defined USE_JAVA && defined MACOSX
+    if ( !JvmfwkUtil_isLoadableJVM( sRuntimeLib ) )
+        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+#endif	// USE_JAVA && MACOSX
     JFW_TRACE2(OUSTR("[Java framework] Using Java runtime library: ")
               + sRuntimeLib + OUSTR(".\n"));
     // On linux we load jvm with RTLD_GLOBAL. This is necessary for debugging, because

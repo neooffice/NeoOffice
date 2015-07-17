@@ -77,7 +77,8 @@ char const* const* SunInfo::getRuntimePaths(int * size)
         "/bin/hotspot/jvm.dll"
 #elif UNX
 #if defined USE_JAVA && defined MACOSX
-        "/lib/server/libjvm.dylib"
+        "/lib/server/libjvm.dylib",
+        "/lib/jli/libjli.dylib"
 #else	// USE_JAVA && MACOSX
         "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so",
         "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so",

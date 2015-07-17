@@ -57,13 +57,12 @@
 #endif
 #include <string.h>
 
-#if defined USE_JAVA && defined MACOSX
-#include <errno.h>
-#endif	// USE_JAVA && MACOSX
-
 #include "sunjre.hxx"
 #include "vendorlist.hxx"
 #include "diagnostics.h"
+#if defined USE_JAVA && defined MACOSX
+#include "util_cocoa.hxx"
+#endif	// USE_JAVA && MACOSX
 using namespace rtl;
 using namespace osl;
 using namespace std;
@@ -75,6 +74,7 @@ using namespace std;
 #endif
 
 #ifdef UNX
+#if !defined USE_JAVA || !defined MACOSX
 namespace {
 char const *g_arJavaNames[] = {
     "",
@@ -105,15 +105,9 @@ char const *g_arCollectDirs[] = {
 */
 char const *g_arSearchPaths[] = {
 #ifdef MACOSX
-#ifdef USE_JAVA
-    // Don't include "" as it will cause OS X to display a dialog when Oracle's
-    // JRE but not their JDK is installed
-    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/"
-#else	// USE_JAVA
     "",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/"
-#endif	// USE_JAVA
 #else
     "",
     "usr/",
@@ -128,6 +122,7 @@ char const *g_arSearchPaths[] = {
 #endif
 };
 }
+#endif	// !USE_JAVA || !MACOSX
 #endif //  UNX
 
 namespace jfw_plugin
@@ -393,35 +388,8 @@ bool getJavaProps(const OUString & exePath,
         return false;
 
 #if defined USE_JAVA && defined MACOSX
-    // Test if the JavaVM.framework can be loaded. Use a subprocess as exit()
-    // will be called. If Java is not installed, OS X should display a dialog
-    // with a button for downloading Java. Prevent unexpected display of OS X
-    // dialog by skipping this step if Oracle's JRE is already installed.
-    char pOracleJREPath[] = "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin/java";
-    char pExePath[] = "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java";
-    if ( access( pOracleJREPath, X_OK ) && !access( pExePath, X_OK ) )
-    {
-        pid_t pid = fork();
-        if ( !pid )
-        {
-            close( 0 );
-            char *pExeArgs[ 3 ];
-            pExeArgs[ 0 ] = pExePath;
-            pExeArgs[ 1 ] = (char *)"-version";
-            pExeArgs[ 2 ] = NULL;
-            execvp( pExePath, pExeArgs );
-            _exit( 1 );
-        }
-        else if ( pid > 0 )
-        {
-            // Invoke waitpid to prevent zombie processes
-            int status;
-            while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-                usleep( 10 );
-            if ( WEXITSTATUS( status ) )
-               return false;
-        }
-    }
+    if (!JvmfwkUtil_isLoadableJVM(exePath))
+        return false;
 #endif	// USE_JAVA && MACOSX
 
     //check if we shall examine a Java for accessibility support
@@ -1170,6 +1138,32 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
 {
     OUString excMessage = OUSTR("[Java framework] sunjavaplugin: "
                                 "Error in function createJavaInfoDirScan in util.cxx.");
+#if defined USE_JAVA && defined MACOSX
+    // Ignore all but Oracle's JDK as loading Apple's Java and Oracle's JRE
+    // will cause OS X's JavaVM framework to display a dialog and invoke
+    // exit() when loaded via JNI on OS X 10.10
+    Directory aDir(OUSTR("file:///Library/Java/JavaVirtualMachines"));
+    if (aDir.open() == File::E_None)
+    {
+        DirectoryItem aItem;
+        while (aDir.getNextItem(aItem) == File::E_None)
+        {
+            FileStatus aStatus(FileStatusMask_FileURL);
+            if (aItem.getFileStatus(aStatus) == File::E_None)
+            {
+                OUString aItemURL( aStatus.getFileURL() );
+                if (aItemURL.getLength())
+                {
+                    aItemURL += OUSTR("/Contents/Home");
+                    if (DirectoryItem::get(aItemURL, aItem) == File::E_None)
+                        getJREInfoByPath(aItemURL, vecInfos);   
+                }
+            }
+		}
+
+        aDir.close();
+    }
+#else	// USE_JAVA && MACOSX
     int cJavaNames= sizeof(g_arJavaNames) / sizeof(char*);
     boost::scoped_array<OUString> sarJavaNames(new OUString[cJavaNames]);
     OUString *arNames = sarJavaNames.get();
@@ -1287,6 +1281,7 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
             }
         }
     }
+#endif	// USE_JAVA && MACOSX
 }
 #endif // ifdef SOLARIS
 #endif // ifdef UNX
