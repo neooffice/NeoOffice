@@ -532,6 +532,9 @@ endif
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/updchk.uno.dylib'
 # Do not ship the Lotus Word Pro filter as it is very unstable on Mac OS X
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/liblwpft$(DLLSUFFIX).dylib'
+# Reregister hwpfilter
+	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/bin/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libhwp.dylib'
+	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/bin/regcomp" -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libhwp.dylib'
 # Reregister spellchecker to enable native grammarchecker
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libspell$(DLLSUFFIX).dylib'
 # Add Mac OS X localized resources
