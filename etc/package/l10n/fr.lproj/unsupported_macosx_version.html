@@ -21,10 +21,11 @@
 			</div>
 			<div id="content">
 				<div class="pageContent">
-					<p class="warning"><span style="font-size: x-large">$(PRODUCT_NAME) $(PRODUCT_VERSION) ne pourrait pas fonctionner correctement avec cette version de Mac&nbsp;OS&nbsp;X</span></p>
-					<p class="titlebar"><span style="font-size: large">Nous vous recommandons de installer la <a href="http://www.neooffice.org/neojava/download.php?fragment=download">dernière version de $(PRODUCT_NAME)</a></span></p>
-					<p>Apple inclut des changements importants dans chaque nouvelle version de Mac&nbsp;OS&nbsp;X. Depuis ces changements sont susceptibles de causer de nombreux nouveaux bogues dans $(PRODUCT_NAME) et <b>pourrait faire planter $(PRODUCT_NAME)</b>, $(PRODUCT_NAME) $(PRODUCT_VERSION) n'est pas une version destinée à la production et risque de contenir de nombreux bugs non découverts.</p>
-					<p><b>Nous vous recommandons de installer la <a href="http://www.neooffice.org/neojava/download.php?fragment=download">dernière version de $(PRODUCT_NAME)</a></b>. Si vous choisissez d'utiliser $(PRODUCT_NAME) $(PRODUCT_VERSION) avec cette version de Mac&nbsp;OS&nbsp;X, <b>nous insistons sur le fait qu'il faut que vous enregistriez votre travail fréquemment</b>.</p>
+					<p class="warning"><span style="font-size: x-large">$(PRODUCT_NAME) $(PRODUCT_VERSION)<br>pourrait ne pas fonctionner correctement avec cette version de Mac&nbsp;OS&nbsp;X</span></p>
+					<br>
+					<p class="titlebar"><span style="font-size: large">Nous vous recommandons d'installer la <a href="$(PRODUCT_DOWNLOAD_URL)">dernière version de $(PRODUCT_NAME)</a></span></p>
+					<p>Nous avons testé $(PRODUCT_NAME) $(PRODUCT_VERSION) uniquement sur Mac&nbsp;OS&nbsp;X $(PRODUCT_MIN_OSVERSION) - $(PRODUCT_MAX_OSVERSION) afin que nous vous recommandons d'installer la <a href="$(PRODUCT_DOWNLOAD_URL)">dernière version de $(PRODUCT_NAME)</a>.</p>
+					<p>Apple ajoute des changements significatifs dans chaque nouvelle version de Mac&nbsp;OS&nbsp;X et ces changements peut causer nouveaux bogues dans $(PRODUCT_NAME). Quand nous trouvons de nouveaux bogues dans $(PRODUCT_NAME), nous incluons corrections dans la <a href="$(PRODUCT_DOWNLOAD_URL)">dernière version de $(PRODUCT_NAME)</a>.</p>
 				</div>
 			</div>
 		</div>

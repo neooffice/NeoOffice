@@ -21,10 +21,11 @@
 			</div>
 			<div id="content">
 				<div class="pageContent">
-					<p class="warning"><span style="font-size: x-large">$(PRODUCT_NAME) $(PRODUCT_VERSION) might not function correctly with this version of Mac&nbsp;OS&nbsp;X</span></p>
-					<p class="titlebar"><span style="font-size: large">We recommend the you install the <a href="http://www.neooffice.org/neojava/download.php?fragment=download">latest version of $(PRODUCT_NAME)</a></span></p>
-					<p>Apple includes significant changes in each new version of Mac&nbsp;OS&nbsp;X. Since such changes will likely cause many new bugs in $(PRODUCT_NAME) and <b>might cause $(PRODUCT_NAME) to crash</b>, $(PRODUCT_NAME) $(PRODUCT_VERSION) is not a production release and will likely have many undiscovered bugs.</p>
-					<p><b>We recommend the you install the <a href="http://www.neooffice.org/neojava/download.php?fragment=download">latest version of $(PRODUCT_NAME)</a></b>. If you choose to use $(PRODUCT_NAME) $(PRODUCT_VERSION) with this version of Mac&nbsp;OS&nbsp;X, <b>we strongly recommend that you save your work frequently</b> so that if you encounter a crashing bug, you will not lose much data.</p>
+					<p class="warning"><span style="font-size: x-large">$(PRODUCT_NAME) $(PRODUCT_VERSION)<br>might not function correctly with this version of Mac&nbsp;OS&nbsp;X</span></p>
+					<br>
+					<p class="titlebar"><span style="font-size: large">We recommend that you <a href="$(PRODUCT_DOWNLOAD_URL)">install the latest version of $(PRODUCT_NAME)</a></span></p>
+					<p>We have tested $(PRODUCT_NAME) $(PRODUCT_VERSION) only on Mac&nbsp;OS&nbsp;X $(PRODUCT_MIN_OSVERSION) - $(PRODUCT_MAX_OSVERSION) so we recommend that you <b><a href="$(PRODUCT_DOWNLOAD_URL)">install the latest version of $(PRODUCT_NAME)</a></b>.</p>
+					<p>Apple adds significant changes in each new version of Mac&nbsp;OS&nbsp;X and these changes can cause new bugs in $(PRODUCT_NAME). When we find new bugs, we include fixes in the <a href="$(PRODUCT_DOWNLOAD_URL)">latest version of $(PRODUCT_NAME)</a>.</p>
 				</div>
 			</div>
 		</div>
