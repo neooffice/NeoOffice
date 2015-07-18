@@ -1,40 +1,26 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-
-/* NAME $Id$
- * PURPOSE
- *   supposed to be used instead of std::string
- * NOTES
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
  *
- * HISTORY
- *        frog - Oct 8, 1998: Created.
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifdef __GNUG__
-#pragma implementation "mzstring.h"
-#endif
+/* PURPOSE
+ *   supposed to be used instead of std::string
+ */
 
-//#include "stdafx.h"		//
 #include "mzstring.h"
 
 #ifndef WIN32
@@ -47,7 +33,6 @@
     #if defined _MSC_VER
         #pragma warning(pop)
     #endif
-//# include <crtdbg.h>
 #endif                                            /* WIN32 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +65,7 @@ MzString::~MzString()
 }
 
 
-void MzString::operator = (MzString &s)
+MzString &MzString::operator = (MzString &s)
 {
     int n = s.length();
     if (allocate(n))
@@ -88,10 +73,11 @@ void MzString::operator = (MzString &s)
         if (n > 0) memcpy(Data, s.Data, n);
         Length = n;
     }
+    return *this;
 }
 
 
-void MzString::operator = (const char *s)
+MzString &MzString::operator = (const char *s)
 {
     if (s == NULL)
         s = "";
@@ -101,6 +87,7 @@ void MzString::operator = (const char *s)
         if (n > 0) memcpy(Data, s, n);
         Length = n;
     }
+    return *this;
 }
 
 
@@ -261,9 +248,9 @@ void MzString::replace(int pos, char ch)
 }
 
 
-//------------------------------------------------------------------------
+
 // Private Methods.
-//
+
 
 bool MzString::allocate(int len)
 {
@@ -308,3 +295,5 @@ bool MzString::resize(int len)
 {
     return allocate(len);
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

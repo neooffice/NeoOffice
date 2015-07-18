@@ -1,40 +1,23 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-
-/* NAME
- * PURPOSE
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
  *
- * NOTES
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * HISTORY
- *        frog - Aug 6, 1998: Created.
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
 #include "precompile.h"
-
-#ifdef __GNUG__
-#pragma implementation "htags.h"
-#endif
 
 #include <string.h>
 
@@ -62,9 +45,10 @@ bool HyperText::Read(HWPFile & hwpf)
 }
 
 
-EmPicture::EmPicture(int tsize):size(tsize - 32)
+EmPicture::EmPicture(size_t tsize)
+    : size(tsize >= 32 ? tsize - 32 : 0)
 {
-    if (size <= 0)
+    if (size == 0)
         data = 0;
     else
         data = new uchar[size];
@@ -80,7 +64,7 @@ EmPicture::~EmPicture(void)
 
 bool EmPicture::Read(HWPFile & hwpf)
 {
-    if (size <= 0)
+    if (size == 0)
         return false;
     hwpf.Read1b(name, 16);
     hwpf.Read1b(type, 16);
@@ -94,24 +78,24 @@ bool EmPicture::Read(HWPFile & hwpf)
 
 
 OlePicture::OlePicture(int tsize)
+    : signature(0)
+    , pis(NULL)
 {
     size = tsize - 4;
     if (size <= 0)
         return;
-#ifdef WIN32
-	 pis = 0L;
-#else
-	 pis = new char[size];
+#ifndef WIN32
+     pis = new char[size];
 #endif
 };
 
-OlePicture::~OlePicture(void)
+OlePicture::~OlePicture()
 {
 #ifdef WIN32
-	 if( pis )
-		  pis->Release();
+     if( pis )
+          pis->Release();
 #else
-	 delete[] pis;
+     delete[] pis;
 #endif
 };
 
@@ -127,28 +111,33 @@ bool OlePicture::Read(HWPFile & hwpf)
     if (signature != FILESTG_SIGNATURE_NORMAL)
         return false;
 #ifdef WIN32
-	 char *data;
-	 data = new char[size];
-	 if( data == 0 || hwpf.ReadBlock(data,size) == 0 )
-		  return false;
-	 FILE *fp;
-	 char tname[200];
-	 wchar_t wtname[200];
-	 tmpnam(tname);
-     if (0 == (fp = fopen(tname, "wb")))
-		  return false;
-	 fwrite(data, size, 1, fp);
-	 fclose(fp);
-	 MultiByteToWideChar(CP_ACP, 0, tname, -1, wtname, 200);
-	 if( StgOpenStorage(wtname, NULL,
-					 STGM_READWRITE|STGM_SHARE_EXCLUSIVE|STGM_TRANSACTED,
-					 NULL, 0, &pis) != S_OK ) {
-		  pis = 0;
-		  unlink(tname);
-		  return false;
-	 }
-	 unlink(tname);
-	 delete [] data;
+    char *data = new char[size];
+    if( data == 0 || hwpf.ReadBlock(data,size) == 0 )
+    {
+          delete [] data;
+          return false;
+    }
+    FILE *fp;
+    char tname[200];
+    wchar_t wtname[200];
+    tmpnam(tname);
+    if (0 == (fp = fopen(tname, "wb")))
+    {
+         delete [] data;
+         return false;
+    }
+    fwrite(data, size, 1, fp);
+    delete [] data;
+    fclose(fp);
+    MultiByteToWideChar(CP_ACP, 0, tname, -1, wtname, 200);
+    if( StgOpenStorage(wtname, NULL,
+                    STGM_READWRITE|STGM_SHARE_EXCLUSIVE|STGM_TRANSACTED,
+                    NULL, 0, &pis) != S_OK ) {
+         pis = 0;
+         unlink(tname);
+         return false;
+    }
+    unlink(tname);
 #else
     if (pis == 0 || hwpf.ReadBlock(pis, size) == 0)
         return false;
@@ -156,3 +145,5 @@ bool OlePicture::Read(HWPFile & hwpf)
 
     return true;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

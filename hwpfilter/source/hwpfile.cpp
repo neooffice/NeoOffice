@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include "precompile.h"
 
@@ -38,98 +34,68 @@
 #include "hcode.h"
 #include "hstream.h"
 
-#define HWPIDLen    30
-#define HWPHeadLen  128
-#define HWPSummaryLen   1008
-
-#define V20SIGNATURE    "HWP Document File V2.00 \032\1\2\3\4\5"
-#define V21SIGNATURE    "HWP Document File V2.10 \032\1\2\3\4\5"
-#define V30SIGNATURE    "HWP Document File V3.00 \032\1\2\3\4\5"
-
-#define FILESTG_SIGNATURE       0xF8995567
-#define FILESTG_SIGNATURE_NORMAL    0xF8995568
+#include <osl/diagnose.h>
 
 HWPFile *HWPFile::cur_doc = 0;
 static int ccount = 0;
 static int pcount = 0;
 static int datecodecount = 0;
 
-HWPFile::HWPFile(void)
+HWPFile::HWPFile()
+    : version(HWP_V30)
+    , compressed(false)
+    , encrypted(false)
+    , linenumber(0)
+    , info_block_len(0)
+    , error_code(HWP_NoError)
+    , oledata(0)
+    , m_nCurrentPage(1)
+    , m_nMaxSettedPage(0)
+    , hiodev(0)
+    , currenthyper(0)
 {
-    Init();
+    SetCurrentDoc(this);
 }
 
-
-/**
- * TODO : 추가된 스타일리스트에 대한 메모리 해제
- */
-HWPFile::~HWPFile(void)
+HWPFile::~HWPFile()
 {
-    if (oledata)
-        delete oledata;
+    delete oledata;
+    delete hiodev;
 
-    if (hiodev)
-        delete hiodev;
+    std::list < ColumnInfo* >::iterator it_column = columnlist.begin();
+    for (; it_column != columnlist.end(); ++it_column)
+        delete *it_column;
 
-    LinkedListIterator < ColumnInfo > it_column(&columnlist);
-    for (; it_column.current(); it_column++)
-        delete it_column.current();
+    std::list < HWPPara* >::iterator it = plist.begin();
+    for (; it != plist.end(); ++it)
+        delete *it;
 
-    LinkedListIterator < HWPPara > it(&plist);
-    for (; it.current(); it++)
-        delete it.current();
+    std::list < Table* >::iterator tbl = tables.begin();
+    for (; tbl != tables.end(); ++tbl)
+        delete *tbl;
 
-    LinkedListIterator < Table > tbl(&tables);
-    for (; tbl.current(); tbl++)
-        delete tbl.current();
-
-    LinkedListIterator < HyperText > hyp(&hyperlist);
-    for (; hyp.current(); hyp++)
+    std::list < HyperText* >::iterator hyp = hyperlist.begin();
+    for (; hyp != hyperlist.end(); ++hyp)
     {
-        delete hyp.current();
+        delete *hyp;
     }
 }
 
-
-void HWPFile::Init(void)
-{
-    version = HWP_V30;
-    info_block_len = 0;
-    compressed = false;
-    encrypted = false;
-
-    error_code = HWP_NoError;
-    hiodev = 0;
-    oledata = 0;
-    SetCurrentDoc(this);
-    currenthyper = 0;
-	 m_nCurrentPage = 1;
-	 m_nMaxSettedPage = 0;
-}
-
-
-int HWPFile::ReadHwpFile(HStream & stream)
+int HWPFile::ReadHwpFile(HStream * stream)
 {
     if (Open(stream) != HWP_NoError)
         return State();
-//	printf("HWPFile::ReadHwpFile\n");
     InfoRead();
-//	printf("HWPFile::InfoRead Done.\n");
     FontRead();
-//	printf("HWPFile::FontRead Done.\n");
     StyleRead();
-//	printf("HWPFile::StyleRead Done.\n");
-	AddColumnInfo();
+    AddColumnInfo();
     ParaListRead();
-//	printf("HWPFile::ParaListRead Done.\n");
     TagsRead();
-	//printf("HWPFile::TagsRead Done. State: %d\n", State());
 
     return State();
 }
 
-
-static int hwp_version(char *str)
+int detect_hwp_version(const char *str)
 {
     if (memcmp(V20SIGNATURE, str, HWPIDLen) == 0)
         return HWP_V20;
@@ -140,42 +106,31 @@ static int hwp_version(char *str)
     return 0;
 }
 
-
 // HIODev wrapper
 
-int HWPFile::Open(HStream & stream)
+int HWPFile::Open(HStream * stream)
 {
-    HStreamIODev *hstreamio;
+    HStreamIODev *hstreamio = new HStreamIODev(stream);
 
-    if (0 == (hstreamio = new HStreamIODev(stream)))
-    {
-        printf(" hstreamio is not instanciate \n");
-        return SetState(errno);
-    }
     if (!hstreamio->open())
     {
         delete hstreamio;
 
         return SetState(HWP_EMPTY_FILE);
     }
-    SetIODevice(hstreamio);
+
+    HIODev *pPrev = SetIODevice(hstreamio);
+    delete pPrev;
 
     char idstr[HWPIDLen];
 
     if (ReadBlock(idstr, HWPIDLen) <= 0
-        || HWP_V30 != (version = hwp_version(idstr)))
+        || HWP_V30 != (version = detect_hwp_version(idstr)))
     {
         return SetState(HWP_UNSUPPORTED_VERSION);
     }
     return HWP_NoError;
 }
-
-
-int HWPFile::State(void) const
-{
-    return error_code;
-}
-
 
 int HWPFile::SetState(int errcode)
 {
@@ -183,30 +138,43 @@ int HWPFile::SetState(int errcode)
     return error_code;
 }
 
-
-int HWPFile::Read1b(void)
+bool HWPFile::Read1b(unsigned char &out)
 {
-    return hiodev ? hiodev->read1b() : -1;
+    return hiodev ? hiodev->read1b(out) : false;
 }
 
-
-int HWPFile::Read2b(void)
+bool HWPFile::Read1b(char &out)
 {
-    return hiodev ? hiodev->read2b() : -1;
+    unsigned char tmp8;
+    if (!Read1b(tmp8))
+        return false;
+    out = tmp8;
+    return true;
 }
 
-
-long HWPFile::Read4b(void)
+bool HWPFile::Read2b(unsigned short &out)
 {
-    return hiodev ? hiodev->read4b() : -1;
+    return hiodev ? hiodev->read2b(out) : false;
 }
 
+bool HWPFile::Read4b(unsigned int &out)
+{
+    return hiodev ? hiodev->read4b(out) : false;
+}
+
+bool HWPFile::Read4b(int &out)
+{
+    unsigned int tmp32;
+    if (!Read4b(tmp32))
+        return false;
+    out = tmp32;
+    return true;
+}
 
 int HWPFile::Read1b(void *ptr, size_t nmemb)
 {
     return hiodev ? hiodev->read1b(ptr, nmemb) : 0;
 }
-
 
 int HWPFile::Read2b(void *ptr, size_t nmemb)
 {
@@ -243,6 +211,7 @@ HIODev *HWPFile::SetIODevice(HIODev * new_hiodev)
     HIODev *old_hiodev = hiodev;
 
     hiodev = new_hiodev;
+
     return old_hiodev;
 }
 
@@ -272,37 +241,35 @@ bool HWPFile::ParaListRead(void)
     return ReadParaList(plist);
 }
 
-bool HWPFile::ReadParaList(LinkedList < HWPPara > &aplist, unsigned char flag)
+bool HWPFile::ReadParaList(std::list < HWPPara* > &aplist, unsigned char flag)
 {
-    LinkedListIterator < HWPPara > it(&aplist);
-
     HWPPara *spNode = new HWPPara;
-	 unsigned char tmp_etcflag;
-	 unsigned char prev_etcflag = 0;
+     unsigned char tmp_etcflag;
+     unsigned char prev_etcflag = 0;
     while (spNode->Read(*this, flag))
     {
-		 if( !(spNode->etcflag & 0x04) ){
-		  tmp_etcflag = spNode->etcflag;
-		  spNode->etcflag = prev_etcflag;
-		  prev_etcflag = tmp_etcflag;
-		 }
+         if( !(spNode->etcflag & 0x04) ){
+          tmp_etcflag = spNode->etcflag;
+          spNode->etcflag = prev_etcflag;
+          prev_etcflag = tmp_etcflag;
+         }
         if (spNode->nch && spNode->reuse_shape)
         {
-            if (aplist.count()){
-					 spNode->pshape = aplist.last()->pshape;
-				}
-				else{
-					 spNode->nch = 0;
-					 spNode->reuse_shape = 0;
-				}
+            if (!aplist.empty()){
+                     spNode->pshape = aplist.back()->pshape;
+                }
+                else{
+                     spNode->nch = 0;
+                     spNode->reuse_shape = 0;
+                }
         }
-		  spNode->pshape.pagebreak = spNode->etcflag;
-		  if( spNode->nch )
-				AddParaShape( &spNode->pshape );
+          spNode->pshape.pagebreak = spNode->etcflag;
+          if( spNode->nch )
+                AddParaShape( &spNode->pshape );
 
-        if (aplist.count())
-            aplist.last()->SetNext(spNode);
-        aplist.insert(spNode, -1);
+        if (!aplist.empty())
+            aplist.back()->SetNext(spNode);
+        aplist.push_back(spNode);
         spNode = new HWPPara;
     }
     delete spNode;
@@ -310,24 +277,23 @@ bool HWPFile::ReadParaList(LinkedList < HWPPara > &aplist, unsigned char flag)
     return true;
 }
 
-
-bool HWPFile::TagsRead(void)
+void HWPFile::TagsRead(void)
 {
-    ulong tag;
-    long size;
-
-    while (1)
+    while (true)
     {
-        tag = Read4b();
-        size = Read4b();
+        uint tag;
+        if (!Read4b(tag))
+            return;
+        uint size;
+        if (!Read4b(size))
+            return;
         if (size <= 0 && tag > 0){
-            //return false;
             continue;
-		  }
+          }
 
         if (tag == FILETAG_END_OF_COMPRESSED ||
             tag == FILETAG_END_OF_UNCOMPRESSED)
-            return true;
+            return;
         switch (tag)
         {
             case FILETAG_EMBEDDED_PICTURE:
@@ -335,7 +301,7 @@ bool HWPFile::TagsRead(void)
                 EmPicture *emb = new EmPicture(size);
 
                 if (true == emb->Read(*this))
-                    emblist.insert(emb, -1);
+                    emblist.push_back(emb);
                 else
                     delete emb;
             }
@@ -351,45 +317,55 @@ bool HWPFile::TagsRead(void)
                 if( (size % 617) != 0 )
                     SkipBlock( size );
                 else
-                    for( int i = 0 ; i < size/617 ; i++)
                 {
-                    HyperText *hypert = new HyperText;
-                    hypert->Read(*this);
-                    hyperlist.insert(hypert, -1);
+                    for( uint i = 0 ; i < size/617 ; i++)
+                    {
+                        HyperText *hypert = new HyperText;
+                        hypert->Read(*this);
+                        hyperlist.push_back(hypert);
+                    }
                 }
                 break;
             }
-				case 6:
-				{
-					 ReadBlock(_hwpInfo.back_info.reserved1, 8);
-					 _hwpInfo.back_info.luminance = Read4b();
-					 _hwpInfo.back_info.contrast = Read4b();
-                     _hwpInfo.back_info.effect = sal::static_int_cast<char>(Read1b());
-					 ReadBlock(_hwpInfo.back_info.reserved2, 7);
-					 ReadBlock(_hwpInfo.back_info.filename, 260);
-					 ReadBlock(_hwpInfo.back_info.color, 3);
-                     unsigned short nFlag = sal::static_int_cast<unsigned short>(Read2b());
-					 _hwpInfo.back_info.flag = nFlag >> 8 ;
-					 int nRange = Read4b();
-					 _hwpInfo.back_info.range = nRange >> 24;
-					 ReadBlock(_hwpInfo.back_info.reserved3, 27);
-					 _hwpInfo.back_info.size = Read4b();
+                case 6:
+                {
+                     ReadBlock(_hwpInfo.back_info.reserved1, 8);
+                     if (!Read4b(_hwpInfo.back_info.luminance))
+                        return;
+                     if (!Read4b(_hwpInfo.back_info.contrast))
+                        return;
+                     if (!Read1b(_hwpInfo.back_info.effect))
+                        return;
+                     ReadBlock(_hwpInfo.back_info.reserved2, 7);
+                     ReadBlock(_hwpInfo.back_info.filename, 260);
+                     ReadBlock(_hwpInfo.back_info.color, 3);
+                     unsigned short nFlag;
+                     if (!Read2b(nFlag))
+                        return;
+                     _hwpInfo.back_info.flag = nFlag >> 8 ;
+                     int nRange;
+                     if (!Read4b(nRange))
+                        return;
+                     _hwpInfo.back_info.range = nRange >> 24;
+                     ReadBlock(_hwpInfo.back_info.reserved3, 27);
+                     if (!Read4b(_hwpInfo.back_info.size))
+                        return;
 
-					 _hwpInfo.back_info.data = new char[(unsigned int)_hwpInfo.back_info.size];
-					 ReadBlock(_hwpInfo.back_info.data, _hwpInfo.back_info.size);
+                     _hwpInfo.back_info.data = new char[(unsigned int)_hwpInfo.back_info.size];
+                     ReadBlock(_hwpInfo.back_info.data, _hwpInfo.back_info.size);
 
-					 if( _hwpInfo.back_info.size > 0 )
-						  _hwpInfo.back_info.type = 2;
-					 else if( _hwpInfo.back_info.filename[0] )
-						  _hwpInfo.back_info.type = 1;
-					 else
-						  _hwpInfo.back_info.type = 0;
+                     if( _hwpInfo.back_info.size > 0 )
+                          _hwpInfo.back_info.type = 2;
+                     else if( _hwpInfo.back_info.filename[0] )
+                          _hwpInfo.back_info.type = 1;
+                     else
+                          _hwpInfo.back_info.type = 0;
 
 
-					 _hwpInfo.back_info.isset = true;
+                     _hwpInfo.back_info.isset = true;
 
-					 break;
-				}
+                     break;
+                }
             case FILETAG_PRESENTATION:
             case FILETAG_PREVIEW_IMAGE:
             case FILETAG_PREVIEW_TEXT:
@@ -397,38 +373,49 @@ bool HWPFile::TagsRead(void)
                 SkipBlock(size);
         }
     }
-//    return false;
 }
 
 
 ColumnDef *HWPFile::GetColumnDef(int num)
 {
-	ColumnInfo *cinfo = columnlist.find(num);
-	if( cinfo )
-		return cinfo->coldef;
-	else
-		return 0;
+    std::list<ColumnInfo*>::iterator it = columnlist.begin();
+
+    for(int i = 0; it != columnlist.end() ; ++it, i++){
+        if( i == num )
+	  break;
+    }
+
+    if( it != columnlist.end() )
+        return (*it)->coldef;
+    else
+        return 0;
 }
 /* @return 인덱스는 1부터 시작한다. */
 int HWPFile::GetPageMasterNum(int page)
 {
-	LinkedListIterator<ColumnInfo> it(&columnlist);
-    //os: unused
-    //ColumnInfo *prev = 0;
-	ColumnInfo *now = 0;
-	int i;
+    std::list<ColumnInfo*>::iterator it = columnlist.begin();
+    ColumnInfo *now = 0;
+    int i;
 
-	for( i = 1 ; it.current() ; it++, i++){
-		now = it.current();
-		if( page < now->start_page )
-			return i-1;
-	}
-	return i-1;
+    for( i = 1 ; it != columnlist.end() ; ++it, i++){
+        now = *it;
+        if( page < now->start_page )
+            return i-1;
+    }
+    return i-1;
 }
 
 HyperText *HWPFile::GetHyperText()
 {
-    return hyperlist.find(currenthyper++);
+    std::list<HyperText*>::iterator it = hyperlist.begin();
+
+    for( int i = 0; it != hyperlist.end(); ++it, i++ ){
+	if( i == currenthyper )
+	  break;
+    }
+
+    currenthyper++;
+    return it != hyperlist.end() ? *it : NULL;
 }
 
 EmPicture *HWPFile::GetEmPicture(Picture * pic)
@@ -439,10 +426,10 @@ EmPicture *HWPFile::GetEmPicture(Picture * pic)
     name[1] = 'W';
     name[2] = 'P';
 
-    LinkedListIterator < EmPicture > it(&emblist);
-    for (; it.current(); it++)
-        if (strcmp(name, it.current()->name) == 0)
-            return it.current();
+    std::list < EmPicture* >::iterator it = emblist.begin();
+    for (; it != emblist.end(); ++it)
+        if (strcmp(name, (*it)->name) == 0)
+            return *it;
     return 0;
 }
 
@@ -452,10 +439,10 @@ EmPicture *HWPFile::GetEmPictureByName(char * name)
     name[1] = 'W';
     name[2] = 'P';
 
-    LinkedListIterator < EmPicture > it(&emblist);
-    for (; it.current(); it++)
-        if (strcmp(name, it.current()->name) == 0)
-            return it.current();
+    std::list < EmPicture* >::iterator it = emblist.begin();
+    for (; it != emblist.end(); ++it)
+        if (strcmp(name, (*it)->name) == 0)
+            return *it;
     return 0;
 }
 
@@ -464,52 +451,102 @@ void HWPFile::AddBox(FBox * box)
 {
 // LATER if we don't use box->next(),
 // AddBox() and GetBoxHead() are useless;
-    if (blist.count())
+    if (!blist.empty())
     {
-        box->prev = blist.last();
+        box->prev = blist.back();
         box->prev->next = box;
     }
     else
         box->prev = 0;
-    blist.insert(box, -1);
+    blist.push_back(box);
 }
 
 
 ParaShape *HWPFile::getParaShape(int index)
 {
-    return pslist.find(index);
+    std::list<ParaShape*>::iterator it = pslist.begin();
+
+    for( int i = 0; it != pslist.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != pslist.end() ? *it : NULL;
 }
 
 
 CharShape *HWPFile::getCharShape(int index)
 {
-    return cslist.find(index);
+    std::list<CharShape*>::iterator it = cslist.begin();
+
+    for( int i = 0; it != cslist.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != cslist.end() ? *it : 0;
 }
 
 
 FBoxStyle *HWPFile::getFBoxStyle(int index)
 {
-    return fbslist.find(index);
+    std::list<FBoxStyle*>::iterator it = fbslist.begin();
+
+    for( int i = 0; it != fbslist.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != fbslist.end() ? *it : 0;
 }
 
 DateCode *HWPFile::getDateCode(int index)
 {
-    return datecodes.find(index);
+    std::list<DateCode*>::iterator it = datecodes.begin();
+
+    for( int i = 0; it != datecodes.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != datecodes.end() ? *it : NULL;
 }
 
 HeaderFooter *HWPFile::getHeaderFooter(int index)
 {
-    return headerfooters.find(index);
+    std::list<HeaderFooter*>::iterator it = headerfooters.begin();
+
+    for( int i = 0; it != headerfooters.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != headerfooters.end() ? *it : NULL;
 }
 
 ShowPageNum *HWPFile::getPageNumber(int index)
 {
-    return pagenumbers.find(index);
+    std::list<ShowPageNum*>::iterator it = pagenumbers.begin();
+
+    for( int i = 0; it != pagenumbers.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != pagenumbers.end() ? *it : NULL;
+
 }
 
 Table *HWPFile::getTable(int index)
 {
-    return tables.find(index);
+    std::list<Table*>::iterator it = tables.begin();
+
+    for( int i = 0; it != tables.end(); ++it, i++ ){
+	if( i == index )
+	  break;
+    }
+
+    return it != tables.end() ? *it : NULL;
 }
 
 void HWPFile::AddParaShape(ParaShape * pshape)
@@ -517,26 +554,26 @@ void HWPFile::AddParaShape(ParaShape * pshape)
     int nscount = 0;
     for(int j = 0 ; j < MAXTABS-1 ; j++)
     {
-		  if( j > 0 && pshape->tabs[j].position == 0 )
-				break;
-		  if( pshape->tabs[0].position == 0 ){
-				if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
-					 (pshape->tabs[j].position != 1000 *j) )
-						  nscount = j;
-		  }
-		  else{
-				if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
-					 (pshape->tabs[j].position != 1000 * (j + 1)) )
-						  nscount = j;
-		  }
+          if( j > 0 && pshape->tabs[j].position == 0 )
+                break;
+          if( pshape->tabs[0].position == 0 ){
+                if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
+                     (pshape->tabs[j].position != 1000 *j) )
+                          nscount = j;
+          }
+          else{
+                if( pshape->tabs[j].type || pshape->tabs[j].dot_continue ||
+                     (pshape->tabs[j].position != 1000 * (j + 1)) )
+                          nscount = j;
+          }
     }
     if( nscount )
         pshape->tabs[MAXTABS-1].type = sal::static_int_cast<char>(nscount);
-	 int value = compareParaShape(pshape);
+     int value = compareParaShape(pshape);
     if( value == 0 || nscount )
     {
         pshape->index = ++pcount;
-        pslist.insert(pshape, -1);
+        pslist.push_back(pshape);
     }
     else
         pshape->index = value;
@@ -549,7 +586,7 @@ void HWPFile::AddCharShape(CharShape * cshape)
     if( value == 0 )
     {
         cshape->index = ++ccount;
-        cslist.insert(cshape, -1);
+        cslist.push_back(cshape);
     }
     else
         cshape->index = value;
@@ -557,55 +594,55 @@ void HWPFile::AddCharShape(CharShape * cshape)
 
 void HWPFile::AddColumnInfo()
 {
-	ColumnInfo *cinfo = new ColumnInfo(m_nCurrentPage);
-   columnlist.insert(cinfo, -1);
-	setMaxSettedPage();
+    ColumnInfo *cinfo = new ColumnInfo(m_nCurrentPage);
+    columnlist.push_back(cinfo);
+    setMaxSettedPage();
 }
 
 void HWPFile::SetColumnDef(ColumnDef *coldef)
 {
-	ColumnInfo *cinfo = columnlist.last();
-	if( cinfo->bIsSet )
-		return;
-	cinfo->coldef = coldef;
-	cinfo->bIsSet = true;
+    ColumnInfo *cinfo = columnlist.back();
+    if( cinfo->bIsSet )
+        return;
+    cinfo->coldef = coldef;
+    cinfo->bIsSet = true;
 }
 
 void HWPFile::AddDateFormat(DateCode * hbox)
 {
     hbox->key = sal::static_int_cast<char>(++datecodecount);
-    datecodes.insert(hbox, -1);
+    datecodes.push_back(hbox);
 }
 
 void HWPFile::AddPageNumber(ShowPageNum * hbox)
 {
-    pagenumbers.insert(hbox, -1);
+    pagenumbers.push_back(hbox);
 }
 
 void HWPFile::AddHeaderFooter(HeaderFooter * hbox)
 {
-    headerfooters.insert(hbox, -1);
+    headerfooters.push_back(hbox);
 }
 
 void HWPFile::AddTable(Table * hbox)
 {
-    tables.insert(hbox, -1);
+    tables.push_back(hbox);
 }
 
 void HWPFile::AddFBoxStyle(FBoxStyle * fbstyle)
 {
-    fbslist.insert(fbstyle, -1);
+    fbslist.push_back(fbstyle);
 }
 
 int HWPFile::compareCharShape(CharShape *shape)
 {
-    int count = cslist.count();
+    int count = cslist.size();
     if( count > 0 )
     {
         CharShape *cshape=0;
         for(int i = 0; i< count; i++)
         {
-            cshape = cslist.find(i);
+            cshape = getCharShape(i);
 
             if( shape->size == cshape->size &&
                 shape->font[0] == cshape->font[0] &&
@@ -626,13 +663,13 @@ int HWPFile::compareCharShape(CharShape *shape)
 
 int HWPFile::compareParaShape(ParaShape *shape)
 {
-    int count = pslist.count();
+    int count = pslist.size();
     if( count > 0 )
     {
         ParaShape *pshape=0;
         for(int i = 0; i< count; i++)
         {
-            pshape = pslist.find(i);
+            pshape = getParaShape(i);
             if( shape->left_margin == pshape->left_margin &&
                 shape->right_margin == pshape->right_margin &&
                 shape->pspacing_prev == pshape->pspacing_prev &&
@@ -641,19 +678,20 @@ int HWPFile::compareParaShape(ParaShape *shape)
                 shape->lspacing == pshape->lspacing &&
                 shape->arrange_type == pshape->arrange_type &&
                 shape->outline == pshape->outline  &&
-					 shape->pagebreak == pshape->pagebreak)
+                     shape->pagebreak == pshape->pagebreak)
             {
-					if( shape->cshape->size == pshape->cshape->size &&
-						 shape->cshape->font[0] == pshape->cshape->font[0] &&
-						 shape->cshape->ratio[0] == pshape->cshape->ratio[0] &&
-						 shape->cshape->space[0] == pshape->cshape->space[0] &&
-						 shape->cshape->color[1] == pshape->cshape->color[1] &&
-						 shape->cshape->color[0] == pshape->cshape->color[0] &&
-						 shape->cshape->shade == pshape->cshape->shade &&
-						 shape->cshape->attr == pshape->cshape->attr )
-					{
-						 return pshape->index;
-					}
+                    if( shape->cshape && pshape->cshape &&
+                         shape->cshape->size == pshape->cshape->size &&
+                         shape->cshape->font[0] == pshape->cshape->font[0] &&
+                         shape->cshape->ratio[0] == pshape->cshape->ratio[0] &&
+                         shape->cshape->space[0] == pshape->cshape->space[0] &&
+                         shape->cshape->color[1] == pshape->cshape->color[1] &&
+                         shape->cshape->color[0] == pshape->cshape->color[0] &&
+                         shape->cshape->shade == pshape->cshape->shade &&
+                         shape->cshape->attr == pshape->cshape->attr )
+                    {
+                         return pshape->index;
+                    }
             }
         }
     }
@@ -674,3 +712,5 @@ HWPFile *SetCurrentDoc(HWPFile * hwpfp)
     HWPFile::cur_doc = hwpfp;
     return org;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

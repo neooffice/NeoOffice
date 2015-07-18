@@ -1,4 +1,5 @@
-/* $XFree86: xc/lib/X11/lcUniConv/ksc5601.h,v 1.4tsi Exp $ 
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* $XFree86: xc/lib/X11/lcUniConv/ksc5601.h,v 1.4tsi Exp
 
    Copyright (c) 1999-2000  Free Software Foundation, Inc.
 
@@ -15,7 +16,6 @@
    FREE SOFTWARE FOUNDATION BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
    IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
  */
 
 /*
@@ -859,3 +859,5 @@ static const hchar ksc5601_2uni_page4a[4888] = {
   0x5e0c, 0x6199, 0x6198, 0x6231, 0x665e, 0x66e6, 0x7199, 0x71b9,
   0x71ba, 0x72a7, 0x79a7, 0x7a00, 0x7fb2, 0x8a70,
 };
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

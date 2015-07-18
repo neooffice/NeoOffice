@@ -1,32 +1,30 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
+#ifndef INCLUDED_HWPFILTER_SOURCE_HBOX_H
+#define INCLUDED_HWPFILTER_SOURCE_HBOX_H
 
+#include <sal/config.h>
 
-/* $Id$ */
+#include <list>
 
-#ifndef _HBOX_H_
-#define _HBOX_H_
-
-#include "list.hxx"
+#include <sal/types.h>
 
 #include "hwplib.h"
 #include "hwpfile.h"
@@ -65,7 +63,7 @@ struct HBox
  * @param hwpf HWPFile Object having all information for a hwp file.
  * @returns True if reading from stream is successful.
  */
-        virtual int   Read(HWPFile &hwpf);
+        virtual bool Read(HWPFile &hwpf);
 
         virtual hchar_string GetString();
     private:
@@ -75,15 +73,15 @@ struct HBox
 /**
  * @short Class for saving data to be skipped.
  */
-struct SkipBlock: public HBox
+struct SkipData: public HBox
 {
-    ulong data_block_len;
+    uint data_block_len;
     hchar dummy;
     char  *data_block;
 
-    SkipBlock(hchar);
-    virtual ~SkipBlock();
-    virtual int Read(HWPFile &hwpf);
+    SkipData(hchar);
+    virtual ~SkipData();
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 struct DateCode;
 struct FieldCode : public HBox
@@ -97,11 +95,11 @@ struct FieldCode : public HBox
     hchar *str3;
     char *bin;
 
-	 DateCode *m_pDate;
+     DateCode *m_pDate;
 
     FieldCode();
     virtual ~FieldCode();
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 /**
  * Kind of BOOKMARK
@@ -126,7 +124,7 @@ struct Bookmark: public HBox
 
     Bookmark();
     virtual ~Bookmark();
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // date format(7)
@@ -141,7 +139,7 @@ struct DateFormat: public HBox
     hchar dummy;
 
     DateFormat();
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /**
@@ -163,9 +161,9 @@ struct DateCode: public HBox
     unsigned char key;
 
     DateCode();
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 
-    virtual hchar_string GetString();
+    virtual hchar_string GetString() SAL_OVERRIDE;
 };
 
 /**
@@ -178,7 +176,7 @@ struct Tab: public HBox
     hchar dummy;
 
     Tab();
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // tbox(10) TABLE BOX MATH BUTTON HYPERTEXT
@@ -290,6 +288,18 @@ struct FBoxStyle
 
     void *cell;
 
+    FBoxStyle()
+        : anchor_type(0)
+        , txtflow(0)
+        , xpos(0)
+        , ypos(0)
+        , boxnum(0)
+        , boxtype(0)
+        , cap_len(0)
+        , cell(NULL)
+    {
+        memset(margin, 0, sizeof(margin));
+    }
 };
 
 /**
@@ -299,7 +309,7 @@ struct FBoxStyle
  */
 struct FBox: public HBox
 {
-	int	zorder;
+    int zorder;
     short     option;                             // draw frame
     hchar     ctrl_ch;
     FBoxStyle style;
@@ -368,15 +378,15 @@ struct TxtBox: public FBox
     short     protect;                            //1=size lock
 
     Cell      *cell;
-	 Table *m_pTable;
+     Table *m_pTable;
 /**
  * Paragraph list
  */
-    LinkedList<HWPPara> *plists;
+    std::list<HWPPara*> *plists;
 /**
  * Caption
  */
-    LinkedList<HWPPara> caption;
+    std::list<HWPPara*> caption;
 
     TxtBox();
     virtual ~TxtBox();
@@ -391,9 +401,9 @@ struct TxtBox: public FBox
  */
     virtual int Type()    { return type;  }
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 
-    virtual hunit  Height(CharShape *csty);
+    virtual hunit  Height(CharShape *csty) SAL_OVERRIDE;
 };
 
 #define ALLOWED_GAP 5
@@ -402,147 +412,148 @@ struct TxtBox: public FBox
 
 struct Columns
 {
-	 int *data;
+     int *data;
      size_t nCount;
      size_t nTotal;
-	 Columns(){
-		  nCount = 0;
-		  nTotal = INIT_SIZE;
-		  data = new int[nTotal];
-	 }
-	 ~Columns(){ delete[] data; }
+     Columns(){
+          nCount = 0;
+          nTotal = INIT_SIZE;
+          data = new int[nTotal];
+     }
+     ~Columns(){ delete[] data; }
 
-	 void AddColumnsSize(){
-		  int *tmp = data;
+     void AddColumnsSize(){
+          int *tmp = data;
           if (nTotal + ADD_AMOUNT < nTotal) // overflow
           {
               throw ::std::bad_alloc();
           }
-		  data = new int[nTotal + ADD_AMOUNT];
+          data = new int[nTotal + ADD_AMOUNT];
           for (size_t i = 0 ; i < nTotal ; i++)
-				data[i] = tmp[i];
-		  nTotal += ADD_AMOUNT;
-		  delete[] tmp;
-	 }
+                data[i] = tmp[i];
+          nTotal += ADD_AMOUNT;
+          delete[] tmp;
+     }
 
-	 void insert(int pos){
-		  if( nCount == 0 ){
-				data[nCount++] = pos;
-				return;
-		  }
+     void insert(int pos){
+          if( nCount == 0 ){
+                data[nCount++] = pos;
+                return;
+          }
           for (size_t i = 0 ; i < nCount; i++ ) {
-				if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
-					 return;  // Already exist;
-				if( pos < data[i] ){
-					 if( nCount == nTotal )
-						  AddColumnsSize();
+                if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
+                     return;  // Already exist;
+                if( pos < data[i] ){
+                     if( nCount == nTotal )
+                          AddColumnsSize();
                      for (size_t j = nCount ; j > i ; j--)
-						  data[j] = data[j-1];
-					 data[i] = pos;
-					 nCount++;
-					 return;
-				}
-		  }
-		  // last postion.
-		  if( nCount == nTotal )
-				AddColumnsSize();
-		  data[nCount++] = pos;
-	 }
+                          data[j] = data[j-1];
+                     data[i] = pos;
+                     nCount++;
+                     return;
+                }
+          }
+          // last position.
+          if( nCount == nTotal )
+                AddColumnsSize();
+          data[nCount++] = pos;
+     }
 
-	 int getIndex(int pos)
-	 {
-		  if( pos == 0 )
-				return 0;
+     int getIndex(int pos)
+     {
+          if( pos == 0 )
+                return 0;
           for (size_t i = 0 ; i < nCount; i++) {
-				if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
-					 return i;
-		  }
-		  return -1;
-	 }
+                if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
+                     return i;
+          }
+          return -1;
+     }
 };
 
 struct Rows
 {
-	 int *data;
+     int *data;
      size_t nCount;
      size_t nTotal;
-	 Rows(){
-		  nCount = 0;
-		  nTotal = INIT_SIZE;
-		  data = new int[nTotal];
-	 }
-	 ~Rows(){ delete[] data; }
+     Rows(){
+          nCount = 0;
+          nTotal = INIT_SIZE;
+          data = new int[nTotal];
+     }
+     ~Rows(){ delete[] data; }
 
-	 void AddRowsSize(){
-		  int *tmp = data;
+     void AddRowsSize(){
+          int *tmp = data;
           if (nTotal + ADD_AMOUNT < nTotal) // overflow
           {
               throw ::std::bad_alloc();
           }
-		  data = new int[nTotal + ADD_AMOUNT];
+          data = new int[nTotal + ADD_AMOUNT];
           for (size_t i = 0 ; i < nTotal ; i++)
-				data[i] = tmp[i];
-		  nTotal += ADD_AMOUNT;
-		  delete[] tmp;
-	 }
+                data[i] = tmp[i];
+          nTotal += ADD_AMOUNT;
+          delete[] tmp;
+     }
 
-	 void insert(int pos){
-		  if( nCount == 0 ){
-				data[nCount++] = pos;
-				return;
-		  }
+     void insert(int pos){
+          if( nCount == 0 ){
+                data[nCount++] = pos;
+                return;
+          }
           for (size_t i = 0 ; i < nCount; i++) {
-				if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
-					 return;  // Already exist;
-				if( pos < data[i] ){
-					 if( nCount == nTotal )
-						  AddRowsSize();
+                if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
+                     return;  // Already exist;
+                if( pos < data[i] ){
+                     if( nCount == nTotal )
+                          AddRowsSize();
                      for (size_t j = nCount ; j > i ; j--)
-						  data[j] = data[j-1];
-					 data[i] = pos;
-					 nCount++;
-					 return;
-				}
-		  }
-		  // last postion.
-		  if( nCount == nTotal )
-				AddRowsSize();
-		  data[nCount++] = pos;
-	 }
+                          data[j] = data[j-1];
+                     data[i] = pos;
+                     nCount++;
+                     return;
+                }
+          }
+          // last position.
+          if( nCount == nTotal )
+                AddRowsSize();
+          data[nCount++] = pos;
+     }
 
-	 int getIndex(int pos)
-	 {
-		  if( pos == 0 )
-				return 0;
+     int getIndex(int pos)
+     {
+          if( pos == 0 )
+                return 0;
           for (size_t i = 0 ; i < nCount; i++) {
-				if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
-					 return i;
-		  }
-		  return -1;
-	 }
+                if( pos < data[i] + ALLOWED_GAP && pos > data[i] - ALLOWED_GAP )
+                     return i;
+          }
+          return -1;
+     }
 };
 
 struct TCell
 {
-	 int nColumnIndex;
-	 int nRowIndex;
-	 int nColumnSpan;
-	 int nRowSpan;
-	 Cell *pCell;
+     int nColumnIndex;
+     int nRowIndex;
+     int nColumnSpan;
+     int nRowSpan;
+     Cell *pCell;
 };
 
 struct Table
 {
-	 Table(){};
-	 ~Table(){
-		  LinkedListIterator<TCell> it(&cells);
-		  for( ; it.current(); it++)
-				delete it.current();
-	 };
-	 Columns columns;
-	 Rows rows;
-    LinkedList<TCell> cells;
-	 TxtBox *box;
+     Table() : box(NULL) {};
+     ~Table() {
+          std::list<TCell*>::iterator it = cells.begin();
+          for( ; it != cells.end(); ++it)
+                delete *it;
+     };
+
+     Columns columns;
+     Rows    rows;
+     std::list<TCell*> cells;
+     TxtBox *box;
 };
 
 /* picture (11) 그림, OLE그림, 삽입그림, 그리기 */
@@ -562,7 +573,7 @@ struct PicDefFile
 };
 
 /**
- * @short Embeded image file
+ * @short Embedded image file
  */
 struct PicDefEmbed
 {
@@ -610,7 +621,7 @@ typedef union
 /**
  * There are four kinds of image.
  * @li External image
- * @li Embeded image
+ * @li Embedded image
  * @li Win32 ole object
  * @li Drawing object of hwp
  *
@@ -624,7 +635,7 @@ struct Picture: public FBox
  * follow_block_size is the size information of the Drawing object of hwp.
  * It's value is greater than 0 if the pictype is PICTYPE_DRAW.
  */
-    ulong     follow_block_size;                  /* 추가정보 길이. */
+    uint      follow_block_size;                  /* 추가정보 길이. */
     short     dummy1;                             // to not change structure size */
     short     dummy2;                             // to not change structure size */
     uchar     reserved1;
@@ -639,7 +650,7 @@ struct Picture: public FBox
 
 /**
  * Type of this object
- * It is one of external/ole/embeded/drawing picture
+ * It is one of external/ole/embedded/drawing picture
  */
     uchar     pictype;
     hunit     skip[2];
@@ -650,7 +661,7 @@ struct Picture: public FBox
     PicDef    picinfo;
     char      reserved3[9];
 
-    LinkedList<HWPPara> caption;
+    std::list<HWPPara*> caption;
 /**
  * It's for the Drawing object
  */
@@ -662,9 +673,9 @@ struct Picture: public FBox
     virtual ~Picture();
 
     virtual int   Type    ();
-    virtual int   Read    (HWPFile &hwpf);
+    virtual bool Read    (HWPFile &hwpf) SAL_OVERRIDE;
 
-    virtual hunit  Height (CharShape *sty);
+    virtual hunit  Height (CharShape *sty) SAL_OVERRIDE;
 };
 
 // line (14)
@@ -683,7 +694,7 @@ struct Line: public FBox
 
     Line();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // hidden(15)
@@ -696,12 +707,12 @@ struct Hidden: public HBox
     hchar     dummy;
 
     unsigned char info[8];                        // h, next, dummy
-    LinkedList<HWPPara> plist;
+    std::list<HWPPara*> plist;
 
     Hidden();
     virtual ~Hidden();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /**
@@ -720,17 +731,17 @@ struct HeaderFooter: public HBox
     unsigned char where;
     unsigned char linenumber;
 
-	 unsigned int m_nPageNumber;
+     unsigned int m_nPageNumber;
 
 /**
  * Paragraph list of header or footer
  */
-    LinkedList<HWPPara> plist;
+    std::list<HWPPara*> plist;
 
     HeaderFooter();
     virtual ~HeaderFooter();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /**
@@ -758,12 +769,12 @@ struct Footnote: public HBox
 /**
  * Paragraph list of Footnote objects
  */
-    LinkedList<HWPPara> plist;
+    std::list<HWPPara*> plist;
 
     Footnote();
     virtual ~Footnote();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // auto number(18)
@@ -791,7 +802,7 @@ struct AutoNum: public HBox
 
     AutoNum();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /**
@@ -805,7 +816,7 @@ struct NewNum: public HBox
 
     NewNum();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // page numger(20)
@@ -818,7 +829,7 @@ struct ShowPageNum: public HBox
  * Location of page number to be inserted.
  */
     unsigned short where;
-	 unsigned int m_nPageNumber;
+     unsigned int m_nPageNumber;
 /**
  * Shape of page number to be inserted.
  */
@@ -827,7 +838,7 @@ struct ShowPageNum: public HBox
 
     ShowPageNum();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /* 홀수쪽시작 (21) */
@@ -852,7 +863,7 @@ struct PageNumCtrl: public HBox
 
     PageNumCtrl();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // mail merge(22)
@@ -867,8 +878,8 @@ struct MailMerge: public HBox
 
     MailMerge();
 
-    virtual int Read(HWPFile &hwpf);
-    virtual hchar_string GetString();
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
+    virtual hchar_string GetString() SAL_OVERRIDE;
 };
 
 // char compositon(23)
@@ -883,7 +894,7 @@ struct Compose: public HBox
 
     Compose();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // hyphen(24)
@@ -900,7 +911,7 @@ struct Hyphen: public HBox
 
     Hyphen();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // toc mark(25)
@@ -916,7 +927,7 @@ struct TocMark: public HBox
 
     TocMark();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // index mark(26)
@@ -934,7 +945,7 @@ struct IndexMark: public HBox
 
     IndexMark();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 // outline(28)
@@ -998,14 +1009,14 @@ class Outline: public HBox
  */
         hchar     user_shape[MAX_OUTLINE_LEVEL];
 /**
- * decoration charactor for the level type
+ * decoration character for the level type
  */
         hchar     deco[MAX_OUTLINE_LEVEL][2];     /* 사용자 정의시 앞뒤 문자 */
         hchar     dummy;
 
         Outline();
 
-        virtual int   Read(HWPFile &hwpf);
+        virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
         hchar_string GetUnicode() const;
 };
 
@@ -1021,7 +1032,7 @@ struct KeepSpace: public HBox
 
     KeepSpace();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
 
 /* 고정폭 빈칸(31) */
@@ -1034,6 +1045,8 @@ struct FixedSpace: public HBox
 
     FixedSpace();
 
-    virtual int Read(HWPFile &hwpf);
+    virtual bool Read(HWPFile &hwpf) SAL_OVERRIDE;
 };
-#endif                                            /* _HBOX_H_ */
+#endif // INCLUDED_HWPFILTER_SOURCE_HBOX_H
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

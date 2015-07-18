@@ -1,43 +1,40 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef __MAPPING_H__
-#define __MAPPING_H__
+#ifndef INCLUDED_HWPFILTER_SOURCE_MAPPING_H
+#define INCLUDED_HWPFILTER_SOURCE_MAPPING_H
 
 #include <string.h>
 #include <stdio.h>
+#include <sal/macros.h>
 
 #include <hwplib.h>
 
 
 struct FormulaEntry{
-	 const char *tex;
-	 hchar ucs;
+     const char *tex;
+     hchar ucs;
 };
 
 // empty square
-#define DEFAULT_VALUE 	0x25a1
-const struct FormulaEntry FormulaMapTab[] = { 
+#define DEFAULT_VALUE   0x25a1
+const struct FormulaEntry FormulaMapTab[] = {
 /* Capital Greek */
 {"Alpha", 0x0391},
 {"Beta", 0x0392},
@@ -108,7 +105,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"varphi", 0x03c6},
 
 
-// Big Symbol 
+// Big Symbol
 {"sum", 0x2211},
 {"smallsum", 0x03a3},
 {"prod", 0x220f},
@@ -143,8 +140,8 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"supseteq", 0x2287},
 {"in", 0x2208},
 {"ni", 0x220b},
-{"notin", 0x2209}, 
-{"notni", 0x220c}, 
+{"notin", 0x2209},
+{"notni", 0x220c},
 {"leq", 0x2264},
 {"geq", 0x2265},
 {"sqsubset", 0x228f},
@@ -159,7 +156,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"succ", 0x227b},
 {"biguplus", 0x228e},
 
-// Binary Operator 
+// Binary Operator
 {"pm", 0x00b1},
 {"mp", 0x2213},
 {"times", 0x00d7},
@@ -191,7 +188,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"diamond", 0x22c4},
 {"dsum", 0x2214}, // add
 {"forall", 0x2200},
-{"prime", DEFAULT_VALUE}, // ' 
+{"prime", DEFAULT_VALUE}, // '
 {"partial", 0x2202},
 {"infty", 0x221e},
 {"propto", 0x221d},
@@ -201,7 +198,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"ddagger", 0x2021},
 {"LNOT", DEFAULT_VALUE},
 
-// Arrows 
+// Arrows
 {"leftarrow", 0x2190},
 {"uparrow", 0x2191},
 {"rightarrow", 0x2192},
@@ -292,7 +289,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"not", DEFAULT_VALUE},
 {"mapsto", DEFAULT_VALUE},
 
-// Arrows 
+// Arrows
 {"to", DEFAULT_VALUE},
 
 {"leftharpoonup", DEFAULT_VALUE},
@@ -307,7 +304,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"rightharpoonup", DEFAULT_VALUE},
 {"rightharpoondown", DEFAULT_VALUE},
 
-// Delimeter 
+// Delimeter
 {"(", DEFAULT_VALUE},
 {")", DEFAULT_VALUE},
 {"[", DEFAULT_VALUE},
@@ -322,7 +319,7 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"rangle", DEFAULT_VALUE},
 {"mid", DEFAULT_VALUE},
 
-// Large Delimeter 
+// Large Delimeter
 {"rmoustache", DEFAULT_VALUE},
 {"lmoustache", DEFAULT_VALUE},
 {"rgroup", DEFAULT_VALUE},
@@ -332,28 +329,28 @@ const struct FormulaEntry FormulaMapTab[] = {
 {"bracevert", DEFAULT_VALUE},
 
 // Accent
-{"hat", DEFAULT_VALUE}, 
+{"hat", DEFAULT_VALUE},
 {"breve", DEFAULT_VALUE},
 {"grave", DEFAULT_VALUE},
 {"bar", DEFAULT_VALUE},
 {"ddot", DEFAULT_VALUE},
-{"check", DEFAULT_VALUE}, 
+{"check", DEFAULT_VALUE},
 {"acute", DEFAULT_VALUE},
 {"tilde", DEFAULT_VALUE},
 {"dot", DEFAULT_VALUE},
-{"vec", DEFAULT_VALUE},  
+{"vec", DEFAULT_VALUE},
 
-// Decoration 
-{"overline", DEFAULT_VALUE}, 
+// Decoration
+{"overline", DEFAULT_VALUE},
 {"underline", DEFAULT_VALUE},
 {"overbrace", DEFAULT_VALUE},
 {"underbrace", DEFAULT_VALUE},
-{"widehat", DEFAULT_VALUE}, 
+{"widehat", DEFAULT_VALUE},
 {"widetilde", DEFAULT_VALUE},
-{"overleftarrow", DEFAULT_VALUE}, 
+{"overleftarrow", DEFAULT_VALUE},
 {"overrightarrow", DEFAULT_VALUE},
 
-// Space Symbol 
+// Space Symbol
 {",", DEFAULT_VALUE},
 {":", DEFAULT_VALUE},
 {";", DEFAULT_VALUE},
@@ -366,22 +363,22 @@ const struct FormulaEntry FormulaMapTab[] = {
 #ifndef DEBUG
 hchar_string getMathMLEntity(const char *tex)
 {
-     static size_t tabSize = sizeof(FormulaMapTab) / sizeof(FormulaMapTab[0]);
+     static const size_t tabSize = sizeof(FormulaMapTab) / sizeof(FormulaMapTab[0]);
 
      hchar_string buf;
-	 for (size_t i = 0 ; i < tabSize ; i++) {
-		  if( !strcmp(tex, FormulaMapTab[i].tex ) ) {
+     for (size_t i = 0 ; i < tabSize ; i++) {
+          if( !strcmp(tex, FormulaMapTab[i].tex ) ) {
                 buf.push_back(FormulaMapTab[i].ucs);
                 return buf;
-		  }
-	 }
+          }
+     }
 
      size_t const len = strlen(tex);
-	 for (size_t i = 0 ; i < len ; i++)
+     for (size_t i = 0 ; i < len ; i++)
      {
          buf.push_back(tex[i]);
      }
-	 return buf;
+     return buf;
 }
 
 #else
@@ -389,8 +386,10 @@ hchar_string getMathMLEntity(const char *tex)
 {
      ::std::string buf;
      buf.append(tex);
-	 return buf;
+     return buf;
 }
 #endif
 
 #endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

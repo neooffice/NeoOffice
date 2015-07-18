@@ -1,25 +1,21 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <stdio.h>
 #ifdef SOLARIS
@@ -27,6 +23,8 @@
 #else
 #include <string.h>
 #endif
+
+#include <fontmap.hxx>
 
 // #i42367# prevent MS compiler from using system locale for parsing
 #ifdef _MSC_VER
@@ -38,7 +36,7 @@ struct FontEntry
 {
     const char *familyname;
     int key;
-	 double ratio;
+     double ratio;
 };
 /**
  * ratio\xb4\xc2 \xc7\xd1\xb1\xdb 70%, \xbc\xfd\xc0\xda 10% \xbf\xb5\xb9\xae 20%\xc0\xc7 \xba\xf1\xc0\xb2\xb7\xce \xb1\xb8\xbc\xba\xb5\xc7\xbe\xfa\xb4\xd9\xb4\xc2 \xb0\xa1\xc1\xa4\xc7\xcf\xbf\xa1 \xc1\xa4\xc7\xd8\xc1\xf8\xb4\xd9.
@@ -125,7 +123,6 @@ const struct FontEntry FontMapTab[] =
     {"\xbd\xc5\xb8\xed \xb1\xc3\xbc\xad",3, 0.97}
 };
 
-#define FONTCOUNT 4
 #ifndef WIN32
 #if defined(LINUX)
 const char* RepFontTab[] =
@@ -145,7 +142,7 @@ const char* RepFontTab[] =
 };
 #endif
 #else
-char* RepFontTab[] =
+const char* RepFontTab[] =
 {
     "\xb9\xd9\xc5\xc1",                                       /* 0 */
     "\xb5\xb8\xbf\xf2",                                       /* 1 */
@@ -161,10 +158,12 @@ int getRepFamilyName(const char* orig, char *buf, double &ratio)
     for( i = 0 ; i < size ; i++)
     {
         if( !strcmp(orig, FontMapTab[i].familyname) ){
-				ratio = FontMapTab[i].ratio;
+                ratio = FontMapTab[i].ratio;
             return strlen( strcpy(buf,RepFontTab[FontMapTab[i].key]) );
-		  }
+          }
     }
-	 ratio = FontMapTab[0].ratio;
+     ratio = FontMapTab[0].ratio;
     return strlen( strcpy(buf, RepFontTab[0] ) );
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

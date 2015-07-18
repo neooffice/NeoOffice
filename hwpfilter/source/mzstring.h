@@ -1,32 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-#ifndef _MZSTRING_H_
-#define _MZSTRING_H_
-
-#ifdef __GNUG__
-#  pragma interface
-#endif
+#ifndef INCLUDED_HWPFILTER_SOURCE_MZSTRING_H
+#define INCLUDED_HWPFILTER_SOURCE_MZSTRING_H
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -43,12 +35,12 @@
 
   If you want to use a default empty MzString as a parameter, use
 
-#void foo(MzString par = MzString());	// Correct#
+#void foo(MzString par = MzString());   // Correct#
 
 rather than
 
-#void foo(MzString par = "");	// WRONG!#
-#void foo(MzString par = 0);	// WRONG!#
+#void foo(MzString par = "");   // WRONG!#
+#void foo(MzString par = 0);    // WRONG!#
 
 (The last one is only wrong because some compilers can't handle it.)
 
@@ -76,7 +68,7 @@ release the memory with #delete[]#. Don't preallocate memory.
 When you want to copy an MzString, just do
 
 #MzString a, b = "String";#
-#a = b;	// That's it!#
+#a = b; // That's it!#
 
 not something like
 
@@ -103,8 +95,8 @@ class MzString
         bool      resize(int len);
 
 // Assignment
-        void      operator = (MzString &s);
-        void      operator = (const char *s);
+        MzString  &operator = (MzString &s);
+        MzString  &operator = (const char *s);
 
 // Appending
         MzString  &operator += (char);
@@ -118,21 +110,21 @@ class MzString
         MzString  &operator << (long);
         MzString  &operator << (short i)      { return *this<<(int)i; }
         MzString  &operator << (MzString const &);
-/* MzString	&operator << (MzString *s)	{ return *this<<*s; }
+/* MzString &operator << (MzString *s)  { return *this<<*s; }
 
   // Removing
-  char		operator >> (char &c);
+  char      operator >> (char &c);
 */
 // Access to specific characters
-//char		&operator [] (int n);
+//char      &operator [] (int n);
         char      operator [] (int n);
         char      last();
 
 // Comparison
 //  Return:
-//	 0 : 'this' is equal to 's'.
-//	-1 : 'this' is less than 's'.
-//	 1 : 'this' is greater than 's'.
+//   0 : 'this' is equal to 's'.
+//  -1 : 'this' is less than 's'.
+//   1 : 'this' is greater than 's'.
         int       compare(const char *s);
 
 // Searching for parts
@@ -177,7 +169,9 @@ inline const char* MzString::c_str() const
 }
 
 
-//
+
 // Non friend, non member operators
-//
-#endif                                            /* _MZSTRING_H_ */
+
+#endif // INCLUDED_HWPFILTER_SOURCE_MZSTRING_H
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

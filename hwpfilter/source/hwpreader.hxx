@@ -1,28 +1,42 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of NeoOffice.
+ *
+ * This file incorporates work covered by the following license notices:
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified July 2015 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under Section 3.3 of the Mozilla Public License v2.0.
+ */
 
-
-
-#ifndef _HWPREADER_HXX_
-#define _HWPREADER_HXX_
+#ifndef INCLUDED_HWPFILTER_SOURCE_HWPREADER_HXX
+#define INCLUDED_HWPFILTER_SOURCE_HWPREADER_HXX
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,28 +49,19 @@
 #include <com/sun/star/document/XImporter.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 
-#include <com/sun/star/ucb/XContentIdentifierFactory.hpp>
-#include <com/sun/star/ucb/XContentProvider.hpp>
-#include <com/sun/star/ucb/XContentIdentifier.hpp>
-#include <com/sun/star/ucb/XContent.hpp>
-#include <com/sun/star/ucb/OpenCommandArgument2.hpp>
-#include <com/sun/star/ucb/OpenMode.hpp>
-#include <com/sun/star/ucb/XCommandProcessor.hpp>
-#include <com/sun/star/ucb/XCommandEnvironment.hpp>
-#include <cppuhelper/implbase2.hxx>
 #include <com/sun/star/io/XActiveDataSink.hpp>
 #include <com/sun/star/io/XActiveDataControl.hpp>
 #include <com/sun/star/io/XStreamListener.hpp>
+#include <com/sun/star/document/XExtendedFilterDetection.hpp>
 
 #include <cppuhelper/factory.hxx>
-#include <cppuhelper/weak.hxx>
 #include <cppuhelper/implbase1.hxx>
-#include <cppuhelper/implbase3.hxx>
-#include <cppuhelper/servicefactory.hxx>
+#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase4.hxx>
+#include <cppuhelper/supportsservice.hxx>
+#include <cppuhelper/weak.hxx>
 
-using namespace ::rtl;
 using namespace ::cppu;
-using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::io;
@@ -67,50 +72,24 @@ using namespace ::com::sun::star::xml::sax;
 
 #include <assert.h>
 
+#if SUPD == 310
+#include <comphelper/mediadescriptor.hxx>
+#else	// SUPD == 310
+#include <unotools/mediadescriptor.hxx>
+#endif	// SUPD == 310
+
 #include "hwpfile.h"
 #include "hcode.h"
 #include "hbox.h"
 #include "htags.h"
 #include "hstream.h"
 #include "drawdef.h"
-#include "attributes.hxx"	
-
+#include "attributes.hxx"
 
 #define IMPLEMENTATION_NAME "com.sun.comp.hwpimport.HwpImportFilter"
-#define  SERVICE_NAME       "com.sun.star.document.ImportFilter"
-#define WRITER_IMPORTER_NAME    "com.sun.star.comp.Writer.XMLImporter"
-
-class MyDataSink : public ::cppu::WeakImplHelper2< XActiveDataControl, XActiveDataSink >
-{
-  Reference < XInputStream >	m_xInputStream;
-public:
-
-  // XActiveDataControl.
-  virtual void SAL_CALL   addListener ( const Reference<XStreamListener> &)
-    throw(RuntimeException) {}
-  virtual void SAL_CALL   removeListener ( const Reference<XStreamListener> &)
-    throw(RuntimeException) {}
-  virtual void SAL_CALL   start (void) throw(RuntimeException) {}
-  virtual void SAL_CALL   terminate (void) throw(RuntimeException) {}
-
-  // XActiveDataSink.
-  virtual void SAL_CALL   setInputStream ( const Reference<XInputStream> &rxInputStream)
-    throw(RuntimeException);
-  virtual Reference<XInputStream> SAL_CALL getInputStream (void) 
-    throw(RuntimeException);
-};
-
-void SAL_CALL MyDataSink::setInputStream ( const Reference<XInputStream> &rxInputStream)
-  throw(RuntimeException )
-{
-  m_xInputStream = rxInputStream;
-}
-
-Reference < XInputStream > SAL_CALL MyDataSink::getInputStream (void) 
-  throw(RuntimeException)
-{
-  return m_xInputStream;
-}
+#define SERVICE_NAME1 "com.sun.star.document.ImportFilter"
+#define SERVICE_NAME2 "com.sun.star.document.ExtendedTypeDetection"
+#define WRITER_IMPORTER_NAME "com.sun.star.comp.Writer.XMLImporter"
 
 struct HwpReaderPrivate;
 /**
@@ -118,32 +97,35 @@ struct HwpReaderPrivate;
  */
 class HwpReader : public WeakImplHelper1<XFilter>
 {
-	
-public:	
+
+public:
     HwpReader();
-    ~HwpReader();
-	
+    virtual ~HwpReader();
+
 public:
     /**
      * parseStream does Parser-startup initializations
      */
-    virtual sal_Bool SAL_CALL filter(const Sequence< PropertyValue >& aDescriptor) throw (RuntimeException);
-    virtual void SAL_CALL cancel() throw(RuntimeException) {}
-    virtual void SAL_CALL setDocumentHandler(Reference< XDocumentHandler >  xHandler) 
+#if SUPD == 310
+    virtual sal_Bool SAL_CALL filter(const Sequence< PropertyValue >& aDescriptor) throw (RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual sal_Bool SAL_CALL filter(const Sequence< PropertyValue >& aDescriptor) throw (RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+#if SUPD == 310
+    virtual void SAL_CALL cancel() throw(RuntimeException) SAL_OVERRIDE {}
+#else	// SUPD == 310
+    virtual void SAL_CALL cancel() throw(RuntimeException, std::exception) SAL_OVERRIDE {}
+#endif	// SUPD == 310
+    virtual void SAL_CALL setDocumentHandler(Reference< XDocumentHandler > xHandler)
     {
-	    rDocumentHandler = xHandler;
+        m_rxDocumentHandler = xHandler;
     }
-	 void setUCB( Reference< XInterface > xUCB ){
-		 rUCB = xUCB;
-	 }
 private:
-    Reference< XDocumentHandler >   rDocumentHandler;
-	 Reference< XInterface > rUCB;
+    Reference< XDocumentHandler > m_rxDocumentHandler;
     Reference< XAttributeList > rList;
     AttributeListImpl *pList;
     HWPFile hwpfile;
-	 HwpReaderPrivate *d;
-
+    HwpReaderPrivate *d;
 private:
     /* -------- Document Parsing --------- */
     void makeMeta();
@@ -156,39 +138,39 @@ private:
     void makeTextDecls();
 
     /* -------- Paragraph Parsing --------- */
-    void parsePara(HWPPara *para, sal_Bool bParaStart = sal_False);
-    void make_text_p0(HWPPara *para, sal_Bool bParaStart = sal_False);
-    void make_text_p1(HWPPara *para, sal_Bool bParaStart = sal_False);
-    void make_text_p3(HWPPara *para, sal_Bool bParaStart = sal_False);
+    void parsePara(HWPPara *para, bool bParaStart = false);
+    void make_text_p0(HWPPara *para, bool bParaStart = false);
+    void make_text_p1(HWPPara *para, bool bParaStart = false);
+    void make_text_p3(HWPPara *para, bool bParaStart = false);
 
     /* -------- rDocument->characters(x) --------- */
     void makeChars(hchar_string & rStr);
 
     /* -------- Special Char Parsing --------- */
-    void makeFieldCode(hchar_string & rStr, FieldCode *hbox);		//6
-    void makeBookmark(Bookmark *hbox);		//6
-    void makeDateFormat(DateCode *hbox);	//7
-    void makeDateCode(DateCode *hbox);		//8
-    void makeTab(Tab *hbox);			//9
-    void makeTable(TxtBox *hbox);			
-    void makeTextBox(TxtBox *hbox);			
-    void makeFormula(TxtBox *hbox);			
-    void makeHyperText(TxtBox *hbox);			
-    void makePicture(Picture *hbox);			
+    void makeFieldCode(hchar_string & rStr, FieldCode *hbox); //6
+    void makeBookmark(Bookmark *hbox);      //6
+    void makeDateFormat(DateCode *hbox);    //7
+    void makeDateCode(DateCode *hbox);      //8
+    void makeTab(Tab *hbox);            //9
+    void makeTable(TxtBox *hbox);
+    void makeTextBox(TxtBox *hbox);
+    void makeFormula(TxtBox *hbox);
+    void makeHyperText(TxtBox *hbox);
+    void makePicture(Picture *hbox);
     void makePictureDRAW(HWPDrawingObject *drawobj, Picture *hbox);
-    void makeLine(Line *hbox);			
-    void makeHidden(Hidden *hbox);	
-    void makeFootnote(Footnote *hbox);	
+    void makeLine(Line *hbox);
+    void makeHidden(Hidden *hbox);
+    void makeFootnote(Footnote *hbox);
     void makeAutoNum(AutoNum *hbox);
-    void makeShowPageNum();	
+    void makeShowPageNum();
     void makeMailMerge(MailMerge *hbox);
-    void makeTocMark(TocMark *hbox);		
+    void makeTocMark(TocMark *hbox);
     void makeIndexMark(IndexMark *hbox);
     void makeOutline(Outline *hbox);
 
     /* --------- Styles Parsing ------------ */
     void makePageStyle();
-	 void makeColumns(ColumnDef *);
+    void makeColumns(ColumnDef *);
     void makeTStyle(CharShape *);
     void makePStyle(ParaShape *);
     void makeFStyle(FBoxStyle *);
@@ -201,28 +183,61 @@ private:
     char* getPStyleName(int, char *);
 };
 
-class HwpImportFilter : public WeakImplHelper3< XFilter, XImporter, XServiceInfo >
+class HwpImportFilter : public WeakImplHelper4< XFilter, XImporter, XServiceInfo, XExtendedFilterDetection >
 {
 public:
     HwpImportFilter( const Reference< XMultiServiceFactory > xFact );
-    ~HwpImportFilter();
+    virtual ~HwpImportFilter();
 
 public:
-    static Sequence< OUString > getSupportedServiceNames_Static( void ) throw();
+    static Sequence< OUString > getSupportedServiceNames_Static() throw();
     static OUString getImplementationName_Static() throw();
 
 public:
-        // XFilter
+    // XFilter
     virtual sal_Bool SAL_CALL filter( const Sequence< PropertyValue >& aDescriptor )
-        throw( RuntimeException );
-    virtual void SAL_CALL cancel() throw(RuntimeException);
-        // XImporter
+#if SUPD == 310
+        throw( RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw( RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
+#if SUPD == 310
+    virtual void SAL_CALL cancel() throw(RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual void SAL_CALL cancel() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+
+    // XImporter
     virtual void SAL_CALL setTargetDocument( const Reference< XComponent >& xDoc)
-        throw( IllegalArgumentException, RuntimeException );
-        // XServiceInfo
-    OUString SAL_CALL getImplementationName() throw (RuntimeException);
-    Sequence< OUString > SAL_CALL getSupportedServiceNames(void) throw (::com::sun::star::uno::RuntimeException);
-    sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw (::com::sun::star::uno::RuntimeException);
+#if SUPD == 310
+        throw( IllegalArgumentException, RuntimeException ) SAL_OVERRIDE;
+#else	// SUPD == 310
+        throw( IllegalArgumentException, RuntimeException, std::exception ) SAL_OVERRIDE;
+#endif	// SUPD == 310
+
+    // XServiceInfo
+#if SUPD == 310
+    OUString SAL_CALL getImplementationName() throw (RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    OUString SAL_CALL getImplementationName() throw (RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+#if SUPD == 310
+    Sequence< OUString > SAL_CALL getSupportedServiceNames(void) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    Sequence< OUString > SAL_CALL getSupportedServiceNames(void) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+#if SUPD == 310
+    sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
+
+    //XExtendedFilterDetection
+#if SUPD == 310
+    virtual OUString SAL_CALL detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+#else	// SUPD == 310
+    virtual OUString SAL_CALL detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+#endif	// SUPD == 310
 
 public:
     Reference< XFilter > rFilter;
@@ -237,31 +252,22 @@ Reference< XInterface > HwpImportFilter_CreateInstance(
     return Reference< XInterface > ( (OWeakObject* )p );
 }
 
-Sequence< OUString > HwpImportFilter::getSupportedServiceNames_Static( void ) throw ()
+Sequence< OUString > HwpImportFilter::getSupportedServiceNames_Static() throw ()
 {
     Sequence< OUString > aRet(1);
     aRet.getArray()[0] = HwpImportFilter::getImplementationName_Static();
     return aRet;
 }
+
 HwpImportFilter::HwpImportFilter( const Reference< XMultiServiceFactory > xFact )
 {
-    OUString sService = OUString::createFromAscii( WRITER_IMPORTER_NAME );
+    OUString sService( WRITER_IMPORTER_NAME );
     try {
         Reference< XDocumentHandler >
             xHandler( xFact->createInstance( sService ), UNO_QUERY );
 
         HwpReader *p = new HwpReader;
         p->setDocumentHandler( xHandler );
-
-		  Sequence< Any > aArgs( 2 );
-		  aArgs[0] <<= OUString::createFromAscii( "Local" );
-		  aArgs[1] <<= OUString::createFromAscii( "Office" );
-		  Reference< XInterface > xUCB 
-			  ( xFact->createInstanceWithArguments
-				 (OUString::createFromAscii("com.sun.star.ucb.UniversalContentBroker"),
-				  aArgs));
-		  p->setUCB( xUCB );
-
 
         Reference< XImporter > xImporter = Reference< XImporter >( xHandler, UNO_QUERY );
         rImporter = xImporter;
@@ -280,21 +286,31 @@ HwpImportFilter::~HwpImportFilter()
 }
 
 sal_Bool HwpImportFilter::filter( const Sequence< PropertyValue >& aDescriptor )
+#if SUPD == 310
     throw( RuntimeException )
+#else	// SUPD == 310
+    throw( RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
-        // delegate to IchitaroImpoter
-    rFilter->filter( aDescriptor );
-
-    return sal_True;
+    // delegate to IchitaroImpoter
+    return rFilter->filter( aDescriptor );
 }
 
+#if SUPD == 310
 void HwpImportFilter::cancel() throw(::com::sun::star::uno::RuntimeException)
+#else	// SUPD == 310
+void HwpImportFilter::cancel() throw(::com::sun::star::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
     rFilter->cancel();
 }
 
 void HwpImportFilter::setTargetDocument( const Reference< XComponent >& xDoc )
+#if SUPD == 310
     throw( IllegalArgumentException, RuntimeException )
+#else	// SUPD == 310
+    throw( IllegalArgumentException, RuntimeException, std::exception )
+#endif	// SUPD == 310
 {
         // delegate
     rImporter->setTargetDocument( xDoc );
@@ -302,46 +318,88 @@ void HwpImportFilter::setTargetDocument( const Reference< XComponent >& xDoc )
 
 OUString HwpImportFilter::getImplementationName_Static() throw()
 {
-    return OUString::createFromAscii( IMPLEMENTATION_NAME );
+    return OUString( IMPLEMENTATION_NAME );
 }
 
+#if SUPD == 310
 OUString HwpImportFilter::getImplementationName() throw(::com::sun::star::uno::RuntimeException)
+#else	// SUPD == 310
+OUString HwpImportFilter::getImplementationName() throw(::com::sun::star::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-    return OUString::createFromAscii( IMPLEMENTATION_NAME );
+    return OUString( IMPLEMENTATION_NAME );
 }
+
+#if SUPD == 310
 sal_Bool HwpImportFilter::supportsService( const OUString& ServiceName ) throw(::com::sun::star::uno::RuntimeException)
+#else	// SUPD == 310
+sal_Bool HwpImportFilter::supportsService( const OUString& ServiceName ) throw(::com::sun::star::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-    Sequence< OUString > aSNL = getSupportedServiceNames();
-    const OUString *pArray = aSNL.getConstArray();
-
-    for ( sal_Int32 i = 0; i < aSNL.getLength(); i++ )
-        if ( pArray[i] == ServiceName )
-            return sal_True;
-
-    return sal_False;
+    return cppu::supportsService(this, ServiceName);
 }
 
-Sequence< OUString> HwpImportFilter::getSupportedServiceNames( void ) throw(::com::sun::star::uno::RuntimeException)
+//XExtendedFilterDetection
+#if SUPD == 310
+OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException)
+#else	// SUPD == 310
+OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& rDescriptor ) throw (::com::sun::star::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
 {
-    Sequence< OUString > seq(1);
-    seq.getArray()[0] = OUString::createFromAscii( SERVICE_NAME );
-    return seq;
+    OUString sTypeName;
+
+#if SUPD == 310
+    comphelper::MediaDescriptor aDescriptor(rDescriptor);
+#else	// SUPD == 310
+    utl::MediaDescriptor aDescriptor(rDescriptor);
+#endif	// SUPD == 310
+    aDescriptor.addInputStream();
+
+    Reference< XInputStream > xInputStream(
+#if SUPD == 310
+        aDescriptor[comphelper::MediaDescriptor::PROP_INPUTSTREAM()], UNO_QUERY);
+#else	// SUPD == 310
+        aDescriptor[utl::MediaDescriptor::PROP_INPUTSTREAM()], UNO_QUERY);
+#endif	// SUPD == 310
+
+    if (xInputStream.is())
+    {
+        Sequence< sal_Int8 > aData;
+        sal_Int32 nLen = HWPIDLen;
+        if (
+             nLen == xInputStream->readBytes(aData, nLen) &&
+             detect_hwp_version(reinterpret_cast<const char*>(aData.getConstArray()))
+           )
+        {
+            sTypeName = OUString("writer_MIZI_Hwp_97");
+        }
+    }
+
+    return sTypeName;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-// The below three C functions are nessesary for this shared library is treaded as
-// UNO component library.
-/////////////////////////////////////////////////////////////////////////////////////
+#if SUPD == 310
+Sequence< OUString> HwpImportFilter::getSupportedServiceNames() throw(::com::sun::star::uno::RuntimeException)
+#else	// SUPD == 310
+Sequence< OUString> HwpImportFilter::getSupportedServiceNames() throw(::com::sun::star::uno::RuntimeException, std::exception)
+#endif	// SUPD == 310
+{
+    Sequence < OUString > aRet(2);
+    OUString* pArray = aRet.getArray();
+    pArray[0] = OUString(SERVICE_NAME1);
+    pArray[1] = OUString(SERVICE_NAME2);
+    return aRet;
+}
+
 extern "C"
 {
-
+#if SUPD == 310
     void SAL_CALL component_getImplementationEnvironment(
         const sal_Char ** ppEnvTypeName, uno_Environment **  )
     {
         *ppEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME;
     }
 
-#if SUPD == 310
     sal_Bool SAL_CALL component_writeInfo(
         void * , void * pRegistryKey )
     {
@@ -353,7 +411,12 @@ extern "C"
 
                 Reference< XRegistryKey > xNewKey = xKey->createKey(
                     OUString::createFromAscii( "/" IMPLEMENTATION_NAME "/UNO/SERVICES" ) );
+#ifdef USE_JAVA
+                xNewKey->createKey( OUString::createFromAscii( SERVICE_NAME1 ) );
+                xNewKey->createKey( OUString::createFromAscii( SERVICE_NAME2 ) );
+#else	// USE_JAVA
                 xNewKey->createKey( OUString::createFromAscii( SERVICE_NAME ) );
+#endif	// USE_JAVA
 
                 return sal_True;
             }
@@ -364,9 +427,11 @@ extern "C"
         }
         return sal_False;
     }
-#endif	// SUPD == 310
 
     void * SAL_CALL component_getFactory( const sal_Char * pImplName, void * pServiceManager, void *  )
+#else	// SUPD == 310
+    SAL_DLLPUBLIC_EXPORT void * SAL_CALL hwp_component_getFactory( const sal_Char * pImplName, void * pServiceManager, void *  )
+#endif	// SUPD == 310
     {
         void * pRet = 0;
 
@@ -377,7 +442,7 @@ extern "C"
 
             OUString aImplementationName = OUString::createFromAscii( pImplName );
 
-            if (aImplementationName == OUString::createFromAscii( IMPLEMENTATION_NAME ) )
+            if (aImplementationName == IMPLEMENTATION_NAME )
             {
                 xRet = createSingleFactory( xSMgr, aImplementationName,
                                             HwpImportFilter_CreateInstance,
@@ -394,5 +459,6 @@ extern "C"
     }
 }
 
-#endif 
+#endif
 
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,30 +1,24 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-/* $Id$ */
-
-#ifndef _HWPPARA_H_
-#define _HWPPARA_H_
+#ifndef INCLUDED_HWPFILTER_SOURCE_HPARA_H
+#define INCLUDED_HWPFILTER_SOURCE_HPARA_H
 
 #include <hwplib.h>
 #include <hwpfile.h>
@@ -46,7 +40,7 @@ struct HBox;
 enum
 {
     PA_USER_COLUMN    =   1,
-    PA_USER_PAGE      =   2,                      /* p user_page definiton */
+    PA_USER_PAGE      =   2,                      /* p user_page definition */
     PA_SECTION_BREAK  =   4,
     PA_BLOCK_BEGIN    =   8,
     PA_IN_BLOCK       =   16,
@@ -70,7 +64,7 @@ struct LineInfo
     hunit         sx;                             /* internal */
     hunit         psx;                            /* internal */
     hunit         pex;                            /* internal */
-// for formating
+// for formatting
     hunit         height_sp;
     unsigned short    softbreak;                  // column, page, section
 
@@ -108,9 +102,9 @@ class DLLEXPORT HWPPara
  */
         unsigned long     ctrlflag;
         unsigned char     pstyno;
-        CharShape     cshape;                     /* 글자가 모두 같은 모양일때	*/
-        ParaShape     pshape;                     /* reuse flag가 0이면		*/
-        int           pno;                        /* run-time only		*/
+        CharShape     cshape;                     /* 글자가 모두 같은 모양일때  */
+        ParaShape     pshape;                     /* reuse flag가 0이면     */
+        int           pno;                        /* run-time only      */
 
         LineInfo      *linfo;
         CharShape     *cshapep;
@@ -122,7 +116,7 @@ class DLLEXPORT HWPPara
         HWPPara(void);
         ~HWPPara(void);
 
-        int   Read(HWPFile &hwpf, unsigned char flag = 0);
+        bool  Read(HWPFile &hwpf, unsigned char flag = 0);
         int   Write(CTextOut &txtf);
         int   Write(CHTMLOut &html);
 
@@ -130,13 +124,13 @@ class DLLEXPORT HWPPara
 
 /* layout을 위한 함수 */
 /**
- * Returns the character sytle of paragraph.
+ * Returns the character style of paragraph.
  */
         CharShape *GetCharShape(int pos);
 /**
- * Returns the sytle of paragraph.
+ * Returns the style of paragraph.
  */
-        ParaShape *GetParaShape(void);
+        ParaShape& GetParaShape(void) { return pshape;}
 
 /**
  * Returns previous paragraph.
@@ -145,7 +139,7 @@ class DLLEXPORT HWPPara
 /**
  * Returns next paragraph.
  */
-        HWPPara *Next(void);
+        HWPPara *Next(void) { return _next;}
 
         int HomePos(int line) const;
         int EndPos(int line) const;
@@ -175,4 +169,6 @@ inline int HWPPara::LineLen(int line) const
 {
     return EndPos(line) - HomePos(line);
 }
-#endif                                            /* _HWPPARA_H_ */
+#endif // INCLUDED_HWPFILTER_SOURCE_HPARA_H
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,30 +1,26 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <math.h>
 #include "solver.h"
 
-//---------------------------------------------------------------------------
+
 double** mgcLinearSystemD::NewMatrix (int N)
 {
   double** A = new double*[N];
@@ -37,7 +33,8 @@ double** mgcLinearSystemD::NewMatrix (int N)
     if ( !A[row] )
     {
       for (int i = 0; i < row; i++)
-	delete[] A[i];
+    delete[] A[i];
+      delete[] A;
       return 0;
     }
     for (int col = 0; col < N; col++)
@@ -45,14 +42,14 @@ double** mgcLinearSystemD::NewMatrix (int N)
   }
   return A;
 }
-//---------------------------------------------------------------------------
+
 void mgcLinearSystemD::DeleteMatrix (int N, double** A)
 {
   for (int row = 0; row < N; row++)
     delete[] A[row];
   delete[] A;
 }
-//---------------------------------------------------------------------------
+
 double* mgcLinearSystemD::NewVector (int N)
 {
   double* B = new double[N];
@@ -63,7 +60,7 @@ double* mgcLinearSystemD::NewVector (int N)
     B[row] = 0;
   return B;
 }
-//---------------------------------------------------------------------------
+
 int mgcLinearSystemD::Solve (int n, double** a, double* b)
 {
   int* indxc = new int[n];
@@ -96,25 +93,25 @@ int mgcLinearSystemD::Solve (int n, double** a, double* b)
     {
       if ( ipiv[j] != 1 )
       {
-	for (k = 0; k < n; k++)
-	{
-	  if ( ipiv[k] == 0 )
-	  {
-	    if ( fabs(a[j][k]) >= big )
-	    {
-	      big = fabs(a[j][k]);
-	      irow = j;
-	      icol = k;
-	    }
-	  }
-	  else if ( ipiv[k] > 1 )
-	  {
-	    delete[] ipiv;
-	    delete[] indxr;
-	    delete[] indxc;
-	    return 0;
-	  }
-	}
+    for (k = 0; k < n; k++)
+    {
+      if ( ipiv[k] == 0 )
+      {
+        if ( fabs(a[j][k]) >= big )
+        {
+          big = fabs(a[j][k]);
+          irow = j;
+          icol = k;
+        }
+      }
+      else if ( ipiv[k] > 1 )
+      {
+        delete[] ipiv;
+        delete[] indxr;
+        delete[] indxc;
+        return 0;
+      }
+    }
       }
     }
     ipiv[icol]++;
@@ -150,11 +147,11 @@ int mgcLinearSystemD::Solve (int n, double** a, double* b)
     {
       if ( j != icol )
       {
-	save = a[j][icol];
-	a[j][icol] = 0;
-	for (k = 0; k < n; k++)
-	  a[j][k] -= a[icol][k]*save;
-	b[j] -= b[icol]*save;
+    save = a[j][icol];
+    a[j][icol] = 0;
+    for (k = 0; k < n; k++)
+      a[j][k] -= a[icol][k]*save;
+    b[j] -= b[icol]*save;
       }
     }
   }
@@ -165,9 +162,9 @@ int mgcLinearSystemD::Solve (int n, double** a, double* b)
     {
       for (k = 0; k < n; k++)
       {
-	save = a[k][indxr[j]];
-	a[k][indxr[j]] = a[k][indxc[j]];
-	a[k][indxc[j]] = save;
+    save = a[k][indxr[j]];
+    a[k][indxr[j]] = a[k][indxc[j]];
+    a[k][indxc[j]] = save;
       }
     }
   }
@@ -177,3 +174,5 @@ int mgcLinearSystemD::Solve (int n, double** a, double* b)
   delete[] indxc;
   return 1;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

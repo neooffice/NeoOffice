@@ -1,54 +1,37 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-
-/* NAME $Id$
- * PURPOSE
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
  *
- * NOTES
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * HISTORY
- *        frog - Aug 6, 1998: Created.
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef _HTAGS_H_
-#define _HTAGS_H_
-
-#ifdef __GNUG__
-#pragma interface
-#endif
+#ifndef INCLUDED_HWPFILTER_SOURCE_HTAGS_H
+#define INCLUDED_HWPFILTER_SOURCE_HTAGS_H
 
 class HWPFile;
 /**
- * @short Embeded image
+ * @short Embedded image
  */
 struct EmPicture
 {
-    int   size;
+    size_t size;
     char  name[16];
     char  type[16];
     uchar *data;
 
-    EmPicture(int size);
+    EmPicture(size_t size);
     ~EmPicture(void);
 
     bool Read(HWPFile& hwpf);
@@ -71,15 +54,17 @@ struct HyperText
 struct OlePicture
 {
     int   size;
-    ulong signature;
+    uint signature;
 #ifdef WIN32
-	 IStorage *pis;
+    IStorage *pis;
 #else
-	 char *pis;
+    char *pis;
 #endif
     OlePicture(int tsize);
     ~OlePicture(void);
 
     bool Read(HWPFile& hwpf);
 };
-#endif                                            /* _HTAGS_H_ */
+#endif // INCLUDED_HWPFILTER_SOURCE_HTAGS_H
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

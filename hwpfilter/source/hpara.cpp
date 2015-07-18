@@ -1,29 +1,25 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
-
-
-/* $Id$ */
-#define NOMINMAX
 #include "precompile.h"
+
+#include <osl/diagnose.h>
 
 #include <comphelper/newarray.hxx>
 
@@ -32,24 +28,37 @@
 #include "hpara.h"
 #include "hbox.h"
 #include "hutil.h"
-#include "hutil.h"
 
 bool LineInfo::Read(HWPFile & hwpf, HWPPara *pPara)
 {
-    pos = sal::static_int_cast<unsigned short>(hwpf.Read2b());
-    space_width = (short) hwpf.Read2b();
-    height = (short) hwpf.Read2b();
-// internal informations
-    pgy = (short) hwpf.Read2b();
-    sx = (short) hwpf.Read2b();
-    psx = (short) hwpf.Read2b();
-    pex = (short) hwpf.Read2b();
+    if (!hwpf.Read2b(pos))
+        return false;
+    unsigned short tmp16;
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    space_width = tmp16;
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    height = tmp16;
+// internal information
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    pgy = tmp16;
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    sx = tmp16;
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    psx = tmp16;
+    if (!hwpf.Read2b(tmp16))
+        return false;
+    pex = tmp16;
     height_sp = 0;
 
     if( pex >> 15 & 0x01 )
     {
-		  if( pex & 0x01 )
-				hwpf.AddPage();
+          if( pex & 0x01 )
+                hwpf.AddPage();
         pPara->pshape.reserved[0] = sal::static_int_cast<unsigned char>(pex & 0x01);
         pPara->pshape.reserved[1] = sal::static_int_cast<unsigned char>(pex & 0x02);
     }
@@ -57,31 +66,35 @@ bool LineInfo::Read(HWPFile & hwpf, HWPPara *pPara)
     return (!hwpf.State());
 }
 
-
-HWPPara::HWPPara(void)
+HWPPara::HWPPara()
+    : _next(NULL)
+    , reuse_shape(0)
+    , nch(0)
+    , nline(0)
+    , begin_ypos(0)
+    , scflag(0)
+    , contain_cshape(0)
+    , etcflag(0)
+    , ctrlflag(0)
+    , pstyno(0)
+    , pno(0)
+    , linfo(NULL)
+    , cshapep(NULL)
+    , hhstr(NULL)
 {
-    _next = NULL;
-    linfo = NULL;
-    cshapep = NULL;
-    hhstr = NULL;
-    pno = 0;
-
+    memset(&cshape, 0, sizeof(cshape));
+    memset(&pshape, 0, sizeof(pshape));
 }
 
-
-HWPPara::~HWPPara(void)
+HWPPara::~HWPPara()
 {
-    int ii;
-
-    if (linfo)
-        delete[]linfo;
-    if (cshapep)
-        delete[]cshapep;
+    delete[] linfo;
+    delete[] cshapep;
     if (hhstr)
     {
 // virtual destructor
-/* C++ should also work on a null. */
-        for (ii = 0; ii < nch; ++ii)
+/* C++은 null에 대해서도 동작한다. */
+        for (int ii = 0; ii < nch; ++ii)
             delete hhstr[ii];
 
         delete[]hhstr;
@@ -90,12 +103,12 @@ HWPPara::~HWPPara(void)
 }
 
 
-int HWPPara::Read(HWPFile & hwpf, unsigned char flag)
+bool HWPPara::Read(HWPFile & hwpf, unsigned char flag)
 {
     unsigned char same_cshape;
-    register int ii;
+    int ii;
     scflag = flag;
-// Paragraph Infomation
+// Paragraph Information
     hwpf.Read1b(&reuse_shape, 1);
     hwpf.Read2b(&nch, 1);
     hwpf.Read2b(&nline, 1);
@@ -105,17 +118,17 @@ int HWPPara::Read(HWPFile & hwpf, unsigned char flag)
     hwpf.Read1b(&pstyno, 1);
 
 
-/* Paragraph representative character */
+/* Paragraph 대표 글자 */
     cshape.Read(hwpf);
     if (nch > 0)
         hwpf.AddCharShape(&cshape);
 
-/* Paragraph paragraph shape */
+/* Paragraph 문단 모양 */
     if (nch && !reuse_shape)
     {
         pshape.Read(hwpf);
         pshape.cshape = &cshape;
-		  pshape.pagebreak = etcflag;
+          pshape.pagebreak = etcflag;
     }
 
     linfo = ::comphelper::newArray_null<LineInfo>(nline);
@@ -124,15 +137,15 @@ int HWPPara::Read(HWPFile & hwpf, unsigned char flag)
     {
         linfo[ii].Read(hwpf, this);
     }
-	 if( etcflag & 0x04 ){
-		 hwpf.AddColumnInfo();
-	 }
+     if( etcflag & 0x04 ){
+         hwpf.AddColumnInfo();
+     }
 
     if (nch && !reuse_shape){
-		 if( pshape.coldef.ncols > 1 ){
-			 hwpf.SetColumnDef( &pshape.coldef );
-		 }
-	 }
+         if( pshape.coldef.ncols > 1 ){
+             hwpf.SetColumnDef( &pshape.coldef );
+         }
+     }
 
 
     if( nline > 0 )
@@ -181,18 +194,14 @@ int HWPPara::Read(HWPFile & hwpf, unsigned char flag)
             return false;
         if (hhstr[ii]->hh == CH_END_PARA)
             break;
-		  if( hhstr[ii]->hh < CH_END_PARA )
-				pshape.reserved[0] = 0;
+          if( hhstr[ii]->hh < CH_END_PARA )
+                pshape.reserved[0] = 0;
         ii += hhstr[ii]->WSize();
     }
     return nch && !hwpf.State();
 }
 
 
-HWPPara *HWPPara::Next(void)
-{
-    return _next;
-}
 
 
 CharShape *HWPPara::GetCharShape(int pos)
@@ -203,24 +212,23 @@ CharShape *HWPPara::GetCharShape(int pos)
 }
 
 
-ParaShape *HWPPara::GetParaShape(void)
-{
-    return &pshape;
-}
 
 
 HBox *HWPPara::readHBox(HWPFile & hwpf)
 {
-    hchar hh = sal::static_int_cast<hchar>(hwpf.Read2b());
+    hchar hh;
+    if (!hwpf.Read2b(hh))
+        return 0;
+
     HBox *hbox = 0;
 
     if (hwpf.State() != HWP_NoError)
         return 0;
-//hbox = new HBox(hh);
+
     if (hh > 31 || hh == CH_END_PARA)
         hbox = new HBox(hh);
     else if (IS_SP_SKIP_BLOCK(hh))
-        hbox = new SkipBlock(hh);
+        hbox = new SkipData(hh);
     else
     {
         switch (hh)
@@ -316,5 +324,6 @@ HBox *HWPPara::readHBox(HWPFile & hwpf)
         }
     }
     return hbox;
-//return 0;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

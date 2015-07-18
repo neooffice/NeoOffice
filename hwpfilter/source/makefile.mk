@@ -35,7 +35,15 @@ ENABLE_EXCEPTIONS=TRUE
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
-	-I$(PRJ)$/..$/comphelper$/inc
+	-I$(PRJ)$/..$/comphelper$/inc \
+	-I$(PRJ)$/..$/cppuhelper$/inc \
+	-I$(PRJ)$/..$/sal$/inc
+
+PREPENDLIBS=$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib
+
+# Link to modified libraries
+SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
 .ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
@@ -85,6 +93,11 @@ SHL1STDLIBS+= \
 		$(OLE32LIB) $(UUIDLIB)
 .ENDIF			# "$(GUI)"=="WNT"		
 
+.IF "$(UPD)" == "310"
+SHL1STDLIBS += \
+		$(COMPHELPERLIB) \
+		$(CPPUHELPERLIB)
+.ENDIF		# "$(UPD)" == "310"
 
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 SHL1LIBS=   $(SLB)$/$(TARGET).lib

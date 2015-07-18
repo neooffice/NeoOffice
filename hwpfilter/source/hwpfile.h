@@ -1,36 +1,31 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 
-
-//
 // hwpfile.h
 // (C) 1998 Mizi Research, All rights are reserved
-//
-// $Id$
-//
 
-#ifndef _HWPFILE_H_
-#define _HWPFILE_H_
 
+#ifndef INCLUDED_HWPFILTER_SOURCE_HWPFILE_H
+#define INCLUDED_HWPFILTER_SOURCE_HWPFILE_H
+
+#include <list>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -39,11 +34,17 @@
 #include "hfont.h"
 #include "hstyle.h"
 #include "hpara.h"
-#include "list.hxx"
+
+#define HWPIDLen    30
+#define V20SIGNATURE    "HWP Document File V2.00 \032\1\2\3\4\5"
+#define V21SIGNATURE    "HWP Document File V2.10 \032\1\2\3\4\5"
+#define V30SIGNATURE    "HWP Document File V3.00 \032\1\2\3\4\5"
 
 #define HWP_V20 20
 #define HWP_V21 21
 #define HWP_V30 30
+
+int detect_hwp_version(const char *str);
 
 struct  FBox;
 struct  EmPicture;
@@ -66,14 +67,14 @@ class   HWPPara;
 class   HStream;
 
 struct ColumnInfo{
-	int start_page;
-	bool bIsSet;
-	ColumnDef *coldef;
-	ColumnInfo(int num){
-		start_page = num;
-		bIsSet = false;
-		coldef = 0;
-	}
+    int start_page;
+    bool bIsSet;
+    ColumnDef *coldef;
+    ColumnInfo(int num){
+        start_page = num;
+        bIsSet = false;
+        coldef = 0;
+    }
 };
 
 /**
@@ -92,7 +93,6 @@ struct ColumnInfo{
  *
  * @short HWP file management object
  * @author Mizi Reserach
- * @version $Id$
  */
 class DLLEXPORT HWPFile
 {
@@ -100,28 +100,23 @@ class DLLEXPORT HWPFile
 /**
  * Default constructor
  */
-        HWPFile( void );
-
-        ~HWPFile( void );
+        HWPFile();
+        ~HWPFile();
 
     public:
-/**
- * Initialize this object
- */
-        void Init();
 
 /**
  * Opens HStream to use it.
  * @returns 0 if success, otherwise error code
  * @see State()
  */
-        int Open( HStream & );
+        int Open( HStream * );
 
 /**
  * Say current state
  * @returns 0 if normal, otherwise error code. If it's  bigger than USER_ERROR_BIT, it is internally using error, otherwise it's system error which is able to get the message @ref strerror() method.
  */
-        int State( void ) const;
+        int State( void ) const { return error_code;}
 /**
  * Sets the current state
  */
@@ -129,15 +124,17 @@ class DLLEXPORT HWPFile
 /**
  * Reads one byte from HIODev
  */
-        int Read1b( void );
+        bool Read1b(char &out);
+        bool Read1b(unsigned char &out);
 /**
  * Reads two byte from HIODev
  */
-        int Read2b( void );
+        bool Read2b(unsigned short &out);
 /**
  * Reads four byte from HIODev
  */
-        long Read4b( void );
+        bool Read4b(unsigned int &out);
+        bool Read4b(int &out);
 /**
  * Reads nmemb byte array from HIODev
  */
@@ -162,7 +159,7 @@ class DLLEXPORT HWPFile
 /**
  * Reads main paragraph list
  */
-        bool ReadParaList(LinkedList<HWPPara> &plist, unsigned char flag = 0);
+        bool ReadParaList(std::list<HWPPara*> &aplist, unsigned char flag = 0);
 /**
  * Sets if the stream is compressed
  */
@@ -175,7 +172,7 @@ class DLLEXPORT HWPFile
 /**
  * Reads all information of hwp file from stream
  */
-        int ReadHwpFile( HStream &);
+        int ReadHwpFile( HStream *);
 /**
  * Reads document information of hwp file from HIODev
  */
@@ -194,9 +191,9 @@ class DLLEXPORT HWPFile
         bool ParaListRead();
 /* 그림 등의 추가 정보를 읽는다. */
 /**
- * Reads additional information like embeded image of hwp file from HIODev
+ * Reads additional information like embedded image of hwp file from HIODev
  */
-        bool TagsRead(void);
+        void TagsRead();
 
         enum Paper
         {
@@ -224,38 +221,38 @@ class DLLEXPORT HWPFile
         void AddTable(Table *);
 
         ColumnDef* GetColumnDef(int);
-		  int GetPageMasterNum(int page);
+          int GetPageMasterNum(int page);
 
-		  int getCurrentPage(){ return m_nCurrentPage;}
-        HWPInfo *GetHWPInfo(void) { return &_hwpInfo; }
-        HWPFont *GetHWPFont(void) { return &_hwpFont; }
-        HWPStyle *GetHWPStyle(void) { return &_hwpStyle; }
-        HWPPara *GetFirstPara(void) { return plist.first(); }
-        HWPPara *GetLastPara(void) { return plist.last(); }
+          int getCurrentPage(){ return m_nCurrentPage;}
+        HWPInfo& GetHWPInfo(void) { return _hwpInfo; }
+        HWPFont& GetHWPFont(void) { return _hwpFont; }
+        HWPStyle& GetHWPStyle(void) { return _hwpStyle; }
+        HWPPara *GetFirstPara(void) { return plist.front(); }
+        HWPPara *GetLastPara(void) { return plist.back(); }
 
         EmPicture *GetEmPicture(Picture *pic);
         EmPicture *GetEmPictureByName(char * name);
         HyperText *GetHyperText();
-        FBox *GetBoxHead (void) { return blist.count()?blist.first():0; }
+        FBox *GetBoxHead (void) { return blist.size()?blist.front():0; }
         ParaShape *getParaShape(int);
         CharShape *getCharShape(int);
         FBoxStyle *getFBoxStyle(int);
         DateCode *getDateCode(int);
-		  HeaderFooter *getHeaderFooter(int);
+          HeaderFooter *getHeaderFooter(int);
         ShowPageNum *getPageNumber(int);
-		  Table *getTable(int);
+          Table *getTable(int);
 
-        int getParaShapeCount(){ return pslist.count(); }
-        int getCharShapeCount(){ return cslist.count(); }
-        int getFBoxStyleCount(){ return fbslist.count(); }
-        int getDateFormatCount(){ return datecodes.count(); }
-        int getHeaderFooterCount(){ return headerfooters.count(); }
-        int getPageNumberCount(){ return pagenumbers.count(); }
-        int getTableCount(){ return tables.count(); }
-        int getColumnCount(){ return columnlist.count(); }
+        int getParaShapeCount(){ return pslist.size(); }
+        int getCharShapeCount(){ return cslist.size(); }
+        int getFBoxStyleCount(){ return fbslist.size(); }
+        int getDateFormatCount(){ return datecodes.size(); }
+        int getHeaderFooterCount(){ return headerfooters.size(); }
+        int getPageNumberCount(){ return pagenumbers.size(); }
+        int getTableCount(){ return tables.size(); }
+        int getColumnCount(){ return columnlist.size(); }
 
-		  int getMaxSettedPage(){ return m_nMaxSettedPage; }
-		  void setMaxSettedPage(){ m_nMaxSettedPage = m_nCurrentPage; }
+          int getMaxSettedPage(){ return m_nMaxSettedPage; }
+          void setMaxSettedPage(){ m_nMaxSettedPage = m_nCurrentPage; }
 
     private :
         int compareCharShape(CharShape *shape);
@@ -272,30 +269,29 @@ class DLLEXPORT HWPFile
 
     private:
 /* hwp 파일 이름 */
-        char      fname[256];
-		  int			m_nCurrentPage;
-		  int m_nMaxSettedPage;
+          int           m_nCurrentPage;
+          int m_nMaxSettedPage;
         HIODev    *hiodev;
 // read hwp contents
         HWPInfo   _hwpInfo;
         HWPFont   _hwpFont;
         HWPStyle  _hwpStyle;
-        LinkedList<ColumnInfo> columnlist;
-		  // paragraph linked list
-        LinkedList<HWPPara> plist;
-		  // floating box linked list
-        LinkedList<FBox> blist;
-		  // embedded picture list(tag datas)
-        LinkedList<EmPicture> emblist;
-        LinkedList<HyperText> hyperlist;
+        std::list<ColumnInfo*> columnlist;
+          // paragraph linked list
+        std::list<HWPPara*> plist;
+          // floating box linked list
+        std::list<FBox*> blist;
+          // embedded picture list(tag datas)
+        std::list<EmPicture*> emblist;
+        std::list<HyperText*> hyperlist;
         int currenthyper;
-        LinkedList<ParaShape> pslist;             /* 스타오피스의 구조상 필요 */
-        LinkedList<CharShape> cslist;
-        LinkedList<FBoxStyle> fbslist;
-        LinkedList<DateCode> datecodes;
-        LinkedList<HeaderFooter> headerfooters;
-        LinkedList<ShowPageNum> pagenumbers;
-        LinkedList<Table> tables;
+        std::list<ParaShape*> pslist;             /* 스타오피스의 구조상 필요 */
+        std::list<CharShape*> cslist;
+        std::list<FBoxStyle*> fbslist;
+        std::list<DateCode*> datecodes;
+        std::list<HeaderFooter*> headerfooters;
+        std::list<ShowPageNum*> pagenumbers;
+        std::list<Table*> tables;
 
 // for global document handling
         static HWPFile *cur_doc;
@@ -305,4 +301,6 @@ class DLLEXPORT HWPFile
 
 HWPFile *GetCurrentDoc(void);
 HWPFile *SetCurrentDoc(HWPFile *hwpfp);
-#endif                                            /* _HWPFILE_H_ */
+#endif // INCLUDED_HWPFILTER_SOURCE_HWPFILE_H
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

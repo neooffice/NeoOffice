@@ -1,45 +1,32 @@
-/**************************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
-
-/* $Id$ */
-
-#ifdef __GNUG__
-#pragma implementation "hiodev.h"
-#endif
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
 
 #include <stdio.h>
 #include <errno.h>
-// DVO: add zlib/ prefix
-#ifdef SYSTEM_ZLIB
-#include <zlib.h>
-#else
-#include <zlib/zlib.h>
-#endif
+
 #ifdef WIN32
 # include <io.h>
 #else
 # include <unistd.h>
 #endif
+
+#include <osl/diagnose.h>
 
 #include "hwplib.h"
 #include "hgzip.h"
@@ -77,13 +64,13 @@ int HIODev::read1b(void *ptr, int nmemb)
         return -1;
     for (ii = 0; ii < nmemb; ii++)
     {
-        p[ii] = sal::static_int_cast<uchar>(read1b());
+        if (!read1b(p[ii]))
+            break;
         if (state())
             break;
     }
     return ii;
 }
-
 
 int HIODev::read2b(void *ptr, int nmemb)
 {
@@ -94,24 +81,25 @@ int HIODev::read2b(void *ptr, int nmemb)
         return -1;
     for (ii = 0; ii < nmemb; ii++)
     {
-        p[ii] = sal::static_int_cast<uchar>(read2b());
+        if (!read2b(p[ii]))
+            break;
         if (state())
             break;
     }
     return ii;
 }
 
-
 int HIODev::read4b(void *ptr, int nmemb)
 {
-    ulong *p = (ulong *) ptr;
+    uint *p = (uint *) ptr;
     int ii;
 
     if (state())
         return -1;
     for (ii = 0; ii < nmemb; ii++)
     {
-        p[ii] = read4b();
+        if (!read4b(p[ii]))
+            break;
         if (state())
             break;
     }
@@ -120,7 +108,7 @@ int HIODev::read4b(void *ptr, int nmemb)
 
 
 // hfileiodev class
-HStreamIODev::HStreamIODev(HStream & stream):_stream(stream)
+HStreamIODev::HStreamIODev(HStream * stream):_stream(stream)
 {
     init();
 }
@@ -141,7 +129,7 @@ void HStreamIODev::init()
 
 bool HStreamIODev::open()
 {
-    if (!(_stream.available()))
+    if (!(_stream->available()))
         return false;
     return true;
 }
@@ -159,9 +147,7 @@ void HStreamIODev::close(void)
 /* 플러시한 후 닫는다. */
     this->flush();
     if (_gzfp)
-        gz_close(_gzfp);                          /* gz_close() calls stream_closeInput() */
-    else
-        _stream.closeInput();
+        gz_close(_gzfp);
     _gzfp = NULL;
 }
 
@@ -177,7 +163,7 @@ bool HStreamIODev::setCompressed(bool flag)
 {
     compressed = flag;
     if (flag == true)
-        return 0 != (_gzfp = gz_open(_stream));
+        return 0 != (_gzfp = gz_open(*_stream));
     else if (_gzfp)
     {
         gz_flush(_gzfp, Z_FINISH);
@@ -192,70 +178,87 @@ bool HStreamIODev::setCompressed(bool flag)
 
 #define GZREAD(ptr,len) (_gzfp?gz_read(_gzfp,ptr,len):0)
 
-int HStreamIODev::read1b()
+bool HStreamIODev::read1b(unsigned char &out)
 {
-    int res = (compressed) ? GZREAD(rBuf, 1) : _stream.readBytes(rBuf, 1);
+    int res = (compressed) ? GZREAD(rBuf, 1) : _stream->readBytes(rBuf, 1);
 
-    if (res <= 0)
-        return -1;
-    else
-        return (unsigned char) rBuf[0];
+    if (res < 1)
+        return false;
+
+    out = (unsigned char)rBuf[0];
+    return true;
 }
 
-
-int HStreamIODev::read2b()
+bool HStreamIODev::read1b(char &out)
 {
-    int res = (compressed) ? GZREAD(rBuf, 2) : _stream.readBytes(rBuf, 2);
-
-    if (res <= 0)
-        return -1;
-    else
-        return ((unsigned char) rBuf[1] << 8 | (unsigned char) rBuf[0]);
+    unsigned char tmp8;
+    if (!read1b(tmp8))
+        return false;
+    out = tmp8;
+    return true;
 }
 
-
-long HStreamIODev::read4b()
+bool HStreamIODev::read2b(unsigned short &out)
 {
-    int res = (compressed) ? GZREAD(rBuf, 4) : _stream.readBytes(rBuf, 4);
+    int res = (compressed) ? GZREAD(rBuf, 2) : _stream->readBytes(rBuf, 2);
 
-    if (res <= 0)
-        return -1;
-    else
-        return ((unsigned char) rBuf[3] << 24 | (unsigned char) rBuf[2] << 16 |
-            (unsigned char) rBuf[1] << 8 | (unsigned char) rBuf[0]);
+    if (res < 2)
+        return false;
+
+    out = ((unsigned char) rBuf[1] << 8 | (unsigned char) rBuf[0]);
+    return true;
 }
 
+bool HStreamIODev::read4b(unsigned int &out)
+{
+    int res = (compressed) ? GZREAD(rBuf, 4) : _stream->readBytes(rBuf, 4);
+
+    if (res < 4)
+        return false;
+
+    out = ((unsigned char) rBuf[3] << 24 | (unsigned char) rBuf[2] << 16 |
+        (unsigned char) rBuf[1] << 8 | (unsigned char) rBuf[0]);
+    return true;
+}
+
+bool HStreamIODev::read4b(int &out)
+{
+    unsigned int tmp32;
+    if (!read4b(tmp32))
+        return false;
+    out = tmp32;
+    return true;
+}
 
 int HStreamIODev::readBlock(void *ptr, int size)
 {
     int count =
-        (compressed) ? GZREAD(ptr, size) : _stream.readBytes((byte *) ptr,
+        (compressed) ? GZREAD(ptr, size) : _stream->readBytes((byte *) ptr,
 
         size);
 
     return count;
 }
 
-
 int HStreamIODev::skipBlock(int size)
 {
     if (compressed){
-		  if( size <= BUFSIZE )
-				return GZREAD(rBuf, size);
-		  else{
-				int remain = size;
-				while(remain){
-					 if( remain > BUFSIZE )
-						  remain -= GZREAD(rBuf, BUFSIZE);
-					 else{
-						  remain -= GZREAD(rBuf, remain);
-						  break;
-					 }
-				}
-				return size - remain;
-		  }
-	 }
-    return _stream.skipBytes(size);
+          if( size <= BUFSIZE )
+                return GZREAD(rBuf, size);
+          else{
+                int remain = size;
+                while(remain){
+                     if( remain > BUFSIZE )
+                          remain -= GZREAD(rBuf, BUFSIZE);
+                     else{
+                          remain -= GZREAD(rBuf, remain);
+                          break;
+                     }
+                }
+                return size - remain;
+          }
+     }
+    return _stream->skipBytes(size);
 }
 
 
@@ -311,36 +314,56 @@ bool HMemIODev::setCompressed(bool )
     return false;
 }
 
-
-int HMemIODev::read1b()
+bool HMemIODev::read1b(unsigned char &out)
 {
     if (pos <= length)
-		 return ptr[pos++];
-	 else
-		 return 0;
+    {
+        out = ptr[pos++];
+        return true;
+    }
+    return false;
 }
 
+bool HMemIODev::read1b(char &out)
+{
+    unsigned char tmp8;
+    if (!read1b(tmp8))
+        return false;
+    out = tmp8;
+    return true;
+}
 
-int HMemIODev::read2b()
+bool HMemIODev::read2b(unsigned short &out)
 {
     pos += 2;
     if (pos <= length)
-		 return ptr[pos - 1] << 8 | ptr[pos - 2];
-	 else
-		 return 0;
+    {
+         out = ptr[pos - 1] << 8 | ptr[pos - 2];
+         return true;
+    }
+    return false;
 }
 
-
-long HMemIODev::read4b()
+bool HMemIODev::read4b(unsigned int &out)
 {
     pos += 4;
     if (pos <= length)
-		 return DWORD(ptr[pos - 1] << 24 | ptr[pos - 2] << 16 |
-        ptr[pos - 3] << 8 | ptr[pos - 4]);
-	 else
-		 return 0;
+    {
+        out = static_cast<unsigned int>(ptr[pos - 1] << 24 | ptr[pos - 2] << 16 |
+                    ptr[pos - 3] << 8 | ptr[pos - 4]);
+        return true;
+    }
+    return false;
 }
 
+bool HMemIODev::read4b(int &out)
+{
+    unsigned int tmp32;
+    if (!read4b(tmp32))
+        return false;
+    out = tmp32;
+    return true;
+}
 
 int HMemIODev::readBlock(void *p, int size)
 {
@@ -351,7 +374,6 @@ int HMemIODev::readBlock(void *p, int size)
     return size;
 }
 
-
 int HMemIODev::skipBlock(int size)
 {
     if (length < pos + size)
@@ -359,3 +381,5 @@ int HMemIODev::skipBlock(int size)
     pos += size;
     return size;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
