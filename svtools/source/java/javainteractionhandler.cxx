@@ -246,6 +246,14 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
                 idWBX = pidPatchWBX;
             WarningBox aWarningBox( NULL, idWBX);
 
+#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, aWarningBox.GetMessText());
+            XubString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
+            aDownload.EraseAllChars('~');
+            if ( aDownload.Len() )
+                aQueryBox.SetButtonText(BUTTONID_OK, aDownload);
+#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
+
             String aTitle;
             SvpResId pidString(STR_WARNING_INVALIDJAVASETTINGS);
             pidString.SetRT(RSC_STRING);
@@ -255,8 +263,22 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             else
                 aTitle = String( SvtResId(STR_WARNING_INVALIDJAVASETTINGS));
 
+#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            if ( aDownload.Len() )
+            {
+                aQueryBox.SetText( aTitle );
+                nResult = aQueryBox.Execute();
+                if ( nResult == RET_OK )
+                    JavaInteractionHandler_downloadJava();
+            }
+            else
+            {
+#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
             aWarningBox.SetText( aTitle );
             nResult = aWarningBox.Execute();
+#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            }
+#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
         }
         else
         {
