@@ -473,7 +473,14 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
 {
     GfxLink aLink = rGraphic.GetLink ();
     OUString sMediaType;
+#ifdef USE_JAVA
+    // Fix crashing when saving document in the following LibreOffice bug to
+    // .xlsx by setting the extension to an empty string:
+    // https://bugs.documentfoundation.org/show_bug.cgi?id=83666
+    const char* sExtension = "";
+#else	// USE_JAVA
     const char* sExtension = NULL;
+#endif	// USE_JAVA
     OUString sRelId;
 
     SvMemoryStream aStream;
