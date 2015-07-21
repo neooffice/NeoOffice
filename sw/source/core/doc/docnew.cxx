@@ -25,6 +25,14 @@
  * Modified October 2009 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -110,6 +118,10 @@
 #ifndef _CMDID_H
 #include <cmdid.h>              // fuer den dflt - Printer in SetJob
 #endif
+
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+#include <svtools/securityoptions.hxx>
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
 
 
 // --> OD 2006-04-19 #b6375613#
@@ -1011,6 +1023,17 @@ void SwDoc::UpdateLinks( BOOL bUI )
             case document::UpdateDocMode::QUIET_UPDATE:bAskUpdate = FALSE; break;
             case document::UpdateDocMode::FULL_UPDATE: bAskUpdate = TRUE; break;
         }
+#ifndef NO_LIBO_LINKUPDATEMODE_FIX
+            if (nLinkMode == AUTOMATIC && !bAskUpdate)
+            {
+                SfxMedium * medium = GetDocShell()->GetMedium();
+                if (!SvtSecurityOptions().isTrustedLocationUriForUpdatingLinks(
+                        medium == NULL ? String() : medium->GetName()))
+                {
+                    bAskUpdate = true;
+                }
+            }
+#endif	// !NO_LIBO_LINKUPDATEMODE_FIX
         if( bUpdate && (bUI || !bAskUpdate) )
         {
             SfxMedium* pMedium = GetDocShell()->GetMedium();
