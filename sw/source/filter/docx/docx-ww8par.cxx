@@ -22,7 +22,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * Modified August 2010 by Patrick Luby. NeoOffice is distributed under
+ * Modified July 2015 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
@@ -131,19 +131,11 @@
 #include <svtools/itemiter.hxx>  //SfxItemIter
 
 #include <stdio.h>
-#include <comphelper/processfactory.hxx>
-#include <basic/basmgr.hxx>
-
-#include "ww8toolbar.hxx"
-#include <osl/file.hxx>
-#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
 
 #ifdef DEBUG
 #include <iostream>
 #include <dbgoutsw.hxx>
 #endif
-#include <unotools/localfilehelper.hxx>
-#include <comphelper/configurationhelper.hxx>
 
 #define MM_250 1417             // WW-Default fuer Hor. Seitenraender: 2.5 cm
 #define MM_200 1134             // WW-Default fuer u.Seitenrand: 2.0 cm
@@ -153,149 +145,6 @@ using namespace sw::util;
 using namespace sw::types;
 using namespace nsHdFtFlags;
 
-#include <com/sun/star/document/XEventsSupplier.hpp>
-#include <com/sun/star/container/XNameReplace.hpp>
-#include <com/sun/star/frame/XModel.hpp>
-#include <svx/msvbahelper.hxx>
-#include <svtools/pathoptions.hxx>
-#include <com/sun/star/ucb/XSimpleFileAccess.hpp>
-
-const static String sThisDocument( RTL_CONSTASCII_USTRINGPARAM("ThisDocument"));
-
-struct DocEventNameTable
-{
-    const sal_Char* sEventName;
-    const sal_Char* sMacroName;
-};
-
-const DocEventNameTable aEventNameTable[] = 
-{
-    {"OnNew", "Document_New"},
-    {"OnLoad", "Document_Open"},
-    {"OnPrepareUnload", "Document_Close"},
-    {NULL, NULL}
-};
-
-bool registerDocEvent( SfxObjectShell* pShell )
-{
-	bool result = false;
-	const static rtl::OUString sEvtType( RTL_CONSTASCII_USTRINGPARAM("EventType") );
-	const static rtl::OUString sScript( RTL_CONSTASCII_USTRINGPARAM("Script") );
-    uno::Reference< document::XEventsSupplier > xEvtSupplier( pShell->GetModel(), uno::UNO_QUERY );
-    if( !xEvtSupplier.is() )
-        return result;
-    uno::Reference< container::XNameReplace > xEvts( xEvtSupplier->getEvents(), uno::UNO_QUERY );     
-	if ( xEvts.is() )
-	{
-        for( const DocEventNameTable* pTable = aEventNameTable; pTable->sEventName != NULL; pTable++ )
-        {
-            rtl::OUString sEvt = rtl::OUString::createFromAscii( pTable->sEventName );
-            String sMacroName = String::CreateFromAscii( pTable->sMacroName ).Insert( '.', 0 ).Insert( sThisDocument, 0);
-            // fail to search the macro if the module is not specified.
-            ooo::vba::VBAMacroResolvedInfo aMacroInfo = ooo::vba::resolveVBAMacro( pShell, sMacroName );
-            if( !aMacroInfo.IsResolved() )
-                continue;
-
-		    uno::Sequence< beans::PropertyValue > aEvents;
-		    xEvts->getByName( sEvt ) >>= aEvents;
-		    uno::Sequence< beans::PropertyValue > aOpenEvt( 2 );
-		    aOpenEvt[ 0 ].Name = sEvtType;
-		    aOpenEvt[ 0 ].Value = uno::makeAny(sScript);
-		    aOpenEvt[ 1 ].Name = sScript;
-            rtl::OUString sUrl = ooo::vba::makeMacroURL( aMacroInfo.ResolvedMacro() );
-    		aOpenEvt[ 1 ].Value = uno::makeAny(sUrl);
-	    	sal_Int32 nPos = aEvents.getLength();
-
-		    sal_Int32 nNewSize = aEvents.getLength() + aOpenEvt.getLength();
-		    if ( nNewSize > aEvents.getLength() )
-			    aEvents.realloc( nNewSize );
-
-	    	for ( sal_Int32 nIndex = nPos, nCpyIndex = 0; nIndex<nNewSize; nIndex++, nCpyIndex++ )
-		    	aEvents[ nIndex ] = aOpenEvt[ nCpyIndex ];	
-			
-		    uno::Any aParam = uno::makeAny( aEvents );
-
-		    xEvts->replaceByName( sEvt, aParam ); 
-		    result = true;
-        }    
-	}
-	return result;
-}
-
-class Sttb : TBBase
-{
-struct SBBItem
-{
-    sal_uInt16 cchData;
-    rtl::OUString data; 
-    SBBItem() : cchData(0){}
-};
-    sal_uInt16 fExtend;
-    sal_uInt16 cData;
-    sal_uInt16 cbExtra;
-
-    std::vector< SBBItem > dataItems;
-
-    Sttb(const Sttb&);
-    Sttb& operator = ( const Sttb&);
-public:
-    Sttb();
-    ~Sttb();
-    bool Read(SvStream *pS);
-    void Print( FILE* fp );
-    rtl::OUString getStringAtIndex( sal_uInt32 );
-};
-
-Sttb::Sttb() : fExtend( 0 )
-,cData( 0 )
-,cbExtra( 0 )
-{
-}
-
-Sttb::~Sttb()
-{
-}
-
-bool Sttb::Read( SvStream* pS )
-{
-    OSL_TRACE("Sttb::Read() stream pos 0x%x", pS->Tell() );
-    nOffSet = pS->Tell();
-    *pS >> fExtend >> cData >> cbExtra;
-    if ( cData )
-    {
-        for ( sal_Int32 index = 0; index < cData; ++index )
-        {
-            SBBItem aItem;
-            *pS >> aItem.cchData;
-            aItem.data = readUnicodeString( pS, aItem.cchData );
-            dataItems.push_back( aItem );
-        }
-    }
-    return true;
-}
-
-void Sttb::Print( FILE* fp )
-{
-    fprintf( fp, "[ 0x%x ] Sttb - dump\n", nOffSet);
-    fprintf( fp, " fExtend 0x%x [expected 0xFFFF ]\n", fExtend );
-    fprintf( fp, " cData no. or string data items %d (0x%x)\n", cData, cData );
-    
-    if ( cData )
-    {
-        for ( sal_Int32 index = 0; index < cData; ++index )
-            fprintf(fp,"   string dataItem[ %d(0x%x) ] has name %s\n", static_cast< int >( index ), static_cast< unsigned int >( index ), rtl::OUStringToOString( dataItems[ index ].data, RTL_TEXTENCODING_UTF8 ).getStr() );
-    }
-
-}
-
-rtl::OUString 
-Sttb::getStringAtIndex( sal_uInt32 index )
-{
-    rtl::OUString aRet;
-    if ( index < dataItems.size() )
-        aRet = dataItems[ index ].data;
-    return aRet;
-}
 
 SwMSDffManager::SwMSDffManager( SwWW8ImplReader& rRdr )
     : SvxMSDffManager(*rRdr.pTableStream, rRdr.GetBaseURL(), rRdr.pWwFib->fcDggInfo,
@@ -1536,8 +1385,6 @@ void SwWW8ImplReader::ImportDop()
     rDoc.set(IDocumentSettingAccess::IGNORE_TABS_AND_BLANKS_FOR_LINE_CALCULATION, true);
     // <--
 
-    rDoc.set(IDocumentSettingAccess::INVERT_BORDER_SPACING, true);
-
     //
     // COMPATIBILITY FLAGS END
     //
@@ -1685,6 +1532,7 @@ WW8ReaderSave::WW8ReaderSave(SwWW8ImplReader* pRdr ,WW8_CP nStartCp) :
     maOldApos.push_back(false);
     maOldApos.swap(pRdr->maApos);
     maOldFieldStack.swap(pRdr->maFieldStack);
+	maFieldCtxStack.swap(pRdr->maNewFieldCtxStack);
 }
 
 void WW8ReaderSave::Restore( SwWW8ImplReader* pRdr )
@@ -1731,6 +1579,7 @@ void WW8ReaderSave::Restore( SwWW8ImplReader* pRdr )
         pRdr->pPlcxMan->RestoreAllPLCFx(maPLCFxSave);
     pRdr->maApos.swap(maOldApos);
     pRdr->maFieldStack.swap(maOldFieldStack);
+	pRdr->maNewFieldCtxStack.swap(maFieldCtxStack);
 }
 
 void SwWW8ImplReader::Read_HdFtFtnText( const SwNodeIndex* pSttIdx,
@@ -2210,8 +2059,6 @@ bool SwWW8ImplReader::ProcessSpecial(bool &rbReSync, WW8_CP nStartCp)
             nCellLevel = 0 != pPlcxMan->HasParaSprm(0x244B);
     }
 
- mark:
-
     WW8_TablePos *pTabPos=0;
     WW8_TablePos aTabPos;
     if (nCellLevel && !bVer67)
@@ -2225,7 +2072,7 @@ bool SwWW8ImplReader::ProcessSpecial(bool &rbReSync, WW8_CP nStartCp)
         if (const BYTE *pLevel = pPlcxMan->HasParaSprm(0x6649))
             nCellLevel = *pLevel;
 
-        bool bHasRowEnd = SearchRowEnd(pPap, nMyStartCp, (nInTable<nCellLevel?nInTable:nCellLevel-1));
+        bool bHasRowEnd = SearchRowEnd(pPap, nMyStartCp, nCellLevel-1);
 
         //Bad Table, remain unchanged in level, e.g. #i19667#
         if (!bHasRowEnd)
@@ -2306,16 +2153,12 @@ bool SwWW8ImplReader::ProcessSpecial(bool &rbReSync, WW8_CP nStartCp)
                                             // in Tabellen
         while (nInTable < nCellLevel)
         {
-            if (StartTable(nStartCp)) {
+            if (StartTable(nStartCp))
                 ++nInTable;
-	    }
             else
                 break;
 
             maApos.push_back(false);
-	    if (nInTable<nCellLevel)
-	       goto mark;
-
         }
         // nach StartTable ist ein ReSync noetig ( eigentlich nur, falls die
         // Tabelle ueber eine FKP-Grenze geht
@@ -2590,12 +2433,10 @@ bool SwWW8ImplReader::AddTextToParagraph(const String& rAddString)
     const SwTxtNode* pNd = pPaM->GetCntntNode()->GetTxtNode();
     if (rAddString.Len())
     {
-#ifndef USE_JAVA
 #ifdef DEBUG
         ::std::clog << "<addTextToParagraph>" << dbg_out(rAddString)
         << "</addTextToParagraph>" << ::std::endl;
 #endif
-#endif  // !USE_JAVA
         if ((pNd->GetTxt().Len() + rAddString.Len()) < STRING_MAXLEN -1)
         {
             rDoc.Insert (*pPaM, rAddString, true);
@@ -2729,10 +2570,8 @@ bool SwWW8ImplReader::ReadChar(long nPosCp, long nCpOfs)
             else if (!nInTable)
             {
                 // Always insert a txtnode for a column break, e.g. ##
-		SwCntntNode *pCntNd=pPaM->GetCntntNode();
-		if (pCntNd!=NULL && pCntNd->Len()>0) // if par is empty not break is needed                
-		    AppendTxtNode(*pPaM->GetPoint());
-		rDoc.Insert(*pPaM, SvxFmtBreakItem(SVX_BREAK_COLUMN_BEFORE, RES_BREAK), 0);
+                AppendTxtNode(*pPaM->GetPoint());
+                rDoc.Insert(*pPaM, SvxFmtBreakItem(SVX_BREAK_COLUMN_BEFORE, RES_BREAK), 0);
             }
             break;
         case 0x7:
@@ -2750,6 +2589,8 @@ bool SwWW8ImplReader::ReadChar(long nPosCp, long nCpOfs)
         case 0x15:
             if( !bSpec )        // Juristenparagraph
                 cInsert = '\xa7';
+			else { 
+			}
             break;
         case 0x9:
             cInsert = '\x9';    // Tab
@@ -3026,10 +2867,7 @@ void SwWW8ImplReader::ReadAttrs(WW8_CP& rNext, WW8_CP& rTxtPos, bool& rbStartLin
 
         do
         {
-            WW8_CP nOldNext = rNext;
             rNext = ReadTextAttr( rTxtPos, rbStartLine );
-            if ( nOldNext > rNext )
-                break;
         }
         while( rTxtPos >= rNext );
 
@@ -3567,14 +3405,7 @@ void wwSectionManager::InsertSegments()
 
         bool bInsertSection = (aIter != aStart) ? (aIter->IsContinous() &&  bThisAndPreviousAreCompatible): false;
         bool bInsertPageDesc = !bInsertSection;
-        bool bProtected = SectionIsProtected(*aIter); // do we really  need this ?? I guess I have a different logic in editshell which disales this...
-	if (bUseEnhFields && mrReader.pWDop->fProtEnabled && aIter->IsNotProtected()) {
-	    // here we have the special case that the whole document is protected, with the execption of this section.
-	    // I want to address this when I do the section rework, so for the moment we disable the overall protection then...
-	    mrReader.rDoc.set(IDocumentSettingAccess::PROTECT_FORM, false );
-	}
-
-
+        bool bProtected = !bUseEnhFields && SectionIsProtected(*aIter); // do we really  need this ?? I guess I have a different logic in editshell which disales this...
         if (bInsertPageDesc)
         {
             /*
@@ -3590,7 +3421,7 @@ void wwSectionManager::InsertSegments()
             bool bThisAndNextAreCompatible = (aNext != aEnd) ? ((aIter->GetPageWidth() == aNext->GetPageWidth()) &&
                 (aIter->GetPageHeight() == aNext->GetPageHeight()) && (aIter->IsLandScape() == aNext->IsLandScape())) : true;
 
-            if ((aNext != aEnd && aNext->IsContinous() && bThisAndNextAreCompatible || bProtected))
+            if ((aNext != aEnd && aNext->IsContinous() && bThisAndNextAreCompatible) || bProtected)
             {
                 bIgnoreCols = true;
                 if ((aIter->NoCols() > 1) || bProtected)
@@ -3798,162 +3629,9 @@ void SwWW8ImplReader::ReadDocInfo()
         DBG_ASSERT(xDocProps.is(), "DocumentProperties is null");
 
         if (xDocProps.is()) {
-            if ( pWwFib->fDot )
-            {
-                rtl::OUString sTemplateURL;
-                SfxMedium* pMedium = mpDocShell->GetMedium();
-                if ( pMedium )
-                {
-                    rtl::OUString aName = pMedium->GetName();
-                    INetURLObject aURL( aName );
-                    sTemplateURL = aURL.GetMainURL(INetURLObject::DECODE_TO_IURI);
-                    if ( sTemplateURL.getLength() > 0 )
-                        xDocProps->setTemplateURL( sTemplateURL );
-                }
-            }
-            else // not a template
-            {
-                long nCur = pTableStream->Tell();
-                Sttb aSttb;
-                pTableStream->Seek( pWwFib->fcSttbfAssoc ); // point at tgc record
-                if (!aSttb.Read( pTableStream ) )
-                    OSL_TRACE("** Read of SttbAssoc data failed!!!! ");
-                pTableStream->Seek( nCur ); // return to previous position, is that necessary?
-#if DEBUG
-                aSttb.Print( stderr );
-#endif
-                String sPath = aSttb.getStringAtIndex( 0x1 );
-                String aURL;
-                // attempt to convert to url ( won't work for obvious reasons on  linux 
-                if ( sPath.Len() )
-	        	::utl::LocalFileHelper::ConvertPhysicalNameToURL( sPath, aURL );
-                if ( aURL.Len() )
-                    xDocProps->setTemplateURL( aURL );
-                else
-                    xDocProps->setTemplateURL( sPath );
-                
-            }
             sfx2::LoadOlePropertySet(xDocProps, pStg);
         }
     }
-}
-
-void lcl_createTemplateToProjectEntry( const uno::Reference< container::XNameContainer >& xPrjNameCache, const rtl::OUString& sTemplatePathOrURL, const rtl::OUString& sVBAProjName )
-{
-    if ( xPrjNameCache.is() )
-    {
-        INetURLObject aObj;
-        aObj.SetURL( sTemplatePathOrURL );
-        bool bIsURL = aObj.GetProtocol() != INET_PROT_NOT_VALID;
-        rtl::OUString aURL;
-        if ( bIsURL )
-            aURL = sTemplatePathOrURL;
-        else
-        {
-            osl::FileBase::getFileURLFromSystemPath( sTemplatePathOrURL, aURL );
-            aObj.SetURL( aURL );
-        }
-        try
-        {
-            rtl::OUString templateNameWithExt = aObj.GetLastName();
-            rtl::OUString templateName;
-            sal_Int32 nIndex =  templateNameWithExt.lastIndexOf( '.' );
-            //xPrjNameCache->insertByName( templateNameWithExt, uno::makeAny( sVBAProjName ) );    
-            if ( nIndex != -1 )
-            {
-                templateName = templateNameWithExt.copy( 0, nIndex );
-                xPrjNameCache->insertByName( templateName, uno::makeAny( sVBAProjName ) );    
-            }
-        }
-        catch( uno::Exception& )
-        {
-        }
-    }
-}
-
-class WW8Customizations
-{
-    SvStream* mpTableStream;
-    WW8Fib mWw8Fib;
-public:
-    WW8Customizations( SvStream*, WW8Fib& );
-    bool  Import( SwDocShell* pShell );
-};
-
-WW8Customizations::WW8Customizations( SvStream* pTableStream, WW8Fib& rFib ) : mpTableStream(pTableStream), mWw8Fib( rFib )
-{
-}
-
-bool WW8Customizations::Import( SwDocShell* pShell ) 
-{
-    if ( mWw8Fib.lcbCmds == 0 )
-        return false;
-    Tcg aTCG;
-    long nCur = mpTableStream->Tell();
-    mpTableStream->Seek( mWw8Fib.fcCmds ); // point at tgc record
-    if (!aTCG.Read( mpTableStream ) )
-        OSL_TRACE("** Read of Customization data failed!!!! ");
-    mpTableStream->Seek( nCur ); // return to previous position, is that necessary?
-#if DEBUG
-    aTCG.Print( stderr );
-#endif
-    return aTCG.ImportCustomToolBar( *pShell );
-}
-
-bool SwWW8ImplReader::ReadGlobalTemplateSettings( const rtl::OUString& sCreatedFrom, const uno::Reference< container::XNameContainer >& xPrjNameCache )
-{
-    SvtPathOptions aPathOpt;
-    String aAddinPath = aPathOpt.GetAddinPath();
-    uno::Sequence< rtl::OUString > sGlobalTemplates;
-
-    // first get the autoload addins in the directory STARTUP
-    uno::Reference< ucb::XSimpleFileAccess > xSFA( ::comphelper::getProcessServiceFactory()->createInstance( rtl::OUString::createFromAscii( "com.sun.star.ucb.SimpleFileAccess" ) ), uno::UNO_QUERY_THROW );
-
-    if( xSFA->isFolder( aAddinPath ) )
-        sGlobalTemplates = xSFA->getFolderContents( aAddinPath, sal_False );
-
-    sal_Int32 nEntries = sGlobalTemplates.getLength();
-    bool bRes = true;
-    const SvtFilterOptions* pVBAFlags = SvtFilterOptions::Get();
-    for ( sal_Int32 i=0; i<nEntries; ++i )
-    {
-        INetURLObject aObj;
-        aObj.SetURL( sGlobalTemplates[ i ] );
-        bool bIsURL = aObj.GetProtocol() != INET_PROT_NOT_VALID;
-        rtl::OUString aURL;
-        if ( bIsURL )
-                aURL = sGlobalTemplates[ i ];
-        else
-                osl::FileBase::getFileURLFromSystemPath( sGlobalTemplates[ i ], aURL );        
-        if ( !aURL.endsWithIgnoreAsciiCaseAsciiL( ".dot", 4 ) || ( sCreatedFrom.getLength() && sCreatedFrom.equals( aURL ) ) )
-            continue; // don't try and read the same document as ourselves
-
-        SotStorageRef rRoot = new SotStorage( aURL, STREAM_STD_READWRITE, STORAGE_TRANSACTED ); 
-
-        // Read Macro Projects
-        SvxImportMSVBasic aVBasic(*mpDocShell, *rRoot,
-            pVBAFlags->IsLoadWordBasicCode(),
-            pVBAFlags->IsLoadWordBasicStorage() );
-
-
-        String s1(CREATE_CONST_ASC("Macros"));
-        String s2(CREATE_CONST_ASC("VBA"));
-        int nRet = aVBasic.Import( s1, s2, ! pVBAFlags->IsLoadWordBasicCode() );
-        lcl_createTemplateToProjectEntry( xPrjNameCache, aURL, aVBasic.GetVBAProjectName() );
-        // Read toolbars & menus
-        SvStorageStreamRef refMainStream = rRoot->OpenSotStream( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("WordDocument") ) );
-        refMainStream->SetNumberFormatInt(NUMBERFORMAT_INT_LITTLEENDIAN);
-        WW8Fib aWwFib( *refMainStream, 8 );       
-        SvStorageStreamRef xTableStream = rRoot->OpenSotStream(String::CreateFromAscii( aWwFib.fWhichTblStm ? SL::a1Table : SL::a0Table), STREAM_STD_READ);
-
-        if (xTableStream.Is() && SVSTREAM_OK == xTableStream->GetError())
-        {
-            xTableStream->SetNumberFormatInt(NUMBERFORMAT_INT_LITTLEENDIAN);
-            WW8Customizations aGblCustomisations( xTableStream, aWwFib ); 
-            aGblCustomisations.Import( mpDocShell );
-        }
-    }
-    return bRes;
 }
 
 ULONG SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss, const SwPosition &rPos)
@@ -4224,63 +3902,7 @@ ULONG SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss, const SwPosition &rPos)
     }
     else //ordinary case
     {
-        if (mbNewDoc && pStg && !pGloss) /*meaningless for a glossary, cmc*/
-        {
-            mpDocShell->SetIsTemplate( pWwFib->fDot ); // point at tgc record
-            const SvtFilterOptions* pVBAFlags = SvtFilterOptions::Get();
-            maTracer.EnterEnvironment(sw::log::eMacros);
-// dissable below for 3.1 at the moment, 'cause it's kinda immature
-// similarly the project reference in svx/source/msvba
-#if 1
-            uno::Reference< document::XDocumentInfoSupplier > xDocInfoSupp( mpDocShell->GetModel(), uno::UNO_QUERY_THROW );
-            uno::Reference< document::XDocumentPropertiesSupplier > xDocPropSupp( xDocInfoSupp->getDocumentInfo(), uno::UNO_QUERY_THROW );
-            uno::Reference< document::XDocumentProperties > xDocProps( xDocPropSupp->getDocumentProperties(), uno::UNO_QUERY_THROW );
-    
-            rtl::OUString sCreatedFrom = xDocProps->getTemplateURL();
-            uno::Reference< container::XNameContainer > xPrjNameCache;
-            uno::Reference< lang::XMultiServiceFactory> xSF(mpDocShell->GetModel(), uno::UNO_QUERY);
-            if ( xSF.is() )
-                xPrjNameCache.set( xSF->createInstance( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM( "ooo.vba.VBAProjectNameProvider" ) ) ), uno::UNO_QUERY );
-
-            // Read Global templates 
-            ReadGlobalTemplateSettings( sCreatedFrom, xPrjNameCache );
-#endif 
-            // Create and insert Word vba Globals
-            uno::Any aGlobs;
-            uno::Sequence< uno::Any > aArgs(1);
-            aArgs[ 0 ] <<= mpDocShell->GetModel();
-            aGlobs <<= ::comphelper::getProcessServiceFactory()->createInstanceWithArguments( ::rtl::OUString::createFromAscii( "ooo.vba.word.Globals"), aArgs );
-            mpDocShell->GetBasicManager()->SetGlobalUNOConstant( "VBAGlobals", aGlobs );
-            
-            SvxImportMSVBasic aVBasic(*mpDocShell, *pStg,
-                            pVBAFlags->IsLoadWordBasicCode(),
-                            pVBAFlags->IsLoadWordBasicStorage() );
-            String s1(CREATE_CONST_ASC("Macros"));
-            String s2(CREATE_CONST_ASC("VBA"));
-            int nRet = aVBasic.Import( s1, s2, ! pVBAFlags->IsLoadWordBasicCode() );
-// dissable below for 3.1 at the moment, 'cause it's kinda immature
-// similarly the project reference in svx/source/msvba
-#if 1
-            lcl_createTemplateToProjectEntry( xPrjNameCache, sCreatedFrom, aVBasic.GetVBAProjectName() );
-            WW8Customizations aCustomisations( pTableStream, *pWwFib ); 
-            aCustomisations.Import( mpDocShell );
-#endif 
-            if( 2 & nRet )
-            {
-                maTracer.Log(sw::log::eContainsVisualBasic);
-                rDoc.SetContainsMSVBasic(true);
-            }
-
-            StoreMacroCmds();
-
-            // Hackly to register the document event.
-            // should be find a better solution to share the codes with Excel Workbook event. 
-            registerDocEvent( mpDocShell );
-
-            maTracer.LeaveEnvironment(sw::log::eMacros);
-        }
         ReadText(0, pWwFib->ccpText, MAN_MAINTEXT);
-
     }
 
     ::SetProgressState(nProgress, mpDocShell);    // Update
@@ -4354,6 +3976,26 @@ ULONG SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss, const SwPosition &rPos)
             eMode |= nsRedlineMode_t::REDLINE_ON;
         if( pWDop->fRMView )
             eMode |= nsRedlineMode_t::REDLINE_SHOW_DELETE;
+        if (pStg && !pGloss) /*meaningless for a glossary, cmc*/
+        {
+            const SvtFilterOptions* pVBAFlags = SvtFilterOptions::Get();
+            maTracer.EnterEnvironment(sw::log::eMacros);
+            SvxImportMSVBasic aVBasic(*mpDocShell, *pStg,
+                            pVBAFlags->IsLoadWordBasicCode(),
+                            pVBAFlags->IsLoadWordBasicStorage() );
+            String s1(CREATE_CONST_ASC("Macros"));
+            String s2(CREATE_CONST_ASC("VBA"));
+            int nRet = aVBasic.Import( s1, s2 );
+            if( 2 & nRet )
+            {
+                maTracer.Log(sw::log::eContainsVisualBasic);
+                rDoc.SetContainsMSVBasic(true);
+            }
+
+            StoreMacroCmds();
+
+            maTracer.LeaveEnvironment(sw::log::eMacros);
+        }
     }
 
     maInsertedTables.DelAndMakeTblFrms();
