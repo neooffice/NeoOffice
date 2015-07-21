@@ -3026,10 +3026,7 @@ void SwWW8ImplReader::ReadAttrs(WW8_CP& rNext, WW8_CP& rTxtPos, bool& rbStartLin
 
         do
         {
-            WW8_CP nOldNext = rNext;
             rNext = ReadTextAttr( rTxtPos, rbStartLine );
-            if ( nOldNext > rNext )
-                break;
         }
         while( rTxtPos >= rNext );
 
