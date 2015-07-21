@@ -1633,11 +1633,14 @@ WW8PLCFpcd* WW8ScannerBase::OpenPieceTable( SvStream* pStr, const WW8Fib* pWwF )
         {
             if (nGrpprl == SHRT_MAX)
 #ifdef USE_JAVA
-                // Throw exception as returning NULL will cause the OOo 3.1.1
+            {
+                // Mark as invalid as returning NULL will cause the OOo 3.1.1
                 // code to go into an infinite loop
-                throw ::com::sun::star::io::IOException();
-#else	// USE_JAVA
+                bValid = false;
+#endif	// USE_JAVA
                 return NULL;
+#ifdef USE_JAVA
+            }
 #endif	// USE_JAVA
 #endif	// !NO_LIBO_WRAPAROUND_FIX
             nGrpprl++;
@@ -1708,6 +1711,9 @@ WW8ScannerBase::WW8ScannerBase( SvStream* pSt, SvStream* pTblSt,
     : pWw8Fib(pWwFib), pMainFdoa(0), pHdFtFdoa(0), pMainTxbx(0),
     pMainTxbxBkd(0), pHdFtTxbx(0), pHdFtTxbxBkd(0), pMagicTables(0),
     pSubdocs(0), pExtendedAtrds(0), pPieceGrpprls(0)
+#ifdef USE_JAVA
+    , bValid( true )
+#endif	// USE_JAVA
 {
     pPiecePLCF = OpenPieceTable( pTblSt, pWw8Fib );             // Complex
     if( pPiecePLCF )
