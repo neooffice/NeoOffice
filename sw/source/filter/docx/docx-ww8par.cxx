@@ -3786,16 +3786,12 @@ ULONG SwWW8ImplReader::CoreLoad(WW8Glossary *pGloss, const SwPosition &rPos)
     if (pCollA)
         SetOutLineStyles();
 
-#ifdef USE_JAVA
-    try
-    {
-#endif	// USE_JAVA
     pSBase = new WW8ScannerBase(pStrm,pTableStream,pDataStream,pWwFib);
+
 #ifdef USE_JAVA
-    }
-    catch ( uno::Exception& )
+    // Test for errors in WW8ScannerBase ctor
+    if (!pSBase->IsValid())
     {
-        // Catch any exceptions thrown in WW8ScannerBase ctor
         ::EndProgress(mpDocShell);
         return ERR_SWG_READ_ERROR;
     }
