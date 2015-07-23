@@ -1176,12 +1176,12 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 		else if ( [[self className] isEqualToString:@"_NSPopoverWindow"] )
- 		{
+		{
 			// Fix crashing on OS X 10.10 when displaying the Save dialog while
 			// the titlebar popover window is displayed by removing the
 			// titlebar popover window's content view before ordering it out
 			[self setContentView:nil];
- 		}
+		}
 	}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 
@@ -1640,6 +1640,8 @@ static NSUInteger nMouseMask = 0;
 				}
 				else
 				{
+					fUnpostedVerticalScrollWheel = 0;
+
 					// Precise scrolling devices have excessively large
 					// deltas so apply a small reduction factor when scrolling
 					// so that scrolling can be done down to a single line
@@ -1648,8 +1650,6 @@ static NSUInteger nMouseMask = 0;
 						fDeltaX /= 2.0f;
 						fDeltaY /= 2.0f;
 					}
-
-					fUnpostedVerticalScrollWheel = 0;
 				}
 			}
 
@@ -2929,6 +2929,39 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+@interface NSObject (VCLObjectPoseAs)
+- (void)poseAsPerformSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes;
+@end
+
+@interface VCLObject : NSObject
+- (void)performSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes;
+@end
+
+@implementation VCLObject
+
+- (void)performSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes
+{
+	if ( [super respondsToSelector:@selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:)] )
+	{
+		// Fix hanging when opening a new window in full screen mode while
+		// running on OS X 10.11 by releasing the application mutex if we are
+		// waiting until done
+		ULONG nCount = bWait ? Application::ReleaseSolarMutex() : 0;
+
+		@try
+		{
+			[super poseAsPerformSelectorOnMainThread:aSelector withObject:aArg waitUntilDone:bWait modes:pModes];
+		}
+		@catch ( NSException *pExc )
+		{
+		}
+
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+@end
+
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3201,6 +3234,20 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		IMP aNewIMP = method_getImplementation( aNewMethod );
 		if ( aNewIMP )
 			class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+	}
+
+	// VCLObject selectors
+
+	aSelector = @selector(performSelectorOnMainThread:withObject:waitUntilDone:modes:);
+	aPoseAsSelector = @selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:);
+	aOldMethod = class_getInstanceMethod( [NSObject class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLObject class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSObject class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
 	NSApplication *pApp = [NSApplication sharedApplication];
