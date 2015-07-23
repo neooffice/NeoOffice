@@ -2803,8 +2803,9 @@ static CFDataRef aRTFSelection = nil;
 	{
 		// Fix hanging when opening a new window in full screen mode while
 		// running on OS X 10.11 by releasing the application mutex if we are
-		// waiting until done
-		ULONG nCount = bWait ? Application::ReleaseSolarMutex() : 0;
+		// waiting until done. If no application mutex exists, ignore mutex as
+		// we are likely to crash.
+		ULONG nCount = ( bWait && !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst ? Application::ReleaseSolarMutex() : 0 );
 
 		@try
 		{
@@ -2814,7 +2815,10 @@ static CFDataRef aRTFSelection = nil;
 		{
 		}
 
-		Application::AcquireSolarMutex( nCount );
+		// If no application mutex exists, ignore mutex as we are likely to
+		// crash
+		if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
+			Application::AcquireSolarMutex( nCount );
 	}
 }
 
