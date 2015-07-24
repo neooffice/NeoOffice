@@ -666,13 +666,13 @@ static void RegisterMainBundleWithLaunchServices()
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 
 	NSView *pContentView = [self contentView];
 	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-		[(VCLView *)pContentView setFrame:pFrame];
+		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
 @end
@@ -1582,13 +1582,13 @@ static NSUInteger nMouseMask = 0;
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 
 	NSView *pContentView = [self contentView];
 	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-		[(VCLView *)pContentView setFrame:pFrame];
+		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
 - (void)setDraggingSourceDelegate:(id)pDelegate
@@ -2352,7 +2352,7 @@ static CFDataRef aRTFSelection = nil;
 	[self insertText:aString replacementRange:NSMakeRange( NSNotFound, 0 )];
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 }
