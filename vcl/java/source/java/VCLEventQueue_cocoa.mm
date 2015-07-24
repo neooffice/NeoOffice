@@ -3136,8 +3136,8 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 	// VCLObject selectors
 
-#ifdef USE_FULL_SCREEN_WINDOW_HACK
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
+#ifdef USE_FULL_SCREEN_WINDOW_HACK
 	aSelector = @selector(performSelectorOnMainThread:withObject:waitUntilDone:modes:);
 	aPoseAsSelector = @selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:);
 	aOldMethod = class_getInstanceMethod( [NSObject class], aSelector );
