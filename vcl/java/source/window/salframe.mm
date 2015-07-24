@@ -508,7 +508,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
 - (void)setContentMinSize:(NSSize)aContentMinSize;
-- (void)setFrame:(VCLWindowWrapperArgs *)pArgs;
+- (void)setJavaFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)setFullScreenMode:(VCLWindowWrapperArgs *)pArgs;
 - (void)setMinSize:(VCLWindowWrapperArgs *)pArgs;
 - (void)setState:(VCLWindowWrapperArgs *)pArgs;
@@ -1377,9 +1377,9 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-				[(VCLPanel *)mpWindow setFrame:mpFrame];
+				[(VCLPanel *)mpWindow setJavaFrame:mpFrame];
 			else
-				[(VCLWindow *)mpWindow setFrame:mpFrame];
+				[(VCLWindow *)mpWindow setJavaFrame:mpFrame];
 
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
@@ -1705,7 +1705,7 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
-- (void)setFrame:(VCLWindowWrapperArgs *)pArgs
+- (void)setJavaFrame:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 1 )
@@ -3738,7 +3738,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		NSRect aFrame = NSMakeRect( nX, nY, nWidth, nHeight );
 		VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithRect:aFrame]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
+		[mpWindow performSelectorOnMainThread:@selector(setJavaFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
 
 		[pPool release];
 	}

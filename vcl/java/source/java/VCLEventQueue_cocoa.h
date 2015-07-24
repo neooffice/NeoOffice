@@ -70,7 +70,7 @@
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)pActualRange;
 - (void)doCommandBySelector:(SEL)aSelector;
 - (void)insertText:(id)aString;
-- (void)setFrame:(JavaSalFrame *)pFrame;
+- (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(MacOSBOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
@@ -121,7 +121,7 @@
 - (MacOSBOOL)canBecomeKeyWindow;
 - (void)dealloc;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
-- (void)setFrame:(JavaSalFrame *)pFrame;
+- (void)setJavaFrame:(JavaSalFrame *)pFrame;
 @end
 
 @interface VCLWindow : NSWindow
@@ -152,7 +152,7 @@
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setCanBecomeKeyWindow:(MacOSBOOL)bCanBecomeKeyWindow;
-- (void)setFrame:(JavaSalFrame *)pFrame;
+- (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;

@@ -660,13 +660,13 @@ static void RegisterMainBundleWithLaunchServices()
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 
 	NSView *pContentView = [self contentView];
 	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-		[(VCLView *)pContentView setFrame:pFrame];
+		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
 @end
@@ -866,6 +866,32 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)canBecomeKeyWindow
 {
+	// Fix incorrect focus after closing a full screen window when running on
+	// OS X 10.11 by refusing focus for this window if it is a full screen
+	// window and a different full screen window is in front of this window
+	if ( mbCanBecomeKeyWindow && [self collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			NSArray *pWindows = [NSApp orderedWindows];
+			if ( pWindows )
+			{
+				unsigned int nCount = [pWindows count];
+				unsigned int i = nCount - 1;
+				for ( ; i >= 0; i-- )
+				{
+					NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+					if ( pWindow == self )
+						break;
+
+					if ( pWindow && [pWindow isVisible] && [pWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
+						return NO;
+				}
+			}
+		}
+	}
+
 	return mbCanBecomeKeyWindow;
 }
 
@@ -1566,13 +1592,13 @@ static NSUInteger nMouseMask = 0;
 	mbCanBecomeKeyWindow = bCanBecomeKeyWindow;
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 
 	NSView *pContentView = [self contentView];
 	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-		[(VCLView *)pContentView setFrame:pFrame];
+		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
 - (void)setDraggingSourceDelegate:(id)pDelegate
@@ -2336,7 +2362,7 @@ static CFDataRef aRTFSelection = nil;
 	[self insertText:aString replacementRange:NSMakeRange( NSNotFound, 0 )];
 }
 
-- (void)setFrame:(JavaSalFrame *)pFrame
+- (void)setJavaFrame:(JavaSalFrame *)pFrame
 {
 	mpFrame = pFrame;
 }
