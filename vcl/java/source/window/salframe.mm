@@ -3202,7 +3202,11 @@ void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
 
 		VCLWindowWrapperArgs *pSetVisibleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:bVisible], [NSNumber numberWithBool:bNoActivate], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		// Release mutex to prevent hanging on OS X 10.11 when opening a window
+		// while in full screen mode
+		ULONG nCount = Application::ReleaseSolarMutex();
 		[mpWindow performSelectorOnMainThread:@selector(setVisible:) withObject:pSetVisibleArgs waitUntilDone:YES modes:pModes];
+		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
 	}

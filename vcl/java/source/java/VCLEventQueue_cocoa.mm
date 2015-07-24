@@ -2828,6 +2828,9 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
+#ifdef USE_FULL_SCREEN_WINDOW_HACK
+
 @interface NSObject (VCLObjectPoseAs)
 - (void)poseAsPerformSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes;
 @end
@@ -2864,6 +2867,9 @@ static CFDataRef aRTFSelection = nil;
 }
 
 @end
+
+#endif	// USE_FULL_SCREEN_WINDOW_HACK
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
@@ -3155,6 +3161,8 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 	// VCLObject selectors
 
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
+#ifdef USE_FULL_SCREEN_WINDOW_HACK
 	aSelector = @selector(performSelectorOnMainThread:withObject:waitUntilDone:modes:);
 	aPoseAsSelector = @selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:);
 	aOldMethod = class_getInstanceMethod( [NSObject class], aSelector );
@@ -3166,6 +3174,8 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSObject class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
+#endif	// USE_FULL_SCREEN_WINDOW_HACK
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
