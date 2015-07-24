@@ -25,12 +25,14 @@ Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aa
 What's New in this Version:
 NeoOffice, OpenOffice en LibreOffice gebruikers: voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de lijst met wijzigingen.
 
-This version of NeoOffice includes significantly faster handling of lengthy, 100+ page documents with tables.
+This version of NeoOffice fixes the following bugs. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided fixes for these bugs:
+• NeoOffice no longer crashes when opening some Hangul WP 97 .hwp documents.
+• NeoOffice no longer crashes when opening some older Microsoft Word .doc documents.
+• NeoOffice now asks the user for permission before updating links in a document. In previous versions of NeoOffice, NeoOffice would silently update links in some documents.
 
-Previous versions of NeoOffice could temporarily hang when opening, editing, saving, printing, exporting to PDF, or previewing lengthy documents with tables. This hanging was due to NeoOffice recalculating the document's page breaks and table cell sizes. To avoid such hanging, the NeoOffice engineers have made the following changes:
-
-• When opening, editing, or saving Writer documents, NeoOffice now recalculates page breaks and table cell sizes in the background in small chunks over the course of a few minutes. By deferring the recalculation, you no longer need to wait for the recalculation to finish before you can continue editing your document.
-• When printing, exporting to PDF, or previewing Writer documents, NeoOffice now displays a dialog if recalculating page breaks and table cell sizes takes more than 30 seconds. This dialog gives you the option to cancel the recalculation. If you cancel the recalculation, NeoOffice uses rough guesses to set page breaks and table cells and immediately proceeds to printing, exporting to PDF, or previewing your document.
+El Capitan Public Beta users: this version also fixes the following bugs:
+• Opening a new window while in full screen mode no longer causes NeoOffice to hang
+• Typing text in a full screen mode window no longer fails
 
 
 Keywords:
