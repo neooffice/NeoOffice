@@ -1007,6 +1007,8 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)canBecomeKeyWindow
 {
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
+#ifdef USE_FULL_SCREEN_WINDOW_HACK
 	// Fix incorrect focus after closing a full screen window when running on
 	// OS X 10.11 by refusing focus for this window if it is a full screen
 	// window and a different full screen window is in front of this window
@@ -1032,6 +1034,8 @@ static NSUInteger nMouseMask = 0;
 			}
 		}
 	}
+#endif	// USE_FULL_SCREEN_WINDOW_HACK
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 	return mbCanBecomeKeyWindow;
 }
