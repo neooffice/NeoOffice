@@ -898,11 +898,11 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 	}
 
 	// After using the Window menu to set focus to a non-full screen window and
-	// after closing that winodw sets the focus to a full screen window,
+	// after closing that window sets the focus to a full screen window,
 	// closing the full screen focus will cause OS X to exit full screen mode
 	// even if focus is set to another full screen window. To fix this bug,
-	// that keep invoking [NSWindow makeKeyAndOrderFront:] on the key window
-	// to bring the application's and window's full screen modes back into sync.
+	// invoke [NSWindow makeKeyAndOrderFront:] on the key window to ensure that
+	// the application's and window's full screen modes are in sync.
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -911,7 +911,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 		{
 			MacOSBOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
 			MacOSBOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
-			if ( ( bAppInFullScreen && !bWindowInFullScreen ) || ( !bAppInFullScreen && bWindowInFullScreen ) )
+			if ( bAppInFullScreen || bWindowInFullScreen )
 				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
 		}
 	}
