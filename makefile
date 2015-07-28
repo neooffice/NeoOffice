@@ -146,7 +146,7 @@ PRODUCT_VERSION2=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT2)
 PRODUCT_VERSION3=$(PRODUCT_VERSION) $(PRODUCT_VERSION_EXT3)
 PRODUCT_VERSION_EXT=
 PRODUCT_VERSION_EXT2=Free Edition
-PRODUCT_VERSION_EXT3=Standard Edition
+PRODUCT_VERSION_EXT3=Classic Edition
 PRODUCT_DIR_VERSION=$(subst $(SPACE),_,$(PRODUCT_VERSION))
 ifdef PRODUCT_BUILD3
 PRODUCT_SHORT_VERSION=$(PRODUCT_VERSION)
@@ -585,7 +585,7 @@ endif
 ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/about.bmp" ; cp "tmp/NeoOffice Aqua Elements 3/Contents/MacOS/about.bmp" "etc/about.bmp" ; ln -sf "../etc/about.bmp" "MacOS/about.bmp"
 ifdef PRODUCT_BUILD3
-	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/intro.bmp" ; cp "$(PWD)/etc/package/intro_standard.bmp" "etc/intro.bmp" ; ln -sf "../etc/intro.bmp" "MacOS/intro.bmp"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/intro.bmp" ; cp "$(PWD)/etc/package/intro_classic.bmp" "etc/intro.bmp" ; ln -sf "../etc/intro.bmp" "MacOS/intro.bmp"
 else ifdef PRODUCT_BUILD2
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "MacOS/intro.bmp" ; cp "$(PWD)/etc/package/intro_free.bmp" "etc/intro.bmp" ; ln -sf "../etc/intro.bmp" "MacOS/intro.bmp"
 else
