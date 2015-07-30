@@ -1715,7 +1715,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pFrame )
         return;
 
-	if ( mpWindow )
+	// Don't change size of windows in full screen mode or else the "update
+	// links" dialog that appears when opening certain documents will leave
+	// the window in a mixed state
+	if ( mpWindow && ! ( [mpWindow styleMask] & NSFullScreenWindowMask ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
@@ -3510,7 +3513,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			{
 				VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:NO modes:pModes];
+				ULONG nCount = Application::ReleaseSolarMutex();
+				[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+				Application::AcquireSolarMutex( nCount );
 			}
 
 			[pPool release];
@@ -3863,9 +3868,9 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:NO];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		    ULONG nCount = Application::ReleaseSolarMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
-		    Application::AcquireSolarMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];
