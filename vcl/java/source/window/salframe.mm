@@ -266,6 +266,17 @@ static BOOL bIOPMAssertionIDSet = NO;
 		{
 			[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
+			if ( [pApp presentationOptions] & NSApplicationPresentationFullScreen )
+			{
+				// Fix hidden menu after existing slide show mode to a full
+				// screen mode window by toggling the window out of full screen
+				// mode. Note: delay the toggling as it needs to lock the
+				// applcation mutex.
+				NSWindow *pKeyWindow = [pApp keyWindow];
+				if ( pKeyWindow && [pKeyWindow styleMask] & NSFullScreenWindowMask && [pKeyWindow respondsToSelector:@selector(toggleFullScreen:)] )
+					[pKeyWindow performSelector:@selector(toggleFullScreen:) withObject:self afterDelay:0];
+			}
+
 			// Stop blocking sleep
 			if ( bIOPMAssertionIDSet )
 			{
@@ -1715,7 +1726,10 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
     if ( !pFrame )
         return;
 
-	if ( mpWindow )
+	// Don't change size of windows in full screen mode or else the "update
+	// links" dialog that appears when opening certain documents will leave
+	// the window in a mixed state
+	if ( mpWindow && ! ( [mpWindow styleMask] & NSFullScreenWindowMask ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
@@ -3447,6 +3461,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	SetVisible( mbVisible, bNoActivate );
 
+	sal_Bool bTopLevelWindow = sal_False;
 	if ( mbVisible )
 	{
 		mbInShow = TRUE;
@@ -3479,7 +3494,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Get native window's content view since it won't be created until
 		// first shown
-		sal_Bool bTopLevelWindow = sal_False;
 		if ( !mpParent && !IsFloatingFrame() && !IsUtilityWindow() )
 		{
 			Window *pWindow = Application::GetFirstTopLevelWindow();
@@ -3496,25 +3510,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
 		pEvent->dispatch();
 		pEvent->release();
-
-		// Fix bug reported in the following NeoOffice forum post by forcing
-		// the window into full screen mode if the app is already in full
-		// screen mode:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
-		if ( bTopLevelWindow )
-		{
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-			NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
-			if ( pNSWindow )
-			{
-				VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:NO modes:pModes];
-			}
-
-			[pPool release];
-		}
 
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );
@@ -3599,6 +3594,27 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	}
 
 	UpdateLayer();
+
+	// Fix bug reported in the following NeoOffice forum post by forcing
+	// the window into full screen mode if the app is already in full
+	// screen mode:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
+	if ( mbVisible && bTopLevelWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
+		if ( pNSWindow )
+		{
+			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			ULONG nCount = Application::ReleaseSolarMutex();
+			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+			Application::AcquireSolarMutex( nCount );
+		}
+
+		[pPool release];
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -3863,9 +3879,9 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:NO];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		    ULONG nCount = Application::ReleaseSolarMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
-		    Application::AcquireSolarMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];
