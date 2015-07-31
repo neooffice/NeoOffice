@@ -266,6 +266,17 @@ static BOOL bIOPMAssertionIDSet = NO;
 		{
 			[pApp setPresentationOptions:NSApplicationPresentationDefault];
 
+			if ( [pApp presentationOptions] & NSApplicationPresentationFullScreen )
+			{
+				// Fix hidden menu after existing slide show mode to a full
+				// screen mode window by toggling the window out of full screen
+				// mode. Note: delay the toggling as it needs to lock the
+				// applcation mutex.
+				NSWindow *pKeyWindow = [pApp keyWindow];
+				if ( pKeyWindow && [pKeyWindow styleMask] & NSFullScreenWindowMask && [pKeyWindow respondsToSelector:@selector(toggleFullScreen:)] )
+					[pKeyWindow performSelector:@selector(toggleFullScreen:) withObject:self afterDelay:0];
+			}
+
 			// Stop blocking sleep
 			if ( bIOPMAssertionIDSet )
 			{
