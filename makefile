@@ -673,6 +673,7 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f -not -path "*/CVS/*" -not -name ".directory_history"` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 ifdef PRODUCT_BUILD3
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' | sed 's#BuildMachine=.*$$#BuildMachine=$(BUILD_MACHINE)#g' > "../../out" ; mv -f "../../out" "etc/bootstraprc"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(TARGET_MACHINE)#$(TARGET_MACHINE)#g' "$(PWD)/etc/program/fundamentalbasisrc" > "basis-link/program/fundamentalbasisrc"
 else
 	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" -not -name ".directory_history" | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents/basis-link" ; sh -e -c 'for i in `cd "$(PWD)/etc/sandbox" ; find share -type f -not -path "*/CVS/*" -not -name ".directory_history"` ; do cp "$(PWD)/etc/sandbox/$${i}" "$${i}" ; done'
