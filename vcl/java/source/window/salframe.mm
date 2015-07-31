@@ -3450,6 +3450,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	SetVisible( mbVisible, bNoActivate );
 
+	sal_Bool bTopLevelWindow = sal_False;
 	if ( mbVisible )
 	{
 		mbInShow = TRUE;
@@ -3482,7 +3483,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Get native window's content view since it won't be created until
 		// first shown
-		sal_Bool bTopLevelWindow = sal_False;
 		if ( !mpParent && !IsFloatingFrame() && !IsUtilityWindow() )
 		{
 			Window *pWindow = Application::GetFirstTopLevelWindow();
@@ -3499,27 +3499,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
 		pEvent->dispatch();
 		pEvent->release();
-
-		// Fix bug reported in the following NeoOffice forum post by forcing
-		// the window into full screen mode if the app is already in full
-		// screen mode:
-		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
-		if ( bTopLevelWindow )
-		{
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-			NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
-			if ( pNSWindow )
-			{
-				VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				ULONG nCount = Application::ReleaseSolarMutex();
-				[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
-				Application::AcquireSolarMutex( nCount );
-			}
-
-			[pPool release];
-		}
 
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );
@@ -3604,6 +3583,27 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	}
 
 	UpdateLayer();
+
+	// Fix bug reported in the following NeoOffice forum post by forcing
+	// the window into full screen mode if the app is already in full
+	// screen mode:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=65002#65002
+	if ( mbVisible && bTopLevelWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSWindow *pNSWindow = (NSWindow *)GetNativeWindow();
+		if ( pNSWindow )
+		{
+			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			ULONG nCount = Application::ReleaseSolarMutex();
+			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+			Application::AcquireSolarMutex( nCount );
+		}
+
+		[pPool release];
+	}
 }
 
 // -----------------------------------------------------------------------
