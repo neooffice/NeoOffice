@@ -58,9 +58,7 @@
 #include <com/sun/star/text/XTextDocument.hpp>
 
 #if SUPD == 310
-#include <rootfrm.hxx>
 #include <sal/log.hxx>
-#include <tools/mapunit.hxx>
 #endif	// SUPD == 310
 
 using namespace com::sun::star;
@@ -174,24 +172,17 @@ void SwTextBoxHelper::destroy(SwFrmFmt* pShape)
     }
 }
 
+#if SUPD != 310
+
 std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwDoc* pDoc)
 {
     std::set<const SwFrmFmt*> aTextBoxes;
     std::map<SwNodeIndex, const SwFrmFmt*> aFlyFormats, aDrawFormats;
 
-#if SUPD == 310
-    const SwSpzFrmFmts& rSpzFrmFmts = *pDoc->GetSpzFrmFmts();
-    for (sal_uInt16 i = 0; i < rSpzFrmFmts.Count(); i++)
-#else	// SUPD == 310
     const SwFrmFmts& rSpzFrmFmts = *pDoc->GetSpzFrmFmts();
     for (SwFrmFmts::const_iterator it = rSpzFrmFmts.begin(); it != rSpzFrmFmts.end(); ++it)
-#endif	// SUPD == 310
     {
-#if SUPD == 310
-        const SwFrmFmt* pFormat = rSpzFrmFmts[i];
-#else	// SUPD == 310
         const SwFrmFmt* pFormat = *it;
-#endif	// SUPD == 310
 
         // A TextBox in the context of this class is a fly frame that has a
         // matching (same RES_CNTNT) draw frame.
@@ -224,24 +215,15 @@ std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwNode& rNode)
     const SwDoc* pDoc = rNode.GetDoc();
     const SwCntntNode* pCntntNode = 0;
     const SwCntntFrm* pCntntFrm = 0;
-#if SUPD == 310
-    bool bHaveViewShell = pDoc->GetRootFrm()->GetCurrShell();
-    if (bHaveViewShell && (pCntntNode = rNode.GetCntntNode()) && (pCntntFrm = pCntntNode->GetFrm()))
-#else	// SUPD == 310
     bool bHaveViewShell = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
     if (bHaveViewShell && (pCntntNode = rNode.GetCntntNode()) && (pCntntFrm = pCntntNode->getLayoutFrm(pDoc->getIDocumentLayoutAccess().GetCurrentLayout())))
-#endif	// SUPD == 310
     {
         // We can use the layout information to iterate over only the frames which are anchored to us.
         std::set<const SwFrmFmt*> aRet;
         const SwSortedObjs* pSortedObjs = pCntntFrm->GetDrawObjs();
         if (pSortedObjs)
         {
-#if SUPD == 310
-            for (sal_uInt16 i = 0; i < pSortedObjs->Count(); i++)
-#else	// SUPD == 310
             for (size_t i = 0; i < pSortedObjs->size(); ++i)
-#endif	// SUPD == 310
             {
                 SwAnchoredObject* pAnchoredObject = (*pSortedObjs)[i];
                 SwFrmFmt* pTextBox = findTextBox(&pAnchoredObject->GetFrmFmt());
@@ -261,25 +243,12 @@ std::map<SwFrmFmt*, SwFrmFmt*> SwTextBoxHelper::findShapes(const SwDoc* pDoc)
 {
     std::map<SwFrmFmt*, SwFrmFmt*> aRet;
 
-#if SUPD == 310
-    const SwSpzFrmFmts& rSpzFrmFmts = *pDoc->GetSpzFrmFmts();
-    for (sal_uInt16 i = 0; i < rSpzFrmFmts.Count(); i++)
-#else	// SUPD == 310
     const SwFrmFmts& rSpzFrmFmts = *pDoc->GetSpzFrmFmts();
     for (SwFrmFmts::const_iterator it = rSpzFrmFmts.begin(); it != rSpzFrmFmts.end(); ++it)
-#endif	// SUPD == 310
     {
-#if SUPD == 310
-        SwFrmFmt* pTextBox = findTextBox(rSpzFrmFmts[i]);
-#else	// SUPD == 310
         SwFrmFmt* pTextBox = findTextBox(*it);
-#endif	// SUPD == 310
         if (pTextBox)
-#if SUPD == 310
-            aRet[pTextBox] = rSpzFrmFmts[i];
-#else	// SUPD == 310
             aRet[pTextBox] = *it;
-#endif	// SUPD == 310
     }
 
     return aRet;
@@ -353,6 +322,8 @@ SwFrmFmt* SwTextBoxHelper::findTextBox(uno::Reference<drawing::XShape> xShape)
 
     return findTextBox(pShape->GetFrmFmt());
 }
+
+#endif	// SUPD != 310
 
 SwFrmFmt* SwTextBoxHelper::findTextBox(const SwFrmFmt* pShape)
 {
@@ -453,6 +424,8 @@ Rectangle SwTextBoxHelper::getTextRectangle(SwFrmFmt* pShape, bool bAbsolute)
     return aRet;
 }
 
+#if SUPD != 310
+
 void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, const OUString& rPropertyName, const css::uno::Any& rValue)
 {
     if (rPropertyName == "CustomShapeGeometry")
@@ -481,27 +454,15 @@ void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, const OUString& rPropertyNa
                     if (SwTxtNode* pMark = pFmt->GetDoc()->GetNodes()[pNodeIndex->GetNode().EndOfSectionIndex() - 1]->GetTxtNode())
                     {
                         aPaM.GetMark()->nNode = *pMark;
-#if SUPD == 310
-                        aPaM.GetMark()->nContent.Assign(pMark, pMark->GetTxt().Len());
-#else	// SUPD == 310
                         aPaM.GetMark()->nContent.Assign(pMark, pMark->GetTxt().getLength());
-#endif	// SUPD == 310
                         SvxCharRotateItem aItem(900, false, RES_CHRATR_ROTATE);
-#if SUPD == 310
-                        pFmt->GetDoc()->Insert(aPaM, aItem, 0);
-#else	// SUPD == 310
                         pFmt->GetDoc()->getIDocumentContentOperations().InsertPoolItem(aPaM, aItem, 0);
-#endif	// SUPD == 310
                     }
                 }
             }
         }
     }
-#if SUPD == 310
-    else if (rPropertyName == SW_PROP_NAME_STR(UNO_NAME_TEXT_VERT_ADJUST))
-#else	// SUPD == 310
     else if (rPropertyName == UNO_NAME_TEXT_VERT_ADJUST)
-#endif	// SUPD == 310
         syncProperty(pShape, RES_TEXT_VERT_ADJUST, 0, rValue);
     else if (rPropertyName == UNO_NAME_TEXT_AUTOGROWHEIGHT)
         syncProperty(pShape, RES_FRM_SIZE, MID_FRMSIZE_IS_AUTO_HEIGHT, rValue);
@@ -528,16 +489,14 @@ void SwTextBoxHelper::getProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 n
             }
             break;
             case MID_CHAIN_NAME:
-#if SUPD == 310
-                rValue = uno::makeAny((OUString&)pFmt->GetName());
-#else	// SUPD == 310
                 rValue = uno::makeAny(pFmt->GetName());
-#endif	// SUPD == 310
                 break;
             }
         }
     }
 }
+
+#endif	// SUPD != 310
 
 void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 nMemberId, const css::uno::Any& rValue)
 {
@@ -746,6 +705,8 @@ void SwTextBoxHelper::saveLinks(const SwFrmFmts& rFormats, std::map<const SwFrmF
     }
 }
 
+#if SUPD != 310
+
 void SwTextBoxHelper::resetLink(SwFrmFmt* pShape, std::map<const SwFrmFmt*, SwFmtCntnt>& rMap)
 {
     if (pShape->Which() == RES_DRAWFRMFMT)
@@ -775,6 +736,8 @@ void SwTextBoxHelper::restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrmF
             const_cast<SwFrmFmt*>(aSetIt->GetFmt())->SetFmtAttr(rOldContent[aSetIt->GetFmt()]);
     }
 }
+
+#endif	// SUPD != 310
 
 void SwTextBoxHelper::syncFlyFrmAttr(SwFrmFmt& rShape, SfxItemSet& rSet)
 {

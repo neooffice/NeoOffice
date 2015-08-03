@@ -95,12 +95,6 @@
 
 #include <vcl/svapp.hxx>
 
-#if SUPD == 310
-#include <textboxhelper.hxx>
-#include <comphelper/makesequence.hxx>
-#include <cppuhelper/supportsservice.hxx>
-#endif	// SUPD == 310
-
 using namespace ::com::sun::star;
 
 DECLARE_STL_USTRINGACCESS_MAP( uno::Sequence< sal_Int8 > *,  SwShapeImplementationIdMap );
@@ -435,86 +429,6 @@ uno::Reference< drawing::XShape >  SwFmDrawPage::_CreateShape( SdrObject *pObj )
 	return xRet;
 }
 
-#if SUPD == 310
-
-namespace
-{
-    class SwXShapesEnumeration
-        : public SwSimpleEnumerationBaseClass
-    {
-        private:
-            typedef ::std::list< ::com::sun::star::uno::Any > shapescontainer_t;
-            shapescontainer_t m_aShapes;
-        protected:
-            virtual ~SwXShapesEnumeration() {};
-        public:
-            SwXShapesEnumeration(SwXDrawPage* const pDrawPage);
-
-            //XEnumeration
-            virtual sal_Bool SAL_CALL hasMoreElements(void) throw(uno::RuntimeException) SAL_OVERRIDE;
-            virtual uno::Any SAL_CALL nextElement(void) throw(container::NoSuchElementException, lang::WrappedTargetException, uno::RuntimeException) SAL_OVERRIDE;
-
-            //XServiceInfo
-            virtual OUString SAL_CALL getImplementationName(void) throw(uno::RuntimeException) SAL_OVERRIDE;
-            virtual sal_Bool SAL_CALL supportsService(const OUString& ServiceName) throw(uno::RuntimeException) SAL_OVERRIDE;
-            virtual uno::Sequence<OUString> SAL_CALL getSupportedServiceNames(void) throw(uno::RuntimeException) SAL_OVERRIDE;
-    };
-}
-
-SwXShapesEnumeration::SwXShapesEnumeration(SwXDrawPage* const pDrawPage)
-    : m_aShapes()
-{
-    SolarMutexGuard aGuard;
-    ::std::insert_iterator<shapescontainer_t> pInserter = ::std::insert_iterator<shapescontainer_t>(m_aShapes, m_aShapes.begin());
-    sal_Int32 nCount = pDrawPage->getCount();
-    std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pDrawPage->GetDoc());
-    for(sal_Int32 nIdx = 0; nIdx < nCount; nIdx++)
-    {
-        uno::Reference<drawing::XShape> xShape = uno::Reference<drawing::XShape>(pDrawPage->getByIndex(nIdx, &aTextBoxes), uno::UNO_QUERY);
-        *pInserter++ = uno::makeAny(xShape);
-    }
-}
-
-sal_Bool SwXShapesEnumeration::hasMoreElements(void) throw(uno::RuntimeException)
-{
-    SolarMutexGuard aGuard;
-    return !m_aShapes.empty();
-}
-
-uno::Any SwXShapesEnumeration::nextElement(void) throw(container::NoSuchElementException, lang::WrappedTargetException, uno::RuntimeException)
-{
-    SolarMutexGuard aGuard;
-    if(m_aShapes.empty())
-        throw container::NoSuchElementException();
-    uno::Any aResult = *m_aShapes.begin();
-    m_aShapes.pop_front();
-    return aResult;
-}
-
-OUString SwXShapesEnumeration::getImplementationName(void) throw(uno::RuntimeException)
-{
-    return OUString("SwXShapeEnumeration");
-}
-
-sal_Bool SwXShapesEnumeration::supportsService(const OUString& ServiceName) throw(uno::RuntimeException)
-{
-    return cppu::supportsService(this, ServiceName);
-}
-
-uno::Sequence< OUString > SwXShapesEnumeration::getSupportedServiceNames(void) throw(uno::RuntimeException)
-{
-    return ::comphelper::makeSequence(OUString("com.sun.star.container.XEnumeration"));
-}
-
-uno::Reference< container::XEnumeration > SwXDrawPage::createEnumeration(void) throw( uno::RuntimeException )
-{
-    SolarMutexGuard aGuard;
-    return uno::Reference< container::XEnumeration >(
-        new SwXShapesEnumeration(this));
-}
-
-#endif	// SUPD == 310
-
 /****************************************************************************
 	class SwXDrawPage
 ****************************************************************************/
@@ -617,17 +531,7 @@ sal_Int32 SwXDrawPage::getCount(void) throw( uno::RuntimeException )
 	else
 	{
 		((SwXDrawPage*)this)->GetSvxPage();
-
-#if SUPD == 310
-        std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pDoc);
-
-        if (aTextBoxes.empty())
-            return pDrawPage->getCount();
-        else
-            return SwTextBoxHelper::getCount(pDrawPage->GetSdrPage(), aTextBoxes);
-#else	// SUPD == 310
 		return pDrawPage->getCount();
-#endif	// SUPD == 310
 	}
 }
 /*-- 22.01.99 11:33:46---------------------------------------------------
@@ -646,34 +550,6 @@ uno::Any SwXDrawPage::getByIndex(sal_Int32 nIndex)
 	((SwXDrawPage*)this)->GetSvxPage();
 	return pDrawPage->getByIndex( nIndex );
 }
-
-#if SUPD == 310
-
-uno::Any SwXDrawPage::getByIndex(sal_Int32 nIndex, std::set<const SwFrmFmt*>* pTextBoxes)
-    throw(lang::IndexOutOfBoundsException, lang::WrappedTargetException, uno::RuntimeException)
-{
-    SolarMutexGuard aGuard;
-    if(!pDoc)
-        throw uno::RuntimeException();
-    if(!pDoc->GetDrawModel())
-        throw lang::IndexOutOfBoundsException();
-
-    ((SwXDrawPage*)this)->GetSvxPage();
-    std::set<const SwFrmFmt*> aTextBoxes;
-    if (!pTextBoxes)
-    {
-        // We got no set, so let's generate one.
-        aTextBoxes = SwTextBoxHelper::findTextBoxes(pDoc);
-        pTextBoxes = &aTextBoxes;
-    }
-    if (pTextBoxes->empty())
-        return pDrawPage->getByIndex( nIndex );
-    else
-        return SwTextBoxHelper::getByIndex(pDrawPage->GetSdrPage(), nIndex, *pTextBoxes);
-}
-
-#endif	// SUPD == 310
-
 /* -----------------22.01.99 13:13-------------------
  *
  * --------------------------------------------------*/
@@ -987,15 +863,6 @@ void SwXDrawPage::InvalidateSwDoc()
     pDoc = 0;
 }
 
-#if SUPD == 310
-
-SwDoc* SwXDrawPage::GetDoc()
-{
-    return pDoc;
-}
-
-#endif	// SUPD == 310
-
 /****************************************************************************
 
 ****************************************************************************/
@@ -1101,16 +968,7 @@ SwXShape::~SwXShape()
  ---------------------------------------------------------------------------*/
 uno::Any SwXShape::queryInterface( const uno::Type& aType ) throw( uno::RuntimeException )
 {
-#if SUPD == 310
-    uno::Any aRet = SwTextBoxHelper::queryInterface(GetFrmFmt(), aType);
-    if (aRet.hasValue())
-        return aRet;
-
-    aRet = SwXShapeBaseClass::queryInterface(aType);
-#else	// SUPD == 310
-
     uno::Any aRet = SwXShapeBaseClass::queryInterface(aType);
-#endif	// SUPD == 310
     // --> OD 2005-08-15 #i53320# - follow-up of #i31698#
     // interface drawing::XShape is overloaded. Thus, provide
     // correct object instance.
@@ -1363,18 +1221,19 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
 #if SUPD == 310
                 else if (pMap->nWID == FN_TEXT_BOX)
                 {
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::setPropertyValue FN_TEXT_BOX not implemented\n" );
+#endif
+#else	// USE_JAVA
                     bool bValue(false);
                     aValue >>= bValue;
                     if (bValue)
                         SwTextBoxHelper::create(pFmt);
                     else
                         SwTextBoxHelper::destroy(pFmt);
+#endif	// USE_JAVA
 
-                }
-                else if (pMap->nWID == RES_CHAIN)
-                {
-                    if (pMap->nMemberId == MID_CHAIN_NEXTNAME || pMap->nMemberId == MID_CHAIN_PREVNAME)
-                        SwTextBoxHelper::syncProperty(pFmt, pMap->nWID, pMap->nMemberId, aValue);
                 }
 #endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
@@ -1481,10 +1340,6 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
                     else
                         pFmt->SetFmtAttr(aSet);
 				}
-#if SUPD == 310
-                // We have a pFmt and a pEntry as well: try to sync TextBox property.
-                SwTextBoxHelper::syncProperty(pFmt, pMap->nWID, pMap->nMemberId, aValue);
-#endif	// SUPD == 310
 			}
 			else
 			{
@@ -1594,15 +1449,6 @@ void SwXShape::setPropertyValue(const rtl::OUString& rPropertyName, const uno::A
 //                                    basegfx::fround( aMatrix.Line2.Column3 ) );
 //                _AdjustPositionProperties( aNewPos );
 //            }
-
-#if SUPD == 310
-            if (pFmt)
-            {
-                // We have a pFmt (but no pEntry): try to sync TextBox property.
-                SwTextBoxHelper::syncProperty(pFmt, rPropertyName, aValue);
-            }
-#endif	// SUPD == 310
-
             // --> OD 2004-08-05 #i31698# - restore object position, if caption
             // point is set.
             if ( rPropertyName.equals(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("CaptionPoint"))) &&
@@ -1691,19 +1537,15 @@ uno::Any SwXShape::getPropertyValue(const rtl::OUString& rPropertyName)
 #if SUPD == 310
                 else if (pMap->nWID == FN_TEXT_BOX)
                 {
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::getPropertyValue FN_TEXT_BOX not implemented\n" );
+#endif
+                    bool bValue = false;
+#else	// USE_JAVA
                     bool bValue = SwTextBoxHelper::findTextBox(pFmt);
+#endif	// USE_JAVA
                     aRet <<= bValue;
-                }
-                else if (pMap->nWID == RES_CHAIN)
-                {
-                    switch (pMap->nMemberId)
-                    {
-                    case MID_CHAIN_PREVNAME:
-                    case MID_CHAIN_NEXTNAME:
-                    case MID_CHAIN_NAME:
-                        SwTextBoxHelper::getProperty(pFmt, pMap->nWID, pMap->nMemberId, aRet);
-                    break;
-                    }
                 }
 #endif	// SUPD == 310
                 // --> OD 2004-08-06 #i28749#
@@ -1859,30 +1701,6 @@ uno::Any SwXShape::getPropertyValue(const rtl::OUString& rPropertyName)
                 // <--
             }
             // <--
-#if SUPD == 310
-            else if (rPropertyName == "ZOrder")
-            {
-                // Convert the real draw page position to the logical one that ignores textboxes.
-                if (pFmt)
-                {
-                    const SdrObject* pObj = pFmt->FindRealSdrObject();
-                    if (pObj)
-                    {
-                        bool bConvert = true;
-                        if (SvxShape* pSvxShape = GetSvxShape())
-                            // In case of group shapes, pSvxShape points to the child shape, while pObj points to the outermost group shape.
-                            if (pSvxShape->GetSdrObject() != pObj)
-                                // Textboxes are not expected inside group shapes, so no conversion is necessary there.
-                                bConvert = false;
-                        if (bConvert)
-                        {
-                            std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pFmt->GetDoc());
-                            aRet <<= SwTextBoxHelper::getOrdNum(pObj, aTextBoxes);
-                        }
-                    }
-                }
-            }
-#endif	// SUPD == 310
         }
 	}
 	return aRet;
@@ -1971,9 +1789,15 @@ uno::Sequence< beans::PropertyState > SwXShape::getPropertyStates(
                 else if (pMap->nWID == FN_TEXT_BOX)
                 {
                     // The TextBox property is set, if we can find a textbox for this shape.
+#ifdef USE_JAVA
+#ifdef DEBUG
+                    fprintf( stderr, "SwXShape::getPropertyStates FN_TEXT_BOX not implemented\n" );
+#endif
+#else	// USE_JAVA
                     if (pFmt && SwTextBoxHelper::findTextBox(pFmt))
                         pRet[nProperty] = beans::PropertyState_DIRECT_VALUE;
                     else
+#endif	// USE_JAVA
                         pRet[nProperty] = beans::PropertyState_DEFAULT_VALUE;
                 }
 #endif	// SUPD == 310
@@ -2600,9 +2424,6 @@ void SAL_CALL SwXShape::setSize( const awt::Size& aSize )
     {
         mxShape->setSize( aSize );
     }
-#if SUPD == 310
-    SwTextBoxHelper::syncProperty(GetFrmFmt(), RES_FRM_SIZE, MID_FRMSIZE_SIZE, uno::makeAny(aSize));
-#endif	// SUPD == 310
 }
 // <--
 // --> OD 2004-07-22 #i31698# -
