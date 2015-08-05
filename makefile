@@ -279,6 +279,7 @@ build.oo_patches: \
 	build.oo_svx_patch \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
+	build.oo_tools_patch \
 	build.oo_ucb_patch \
 	build.oo_ucbhelper_patch \
 	build.oo_vcl_patch \

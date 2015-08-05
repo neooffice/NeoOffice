@@ -1,0 +1,1046 @@
+--- ./inc/tools/multisel.hxx	2008-04-11 06:24:10.000000000 -0700
++++ ./inc/tools/multisel.hxx	2015-08-05 08:14:24.000000000 -0700
+@@ -1,32 +1,25 @@
+-/*************************************************************************
+- *
+- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++/**************************************************************
+  * 
+- * Copyright 2008 by Sun Microsystems, Inc.
+- *
+- * OpenOffice.org - a multi-platform office productivity suite
+- *
+- * $RCSfile$
+- * $Revision$
+- *
+- * This file is part of OpenOffice.org.
+- *
+- * OpenOffice.org is free software: you can redistribute it and/or modify
+- * it under the terms of the GNU Lesser General Public License version 3
+- * only, as published by the Free Software Foundation.
+- *
+- * OpenOffice.org is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU Lesser General Public License version 3 for more details
+- * (a copy is included in the LICENSE file that accompanied this code).
+- *
+- * You should have received a copy of the GNU Lesser General Public License
+- * version 3 along with OpenOffice.org.  If not, see
+- * <http://www.openoffice.org/license.html>
+- * for a copy of the LGPLv3 License.
+- *
+- ************************************************************************/
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ * 
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ * 
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ * 
++ *************************************************************/
++
++
+ #ifndef _SV_MULTISEL_HXX
+ #define _SV_MULTISEL_HXX
+ 
+@@ -35,6 +28,9 @@
+ #include <tools/list.hxx>
+ #include <tools/string.hxx>
+ 
++#include <vector>
++#include <set>
++
+ //------------------------------------------------------------------
+ 
+ #ifdef _SV_MULTISEL_CXX
+@@ -56,17 +52,17 @@
+ private:
+ 	ImpSelList		aSels;		// array of SV-selections
+ 	Range			aTotRange;	// total range of indexes
+-	ULONG			nCurSubSel; // index in aSels of current selected index
++	sal_uIntPtr			nCurSubSel; // index in aSels of current selected index
+ 	long			nCurIndex;	// current selected entry
+-	ULONG			nSelCount;	// number of selected indexes
+-	BOOL			bInverseCur;// inverse cursor
+-	BOOL			bCurValid;	// are nCurIndex and nCurSubSel valid
+-	BOOL			bSelectNew; // auto-select newly inserted indexes
++	sal_uIntPtr			nSelCount;	// number of selected indexes
++	sal_Bool			bInverseCur;// inverse cursor
++	sal_Bool			bCurValid;	// are nCurIndex and nCurSubSel valid
++	sal_Bool			bSelectNew; // auto-select newly inserted indexes
+ 
+ #ifdef _SV_MULTISEL_CXX
+ 	TOOLS_DLLPRIVATE void			ImplClear();
+-	TOOLS_DLLPRIVATE ULONG			ImplFindSubSelection( long nIndex ) const;
+-	TOOLS_DLLPRIVATE BOOL			ImplMergeSubSelections( ULONG nPos1, ULONG nPos2 );
++	TOOLS_DLLPRIVATE sal_uIntPtr			ImplFindSubSelection( long nIndex ) const;
++	TOOLS_DLLPRIVATE sal_Bool			ImplMergeSubSelections( sal_uIntPtr nPos1, sal_uIntPtr nPos2 );
+ 	TOOLS_DLLPRIVATE long			ImplFwdUnselected();
+ 	TOOLS_DLLPRIVATE long			ImplBwdUnselected();
+ #endif
+@@ -81,18 +77,18 @@
+ 					~MultiSelection();
+ 
+ 	MultiSelection& operator= ( const MultiSelection& rOrig );
+-	BOOL			operator== ( MultiSelection& rOrig );
+-	BOOL			operator!= ( MultiSelection& rOrig )
++	sal_Bool			operator== ( MultiSelection& rOrig );
++	sal_Bool			operator!= ( MultiSelection& rOrig )
+ 						{ return !operator==( rOrig ); }
+-	BOOL			operator !() const
++	sal_Bool			operator !() const
+ 						{ return nSelCount == 0; }
+ 
+-	void			SelectAll( BOOL bSelect = TRUE );
+-	BOOL			Select( long nIndex, BOOL bSelect = TRUE );
+-	void			Select( const Range& rIndexRange, BOOL bSelect = TRUE );
+-	BOOL			IsSelected( long nIndex ) const;
+-	BOOL			IsAllSelected() const
+-						{ return nSelCount == ULONG(aTotRange.Len()); }
++	void			SelectAll( sal_Bool bSelect = sal_True );
++	sal_Bool			Select( long nIndex, sal_Bool bSelect = sal_True );
++	void			Select( const Range& rIndexRange, sal_Bool bSelect = sal_True );
++	sal_Bool			IsSelected( long nIndex ) const;
++	sal_Bool			IsAllSelected() const
++						{ return nSelCount == sal_uIntPtr(aTotRange.Len()); }
+ 	long			GetSelectCount() const { return nSelCount; }
+ 
+ 	void			SetTotalRange( const Range& rTotRange );
+@@ -101,15 +97,116 @@
+ 	void			Append( long nCount = 1 );
+ 
+ 	const Range&	GetTotalRange() const { return aTotRange; }
+-	BOOL			IsCurValid() const { return bCurValid; }
++	sal_Bool			IsCurValid() const { return bCurValid; }
+ 	long			GetCurSelected() const { return nCurIndex; }
+-	long			FirstSelected( BOOL bInverse = FALSE );
++	long			FirstSelected( sal_Bool bInverse = sal_False );
+ 	long			LastSelected();
+ 	long			NextSelected();
+ 	long			PrevSelected();
+ 
+-	ULONG			GetRangeCount() const { return aSels.Count(); }
+-	const Range&	GetRange( ULONG nRange ) const { return *(const Range*)aSels.GetObject(nRange); }
++	sal_uIntPtr			GetRangeCount() const { return aSels.Count(); }
++	const Range&	GetRange( sal_uIntPtr nRange ) const { return *(const Range*)aSels.GetObject(nRange); }
++};
++
++class TOOLS_DLLPUBLIC StringRangeEnumerator
++{
++    struct Range
++    {
++        sal_Int32   nFirst;
++        sal_Int32   nLast;
++        
++        Range() : nFirst( -1 ), nLast( -1 ) {}
++        Range( sal_Int32 i_nFirst, sal_Int32 i_nLast ) : nFirst( i_nFirst ), nLast( i_nLast ) {}
++    };
++    std::vector< StringRangeEnumerator::Range >            maSequence;
++    sal_Int32                                              mnCount;
++    sal_Int32                                              mnMin;
++    sal_Int32                                              mnMax;
++    sal_Int32                                              mnOffset;
++    
++    bool insertRange( sal_Int32 nFirst, sal_Int32 nLast, bool bSequence, bool bMayAdjust );
++    bool checkValue( sal_Int32, const std::set< sal_Int32 >* i_pPossibleValues = NULL ) const;
++public:
++    class TOOLS_DLLPUBLIC Iterator
++    {
++        const StringRangeEnumerator*      pEnumerator;
++        const std::set< sal_Int32 >*      pPossibleValues;
++        sal_Int32                         nRangeIndex;
++        sal_Int32                         nCurrent;
++        
++        friend class StringRangeEnumerator;
++        Iterator( const StringRangeEnumerator* i_pEnum,
++                  const std::set< sal_Int32 >* i_pPossibleValues,
++                  sal_Int32 i_nRange,
++                  sal_Int32 i_nCurrent )
++        : pEnumerator( i_pEnum ), pPossibleValues( i_pPossibleValues )
++        , nRangeIndex( i_nRange ), nCurrent( i_nCurrent ) {}
++    public:
++        Iterator() : pEnumerator( NULL ), pPossibleValues( NULL ), nRangeIndex( -1 ), nCurrent( -1 ) {}
++        Iterator& operator++();
++        sal_Int32 operator*() const;
++        bool operator==(const Iterator&) const;
++        bool operator!=(const Iterator& i_rComp) const
++        { return ! (*this == i_rComp); }
++    };
++
++    friend class StringRangeEnumerator::Iterator;
++    
++    StringRangeEnumerator() : mnCount( 0 ), mnMin( -1 ), mnMax( -1 ), mnOffset( -1 ) {}
++    StringRangeEnumerator( const rtl::OUString& i_rInput,
++                           sal_Int32 i_nMinNumber = -1,
++                           sal_Int32 i_nMaxNumber = -1,
++                           sal_Int32 i_nLogicalOffset = -1
++                           );
++    
++    size_t size() const { return size_t(mnCount); }
++    Iterator begin( const std::set< sal_Int32 >* i_pPossibleValues = NULL ) const;
++    Iterator end( const std::set< sal_Int32 >* i_pPossibleValues = NULL ) const;
++    
++    sal_Int32 getMin() const { return mnMin; }
++    void setMin( sal_Int32 i_nMinValue ) { mnMin = i_nMinValue; }
++    sal_Int32 getMax() const { return mnMax; }
++    void setMax( sal_Int32 i_nMaxValue ) { mnMax = i_nMaxValue; }
++    sal_Int32 getLogicalOffset() const { return mnOffset; }
++    void setLogicalOffset( sal_Int32 i_nOffset ) { mnOffset = i_nOffset; }
++    
++    bool setRange( const rtl::OUString& i_rNewRange, bool i_bStrict = false );
++    bool hasValue( sal_Int32 nValue, const std::set< sal_Int32 >* i_pPossibleValues = NULL ) const;
++    
++                          
++    /**
++    i_rPageRange:     the string to be changed into a sequence of numbers
++                      valid format example "5-3,9,9,7-8" ; instead of ',' ';' or ' ' are allowed as well
++    o_rPageVector:    the output sequence of numbers
++    i_nLogicalOffset: an offset to be applied to each number in the string before inserting it in the resulting sequence
++                      example: a user enters page numbers from 1 to n (since that is logical)
++                               of course usable page numbers in code would start from 0 and end at n-1
++                               so the logical offset would be -1
++    i_nMinNumber:     the minimum allowed number, a negative number means no minimum check
++    i_nMaxNumber:     the maximum allowed number, a negative number means no maximum check
++    
++    @returns: true if the input string was valid, o_rPageVector will contain the resulting sequence
++              false if the input string was invalid, o_rPageVector will be unchanged
++    
++    behavior:
++    - only non-negative sequence numbers are allowed
++    - only non-negative values in the input string are allowed
++    - the string "-3" will be either
++      * an error if no minimum is given
++      * or result in the sequence i_nMinNumber to 3
++    - the string "3-" will be either
++      * an error if no maximum is given
++      * or result in the seqeuence 3 to i_nMaxNumber
++    - an empty string as input is valid and will result in the range [min,max] if given
++      or an empty vector, if not
++    */
++    static bool getRangesFromString( const rtl::OUString& i_rPageRange,
++                                     std::vector< sal_Int32 >& o_rPageVector,
++                                     sal_Int32 i_nMinNumber = -1,
++                                     sal_Int32 i_nMaxNumber = -1,
++                                     sal_Int32 i_nLogicalOffset = -1,
++                                     std::set< sal_Int32 >* i_pPossibleValues = NULL
++                                    );
+ };
+ 
+ #endif	// _SV_MULTISEL_HXX
+--- ./source/memtools/multisel.cxx	2008-04-11 06:52:10.000000000 -0700
++++ ./source/memtools/multisel.cxx	2015-08-05 08:15:21.000000000 -0700
+@@ -1,32 +1,25 @@
+-/*************************************************************************
+- *
+- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++/**************************************************************
+  * 
+- * Copyright 2008 by Sun Microsystems, Inc.
+- *
+- * OpenOffice.org - a multi-platform office productivity suite
+- *
+- * $RCSfile$
+- * $Revision$
+- *
+- * This file is part of OpenOffice.org.
+- *
+- * OpenOffice.org is free software: you can redistribute it and/or modify
+- * it under the terms of the GNU Lesser General Public License version 3
+- * only, as published by the Free Software Foundation.
+- *
+- * OpenOffice.org is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU Lesser General Public License version 3 for more details
+- * (a copy is included in the LICENSE file that accompanied this code).
+- *
+- * You should have received a copy of the GNU Lesser General Public License
+- * version 3 along with OpenOffice.org.  If not, see
+- * <http://www.openoffice.org/license.html>
+- * for a copy of the LGPLv3 License.
+- *
+- ************************************************************************/
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ * 
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ * 
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ * 
++ *************************************************************/
++
++
+ 
+ // MARKER(update_precomp.py): autogen include statement, do not remove
+ #include "precompiled_tools.hxx"
+@@ -41,12 +34,16 @@
+ #include <tools/debug.hxx>
+ #include <tools/multisel.hxx>
+ 
++#include "rtl/ustrbuf.hxx"
++
+ #ifdef MI_DEBUG
+ #define DBG(x) x
+ #else
+ #define DBG(x)
+ #endif
+ 
++using namespace rtl;
++
+ //==================================================================
+ 
+ #ifdef MI_DEBUG
+@@ -62,7 +59,7 @@
+ 	}
+ 	DbgOutf( "SelCount:     %4ld\n", pSel->nSelCount );
+ 	DbgOutf( "SubCount:     %4ld\n", pSel->aSels.Count() );
+-	for ( ULONG nPos = 0; nPos < pSel->aSels.Count(); ++nPos )
++	for ( sal_uIntPtr nPos = 0; nPos < pSel->aSels.Count(); ++nPos )
+ 	{
+ 		DbgOutf( "SubSel #%2ld:   %4ld-%4ld\n", nPos,
+ 				 pSel->aSels.GetObject(nPos)->Min(),
+@@ -92,10 +89,10 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-ULONG MultiSelection::ImplFindSubSelection( long nIndex ) const
++sal_uIntPtr MultiSelection::ImplFindSubSelection( long nIndex ) const
+ {
+ 	// iterate through the sub selections
+-	ULONG n = 0;
++	sal_uIntPtr n = 0;
+ 	for ( ;
+ 		  n < aSels.Count() && nIndex > aSels.GetObject(n)->Max();
+ 		  ++n ) {} /* empty loop */
+@@ -104,11 +101,11 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-BOOL MultiSelection::ImplMergeSubSelections( ULONG nPos1, ULONG nPos2 )
++sal_Bool MultiSelection::ImplMergeSubSelections( sal_uIntPtr nPos1, sal_uIntPtr nPos2 )
+ {
+ 	// didn't a sub selection at nPos2 exist?
+ 	if ( nPos2 >= aSels.Count() )
+-		return FALSE;
++		return sal_False;
+ 
+ 	// did the sub selections touch each other?
+ 	if ( (aSels.GetObject(nPos1)->Max() + 1) == aSels.GetObject(nPos2)->Min() )
+@@ -116,10 +113,10 @@
+ 		// merge them
+ 		aSels.GetObject(nPos1)->Max() = aSels.GetObject(nPos2)->Max();
+ 		delete aSels.Remove(nPos2);
+-		return TRUE;
++		return sal_True;
+ 	}
+ 
+-	return FALSE;
++	return sal_False;
+ }
+ 
+ // -----------------------------------------------------------------------
+@@ -128,8 +125,8 @@
+ 	aTotRange( 0, -1 ),
+ 	nCurSubSel(0),
+ 	nSelCount(0),
+-	bCurValid(FALSE),
+-	bSelectNew(FALSE)
++	bCurValid(sal_False),
++	bSelectNew(sal_False)
+ {
+ }
+ 
+@@ -139,8 +136,8 @@
+ 	aTotRange(0,RANGE_MAX),
+ 	nCurSubSel(0),
+ 	nSelCount(0),
+-	bCurValid(FALSE),
+-	bSelectNew(FALSE)
++	bCurValid(sal_False),
++	bSelectNew(sal_False)
+ {
+ 	// Dies ist nur ein Schnellschuss und sollte bald optimiert,
+ 	// an die verschiedenen Systeme (UNIX etc.)
+@@ -149,8 +146,8 @@
+ 	UniString			aStr( rString );
+ 	sal_Unicode*		pStr   = aStr.GetBufferAccess();
+ 	sal_Unicode*		pOld = pStr;
+-	BOOL				bReady = FALSE;
+-	BOOL				bUntil = FALSE;
++	sal_Bool				bReady = sal_False;
++	sal_Bool				bUntil = sal_False;
+ 	xub_StrLen			nCut   = 0;
+ 
+ 	// Hier normieren wir den String, sodass nur Ziffern,
+@@ -176,11 +173,11 @@
+ 				{
+ 					*pStr++ = ';';
+ 					nCut++;
+-					bReady = FALSE;
++					bReady = sal_False;
+ 				}
+ 				*pStr++ = *pOld;
+ 				nCut++;
+-				bUntil = FALSE;
++				bUntil = sal_False;
+ 				break;
+ 
+ 			case '-':
+@@ -192,12 +189,12 @@
+ 					{
+ 						*pStr++ = '-';
+ 						nCut++;
+-						bUntil = TRUE;
++						bUntil = sal_True;
+ 					}
+-					bReady = FALSE;
++					bReady = sal_False;
+ 				}
+ 				else
+-					bReady = TRUE;
++					bReady = sal_True;
+ 				break;
+ 
+ 			case ' ':
+@@ -213,12 +210,12 @@
+ 					{
+ 						*pStr++ = '-';
+ 						nCut++;
+-						bUntil = TRUE;
++						bUntil = sal_True;
+ 					}
+-					bReady = FALSE;
++					bReady = sal_False;
+ 				}
+ 				else
+-					bReady = TRUE;
++					bReady = sal_True;
+ 				break;
+ 		}
+ 
+@@ -232,7 +229,7 @@
+ 	const sal_Unicode*	pCStr = aStr.GetBuffer();
+ 	long				nPage = 1;
+ 	long				nNum  = 1;
+-	bUntil = FALSE;
++	bUntil = sal_False;
+ 	while ( *pCStr )
+ 	{
+ 		switch ( *pCStr )
+@@ -264,13 +261,13 @@
+ 					Select( nNum );
+ 				nPage = 0;
+ 				aNumStr.Erase();
+-				bUntil = FALSE;
++				bUntil = sal_False;
+ 				break;
+ 
+ 			case '-':
+ 				nPage = aNumStr.ToInt32();
+ 				aNumStr.Erase();
+-				bUntil = TRUE;
++				bUntil = sal_True;
+ 				break;
+ 		}
+ 
+@@ -297,7 +294,7 @@
+ 	aTotRange(rOrig.aTotRange),
+ 	nSelCount(rOrig.nSelCount),
+ 	bCurValid(rOrig.bCurValid),
+-	bSelectNew(FALSE)
++	bSelectNew(sal_False)
+ {
+ 	if ( bCurValid )
+ 	{
+@@ -306,7 +303,7 @@
+ 	}
+ 
+ 	// copy the sub selections
+-	for ( ULONG n = 0; n < rOrig.aSels.Count(); ++n )
++	for ( sal_uIntPtr n = 0; n < rOrig.aSels.Count(); ++n )
+ 		aSels.Insert( new Range( *rOrig.aSels.GetObject(n) ), LIST_APPEND );
+ }
+ 
+@@ -316,8 +313,8 @@
+ 	aTotRange(rRange),
+ 	nCurSubSel(0),
+ 	nSelCount(0),
+-	bCurValid(FALSE),
+-	bSelectNew(FALSE)
++	bCurValid(sal_False),
++	bSelectNew(sal_False)
+ {
+ }
+ 
+@@ -347,7 +344,7 @@
+ 
+ 	// clear the old and copy the sub selections
+ 	ImplClear();
+-	for ( ULONG n = 0; n < rOrig.aSels.Count(); ++n )
++	for ( sal_uIntPtr n = 0; n < rOrig.aSels.Count(); ++n )
+ 		aSels.Insert( new Range( *rOrig.aSels.GetObject(n) ), LIST_APPEND );
+ 	nSelCount = rOrig.nSelCount;
+ 
+@@ -356,24 +353,24 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-BOOL MultiSelection::operator== ( MultiSelection& rWith )
++sal_Bool MultiSelection::operator== ( MultiSelection& rWith )
+ {
+ 	if ( aTotRange != rWith.aTotRange || nSelCount != rWith.nSelCount ||
+ 		 aSels.Count() != rWith.aSels.Count() )
+-		return FALSE;
++		return sal_False;
+ 
+ 	// compare the sub seletions
+-	for ( ULONG n = 0; n < aSels.Count(); ++n )
++	for ( sal_uIntPtr n = 0; n < aSels.Count(); ++n )
+ 		if ( *aSels.GetObject(n) != *rWith.aSels.GetObject(n) )
+-			return FALSE;
+-	return TRUE;
++			return sal_False;
++	return sal_True;
+ }
+ 
+ // -----------------------------------------------------------------------
+ 
+-void MultiSelection::SelectAll( BOOL bSelect )
++void MultiSelection::SelectAll( sal_Bool bSelect )
+ {
+-	DBG(DbgOutf( "::SelectAll(%s)\n", bSelect ? "TRUE" : "FALSE" ));
++	DBG(DbgOutf( "::SelectAll(%s)\n", bSelect ? "sal_True" : "sal_False" ));
+ 
+ 	ImplClear();
+ 	if ( bSelect )
+@@ -387,16 +384,16 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-BOOL MultiSelection::Select( long nIndex, BOOL bSelect )
++sal_Bool MultiSelection::Select( long nIndex, sal_Bool bSelect )
+ {
+ 	DBG_ASSERT( aTotRange.IsInside(nIndex), "selected index out of range" );
+ 
+ 	// out of range?
+ 	if ( !aTotRange.IsInside(nIndex) )
+-		return FALSE;
++		return sal_False;
+ 
+ 	// find the virtual target position
+-	ULONG nSubSelPos = ImplFindSubSelection( nIndex );
++	sal_uIntPtr nSubSelPos = ImplFindSubSelection( nIndex );
+ 
+ 	if ( bSelect )
+ 	{
+@@ -404,7 +401,7 @@
+ 		if ( nSubSelPos < aSels.Count() &&
+ 			 aSels.GetObject(nSubSelPos)->IsInside( nIndex ) )
+ 			// already selected, nothing to do
+-			return FALSE;
++			return sal_False;
+ 
+ 		// it will become selected
+ 		++nSelCount;
+@@ -440,7 +437,7 @@
+ 		{
+ 			// not selected, nothing to do
+ 			DBG(Print( this ));
+-			return FALSE;
++			return sal_False;
+ 		}
+ 
+ 		// it will become deselected
+@@ -452,7 +449,7 @@
+ 			// remove the complete sub selection
+ 			delete aSels.Remove( nSubSelPos );
+ 			DBG(Print( this ));
+-			return TRUE;
++			return sal_True;
+ 		}
+ 
+ 		// is it at the beginning of the found sub selection?
+@@ -474,20 +471,20 @@
+ 
+ 	DBG(Print( this ));
+ 
+-	return TRUE;
++	return sal_True;
+ }
+ 
+ // -----------------------------------------------------------------------
+ 
+-void MultiSelection::Select( const Range& rIndexRange, BOOL bSelect )
++void MultiSelection::Select( const Range& rIndexRange, sal_Bool bSelect )
+ {
+ 	Range* pRange;
+ 	long nOld;
+ 
+-	ULONG nTmpMin = rIndexRange.Min();
+-	ULONG nTmpMax = rIndexRange.Max();
+-	ULONG nCurMin = FirstSelected();
+-	ULONG nCurMax = LastSelected();
++	sal_uIntPtr nTmpMin = rIndexRange.Min();
++	sal_uIntPtr nTmpMax = rIndexRange.Max();
++	sal_uIntPtr nCurMin = FirstSelected();
++	sal_uIntPtr nCurMax = LastSelected();
+ 	DBG_ASSERT(aTotRange.IsInside(nTmpMax), "selected index out of range" );
+ 	DBG_ASSERT(aTotRange.IsInside(nTmpMin), "selected index out of range" );
+ 
+@@ -511,7 +508,7 @@
+ 			if( nCurMin > (nTmpMax+1)  )
+ 			{
+ 				pRange = new Range( rIndexRange );
+-				aSels.Insert( pRange, (ULONG)0 );
++				aSels.Insert( pRange, (sal_uIntPtr)0 );
+ 				nSelCount += pRange->Len();
+ 			}
+ 			else
+@@ -521,7 +518,7 @@
+ 				pRange->Min() = (long)nTmpMin;
+ 				nSelCount += ( nOld - nTmpMin );
+ 			}
+-			bCurValid = FALSE;
++			bCurValid = sal_False;
+ 		}
+ 		return;
+ 	}
+@@ -544,7 +541,7 @@
+ 				pRange->Max() = (long)nTmpMax;
+ 				nSelCount += ( nTmpMax - nOld );
+ 			}
+-			bCurValid = FALSE;
++			bCurValid = sal_False;
+ 		}
+ 		return;
+ 	}
+@@ -559,10 +556,10 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-BOOL MultiSelection::IsSelected( long nIndex ) const
++sal_Bool MultiSelection::IsSelected( long nIndex ) const
+ {
+ 	// find the virtual target position
+-	ULONG nSubSelPos = ImplFindSubSelection( nIndex );
++	sal_uIntPtr nSubSelPos = ImplFindSubSelection( nIndex );
+ 
+ 	return nSubSelPos < aSels.Count() &&
+ 		   aSels.GetObject(nSubSelPos)->IsInside(nIndex);
+@@ -575,7 +572,7 @@
+ 	DBG(DbgOutf( "::Insert(%ld, %ld)\n", nIndex, nCount ));
+ 
+ 	// find the virtual target position
+-	ULONG nSubSelPos = ImplFindSubSelection( nIndex );
++	sal_uIntPtr nSubSelPos = ImplFindSubSelection( nIndex );
+ 
+ 	// did we need to shift the sub selections?
+ 	if ( nSubSelPos < aSels.Count() )
+@@ -607,14 +604,14 @@
+ 		}
+ 
+ 		// shift the sub selections behind the inserting position
+-		for ( ULONG nPos = nSubSelPos; nPos < aSels.Count(); ++nPos )
++		for ( sal_uIntPtr nPos = nSubSelPos; nPos < aSels.Count(); ++nPos )
+ 		{
+ 			aSels.GetObject(nPos)->Min() += nCount;
+ 			aSels.GetObject(nPos)->Max() += nCount;
+ 		}
+ 	}
+ 
+-	bCurValid = FALSE;
++	bCurValid = sal_False;
+ 	aTotRange.Max() += nCount;
+ 	if ( bSelectNew )
+ 		nSelCount += nCount;
+@@ -629,7 +626,7 @@
+ 	DBG(DbgOutf( "::Remove(%ld)\n", nIndex ));
+ 
+ 	// find the virtual target position
+-	ULONG nSubSelPos = ImplFindSubSelection( nIndex );
++	sal_uIntPtr nSubSelPos = ImplFindSubSelection( nIndex );
+ 
+ 	// did we remove from an existing sub selection?
+ 	if ( nSubSelPos < aSels.Count() &&
+@@ -648,13 +645,13 @@
+ 	}
+ 
+ 	// shift the sub selections behind the removed index
+-	for ( ULONG nPos = nSubSelPos; nPos < aSels.Count(); ++nPos )
++	for ( sal_uIntPtr nPos = nSubSelPos; nPos < aSels.Count(); ++nPos )
+ 	{
+ 		--( aSels.GetObject(nPos)->Min() );
+ 		--( aSels.GetObject(nPos)->Max() );
+ 	}
+ 
+-	bCurValid = FALSE;
++	bCurValid = sal_False;
+ 	aTotRange.Max() -= 1;
+ 
+ 	DBG(Print( this ));
+@@ -712,14 +709,14 @@
+ 
+ // -----------------------------------------------------------------------
+ 
+-long MultiSelection::FirstSelected( BOOL bInverse )
++long MultiSelection::FirstSelected( sal_Bool bInverse )
+ {
+ 	bInverseCur = bInverse;
+ 	nCurSubSel = 0;
+ 
+ 	if ( bInverseCur )
+ 	{
+-		bCurValid = nSelCount < ULONG(aTotRange.Len());
++		bCurValid = nSelCount < sal_uIntPtr(aTotRange.Len());
+ 		if ( bCurValid )
+ 		{
+ 			nCurIndex = 0;
+@@ -819,7 +816,7 @@
+ 		if( pRange->Max() < aTotRange.Min() )
+ 		{
+ 			delete pRange;
+-			aSels.Remove( (ULONG)0 );
++			aSels.Remove( (sal_uIntPtr)0 );
+ 		}
+ 		else if( pRange->Min() < aTotRange.Min() )
+ 		{
+@@ -833,14 +830,14 @@
+ 	}
+ 
+ 	// die obere Bereichsgrenze anpassen
+-	ULONG nCount = aSels.Count();
++	sal_uIntPtr nCount = aSels.Count();
+ 	while( nCount )
+ 	{
+ 		pRange = aSels.GetObject( nCount - 1 );
+ 		if( pRange->Min() > aTotRange.Max() )
+ 		{
+ 			delete pRange;
+-			aSels.Remove( (ULONG)(nCount - 1) );
++			aSels.Remove( (sal_uIntPtr)(nCount - 1) );
+ 		}
+ 		else if( pRange->Max() > aTotRange.Max() )
+ 		{
+@@ -862,6 +859,300 @@
+ 		pRange = aSels.Next();
+ 	}
+ 
+-	bCurValid = FALSE;
++	bCurValid = sal_False;
+ 	nCurIndex = 0;
+ }
++
++// -----------------------------------------------------------------------
++//
++// StringRangeEnumerator
++//
++// -----------------------------------------------------------------------
++StringRangeEnumerator::StringRangeEnumerator( const rtl::OUString& i_rInput,
++                                              sal_Int32 i_nMinNumber,
++                                              sal_Int32 i_nMaxNumber,
++                                              sal_Int32 i_nLogicalOffset
++                                              )
++    : mnCount( 0 )
++    , mnMin( i_nMinNumber )
++    , mnMax( i_nMaxNumber )
++    , mnOffset( i_nLogicalOffset )                   
++{
++    setRange( i_rInput );
++}
++
++bool StringRangeEnumerator::checkValue( sal_Int32 i_nValue, const std::set< sal_Int32 >* i_pPossibleValues ) const
++{
++    if( mnMin >= 0 && i_nValue < mnMin )
++        return false;
++    if( mnMax >= 0 && i_nValue > mnMax )
++        return false;
++    if( i_nValue < 0 )
++        return false;
++    if( i_pPossibleValues && i_pPossibleValues->find( i_nValue ) == i_pPossibleValues->end() )
++        return false;
++    return true;
++}
++
++bool StringRangeEnumerator::insertRange( sal_Int32 i_nFirst, sal_Int32 i_nLast, bool bSequence, bool bMayAdjust )
++{
++    bool bSuccess = true;
++    if( bSequence )
++    {
++        if( i_nFirst == -1 )
++            i_nFirst = mnMin;
++        if( i_nLast == -1 )
++            i_nLast = mnMax;
++        if( bMayAdjust )
++        {
++            if( i_nFirst < mnMin )
++                i_nFirst = mnMin;
++            if( i_nFirst > mnMax )
++                i_nFirst = mnMax;
++            if( i_nLast < mnMin )
++                i_nLast = mnMin;
++            if( i_nLast > mnMax )
++                i_nLast = mnMax;
++        }
++        if( checkValue( i_nFirst ) && checkValue( i_nLast ) )
++        {
++            maSequence.push_back( Range( i_nFirst, i_nLast ) );
++            sal_Int32 nNumber = i_nLast - i_nFirst;
++            nNumber = nNumber < 0 ? -nNumber : nNumber;
++            mnCount += nNumber + 1;
++        }
++        else
++            bSuccess = false;
++    }
++    else
++    {
++        if( i_nFirst >= 0 )
++        {
++            if( checkValue( i_nFirst ) )
++            {
++                maSequence.push_back( Range( i_nFirst, i_nFirst ) );
++                mnCount++;
++            }
++            else
++                bSuccess = false;
++        }
++        if( i_nLast >= 0 )
++        {
++            if( checkValue( i_nLast ) )
++            {
++                maSequence.push_back( Range( i_nLast, i_nLast ) );
++                mnCount++;
++            }
++            else
++                bSuccess = false;
++        }
++    }
++    
++    return bSuccess;
++}
++
++bool StringRangeEnumerator::setRange( const rtl::OUString& i_rNewRange, bool i_bStrict )
++{
++    mnCount = 0;
++    maSequence.clear();
++
++    // we love special cases
++    if( i_rNewRange.getLength() == 0 )
++    {
++        if( mnMin >= 0 && mnMax >= 0 )
++        {
++            insertRange( mnMin, mnMax, mnMin != mnMax, ! i_bStrict );
++        }
++        return true;
++    }
++    
++    const sal_Unicode* pInput = i_rNewRange.getStr();
++    rtl::OUStringBuffer aNumberBuf( 16 );
++    sal_Int32 nLastNumber = -1, nNumber = -1;
++    bool bSequence = false;
++    bool bSuccess = true;
++    while( *pInput )
++    {
++        while( *pInput >= sal_Unicode('0') && *pInput <= sal_Unicode('9') )
++            aNumberBuf.append( *pInput++ );
++        if( aNumberBuf.getLength() )
++        {
++            if( nNumber != -1 )
++            {
++                if( bSequence )
++                {
++                    if( ! insertRange( nLastNumber, nNumber, true, ! i_bStrict ) && i_bStrict )
++                    {
++                        bSuccess = false;
++                        break;
++                    }
++                    nLastNumber = -1;
++                }
++                else
++                {
++                    if( ! insertRange( nNumber, nNumber, false, ! i_bStrict ) && i_bStrict )
++                    {
++                        bSuccess = false;
++                        break;
++                    }
++                }
++            }
++            nNumber = aNumberBuf.makeStringAndClear().toInt32();
++            nNumber += mnOffset;
++        }
++        bool bInsertRange = false;
++        if( *pInput == sal_Unicode('-') )
++        {
++            nLastNumber = nNumber;
++            nNumber = -1;
++            bSequence = true;
++        }
++        else if( *pInput == ' ' )
++        {
++        }
++        else if( *pInput == sal_Unicode(',') || *pInput == sal_Unicode(';') )
++            bInsertRange = true;
++        else if( *pInput )
++        {
++            
++            bSuccess = false;
++            break; // parse error
++        }
++        
++        if( bInsertRange )
++        {
++            if( ! insertRange( nLastNumber, nNumber, bSequence, ! i_bStrict ) && i_bStrict )
++            {
++                bSuccess = false;
++                break;
++            }
++            nNumber = nLastNumber = -1;
++            bSequence = false;
++        }
++        if( *pInput )
++            pInput++;
++    }
++    // insert last entries
++    insertRange( nLastNumber, nNumber, bSequence, ! i_bStrict );
++    
++    return bSuccess;
++}
++
++bool StringRangeEnumerator::hasValue( sal_Int32 i_nValue, const std::set< sal_Int32 >* i_pPossibleValues ) const
++{
++    if( i_pPossibleValues && i_pPossibleValues->find( i_nValue ) == i_pPossibleValues->end() )
++        return false;
++    size_t n = maSequence.size();
++    for( size_t i= 0; i < n; ++i )
++    {
++        const StringRangeEnumerator::Range rRange( maSequence[i] );
++        if( rRange.nFirst < rRange.nLast )
++        {
++            if( i_nValue >= rRange.nFirst && i_nValue <= rRange.nLast )
++                return true;
++        }
++        else
++        {
++            if( i_nValue >= rRange.nLast && i_nValue <= rRange.nFirst )
++                return true;
++        }
++    }
++    return false;
++}
++
++StringRangeEnumerator::Iterator& StringRangeEnumerator::Iterator::operator++()
++{
++    if( nRangeIndex >= 0 && nCurrent >= 0 && pEnumerator )
++    {
++        const StringRangeEnumerator::Range& rRange( pEnumerator->maSequence[nRangeIndex] );
++        bool bRangeChange = false;
++        if( rRange.nLast < rRange.nFirst )
++        {
++            // backward range
++            if( nCurrent > rRange.nLast )
++                nCurrent--;
++            else
++                bRangeChange = true;
++        }
++        else
++        {
++            // forward range
++            if( nCurrent < rRange.nLast )
++                nCurrent++;
++            else
++                bRangeChange = true;
++        }
++        if( bRangeChange )
++        {
++            nRangeIndex++;
++            if( size_t(nRangeIndex) == pEnumerator->maSequence.size() )
++            {
++                // reached the end
++                nRangeIndex = nCurrent = -1;
++            }
++            else
++                nCurrent = pEnumerator->maSequence[nRangeIndex].nFirst;
++        }
++        if( nRangeIndex != -1 && nCurrent != -1 )
++        {
++            if( ! pEnumerator->checkValue( nCurrent, pPossibleValues ) )
++                return ++(*this);
++        }
++    }
++    return *this;
++}
++
++sal_Int32 StringRangeEnumerator::Iterator::operator*() const
++{
++    return nCurrent;
++}
++
++bool StringRangeEnumerator::Iterator::operator==( const Iterator& i_rCompare ) const
++{
++    return i_rCompare.pEnumerator == pEnumerator && i_rCompare.nRangeIndex == nRangeIndex && i_rCompare.nCurrent == nCurrent;
++}
++
++StringRangeEnumerator::Iterator StringRangeEnumerator::begin( const std::set< sal_Int32 >* i_pPossibleValues ) const
++{
++    StringRangeEnumerator::Iterator it( this,
++                                        i_pPossibleValues,
++                                        maSequence.empty() ? -1 : 0,
++                                        maSequence.empty() ? -1 : maSequence[0].nFirst );
++    if( ! checkValue(*it, i_pPossibleValues ) )
++        ++it;
++    return it;
++}
++
++StringRangeEnumerator::Iterator StringRangeEnumerator::end( const std::set< sal_Int32 >* i_pPossibleValues ) const
++{
++    return StringRangeEnumerator::Iterator( this, i_pPossibleValues, -1, -1 );
++}
++
++bool StringRangeEnumerator::getRangesFromString( const OUString& i_rPageRange,
++                                                 std::vector< sal_Int32 >& o_rPageVector,
++                                                 sal_Int32 i_nMinNumber,
++                                                 sal_Int32 i_nMaxNumber,
++                                                 sal_Int32 i_nLogicalOffset,
++                                                 std::set< sal_Int32 >* i_pPossibleValues
++                                               )
++{
++    StringRangeEnumerator aEnum;
++    aEnum.setMin( i_nMinNumber );
++    aEnum.setMax( i_nMaxNumber );
++    aEnum.setLogicalOffset( i_nLogicalOffset );
++
++    bool bRes = aEnum.setRange( i_rPageRange );
++    if( bRes )
++    {
++        o_rPageVector.clear();
++        o_rPageVector.reserve( aEnum.size() );
++        for( StringRangeEnumerator::Iterator it = aEnum.begin( i_pPossibleValues );
++             it != aEnum.end( i_pPossibleValues ); ++it )
++        {
++            o_rPageVector.push_back( *it );
++        }
++    }
++
++    return bRes;
++}
++
