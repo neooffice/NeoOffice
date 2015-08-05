@@ -1,4 +1,4 @@
---- inc/svx/svdoashp.hxx.bak	2015-07-02 19:42:39.000000000 -0700
+--- inc/svx/svdoashp.hxx	2015-07-02 19:42:39.000000000 -0700
 +++ inc/svx/svdoashp.hxx	2015-08-04 20:07:06.000000000 -0700
 @@ -26,6 +26,14 @@
   * <http://www.openoffice.org/license.html>
@@ -35,7 +35,7 @@
  	virtual FASTBOOL AdjustTextFrameWidthAndHeight(Rectangle& rR, FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE) const;
  	virtual FASTBOOL NbcAdjustTextFrameWidthAndHeight(FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE);
  	virtual FASTBOOL AdjustTextFrameWidthAndHeight(FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE);
---- source/svdraw/svdoashp.cxx.bak	2015-07-02 19:42:39.000000000 -0700
+--- source/svdraw/svdoashp.cxx	2015-07-02 19:42:39.000000000 -0700
 +++ source/svdraw/svdoashp.cxx	2015-08-04 20:10:15.000000000 -0700
 @@ -26,6 +26,14 @@
   * <http://www.openoffice.org/license.html>
@@ -104,3 +104,335 @@
  			if ( nWdt < nMinWdt )
  				nWdt = nMinWdt;
  			if ( nWdt > nMaxWdt )
+--- ./inc/svx/escherex.hxx	2015-07-02 19:42:33.000000000 -0700
++++ ./inc/svx/escherex.hxx	2015-08-04 20:48:24.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ #ifndef _SVX_ESCHEREX_HXX
+@@ -1405,6 +1413,9 @@
+ 		BOOL					mbEscherDgg;
+ 		BOOL					mbEscherDg;
+ 		BOOL					mbOleEmf;					// OLE is EMF instead of WMF
++#if SUPD == 310
++        rtl::OUString               mEditAs;
++#endif	// SUPD == 310
+ 
+ 
+ 		virtual BOOL DoSeek( UINT32 nKey );
+@@ -1432,6 +1443,10 @@
+ 		virtual BOOL InsertAtPersistOffset( UINT32 nKey, UINT32 nValue );// nValue wird im Stream an entrsprechender Stelle eingefuegt(overwrite modus), ohne dass sich die
+ 																	// aktuelle StreamPosition aendert
+ 
++#if SUPD == 310
++    void            SetEditAs( const rtl::OUString& rEditAs );
++    rtl::OUString   GetEditAs() { return mEditAs; }
++#endif	// SUPD == 310
+ 		SvStream&	GetStream() const	{ return *mpOutStrm; }
+ 		ULONG	GetStreamPos() const	{ return mpOutStrm->Tell(); }
+ 
+--- ./inc/svx/msocximex.hxx	2015-07-02 19:42:28.000000000 -0700
++++ ./inc/svx/msocximex.hxx	2015-08-04 20:49:41.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ #ifndef _MSOCXIMEX_HXX
+ #define _MSOCXIMEX_HXX
+@@ -71,6 +79,11 @@
+         namespace uno{
+                 class XComponentContext;
+         }
++#if SUPD == 310
++        namespace frame{
++                class XModel;
++        }
++#endif	// SUPD == 310
+ 
+ }}}
+ 
+@@ -94,6 +107,9 @@
+ class SVX_DLLPUBLIC SvxMSConvertOCXControls
+ {
+ public:
++#if SUPD == 310
++    SvxMSConvertOCXControls( const  ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& xModel );
++#endif	// SUPD == 310
+     SvxMSConvertOCXControls( SfxObjectShell *pDSh,SwPaM *pP );
+     virtual ~SvxMSConvertOCXControls();
+ 
+@@ -155,6 +171,9 @@
+ 	const com::sun::star::uno::Reference<
+ 		com::sun::star::container::XIndexContainer > & 	GetFormComps();
+ 
++#if SUPD == 310
++    ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel > mxModel;
++#endif	// SUPD == 310
+ 	SfxObjectShell *pDocSh;
+ 	SwPaM *pPaM;
+ 
+--- ./inc/svx/svdobj.hxx	2009-01-20 02:49:16.000000000 -0800
++++ ./inc/svx/svdobj.hxx	2015-08-04 21:55:51.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ #ifndef _SVDOBJ_HXX
+@@ -77,6 +85,9 @@
+ class SfxPoolItem;
+ class SdrVirtObj;
+ class SdrDragView;
++#if SUPD == 310
++class SfxGrabBagItem;
++#endif	// SUPD == 310
+ 
+ namespace sdr
+ {
+@@ -1122,6 +1133,10 @@
+ 	/** do not use directly, always use getSvxShape() if you have to! */
+ 	SvxShape* mpSvxShape;
+ 
++#if SUPD == 310
++    SfxGrabBagItem*             pGrabBagItem; // holds the GrabBagItem property
++#endif	// SUPD == 310
++
+ };
+ 
+ //************************************************************
+--- ./inc/svx/ulspitem.hxx	2008-04-10 13:44:47.000000000 -0700
++++ ./inc/svx/ulspitem.hxx	2015-08-04 21:08:20.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ #ifndef _SVX_ULSPITEM_HXX
+ #define _SVX_ULSPITEM_HXX
+@@ -56,6 +64,9 @@
+ {
+ 	USHORT nUpper;  //Oberer Rand
+ 	USHORT nLower;  //Unterer Rand
++#if SUPD == 310
++    bool       bContext; // Contextual spacing?
++#endif	// SUPD == 310
+ 	USHORT nPropUpper, nPropLower;		// relativ oder absolut (=100%)
+ public:
+ 	TYPEINFO();
+@@ -88,11 +99,17 @@
+ 
+ 	void SetUpperValue( const USHORT nU ) { nUpper = nU; }
+ 	void SetLowerValue( const USHORT nL ) { nLower = nL; }
++#if SUPD == 310
++    void SetContextValue( const bool bC )     { bContext = bC; }
++#endif	// SUPD == 310
+ 	void SetPropUpper( const USHORT nU ) { nPropUpper = nU; }
+ 	void SetPropLower( const USHORT nL ) { nPropLower = nL; }
+ 
+ 	USHORT GetUpper() const { return nUpper; }
+ 	USHORT GetLower() const { return nLower; }
++#if SUPD == 310
++    bool GetContext() const { return bContext; }
++#endif	// SUPD == 310
+ 	USHORT GetPropUpper() const { return nPropUpper; }
+ 	USHORT GetPropLower() const { return nPropLower; }
+ };
+--- ./source/items/frmitems.cxx	2008-11-10 08:06:12.000000000 -0800
++++ ./source/items/frmitems.cxx	2015-08-04 21:35:45.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ // MARKER(update_precomp.py): autogen include statement, do not remove
+@@ -822,6 +830,9 @@
+ 
+     nUpper( 0 ),
+     nLower( 0 ),
++#if SUPD == 310
++    bContext( false ),
++#endif	// SUPD == 310
+     nPropUpper( 100 ),
+     nPropLower( 100 )
+ {
+@@ -836,6 +847,9 @@
+ 
+     nUpper( nUp  ),
+     nLower( nLow ),
++#if SUPD == 310
++    bContext( false ),
++#endif	// SUPD == 310
+     nPropUpper( 100 ),
+     nPropLower( 100 )
+ {
+@@ -932,6 +946,9 @@
+ 
+ 	return ( nUpper == ( (SvxULSpaceItem&)rAttr ).nUpper &&
+ 			 nLower == ( (SvxULSpaceItem&)rAttr ).nLower &&
++#if SUPD == 310
++			 bContext == ( (SvxULSpaceItem&)rAttr ).bContext &&
++#endif	// SUPD == 310
+ 			 nPropUpper == ( (SvxULSpaceItem&)rAttr ).nPropUpper &&
+ 			 nPropLower == ( (SvxULSpaceItem&)rAttr ).nPropLower );
+ }
+--- ./source/msfilter/escherex.cxx	2015-07-02 19:42:34.000000000 -0700
++++ ./source/msfilter/escherex.cxx	2015-08-04 21:16:01.000000000 -0700
+@@ -4455,6 +4455,15 @@
+ 	PtInsert( ESCHER_Persist_PrivateEntry | nKey, nOffset );
+ }
+ 
++#if SUPD == 310
++
++void EscherEx::SetEditAs( const OUString& rEditAs )
++{
++    mEditAs = rEditAs;
++}
++
++#endif	// SUPD == 310
++
+ // ---------------------------------------------------------------------------------------------
+ 
+ BOOL EscherEx::DoSeek( UINT32 nKey )
+--- ./source/msfilter/msocximex.cxx	2015-07-02 19:42:28.000000000 -0700
++++ ./source/msfilter/msocximex.cxx	2015-08-04 21:18:10.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ // MARKER(update_precomp.py): autogen include statement, do not remove
+@@ -1194,6 +1202,17 @@
+ const uno::Reference< drawing::XDrawPage >&
+ 	SvxMSConvertOCXControls::GetDrawPage()
+ {
++#if SUPD == 310
++    if( !xDrawPage.is() && mxModel.is() )
++    {
++        uno::Reference< drawing::XDrawPageSupplier > xTxtDoc(mxModel,
++            uno::UNO_QUERY);
++        OSL_ENSURE(xTxtDoc.is(),"no XDrawPageSupplier from XModel");
++        xDrawPage = xTxtDoc->getDrawPage();
++        OSL_ENSURE( xDrawPage.is(), "no XDrawPage" );
++    }
++#endif	// SUPD == 310
++
+ 	if( !xDrawPage.is() && pDocSh )
+ 	{
+ 		uno::Reference< drawing::XDrawPageSupplier > xTxtDoc(pDocSh->GetModel(),
+@@ -1210,6 +1229,16 @@
+ const uno::Reference< lang::XMultiServiceFactory >&
+ 	SvxMSConvertOCXControls::GetServiceFactory()
+ {
++#if SUPD == 310
++    if( !xServiceFactory.is() && mxModel.is() )
++    {
++        xServiceFactory = uno::Reference< lang::XMultiServiceFactory >
++            (mxModel, uno::UNO_QUERY);
++        OSL_ENSURE( xServiceFactory.is(),
++                "no XMultiServiceFactory from doc Model" );
++    }
++#endif	// SUPD == 310
++
+ 	if( !xServiceFactory.is() && pDocSh )
+ 	{
+ 		xServiceFactory = uno::Reference< lang::XMultiServiceFactory >
+@@ -4648,6 +4677,17 @@
+ 
+ const int NO_OCX = sizeof( aOCXTab ) / sizeof( *aOCXTab );
+ 
++#if SUPD == 310
++
++SvxMSConvertOCXControls::SvxMSConvertOCXControls( const uno::Reference< frame::XModel >& rxModel) : mxModel(rxModel)
++#if SUPD == 310
++    , pDocSh(0), pPaM(0), nEdit(0), nCheckbox(0)
++#endif	// SUPD == 310
++{
++}
++
++#endif	// SUPD == 310
++
+ SvxMSConvertOCXControls::SvxMSConvertOCXControls(SfxObjectShell *pDSh, SwPaM *pP) :
+     pDocSh(pDSh), pPaM(pP), nEdit(0), nCheckbox(0)
+ {
+--- ./source/svdraw/svdobj.cxx	2009-07-17 00:24:42.000000000 -0700
++++ ./source/svdraw/svdobj.cxx	2015-08-04 21:55:12.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ // MARKER(update_precomp.py): autogen include statement, do not remove
+@@ -441,6 +449,9 @@
+     mnNavigationPosition(SAL_MAX_UINT32),
+ 	mnLayerID(0),
+ 	mpSvxShape(0)
++#if SUPD == 310
++    ,pGrabBagItem(NULL)
++#endif	// SUPD == 310
+ {
+ 	DBG_CTOR(SdrObject,NULL);
+ 	bVirtObj         =FALSE;

@@ -1508,7 +1508,7 @@ class SVX_DLLPUBLIC EscherEx : public EscherPersistTable, public EscherGraphicPr
 		BOOL					mbEscherDg;
 		BOOL					mbOleEmf;					// OLE is EMF instead of WMF
 #if SUPD == 310
-        OUString                    mEditAs;
+        rtl::OUString               mEditAs;
 #endif	// SUPD == 310
 
 
@@ -1538,7 +1538,7 @@ class SVX_DLLPUBLIC EscherEx : public EscherPersistTable, public EscherGraphicPr
 																	// aktuelle StreamPosition aendert
 
 #if SUPD == 310
-    void            SetEditAs( const OUString& rEditAs );
+    void            SetEditAs( const rtl::OUString& rEditAs );
     rtl::OUString   GetEditAs() { return mEditAs; }
 #endif	// SUPD == 310
 		SvStream&	GetStream() const	{ return *mpOutStrm; }
