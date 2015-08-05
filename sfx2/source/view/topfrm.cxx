@@ -1386,6 +1386,9 @@ SfxTopViewFrame::SfxTopViewFrame
 */
 
     : SfxViewFrame( *(new SfxBindings), pFrame, pObjShell, SFXFRAME_HASTITLE )
+#ifdef MACOSX
+    , bNeedsUpdateTitle( FALSE )
+#endif	// MACOSX
 {
 	DBG_CTOR(SfxTopViewFrame, 0);
 

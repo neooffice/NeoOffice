@@ -542,9 +542,9 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog( Window *pParent,
 	pViewSh		( pViewShell ),
 	pOptions	( pSet->Clone() ),
 	pPage		( NULL )
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
 	, bShowPrintSetupDialog	( true )
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
 
 {
 	SetText( SfxResId( STR_PRINT_OPTIONS_TITLE ) );

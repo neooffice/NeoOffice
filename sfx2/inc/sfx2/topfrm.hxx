@@ -39,9 +39,9 @@
 #include <sfx2/frame.hxx>
 #include <sfx2/viewfrm.hxx>
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
 #include <vcl/timer.hxx>
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
 
 class SfxViewShell;
 class SfxTopFrame;
@@ -95,10 +95,10 @@ friend class SfxTopViewFrame_Impl;
 
 	SfxTopViewFrame_Impl*	pImp;
     svtools::AsynchronLink* pCloser;
-#if defined USE_JAVA && defined MACOSX
+#ifdef MACOSX
     BOOL					bNeedsUpdateTitle;
     Timer					aTimer;
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
 
 protected:
 
