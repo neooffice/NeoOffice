@@ -276,6 +276,7 @@ build.oo_patches: \
 	build.oo_scp2_patch \
 	build.oo_solenv_patch \
 	build.oo_soltools_patch \
+	build.oo_svx_patch \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
 	build.oo_ucb_patch \

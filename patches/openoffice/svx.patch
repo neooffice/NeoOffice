@@ -1,0 +1,106 @@
+--- inc/svx/svdoashp.hxx.bak	2015-07-02 19:42:39.000000000 -0700
++++ inc/svx/svdoashp.hxx	2015-08-04 20:07:06.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ #ifndef _SVDOASHP_HXX
+@@ -139,6 +147,9 @@
+ protected:
+ 
+ 	String		aName;
++#if SUPD == 310
++    Size          m_aSuggestedTextFrameSize;
++#endif	// SUPD == 310
+ 
+ public:
+ 
+@@ -212,6 +223,9 @@
+ 	virtual FASTBOOL MovCreate(SdrDragStat& rStat);	// #i37448#
+ 	virtual FASTBOOL EndCreate(SdrDragStat& rStat, SdrCreateCmd eCmd);
+ 
++#if SUPD == 310
++    void SuggestTextFrameSize(Size aSuggestedTextFrameSize);
++#endif	// SUPD == 310
+ 	virtual FASTBOOL AdjustTextFrameWidthAndHeight(Rectangle& rR, FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE) const;
+ 	virtual FASTBOOL NbcAdjustTextFrameWidthAndHeight(FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE);
+ 	virtual FASTBOOL AdjustTextFrameWidthAndHeight(FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE);
+--- source/svdraw/svdoashp.cxx.bak	2015-07-02 19:42:39.000000000 -0700
++++ source/svdraw/svdoashp.cxx	2015-08-04 20:10:15.000000000 -0700
+@@ -26,6 +26,14 @@
+  * <http://www.openoffice.org/license.html>
+  * for a copy of the LGPLv3 License.
+  *
++ * This file incorporates work covered by the following license notice:
++ *
++ *   Portions of this file are part of the LibreOffice project.
++ *
++ *   This Source Code Form is subject to the terms of the Mozilla Public
++ *   License, v. 2.0. If a copy of the MPL was not distributed with this
++ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
++ *
+  ************************************************************************/
+ 
+ // MARKER(update_precomp.py): autogen include statement, do not remove
+@@ -2520,9 +2528,25 @@
+ 		}
+ 	}
+ }
++
++#if SUPD == 310
++
++void SdrObjCustomShape::SuggestTextFrameSize(Size aSuggestedTextFrameSize)
++{
++    m_aSuggestedTextFrameSize = aSuggestedTextFrameSize;
++}
++
++#endif	// SUPD == 310
++
+ FASTBOOL SdrObjCustomShape::AdjustTextFrameWidthAndHeight(Rectangle& rR, FASTBOOL bHgt, FASTBOOL bWdt) const
+ {
++#if SUPD == 310
++    // Either we have text or the application has native text and suggested its size to us.
++    bool bHasText = HasText() || (m_aSuggestedTextFrameSize.Width() != 0 && m_aSuggestedTextFrameSize.Height() != 0);
++    if ( pModel && bHasText && !rR.IsEmpty() )
++#else	// SUPD == 310
+  	if ( pModel && HasText() && !rR.IsEmpty() )
++#endif	// SUPD == 310
+ 	{
+ 		FASTBOOL bWdtGrow=bWdt && IsAutoGrowWidth();
+ 		FASTBOOL bHgtGrow=bHgt && IsAutoGrowHeight();
+@@ -2561,6 +2585,10 @@
+ 			if ( aSiz.Height() < 2 )
+ 				aSiz.Height() = 2; // Mindestgroesse 2
+ 
++#if SUPD == 310
++            if (HasText())
++            {
++#endif	// SUPD == 310
+ 			if(pEdtOutl)
+ 			{
+ 				pEdtOutl->SetMaxAutoPaperSize( aSiz );
+@@ -2598,6 +2626,14 @@
+ 					nHgt = rOutliner.GetTextHeight()+1; // lieber etwas Tolleranz
+ 				rOutliner.Clear();
+ 			}
++#if SUPD == 310
++            }
++            else
++            {
++                nHgt = m_aSuggestedTextFrameSize.Height();
++                nWdt = m_aSuggestedTextFrameSize.Width();
++            }
++#endif	// SUPD == 310
+ 			if ( nWdt < nMinWdt )
+ 				nWdt = nMinWdt;
+ 			if ( nWdt > nMaxWdt )
