@@ -25,6 +25,14 @@
  * Modified February 2010 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -165,6 +173,11 @@
 #include "macdictlookup.hrc"
 
 #endif	// USE_JAVA && MACOSX
+
+#if SUPD == 310
+#include <dcontact.hxx>
+#include <textboxhelper.hxx>
+#endif	// SUPD == 310
 
 //JP 11.10.2001: enable test code for bug fix 91313
 #if !defined( PRODUCT ) && (OSL_DEBUG_LEVEL > 1)
@@ -3986,6 +3999,38 @@ void SwEditWin::MouseButtonUp(const MouseEvent& rMEvt)
 			bFrmDrag = FALSE;
 		}
 		bNoInterrupt = FALSE;
+
+#if SUPD == 310
+        const Point aDocPos( PixelToLogic( rMEvt.GetPosPixel() ) );
+#ifdef USE_JAVA
+        if ((PixelToLogic(aStartPos).Y() == (aDocPos.Y())) && (PixelToLogic(aStartPos).X() == (aDocPos.X())))//To make sure it was not moved
+#else	// USE_JAVA
+        if ((PixelToLogic(m_aStartPos).Y() == (aDocPos.Y())) && (PixelToLogic(m_aStartPos).X() == (aDocPos.X())))//To make sure it was not moved
+#endif	// USE_JAVA
+        {
+            SdrObject* pObj;
+            SdrPageView* pPV;
+            if (pSdrView && pSdrView->PickObj(aDocPos, pSdrView->getHitTolLog(), pObj, pPV, SDRSEARCH_ALSOONMASTER ))
+            {
+                std::map<SwFrmFmt*, SwFrmFmt*> aTextBoxShapes = SwTextBoxHelper::findShapes(rSh.GetDoc());
+                SwDrawContact* pDrawContact = static_cast<SwDrawContact*>(GetUserCall(pObj));
+                SwFrmFmt* pFmt = pDrawContact->GetFmt();
+                if (aTextBoxShapes.find(pFmt) == aTextBoxShapes.end())
+                {
+                    pSdrView->UnmarkAllObj();
+                    pSdrView->MarkObj(pObj,pPV,false,false);
+                }
+                else
+                {
+                    // If the fly frame is a textbox of a shape, then select the shape instead.
+                    SdrObject* pShape = aTextBoxShapes[pFmt]->FindSdrObject();
+                    pSdrView->UnmarkAllObj();
+                    pSdrView->MarkObj(pShape, pPV, false, false);
+                }
+            }
+        }
+#endif	// SUPD == 310
+
 		ReleaseMouse();
 		return;
 	}

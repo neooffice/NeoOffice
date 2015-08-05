@@ -54,25 +54,20 @@ public:
 
     /// Sync property of TextBox with the one of the shape.
     static void syncProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 nMemberID, const css::uno::Any& rValue);
-#if SUPD != 310
     /// Does the same, but works on properties which lack an sw-specific WID / MemberID.
     static void syncProperty(SwFrmFmt* pShape, const OUString& rPropertyName, const css::uno::Any& rValue);
     /// Get a property of the underlying TextFrame.
     static void getProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 nMemberID, css::uno::Any& rValue);
-#endif	// SUPD != 310
 
     /// Similar to syncProperty(), but used by the internal API (e.g. for UI purposes).
     static void syncFlyFrmAttr(SwFrmFmt& rShape, SfxItemSet& rSet);
 
     /// If we have an associated TextFrame, then return that.
     static SwFrmFmt* findTextBox(const SwFrmFmt* pShape);
-#if SUPD != 310
     static SwFrmFmt* findTextBox(css::uno::Reference<css::drawing::XShape> xShape);
-#endif	// SUPD != 310
     /// Return the textbox rectangle of a draw shape (in twips).
     static Rectangle getTextRectangle(SwFrmFmt* pShape, bool bAbsolute = true);
 
-#if SUPD != 310
     /// Look up TextFrames in a document, which are in fact TextBoxes.
     static std::set<const SwFrmFmt*> findTextBoxes(const SwDoc* pDoc);
     /**
@@ -90,16 +85,13 @@ public:
     static css::uno::Any getByIndex(SdrPage* pPage, sal_Int32 nIndex, std::set<const SwFrmFmt*>& rTextBoxes) throw(css::lang::IndexOutOfBoundsException);
     /// Get the order of the shape, excluding TextBoxes.
     static sal_Int32 getOrdNum(const SdrObject* pObject, std::set<const SwFrmFmt*>& rTextBoxes);
-#endif	// SUPD != 310
 
     /// Saves the current shape -> textbox links in a map, so they can be restored later.
     static void saveLinks(const SwFrmFmts& rFormats, std::map<const SwFrmFmt*, const SwFrmFmt*>& rLinks);
-#if SUPD != 310
     /// Reset the shape -> textbox link on the shape, and save it to the map, so it can be restored later.
     static void resetLink(SwFrmFmt* pShape, std::map<const SwFrmFmt*, SwFmtCntnt>& rOldContent);
     /// Undo the effect of saveLinks() + individual resetLink() calls.
     static void restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrmFmt*>& rNew, SavedLink& rSavedLinks, SavedContent& rResetContent);
-#endif	// SUPD != 310
 };
 
 #endif // INCLUDED_SW_INC_TEXTBOXHELPER_HXX

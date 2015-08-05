@@ -126,6 +126,10 @@
 
 #include <toolkit/helper/vclunohelper.hxx>
 
+#if SUPD == 310
+#include <textboxhelper.hxx>
+#endif	// SUPD == 310
+
 // from fefly1.cxx
 extern sal_Bool lcl_ChkAndSetNewAnchor( const SwFlyFrm& rFly, SfxItemSet& rSet );
 
@@ -1385,7 +1389,14 @@ void SwXFrame::setPropertyValue(const OUString& rPropertyName, const uno::Any& a
 		{
 			sal_Int32 nZOrder = - 1;
 			aValue >>= nZOrder;
+
+#if SUPD == 310
+            // Don't set an explicit ZOrder on TextBoxes.
+            std::set<const SwFrmFmt*> aTextBoxes = SwTextBoxHelper::findTextBoxes(pDoc);
+            if( nZOrder >= 0 && aTextBoxes.find(pFmt) == aTextBoxes.end())
+#else	// SUPD == 310
 			if( nZOrder >= 0)
+#endif	// SUPD == 310
 			{
 				SdrObject* pObject =
 					GetOrCreateSdrObject( (SwFlyFrmFmt*)pFmt );
