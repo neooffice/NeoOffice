@@ -58,9 +58,15 @@
 #include <com/sun/star/text/XTextDocument.hpp>
 
 #if SUPD == 310
+
 #include <rootfrm.hxx>
 #include <sal/log.hxx>
 #include <tools/mapunit.hxx>
+
+// Fix crashing when opening .docx documents with text boxes by not attaching
+// the start of the section node to the shape
+#define NO_LIBO_ATTACH_START_OF_SECTION_NODE_TO_SHAPE
+
 #endif	// SUPD == 310
 
 using namespace com::sun::star;
@@ -115,6 +121,7 @@ void SwTextBoxHelper::create(SwFrmFmt* pShape)
         if (sw::XTextRangeToSwPaM(aInternalPaM, xTextBox))
 #endif	// SUPD == 310
         {
+#ifndef NO_LIBO_ATTACH_START_OF_SECTION_NODE_TO_SHAPE
             SwAttrSet aSet(pShape->GetAttrSet());
 #if SUPD == 310
             SwFmtCntnt aCntnt(aInternalPaM.GetNode()->StartOfSectionNode());
@@ -123,6 +130,7 @@ void SwTextBoxHelper::create(SwFrmFmt* pShape)
 #endif	// SUPD == 310
             aSet.Put(aCntnt);
             pShape->SetFmtAttr(aSet);
+#endif	// !NO_LIBO_ATTACH_START_OF_SECTION_NODE_TO_SHAPE
         }
 
         // Also initialize the properties, which are not constant, but inherited from the shape's ones.
