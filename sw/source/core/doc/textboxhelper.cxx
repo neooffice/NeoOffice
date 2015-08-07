@@ -63,6 +63,10 @@
 #include <sal/log.hxx>
 #include <tools/mapunit.hxx>
 
+// Disable text boxes since only a portion of the LibreOffice 4.4.2.2 code has
+// been backported
+#define NO_LIBO_TEXT_BOXES_FOR_SHAPES
+
 // Fix crashing when opening .docx documents with text boxes by not attaching
 // the start of the section node to the shape
 #define NO_LIBO_ATTACH_START_OF_SECTION_NODE_TO_SHAPE
@@ -73,6 +77,7 @@ using namespace com::sun::star;
 
 void SwTextBoxHelper::create(SwFrmFmt* pShape)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     // If TextBox wasn't enabled previously
     if (!pShape->GetAttrSet().HasItem(RES_CNTNT))
     {
@@ -160,10 +165,12 @@ void SwTextBoxHelper::create(SwFrmFmt* pShape)
         syncProperty(pShape, RES_TEXT_VERT_ADJUST, 0, xShapePropertySet->getPropertyValue(UNO_NAME_TEXT_VERT_ADJUST));
 #endif	// SUPD == 310
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::destroy(SwFrmFmt* pShape)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     // If a TextBox was enabled previously
     if (pShape->GetAttrSet().HasItem(RES_CNTNT))
     {
@@ -180,11 +187,13 @@ void SwTextBoxHelper::destroy(SwFrmFmt* pShape)
             pShape->GetDoc()->getIDocumentLayoutAccess().DelLayoutFmt(pFmt);
 #endif	// SUPD == 310
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwDoc* pDoc)
 {
     std::set<const SwFrmFmt*> aTextBoxes;
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     std::map<SwNodeIndex, const SwFrmFmt*> aFlyFormats, aDrawFormats;
 
 #if SUPD == 310
@@ -224,12 +233,14 @@ std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwDoc* pDoc)
         }
     }
 
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
     return aTextBoxes;
 }
 
 std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwNode& rNode)
 {
     const SwDoc* pDoc = rNode.GetDoc();
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     const SwCntntNode* pCntntNode = 0;
     const SwCntntFrm* pCntntFrm = 0;
 #if SUPD == 310
@@ -262,6 +273,7 @@ std::set<const SwFrmFmt*> SwTextBoxHelper::findTextBoxes(const SwNode& rNode)
     else
         // If necessary, here we could manually limit the returned set to the
         // ones which are anchored to rNode, but currently no need to do so.
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
         return findTextBoxes(pDoc);
 }
 
@@ -269,6 +281,7 @@ std::map<SwFrmFmt*, SwFrmFmt*> SwTextBoxHelper::findShapes(const SwDoc* pDoc)
 {
     std::map<SwFrmFmt*, SwFrmFmt*> aRet;
 
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
 #if SUPD == 310
     const SwSpzFrmFmts& rSpzFrmFmts = *pDoc->GetSpzFrmFmts();
     for (sal_uInt16 i = 0; i < rSpzFrmFmts.Count(); i++)
@@ -289,6 +302,7 @@ std::map<SwFrmFmt*, SwFrmFmt*> SwTextBoxHelper::findShapes(const SwDoc* pDoc)
             aRet[pTextBox] = *it;
 #endif	// SUPD == 310
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 
     return aRet;
 }
@@ -303,12 +317,14 @@ bool lcl_isTextBox(SdrObject* pSdrObject, std::set<const SwFrmFmt*>& rTextBoxes)
 sal_Int32 SwTextBoxHelper::getCount(SdrPage* pPage, std::set<const SwFrmFmt*>& rTextBoxes)
 {
     sal_Int32 nRet = 0;
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     for (size_t i = 0; i < pPage->GetObjCount(); ++i)
     {
         if (lcl_isTextBox(pPage->GetObj(i), rTextBoxes))
             continue;
         ++nRet;
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
     return nRet;
 }
 
@@ -318,6 +334,7 @@ uno::Any SwTextBoxHelper::getByIndex(SdrPage* pPage, sal_Int32 nIndex, std::set<
         throw lang::IndexOutOfBoundsException();
 
     SdrObject* pRet = 0;
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     sal_Int32 nCount = 0; // Current logical index.
     for (size_t i = 0; i < pPage->GetObjCount(); ++i)
     {
@@ -331,11 +348,13 @@ uno::Any SwTextBoxHelper::getByIndex(SdrPage* pPage, sal_Int32 nIndex, std::set<
         ++nCount;
     }
     assert(pRet);
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
     return pRet ? uno::makeAny(uno::Reference<drawing::XShape>(pRet->getUnoShape(), uno::UNO_QUERY)) : uno::Any();
 }
 
 sal_Int32 SwTextBoxHelper::getOrdNum(const SdrObject* pObject, std::set<const SwFrmFmt*>& rTextBoxes)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (const SdrPage* pPage = pObject->GetPage())
     {
         sal_Int32 nOrder = 0; // Current logical order.
@@ -348,6 +367,7 @@ sal_Int32 SwTextBoxHelper::getOrdNum(const SdrObject* pObject, std::set<const Sw
             ++nOrder;
         }
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 
     SAL_WARN("sw.core", "SwTextBoxHelper::getOrdNum: no page or page doesn't contain the object");
     return pObject->GetOrdNum();
@@ -366,6 +386,7 @@ SwFrmFmt* SwTextBoxHelper::findTextBox(const SwFrmFmt* pShape)
 {
     SwFrmFmt* pRet = 0;
 
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     // Only draw frames can have TextBoxes.
     if (pShape && pShape->Which() == RES_DRAWFRMFMT && pShape->GetAttrSet().HasItem(RES_CNTNT))
     {
@@ -391,6 +412,7 @@ SwFrmFmt* SwTextBoxHelper::findTextBox(const SwFrmFmt* pShape)
             }
         }
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 
     return pRet;
 }
@@ -411,6 +433,7 @@ uno::Any SwTextBoxHelper::queryInterface(SwFrmFmt* pShape, const uno::Type& rTyp
 {
     uno::Any aRet;
 
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (rType == cppu::UnoType<css::text::XTextAppend>::get())
     {
         lcl_queryInterface<text::XTextAppend>(pShape, aRet);
@@ -423,6 +446,7 @@ uno::Any SwTextBoxHelper::queryInterface(SwFrmFmt* pShape, const uno::Type& rTyp
     {
         lcl_queryInterface<text::XTextRange>(pShape, aRet);
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 
 
     return aRet;
@@ -432,6 +456,7 @@ Rectangle SwTextBoxHelper::getTextRectangle(SwFrmFmt* pShape, bool bAbsolute)
 {
     Rectangle aRet;
     aRet.SetEmpty();
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     SdrObjCustomShape* pCustomShape = dynamic_cast<SdrObjCustomShape*>(pShape->FindRealSdrObject());
     if (pCustomShape)
     {
@@ -457,12 +482,14 @@ Rectangle SwTextBoxHelper::getTextRectangle(SwFrmFmt* pShape, bool bAbsolute)
         Rectangle aLogicRect(aPoint, aSize);
         aRet.Move(-1 * aLogicRect.Left(), -1 * aLogicRect.Top());
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 
     return aRet;
 }
 
 void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, const OUString& rPropertyName, const css::uno::Any& rValue)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (rPropertyName == "CustomShapeGeometry")
     {
         // CustomShapeGeometry changes the textbox position offset and size, so adjust both.
@@ -513,10 +540,12 @@ void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, const OUString& rPropertyNa
         syncProperty(pShape, RES_TEXT_VERT_ADJUST, 0, rValue);
     else if (rPropertyName == UNO_NAME_TEXT_AUTOGROWHEIGHT)
         syncProperty(pShape, RES_FRM_SIZE, MID_FRMSIZE_IS_AUTO_HEIGHT, rValue);
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::getProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 nMemberId, css::uno::Any& rValue)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (!pShape)
         return;
 
@@ -545,10 +574,12 @@ void SwTextBoxHelper::getProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 n
             }
         }
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 nMemberId, const css::uno::Any& rValue)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     // No shape yet? Then nothing to do, initial properties are set by create().
     if (!pShape)
         return;
@@ -736,10 +767,12 @@ void SwTextBoxHelper::syncProperty(SwFrmFmt* pShape, sal_uInt16 nWID, sal_uInt8 
             xPropertySet->setPropertyValue(aPropertyName, aValue);
         }
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::saveLinks(const SwFrmFmts& rFormats, std::map<const SwFrmFmt*, const SwFrmFmt*>& rLinks)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
 #if SUPD == 310
     for (sal_uInt16 i = 0; i < rFormats.Count(); ++i)
 #else	// SUPD == 310
@@ -752,20 +785,24 @@ void SwTextBoxHelper::saveLinks(const SwFrmFmts& rFormats, std::map<const SwFrmF
         if (SwFrmFmt* pTextBox = findTextBox(pFmt))
             rLinks[pFmt] = pTextBox;
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::resetLink(SwFrmFmt* pShape, std::map<const SwFrmFmt*, SwFmtCntnt>& rMap)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (pShape->Which() == RES_DRAWFRMFMT)
     {
         if (pShape->GetCntnt().GetCntntIdx())
             rMap.insert(std::make_pair(pShape, pShape->GetCntnt()));
         pShape->ResetFmtAttr(RES_CNTNT);
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrmFmt*>& rNew, SavedLink& rSavedLinks, SavedContent& rOldContent)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     size_t i = 0;
     for (std::set<_ZSortFly>::iterator aSetIt = rOld.begin(); aSetIt != rOld.end(); ++aSetIt, ++i)
     {
@@ -782,10 +819,12 @@ void SwTextBoxHelper::restoreLinks(std::set<_ZSortFly>& rOld, std::vector<SwFrmF
         if (rOldContent.find(aSetIt->GetFmt()) != rOldContent.end())
             const_cast<SwFrmFmt*>(aSetIt->GetFmt())->SetFmtAttr(rOldContent[aSetIt->GetFmt()]);
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 void SwTextBoxHelper::syncFlyFrmAttr(SwFrmFmt& rShape, SfxItemSet& rSet)
 {
+#ifndef NO_LIBO_TEXT_BOXES_FOR_SHAPES
     if (SwFrmFmt* pFmt = findTextBox(&rShape))
     {
         SfxItemSet aTextBoxSet(pFmt->GetDoc()->GetAttrPool(), aFrmFmtSetRange);
@@ -858,6 +897,7 @@ void SwTextBoxHelper::syncFlyFrmAttr(SwFrmFmt& rShape, SfxItemSet& rSet)
         if (aTextBoxSet.Count())
             pFmt->GetDoc()->SetFlyFrmAttr(*pFmt, aTextBoxSet);
     }
+#endif	// !NO_LIBO_TEXT_BOXES_FOR_SHAPES
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
