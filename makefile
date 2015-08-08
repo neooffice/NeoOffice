@@ -606,6 +606,7 @@ endif
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/filter"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/oox-drawingml-adj-names" "share/filter/oox-drawingml-adj-names"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/source/drawingml/customshapes/oox-drawingml-cs-presets" "share/filter/oox-drawingml-cs-presets"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp -f "$(PWD)/oox/$(UOUTPUTDIR)/misc/vmlexport-shape-types" "share/filter/vml-shape-types"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; sh -e -c 'for i in `find "$(PWD)/offapi/$(UOUTPUTDIR)/ucr" -name "css*.db"` ; do regmerge offapi.rdb / "$$i" ; done'
 	source "$(OO_ENV_JAVA)" ; setenv DYLD_LIBRARY_PATH "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/program:$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/lib:$$DYLD_LIBRARY_PATH" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/ure-link/bin/regcomp" -revoke -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libAppleRemote$(DLLSUFFIX).dylib'
