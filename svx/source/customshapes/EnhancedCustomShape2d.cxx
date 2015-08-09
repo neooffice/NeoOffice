@@ -86,9 +86,16 @@
 
 #include <math.h>
 
+#if SUPD == 310
+#include <com/sun/star/drawing/EnhancedCustomShapeSegmentCommand2.hpp>
+#endif	// SUPD == 310
+
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::drawing::EnhancedCustomShapeSegmentCommand;
+#if SUPD == 310
+using namespace ::com::sun::star::drawing::EnhancedCustomShapeSegmentCommand2;
+#endif	// SUPD == 310
 
 void EnhancedCustomShape2d::SetEnhancedCustomShapeParameter( EnhancedCustomShapeParameter& rParameter, const sal_Int32 nValue )
 {
@@ -1388,7 +1395,11 @@ void EnhancedCustomShape2d::SwapStartAndEndArrow( SdrObject* pObj )	//#108274
 	pObj->SetMergedItem( aLineEndCenter );
 }
 
+#if SUPD == 310
+static basegfx::B2DPolygon CreateArc( const Rectangle& rRect, const Point& rStart, const Point& rEnd, const bool bClockwise, bool bFullCircle = false )
+#else	// SUPD == 310
 basegfx::B2DPolygon CreateArc( const Rectangle& rRect, const Point& rStart, const Point& rEnd, const sal_Bool bClockwise )
+#endif	// SUPD == 310
 {
 	Rectangle aRect( rRect );
 	Point aStart( rStart );
@@ -1411,7 +1422,11 @@ basegfx::B2DPolygon CreateArc( const Rectangle& rRect, const Point& rStart, cons
 		}
 	}
 
+#if SUPD == 310
 	Polygon aTempPoly( aRect, aStart, aEnd, POLY_ARC );
+#else	// SUPD == 310
+    Polygon aTempPoly( aRect, aStart, aEnd, POLY_ARC, bFullCircle );
+#endif	// SUPD == 310
 	basegfx::B2DPolygon aRetval;
 
 	if ( bClockwise )
@@ -1665,6 +1680,56 @@ void EnhancedCustomShape2d::CreateSubPath( sal_uInt16& rSrcPt, sal_uInt16& rSegm
 					}
 				}
 				break;
+
+#if SUPD == 310
+                case ARCANGLETO :
+                {
+                    double fWR, fHR, fStartAngle, fSwingAngle;
+
+                    for ( sal_uInt16 i = 0; ( i < nPntCount ) && ( rSrcPt + 1 < nCoordSize ); i++ )
+                    {
+                        GetParameter ( fWR, seqCoordinates[ (sal_uInt16)( rSrcPt ) ].First, true, false );
+                        GetParameter ( fHR, seqCoordinates[ (sal_uInt16)( rSrcPt ) ].Second, false, true );
+
+                        GetParameter ( fStartAngle, seqCoordinates[ (sal_uInt16)( rSrcPt + 1) ].First, false, false );
+                        GetParameter ( fSwingAngle, seqCoordinates[ (sal_uInt16)( rSrcPt + 1 ) ].Second, false, false );
+
+                        fWR *= fXScale;
+                        fHR *= fYScale;
+
+                        fStartAngle *= F_PI180;
+                        fSwingAngle *= F_PI180;
+
+                        OSL_TRACE("ARCANGLETO scale: %f x %f angles: %f, %f", fWR, fHR, fStartAngle, fSwingAngle);
+
+                        bool bClockwise = fSwingAngle >= 0.0;
+
+                        if (aNewB2DPolygon.count() > 0)
+                        {
+                            basegfx::B2DPoint aStartPointB2D( aNewB2DPolygon.getB2DPoint(aNewB2DPolygon.count() - 1 ) );
+                            Point aStartPoint( aStartPointB2D.getX(), aStartPointB2D.getY() );
+
+                            double fT = atan2((fWR*sin(fStartAngle)), (fHR*cos(fStartAngle)));
+                            double fTE = atan2((fWR*sin(fStartAngle + fSwingAngle)), fHR*cos(fStartAngle + fSwingAngle));
+
+                            OSL_TRACE("ARCANGLETO angles: %f, %f --> parameters: %f, %f", fStartAngle, fSwingAngle, fT, fTE );
+
+                            Rectangle aRect ( Point ( aStartPoint.getX() - fWR*cos(fT) - fWR, aStartPoint.getY() - fHR*sin(fT) - fHR ),
+                                              Point ( aStartPoint.getX() - fWR*cos(fT) + fWR, aStartPoint.getY() - fHR*sin(fT) + fHR) );
+
+                            Point aEndPoint ( aStartPoint.getX() - fWR*(cos(fT) - cos(fTE)), aStartPoint.getY() - fHR*(sin(fT) - sin(fTE)) );
+
+                            OSL_TRACE("ARCANGLETO rect: %d, %d   x   %d, %d   start: %d, %d end: %d, %d clockwise: %d",
+                                      aRect.Left(), aRect.Top(), aRect.Right(), aRect.Bottom(),
+                                      aStartPoint.X(), aStartPoint.Y(), aEndPoint.X(), aEndPoint.Y(), bClockwise);
+                            aNewB2DPolygon.append(CreateArc( aRect, bClockwise ? aEndPoint : aStartPoint, bClockwise ? aStartPoint : aEndPoint, bClockwise, aStartPoint == aEndPoint && fSwingAngle > F_PI));
+                        }
+
+                        rSrcPt += 2;
+                    }
+                }
+                break;
+#endif	// SUPD == 310
 
 				case ELLIPTICALQUADRANTX :
 				case ELLIPTICALQUADRANTY :
