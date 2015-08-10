@@ -170,7 +170,12 @@ static XubString GetUpdResString( int nId )
 			}
 
 			if ( [pAlert runModal] == NSAlertDefaultReturn )
-				[pWorkspace openURL:pURL];
+			{
+				// The OS X sandbox will sometimes fail to open URLs when the
+				// default browser is not Safari and the browser is not running
+				if ( ![pWorkspace openURL:pURL] && ![@"macappstores" isEqualToString:[pURL scheme]] )
+					[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+			}
 		}
 	}
 	else
