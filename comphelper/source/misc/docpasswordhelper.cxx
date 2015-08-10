@@ -53,11 +53,7 @@ static uno::Sequence< sal_Int8 > GeneratePBKDF2Hash( const ::rtl::OUString& aPas
 {
     uno::Sequence< sal_Int8 > aResult;
    
-#if SUPD == 310 
-    if ( aPassword.getLength() && aSalt.getLength() && nCount && nHashLength )
-#else	// SUPD == 310 
     if ( !aPassword.isEmpty() && aSalt.getLength() && nCount && nHashLength )
-#endif	// SUPD == 310 
     {
         ::rtl::OString aBytePass = ::rtl::OUStringToOString( aPassword, RTL_TEXTENCODING_UTF8 );
         aResult.realloc( 16 );
@@ -108,11 +104,7 @@ uno::Sequence< beans::PropertyValue > DocPasswordHelper::GenerateNewModifyPasswo
 sal_Bool DocPasswordHelper::IsModifyPasswordCorrect( const ::rtl::OUString& aPassword, const uno::Sequence< beans::PropertyValue >& aInfo )
 {
     sal_Bool bResult = sal_False;
-#if SUPD == 310 
-    if ( aPassword.getLength() && aInfo.getLength() )
-#else	// SUPD == 310 
     if ( !aPassword.isEmpty() && aInfo.getLength() )
-#endif	// SUPD == 310 
     {
         ::rtl::OUString sAlgorithm;
         uno::Sequence< sal_Int8 > aSalt;
@@ -246,11 +238,7 @@ sal_uInt16 DocPasswordHelper::GetXLHashAsUINT16(
 
     ::rtl::OString aString = ::rtl::OUStringToOString( aUString, nEnc );
 
-#if SUPD == 310 
-    if ( aString.getLength() && aString.getLength() <= SAL_MAX_UINT16 )
-#else	// SUPD == 310 
     if ( !aString.isEmpty() && aString.getLength() <= SAL_MAX_UINT16 )
-#endif	// SUPD == 310 
     {
         for ( sal_Int32 nInd = aString.getLength() - 1; nInd >= 0; nInd-- )
         {
@@ -299,11 +287,7 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
 /*static*/ uno::Sequence< sal_Int8 > DocPasswordHelper::GenerateStd97Key( const ::rtl::OUString& aPassword, const uno::Sequence< sal_Int8 >& aDocId )
 {
     uno::Sequence< sal_Int8 > aResultKey;
-#if SUPD == 310 
-    if ( aPassword.getLength() && aDocId.getLength() == 16 )
-#else	// SUPD == 310 
     if ( !aPassword.isEmpty() && aDocId.getLength() == 16 )
-#endif	// SUPD == 310 
     {
         sal_uInt16 pPassData[16];
         rtl_zeroMemory( pPassData, sizeof(pPassData) );
@@ -393,13 +377,8 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
     {
         for( ::std::vector< OUString >::const_iterator aIt = pDefaultPasswords->begin(), aEnd = pDefaultPasswords->end(); (eResult == DocPasswordVerifierResult_WRONG_PASSWORD) && (aIt != aEnd); ++aIt )
         {
-#if SUPD == 310 
-            OSL_ENSURE( aIt->getLength(), "DocPasswordHelper::requestAndVerifyDocPassword - unexpected empty default password" );
-            if( aIt->getLength() )
-#else	// SUPD == 310 
             OSL_ENSURE( !aIt->isEmpty(), "DocPasswordHelper::requestAndVerifyDocPassword - unexpected empty default password" );
             if( !aIt->isEmpty() )
-#endif	// SUPD == 310 
             {
                 eResult = rVerifier.verifyPassword( *aIt, aEncData );
                 if( pbIsDefaultPassword )
@@ -422,11 +401,7 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
     // try media password (skip, if result is OK or ABORT)
     if( eResult == DocPasswordVerifierResult_WRONG_PASSWORD )
     {
-#if SUPD == 310 
-        if( rMediaPassword.getLength() )
-#else	// SUPD == 310 
         if( !rMediaPassword.isEmpty() )
-#endif	// SUPD == 310 
             eResult = rVerifier.verifyPassword( rMediaPassword, aEncData );
     }
 
@@ -441,11 +416,7 @@ Sequence< sal_Int8 > DocPasswordHelper::GetXLHashAsSequence(
             rxInteractHandler->handle( xRequest );
             if( pRequest->isPassword() )
             {
-#if SUPD == 310 
-                if( pRequest->getPassword().getLength() )
-#else	// SUPD == 310 
                 if( !pRequest->getPassword().isEmpty() )
-#endif	// SUPD == 310 
                     eResult = rVerifier.verifyPassword( pRequest->getPassword(), aEncData );
             }
             else

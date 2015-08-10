@@ -596,11 +596,7 @@ sal_Bool MediaDescriptor::impl_addInputStream( sal_Bool bLockFile )
 
 		// b) ... or we must get it from the given URL
 		::rtl::OUString sURL = getUnpackedValueOrDefault(MediaDescriptor::PROP_URL(), ::rtl::OUString());
-#if SUPD == 310
-		if ( !sURL.getLength() )
-#else	// SUPD == 310
 		if ( sURL.isEmpty() )
-#endif	// SUPD == 310
 			throw css::uno::Exception(
 					::rtl::OUString::createFromAscii("Found no URL."),
 					css::uno::Reference< css::uno::XInterface >());
@@ -649,11 +645,7 @@ sal_Bool MediaDescriptor::impl_openStreamWithPostData( const css::uno::Reference
 
     // media type
 	::rtl::OUString sMediaType = getUnpackedValueOrDefault(MediaDescriptor::PROP_MEDIATYPE(), ::rtl::OUString());
-#if SUPD == 310
-    if ( !sMediaType.getLength() )
-#else	// SUPD == 310
     if ( sMediaType.isEmpty() )
-#endif	// SUPD == 310
     {
         sMediaType = ::rtl::OUString::createFromAscii("application/x-www-form-urlencoded");
         (*this)[MediaDescriptor::PROP_MEDIATYPE()] <<= sMediaType;
