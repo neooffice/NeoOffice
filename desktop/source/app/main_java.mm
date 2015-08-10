@@ -513,7 +513,8 @@ int java_main( int argc, char **argv )
 				{
 					NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
 					if ( pURL )
-						[pWorkspace openURL:pURL];
+						if ( ![pWorkspace openURL:pURL] )
+							[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 				}
 			}
 		}
