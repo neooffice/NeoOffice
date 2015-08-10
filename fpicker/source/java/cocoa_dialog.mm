@@ -145,6 +145,7 @@ using namespace vos;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	MacOSBOOL				mbFinished;
+	MacOSBOOL				mbInControlChange;
 	MacOSBOOL				mbMultiSelectionMode;
 	void*					mpPicker;
 	short					mnResult;
@@ -183,6 +184,7 @@ using namespace vos;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (short)result;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
@@ -459,19 +461,32 @@ using namespace vos;
 {
 	if ( mpFilePanel && mpPicker && !mbCancelled && !mbFinished )
 	{
-		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
-		if ( pPopup )
-		{
-			JavaFilePicker_controlStateChanged( COCOA_CONTROL_ID_FILETYPE, mpPicker );
+		MacOSBOOL bOldInControlChange = mbInControlChange;
+		mbInControlChange = YES;
 
-			// Update filtering
-			NSString *pFilter = [self selectedFilter:nil];
-			if ( pFilter )
+		@try
+		{
+			NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+			if ( pPopup )
 			{
-				ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
-				[self setSelectedFilter:pSelectedFilterArgs];
+				JavaFilePicker_controlStateChanged( COCOA_CONTROL_ID_FILETYPE, mpPicker );
+
+				// Update filtering
+				NSString *pFilter = [self selectedFilter:nil];
+				if ( pFilter )
+				{
+					ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
+					[self setSelectedFilter:pSelectedFilterArgs];
+				}
 			}
 		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+
+		mbInControlChange = bOldInControlChange;
 	}
 }
 
@@ -547,6 +562,7 @@ using namespace vos;
 	mbExtensionHidden = NO;
 	mpFilePanel = nil;
 	mbFinished = NO;
+	mbInControlChange = NO;
 	mbMultiSelectionMode = NO;
 	mpPicker = pPicker;
 	mnResult = 0;
@@ -979,6 +995,14 @@ using namespace vos;
 }
 
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	return !mbInControlChange;
+}
 
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
 {
