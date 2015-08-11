@@ -22,14 +22,6 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * This file incorporates work covered by the following license notice:
- *
- *   Portions of this file are part of the LibreOffice project.
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
  * Modified June 2014 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
@@ -102,10 +94,6 @@
 #include <framework/titlehelper.hxx>
 #include <comphelper/numberedcollection.hxx>
 #include <unotools/ucbstreamhelper.hxx>
-
-#if SUPD == 310
-#include <svtools/grabbagitem.hxx>
-#endif	// SUPD == 310
 
 //________________________________________________________________________________________________________
 //	includes of my own project
@@ -187,9 +175,6 @@ struct IMPL_SfxBaseModel_DataContainer : public ::sfx2::IModifiableDocument
     ::rtl::OUString                                 m_sModuleIdentifier;
     css::uno::Reference< css::frame::XTitle >               m_xTitleHelper;
     css::uno::Reference< css::frame::XUntitledNumbers >     m_xNumberedControllers;
-#if SUPD == 310
-    boost::shared_ptr<SfxGrabBagItem>                          m_pGrabBagItem           ;
-#endif	// SUPD == 310
 
     IMPL_SfxBaseModel_DataContainer( ::osl::Mutex& rMutex, SfxObjectShell* pObjectShell )
             :   m_pObjectShell			( pObjectShell	)
@@ -3084,28 +3069,6 @@ sal_Bool SfxBaseModel::hasValidSignatures() const
         return ( m_pData->m_pObjectShell->ImplGetSignatureState( sal_False ) == SIGNATURESTATE_SIGNATURES_OK );
     return sal_False;
 }
-
-#if SUPD == 310
-
-void SfxBaseModel::getGrabBagItem(com::sun::star::uno::Any& rVal) const
-{
-    if (m_pData->m_pGrabBagItem.get())
-        m_pData->m_pGrabBagItem->QueryValue(rVal);
-    else {
-        uno::Sequence<beans::PropertyValue> aValue(0);
-        rVal = uno::makeAny(aValue);
-    }
-}
-
-void SfxBaseModel::setGrabBagItem(const com::sun::star::uno::Any& rVal)
-{
-    if (!m_pData->m_pGrabBagItem.get())
-        m_pData->m_pGrabBagItem.reset(new SfxGrabBagItem);
-
-    m_pData->m_pGrabBagItem->PutValue(rVal);
-}
-
-#endif	// SUPD == 310
 
 static void GetCommandFromSequence( rtl::OUString& rCommand, sal_Int32& nIndex, const uno::Sequence< beans::PropertyValue >& rSeqPropValue )
 {

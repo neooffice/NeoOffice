@@ -2088,11 +2088,7 @@ sal_Bool SfxObjectShell::IsSecure()
             aReferer = INetURLObject( aTempl ).GetMainURL( INetURLObject::NO_DECODE );
 	}
 
-#if SUPD == 310
 	INetURLObject aURL( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "macro:" ) ) );
-#else	// SUPD == 310
-	INetURLObject aURL( "macro:" );
-#endif	// SUPD == 310
     if ( !aReferer.Len() )
         // empty new or embedded document
         return sal_True;

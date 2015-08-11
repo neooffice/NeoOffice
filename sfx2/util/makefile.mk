@@ -38,19 +38,15 @@ GEN_HID=TRUE
 GEN_HID_OTHER=TRUE
 USE_DEFFILE=TRUE
 
+.IF "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
+# Link to modified libsysshell.a
+SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
+.ENDIF		# "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
-
-.IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/shell$/$(INPATH)$/slb \
-	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib
-
-# Link to modified libraries
-SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
-SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
-.ENDIF		# "$(UPD)" == "310"
 
 # --- Allgemein ----------------------------------------------------
 
@@ -125,11 +121,6 @@ SHL1STDLIBS+= -framework Quartz
 .ENDIF		# "$(GUIBASE)" == "java"
 .ENDIF # MACOSX
 .ENDIF # WNT
-
-.IF "$(UPD)" == "310"
-SHL1STDLIBS += \
-	$(LIBXML2LIB)
-.ENDIF		# "$(UPD)" == "310"
 
 
 SHL1DEPN += $(shell @$(FIND) $(SLO) -type f -name "*.OBJ" -print)

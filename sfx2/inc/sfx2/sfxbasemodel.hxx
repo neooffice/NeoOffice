@@ -22,14 +22,6 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * This file incorporates work covered by the following license notice:
- *
- *   Portions of this file are part of the LibreOffice project.
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
  * Modified August 2014 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
@@ -1390,13 +1382,6 @@ protected:
     sal_Bool hasValidSignatures() const;
 
     void setDocumentProperties( const ::com::sun::star::uno::Reference< ::com::sun::star::document::XDocumentProperties >& );
-
-#if SUPD == 310
-    /* GrabBagItem for interim interop purposes */
-    void getGrabBagItem(com::sun::star::uno::Any& rVal) const;
-
-    void setGrabBagItem(const com::sun::star::uno::Any& rVal);
-#endif	// SUPD == 310
 //________________________________________________________________________________________________________
 //	private methods
 //________________________________________________________________________________________________________

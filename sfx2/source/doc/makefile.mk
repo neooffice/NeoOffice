@@ -43,14 +43,6 @@ ENABLE_EXCEPTIONS=TRUE
 CFLAGS+=-DPRODUCT_DOWNLOAD_URL='"$(PRODUCT_DOWNLOAD_URL)"'
 .ENDIF
 
-.IF "$(UPD)" == "310"
-INCLOCAL += \
-	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssbeans \
-	-I$(PRJ)$/..$/sal$/inc \
-	-I$(PRJ)$/..$/svtools$/inc \
-	$(LIBXML_CFLAGS)
-.ENDIF		# "$(UPD)" == "310"
-
 # --- Files --------------------------------------------------------
 
 SRS1NAME=$(TARGET)
@@ -108,12 +100,6 @@ RESLIB2IMAGES=$(PRJ)$/res
 RESLIB2SRSFILES=$(SRS)$/objserv_cocoa.srs
 
 .ENDIF "$(GUIBASE)" == "java"
-
-.IF "$(UPD)" == "310"
-SLOFILES +=	\
-	$(SLO)$/DocumentMetadataAccess.obj \
-	$(SLO)$/Metadatable.obj
-.ENDIF		# "$(UPD)" == "310"
 
 # --- Tagets -------------------------------------------------------
 
