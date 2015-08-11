@@ -1,33 +1,41 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-
+//------------------------------------------------------
 // testcomponent - Loads a service and its testcomponent from dlls performs a test.
 // Expands the dll-names depending on the actual environment.
-// Example : testcomponent com.sun.star.io.Pipe stm
-
-// Therefor the testcode must exist in teststm and the testservice must be named test.com.sun.star.uno.io.Pipe
-
+// Example : testcomponent stardiv.uno.io.Pipe stm
+//
+// Therefor the testcode must exist in teststm and the testservice must be named test.stardiv.uno.io.Pipe
+//
 
 #include <stdio.h>
 #include <vector>
-#include <cstring>
 
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -84,7 +92,7 @@ public:
         {
             return readBytes( aData, nMaxBytesToRead );
         }
-    virtual void SAL_CALL skipBytes( sal_Int32 /* nBytesToSkip */ )
+    virtual void SAL_CALL skipBytes( sal_Int32 nBytesToSkip )
         throw(NotConnectedException, BufferSizeExceededException, IOException, RuntimeException)
         {
             // not implemented
@@ -99,13 +107,13 @@ public:
         {
             // not needed
         }
-    Sequence< sal_Int8> m_seq;
     sal_Int32 nPos;
+    Sequence< sal_Int8> m_seq;
 };
 
-
+//-------------------------------
 // Helper : create an input stream from a file
-
+//------------------------------
 Reference< XInputStream > createStreamFromFile(
     const char *pcFile )
 {
@@ -126,10 +134,10 @@ Reference< XInputStream > createStreamFromFile(
     return r;
 }
 
-
+//-----------------------------------------
 // The document handler, which is needed for the saxparser
 // The Documenthandler for reading sax
-
+//-----------------------------------------
 class TestDocumentHandler :
     public WeakImplHelper3< XExtendedDocumentHandler , XEntityResolver , XErrorHandler >
 {
@@ -143,15 +151,15 @@ public: // Error handler
     {
         printf( "Error !\n" );
         throw  SAXException(
-            OUString( "error from error handler") ,
+            OUString( RTL_CONSTASCII_USTRINGPARAM("error from error handler")) ,
             Reference < XInterface >() ,
             aSAXParseException );
     }
-    virtual void SAL_CALL fatalError(const Any& /* aSAXParseException */) throw (SAXException, RuntimeException)
+    virtual void SAL_CALL fatalError(const Any& aSAXParseException) throw (SAXException, RuntimeException)
     {
         printf( "Fatal Error !\n" );
     }
-    virtual void SAL_CALL warning(const Any& /* aSAXParseException */) throw (SAXException, RuntimeException)
+    virtual void SAL_CALL warning(const Any& aSAXParseException) throw (SAXException, RuntimeException)
     {
         printf( "Warning !\n" );
     }
@@ -174,7 +182,7 @@ public: // ExtendedDocumentHandler
                 m_iElementCount, m_iAttributeCount, m_iWhitespaceCount , m_iCharCount );
 
     }
-    virtual void SAL_CALL startElement(const OUString& /* aName */,
+    virtual void SAL_CALL startElement(const OUString& aName,
                               const Reference< XAttributeList > & xAttribs)
         throw (SAXException,RuntimeException)
     {
@@ -182,7 +190,7 @@ public: // ExtendedDocumentHandler
         m_iAttributeCount += xAttribs->getLength();
     }
 
-    virtual void SAL_CALL endElement(const OUString& /* aName */) throw (SAXException,RuntimeException)
+    virtual void SAL_CALL endElement(const OUString& aName) throw (SAXException,RuntimeException)
     {
         // ignored
     }
@@ -196,12 +204,12 @@ public: // ExtendedDocumentHandler
         m_iWhitespaceCount += aWhitespaces.getLength();
     }
 
-    virtual void SAL_CALL processingInstruction(const OUString& /* aTarget */, const OUString& /* aData */) throw (SAXException,RuntimeException)
+    virtual void SAL_CALL processingInstruction(const OUString& aTarget, const OUString& aData) throw (SAXException,RuntimeException)
     {
         // ignored
     }
 
-    virtual void SAL_CALL setDocumentLocator(const Reference< XLocator> & /* xLocator */)
+    virtual void SAL_CALL setDocumentLocator(const Reference< XLocator> & xLocator)
         throw (SAXException,RuntimeException)
     {
         // ignored
@@ -210,14 +218,14 @@ public: // ExtendedDocumentHandler
     virtual InputSource SAL_CALL resolveEntity(
         const OUString& sPublicId,
         const OUString& sSystemId)
-        throw (RuntimeException)
+        throw (SAXException,RuntimeException)
     {
         InputSource source;
         source.sSystemId = sSystemId;
         source.sPublicId = sPublicId;
 
         source.aInputStream = createStreamFromFile(
-            OUStringToOString( sSystemId, RTL_TEXTENCODING_ASCII_US).getStr() );
+            OUStringToOString( sSystemId , RTL_TEXTENCODING_ASCII_US) );
 
         return source;
     }
@@ -228,10 +236,10 @@ public: // ExtendedDocumentHandler
     virtual void SAL_CALL endCDATA(void) throw (SAXException,RuntimeException)
     {
     }
-    virtual void SAL_CALL comment(const OUString& /* sComment */) throw (SAXException,RuntimeException)
+    virtual void SAL_CALL comment(const OUString& sComment) throw (SAXException,RuntimeException)
     {
     }
-    virtual void SAL_CALL unknown(const OUString& /* sString */) throw (SAXException,RuntimeException)
+    virtual void SAL_CALL unknown(const OUString& sString) throw (SAXException,RuntimeException)
     {
     }
 
@@ -247,10 +255,10 @@ public:
     int m_iCharCount;
 };
 
-
+//--------------------------------------
 // helper implementation for writing
 // implements an XAttributeList
-
+//-------------------------------------
 struct AttributeListImpl_impl;
 class AttributeListImpl : public WeakImplHelper1< XAttributeList >
 {
@@ -281,13 +289,13 @@ private:
 struct TagAttribute
 {
     TagAttribute(){}
-    TagAttribute( const OUString &s_Name,
-                  const OUString &s_Type ,
-                  const OUString &s_Value )
+    TagAttribute( const OUString &sName,
+                  const OUString &sType ,
+                  const OUString &sValue )
     {
-        this->sName     = s_Name;
-        this->sType     = s_Type;
-        this->sValue    = s_Value;
+        this->sName 	= sName;
+        this->sType 	= sType;
+        this->sValue 	= sValue;
     }
 
     OUString sName;
@@ -309,7 +317,7 @@ struct AttributeListImpl_impl
 
 sal_Int16 AttributeListImpl::getLength(void) throw  (RuntimeException)
 {
-    return (sal_Int16) m_pImpl->vecAttribute.size();
+    return m_pImpl->vecAttribute.size();
 }
 
 
@@ -321,7 +329,7 @@ AttributeListImpl::AttributeListImpl( const AttributeListImpl &r )
 
 OUString AttributeListImpl::getNameByIndex(sal_Int16 i) throw  (RuntimeException)
 {
-    if( i < sal::static_int_cast<sal_Int16>(m_pImpl->vecAttribute.size()) ) {
+    if( i < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sName;
     }
     return OUString();
@@ -330,7 +338,7 @@ OUString AttributeListImpl::getNameByIndex(sal_Int16 i) throw  (RuntimeException
 
 OUString AttributeListImpl::getTypeByIndex(sal_Int16 i) throw  (RuntimeException)
 {
-    if( i < sal::static_int_cast<sal_Int16>(m_pImpl->vecAttribute.size()) ) {
+    if( i < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sType;
     }
     return OUString();
@@ -338,7 +346,7 @@ OUString AttributeListImpl::getTypeByIndex(sal_Int16 i) throw  (RuntimeException
 
 OUString AttributeListImpl::getValueByIndex(sal_Int16 i) throw  (RuntimeException)
 {
-    if( i < sal::static_int_cast<sal_Int16>(m_pImpl->vecAttribute.size()) ) {
+    if( i < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sValue;
     }
     return OUString();
@@ -349,7 +357,7 @@ OUString AttributeListImpl::getTypeByName( const OUString& sName ) throw  (Runti
 {
     vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-    for( ; ii != m_pImpl->vecAttribute.end() ; ++ii ) {
+    for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
         if( (*ii).sName == sName ) {
             return (*ii).sType;
         }
@@ -361,7 +369,7 @@ OUString AttributeListImpl::getValueByName(const OUString& sName) throw  (Runtim
 {
     vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-    for( ; ii != m_pImpl->vecAttribute.end() ; ++ii ) {
+    for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
         if( (*ii).sName == sName ) {
             return (*ii).sValue;
         }
@@ -384,7 +392,7 @@ AttributeListImpl::~AttributeListImpl()
 }
 
 
-void AttributeListImpl::addAttribute(   const OUString &sName ,
+void AttributeListImpl::addAttribute( 	const OUString &sName ,
                                         const OUString &sType ,
                                         const OUString &sValue )
 {
@@ -397,25 +405,24 @@ void AttributeListImpl::clear()
 }
 
 
-
+//--------------------------------------
 // helper function for writing
 // ensures that linebreaks are inserted
 // when writing a long text.
 // Note: this implementation may be a bit slow,
 // but it shows, how the SAX-Writer handles the allowLineBreak calls.
-
+//--------------------------------------
 void writeParagraphHelper(
     const  Reference< XExtendedDocumentHandler > &r ,
     const OUString & s)
 {
     int nMax = s.getLength();
     int nStart = 0;
-    int n = 1;
 
     Sequence<sal_uInt16> seq( s.getLength() );
     memcpy( seq.getArray() , s.getStr() , s.getLength() * sizeof( sal_uInt16 ) );
 
-    for( n = 1 ; n < nMax ; n++ ){
+    for( int n = 1 ; n < nMax ; n++ ){
         if( 32 == seq.getArray()[n] ) {
             r->allowLineBreak();
             r->characters( s.copy( nStart , n - nStart ) );
@@ -427,10 +434,10 @@ void writeParagraphHelper(
 }
 
 
-
+//---------------------------------
 // helper implementation for SAX-Writer
 // writes data to a file
-
+//--------------------------------
 class OFileWriter :
         public WeakImplHelper1< XOutputStream >
 {
@@ -495,14 +502,14 @@ int main (int argc, char **argv)
 
     // create service manager
     Reference< XMultiServiceFactory > xSMgr = createRegistryServiceFactory(
-        OUString(  "applicat.rdb" ) );
+        OUString( RTL_CONSTASCII_USTRINGPARAM( "applicat.rdb" )) );
 
     Reference < XImplementationRegistration > xReg;
     try
     {
         // Create registration service
         Reference < XInterface > x = xSMgr->createInstance(
-            OUString("com.sun.star.registry.ImplementationRegistration") );
+            OUString::createFromAscii( "com.sun.star.registry.ImplementationRegistration" ) );
         xReg = Reference<  XImplementationRegistration > ( x , UNO_QUERY );
     }
     catch( Exception & ) {
@@ -514,9 +521,10 @@ int main (int argc, char **argv)
     try
     {
         // Load dll for the tested component
-        OUString aDllName( "sax.uno" SAL_DLLEXTENSION );
+        OUString aDllName =
+            OUString::createFromAscii( "sax.uno" SAL_DLLEXTENSION );
         xReg->registerImplementation(
-            OUString("com.sun.star.loader.SharedLibrary"),
+            OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ),
             aDllName,
             Reference< XSimpleRegistry > ()  );
     }
@@ -528,12 +536,12 @@ int main (int argc, char **argv)
     }
 
 
-
+    //--------------------------------
     // parser demo
     // read xml from a file and count elements
-
+    //--------------------------------
     Reference< XInterface > x = xSMgr->createInstance(
-        OUString("com.sun.star.xml.sax.Parser") );
+        OUString::createFromAscii( "com.sun.star.xml.sax.Parser" ) );
     if( x.is() )
     {
         Reference< XParser > rParser( x , UNO_QUERY );
@@ -541,7 +549,7 @@ int main (int argc, char **argv)
         // create and connect the document handler to the parser
         TestDocumentHandler *pDocHandler = new TestDocumentHandler( );
 
-        Reference < XDocumentHandler >  rDocHandler( (XDocumentHandler *) pDocHandler );
+        Reference < XDocumentHandler >	rDocHandler( (XDocumentHandler *) pDocHandler );
         Reference< XEntityResolver > rEntityResolver( (XEntityResolver *) pDocHandler );
 
         rParser->setDocumentHandler( rDocHandler );
@@ -550,7 +558,7 @@ int main (int argc, char **argv)
         // create the input stream
         InputSource source;
         source.aInputStream = createStreamFromFile( argv[1] );
-        source.sSystemId    = OUString::createFromAscii( argv[1] );
+        source.sSystemId 	= OUString::createFromAscii( argv[1] );
 
         try
         {
@@ -566,14 +574,14 @@ int main (int argc, char **argv)
     }
     else
     {
-        printf( "couldn't create sax-parser component\n" );
+        printf( "couln't create sax-parser component\n" );
     }
 
 
-
+    //----------------------
     // The SAX-Writer demo
-
-    x= xSMgr->createInstance("com.sun.star.xml.sax.Writer");
+    //----------------------
+    x= xSMgr->createInstance( OUString::createFromAscii( "com.sun.star.xml.sax.Writer" ) );
     if( x.is() )
     {
         printf( "start writing to %s\n" , argv[2] );
@@ -588,57 +596,57 @@ int main (int argc, char **argv)
         Reference< XExtendedDocumentHandler > r( x , UNO_QUERY );
         r->startDocument();
 
-        pList->addAttribute( OUString( "Arg1" ),
-                             OUString( "CDATA") ,
-                             OUString( "foo\n   u") );
-        pList->addAttribute( OUString( "Arg2") ,
-                             OUString( "CDATA") ,
-                             OUString( "foo2") );
+        pList->addAttribute( OUString( RTL_CONSTASCII_USTRINGPARAM("Arg1" )),
+                             OUString( RTL_CONSTASCII_USTRINGPARAM("CDATA")) ,
+                             OUString( RTL_CONSTASCII_USTRINGPARAM("foo\n	u")) );
+        pList->addAttribute( OUString( RTL_CONSTASCII_USTRINGPARAM("Arg2")) ,
+                             OUString( RTL_CONSTASCII_USTRINGPARAM("CDATA")) ,
+                             OUString( RTL_CONSTASCII_USTRINGPARAM("foo2")) );
 
-        r->startElement( OUString( "tag1")  , rList );
+        r->startElement( OUString( RTL_CONSTASCII_USTRINGPARAM("tag1"))  , rList );
         // tells the writer to insert a linefeed
         r->ignorableWhitespace( OUString() );
 
-        r->characters( OUString( "huhu") );
+        r->characters( OUString( RTL_CONSTASCII_USTRINGPARAM("huhu")) );
         r->ignorableWhitespace( OUString() );
 
-        r->startElement( OUString( "hi") , rList );
+        r->startElement( OUString( RTL_CONSTASCII_USTRINGPARAM("hi")) , rList );
         r->ignorableWhitespace( OUString() );
 
         // the enpassant must be converted & -> &amp;
-        r->characters( OUString( "&#252;") );
+        r->characters( OUString( RTL_CONSTASCII_USTRINGPARAM("&#252;")) );
         r->ignorableWhitespace( OUString() );
 
         // '>' must not be converted
         r->startCDATA();
-        r->characters( OUString( " > foo < ")  );
+        r->characters( OUString( RTL_CONSTASCII_USTRINGPARAM(" > foo < "))  );
         r->endCDATA();
         r->ignorableWhitespace( OUString() );
 
-        OUString testParagraph = OUString(
+        OUString testParagraph = OUString( RTL_CONSTASCII_USTRINGPARAM(
             "This is only a test to check, if the writer inserts line feeds "
-            "if needed or if the writer puts the whole text into one line." );
+            "if needed or if the writer puts the whole text into one line." ));
         writeParagraphHelper( r , testParagraph );
 
         r->ignorableWhitespace( OUString() );
-        r->comment( OUString( "This is a comment !") );
+        r->comment( OUString( RTL_CONSTASCII_USTRINGPARAM("This is a comment !")) );
         r->ignorableWhitespace( OUString() );
 
-        r->startElement( OUString( "emptytagtest")  , rList );
-        r->endElement( OUString( "emptytagtest") );
+        r->startElement( OUString( RTL_CONSTASCII_USTRINGPARAM("emptytagtest"))  , rList );
+        r->endElement( OUString( RTL_CONSTASCII_USTRINGPARAM("emptytagtest")) );
         r->ignorableWhitespace( OUString() );
 
-        r->endElement( OUString( "hi") );
+        r->endElement( OUString( RTL_CONSTASCII_USTRINGPARAM("hi")) );
         r->ignorableWhitespace( OUString() );
 
-        r->endElement( OUString( "tag1") );
+        r->endElement( OUString( RTL_CONSTASCII_USTRINGPARAM("tag1")) );
         r->endDocument();
 
         printf( "finished writing\n" );
     }
     else
     {
-        printf( "couldn't create sax-writer component\n" );
+        printf( "couln't create sax-writer component\n" );
     }
 }
 

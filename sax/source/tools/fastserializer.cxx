@@ -1,26 +1,34 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
 #include "fastserializer.hxx"
 #include <rtl/ustrbuf.hxx>
-
-#include <comphelper/sequenceasvector.hxx>
+#include <rtl/byteseq.hxx>
 
 #include <com/sun/star/xml/Attribute.hpp>
 #include <com/sun/star/xml/FastAttribute.hpp>
@@ -28,12 +36,14 @@
 
 #include <string.h>
 
-#if OSL_DEBUG_LEVEL > 0
-#include <iostream>
-#include <set>
+#if DEBUG
+#include <cstdio>
 #endif
 
-using ::comphelper::SequenceAsVector;
+using ::rtl::OString;
+using ::rtl::OUString;
+using ::rtl::OUStringBuffer;
+using ::rtl::OUStringToOString;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::Sequence;
@@ -42,45 +52,42 @@ using ::com::sun::star::xml::FastAttribute;
 using ::com::sun::star::xml::Attribute;
 using ::com::sun::star::xml::sax::SAXException;
 using ::com::sun::star::xml::sax::XFastAttributeList;
+using ::com::sun::star::xml::sax::XFastTokenHandler;
+using ::com::sun::star::xml::sax::XFastSerializer;
 using ::com::sun::star::io::XOutputStream;
 using ::com::sun::star::io::NotConnectedException;
 using ::com::sun::star::io::IOException;
 using ::com::sun::star::io::BufferSizeExceededException;
+
+static rtl::ByteSequence aClosingBracket((const sal_Int8 *)">", 1);
+static rtl::ByteSequence aSlashAndClosingBracket((const sal_Int8 *)"/>", 2);
+static rtl::ByteSequence aColon((const sal_Int8 *)":", 1);
+static rtl::ByteSequence aOpeningBracket((const sal_Int8 *)"<", 1);
+static rtl::ByteSequence aOpeningBracketAndSlash((const sal_Int8 *)"</", 2);
+static rtl::ByteSequence aQuote((const sal_Int8 *)"\"", 1);
+static rtl::ByteSequence aEqualSignAndQuote((const sal_Int8 *)"=\"", 2);
+static rtl::ByteSequence aSpace((const sal_Int8 *)" ", 1);
+static rtl::ByteSequence aXmlHeader((const sal_Int8*) "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n", 56);
 
 #define HAS_NAMESPACE(x) ((x & 0xffff0000) != 0)
 #define NAMESPACE(x) (x >> 16)
 #define TOKEN(x) (x & 0xffff)
 
 namespace sax_fastparser {
-    FastSaxSerializer::FastSaxSerializer( )
-        : mxOutputStream()
-        , mxFastTokenHandler()
-        , maMarkStack()
-        , maClosingBracket((const sal_Int8 *)">", 1)
-        , maSlashAndClosingBracket((const sal_Int8 *)"/>", 2)
-        , maColon((const sal_Int8 *)":", 1)
-        , maOpeningBracket((const sal_Int8 *)"<", 1)
-        , maOpeningBracketAndSlash((const sal_Int8 *)"</", 2)
-        , maQuote((const sal_Int8 *)"\"", 1)
-        , maEqualSignAndQuote((const sal_Int8 *)"=\"", 2)
-        , maSpace((const sal_Int8 *)" ", 1)
-    {
-    }
+    FastSaxSerializer::FastSaxSerializer( ) : mxOutputStream(), mxFastTokenHandler(), maMarkStack() {}
     FastSaxSerializer::~FastSaxSerializer() {}
 
     void SAL_CALL FastSaxSerializer::startDocument(  ) throw (SAXException, RuntimeException)
     {
-        assert(mxOutputStream.is()); // cannot do anything without that
         if (!mxOutputStream.is())
             return;
-        rtl::ByteSequence aXmlHeader((const sal_Int8*) "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n", 56);
         writeBytes(toUnoSequence(aXmlHeader));
     }
 
     OUString FastSaxSerializer::escapeXml( const OUString& s )
     {
-        OUStringBuffer sBuf( s.getLength() );
-        const sal_Unicode* pStr = s.getStr();
+        ::rtl::OUStringBuffer sBuf( s.getLength() );
+        const sal_Unicode* pStr = s;
         sal_Int32 nLen = s.getLength();
         for( sal_Int32 i = 0; i < nLen; ++i)
         {
@@ -92,19 +99,17 @@ namespace sax_fastparser {
                 case '&':   sBuf.appendAscii( "&amp;" );    break;
                 case '\'':  sBuf.appendAscii( "&apos;" );   break;
                 case '"':   sBuf.appendAscii( "&quot;" );   break;
-                case '\n':  sBuf.appendAscii( "&#10;" );    break;
-                case '\r':  sBuf.appendAscii( "&#13;" );    break;
                 default:    sBuf.append( c );               break;
             }
         }
         return sBuf.makeStringAndClear();
     }
-
+    
     void FastSaxSerializer::write( const OUString& s )
     {
         OString sOutput( OUStringToOString( s, RTL_TEXTENCODING_UTF8 ) );
-        writeBytes( Sequence< sal_Int8 >(
-                    reinterpret_cast< const sal_Int8*>( sOutput.getStr() ),
+        writeBytes( Sequence< sal_Int8 >( 
+                    reinterpret_cast< const sal_Int8*>( sOutput.getStr() ), 
                     sOutput.getLength() ) );
     }
 
@@ -113,35 +118,16 @@ namespace sax_fastparser {
         if (!mxOutputStream.is())
             return;
     }
-
+    
     void SAL_CALL FastSaxSerializer::writeId( ::sal_Int32 nElement )
     {
         if( HAS_NAMESPACE( nElement ) ) {
             writeBytes(mxFastTokenHandler->getUTF8Identifier(NAMESPACE(nElement)));
-            writeBytes(toUnoSequence(maColon));
+            writeBytes(toUnoSequence(aColon));
             writeBytes(mxFastTokenHandler->getUTF8Identifier(TOKEN(nElement)));
         } else
             writeBytes(mxFastTokenHandler->getUTF8Identifier(nElement));
     }
-
-#ifdef DBG_UTIL
-    OString SAL_CALL FastSaxSerializer::getId( ::sal_Int32 nElement )
-    {
-        if (HAS_NAMESPACE(nElement)) {
-            Sequence<sal_Int8> const ns(
-                mxFastTokenHandler->getUTF8Identifier(NAMESPACE(nElement)));
-            Sequence<sal_Int8> const name(
-                mxFastTokenHandler->getUTF8Identifier(TOKEN(nElement)));
-            return OString(reinterpret_cast<sal_Char const*>(ns.getConstArray()), ns.getLength())
-                 + OString(reinterpret_cast<sal_Char const*>(maColon.getConstArray()), maColon.getLength())
-                 + OString(reinterpret_cast<sal_Char const*>(name.getConstArray()), name.getLength());
-        } else {
-            Sequence<sal_Int8> const name(
-                mxFastTokenHandler->getUTF8Identifier(nElement));
-            return OString(reinterpret_cast<sal_Char const*>(name.getConstArray()), name.getLength());
-        }
-    }
-#endif
 
     void SAL_CALL FastSaxSerializer::startFastElement( ::sal_Int32 Element, const Reference< XFastAttributeList >& Attribs )
         throw (SAXException, RuntimeException)
@@ -149,19 +135,33 @@ namespace sax_fastparser {
         if (!mxOutputStream.is())
             return;
 
-        if ( !maMarkStack.empty() )
-            maMarkStack.top()->setCurrentElement( Element );
-
-#ifdef DBG_UTIL
-        m_DebugStartedElements.push(Element);
-#endif
-
-        writeBytes(toUnoSequence(maOpeningBracket));
+        writeBytes(toUnoSequence(aOpeningBracket));
 
         writeId(Element);
         writeFastAttributeList(Attribs);
 
-        writeBytes(toUnoSequence(maClosingBracket));
+        writeBytes(toUnoSequence(aClosingBracket));
+    }
+
+    void SAL_CALL FastSaxSerializer::startUnknownElement( const OUString& Namespace, const OUString& Name, const Reference< XFastAttributeList >& Attribs )
+        throw (SAXException, RuntimeException)
+    {
+        if (!mxOutputStream.is())
+            return;
+
+        writeBytes(toUnoSequence(aOpeningBracket));
+
+        if (Namespace.getLength())
+        {
+            write(Namespace);
+            writeBytes(toUnoSequence(aColon));
+        }
+        
+        write(Name);
+        
+        writeFastAttributeList(Attribs);
+            
+        writeBytes(toUnoSequence(aClosingBracket));
     }
 
     void SAL_CALL FastSaxSerializer::endFastElement( ::sal_Int32 Element )
@@ -170,18 +170,30 @@ namespace sax_fastparser {
         if (!mxOutputStream.is())
             return;
 
-#ifdef DBG_UTIL
-        assert(!m_DebugStartedElements.empty());
-        // Well-formedness constraint: Element Type Match
-        assert(Element == m_DebugStartedElements.top());
-        m_DebugStartedElements.pop();
-#endif
-
-        writeBytes(toUnoSequence(maOpeningBracketAndSlash));
+        writeBytes(toUnoSequence(aOpeningBracketAndSlash));
 
         writeId(Element);
 
-        writeBytes(toUnoSequence(maClosingBracket));
+        writeBytes(toUnoSequence(aClosingBracket));
+    }
+
+    void SAL_CALL FastSaxSerializer::endUnknownElement( const OUString& Namespace, const OUString& Name )
+        throw (SAXException, RuntimeException)
+    {
+        if (!mxOutputStream.is())
+            return;
+
+        writeBytes(toUnoSequence(aOpeningBracketAndSlash));
+
+        if (Namespace.getLength())
+        {
+            write(Namespace);
+            writeBytes(toUnoSequence(aColon));
+        }
+        
+        write(Name);
+        
+        writeBytes(toUnoSequence(aClosingBracket));
     }
 
     void SAL_CALL FastSaxSerializer::singleFastElement( ::sal_Int32 Element, const Reference< XFastAttributeList >& Attribs )
@@ -190,15 +202,33 @@ namespace sax_fastparser {
         if (!mxOutputStream.is())
             return;
 
-        if ( !maMarkStack.empty() )
-            maMarkStack.top()->setCurrentElement( Element );
-
-        writeBytes(toUnoSequence(maOpeningBracket));
+        writeBytes(toUnoSequence(aOpeningBracket));
 
         writeId(Element);
         writeFastAttributeList(Attribs);
 
-        writeBytes(toUnoSequence(maSlashAndClosingBracket));
+        writeBytes(toUnoSequence(aSlashAndClosingBracket));
+    }
+
+    void SAL_CALL FastSaxSerializer::singleUnknownElement( const OUString& Namespace, const OUString& Name, const Reference< XFastAttributeList >& Attribs )
+        throw (SAXException, RuntimeException)
+    {
+        if (!mxOutputStream.is())
+            return;
+
+        writeBytes(toUnoSequence(aOpeningBracket));
+
+        if (Namespace.getLength())
+        {
+            write(Namespace);
+            writeBytes(toUnoSequence(aColon));
+        }
+        
+        write(Name);
+
+        writeFastAttributeList(Attribs);
+            
+        writeBytes(toUnoSequence(aSlashAndClosingBracket));
     }
 
     void SAL_CALL FastSaxSerializer::characters( const OUString& aChars )
@@ -209,12 +239,11 @@ namespace sax_fastparser {
 
         write( aChars );
     }
-
+    
     void SAL_CALL FastSaxSerializer::setOutputStream( const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream >& xOutputStream )
         throw (::com::sun::star::uno::RuntimeException)
     {
         mxOutputStream = xOutputStream;
-        assert(mxOutputStream.is()); // cannot do anything without that
     }
 
     void SAL_CALL FastSaxSerializer::setFastTokenHandler( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xFastTokenHandler )
@@ -224,83 +253,102 @@ namespace sax_fastparser {
     }
     void FastSaxSerializer::writeFastAttributeList( const Reference< XFastAttributeList >& Attribs )
     {
-#ifdef DBG_UTIL
-        ::std::set<OUString> DebugAttributes;
-#endif
         Sequence< Attribute > aAttrSeq = Attribs->getUnknownAttributes();
         const Attribute *pAttr = aAttrSeq.getConstArray();
         sal_Int32 nAttrLength = aAttrSeq.getLength();
         for (sal_Int32 i = 0; i < nAttrLength; i++)
         {
-            writeBytes(toUnoSequence(maSpace));
+            writeBytes(toUnoSequence(aSpace));
 
-            OUString const& rAttrName(pAttr[i].Name);
-#ifdef DBG_UTIL
-            // Well-formedness constraint: Unique Att Spec
-            assert(DebugAttributes.find(rAttrName) == DebugAttributes.end());
-            DebugAttributes.insert(rAttrName);
-#endif
-            write(rAttrName);
-            writeBytes(toUnoSequence(maEqualSignAndQuote));
+            write(pAttr[i].Name);
+            writeBytes(toUnoSequence(aEqualSignAndQuote));
             write(escapeXml(pAttr[i].Value));
-            writeBytes(toUnoSequence(maQuote));
+            writeBytes(toUnoSequence(aQuote));
         }
-
+        
         Sequence< FastAttribute > aFastAttrSeq = Attribs->getFastAttributes();
         const FastAttribute *pFastAttr = aFastAttrSeq.getConstArray();
         sal_Int32 nFastAttrLength = aFastAttrSeq.getLength();
         for (sal_Int32 j = 0; j < nFastAttrLength; j++)
         {
-            writeBytes(toUnoSequence(maSpace));
+            writeBytes(toUnoSequence(aSpace));
 
             sal_Int32 nToken = pFastAttr[j].Token;
             writeId(nToken);
-
-#ifdef DBG_UTIL
-            // Well-formedness constraint: Unique Att Spec
-            OUString const name(OStringToOUString(getId(nToken),
-                                                  RTL_TEXTENCODING_UTF8));
-            assert(DebugAttributes.find(name) == DebugAttributes.end());
-            DebugAttributes.insert(name);
-#endif
-
-            writeBytes(toUnoSequence(maEqualSignAndQuote));
-
+            
+            writeBytes(toUnoSequence(aEqualSignAndQuote));
+    
             write(escapeXml(Attribs->getValue(pFastAttr[j].Token)));
-
-            writeBytes(toUnoSequence(maQuote));
+            
+            writeBytes(toUnoSequence(aQuote));
         }
     }
 
-#if SUPD == 310
+    // XServiceInfo
+    OUString FastSaxSerializer::getImplementationName() throw (RuntimeException)
+    {
+        return OUString::createFromAscii( SERIALIZER_IMPLEMENTATION_NAME );
+    }
+
+    // XServiceInfo
+    sal_Bool FastSaxSerializer::supportsService(const OUString& ServiceName) throw (RuntimeException)
+    {
+        Sequence< OUString > aSNL = getSupportedServiceNames();
+        const OUString * pArray = aSNL.getConstArray();
+
+        for( sal_Int32 i = 0; i < aSNL.getLength(); i++ )
+        if( pArray[i] == ServiceName )
+            return sal_True;
+
+        return sal_False;
+    }
+
+    // XServiceInfo
+    Sequence< OUString > FastSaxSerializer::getSupportedServiceNames(void) throw (RuntimeException)
+    {
+        Sequence<OUString> seq(1);
+        seq.getArray()[0] = OUString::createFromAscii( SERIALIZER_SERVICE_NAME );
+        return seq;
+    }
 
     OUString FastSaxSerializer::getImplementationName_Static()
     {
         return OUString::createFromAscii( SERIALIZER_IMPLEMENTATION_NAME );
     }
 
-    css::uno::Sequence< OUString > FastSaxSerializer::getSupportedServiceNames_Static(void)
+    Sequence< OUString > FastSaxSerializer::getSupportedServiceNames_Static(void)
     {
-        css::uno::Sequence<OUString> aRet(1);
+        Sequence<OUString> aRet(1);
         aRet.getArray()[0] = OUString( RTL_CONSTASCII_USTRINGPARAM(SERIALIZER_SERVICE_NAME) );
         return aRet;
     }
 
-#endif	// SUPD == 310
-
-    void FastSaxSerializer::mark( const Int32Sequence& aOrder )
+    void FastSaxSerializer::mark()
     {
-        if ( aOrder.hasElements() )
+        maMarkStack.push( ForMerge() );
+    }
+
+#if DEBUG
+    void FastSaxSerializer::printMarkStack( )
+    {
+        ::std::stack< ForMerge > aCopy( maMarkStack );
+        int nSize = aCopy.size();
+        int i = 0;
+        while ( !aCopy.empty() )
         {
-            boost::shared_ptr< ForMerge > pSort( new ForSort( aOrder ) );
-            maMarkStack.push( pSort );
-        }
-        else
-        {
-            boost::shared_ptr< ForMerge > pMerge( new ForMerge( ) );
-            maMarkStack.push( pMerge );
+            fprintf( stderr, "%d\n", nSize - i );
+
+            ForMerge aMarks = aCopy.top( );
+            aMarks.print();
+
+
+            fprintf( stderr, "\n" );
+
+            aCopy.pop( );
+            i++;
         }
     }
+#endif
 
     void FastSaxSerializer::mergeTopMarks( sax_fastparser::MergeMarksEnum eMergeType )
     {
@@ -309,19 +357,19 @@ namespace sax_fastparser {
 
         if ( maMarkStack.size() == 1 )
         {
-            mxOutputStream->writeBytes( maMarkStack.top()->getData() );
+            mxOutputStream->writeBytes( maMarkStack.top().getData() );
             maMarkStack.pop();
             return;
         }
 
-        const Int8Sequence aMerge( maMarkStack.top()->getData() );
+        const Int8Sequence aMerge( maMarkStack.top().getData() );
         maMarkStack.pop();
 
         switch ( eMergeType )
         {
-            case MERGE_MARKS_APPEND:   maMarkStack.top()->append( aMerge );   break;
-            case MERGE_MARKS_PREPEND:  maMarkStack.top()->prepend( aMerge );  break;
-            case MERGE_MARKS_POSTPONE: maMarkStack.top()->postpone( aMerge ); break;
+            case MERGE_MARKS_APPEND:   maMarkStack.top().append( aMerge );   break;
+            case MERGE_MARKS_PREPEND:  maMarkStack.top().prepend( aMerge );  break;
+            case MERGE_MARKS_POSTPONE: maMarkStack.top().postpone( aMerge ); break;
         }
     }
 
@@ -330,33 +378,33 @@ namespace sax_fastparser {
         if ( maMarkStack.empty() )
             mxOutputStream->writeBytes( aData );
         else
-            maMarkStack.top()->append( aData );
+            maMarkStack.top().append( aData );
     }
 
     FastSaxSerializer::Int8Sequence& FastSaxSerializer::ForMerge::getData()
     {
         merge( maData, maPostponed, true );
         maPostponed.realloc( 0 );
-
+        
         return maData;
     }
 
-#if OSL_DEBUG_LEVEL > 0
+#if DEBUG
     void FastSaxSerializer::ForMerge::print( )
     {
-        std::cerr << "Data: ";
+        fprintf( stderr, "Data: " );
         for ( sal_Int32 i=0, len=maData.getLength(); i < len; i++ )
         {
-            std::cerr << maData[i];
+            fprintf( stderr, "%c", maData[i] );
         }
 
-        std::cerr << "\nPostponed: ";
+        fprintf( stderr, "\nPostponed: " );
         for ( sal_Int32 i=0, len=maPostponed.getLength(); i < len; i++ )
         {
-            std::cerr << maPostponed[i];
+            fprintf( stderr, "%c", maPostponed[i] );
         }
 
-        std::cerr << "\n";
+        fprintf( stderr, "\n" );
     }
 #endif
 
@@ -396,71 +444,6 @@ namespace sax_fastparser {
             }
         }
     }
-
-    void FastSaxSerializer::ForMerge::resetData( )
-    {
-        maData = Int8Sequence();
-    }
-
-    void FastSaxSerializer::ForSort::setCurrentElement( sal_Int32 nElement )
-    {
-        SequenceAsVector< sal_Int32 > aOrder( maOrder );
-        if( std::find( aOrder.begin(), aOrder.end(), nElement ) != aOrder.end() )
-        {
-            mnCurrentElement = nElement;
-            if ( maData.find( nElement ) == maData.end() )
-                maData[ nElement ] = Int8Sequence();
-        }
-    }
-
-    void FastSaxSerializer::ForSort::prepend( const Int8Sequence &rWhat )
-    {
-        append( rWhat );
-    }
-
-    void FastSaxSerializer::ForSort::append( const Int8Sequence &rWhat )
-    {
-        merge( maData[mnCurrentElement], rWhat, true );
-    }
-
-    void FastSaxSerializer::ForSort::sort()
-    {
-        // Clear the ForMerge data to avoid duplicate items
-        resetData();
-
-        // Sort it all
-        std::map< sal_Int32, Int8Sequence >::iterator iter;
-        for ( sal_Int32 i=0, len=maOrder.getLength(); i < len; i++ )
-        {
-            iter = maData.find( maOrder[i] );
-            if ( iter != maData.end() )
-                ForMerge::append( iter->second );
-        }
-    }
-
-    FastSaxSerializer::Int8Sequence& FastSaxSerializer::ForSort::getData()
-    {
-        sort( );
-        return ForMerge::getData();
-    }
-
-#if OSL_DEBUG_LEVEL > 0
-    void FastSaxSerializer::ForSort::print( )
-    {
-        std::map< sal_Int32, Int8Sequence >::iterator iter = maData.begin();
-        while ( iter != maData.end( ) )
-        {
-            std::cerr << "pair: " << iter->first;
-            for ( sal_Int32 i=0, len=iter->second.getLength(); i < len; ++i )
-                std::cerr << iter->second[i];
-            std::cerr << "\n";
-            ++iter;
-        }
-
-        sort( );
-        ForMerge::print();
-    }
-#endif
 
 } // namespace sax_fastparser
 

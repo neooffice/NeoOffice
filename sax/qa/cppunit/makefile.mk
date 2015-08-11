@@ -1,25 +1,28 @@
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#  
-#    http://www.apache.org/licenses/LICENSE-2.0
-#  
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an
-#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#  KIND, either express or implied.  See the License for the
-#  specific language governing permissions and limitations
-#  under the License.
-#  
-#**************************************************************
-
-
+#*************************************************************************
+#
+# Copyright 2000, 2010 Oracle and/or its affiliates.
+#
+# This file is part of NeoOffice.
+#
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
+#
+# Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
+#
+#*************************************************************************
 
 PRJ=../..
 PRJNAME=sax
@@ -31,12 +34,14 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
-.IF "$(WITH_CPPUNIT)" != "YES"
+.IF "$(UPD)" != "310"
 
-@all:
-	@echo "cppunit disabled. nothing do do."
-
-.ELSE # "$(WITH_CPPUNIT)" != "YES"
+#building with stlport, but cppunit was not built with stlport
+.IF "$(USE_SYSTEM_STL)"!="YES"
+.IF "$(SYSTEM_CPPUNIT)"=="YES"
+CFLAGSCXX+=-DADAPT_EXT_STL
+.ENDIF
+.ENDIF
 
 CFLAGSCXX += $(CPPUNIT_CFLAGS)
 DLLPRE = # no leading "lib" on .so files
@@ -44,20 +49,16 @@ DLLPRE = # no leading "lib" on .so files
 # --- Libs ---------------------------------------------------------
 
 SHL1OBJS=  \
-	$(SLO)/test_converter.obj \
+    $(SLO)/test_converter.obj \
 
 
 SHL1STDLIBS= \
-	 $(SAXLIB) \
-	 $(SALLIB) \
-	 $(CPPUNITLIB) \
+     $(SAXLIB) \
+     $(SALLIB) \
+     $(CPPUNITLIB) \
 
 
-.IF "$(GUI)" == "OS2"
-SHL1TARGET= tst_cnv
-.ELSE
 SHL1TARGET= test_converter
-.ENDIF
 SHL1RPATH = NONE
 SHL1IMPLIB= i$(SHL1TARGET)
 # SHL1DEF= $(MISC)/$(SHL1TARGET).def
@@ -68,12 +69,14 @@ SHL1VERSIONMAP= version.map
 # --- All object files ---------------------------------------------
 
 SLOFILES= \
-	$(SHL1OBJS) \
+    $(SHL1OBJS) \
 
+.ELSE		# "$(UPD)" != "310"
+dummy:
+	@echo "Nothing to build for UPD $(UPD)"
+.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets ------------------------------------------------------
-
-.ENDIF # "$(WITH_CPPUNIT)" != "YES"
 
 .INCLUDE :  target.mk
 .INCLUDE : _cppunit.mk

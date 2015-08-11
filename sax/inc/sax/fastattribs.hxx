@@ -1,24 +1,33 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_SAX_FASTATTRIBS_HXX
-#define INCLUDED_SAX_FASTATTRIBS_HXX
+#ifndef _SAX_FASTATTRIBS_HXX_
+#define _SAX_FASTATTRIBS_HXX_
 
 #include <com/sun/star/xml/sax/XFastAttributeList.hpp>
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
@@ -26,7 +35,7 @@
 #include <com/sun/star/xml/FastAttribute.hpp>
 
 #include <cppuhelper/implbase1.hxx>
-#include <sax/saxdllapi.h>
+#include "sax/dllapi.h"
 
 #include <map>
 #include <vector>
@@ -36,94 +45,46 @@ namespace sax_fastparser
 
 struct UnknownAttribute
 {
-    OUString maNamespaceURL;
-    OString maName;
-    OString maValue;
+    ::rtl::OUString maNamespaceURL;
+    ::rtl::OString maName;
+    ::rtl::OString maValue;
 
-    UnknownAttribute( const OUString& rNamespaceURL, const OString& rName, const sal_Char* pValue );
+    UnknownAttribute( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
-    UnknownAttribute( const OString& rName, const sal_Char* pValue );
+    UnknownAttribute( const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
     void FillAttribute( ::com::sun::star::xml::Attribute* pAttrib ) const;
 };
 
+typedef std::map< sal_Int32, ::rtl::OString > FastAttributeMap;
 typedef std::vector< UnknownAttribute > UnknownAttributeList;
 
-/// A native C++ interface to tokenisation
-class SAX_DLLPUBLIC FastTokenHandlerBase
-{
-    public:
-        virtual ~FastTokenHandlerBase();
-        virtual sal_Int32 getTokenDirect( const char *pToken, sal_Int32 nLength ) const = 0;
-};
-
-/// avoid constantly allocating and freeing sequences.
-class SAX_DLLPUBLIC FastTokenLookup
-{
-    static const int mnUtf8BufferSize = 128;
-    ::css::uno::Sequence< sal_Int8 > maUtf8Buffer;
-public:
-    FastTokenLookup();
-    sal_Int32 getTokenFromChars(
-        const ::css::uno::Reference< ::css::xml::sax::XFastTokenHandler > &mxTokenHandler,
-        FastTokenHandlerBase *pTokenHandler,
-        const char *pStr, size_t nLength = 0 );
-};
-
-class SAX_DLLPUBLIC FastAttributeList : public ::cppu::WeakImplHelper1< ::com::sun::star::xml::sax::XFastAttributeList >
+class SAX_DLLPUBLIC FastAttributeList : public ::cppu::WeakImplHelper1< ::com::sun::star::xml::sax::XFastAttributeList > 
 {
 public:
-    FastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xTokenHandler,
-                       FastTokenHandlerBase *pOptHandlerBase = NULL );
+    FastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xTokenHandler );
     virtual ~FastAttributeList();
 
     void clear();
-    void add( sal_Int32 nToken, const sal_Char* pValue, size_t nValueLength = 0 );
-    void add( sal_Int32 nToken, const OString& rValue );
-    void addNS( sal_Int32 nNamespaceToken, sal_Int32 nToken, const OString& rValue );
-    void addUnknown( const OUString& rNamespaceURL, const OString& rName, const sal_Char* pValue );
-    void addUnknown( const OString& rName, const sal_Char* pValue );
-
-    // performance sensitive shortcuts to avoid allocation ...
-    bool getAsInteger( sal_Int32 nToken, sal_Int32 &rInt);
-    bool getAsDouble( sal_Int32 nToken, double &rDouble);
-    bool getAsChar( sal_Int32 nToken, const char*& rPos ) const;
+    void add( sal_Int32 nToken, const ::rtl::OString& rValue );
+    void addUnknown( const ::rtl::OUString& rNamespaceURL, const ::rtl::OString& rName, const ::rtl::OString& rValue );
+    void addUnknown( const ::rtl::OString& rName, const ::rtl::OString& rValue );
 
     // XFastAttributeList
-#if SUPD == 310
-    virtual sal_Bool SAL_CALL hasAttribute( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual ::sal_Int32 SAL_CALL getValueToken( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual ::sal_Int32 SAL_CALL getOptionalValueToken( ::sal_Int32 Token, ::sal_Int32 Default ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual OUString SAL_CALL getValue( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual OUString SAL_CALL getOptionalValue( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::Attribute > SAL_CALL getUnknownAttributes(  ) throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::FastAttribute > SAL_CALL getFastAttributes() throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-    virtual sal_Bool SAL_CALL hasAttribute( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual ::sal_Int32 SAL_CALL getValueToken( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual ::sal_Int32 SAL_CALL getOptionalValueToken( ::sal_Int32 Token, ::sal_Int32 Default ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual OUString SAL_CALL getValue( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual OUString SAL_CALL getOptionalValue( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::Attribute > SAL_CALL getUnknownAttributes(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::FastAttribute > SAL_CALL getFastAttributes() throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+    virtual ::sal_Bool SAL_CALL hasAttribute( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException);
+    virtual ::sal_Int32 SAL_CALL getValueToken( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual ::sal_Int32 SAL_CALL getOptionalValueToken( ::sal_Int32 Token, ::sal_Int32 Default ) throw (::com::sun::star::uno::RuntimeException);
+    virtual ::rtl::OUString SAL_CALL getValue( ::sal_Int32 Token ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual ::rtl::OUString SAL_CALL getOptionalValue( ::sal_Int32 Token ) throw (::com::sun::star::uno::RuntimeException);
+    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::Attribute > SAL_CALL getUnknownAttributes(  ) throw (::com::sun::star::uno::RuntimeException);
+    virtual ::com::sun::star::uno::Sequence< ::com::sun::star::xml::FastAttribute > SAL_CALL getFastAttributes() throw (::com::sun::star::uno::RuntimeException);
 
 private:
-    inline sal_Int32 AttributeValueLength(sal_Int32 i);
-
-private:
-    sal_Char *mpChunk; ///< buffer to store all attribute values - null terminated strings
-    sal_Int32 mnChunkLength; ///< size of allocated memory for mpChunk
-    // maAttributeValues stores pointers, relative to mpChunk, for each attribute value string
-    // length of the string is maAttributeValues[n+1] - maAttributeValues[n] - 1
-    // maAttributeValues[0] == 0
-    std::vector< sal_Int32 > maAttributeValues;
-    std::vector< sal_Int32 > maAttributeTokens;
+    FastAttributeMap maAttributes;
     UnknownAttributeList maUnknownAttributes;
+    FastAttributeMap::iterator maLastIter;
     ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxTokenHandler;
-    FastTokenHandlerBase *mpTokenHandler;
 
-    FastTokenLookup maTokenLookup;
 };
 
 }

@@ -1,56 +1,65 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 #include <string.h>
-
-#include <algorithm>
 
 #include <sal/types.h>
 
 #include <rtl/textenc.h>
 #include <rtl/tencinfo.h>
 
+
 #include <com/sun/star/io/XInputStream.hpp>
 
+using namespace rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::io;
 
-
 #include "xml2utf.hxx"
-#include <boost/scoped_array.hpp>
 
 namespace sax_expatwrap {
 
 sal_Int32 XMLFile2UTFConverter::readAndConvert( Sequence<sal_Int8> &seq , sal_Int32 nMaxToRead )
     throw ( IOException, NotConnectedException , BufferSizeExceededException , RuntimeException )
 {
+
+    Sequence<sal_Int8> seqIn;
+
     if( ! m_in.is() ) {
         throw NotConnectedException();
     }
     if( ! m_bStarted ) {
-        // it should be possible to find the encoding attribute
-        // within the first 512 bytes == 128 chars in UCS-4
-        nMaxToRead = ::std::max( sal_Int32(512) , nMaxToRead );
+        nMaxToRead = Max( 512 , nMaxToRead );  	// it should be possible to find the encoding attribute
+                                                 // within the first 512 bytes == 128 chars in UCS-4
     }
 
     sal_Int32 nRead;
     Sequence< sal_Int8 > seqStart;
-    while( true )
+    while( sal_True )
     {
         nRead = m_in->readSomeBytes( seq , nMaxToRead );
 
@@ -83,7 +92,7 @@ sal_Int32 XMLFile2UTFConverter::readAndConvert( Sequence<sal_Int8> &seq , sal_In
                   // read more !
                   continue;
                 }
-                if( scanForEncoding( seq ) || !m_sEncoding.isEmpty() ) {
+                if( scanForEncoding( seq ) || m_sEncoding.getLength() ) {
                     // initialize decoding
                     initializeDecoding();
                 }
@@ -96,7 +105,7 @@ sal_Int32 XMLFile2UTFConverter::readAndConvert( Sequence<sal_Int8> &seq , sal_In
                 m_pText2Unicode->canContinue() && m_pUnicode2Text->canContinue() ) {
 
                 Sequence<sal_Unicode> seqUnicode = m_pText2Unicode->convert( seq );
-                seq = m_pUnicode2Text->convert( seqUnicode.getConstArray(), seqUnicode.getLength() );
+                seq = m_pUnicode2Text->convert(	seqUnicode.getConstArray(),	seqUnicode.getLength() );
             }
 
             if( ! m_bStarted )
@@ -105,7 +114,7 @@ sal_Int32 XMLFile2UTFConverter::readAndConvert( Sequence<sal_Int8> &seq , sal_In
                 // ( otherwise the expat-Parser will crash )
                 // This must be done after decoding !
                 // ( e.g. Files decoded in ucs-4 cannot be read properly )
-                m_bStarted = true;
+                m_bStarted = sal_True;
                 removeEncoding( seq );
             }
             nRead = seq.getLength();
@@ -164,38 +173,38 @@ void XMLFile2UTFConverter::removeEncoding( Sequence<sal_Int8> &seq )
                                 &( seq.getArray()[nStop+1]) ,
                                 seq.getLength() - nStop -1);
                 seq.realloc( seq.getLength() - ( nStop+1 - nFound ) );
-//              str = String( (char * ) seq.getArray() , seq.getLen() );
+//				str = String( (char * ) seq.getArray() , seq.getLen() );
             }
         }
     }
 }
 
 // Checks, if enough data has been accumulated to recognize the encoding
-bool XMLFile2UTFConverter::isEncodingRecognizable( const Sequence< sal_Int8 > &seq)
+sal_Bool XMLFile2UTFConverter::isEncodingRecognizable( const Sequence< sal_Int8 > &seq)
 {
     const sal_Int8 *pSource = seq.getConstArray();
-    bool bCheckIfFirstClosingBracketExsists = false;
+    sal_Bool bCheckIfFirstClosingBracketExsists = sal_False;
 
     if( seq.getLength() < 8 ) {
         // no recognition possible, when less than 8 bytes are available
-        return false;
+        return sal_False;
     }
 
     if( ! strncmp( (const char * ) pSource , "<?xml" , 4 ) ) {
         // scan if the <?xml tag finishes within this buffer
-        bCheckIfFirstClosingBracketExsists = true;
+        bCheckIfFirstClosingBracketExsists = sal_True;
     }
     else if( ('<' == pSource[0] || '<' == pSource[2] ) &&
              ( ('?' == pSource[4] || '?' == pSource[6] ) ) )
     {
         // check for utf-16
-        bCheckIfFirstClosingBracketExsists = true;
+        bCheckIfFirstClosingBracketExsists = sal_True;
     }
     else if( ( '<' == pSource[1] || '<' == pSource[3] ) &&
              ( '?' == pSource[5] || '?' == pSource[7] ) )
     {
         // check for
-        bCheckIfFirstClosingBracketExsists = true;
+        bCheckIfFirstClosingBracketExsists = sal_True;
     }
 
     if( bCheckIfFirstClosingBracketExsists )
@@ -205,24 +214,24 @@ bool XMLFile2UTFConverter::isEncodingRecognizable( const Sequence< sal_Int8 > &s
             // whole <?xml tag is valid
             if( '>' == pSource[ i ] )
             {
-                return true;
+                return sal_True;
             }
         }
-        return false;
+        return sal_False;
     }
 
     // No <? tag in front, no need for a bigger buffer
-    return true;
+    return sal_True;
 }
 
-bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
+sal_Bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
 {
     const sal_uInt8 *pSource = reinterpret_cast<const sal_uInt8*>( seq.getConstArray() );
-    bool bReturn = true;
+    sal_Bool bReturn = sal_True;
 
     if( seq.getLength() < 4 ) {
         // no recognition possible, when less than 4 bytes are available
-        return false;
+        return sal_False;
     }
 
     // first level : detect possible file formats
@@ -240,7 +249,7 @@ bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
         }
 
         int nFound = str.indexOf( " encoding" );
-        if( nFound >= 0 ) {
+        if( nFound < str.getLength() ) {
             int nStop;
             int nStart = str.indexOf( "\"" , nFound );
             if( nStart < 0 || str.indexOf( "'" , nFound ) < nStart )
@@ -294,7 +303,7 @@ bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
 
         m_sEncoding = "utf-16";
     }
-    else if( 0xEF == pSource[0] &&
+    else if( 0xEF == pSource[0] && 
              0xBB == pSource[1] &&
              0xBF == pSource[2] )
     {
@@ -312,18 +321,16 @@ bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
         // UCS-4 little endian
         m_sEncoding = "ucs-4";
     }
-/* TODO: no need to test for the moment since we return sal_False like default case anyway
     else if( 0x4c == pSource[0] && 0x6f == pSource[1]  &&
              0xa7 == static_cast<unsigned char> (pSource[2]) &&
              0x94 == static_cast<unsigned char> (pSource[3]) ) {
         // EBCDIC
         bReturn = sal_False;   // must be extended
     }
-*/
     else {
         // other
         // UTF8 is directly recognized by the parser.
-        bReturn = false;
+        bReturn = sal_False;
     }
 
     return bReturn;
@@ -332,7 +339,7 @@ bool XMLFile2UTFConverter::scanForEncoding( Sequence< sal_Int8 > &seq )
 void XMLFile2UTFConverter::initializeDecoding()
 {
 
-    if( !m_sEncoding.isEmpty() )
+    if( m_sEncoding.getLength() )
     {
         rtl_TextEncoding encoding = rtl_getTextEncodingFromMimeCharset( m_sEncoding.getStr() );
         if( encoding != RTL_TEXTENCODING_UTF8 )
@@ -344,21 +351,18 @@ void XMLFile2UTFConverter::initializeDecoding()
 }
 
 
-
-
+//----------------------------------------------
+//
 // Text2UnicodeConverter
-
-
+//
+//----------------------------------------------
 Text2UnicodeConverter::Text2UnicodeConverter( const OString &sEncoding )
-    : m_convText2Unicode(NULL)
-    , m_contextText2Unicode(NULL)
-    , m_rtlEncoding(RTL_TEXTENCODING_DONTKNOW)
 {
     rtl_TextEncoding encoding = rtl_getTextEncodingFromMimeCharset( sEncoding.getStr() );
     if( RTL_TEXTENCODING_DONTKNOW == encoding )
     {
-        m_bCanContinue = false;
-        m_bInitialized = false;
+        m_bCanContinue = sal_False;
+        m_bInitialized = sal_False;
     }
     else
     {
@@ -377,10 +381,10 @@ Text2UnicodeConverter::~Text2UnicodeConverter()
 
 void Text2UnicodeConverter::init( rtl_TextEncoding encoding )
 {
-    m_bCanContinue = true;
-    m_bInitialized = true;
+    m_bCanContinue = sal_True;
+    m_bInitialized = sal_True;
 
-    m_convText2Unicode  = rtl_createTextToUnicodeConverter(encoding);
+    m_convText2Unicode 	= rtl_createTextToUnicodeConverter(encoding);
     m_contextText2Unicode = rtl_createTextToUnicodeContext( m_convText2Unicode );
     m_rtlEncoding = encoding;
 }
@@ -389,32 +393,32 @@ void Text2UnicodeConverter::init( rtl_TextEncoding encoding )
 Sequence<sal_Unicode> Text2UnicodeConverter::convert( const Sequence<sal_Int8> &seqText )
 {
     sal_uInt32 uiInfo;
-    sal_Size nSrcCvtBytes   = 0;
-    sal_Size nTargetCount   = 0;
+    sal_Size nSrcCvtBytes 	= 0;
+    sal_Size nTargetCount 	= 0;
     sal_Size nSourceCount   = 0;
 
     // the whole source size
-    sal_Int32   nSourceSize = seqText.getLength() + m_seqSource.getLength();
-    Sequence<sal_Unicode>   seqUnicode ( nSourceSize );
+    sal_Int32 	nSourceSize = seqText.getLength() + m_seqSource.getLength();
+    Sequence<sal_Unicode> 	seqUnicode ( nSourceSize );
 
     const sal_Int8 *pbSource = seqText.getConstArray();
-    boost::scoped_array<sal_Int8> pbTempMem;
+    sal_Int8 *pbTempMem = 0;
 
     if( m_seqSource.getLength() ) {
         // put old rest and new byte sequence into one array
-        pbTempMem.reset(new sal_Int8[ nSourceSize ]);
-        memcpy( pbTempMem.get() , m_seqSource.getConstArray() , m_seqSource.getLength() );
+        pbTempMem = new sal_Int8[ nSourceSize ];
+        memcpy( pbTempMem , m_seqSource.getConstArray() , m_seqSource.getLength() );
         memcpy( &(pbTempMem[ m_seqSource.getLength() ]) , seqText.getConstArray() , seqText.getLength() );
-        pbSource = pbTempMem.get();
+        pbSource = pbTempMem;
 
         // set to zero again
         m_seqSource = Sequence< sal_Int8 >();
     }
 
-    while( true ) {
+    while( sal_True ) {
 
         /* All invalid characters are transformed to the unicode undefined char */
-        nTargetCount +=     rtl_convertTextToUnicode(
+        nTargetCount += 	rtl_convertTextToUnicode(
                                     m_convText2Unicode,
                                     m_contextText2Unicode,
                                     ( const sal_Char * ) &( pbSource[nSourceCount] ),
@@ -440,6 +444,11 @@ Sequence<sal_Unicode> Text2UnicodeConverter::convert( const Sequence<sal_Int8> &
         memcpy( m_seqSource.getArray() , &(pbSource[nSourceCount]) , nSourceSize-nSourceCount );
     }
 
+
+    if( pbTempMem ) {
+        delete [] pbTempMem;
+    }
+
     // set to correct unicode size
     seqUnicode.realloc( nTargetCount );
 
@@ -448,11 +457,11 @@ Sequence<sal_Unicode> Text2UnicodeConverter::convert( const Sequence<sal_Int8> &
 
 
 
-
-
+//----------------------------------------------
+//
 // Unicode2TextConverter
-
-
+//
+//----------------------------------------------
 Unicode2TextConverter::Unicode2TextConverter( rtl_TextEncoding encoding )
 {
     init( encoding );
@@ -470,7 +479,7 @@ Unicode2TextConverter::~Unicode2TextConverter()
 
 Sequence<sal_Int8> Unicode2TextConverter::convert(const sal_Unicode *puSource , sal_Int32 nSourceSize)
 {
-    boost::scoped_array<sal_Unicode> puTempMem;
+    sal_Unicode *puTempMem = 0;
 
     if( m_seqSource.getLength() ) {
         // For surrogates !
@@ -478,15 +487,15 @@ Sequence<sal_Int8> Unicode2TextConverter::convert(const sal_Unicode *puSource , 
         // In general when surrogates are used, they should be rarely
         // cut off between two convert()-calls. So this code is used
         // rarely and the extra copy is acceptable.
-        puTempMem.reset(new sal_Unicode[ nSourceSize + m_seqSource.getLength()]);
-        memcpy( puTempMem.get() ,
+        puTempMem = new sal_Unicode[ nSourceSize + m_seqSource.getLength()];
+        memcpy( puTempMem ,
                 m_seqSource.getConstArray() ,
                 m_seqSource.getLength() * sizeof( sal_Unicode ) );
         memcpy(
             &(puTempMem[ m_seqSource.getLength() ]) ,
             puSource ,
             nSourceSize*sizeof( sal_Unicode ) );
-        puSource = puTempMem.get();
+        puSource = puTempMem;
         nSourceSize += m_seqSource.getLength();
 
         m_seqSource = Sequence< sal_Unicode > ();
@@ -504,9 +513,9 @@ Sequence<sal_Int8> Unicode2TextConverter::convert(const sal_Unicode *puSource , 
     // which most often used as the target.
     sal_Int32 nSeqSize =  nSourceSize * 3;
 
-    Sequence<sal_Int8>  seqText( nSeqSize );
+    Sequence<sal_Int8> 	seqText( nSeqSize );
     sal_Char *pTarget = (sal_Char *) seqText.getArray();
-    while( true ) {
+    while( sal_True ) {
 
         nTargetCount += rtl_convertUnicodeToText(
                                     m_convUnicode2Text,
@@ -538,6 +547,10 @@ Sequence<sal_Int8> Unicode2TextConverter::convert(const sal_Unicode *puSource , 
                 (nSourceSize - nSourceCount) * sizeof( sal_Unicode ) );
     }
 
+    if( puTempMem ) {
+        delete [] puTempMem;
+    }
+
     // reduce the size of the buffer (fast, no copy necessary)
     seqText.realloc( nTargetCount );
 
@@ -546,10 +559,10 @@ Sequence<sal_Int8> Unicode2TextConverter::convert(const sal_Unicode *puSource , 
 
 void Unicode2TextConverter::init( rtl_TextEncoding encoding )
 {
-    m_bCanContinue = true;
-    m_bInitialized = true;
+    m_bCanContinue = sal_True;
+    m_bInitialized = sal_True;
 
-    m_convUnicode2Text  = rtl_createUnicodeToTextConverter( encoding );
+    m_convUnicode2Text 	= rtl_createUnicodeToTextConverter( encoding );
     m_contextUnicode2Text = rtl_createUnicodeToTextContext( m_convUnicode2Text );
     m_rtlEncoding = encoding;
 };

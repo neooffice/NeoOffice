@@ -1,29 +1,38 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-
+//------------------------------------------------------
 // testcomponent - Loads a service and its testcomponent from dlls performs a test.
 // Expands the dll-names depending on the actual environment.
-// Example : testcomponent com.sun.star.io.Pipe stm
-
-// Therefor the testcode must exist in teststm and the testservice must be named com.sun.star.io.Pipe
-
+// Example : testcomponent stardiv.uno.io.Pipe stm
+//
+// Therefor the testcode must exist in teststm and the testservice must be named test.stardiv.uno.io.Pipe
+//
 
 #include <stdio.h>
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
@@ -61,7 +70,7 @@ int main (int argc, char **argv)
 
     // create service manager
     Reference< XMultiServiceFactory > xSMgr =
-        createRegistryServiceFactory( OUString( "applicat.rdb") );
+        createRegistryServiceFactory( OUString( RTL_CONSTASCII_USTRINGPARAM("applicat.rdb")) );
 
     Reference < XImplementationRegistration > xReg;
     Reference < XSimpleRegistry > xSimpleReg;
@@ -70,11 +79,10 @@ int main (int argc, char **argv)
     {
         // Create registration service
         Reference < XInterface > x = xSMgr->createInstance(
-            OUString("com.sun.star.registry.ImplementationRegistration") );
+            OUString::createFromAscii( "com.sun.star.registry.ImplementationRegistration" ) );
         xReg = Reference<  XImplementationRegistration > ( x , UNO_QUERY );
     }
-    catch (const Exception&)
-    {
+    catch( Exception & ) {
         printf( "Couldn't create ImplementationRegistration service\n" );
         exit(1);
     }
@@ -89,18 +97,17 @@ int main (int argc, char **argv)
 #ifdef SAL_W32
             OUString aDllName = OStringToOUString( argv[n] , RTL_TEXTENCODING_ASCII_US );
 #else
-            OUString aDllName = "lib";
+            OUString aDllName = OUString( RTL_CONSTASCII_USTRINGPARAM("lib"));
             aDllName += OStringToOUString( argv[n] , RTL_TEXTENCODING_ASCII_US );
-            aDllName += ".so";
+            aDllName += OUString( RTL_CONSTASCII_USTRINGPARAM(".so"));
 #endif
             xReg->registerImplementation(
-                OUString("com.sun.star.loader.SharedLibrary"),
+                OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ),
                 aDllName,
                 xSimpleReg );
         }
     }
-    catch (const Exception &e)
-    {
+    catch( Exception &e ) {
         printf( "Couldn't reach dll %s\n" , szBuf );
         printf( "%s\n" , OUStringToOString( e.Message , RTL_TEXTENCODING_ASCII_US ).getStr() );
 
@@ -117,17 +124,17 @@ int main (int argc, char **argv)
 #ifdef SAL_W32
         OUString aDllName = OStringToOUString( sTestName , RTL_TEXTENCODING_ASCII_US );
 #else
-        OUString aDllName = "lib";
+        OUString aDllName = OUString( RTL_CONSTASCII_USTRINGPARAM("lib"));
         aDllName += OStringToOUString( sTestName , RTL_TEXTENCODING_ASCII_US );
-        aDllName += ".so";
+        aDllName += OUString( RTL_CONSTASCII_USTRINGPARAM(".so"));
 #endif
 
         xReg->registerImplementation(
-            OUString("com.sun.star.loader.SharedLibrary") ,
+            OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ) ,
             aDllName,
             xSimpleReg );
     }
-    catch (const Exception&)
+    catch( Exception & e )
     {
         printf( "Couldn't reach dll %s\n" , szBuf );
         exit(1);
@@ -171,13 +178,12 @@ int main (int argc, char **argv)
             nNewHandle = xTest->test(
                 OStringToOUString( argv[1] , RTL_TEXTENCODING_ASCII_US ) , x , nHandle );
         }
-        catch (const Exception &e)
-        {
+        catch( Exception & e ) {
             OString o  = OUStringToOString( e.Message, RTL_TEXTENCODING_ASCII_US );
             printf( "testcomponent : uncaught exception %s\n" , o.getStr() );
             exit(1);
         }
-        catch (...)
+        catch( ... )
         {
             printf( "testcomponent : uncaught unknown exception\n"  );
             exit(1);
@@ -189,7 +195,7 @@ int main (int argc, char **argv)
         Sequence<OUString> seqWarnings = xTest->getWarnings();
         if( seqWarnings.getLength() > nWarningCount )
         {
-            printf( "Warnings during test %" SAL_PRIxUINT32 "!\n" , nHandle );
+            printf( "Warnings during test %d!\n" , nHandle );
             for( ; nWarningCount < seqWarnings.getLength() ; nWarningCount ++ )
             {
                 OString o = OUStringToOString(
@@ -200,7 +206,7 @@ int main (int argc, char **argv)
 
 
         if( seqErrors.getLength() > nErrorCount ) {
-            printf( "Errors during test %" SAL_PRIxUINT32 "!\n" , nHandle );
+            printf( "Errors during test %d!\n" , nHandle );
             for( ; nErrorCount < seqErrors.getLength() ; nErrorCount ++ ) {
                 OString o = OUStringToOString(
                     seqErrors.getArray()[nErrorCount], RTL_TEXTENCODING_ASCII_US );

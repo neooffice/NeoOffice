@@ -1,21 +1,30 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
 #include "attrlistimpl.hxx"
 
@@ -34,11 +43,13 @@ using namespace ::com::sun::star::xml::sax;
 namespace sax_expatwrap {
 struct TagAttribute
 {
+    TagAttribute()
+        {}
     TagAttribute( const OUString &aName, const OUString &aType , const OUString &aValue )
     {
-        this->sName     = aName;
-        this->sType     = aType;
-        this->sValue    = aValue;
+        this->sName 	= aName;
+        this->sType 	= aType;
+        this->sValue 	= aValue;
     }
 
     OUString sName;
@@ -58,11 +69,7 @@ struct AttributeList_impl
 
 
 
-#if SUPD == 310
 sal_Int16 AttributeList::getLength(void) throw (RuntimeException)
-#else	// SUPD == 310
-sal_Int16 AttributeList::getLength(void) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     return static_cast<sal_Int16>(m_pImpl->vecAttribute.size());
 }
@@ -75,11 +82,7 @@ AttributeList::AttributeList( const AttributeList &r ) :
     *m_pImpl = *(r.m_pImpl);
 }
 
-#if SUPD == 310
 OUString AttributeList::getNameByIndex(sal_Int16 i) throw (RuntimeException)
-#else	// SUPD == 310
-OUString AttributeList::getNameByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sName;
@@ -88,11 +91,7 @@ OUString AttributeList::getNameByIndex(sal_Int16 i) throw (RuntimeException, std
 }
 
 
-#if SUPD == 310
 OUString AttributeList::getTypeByIndex(sal_Int16 i) throw (RuntimeException)
-#else	// SUPD == 310
-OUString AttributeList::getTypeByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sType;
@@ -100,11 +99,7 @@ OUString AttributeList::getTypeByIndex(sal_Int16 i) throw (RuntimeException, std
     return OUString();
 }
 
-#if SUPD == 310
 OUString AttributeList::getValueByIndex(sal_Int16 i) throw (RuntimeException)
-#else	// SUPD == 310
-OUString AttributeList::getValueByIndex(sal_Int16 i) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     if( std::vector< TagAttribute >::size_type(i) < m_pImpl->vecAttribute.size() ) {
         return m_pImpl->vecAttribute[i].sValue;
@@ -113,36 +108,24 @@ OUString AttributeList::getValueByIndex(sal_Int16 i) throw (RuntimeException, st
 
 }
 
-#if SUPD == 310
 OUString AttributeList::getTypeByName( const OUString& sName ) throw (RuntimeException)
-#else	// SUPD == 310
-OUString AttributeList::getTypeByName( const OUString& sName ) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-    for (; ii != m_pImpl->vecAttribute.end(); ++ii )
-    {
-        if( (*ii).sName == sName )
-        {
+    for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
+        if( (*ii).sName == sName ) {
             return (*ii).sType;
         }
     }
     return OUString();
 }
 
-#if SUPD == 310
 OUString AttributeList::getValueByName(const OUString& sName) throw (RuntimeException)
-#else	// SUPD == 310
-OUString AttributeList::getValueByName(const OUString& sName) throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     vector<struct TagAttribute>::iterator ii = m_pImpl->vecAttribute.begin();
 
-    for (; ii != m_pImpl->vecAttribute.end(); ++ii)
-    {
-        if( (*ii).sName == sName )
-        {
+    for( ; ii != m_pImpl->vecAttribute.end() ; ii ++ ) {
+        if( (*ii).sName == sName ) {
             return (*ii).sValue;
         }
     }
@@ -150,11 +133,7 @@ OUString AttributeList::getValueByName(const OUString& sName) throw (RuntimeExce
 }
 
 
-#if SUPD == 310
 Reference< XCloneable > AttributeList::createClone() throw (RuntimeException)
-#else	// SUPD == 310
-Reference< XCloneable > AttributeList::createClone() throw (RuntimeException, std::exception)
-#endif	// SUPD == 310
 {
     AttributeList *p = new AttributeList( *this );
     return Reference< XCloneable > ( (XCloneable * ) p );
@@ -175,7 +154,7 @@ AttributeList::~AttributeList()
 }
 
 
-void AttributeList::addAttribute(   const OUString &sName ,
+void AttributeList::addAttribute( 	const OUString &sName ,
                                         const OUString &sType ,
                                         const OUString &sValue )
 {

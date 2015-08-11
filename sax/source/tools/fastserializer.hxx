@@ -1,137 +1,93 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_SAX_SOURCE_TOOLS_FASTSERIALIZER_HXX
-#define INCLUDED_SAX_SOURCE_TOOLS_FASTSERIALIZER_HXX
+#ifndef SAX_FASTSERIALIZER_HXX
+#define SAX_FASTSERIALIZER_HXX
 
+#include <com/sun/star/xml/sax/XFastSerializer.hpp>
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
+#include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
-#include <rtl/byteseq.hxx>
+#include <cppuhelper/implbase2.hxx>
 
 #include <stack>
-#include <map>
 
-#include <boost/shared_ptr.hpp>
-
-#if SUPD == 310
-
-#include <sax/fastsaxdllapi.h>
+#include "sax/dllapi.h"
+#include "sax/fshelper.hxx"
 
 #define SERIALIZER_IMPLEMENTATION_NAME	"com.sun.star.comp.extensions.xml.sax.FastSerializer"
 #define SERIALIZER_SERVICE_NAME		"com.sun.star.xml.sax.FastSerializer"
 
-#endif	// SUPD == 310
-
-#include "sax/fshelper.hxx"
-
 namespace sax_fastparser {
 
-/// Receives notification of sax document events to write into an XOutputStream.
-#if SUPD == 310
-class FASTSAX_DLLPUBLIC FastSaxSerializer
-#else	// SUPD == 310
-class FastSaxSerializer
-#endif	// SUPD == 310
+class SAX_DLLPUBLIC FastSaxSerializer : public ::cppu::WeakImplHelper2< ::com::sun::star::xml::sax::XFastSerializer, ::com::sun::star::lang::XServiceInfo >
 {
-    typedef ::com::sun::star::uno::Sequence< ::sal_Int8 > Int8Sequence;
-    typedef ::com::sun::star::uno::Sequence< ::sal_Int32 > Int32Sequence;
-
 public:
-    explicit FastSaxSerializer();
-    ~FastSaxSerializer();
-
-#if SUPD == 310
-    static ::com::sun::star::uno::Sequence< ::rtl::OUString > 	getSupportedServiceNames_Static(void);
-	static ::rtl::OUString 				                        getImplementationName_Static();
-#endif	// SUPD == 310
+    explicit            FastSaxSerializer(  );
+    virtual             ~FastSaxSerializer();
 
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > getOutputStream() {return mxOutputStream;}
 
-    /** called by the parser when parsing of an XML stream is started.
-     */
-    void SAL_CALL startDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    // The implementation details
+    static ::com::sun::star::uno::Sequence< ::rtl::OUString > 	getSupportedServiceNames_Static(void);
+    static ::rtl::OUString 				                        getImplementationName_Static();
 
-    /** called by the parser after the last XML element of a stream is processed.
-     */
-    void SAL_CALL endDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
-
-    /** receives notification of the beginning of an element.
-
-        @param Element
-            contains the integer token from the <type>XFastTokenHandler</type>
-            registered at the <type>XFastParser</type>.<br>
-
-            If the element has a namespace that was registered with the
-            <type>XFastParser</type>, <param>Element</param> contains the integer
-            token of the elements local name from the <type>XFastTokenHandler</type>
-            and the integer token of the namespace combined with an arithmetic
-            <b>or</b> operation.
-
-        @param Attribs
-            Contains a <type>XFastAttrbitueList</type> to access the attributes
-            from the element.
-
-    */
-    void SAL_CALL startFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
+    // XFastSerializer
+    virtual void SAL_CALL startDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL endDocument(  ) throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL startFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
         throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
-
-    /** receives notification of the end of an known element.
-        @see startFastElement
-     */
-    void SAL_CALL endFastElement( ::sal_Int32 Element )
+    virtual void SAL_CALL startUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
         throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
-
-    /** receives notification of the beginning of a single element.
-
-        @param Element
-            contains the integer token from the <type>XFastTokenHandler</type>
-            registered at the <type>XFastParser</type>.<br>
-
-            If the element has a namespace that was registered with the
-            <type>XFastParser</type>, <param>Element</param> contains the integer
-            token of the elements local name from the <type>XFastTokenHandler</type>
-            and the integer token of the namespace combined with an arithmetic
-            <b>or</b> operation.
-
-        @param Attribs
-            Contains a <type>XFastAttrbitueList</type> to access the attributes
-            from the element.
-
-    */
-    void SAL_CALL singleFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
+    virtual void SAL_CALL endFastElement( ::sal_Int32 Element )
         throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
-
-    /// receives notification of character data.
-    void SAL_CALL characters( const OUString& aChars )
+    virtual void SAL_CALL endUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name )
         throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
-
-    void SAL_CALL setOutputStream( const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream >& xOutputStream )
+    virtual void SAL_CALL singleFastElement( ::sal_Int32 Element, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
+        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL singleUnknownElement( const ::rtl::OUString& Namespace, const ::rtl::OUString& Name, const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs )
+        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL characters( const ::rtl::OUString& aChars )
+        throw (::com::sun::star::xml::sax::SAXException, ::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL setOutputStream( const ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream >& xOutputStream )
+        throw (::com::sun::star::uno::RuntimeException);
+    virtual void SAL_CALL setFastTokenHandler( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xFastTokenHandler )
         throw (::com::sun::star::uno::RuntimeException);
 
-    void SAL_CALL setFastTokenHandler( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler >& xFastTokenHandler )
-        throw (::com::sun::star::uno::RuntimeException);
+    // XServiceInfo
+    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) throw ( ::com::sun::star::uno::RuntimeException );
+    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw ( ::com::sun::star::uno::RuntimeException );
+    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) throw ( ::com::sun::star::uno::RuntimeException );
 
     // C++ helpers
-    void SAL_CALL writeId( ::sal_Int32 Element );
-    OString SAL_CALL getId( ::sal_Int32 Element );
+    virtual void SAL_CALL writeId( ::sal_Int32 Element );
 
-    static OUString escapeXml( const OUString& s );
+    static ::rtl::OUString escapeXml( const ::rtl::OUString& s );
 
 public:
     /** From now on, don't write directly to the stream, but to top of a stack.
@@ -146,7 +102,7 @@ public:
           mergeTopMarks( true ), mergeTopMarks(), /r, /p
         and you are done.
      */
-    void mark( const Int32Sequence& aOrder = Int32Sequence() );
+    void mark();
 
     /** Merge 2 topmost marks.
 
@@ -169,6 +125,7 @@ private:
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XOutputStream > mxOutputStream;
     ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastTokenHandler > mxFastTokenHandler;
 
+    typedef ::com::sun::star::uno::Sequence< ::sal_Int8 > Int8Sequence;
     class ForMerge
     {
         Int8Sequence maData;
@@ -176,71 +133,30 @@ private:
 
     public:
         ForMerge() : maData(), maPostponed() {}
-        virtual ~ForMerge() {}
 
-        virtual void setCurrentElement( ::sal_Int32 /*nToken*/ ) {}
-        virtual Int8Sequence& getData();
-#if OSL_DEBUG_LEVEL > 0
-        virtual void print();
+        Int8Sequence& getData();
+#if DEBUG
+        void print();
 #endif
 
-        virtual void prepend( const Int8Sequence &rWhat );
-        virtual void append( const Int8Sequence &rWhat );
+        void prepend( const Int8Sequence &rWhat );
+        void append( const Int8Sequence &rWhat );
         void postpone( const Int8Sequence &rWhat );
-
-    protected:
-        void resetData( );
+        
+    private:
         static void merge( Int8Sequence &rTop, const Int8Sequence &rMerge, bool bAppend );
     };
 
-    class ForSort : public ForMerge
-    {
-        std::map< ::sal_Int32, Int8Sequence > maData;
-        sal_Int32 mnCurrentElement;
-
-        Int32Sequence maOrder;
-
-    public:
-        ForSort( const Int32Sequence& aOrder ) :
-            ForMerge(),
-            maData(),
-            mnCurrentElement( 0 ),
-            maOrder( aOrder ) {}
-
-        void setCurrentElement( ::sal_Int32 nToken ) SAL_OVERRIDE;
-
-        virtual Int8Sequence& getData() SAL_OVERRIDE;
-
-#if OSL_DEBUG_LEVEL > 0
-        virtual void print() SAL_OVERRIDE;
+#if DEBUG
+        void printMarkStack( );
 #endif
 
-        virtual void prepend( const Int8Sequence &rWhat ) SAL_OVERRIDE;
-        virtual void append( const Int8Sequence &rWhat ) SAL_OVERRIDE;
-    private:
-        void sort();
-    };
-
-    ::std::stack< boost::shared_ptr< ForMerge > > maMarkStack;
-    ::std::stack< boost::shared_ptr< ForMerge > > maSavedMarkStack;
-
-#ifdef DBG_UTIL
-    ::std::stack<sal_Int32> m_DebugStartedElements;
-#endif
+    ::std::stack< ForMerge > maMarkStack;
 
     void writeFastAttributeList( const ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XFastAttributeList >& Attribs );
-    void write( const OUString& s );
+    void write( const ::rtl::OUString& s );
 
 protected:
-    rtl::ByteSequence maClosingBracket;
-    rtl::ByteSequence maSlashAndClosingBracket;
-    rtl::ByteSequence maColon;
-    rtl::ByteSequence maOpeningBracket;
-    rtl::ByteSequence maOpeningBracketAndSlash;
-    rtl::ByteSequence maQuote;
-    rtl::ByteSequence maEqualSignAndQuote;
-    rtl::ByteSequence maSpace;
-
     /** Forward the call to the output stream, or write to the stack.
 
         The latter in the case that we are inside a mark().
