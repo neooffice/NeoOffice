@@ -2088,7 +2088,7 @@ sal_Bool SfxObjectShell::IsSecure()
             aReferer = INetURLObject( aTempl ).GetMainURL( INetURLObject::NO_DECODE );
 	}
 
-	INetURLObject aURL( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "macro:" ) ) );
+	INetURLObject aURL( "macro:" );
     if ( !aReferer.Len() )
         // empty new or embedded document
         return sal_True;
