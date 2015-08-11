@@ -4339,11 +4339,7 @@ we check in the following sequence:
 						OStringBuffer aLineLoc( 1024 );
 						appendDestinationName( aFragment , aLineLoc );
 //substitute the fragment
-#if SUPD == 310
-						aTargetURL.SetMark( OUString( aLineLoc.getStr() ) );
-#else	// SUPD == 310
 						aTargetURL.SetMark( aLineLoc.getStr() );
-#endif	// SUPD == 310
 					}
 					rtl::OUString aURL = aTargetURL.GetMainURL( (nSetRelative || eTargetProtocol == INET_PROT_FILE) ? INetURLObject::DECODE_WITH_CHARSET : INetURLObject::NO_DECODE );
 // check if we have a URL available, if the string is empty, set it as the original one
