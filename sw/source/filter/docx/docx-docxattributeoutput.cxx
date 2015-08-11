@@ -1,19 +1,11 @@
-/*
+/*************************************************************************
+ *
+ * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * $RCSfile$
+ * $Revision$
+ *
  * This file is part of NeoOffice.
- *
- * This file incorporates work covered by the following license notices:
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  *
  * NeoOffice is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3
@@ -31,8 +23,9 @@
  * for a copy of the GPLv3 License.
  *
  * Modified December 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under Section 3.3 of the Mozilla Public License v2.0.
- */
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 
 #include "docxattributeoutput.hxx"
 #include "docxexport.hxx"
@@ -2740,13 +2733,9 @@ void DocxAttributeOutput::FootnotesEndnotes( bool bFootnotes )
     sal_Int32 nBody = bFootnotes? XML_footnotes: XML_endnotes;
     sal_Int32 nItem = bFootnotes? XML_footnote:  XML_endnote;
 
-#if SUPD == 310
-    m_pSerializer->startElementNS( XML_w, nBody, m_rExport.MainXmlNamespaces(m_pSerializer) );
-#else	// SUPD == 310
     m_pSerializer->startElementNS( XML_w, nBody,
             FSNS( XML_xmlns, XML_w ), "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
             FSEND );
-#endif	// SUPD == 310
 
     sal_Int32 nIndex = 0;
 

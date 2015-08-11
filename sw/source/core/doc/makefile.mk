@@ -23,7 +23,7 @@
 # <http://www.gnu.org/licenses/gpl-3.0.txt>
 # for a copy of the GPLv3 License.
 #
-# Modified May 2015 by Patrick Luby. NeoOffice is distributed under
+# Modified July 2015 by Patrick Luby. NeoOffice is distributed under
 # GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
@@ -37,6 +37,11 @@ TARGET=doc
 .INCLUDE :	$(PRJ)$/inc$/swpre.mk
 .INCLUDE :	settings.mk
 .INCLUDE :	$(PRJ)$/inc$/sw.mk
+
+.IF "$(UPD)" == "310"
+INCLOCAL += \
+	-I$(PRJ)$/..$/svtools$/inc
+.ENDIF		# "$(UPD)" == "310"
 
 # --- Files --------------------------------------------------------
 
@@ -61,11 +66,6 @@ EXCEPTIONSFILES = \
 	$(SLO)$/tblcpy.obj \
         $(SLO)$/tblrwcl.obj \
         $(SLO)$/list.obj
-
-.IF "$(UPD)" == "310"
-EXCEPTIONSFILES += \
-	$(SLO)$/textboxhelper.obj
-.ENDIF		# "$(UPD)" == "310"
 
 SLOFILES =	$(EXCEPTIONSFILES) \
 		$(SLO)$/docbasic.obj \

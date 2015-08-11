@@ -7,20 +7,6 @@
  *
  * This file is part of NeoOffice.
  *
- * This file incorporates work covered by the following license notices:
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- *
  * NeoOffice is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
@@ -37,8 +23,7 @@
  * for a copy of the GPLv3 License.
  *
  * Modified July 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL and under Section 3.3
- * of the Mozilla Public License v2.0.
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -291,11 +276,7 @@ SwFmtFrmSize::SwFmtFrmSize( SwFrmSize eSize, SwTwips nWidth, SwTwips nHeight )
     eFrmHeightType( eSize ),
     eFrmWidthType( ATT_FIX_SIZE )
 {
-#if SUPD == 310
-    nWidthPercent = m_eWidthPercentRelation = nHeightPercent = m_eHeightPercentRelation = 0;
-#else	// SUPD == 310
 	nWidthPercent = nHeightPercent = 0;
-#endif	// SUPD == 310
 }
 
 SwFmtFrmSize& SwFmtFrmSize::operator=( const SwFmtFrmSize& rCpy )
@@ -304,13 +285,7 @@ SwFmtFrmSize& SwFmtFrmSize::operator=( const SwFmtFrmSize& rCpy )
     eFrmHeightType = rCpy.GetHeightSizeType();
     eFrmWidthType = rCpy.GetWidthSizeType();
 	nHeightPercent = rCpy.GetHeightPercent();
-#if SUPD == 310
-    m_eHeightPercentRelation  = rCpy.GetHeightPercentRelation();
-#endif	// SUPD == 310
 	nWidthPercent  = rCpy.GetWidthPercent();
-#if SUPD == 310
-    m_eWidthPercentRelation  = rCpy.GetWidthPercentRelation();
-#endif	// SUPD == 310
 	return *this;
 }
 
@@ -321,13 +296,7 @@ int  SwFmtFrmSize::operator==( const SfxPoolItem& rAttr ) const
             eFrmWidthType  == ((SwFmtFrmSize&)rAttr).eFrmWidthType &&
 			aSize    		== ((SwFmtFrmSize&)rAttr).GetSize()&&
 			nWidthPercent	== ((SwFmtFrmSize&)rAttr).GetWidthPercent() &&
-#if SUPD == 310
-            m_eWidthPercentRelation == ((SwFmtFrmSize&)rAttr).GetWidthPercentRelation() &&
-            nHeightPercent  == ((SwFmtFrmSize&)rAttr).GetHeightPercent() &&
-            m_eHeightPercentRelation == ((SwFmtFrmSize&)rAttr).GetHeightPercentRelation() );
-#else	// SUPD == 310
 			nHeightPercent	== ((SwFmtFrmSize&)rAttr).GetHeightPercent() );
-#endif	// SUPD == 310
 }
 
 SfxPoolItem*  SwFmtFrmSize::Clone( SfxItemPool* ) const
@@ -356,19 +325,9 @@ BOOL SwFmtFrmSize::QueryValue( uno::Any& rVal, BYTE nMemberId ) const
 		case MID_FRMSIZE_REL_HEIGHT:
 			rVal <<= (sal_Int16)(GetHeightPercent() != 0xFF ? GetHeightPercent() : 0);
 		break;
-#if SUPD == 310
-        case MID_FRMSIZE_REL_HEIGHT_RELATION:
-            rVal <<= GetHeightPercentRelation();
-        break;
-#endif	// SUPD == 310
 		case MID_FRMSIZE_REL_WIDTH:
 			rVal <<= (sal_Int16)(GetWidthPercent() != 0xFF ? GetWidthPercent() : 0);
 		break;
-#if SUPD == 310
-        case MID_FRMSIZE_REL_WIDTH_RELATION:
-            rVal <<= GetWidthPercentRelation();
-        break;
-#endif	// SUPD == 310
         case MID_FRMSIZE_IS_SYNC_HEIGHT_TO_WIDTH:
 		{
 			BOOL bTmp = 0xFF == GetHeightPercent();
@@ -447,15 +406,6 @@ BOOL SwFmtFrmSize::PutValue( const uno::Any& rVal, BYTE nMemberId )
 				bRet = sal_False;
 		}
 		break;
-#if SUPD == 310
-        case MID_FRMSIZE_REL_HEIGHT_RELATION:
-        {
-            sal_Int16 eSet = 0;
-            rVal >>= eSet;
-            SetHeightPercentRelation(eSet);
-        }
-        break;
-#endif	// SUPD == 310
 		case MID_FRMSIZE_REL_WIDTH:
 		{
 			sal_Int16 nSet = 0;
@@ -466,15 +416,6 @@ BOOL SwFmtFrmSize::PutValue( const uno::Any& rVal, BYTE nMemberId )
 				bRet = sal_False;
 		}
 		break;
-#if SUPD == 310
-        case MID_FRMSIZE_REL_WIDTH_RELATION:
-        {
-            sal_Int16 eSet = 0;
-            rVal >>= eSet;
-            SetWidthPercentRelation(eSet);
-        }
-        break;
-#endif	// SUPD == 310
 		case MID_FRMSIZE_IS_SYNC_HEIGHT_TO_WIDTH:
 		{
 			sal_Bool bSet = *(sal_Bool*)rVal.getValue();

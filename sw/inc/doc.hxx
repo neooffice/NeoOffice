@@ -1347,13 +1347,8 @@ public:
 
 	//Rahmenzugriff
 	//iterieren ueber Flys - fuer Basic-Collections
-#if SUPD == 310
-    sal_uInt16 GetFlyCount( FlyCntType eType = FLYCNTTYPE_ALL, bool bIgnoreTextBoxes = false ) const;
-    SwFrmFmt* GetFlyNum(sal_uInt16 nIdx, FlyCntType eType = FLYCNTTYPE_ALL, bool bIgnoreTextBoxes = false );
-#else	// SUPD == 310
 	sal_uInt16 GetFlyCount( FlyCntType eType = FLYCNTTYPE_ALL) const;
 	SwFrmFmt* GetFlyNum(sal_uInt16 nIdx, FlyCntType eType = FLYCNTTYPE_ALL);
-#endif	// SUPD == 310
 
 
 	// kopiere die Formate in die eigenen Arrays und returne diese

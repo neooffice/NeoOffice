@@ -25,14 +25,6 @@
  * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
- * This file incorporates work covered by the following license notice:
- *
- *   Portions of this file are part of the LibreOffice project.
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
  ************************************************************************/
 
 /******************************************************************************
@@ -918,21 +910,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_UNO_PARA_CONT_PREV_SUBTREE       (FN_EXTRA2 + 109)
 #define FN_UNO_PARA_NUM_STRING              (FN_EXTRA2 + 110)
-#if SUPD == 310
-#define FN_UNO_TABLE_NAME                   (FN_EXTRA2 + 111)
-#define FN_UNO_META                         (FN_EXTRA2 + 112)
-#define FN_UNO_NESTED_TEXT_CONTENT          (FN_EXTRA2 + 113)
-
-#define FN_EMBEDDED_OBJECT                  (FN_EXTRA2 + 116)
-#define FN_UNO_FIRST_SHARE_CONTENT          (FN_EXTRA2 + 117)
-#define FN_UNO_HEADER_FIRST                 (FN_EXTRA2 + 118)
-#define FN_UNO_FOOTER_FIRST                 (FN_EXTRA2 + 119)
-#define FN_UNO_TABLE_BORDER2                (FN_EXTRA2 + 120)
-
-#define FN_UNO_REPLACEMENT_GRAPHIC_U_R_L    (FN_EXTRA2 + 121)
-#define FN_UNO_HIDDEN                       (FN_EXTRA2 + 122)
-#define FN_UNO_STYLE_INTEROP_GRAB_BAG       (FN_EXTRA2 + 123)
-#endif	// SUPD == 310
 
 #ifdef USE_JAVA
 #define FN_LOOKUP_IN_MACOSX_DICTIONARY      (FN_EXTRA2 + 199)
@@ -1222,9 +1199,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 // --> OD 2004-10-28 #i36248#
 #define FN_SHAPE_STARTPOSITION_IN_HORI_L2R (FN_PARAM2+25)
 #define FN_SHAPE_ENDPOSITION_IN_HORI_L2R   (FN_PARAM2+26)
-#if SUPD == 310
-#define FN_TEXT_BOX                     (FN_PARAM2+28) /* TextBox Property*/
-#endif	// SUPD == 310
 
 // <--
 /*--------------------------------------------------------------------
@@ -1293,10 +1267,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_INPLACE_OLE                  (FN_FRAME + 19)
 #define FN_OUTPLACE_OLE                 (FN_FRAME + 20)
-
-#if SUPD == 310
-#define FN_UNO_DESCRIPTION              (FN_FRAME + 21)
-#endif	// SUPD == 310
 
 //Member-Ids fuer Fill/SetVariable an Items
 #define 		MID_STYLE	    0xe0

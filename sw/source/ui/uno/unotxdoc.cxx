@@ -22,14 +22,6 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * This file incorporates work covered by the following license notice:
- *
- *   Portions of this file are part of the LibreOffice project.
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
  * Modified August 2008 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
@@ -2133,19 +2125,6 @@ void SwXTextDocument::setPropertyValue(const OUString& rPropertyName,
         break;
         // <--
 
-#if SUPD == 310
-        case WID_DOC_DEFAULT_PAGE_MODE:
-        {
-            bool bDefaultPageMode( false );
-            aValue >>= bDefaultPageMode;
-            pDocShell->GetDoc()->SetDefaultPageMode( bDefaultPageMode );
-        }
-        break;
-        case WID_DOC_INTEROP_GRAB_BAG:
-             setGrabBagItem(aValue);
-        break;
-#endif	// SUPD == 310
-
         default:
 		{
 			const SfxPoolItem& rItem = pDocShell->GetDoc()->GetDefault(pMap->nWID);
@@ -2311,11 +2290,6 @@ Any SwXTextDocument::getPropertyValue(const OUString& rPropertyName)
         }
         break;
         // <--
-#if SUPD == 310
-        case WID_DOC_INTEROP_GRAB_BAG:
-             getGrabBagItem(aAny);
-        break;
-#endif	// SUPD == 310
 
 		default:
 		{
