@@ -45,18 +45,7 @@ LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
 .ENDIF
 
 .IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/comphelper$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/cppuhelper$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/goodies$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/oox$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/salhelper$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/sax$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/sfx2$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/svtools$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/svx$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/tools$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib \
-	-L$(PRJ)$/..$/xmloff$/$(INPATH)$/lib
+PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib
 
 # Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
@@ -237,10 +226,6 @@ SHL6STDLIBS= \
 	$(SAXLIB) \
     $(FORLIB)
 
-.IF "$(UPD)" == "310"
-SHL6LIBS += $(SLB)$/oox.lib
-.ENDIF		# "$(UPD)" == "310"
-
 # xlsx filter
 LIB7TARGET = $(SLB)$/xlsx2.lib
 LIB7OBJFILES = \
@@ -286,10 +271,6 @@ SHL7STDLIBS= \
 	$(OOXLIB)       \
 	$(SAXLIB) \
     $(FORLIB)
-
-.IF "$(UPD)" == "310"
-SHL7LIBS += $(SLB)$/oox.lib
-.ENDIF		# "$(UPD)" == "310"
 
 # add for scui
 SHL8TARGET= scui$(DLLPOSTFIX)
