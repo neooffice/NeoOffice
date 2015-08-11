@@ -1,7 +1,6 @@
 /*************************************************************************
  *
  * Copyright 2008 by Sun Microsystems, Inc.
- * Portions of this file are part of the LibreOffice project.
  *
  * $RCSfile$
  * $Revision$
@@ -24,7 +23,7 @@
  * for a copy of the GPLv3 License.
  *
  * Modified March 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL and term 3.3 of the MPL.
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -4352,146 +4351,6 @@ void EscherSolverContainer::WriteSolver( SvStream& rStrm )
     }
 }
 
-#if SUPD == 310
-
-EscherExGlobal::EscherExGlobal( sal_uInt32 nGraphicProvFlags ) :
-    EscherGraphicProvider( nGraphicProvFlags ),
-    mpPicStrm( 0 ),
-    mbHasDggCont( false ),
-    mbPicStrmQueried( false )
-{
-}
-
-EscherExGlobal::~EscherExGlobal()
-{
-}
-
-sal_uInt32 EscherExGlobal::GenerateDrawingId()
-{
-    // new drawing starts a new cluster in the cluster table (cluster identifiers are one-based)
-    sal_uInt32 nClusterId = static_cast< sal_uInt32 >( maClusterTable.size() + 1 );
-    // drawing identifiers are one-based
-    sal_uInt32 nDrawingId = static_cast< sal_uInt32 >( maDrawingInfos.size() + 1 );
-    // prepare new entries in the tables
-    maClusterTable.push_back( ClusterEntry( nDrawingId ) );
-    maDrawingInfos.push_back( DrawingInfo( nClusterId ) );
-    // return the new drawing identifier
-    return nDrawingId;
-}
-
-sal_uInt32 EscherExGlobal::GenerateShapeId( sal_uInt32 nDrawingId, bool bIsInSpgr )
-{
-    // drawing identifier is one-based
-    // make sure the drawing is valid (bnc#656503)
-    if ( nDrawingId == 0 )
-        return 0;
-    // create index from the identifier
-    size_t nDrawingIdx = nDrawingId - 1;
-    OSL_ENSURE( nDrawingIdx < maDrawingInfos.size(), "EscherExGlobal::GenerateShapeId - invalid drawing ID" );
-    if( nDrawingIdx >= maDrawingInfos.size() )
-        return 0;
-    DrawingInfo& rDrawingInfo = maDrawingInfos[ nDrawingIdx ];
-
-    // cluster identifier in drawing info struct is one-based
-    ClusterEntry* pClusterEntry = &maClusterTable[ rDrawingInfo.mnClusterId - 1 ];
-
-    // check cluster overflow, create new cluster entry
-    if( pClusterEntry->mnNextShapeId == DFF_DGG_CLUSTER_SIZE )
-    {
-        // start a new cluster in the cluster table
-        maClusterTable.push_back( ClusterEntry( nDrawingId ) );
-        pClusterEntry = &maClusterTable.back();
-        // new size of maClusterTable is equal to one-based identifier of the new cluster
-        rDrawingInfo.mnClusterId = static_cast< sal_uInt32 >( maClusterTable.size() );
-    }
-
-    // build shape identifier from cluster identifier and next free cluster shape identifier
-    rDrawingInfo.mnLastShapeId = static_cast< sal_uInt32 >( rDrawingInfo.mnClusterId * DFF_DGG_CLUSTER_SIZE + pClusterEntry->mnNextShapeId );
-    // update free shape identifier in cluster entry
-    ++pClusterEntry->mnNextShapeId;
-    /*  Old code has counted the shapes only, if we are in a SPGRCONTAINER. Is
-        this really intended? Maybe it's always true... */
-    if( bIsInSpgr )
-        ++rDrawingInfo.mnShapeCount;
-
-    // return the new shape identifier
-    return rDrawingInfo.mnLastShapeId;
-}
-
-sal_uInt32 EscherExGlobal::GetDrawingShapeCount( sal_uInt32 nDrawingId ) const
-{
-    size_t nDrawingIdx = nDrawingId - 1;
-    OSL_ENSURE( nDrawingIdx < maDrawingInfos.size(), "EscherExGlobal::GetDrawingShapeCount - invalid drawing ID" );
-    return (nDrawingIdx < maDrawingInfos.size()) ? maDrawingInfos[ nDrawingIdx ].mnShapeCount : 0;
-}
-
-sal_uInt32 EscherExGlobal::GetLastShapeId( sal_uInt32 nDrawingId ) const
-{
-    size_t nDrawingIdx = nDrawingId - 1;
-    OSL_ENSURE( nDrawingIdx < maDrawingInfos.size(), "EscherExGlobal::GetLastShapeId - invalid drawing ID" );
-    return (nDrawingIdx < maDrawingInfos.size()) ? maDrawingInfos[ nDrawingIdx ].mnLastShapeId : 0;
-}
-
-sal_uInt32 EscherExGlobal::GetDggAtomSize() const
-{
-    // 8 bytes header, 16 bytes fixed DGG data, 8 bytes for each cluster
-    return static_cast< sal_uInt32 >( 24 + 8 * maClusterTable.size() );
-}
-
-void EscherExGlobal::WriteDggAtom( SvStream& rStrm ) const
-{
-    sal_uInt32 nDggSize = GetDggAtomSize();
-
-    // write the DGG record header (do not include the 8 bytes of the header in the data size)
-#if SUPD == 310
-    rStrm << static_cast< sal_uInt32 >( ESCHER_Dgg << 16 ) << static_cast< sal_uInt32 >( nDggSize - 8 );
-#else	// SUPD == 310
-    rStrm.WriteUInt32( static_cast< sal_uInt32 >( ESCHER_Dgg << 16 ) ).WriteUInt32( static_cast< sal_uInt32 >( nDggSize - 8 ) );
-#endif	// SUPD == 310
-
-    // claculate and write the fixed DGG data
-    sal_uInt32 nShapeCount = 0;
-    sal_uInt32 nLastShapeId = 0;
-    for( DrawingInfoVector::const_iterator aIt = maDrawingInfos.begin(), aEnd = maDrawingInfos.end(); aIt != aEnd; ++aIt )
-    {
-        nShapeCount += aIt->mnShapeCount;
-        nLastShapeId = ::std::max( nLastShapeId, aIt->mnLastShapeId );
-    }
-    // the non-existing cluster with index #0 is counted too
-    sal_uInt32 nClusterCount = static_cast< sal_uInt32 >( maClusterTable.size() + 1 );
-    sal_uInt32 nDrawingCount = static_cast< sal_uInt32 >( maDrawingInfos.size() );
-#if SUPD == 310
-    rStrm << nLastShapeId << nClusterCount << nShapeCount << nDrawingCount;
-#else	// SUPD == 310
-    rStrm.WriteUInt32( nLastShapeId ).WriteUInt32( nClusterCount ).WriteUInt32( nShapeCount ).WriteUInt32( nDrawingCount );
-#endif	// SUPD == 310
-
-    // write the cluster table
-    for( ClusterTable::const_iterator aIt = maClusterTable.begin(), aEnd = maClusterTable.end(); aIt != aEnd; ++aIt )
-#if SUPD == 310
-        rStrm << aIt->mnDrawingId << aIt->mnNextShapeId;
-#else	// SUPD == 310
-        rStrm.WriteUInt32( aIt->mnDrawingId ).WriteUInt32( aIt->mnNextShapeId );
-#endif	// SUPD == 310
-}
-
-SvStream* EscherExGlobal::QueryPictureStream()
-{
-    if( !mbPicStrmQueried )
-    {
-        mpPicStrm = ImplQueryPictureStream();
-        mbPicStrmQueried = true;
-    }
-    return mpPicStrm;
-}
-
-SvStream* EscherExGlobal::ImplQueryPictureStream()
-{
-    return 0;
-}
-
-#endif	// SUPD == 310
-
 // ---------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------
@@ -4630,15 +4489,6 @@ void EscherEx::InsertPersistOffset( UINT32 nKey, UINT32 nOffset )
 {
 	PtInsert( ESCHER_Persist_PrivateEntry | nKey, nOffset );
 }
-
-#if SUPD == 310
-
-void EscherEx::SetEditAs( const OUString& rEditAs )
-{
-    mEditAs = rEditAs;
-}
-
-#endif	// SUPD == 310
 
 // ---------------------------------------------------------------------------------------------
 
