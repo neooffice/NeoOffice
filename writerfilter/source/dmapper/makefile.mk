@@ -1,34 +1,29 @@
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.
-#  
-#  $RCSfile$
-#  $Revision$
-#  
-#  This file is part of NeoOffice.
-#  
-#  NeoOffice is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 3
-#  only, as published by the Free Software Foundation.
-#  
-#  NeoOffice is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License version 3 for more details
-#  (a copy is included in the LICENSE file that accompanied this code).
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 3 along with NeoOffice.  If not, see
-#  <http://www.gnu.org/licenses/gpl-3.0.txt>
-#  for a copy of the GPLv3 License.
-#  
-#  Modified November 2014 by Patrick Luby. NeoOffice is distributed under
-#  GPL only under Section 4 of the Apache License v2.0.
-#  
-#**************************************************************
-
-
+#*************************************************************************
+#
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+# 
+# Copyright 2000, 2010 Oracle and/or its affiliates.
+#
+# OpenOffice.org - a multi-platform office productivity suite
+#
+# This file is part of OpenOffice.org.
+#
+# OpenOffice.org is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenOffice.org is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenOffice.org.  If not, see
+# <http://www.openoffice.org/license.html>
+# for a copy of the LGPLv3 License.
+#
+#*************************************************************************
 PRJ=..$/..
 PRJNAME=writerfilter
 TARGET=dmapper
@@ -53,13 +48,13 @@ SLOFILES= \
     $(SLO)$/DomainMapperTableManager.obj \
     $(SLO)$/DomainMapper_Impl.obj \
     $(SLO)$/FFDataHandler.obj \
-    $(SLO)$/FontTable.obj \
     $(SLO)$/FormControlHelper.obj \
+    $(SLO)$/FontTable.obj \
     $(SLO)$/GraphicHelpers.obj \
     $(SLO)$/GraphicImport.obj \
+    $(SLO)$/NumberingManager.obj  \
     $(SLO)$/MeasureHandler.obj \
     $(SLO)$/ModelEventListener.obj \
-    $(SLO)$/NumberingManager.obj  \
     $(SLO)$/OLEHandler.obj \
     $(SLO)$/PageBordersHandler.obj \
     $(SLO)$/PropertyIds.obj \
@@ -71,18 +66,7 @@ SLOFILES= \
     $(SLO)$/TDefTableHandler.obj \
     $(SLO)$/TablePropertiesHandler.obj \
     $(SLO)$/TblStylePrHandler.obj \
-    $(SLO)$/ThemeTable.obj \
-    $(SLO)$/WrapPolygonHandler.obj \
-
-.IF "$(UPD)" == "310"
-SLOFILES += \
-    $(SLO)$/LatentStyleHandler.obj \
-    $(SLO)$/TrackChangesHandler.obj \
-    $(SLO)$/SdtHelper.obj \
-    $(SLO)$/TablePositionHandler.obj \
-    $(SLO)$/TextEffectsHandler.obj
-.ENDIF		# "$(UPD)" == "310"
-
+    $(SLO)$/ThemeTable.obj 
 
 # --- Targets ----------------------------------
 

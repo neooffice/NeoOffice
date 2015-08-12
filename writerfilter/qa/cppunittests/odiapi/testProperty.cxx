@@ -1,25 +1,30 @@
-/**************************************************************
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*************************************************************************
+ *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- *************************************************************/
-
-
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
+ *
+ * OpenOffice.org - a multi-platform office productivity suite
+ *
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
 #include <testshl/simpleheader.hxx>
 #include <odiapi/props/Properties.hxx>
@@ -44,7 +49,7 @@ OString getTempFileName(const OUString& fileName)
   OUString ousTmpUrl;
   FileBase::getTempDirURL(ousTmpUrl);
   if (!ousTmpUrl.endsWithIgnoreAsciiCaseAsciiL("/", 1))
-	ousTmpUrl += OUString::createFromAscii("/");
+    ousTmpUrl += OUString::createFromAscii("/");
   ousTmpUrl += fileName;
 
   OUString sysTmpPath;
@@ -162,11 +167,11 @@ public:
         CPPUNIT_ASSERT_MESSAGE("Property not in property sequence", pb->get(0)->getIntValue() == 12);
         CPPUNIT_ASSERT_MESSAGE("Wrong property id", pb->get(0)->getId() == NS_fo::LN_font_weight);
 
-		Iterator<Property::Pointer_t>::Pointer_t iter = pb->createIterator();
+        Iterator<Property::Pointer_t>::Pointer_t iter = pb->createIterator();
         for (iter->first(); !iter->isDone(); iter->next())
-		{
-			CPPUNIT_ASSERT_MESSAGE("Test property bag as array failed", iter->getCurrent()->getId() == NS_fo::LN_font_weight);
-		}
+        {
+            CPPUNIT_ASSERT_MESSAGE("Test property bag as array failed", iter->getCurrent()->getId() == NS_fo::LN_font_weight);
+        }
     }
 
     void testCopyPropertyBag()
@@ -288,7 +293,7 @@ public:
         pb1->insert(createStringProperty(NS_style::LN_type, "left"));
         Property::Pointer_t tab100 = createCompositeProperty(NS_style::LN_tab_stop, pool->insert(pb1));
 
-		pb1->clear();
+        pb1->clear();
         pb1->insert(createIntegerProperty(NS_fo::LN_font_weight, 12));
         pb1->insert(createStringProperty(NS_style::LN_font_face, "Times New Roman"));
         Property::Pointer_t charProps1 = createCompositeProperty(NS_style::LN_char, pool->insert(pb1));
@@ -328,13 +333,13 @@ public:
         pb1->insert(createStringProperty(NS_style::LN_font_face, "Times New Roman"));
         Property::Pointer_t charProps = createCompositeProperty(NS_style::LN_char, pool->insert(pb1));
 
-		pb1->clear();
+        pb1->clear();
         pb1->insert(createIntegerProperty(NS_fo::LN_line_height, 20));
         pb1->insert(tabs);
         pb1->insert(charProps);
         Property::Pointer_t paraProps = createCompositeProperty(NS_style::LN_paragraph_properties, pool->insert(pb1));
 
-		pb1->clear();
+        pb1->clear();
         pb1->insert(createIntegerProperty(NS_style::LN_position, 100));
         pb1->insert(createStringProperty(NS_style::LN_type, "left"));
         Property::Pointer_t tab300 = createCompositeProperty(NS_style::LN_tab_stop, pool->insert(pb1));
@@ -676,3 +681,5 @@ public:
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(TestProperty, "TestProperty");
 
 NOADDITIONAL;
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

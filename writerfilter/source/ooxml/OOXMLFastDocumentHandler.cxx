@@ -1,27 +1,42 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * $RCSfile$
+ * $Revision$
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of NeoOffice.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified December 2013 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 
 #include <iostream>
 #include <boost/shared_ptr.hpp>
+#ifdef DEBUG_ELEMENT
+#include "ooxmlLoggers.hxx"
+#include <resourcemodel/Protocol.hxx>
+#endif
 #include "OOXMLFastDocumentHandler.hxx"
 #include "OOXMLFastContextHandler.hxx"
-#include "oox/token/tokens.hxx"
+#include "OOXMLFastTokens.hxx"
 #include "OOXMLFactory.hxx"
 
 namespace writerfilter {
@@ -31,61 +46,48 @@ using namespace ::com::sun::star;
 using namespace ::std;
 
 
-OOXMLFastDocumentHandler::OOXMLFastDocumentHandler(
-    uno::Reference< uno::XComponentContext > const & context,
-    Stream* pStream,
-    OOXMLDocumentImpl* pDocument,
-    sal_Int32 nXNoteId )
-    : m_xContext(context)
-    , mpStream( pStream )
-#ifdef DEBUG_WRITERFILTER
-    , mpTmpStream()
-#endif
-    , mpDocument( pDocument )
-    , mnXNoteId( nXNoteId )
-    , mpContextHandler()
-{
-}
+OOXMLFastDocumentHandler::OOXMLFastDocumentHandler
+(uno::Reference< uno::XComponentContext > const & context)
+: m_xContext(context)
+#ifdef USE_JAVA
+// Fix crashing bug reported in the following Debian bug when opening
+// a .docx that has no <w:document> tag:
+// http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=550359
+, mpDocument(NULL)
+#endif	// USE_JAVA
+{}
 
 // ::com::sun::star::xml::sax::XFastContextHandler:
 void SAL_CALL OOXMLFastDocumentHandler::startFastElement
-(::sal_Int32
-#ifdef DEBUG_WRITERFILTER
+(::sal_Int32 
+#ifdef DEBUG_CONTEXT_STACK
 Element
 #endif
-, const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
-#if SUPD == 310
+, const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/) 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":start element:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":start element:" 
          << fastTokenToId(Element)
          << endl;
 #endif
 }
 
 void SAL_CALL OOXMLFastDocumentHandler::startUnknownElement
-(const OUString &
-#ifdef DEBUG_WRITERFILTER
+(const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Namespace
 #endif
-, const OUString &
-#ifdef DEBUG_WRITERFILTER
+, const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Name
 #endif
-,
- const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
-#if SUPD == 310
+, 
+ const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/) 
 throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":start unknown element:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":start unknown element:" 
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
          << OUStringToOString(Name, RTL_TEXTENCODING_ASCII_US).getStr()
@@ -93,42 +95,34 @@ throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif
 }
 
-void SAL_CALL OOXMLFastDocumentHandler::endFastElement(::sal_Int32
-#ifdef DEBUG_WRITERFILTER
+void SAL_CALL OOXMLFastDocumentHandler::endFastElement(::sal_Int32 
+#ifdef DEBUG_CONTEXT_STACK
 Element
 #endif
-)
-#if SUPD == 310
+) 
 throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":end element:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":end element:" 
          << fastTokenToId(Element)
          << endl;
 #endif
 }
 
 void SAL_CALL OOXMLFastDocumentHandler::endUnknownElement
-(const OUString &
-#ifdef DEBUG_WRITERFILTER
+(const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Namespace
 #endif
-, const OUString &
-#ifdef DEBUG_WRITERFILTER
+, const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Name
 #endif
-)
-#if SUPD == 310
+) 
 throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":end unknown element:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":end unknown element:" 
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
          << OUStringToOString(Name, RTL_TEXTENCODING_ASCII_US).getStr()
@@ -136,11 +130,18 @@ throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
 #endif
 }
 
-OOXMLFastContextHandler::Pointer_t
+OOXMLFastContextHandler::Pointer_t 
 OOXMLFastDocumentHandler::getContextHandler() const
 {
     if (mpContextHandler == OOXMLFastContextHandler::Pointer_t())
     {
+#ifdef USE_JAVA
+        // Fix crashing bug reported in the following Debian bug when opening
+        // a .docx that has no <w:document> tag:
+        // http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=550359
+        if (!mpDocument)
+            throw uno::RuntimeException(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("Failed to connect to mail server.")), uno::Reference< XInterface >());
+#endif	// USE_JAVA
         mpContextHandler.reset
         (new OOXMLFastContextHandler(m_xContext));
         mpContextHandler->setStream(mpStream);
@@ -151,53 +152,38 @@ OOXMLFastDocumentHandler::getContextHandler() const
 
     return mpContextHandler;
 }
-
+    
 uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
  OOXMLFastDocumentHandler::createFastChildContext
-(::sal_Int32 Element,
- const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
-#if SUPD == 310
+(::sal_Int32 Element, 
+ const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/) 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":createFastChildContext:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":createFastChildContext:" 
          << fastTokenToId(Element)
          << endl;
 #endif
-
-    if ( mpStream == nullptr && mpDocument == nullptr )
-    {
-        // document handler has been created as unknown child - see <OOXMLFastDocumentHandler::createUnknownChildContext(..)>
-        // --> do not provide a child context
-        return nullptr;
-    }
-
+    
     return OOXMLFactory::getInstance()->createFastChildContextFromStart(getContextHandler().get(), Element);
 }
-
-uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
+    
+uno::Reference< xml::sax::XFastContextHandler > SAL_CALL 
 OOXMLFastDocumentHandler::createUnknownChildContext
-(const OUString &
-#ifdef DEBUG_WRITERFILTER
+(const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Namespace
 #endif
-,
- const OUString &
-#ifdef DEBUG_WRITERFILTER
+, 
+ const ::rtl::OUString & 
+#ifdef DEBUG_CONTEXT_STACK
 Name
 #endif
-, const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/)
-#if SUPD == 310
+, const uno::Reference< xml::sax::XFastAttributeList > & /*Attribs*/) 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
-#ifdef DEBUG_WRITERFILTER
-    clog << this << ":createUnknownChildContext:"
+#ifdef DEBUG_CONTEXT_STACK
+    clog << this << ":createUnknownChildContext:" 
          << OUStringToOString(Namespace, RTL_TEXTENCODING_ASCII_US).getStr()
          << ":"
          << OUStringToOString(Name, RTL_TEXTENCODING_ASCII_US).getStr()
@@ -205,53 +191,56 @@ Name
 #endif
 
     return uno::Reference< xml::sax::XFastContextHandler >
-        ( new OOXMLFastDocumentHandler( m_xContext, nullptr, nullptr, 0 ) );
+        (new OOXMLFastDocumentHandler(m_xContext));
 }
 
-void SAL_CALL OOXMLFastDocumentHandler::characters(const OUString & /*aChars*/)
-#if SUPD == 310
+void SAL_CALL OOXMLFastDocumentHandler::characters(const ::rtl::OUString & /*aChars*/) 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
+    // TODO: Insert your implementation for "characters" here.
 }
 
 // ::com::sun::star::xml::sax::XFastDocumentHandler:
-void SAL_CALL OOXMLFastDocumentHandler::startDocument()
-#if SUPD == 310
+void SAL_CALL OOXMLFastDocumentHandler::startDocument() 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
 }
 
-void SAL_CALL OOXMLFastDocumentHandler::endDocument()
-#if SUPD == 310
+void SAL_CALL OOXMLFastDocumentHandler::endDocument() 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
 }
 
 void SAL_CALL OOXMLFastDocumentHandler::setDocumentLocator
-(const uno::Reference< xml::sax::XLocator > & /*xLocator*/)
-#if SUPD == 310
+(const uno::Reference< xml::sax::XLocator > & /*xLocator*/) 
     throw (uno::RuntimeException, xml::sax::SAXException)
-#else	// SUPD == 310
-    throw (uno::RuntimeException, xml::sax::SAXException, std::exception)
-#endif	// SUPD == 310
 {
+    // TODO: Insert your implementation for "setDocumentLocator" here.
+}
+
+void OOXMLFastDocumentHandler::setStream(Stream * pStream)
+{ 
+#ifdef DEBUG_PROTOCOL
+    mpTmpStream.reset(new StreamProtocol(pStream, debug_logger));
+    mpStream = mpTmpStream.get();
+#else
+    mpStream = pStream;
+#endif
+}
+
+void OOXMLFastDocumentHandler::setDocument(OOXMLDocument * pDocument)
+{
+    mpDocument = pDocument;
+}
+
+void OOXMLFastDocumentHandler::setXNoteId(const sal_Int32 nXNoteId)
+{
+    mnXNoteId = nXNoteId;
 }
 
 void OOXMLFastDocumentHandler::setIsSubstream( bool bSubstream )
 {
-    if ( mpStream != nullptr && mpDocument != nullptr )
-    {
-        getContextHandler( )->getParserState( )->setInSectionGroup( bSubstream );
-    }
+    getContextHandler( )->getParserState( )->setInSectionGroup( bSubstream );
 }
 
 }}

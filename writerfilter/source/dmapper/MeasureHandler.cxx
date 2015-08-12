@@ -1,113 +1,112 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 #include <MeasureHandler.hxx>
 #include <PropertyMap.hxx>
+#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
 #include <ooxml/resourceids.hxx>
-#include <osl/diagnose.h>
 #include <com/sun/star/text/SizeType.hpp>
-#include "dmapperLoggers.hxx"
 
 namespace writerfilter {
 namespace dmapper {
 
 using namespace ::com::sun::star;
 
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-
+  -----------------------------------------------------------------------*/
 MeasureHandler::MeasureHandler() :
-LoggedProperties(dmapper_logger, "MeasureHandler"),
-m_nMeasureValue( 0 ),
-m_nUnit( -1 ),
-m_nRowHeightSizeType( text::SizeType::MIN )
+    m_nMeasureValue( 0 ),
+    m_nUnit( -1 ),
+    m_nRowHeightSizeType( text::SizeType::MIN ) 
 {
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-
+  -----------------------------------------------------------------------*/
 MeasureHandler::~MeasureHandler()
 {
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-
-void MeasureHandler::lcl_attribute(Id rName, Value & rVal)
+  -----------------------------------------------------------------------*/
+void MeasureHandler::attribute(Id rName, Value & rVal)
 {
     sal_Int32 nIntValue = rVal.getInt();
     (void)rName;
+    /* WRITERFILTERSTATUS: table: MeasureHandler_attributedata */
     switch( rName )
     {
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
+        case NS_rtf::LN_unit:
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_TblWidth_type:// = 90668;
-        {
-            //can be: NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct,
-            //        NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto;
+            //can be: NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct, 
+            //        NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto; 
             m_nUnit = nIntValue;
-
-            if (!m_aInteropGrabBagName.isEmpty())
-            {
-                beans::PropertyValue aValue;
-                aValue.Name = "type";
-                switch (nIntValue)
-                {
-                    case NS_ooxml::LN_Value_ST_TblWidth_nil: aValue.Value = uno::makeAny(OUString("nil")); break;
-                    case NS_ooxml::LN_Value_ST_TblWidth_pct: aValue.Value = uno::makeAny(OUString("pct")); break;
-                    case NS_ooxml::LN_Value_ST_TblWidth_dxa: aValue.Value = uno::makeAny(OUString("dxa")); break;
-                    case NS_ooxml::LN_Value_ST_TblWidth_auto: aValue.Value = uno::makeAny(OUString("auto")); break;
-                }
-                m_aInteropGrabBag.push_back(aValue);
-            }
-        }
         break;
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_Height_hRule: // 90666;
-        {
-            OUString sHeightType = rVal.getString();
-            if ( sHeightType == "exact" )
+        {    
+            ::rtl::OUString sHeightType = rVal.getString();
+            if( sHeightType.equalsAscii( "exact" ) )
                 m_nRowHeightSizeType = text::SizeType::FIX;
         }
         break;
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
+        case NS_rtf::LN_trleft: 
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
+        case NS_rtf::LN_preferredWidth:
         case NS_ooxml::LN_CT_TblWidth_w:// = 90667;
             m_nMeasureValue = nIntValue;
-            if (!m_aInteropGrabBagName.isEmpty())
-            {
-                beans::PropertyValue aValue;
-                aValue.Name = "w";
-                aValue.Value = uno::makeAny(nIntValue);
-                m_aInteropGrabBag.push_back(aValue);
-            }
         break;
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_Height_val: // 90665 -- a string value
         {
             m_nUnit = NS_ooxml::LN_Value_ST_TblWidth_dxa;
-            OUString sHeight = rVal.getString();
+            ::rtl::OUString sHeight = rVal.getString();
             m_nMeasureValue = sHeight.toInt32();
-        }
+        }        
         break;
         default:
-            OSL_FAIL( "unknown attribute");
+            OSL_ENSURE( false, "unknown attribute");
     }
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-
-void MeasureHandler::lcl_sprm(Sprm & rSprm)
+  -----------------------------------------------------------------------*/
+void MeasureHandler::sprm(Sprm & rSprm)
 {
     (void)rSprm;
 }
+/*-- 24.04.2007 09:09:01---------------------------------------------------
 
-
+  -----------------------------------------------------------------------*/
 sal_Int32 MeasureHandler::getMeasureValue() const
 {
     sal_Int32 nRet = 0;
@@ -115,33 +114,19 @@ sal_Int32 MeasureHandler::getMeasureValue() const
     {
         // TODO m_nUnit 3 - twip, other values unknown :-(
         if( m_nUnit == 3 || sal::static_int_cast<Id>(m_nUnit) == NS_ooxml::LN_Value_ST_TblWidth_dxa)
-        {
             nRet = ConversionHelper::convertTwipToMM100( m_nMeasureValue );
-        }
-        //todo: handle additional width types:
-        //NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct,
-        //NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto;
+        //todo: handle additional width types:    
+        //NS_ooxml::LN_Value_ST_TblWidth_nil, NS_ooxml::LN_Value_ST_TblWidth_pct, 
+        //NS_ooxml::LN_Value_ST_TblWidth_dxa, NS_ooxml::LN_Value_ST_TblWidth_auto; 
     }
     return nRet;
 }
+/*-- 18.06.2007 10:24:26---------------------------------------------------
 
-void MeasureHandler::enableInteropGrabBag(const OUString& aName)
+  -----------------------------------------------------------------------*/
+bool MeasureHandler::isAutoWidth() const 
 {
-    m_aInteropGrabBagName = aName;
-}
-
-beans::PropertyValue MeasureHandler::getInteropGrabBag()
-{
-    beans::PropertyValue aRet;
-    aRet.Name = m_aInteropGrabBagName;
-
-    uno::Sequence<beans::PropertyValue> aSeq(m_aInteropGrabBag.size());
-    beans::PropertyValue* pSeq = aSeq.getArray();
-    for (std::vector<beans::PropertyValue>::iterator i = m_aInteropGrabBag.begin(); i != m_aInteropGrabBag.end(); ++i)
-        *pSeq++ = *i;
-
-    aRet.Value = uno::makeAny(aSeq);
-    return aRet;
+    return sal::static_int_cast<Id>(m_nUnit) == NS_ooxml::LN_Value_ST_TblWidth_auto;
 }
 
 } //namespace dmapper

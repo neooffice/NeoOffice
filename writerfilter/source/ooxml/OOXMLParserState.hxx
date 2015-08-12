@@ -1,29 +1,38 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDE_OOXML_PARSER_STATE_HXX
+#define INCLUDE_OOXML_PARSER_STATE_HXX
 
 #include <stack>
-#include "OOXMLDocumentImpl.hxx"
+#include <ooxml/OOXMLDocument.hxx>
 #include "OOXMLPropertySetImpl.hxx"
 
-#ifdef DEBUG_WRITERFILTER
+#ifdef DEBUG
 #include <resourcemodel/TagLogger.hxx>
 #endif
 
@@ -31,17 +40,7 @@ namespace writerfilter {
 namespace ooxml
 {
 
-/**
- * Struct to store our 'alternate state'. If multiple mc:AlternateContent
- * elements arrive, then while the inner ones are active, the original state is
- * saved away, and once they inner goes out of scope, the original state is
- * restored.
- */
-struct SavedAlternateState
-{
-    bool m_bDiscardChildren;
-    bool m_bTookChoice; ///< Did we take the Choice or want Fallback instead?
-};
+using ::std::stack;
 
 class OOXMLParserState
 {
@@ -52,17 +51,13 @@ class OOXMLParserState
     bool mbForwardEvents;
     unsigned int mnContexts;
     unsigned int mnHandle;
-    OOXMLDocumentImpl* mpDocument;
+    OOXMLDocument * mpDocument;
+    sal_Int32 mnXNoteId;
+    rtl::OUString msTarget;
     OOXMLPropertySet::Pointer_t mpCharacterProps;
-    std::stack<OOXMLPropertySet::Pointer_t> mCellProps;
-    std::stack<OOXMLPropertySet::Pointer_t> mRowProps;
-    std::stack<OOXMLPropertySet::Pointer_t> mTableProps;
-    bool inTxbxContent;
-    // these 4 save when inTxbxContent
-    bool savedInParagraphGroup;
-    bool savedInCharacterGroup;
-    bool savedLastParagraphInSection;
-    std::vector<SavedAlternateState> maSavedAlternateStates;
+    stack<OOXMLPropertySet::Pointer_t> mCellProps;
+    stack<OOXMLPropertySet::Pointer_t> mRowProps;
+    stack<OOXMLPropertySet::Pointer_t> mTableProps;
 
 public:
     typedef boost::shared_ptr<OOXMLParserState> Pointer_t;
@@ -70,33 +65,31 @@ public:
     OOXMLParserState();
     virtual ~OOXMLParserState();
 
-    bool isInSectionGroup() const { return mbInSectionGroup;}
+    bool isInSectionGroup() const;
     void setInSectionGroup(bool bInSectionGroup);
-
+    
     void setLastParagraphInSection(bool bLastParagraphInSection);
-    bool isLastParagraphInSection() const { return mbLastParagraphInSection;}
+    bool isLastParagraphInSection() const;
 
-    std::vector<SavedAlternateState>& getSavedAlternateStates() { return maSavedAlternateStates; }
-
-    bool isInParagraphGroup() const { return mbInParagraphGroup;}
+    bool isInParagraphGroup() const;
     void setInParagraphGroup(bool bInParagraphGroup);
 
-    bool isInCharacterGroup() const { return mbInCharacterGroup;}
+    bool isInCharacterGroup() const;
     void setInCharacterGroup(bool bInCharacterGroup);
 
     void setForwardEvents(bool bForwardEvents);
-    bool isForwardEvents() const { return mbForwardEvents;}
-
-    const std::string getHandle() const;
+    bool isForwardEvents() const;
+    
+    const string getHandle() const;
     void setHandle();
 
-    void setDocument(OOXMLDocumentImpl* pDocument);
-    OOXMLDocumentImpl* getDocument() const { return mpDocument;}
+    void setDocument(OOXMLDocument * pDocument);
+    OOXMLDocument * getDocument() const;
 
     void setXNoteId(const sal_Int32 rId);
     sal_Int32 getXNoteId() const;
 
-    const OUString & getTarget() const;
+    const rtl::OUString & getTarget() const;
 
     void resolveCharacterProperties(Stream & rStream);
     void setCharacterProperties(OOXMLPropertySet::Pointer_t pProps);
@@ -109,16 +102,20 @@ public:
 
     void startTable();
     void endTable();
-
+    
     void incContextCount();
 
-    void startTxbxContent();
-    void endTxbxContent();
+#ifdef DEBUG
+public:
+    unsigned int getContextCount() const;
+    string toString() const;
+    XMLTag::Pointer_t toTag() const;
+#endif
 
 };
 
 }}
 
-#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPARSERSTATE_HXX
+#endif // INCLUDE_OOXML_PARSER_STATE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

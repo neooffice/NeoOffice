@@ -1,32 +1,37 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_GRAPHICIMPORT_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_GRAPHICIMPORT_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_GRAPHICIMPORT_HXX
+#define INCLUDED_GRAPHICIMPORT_HXX
 
-#include <queue>
-#include <boost/scoped_ptr.hpp>
+#include <resourcemodel/WW8ResourceModel.hxx>
 
-#include <resourcemodel/LoggedResources.hxx>
-
-namespace com { namespace sun { namespace star {
-    namespace uno
-    {
+namespace com{ namespace sun { namespace star {
+    namespace uno{
         class XComponentContext;
     }
     namespace lang
@@ -43,13 +48,12 @@ namespace com { namespace sun { namespace star {
     }
     namespace beans
     {
-        struct PropertyValue;
-        typedef css::uno::Sequence< css::beans::PropertyValue > PropertyValues;
+        class PropertyValue;
+        typedef ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue > PropertyValues;
     }
 }}}
 
-namespace writerfilter
-{
+namespace writerfilter {
 namespace dmapper
 {
 class GraphicImport_Impl;
@@ -57,74 +61,68 @@ class DomainMapper;
 
 enum GraphicImportType
 {
-    IMPORT_AS_DETECTED_INLINE,
+    IMPORT_AS_GRAPHIC,
+    IMPORT_AS_SHAPE,
+    IMPORT_AS_DETECTED_INLINE,  
     IMPORT_AS_DETECTED_ANCHOR
-};
+};    
 
-class GraphicImport : public LoggedProperties, public LoggedTable
-                    ,public BinaryObj, public LoggedStream
+class WRITERFILTER_DLLPRIVATE GraphicImport : public Properties, public Table
+                    ,public BinaryObj, public Stream
 {
-    boost::scoped_ptr<GraphicImport_Impl> m_pImpl;
+    GraphicImport_Impl* m_pImpl;
+    ::com::sun::star::uno::Reference < ::com::sun::star::uno::XComponentContext >    m_xComponentContext;
+    ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > m_xTextFactory;
 
-    css::uno::Reference<css::uno::XComponentContext>     m_xComponentContext;
-    css::uno::Reference<css::lang::XMultiServiceFactory> m_xTextFactory;
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent > m_xGraphicObject;
 
-    css::uno::Reference<css::text::XTextContent> m_xGraphicObject;
-
-    css::uno::Reference<css::drawing::XShape> m_xShape;
+    ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape> m_xShape;
     void ProcessShapeOptions(Value & val);
-
-    css::uno::Reference<css::text::XTextContent > createGraphicObject(const css::beans::PropertyValues& aMediaProperties, const css::uno::Reference<css::beans::XPropertySet>& xShapeProps);
-
-    void putPropertyToFrameGrabBag( const OUString& sPropertyName, const css::uno::Any& aPropertyValue );
+    
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent > createGraphicObject( 
+            const ::com::sun::star::beans::PropertyValues& aMediaProperties );
 
 public:
-    explicit GraphicImport( css::uno::Reference<css::uno::XComponentContext> const& xComponentContext,
-                            css::uno::Reference<css::lang::XMultiServiceFactory> const& xTextFactory,
-                            DomainMapper& rDomainMapper,
-                            GraphicImportType eGraphicImportType,
-                            std::queue<OUString>& rPositivePercentages);
+    explicit GraphicImport(::com::sun::star::uno::Reference < ::com::sun::star::uno::XComponentContext >    xComponentContext,
+                  ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > xTextFactory,
+                  DomainMapper& rDomainMapper,
+                  GraphicImportType eGraphicImportType);
     virtual ~GraphicImport();
 
-    // BinaryObj
-    virtual void data(const sal_uInt8* buffer, size_t len, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
-
-    css::uno::Reference<css::text::XTextContent> GetGraphicObject();
-    css::uno::Reference<css::drawing::XShape> GetXShapeObject() { return m_xShape;}
-    bool IsGraphic() const;
-
- private:
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
 
     // Table
-    virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
+    virtual void entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
+
+    // BinaryObj
+    virtual void data(const sal_uInt8* buf, size_t len, writerfilter::Reference<Properties>::Pointer_t ref);
 
     // Stream
-    virtual void lcl_startSectionGroup() SAL_OVERRIDE;
-    virtual void lcl_endSectionGroup() SAL_OVERRIDE;
-    virtual void lcl_startParagraphGroup() SAL_OVERRIDE;
-    virtual void lcl_endParagraphGroup() SAL_OVERRIDE;
-    virtual void lcl_startCharacterGroup() SAL_OVERRIDE;
-    virtual void lcl_endCharacterGroup() SAL_OVERRIDE;
-    virtual void lcl_text(const sal_uInt8 * data, size_t len) SAL_OVERRIDE;
-    virtual void lcl_utext(const sal_uInt8 * data, size_t len) SAL_OVERRIDE;
-    virtual void lcl_props(writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_table(Id name,
-                           writerfilter::Reference<Table>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_substream(Id name, writerfilter::Reference<Stream>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_info(const std::string & info) SAL_OVERRIDE;
-    virtual void lcl_startShape(css::uno::Reference<css::drawing::XShape> const& xShape) SAL_OVERRIDE;
-    virtual void lcl_endShape() SAL_OVERRIDE;
+    virtual void startSectionGroup();
+    virtual void endSectionGroup();
+    virtual void startParagraphGroup();
+    virtual void endParagraphGroup();
+    virtual void startCharacterGroup();
+    virtual void endCharacterGroup();
+    virtual void text(const sal_uInt8 * data, size_t len);
+    virtual void utext(const sal_uInt8 * data, size_t len);
+    virtual void props(writerfilter::Reference<Properties>::Pointer_t ref);
+    virtual void table(Id name,
+                       writerfilter::Reference<Table>::Pointer_t ref);
+    virtual void substream(Id name,
+                           ::writerfilter::Reference<Stream>::Pointer_t ref);
+    virtual void info(const string & info);
+    virtual void startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape );
+    virtual void endShape( );
 
-    void handleWrapTextValue(sal_uInt32 nVal);
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextContent > GetGraphicObject();
+    bool    IsGraphic() const;
 };
-
-typedef boost::shared_ptr<GraphicImport> GraphicImportPtr;
-
+typedef boost::shared_ptr< GraphicImport >          GraphicImportPtr;
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

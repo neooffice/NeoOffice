@@ -1,26 +1,11 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * This file incorporates work covered by the following license notice:
- *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
 #include "ConversionHelper.hxx"
 #include "NumberingManager.hxx"
 #include "StyleSheetTable.hxx"
 #include "PropertyIds.hxx"
 
+#include <doctok/resourceids.hxx>
+#include <doctok/sprmids.hxx>
 #include <ooxml/resourceids.hxx>
 
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -31,15 +16,17 @@
 #include <com/sun/star/text/PositionAndSpaceMode.hpp>
 #include <com/sun/star/text/XChapterNumberingSupplier.hpp>
 
-#include <osl/diagnose.h>
-#include <rtl/ustring.hxx>
+#if DEBUG
+#include <stdio.h>
+#endif
 
-#include "dmapperLoggers.hxx"
-
+using namespace rtl;
 using namespace com::sun::star;
 
 #define MAKE_PROPVAL(NameId, Value) \
     beans::PropertyValue(aPropNameSupplier.GetName(NameId), 0, uno::makeAny(Value), beans::PropertyState_DIRECT_VALUE )
+
+#define OUSTR_TO_C( x )  OUStringToOString( x, RTL_TEXTENCODING_UTF8 ).getStr( )
 
 #define NUMBERING_MAX_LEVELS    10
 
@@ -48,9 +35,8 @@ namespace writerfilter {
 namespace dmapper {
 
 //---------------------------------------------------  Utility functions
-
-#ifdef DEBUG_WRITERFILTER
-void lcl_printProperties( uno::Sequence< beans::PropertyValue > const & aProps )
+    
+void lcl_printProperties( uno::Sequence< beans::PropertyValue > aProps )
 {
     sal_Int32 nLen = aProps.getLength( );
     for ( sal_Int32 i = 0; i < nLen; i++ )
@@ -60,14 +46,17 @@ void lcl_printProperties( uno::Sequence< beans::PropertyValue > const & aProps )
         OUString sValue;
 
         if ( !( aValue >>= sValue ) && ( aValue >>= nValue ) )
-            sValue = OUString::number( nValue );
+            sValue = OUString::valueOf( nValue );
 
-        SAL_INFO("writerfilter", "Property " << aProps[i].Name << ": " << sValue);
+#if DEBUG
+        fprintf( stderr, "Property %s: %s\n", 
+                OUSTR_TO_C( aProps[i].Name ),
+                OUSTR_TO_C( sValue ) );
+#endif
     }
 }
-#endif
 
-sal_Int32 lcl_findProperty( const uno::Sequence< beans::PropertyValue >& aProps, const OUString& sName )
+sal_Int32 lcl_findProperty( uno::Sequence< beans::PropertyValue > aProps, OUString sName )
 {
     sal_Int32 i = 0;
     sal_Int32 nLen = aProps.getLength( );
@@ -110,54 +99,47 @@ void ListLevel::SetValue( Id nId, sal_Int32 nValue )
 {
     switch( nId )
     {
-        case NS_ooxml::LN_CT_Lvl_start:
+        case NS_rtf::LN_ISTARTAT:
             m_nIStartAt = nValue;
         break;
-        case NS_ooxml::LN_CT_Lvl_numFmt:
+        case NS_rtf::LN_NFC:
             m_nNFC = nValue;
         break;
-        case NS_ooxml::LN_CT_Lvl_isLgl:
+        case NS_rtf::LN_JC:
+            m_nJC = nValue;
+        break;
+        case NS_rtf::LN_FLEGAL:
             m_nFLegal = nValue;
         break;
-        case NS_ooxml::LN_CT_Lvl_legacy:
+        case NS_rtf::LN_FNORESTART:
+            m_nFNoRestart = nValue;
+        break;
+        case NS_rtf::LN_FIDENTSAV:
+            m_nFPrev = nValue;
+        break;
+        case NS_rtf::LN_FCONVERTED:
             m_nFPrevSpace = nValue;
         break;
-        case NS_ooxml::LN_CT_Lvl_suff:
-            m_nXChFollow = nValue;
+#if 0
+        case NS_rtf::LN_FWORD6:
+            m_nFWord6 = nValue;
         break;
+#endif
+        case NS_rtf::LN_IXCHFOLLOW:
+            m_nXChFollow = nValue;
+  break;
         case NS_ooxml::LN_CT_TabStop_pos:
-            if (nValue < 0)
-            {
-                SAL_INFO("writerfilter",
-                        "unsupported list tab stop position " << nValue);
-            }
-            else
-                m_nTabstop = nValue;
+            m_nTabstop = nValue;
         break;
         default:
-            OSL_FAIL( "this line should never be reached");
+            OSL_ENSURE( false, "this line should never be reached");
     }
 }
 
-void ListLevel::SetParaStyle( boost::shared_ptr< StyleSheetEntry > pStyle )
-{
-    if (!pStyle)
-        return;
-    m_pParaStyle = pStyle;
-    // AFAICT .docx spec does not identify which numberings or paragraph
-    // styles are actually the ones to be used for outlines (chapter numbering),
-    // it only kind of says somewhere that they should be named Heading1 to Heading9.
-    const OUString styleId= pStyle->sConvertedStyleName;
-    m_outline = ( styleId.getLength() == RTL_CONSTASCII_LENGTH( "Heading 1" )
-        && styleId.match( "Heading ", 0 )
-        && styleId[ RTL_CONSTASCII_LENGTH( "Heading " ) ] >= '1'
-        && styleId[ RTL_CONSTASCII_LENGTH( "Heading " ) ] <= '9' );
-}
-
-sal_Int16 ListLevel::GetParentNumbering( const OUString& sText, sal_Int16 nLevel,
+sal_Int16 ListLevel::GetParentNumbering( OUString sText, sal_Int16 nLevel, 
         OUString& rPrefix, OUString& rSuffix )
 {
-    sal_Int16 nParentNumbering = 1;
+    sal_Int16 nParentNumbering = nLevel;
 
     //now parse the text to find %n from %1 to %nLevel+1
     //everything before the first % and the last %x is prefix and suffix
@@ -168,7 +150,7 @@ sal_Int16 ListLevel::GetParentNumbering( const OUString& sText, sal_Int16 nLevel
     {
         rPrefix = sLevelText.copy( 0, nFound );
         sLevelText = sLevelText.copy( nFound );
-    }
+    } 
     sal_Int32 nMinLevel = nLevel;
     //now the text should either be empty or start with %
     nFound = sLevelText.getLength( ) > 1 ? 0 : -1;
@@ -176,7 +158,7 @@ sal_Int16 ListLevel::GetParentNumbering( const OUString& sText, sal_Int16 nLevel
     {
         if( sLevelText.getLength() > 1 )
         {
-            sal_Unicode cLevel = sLevelText[1];
+            sal_Unicode cLevel = sLevelText.getStr()[1];
             if( cLevel >= '1' && cLevel <= '9' )
             {
                 if( cLevel - '1' < nMinLevel )
@@ -184,8 +166,8 @@ sal_Int16 ListLevel::GetParentNumbering( const OUString& sText, sal_Int16 nLevel
                 //remove first char - next char is removed later
                 sLevelText = sLevelText.copy( 1 );
             }
-        }
-        //remove old '%' or number
+        }    
+        //remove old '%' or number 
         sLevelText = sLevelText.copy( 1 );
         nCurrentIndex = 0;
         nFound = sLevelText.indexOf( '%', nCurrentIndex );
@@ -207,51 +189,41 @@ uno::Sequence< beans::PropertyValue > ListLevel::GetProperties( )
 {
     uno::Sequence< beans::PropertyValue > aLevelProps = GetLevelProperties( );
     if ( m_pParaStyle.get( ) )
-        AddParaProperties( &aLevelProps );
+    {
+        // Merge with the paragraph properties
+        uno::Sequence< beans::PropertyValue > aParaProps = GetParaProperties( );
+        lcl_mergeProperties( aParaProps, aLevelProps );
+    }
     return aLevelProps;
 }
 
-static bool IgnoreForCharStyle(const OUString& aStr)
-{
-    //Names found in PropertyIds.cxx, Lines 56-396
-    return (aStr=="Adjust" || aStr=="IndentAt" || aStr=="FirstLineIndent"
-            || aStr=="FirstLineOffset" || aStr=="LeftMargin" || aStr=="CharFontName"
-        );
-}
 uno::Sequence< beans::PropertyValue > ListLevel::GetCharStyleProperties( )
 {
     PropertyValueVector_t rProperties;
+    PropertyNameSupplier& aPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
 
-    uno::Sequence< beans::PropertyValue > vPropVals = PropertyMap::GetPropertyValues();
-#if SUPD == 310
-    sal_Int32 nPropValsLen = vPropVals.getLength();
-    beans::PropertyValue* aValIter = vPropVals.getArray();
-    for ( sal_Int32 nPropVal = 0; nPropVal < nPropValsLen; ++nPropVal, ++aValIter )
-#else	// SUPD == 310
-    beans::PropertyValue* aValIter = vPropVals.begin();
-    beans::PropertyValue* aEndIter = vPropVals.end();
-    for( ; aValIter != aEndIter; ++aValIter )
-#endif	// SUPD == 310
+    _PropertyMap::const_iterator aMapIter = begin();
+    _PropertyMap::const_iterator aEndIter = end();
+    for( ; aMapIter != aEndIter; ++aMapIter )
     {
-        if (IgnoreForCharStyle(aValIter->Name))
-            continue;
-        else if(aValIter->Name=="CharInteropGrabBag" || aValIter->Name=="ParaInteropGrabBag") {
-            uno::Sequence<beans::PropertyValue> vGrabVals;
-            aValIter->Value >>= vGrabVals;
-#if SUPD == 310
-            sal_Int32 nGrabValsLen = vGrabVals.getLength();
-            beans::PropertyValue* aGrabIter = vGrabVals.getArray();
-            for ( sal_Int32 nGrabVal = 0; nGrabVal < nGrabValsLen; ++nGrabVal, ++aGrabIter ) {
-#else	// SUPD == 310
-            beans::PropertyValue* aGrabIter = vGrabVals.begin();
-            for(; aGrabIter!=vGrabVals.end(); ++aGrabIter) {
-#endif	// SUPD == 310
-                if(!IgnoreForCharStyle(aGrabIter->Name))
-                    rProperties.push_back(beans::PropertyValue(aGrabIter->Name, 0, aGrabIter->Value, beans::PropertyState_DIRECT_VALUE));
+        switch( aMapIter->first.eId )
+        {
+            case PROP_ADJUST:
+            case PROP_INDENT_AT:
+            case PROP_FIRST_LINE_INDENT:
+            case PROP_FIRST_LINE_OFFSET:
+            case PROP_LEFT_MARGIN:
+            case PROP_CHAR_FONT_NAME:
+                // Do nothing: handled in the GetPropertyValues method
+            break;
+            default: 
+            {
+                rProperties.push_back(
+                        beans::PropertyValue( 
+                            aPropNameSupplier.GetName( aMapIter->first.eId ), 0, 
+                            aMapIter->second, beans::PropertyState_DIRECT_VALUE ));
             }
         }
-        else
-            rProperties.push_back(beans::PropertyValue(aValIter->Name, 0, aValIter->Value, beans::PropertyState_DIRECT_VALUE));
     }
 
     uno::Sequence< beans::PropertyValue > aRet( rProperties.size() );
@@ -282,35 +254,14 @@ uno::Sequence< beans::PropertyValue > ListLevel::GetLevelProperties( )
 
     sal_Int16 nNumberFormat = ConversionHelper::ConvertNumberingType(m_nNFC);
     if( m_nNFC >= 0)
-    {
-        if (!m_sGraphicURL.isEmpty() || m_sGraphicBitmap.is())
-            nNumberFormat = style::NumberingType::BITMAP;
         aNumberingProperties.push_back( MAKE_PROPVAL(PROP_NUMBERING_TYPE, nNumberFormat ));
-    }
 
     if( m_nJC >= 0 && m_nJC <= sal::static_int_cast<sal_Int32>(sizeof(aWWToUnoAdjust) / sizeof(sal_Int16)) )
         aNumberingProperties.push_back( MAKE_PROPVAL(PROP_ADJUST, aWWToUnoAdjust[m_nJC]));
 
-    if( !isOutlineNumbering())
-    {
-        // todo: this is not the bullet char
-        if( nNumberFormat == style::NumberingType::CHAR_SPECIAL )
-        {
-            if (!m_sBulletChar.isEmpty())
-            {
-                aNumberingProperties.push_back( MAKE_PROPVAL(PROP_BULLET_CHAR, m_sBulletChar.copy(0,1)));
-            }
-            else
-            {
-                // If w:lvlText's value is null - set bullet char to zero.
-                aNumberingProperties.push_back( MAKE_PROPVAL(PROP_BULLET_CHAR, sal_Unicode(0x0)));
-            }
-        }
-        if (!m_sGraphicURL.isEmpty())
-            aNumberingProperties.push_back(MAKE_PROPVAL(PROP_GRAPHIC_URL, m_sGraphicURL));
-        if (m_sGraphicBitmap.is())
-            aNumberingProperties.push_back(MAKE_PROPVAL(PROP_GRAPHIC_BITMAP, m_sGraphicBitmap));
-    }
+    // todo: this is not the bullet char
+    if( nNumberFormat == style::NumberingType::CHAR_SPECIAL && m_sBulletChar.getLength() )
+        aNumberingProperties.push_back( MAKE_PROPVAL(PROP_BULLET_CHAR, m_sBulletChar.copy(0,1)));
 
     aNumberingProperties.push_back( MAKE_PROPVAL( PROP_LISTTAB_STOP_POSITION, m_nTabstop ) );
 
@@ -321,7 +272,7 @@ uno::Sequence< beans::PropertyValue > ListLevel::GetLevelProperties( )
     //2.2
     //2.3
     //3.4
-
+    //
 
     if( m_nFWord6 > 0) //Word 6 compatibility
     {
@@ -332,29 +283,34 @@ uno::Sequence< beans::PropertyValue > ListLevel::GetLevelProperties( )
 
 //    TODO: sRGBXchNums;     array of inherited numbers
 
-//  nXChFollow; following character 0 - tab, 1 - space, 2 - nothing
-    aNumberingProperties.push_back( MAKE_PROPVAL( PROP_LEVEL_FOLLOW, m_nXChFollow ));
+//    TODO: nXChFollow; following character 0 - tab, 1 - space, 2 - nothing
 
-    const int nIds = 5;
-    PropertyIds aReadIds[nIds] =
+    _PropertyMap::const_iterator aMapIter = begin();
+    _PropertyMap::const_iterator aEndIter = end();
+    for( ; aMapIter != aEndIter; ++aMapIter )
     {
-        PROP_ADJUST, PROP_INDENT_AT, PROP_FIRST_LINE_INDENT,
-            PROP_FIRST_LINE_OFFSET, PROP_LEFT_MARGIN
-    };
-    for(int i=0; i<nIds; ++i) {
-        boost::optional<PropertyMap::Property> aProp = getProperty(aReadIds[i]);
-        if (aProp)
-            aNumberingProperties.push_back(
-                    beans::PropertyValue( aPropNameSupplier.GetName(aProp->first), 0, aProp->second, beans::PropertyState_DIRECT_VALUE )
-                    );
+        switch( aMapIter->first.eId )
+        {
+            case PROP_ADJUST:
+            case PROP_INDENT_AT:
+            case PROP_FIRST_LINE_INDENT:
+            case PROP_FIRST_LINE_OFFSET:
+            case PROP_LEFT_MARGIN:
+                aNumberingProperties.push_back(
+                    beans::PropertyValue( aPropNameSupplier.GetName( aMapIter->first.eId ), 0, aMapIter->second, beans::PropertyState_DIRECT_VALUE ));
+            break;
+            case PROP_CHAR_FONT_NAME:
+                aNumberingProperties.push_back(
+                    beans::PropertyValue( aPropNameSupplier.GetName( PROP_BULLET_FONT_NAME ), 0, aMapIter->second, beans::PropertyState_DIRECT_VALUE ));
+            break;
+            default: 
+            {
+                // Handled in GetCharStyleProperties method
+            }
+
+        }
     }
-
-    boost::optional<PropertyMap::Property> aPropFont = getProperty(PROP_CHAR_FONT_NAME);
-    if(aPropFont && !isOutlineNumbering())
-        aNumberingProperties.push_back(
-                beans::PropertyValue( aPropNameSupplier.GetName(PROP_BULLET_FONT_NAME), 0, aPropFont->second, beans::PropertyState_DIRECT_VALUE )
-                );
-
+    
     uno::Sequence< beans::PropertyValue > aRet(aNumberingProperties.size());
     beans::PropertyValue* pValues = aRet.getArray();
     PropertyValueVector_t::const_iterator aIt = aNumberingProperties.begin();
@@ -366,77 +322,53 @@ uno::Sequence< beans::PropertyValue > ListLevel::GetLevelProperties( )
     return aRet;
 }
 
-// Add the properties only if they do not already exist in the sequence.
-void ListLevel::AddParaProperties( uno::Sequence< beans::PropertyValue >* props )
+uno::Sequence< beans::PropertyValue > ListLevel::GetParaProperties( )
 {
-    uno::Sequence< beans::PropertyValue >& aProps = *props;
     PropertyNameSupplier& aPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
 
-    OUString sFirstLineIndent = aPropNameSupplier.GetName(
-            PROP_FIRST_LINE_INDENT );
-    OUString sIndentAt = aPropNameSupplier.GetName(
-            PROP_INDENT_AT );
-
-    bool hasFirstLineIndent = lcl_findProperty( aProps, sFirstLineIndent );
-    bool hasIndentAt = lcl_findProperty( aProps, sIndentAt );
-
-    if( hasFirstLineIndent && hasIndentAt )
-        return; // has them all, nothing to add
-
     uno::Sequence< beans::PropertyValue > aParaProps = m_pParaStyle->pProperties->GetPropertyValues( );
+    uno::Sequence< beans::PropertyValue > aProps;
 
     // ParaFirstLineIndent -> FirstLineIndent
     // ParaLeftMargin -> IndentAt
 
-    OUString sParaIndent = aPropNameSupplier.GetName(
+    OUString sParaIndent = aPropNameSupplier.GetName( 
             PROP_PARA_FIRST_LINE_INDENT );
-    OUString sParaLeftMargin = aPropNameSupplier.GetName(
+    OUString sFirstLineIndent = aPropNameSupplier.GetName( 
+            PROP_FIRST_LINE_INDENT );
+    OUString sParaLeftMargin = aPropNameSupplier.GetName( 
             PROP_PARA_LEFT_MARGIN );
+    OUString sIndentAt = aPropNameSupplier.GetName( 
+            PROP_INDENT_AT );
 
     sal_Int32 nLen = aParaProps.getLength( );
     for ( sal_Int32 i = 0; i < nLen; i++ )
     {
-        if ( !hasFirstLineIndent && aParaProps[i].Name.equals( sParaIndent ) )
+        if ( aParaProps[i].Name.equals( sParaIndent ) )
         {
             aProps.realloc( aProps.getLength() + 1 );
             aProps[aProps.getLength( ) - 1] = aParaProps[i];
             aProps[aProps.getLength( ) - 1].Name = sFirstLineIndent;
         }
-        else if ( !hasIndentAt && aParaProps[i].Name.equals( sParaLeftMargin ) )
+        else if ( aParaProps[i].Name.equals( sParaLeftMargin ) )
         {
             aProps.realloc( aProps.getLength() + 1 );
             aProps[aProps.getLength( ) - 1] = aParaProps[i];
             aProps[aProps.getLength( ) - 1].Name = sIndentAt;
         }
-
+        
     }
+
+    return aProps;
 }
-
-NumPicBullet::NumPicBullet()
-    : m_nId(0)
-{
-}
-
-NumPicBullet::~NumPicBullet()
-{
-}
-
-void NumPicBullet::SetId(sal_Int32 nId)
-{
-    m_nId = nId;
-}
-
-void NumPicBullet::SetShape(uno::Reference<drawing::XShape> const& xShape)
-{
-    m_xShape = xShape;
-}
-
-
 
 //--------------------------------------- AbstractListDef implementation
 
 AbstractListDef::AbstractListDef( ) :
-    m_nTmpl( -1 )
+    m_nTPLC( -1 )
+    ,m_nSimpleList( -1 )
+    ,m_nRestart( -1 )
+    ,m_nUnsigned( -1 )
     ,m_nId( -1 )
 {
 }
@@ -449,16 +381,25 @@ void AbstractListDef::SetValue( sal_uInt32 nSprmId, sal_Int32 nValue )
 {
     switch( nSprmId )
     {
-        case NS_ooxml::LN_CT_AbstractNum_tmpl:
-            m_nTmpl = nValue;
+        case NS_rtf::LN_TPLC:
+            m_nTPLC = nValue;
+        break;
+        case NS_rtf::LN_FSIMPLELIST:
+            m_nSimpleList = nValue;
+        break;
+        case NS_rtf::LN_fAutoNum:
+            m_nRestart = nValue;
+        break;
+        case NS_rtf::LN_fHybrid:
+            m_nUnsigned = nValue;
         break;
         default:
-            OSL_FAIL( "this line should never be reached");
+            OSL_ENSURE( false, "this line should never be reached");
     }
 }
 
 ListLevel::Pointer AbstractListDef::GetLevel( sal_uInt16 nLvl )
-{
+{ 
     ListLevel::Pointer pLevel;
     if ( m_aLevels.size( ) > nLvl )
         pLevel = m_aLevels[ nLvl ];
@@ -498,32 +439,28 @@ ListDef::~ListDef( )
 
 OUString ListDef::GetStyleName( sal_Int32 nId )
 {
-    OUString sStyleName( "WWNum" );
-    sStyleName += OUString::number( nId );
+    OUString sStyleName( OUString::createFromAscii( "WWNum" ) );
+    sStyleName += OUString::valueOf( nId );
 
     return sStyleName;
 }
 
 uno::Sequence< uno::Sequence< beans::PropertyValue > > ListDef::GetPropertyValues( )
 {
-    if (!m_pAbstractDef)
-        return uno::Sequence< uno::Sequence< beans::PropertyValue > >();
-
     // [1] Call the same method on the abstract list
     uno::Sequence< uno::Sequence< beans::PropertyValue > > aAbstract = m_pAbstractDef->GetPropertyValues( );
-
+    
     // [2] Call the upper class method
     uno::Sequence< uno::Sequence< beans::PropertyValue > > aThis = AbstractListDef::GetPropertyValues( );
-
+    
     // Merge the results of [2] in [1]
     sal_Int32 nThisCount = aThis.getLength( );
-    sal_Int32 nAbstractCount = aAbstract.getLength( );
-    for ( sal_Int32 i = 0; i < nThisCount && i < nAbstractCount; i++ )
+    for ( sal_Int32 i = 0; i < nThisCount; i++ )
     {
         uno::Sequence< beans::PropertyValue > level = aThis[i];
-        if ( level.hasElements() )
+        if ( level.getLength( ) == 0 )
         {
-            // If the element contains something, merge it
+            // If the the element contains something, merge it
             lcl_mergeProperties( level, aAbstract[i] );
         }
     }
@@ -531,19 +468,19 @@ uno::Sequence< uno::Sequence< beans::PropertyValue > > ListDef::GetPropertyValue
     return aAbstract;
 }
 
-uno::Reference< container::XNameContainer > lcl_getUnoNumberingStyles(
-       uno::Reference<lang::XMultiServiceFactory> const& xFactory)
+uno::Reference< container::XNameContainer > lcl_getUnoNumberingStyles( 
+       uno::Reference< lang::XMultiServiceFactory > xFactory )
 {
     uno::Reference< container::XNameContainer > xStyles;
 
     try
     {
         uno::Reference< style::XStyleFamiliesSupplier > xFamilies( xFactory, uno::UNO_QUERY_THROW );
-        uno::Any oFamily = xFamilies->getStyleFamilies( )->getByName("NumberingStyles");
+        uno::Any oFamily = xFamilies->getStyleFamilies( )->getByName( OUString::createFromAscii( "NumberingStyles" ) );
 
         oFamily >>= xStyles;
     }
-    catch ( const uno::Exception & )
+    catch ( const uno::Exception )
     {
     }
 
@@ -551,7 +488,7 @@ uno::Reference< container::XNameContainer > lcl_getUnoNumberingStyles(
 }
 
 void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
-        uno::Reference<lang::XMultiServiceFactory> const& xFactory)
+        uno::Reference< lang::XMultiServiceFactory> xFactory )
 {
     // Get the UNO Numbering styles
     uno::Reference< container::XNameContainer > xStyles = lcl_getUnoNumberingStyles( xFactory );
@@ -563,16 +500,17 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
         {
             // Create the numbering style
             uno::Reference< beans::XPropertySet > xStyle (
-                xFactory->createInstance("com.sun.star.style.NumberingStyle"),
+                xFactory->createInstance( 
+                    OUString::createFromAscii("com.sun.star.style.NumberingStyle")),
                 uno::UNO_QUERY_THROW );
 
-            OUString sStyleName = GetStyleName( GetId( ) );
+            rtl::OUString sStyleName = GetStyleName( GetId( ) );
 
             xStyles->insertByName( sStyleName, makeAny( xStyle ) );
-
+            
             uno::Any oStyle = xStyles->getByName( sStyleName );
             xStyle.set( oStyle, uno::UNO_QUERY_THROW );
-
+            
             PropertyNameSupplier& aPropNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
 
             // Get the default OOo Numbering style rules
@@ -581,31 +519,29 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
 
             uno::Sequence< uno::Sequence< beans::PropertyValue > > aProps = GetPropertyValues( );
 
-            sal_Int32 nAbstLevels = m_pAbstractDef ? m_pAbstractDef->Size() : 0;
+            sal_Int32 nAbstLevels = m_pAbstractDef->Size( );
             sal_Int16 nLevel = 0;
             while ( nLevel < nAbstLevels )
             {
                 ListLevel::Pointer pAbsLevel = m_pAbstractDef->GetLevel( nLevel );
                 ListLevel::Pointer pLevel = GetLevel( nLevel );
-
+                
                 // Get the merged level properties
                 uno::Sequence< beans::PropertyValue > aLvlProps = aProps[sal_Int32( nLevel )];
 
-#ifdef DEBUG_WRITERFILTER
                 lcl_printProperties( aLvlProps );
-#endif
 
                 // Get the char style
                 uno::Sequence< beans::PropertyValue > aAbsCharStyleProps = pAbsLevel->GetCharStyleProperties( );
                 uno::Sequence< beans::PropertyValue >& rAbsCharStyleProps = aAbsCharStyleProps;
                 if ( pLevel.get( ) )
                 {
-                    uno::Sequence< beans::PropertyValue > aCharStyleProps =
+                    uno::Sequence< beans::PropertyValue > aCharStyleProps = 
                         pLevel->GetCharStyleProperties( );
                     uno::Sequence< beans::PropertyValue >& rCharStyleProps = aCharStyleProps;
                     lcl_mergeProperties( rAbsCharStyleProps, rCharStyleProps );
                 }
-
+                    
                 if( aAbsCharStyleProps.getLength() )
                 {
                     // Change the sequence into a vector
@@ -615,19 +551,18 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                         aStyleProps.push_back( aAbsCharStyleProps[i] );
                     }
 
-                    //create (or find) a character style containing the character
+                    //create (or find) a character style containing the character 
                     // attributes of the symbol and apply it to the numbering level
                     OUString sStyle = rDMapper.getOrCreateCharStyle( aStyleProps );
                     aLvlProps.realloc( aLvlProps.getLength() + 1);
-                    aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 1].Name = aPropNameSupplier.GetName( PROP_CHAR_STYLE_NAME );
-                    aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 1].Value <<= sStyle;
-                }
-
-                // Get the prefix / suffix / Parent numbering
+                    aLvlProps[aLvlProps.getLength() - 1].Name = aPropNameSupplier.GetName( PROP_CHAR_STYLE_NAME );
+                    aLvlProps[aLvlProps.getLength() - 1].Value <<= sStyle;
+                }    
+ 
+                // Get the prefix / suffix / Parent numbering 
                 // and add them to the level properties
                 OUString sText = pAbsLevel->GetBulletChar( );
-                // Inherit <w:lvlText> from the abstract level in case the override would be empty.
-                if (pLevel.get() && !pLevel->GetBulletChar().isEmpty())
+                if ( pLevel.get( ) )
                     sText = pLevel->GetBulletChar( );
 
                 OUString sPrefix;
@@ -638,29 +573,26 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                        sText, nLevel, rPrefix, rSuffix );
 
                 aLvlProps.realloc( aLvlProps.getLength( ) + 4 );
-                aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 4] = MAKE_PROPVAL( PROP_PREFIX, rPrefix );
-                aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 3] = MAKE_PROPVAL( PROP_SUFFIX, rSuffix );
-                aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 2] = MAKE_PROPVAL( PROP_PARENT_NUMBERING, nParentNum );
+                aLvlProps[ aLvlProps.getLength( ) - 4 ] = MAKE_PROPVAL( PROP_PREFIX, rPrefix );
+                aLvlProps[ aLvlProps.getLength( ) - 3 ] = MAKE_PROPVAL( PROP_SUFFIX, rSuffix );
+                aLvlProps[ aLvlProps.getLength( ) - 2 ] = MAKE_PROPVAL( PROP_PARENT_NUMBERING, nParentNum );
 
-                aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 1] = MAKE_PROPVAL( PROP_POSITION_AND_SPACE_MODE,
+                aLvlProps[ aLvlProps.getLength( ) - 1 ] = MAKE_PROPVAL( PROP_POSITION_AND_SPACE_MODE, 
                             sal_Int16( text::PositionAndSpaceMode::LABEL_ALIGNMENT ) );
-
-
                 // Replace the numbering rules for the level
                 m_xNumRules->replaceByIndex( nLevel, uno::makeAny( aLvlProps ) );
-
+                
                 // Handle the outline level here
-                if ( pAbsLevel->isOutlineNumbering())
+                StyleSheetEntryPtr pParaStyle = pAbsLevel->GetParaStyle( );
+                if ( pParaStyle.get( ) )
                 {
                     uno::Reference< text::XChapterNumberingSupplier > xOutlines (
                         xFactory, uno::UNO_QUERY_THROW );
-                    uno::Reference< container::XIndexReplace > xOutlineRules =
+                    uno::Reference< container::XIndexReplace > xOutlineRules = 
                         xOutlines->getChapterNumberingRules( );
 
-                    StyleSheetEntryPtr pParaStyle = pAbsLevel->GetParaStyle( );
                     aLvlProps.realloc( aLvlProps.getLength() + 1 );
-                    aLvlProps[sal::static_int_cast<sal_uInt32>(aLvlProps.getLength()) - 1] = MAKE_PROPVAL( PROP_HEADING_STYLE_NAME,
-                        pParaStyle->sConvertedStyleName );
+                    aLvlProps[aLvlProps.getLength( ) - 1] = MAKE_PROPVAL( PROP_HEADING_STYLE_NAME, pParaStyle->sConvertedStyleName );
 
                     xOutlineRules->replaceByIndex( nLevel, uno::makeAny( aLvlProps ) );
                 }
@@ -668,23 +600,13 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                 nLevel++;
             }
 
-            // Create the numbering style for these rules
+            // Create the numbering style for these rules 
             OUString sNumRulesName = aPropNameSupplier.GetName( PROP_NUMBERING_RULES );
             xStyle->setPropertyValue( sNumRulesName, uno::makeAny( m_xNumRules ) );
         }
-        catch( const lang::IllegalArgumentException& e )
+        catch( const uno::Exception& rEx)
         {
-            SAL_WARN( "writerfilter", "Exception: " << e.Message );
-             assert( !"Incorrect argument to UNO call" );
-        }
-        catch( const uno::RuntimeException& e )
-        {
-            SAL_WARN( "writerfilter", "Exception: " << e.Message );
-             assert( !"Incorrect argument to UNO call" );
-        }
-        catch( const uno::Exception& e )
-        {
-            SAL_WARN( "writerfilter", "Exception: " << e.Message );
+            OSL_ENSURE( false, "ListTable::CreateNumberingRules");
         }
     }
 
@@ -693,86 +615,89 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
 //-------------------------------------  NumberingManager implementation
 
 
-ListsManager::ListsManager(DomainMapper& rDMapper,
-    const uno::Reference<lang::XMultiServiceFactory> & xFactory)
-    : LoggedProperties(dmapper_logger, "ListsManager")
-    , LoggedTable(dmapper_logger, "ListsManager")
-    , m_rDMapper(rDMapper)
-    , m_xFactory(xFactory)
-    , m_bIsLFOImport(false)
+ListsManager::ListsManager( DomainMapper& rDMapper, 
+        const uno::Reference< lang::XMultiServiceFactory > xFactory ) :
+    m_rDMapper( rDMapper ),
+    m_xFactory( xFactory )
 {
 }
 
 ListsManager::~ListsManager( )
 {
-    DisposeNumPicBullets();
 }
 
-void ListsManager::DisposeNumPicBullets( )
+void ListsManager::attribute( Id nName, Value& rVal )
 {
-    uno::Reference<drawing::XShape> xShape;
-    for (std::vector<NumPicBullet::Pointer>::iterator it = m_aNumPicBullets.begin(); it != m_aNumPicBullets.end(); ++it)
-    {
-        xShape = (*it)->GetShape();
-        if (xShape.is())
-        {
-            uno::Reference<lang::XComponent> xShapeComponent(xShape, uno::UNO_QUERY);
-            xShapeComponent->dispose();
-        }
-    }
-}
-
-void ListsManager::lcl_attribute( Id nName, Value& rVal )
-{
-    ListLevel::Pointer pCurrentLvl;
-
-    if (nName != NS_ooxml::LN_CT_NumPicBullet_numPicBulletId)
-    {
-        OSL_ENSURE( m_pCurrentDefinition.get(), "current entry has to be set here");
-        if(!m_pCurrentDefinition.get())
-            return ;
-        pCurrentLvl = m_pCurrentDefinition->GetCurrentLevel( );
-    }
-    else
-    {
-        SAL_WARN_IF(!m_pCurrentNumPicBullet.get(), "writerfilter", "current entry has to be set here");
-        if (!m_pCurrentNumPicBullet.get())
-            return;
-    }
+    OSL_ENSURE( m_pCurrentDefinition.get(), "current entry has to be set here");
+    if(!m_pCurrentDefinition.get())
+        return ;
     int nIntValue = rVal.getInt();
 
+    ListLevel::Pointer pCurrentLvl = m_pCurrentDefinition->GetCurrentLevel( );
 
 
+    /* WRITERFILTERSTATUS: table: ListTable_attributedata */
     switch(nName)
     {
+        /* WRITERFILTERSTATUS: done: 50, planned: 0, spent: 0 */
+        case NS_rtf::LN_RGBXCHNUMS:
+            if(pCurrentLvl.get())
+                pCurrentLvl->AddRGBXchNums( rVal.getString( ) );
+        break;
+        /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_LevelText_val:
-        {
+        {    
             //this strings contains the definition of the level
             //the level number is marked as %n
-            //these numbers can be mixed randomly together with separators pre- and suffixes
+            //these numbers can be mixed randomly toghether with seperators pre- and suffixes
             //the Writer supports only a number of upper levels to show, separators is always a dot
             //and each level can have a prefix and a suffix
             if(pCurrentLvl.get())
                 pCurrentLvl->SetBulletChar( rVal.getString() );
         }
         break;
-        case NS_ooxml::LN_CT_Lvl_start:
-        case NS_ooxml::LN_CT_Lvl_numFmt:
-        case NS_ooxml::LN_CT_Lvl_isLgl:
-        case NS_ooxml::LN_CT_Lvl_legacy:
+//        case NS_rtf::LN_ISTD: break;
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_ISTARTAT:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_NFC:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_JC:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_FLEGAL:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_FNORESTART:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_FIDENTSAV:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_FCONVERTED:
+#if 0
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_FWORD6:
+#endif
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_IXCHFOLLOW:
             if ( pCurrentLvl.get( ) )
                 pCurrentLvl->SetValue( nName, sal_Int32( nIntValue ) );
         break;
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_RGISTD:
+            m_pCurrentDefinition->AddRGISTD( rVal.getString() );
+        break;
         case NS_ooxml::LN_CT_Num_numId:
             m_pCurrentDefinition->SetId( rVal.getString().toInt32( ) );
-        break;
-        case NS_ooxml::LN_CT_AbstractNum_nsid:
+        break; 
+        case NS_rtf::LN_LSID:
             m_pCurrentDefinition->SetId( nIntValue );
         break;
-        case NS_ooxml::LN_CT_AbstractNum_tmpl:
+        case NS_rtf::LN_TPLC:
+        case NS_rtf::LN_FSIMPLELIST:
+        case NS_rtf::LN_fAutoNum:
+        case NS_rtf::LN_fHybrid:
             m_pCurrentDefinition->SetValue( nName, nIntValue );
         break;
         case NS_ooxml::LN_CT_NumLvl_ilvl:
+        case NS_rtf::LN_LISTLEVEL:
         {
             //add a new level to the level vector and make it the current one
             m_pCurrentDefinition->AddLevel();
@@ -782,8 +707,9 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
                 pProperties->resolve(*this);
         }
         break;
+        /* WRITERFILTERSTATUS: done: 100, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_AbstractNum_abstractNumId:
-        {
+        {   
             // This one corresponds to the AbstractNum Id definition
             // The reference to the abstract num is in the sprm method
             sal_Int32 nVal = rVal.getString().toInt32();
@@ -791,16 +717,19 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
         }
         break;
         case NS_ooxml::LN_CT_Ind_left:
+            /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             pCurrentLvl->Insert(
-                PROP_INDENT_AT, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
+                PROP_INDENT_AT, true, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
             break;
         case NS_ooxml::LN_CT_Ind_hanging:
+            /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             pCurrentLvl->Insert(
-                PROP_FIRST_LINE_INDENT, uno::makeAny( - ConversionHelper::convertTwipToMM100( nIntValue ) ));
+                PROP_FIRST_LINE_INDENT, true, uno::makeAny( - ConversionHelper::convertTwipToMM100( nIntValue ) ));
         break;
         case NS_ooxml::LN_CT_Ind_firstLine:
+            /* WRITERFILTERSTATUS: done: 100, planned: 0.5, spent: 0 */
             pCurrentLvl->Insert(
-                PROP_FIRST_LINE_INDENT, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
+                PROP_FIRST_LINE_INDENT, true, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
         break;
         case NS_ooxml::LN_CT_Lvl_ilvl: //overrides previous level - unsupported
         case NS_ooxml::LN_CT_Lvl_tplc: //template code - unsupported
@@ -810,7 +739,7 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
         {
             //no paragraph attributes in ListTable char style sheets
             if ( pCurrentLvl.get( ) )
-                pCurrentLvl->SetValue( nName,
+                pCurrentLvl->SetValue( nName, 
                     ConversionHelper::convertTwipToMM100( nIntValue ) );
         }
         break;
@@ -819,28 +748,36 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
             // TODO Do something of that
         }
         break;
-        case NS_ooxml::LN_CT_NumPicBullet_numPicBulletId:
-            m_pCurrentNumPicBullet->SetId(rVal.getString().toInt32());
-        break;
         default:
-            SAL_WARN("writerfilter", "ListsManager::lcl_attribute: unhandled token: " << nName);
+        {
+#if OSL_DEBUG_LEVEL > 0
+            ::rtl::OString sMessage( "ListTable::attribute() - Id: ");
+            sMessage += ::rtl::OString::valueOf( sal_Int32( nName ), 10 );
+            sMessage += ::rtl::OString(" / 0x");
+            sMessage += ::rtl::OString::valueOf( sal_Int32( nName ), 16 );
+            sMessage += ::rtl::OString(" value: ");
+            sMessage += ::rtl::OString::valueOf( sal_Int32( nIntValue ), 10 );
+            sMessage += ::rtl::OString(" / 0x");
+            sMessage += ::rtl::OString::valueOf( sal_Int32( nIntValue ), 16 );
+            OSL_ENSURE( false, sMessage.getStr()); //
+#endif
+        }
     }
 }
 
-void ListsManager::lcl_sprm( Sprm& rSprm )
+void ListsManager::sprm( Sprm& rSprm )
 {
-    static bool bIsStartVisited = false;
     //fill the attributes of the style sheet
     sal_uInt32 nSprmId = rSprm.getId();
     if( m_pCurrentDefinition.get() ||
-        nSprmId == NS_ooxml::LN_CT_Numbering_abstractNum ||
-        nSprmId == NS_ooxml::LN_CT_Numbering_num ||
-        (nSprmId == NS_ooxml::LN_CT_NumPicBullet_pict && m_pCurrentNumPicBullet.get()) ||
-        nSprmId == NS_ooxml::LN_CT_Numbering_numPicBullet)
+        nSprmId == NS_ooxml::LN_CT_Numbering_abstractNum || 
+        nSprmId == NS_ooxml::LN_CT_Numbering_num )
     {
         sal_Int32 nIntValue = rSprm.getValue()->getInt();
+        /* WRITERFILTERSTATUS: table: ListTable_sprm */
         switch( nSprmId )
         {
+            /* WRITERFILTERSTATUS: done: 100, planned: 0, spent: 0 */
             case NS_ooxml::LN_CT_Numbering_abstractNum:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
@@ -856,6 +793,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                 }
             }
             break;
+            /* WRITERFILTERSTATUS: done: 50, planned: 0, spent: 0 */
             case NS_ooxml::LN_CT_Numbering_num:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
@@ -873,135 +811,68 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                 }
             }
             break;
-            case NS_ooxml::LN_CT_Numbering_numPicBullet:
-            {
-                writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if (pProperties.get())
-                {
-                    NumPicBullet::Pointer numPicBullet(new NumPicBullet());
-                    m_pCurrentNumPicBullet = numPicBullet;
-                    pProperties->resolve(*this);
-                    m_aNumPicBullets.push_back(numPicBullet);
-                    m_pCurrentNumPicBullet = NumPicBullet::Pointer();
-                }
-            }
-            break;
-            case NS_ooxml::LN_CT_NumPicBullet_pict:
-            {
-                uno::Reference<drawing::XShape> xShape = m_rDMapper.PopPendingShape();
-                m_pCurrentNumPicBullet->SetShape(xShape);
-            }
-            break;
-            case NS_ooxml::LN_CT_Lvl_lvlPicBulletId:
-            {
-                uno::Reference<drawing::XShape> xShape;
-                for (std::vector<NumPicBullet::Pointer>::iterator it = m_aNumPicBullets.begin(); it != m_aNumPicBullets.end(); ++it)
-                {
-                    if ((*it)->GetId() == nIntValue)
-                    {
-                        xShape = (*it)->GetShape();
-                        break;
-                    }
-                }
-                if (xShape.is())
-                {
-                    uno::Reference<beans::XPropertySet> xPropertySet(xShape, uno::UNO_QUERY);
-                    try
-                    {
-                        uno::Any aAny = xPropertySet->getPropertyValue("GraphicURL");
-                        if (aAny.has<OUString>())
-                            m_pCurrentDefinition->GetCurrentLevel()->SetGraphicURL(aAny.get<OUString>());
-                    } catch(const beans::UnknownPropertyException&)
-                    {}
-                    try
-                    {
-                        uno::Reference< graphic::XGraphic > gr;
-                        xPropertySet->getPropertyValue("Bitmap") >>= gr;
-                        m_pCurrentDefinition->GetCurrentLevel()->SetGraphicBitmap( gr );
-                    } catch(const beans::UnknownPropertyException&)
-                    {}
-
-                    // Now that we saved the URL of the graphic, remove it from the document.
-                    uno::Reference<lang::XComponent> xShapeComponent(xShape, uno::UNO_QUERY);
-                    xShapeComponent->dispose();
-                }
-            }
-            break;
             case NS_ooxml::LN_CT_Num_abstractNumId:
             {
                 sal_Int32 nAbstractNumId = rSprm.getValue()->getInt();
                 ListDef* pListDef = dynamic_cast< ListDef* >( m_pCurrentDefinition.get( ) );
-                if ( pListDef != nullptr )
+                if ( pListDef != NULL )
                 {
                     // The current def should be a ListDef
                     pListDef->SetAbstractDefinition(
-                           GetAbstractList( nAbstractNumId ) );
+                           GetAbstractList( nAbstractNumId ) ); 
                 }
             }
             break;
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
             case NS_ooxml::LN_CT_AbstractNum_multiLevelType:
             break;
-            case NS_ooxml::LN_CT_AbstractNum_tmpl:
+            /* WRITERFILTERSTATUS: done: 50, planned: 0, spent: 0 */
+            case NS_rtf::LN_TPLC:
                 m_pCurrentDefinition->SetValue( nSprmId, nIntValue );
             break;
+            /* WRITERFILTERSTATUS: done: 100, planned: 0, spent: 0 */
             case NS_ooxml::LN_CT_AbstractNum_lvl:
             {
                 m_pCurrentDefinition->AddLevel();
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
                 if(pProperties.get())
                     pProperties->resolve(*this);
-            }
-            break;
-            case NS_ooxml::LN_CT_Lvl_start:
-                if (m_pCurrentDefinition->GetCurrentLevel().get())
-                    m_pCurrentDefinition->GetCurrentLevel( )->SetValue( nSprmId, nIntValue );
-                bIsStartVisited = true;
-            break;
-            case NS_ooxml::LN_CT_Lvl_numFmt:
-            case NS_ooxml::LN_CT_Lvl_isLgl:
-            case NS_ooxml::LN_CT_Lvl_legacy:
-                if (m_pCurrentDefinition->GetCurrentLevel().get())
-                {
-                    m_pCurrentDefinition->GetCurrentLevel( )->SetValue( nSprmId, nIntValue );
-                    if( false == bIsStartVisited )
-                    {
-                        m_pCurrentDefinition->GetCurrentLevel( )->SetValue( NS_ooxml::LN_CT_Lvl_start, 0 );
-                        bIsStartVisited = true;
-                    }
                 }
             break;
-            case NS_ooxml::LN_CT_Lvl_suff:
-            {
-                if (m_pCurrentDefinition->GetCurrentLevel().get())
-                {
-#if SUPD == 310
-                    SvxNumberFormat::SvxNumLabelFollowedBy value = SvxNumberFormat::LISTTAB;
-#else	// SUPD == 310
-                    SvxNumberFormat::LabelFollowedBy value = SvxNumberFormat::LISTTAB;
-#endif	// SUPD == 310
-                    if( rSprm.getValue()->getString() == "tab" )
-                        value = SvxNumberFormat::LISTTAB;
-                    else if( rSprm.getValue()->getString() == "space" )
-                        value = SvxNumberFormat::SPACE;
-                    else if( rSprm.getValue()->getString() == "nothing" )
-                        value = SvxNumberFormat::NOTHING;
-                    else
-                        SAL_WARN( "writerfilter", "Unknown ST_LevelSuffix value "
-                            << rSprm.getValue()->getString());
-                    m_pCurrentDefinition->GetCurrentLevel()->SetValue( nSprmId, value );
-                }
-            }
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
+            case NS_rtf::LN_RGBXCHNUMS: break;
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_ISTARTAT:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_NFC:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_JC:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_FLEGAL:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_FNORESTART:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_FIDENTSAV:
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_FCONVERTED:
+#if 0
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_FWORD6:
+#endif
+            /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+            case NS_rtf::LN_IXCHFOLLOW:
+                m_pCurrentDefinition->GetCurrentLevel( )->SetValue( nSprmId, nIntValue );
             break;
             case NS_ooxml::LN_CT_Lvl_lvlText:
             case NS_ooxml::LN_CT_Lvl_rPr : //contains LN_EG_RPrBase_rFonts
-            {
+            {    
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
                 if(pProperties.get())
                     pProperties->resolve(*this);
             }
             break;
             case NS_ooxml::LN_CT_NumLvl_lvl:
-            {
+            {   
                 // overwrite level
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
                 if(pProperties.get())
@@ -1010,29 +881,20 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             break;
             case NS_ooxml::LN_CT_Lvl_lvlJc:
             {
-                sal_Int16 nValue = 0;
-                switch (nIntValue)
+                static sal_Int16 aWWAlignments[ ] = 
                 {
-                case NS_ooxml::LN_Value_ST_Jc_left:
-                case NS_ooxml::LN_Value_ST_Jc_start:
-                    nValue = text::HoriOrientation::LEFT;
-                    break;
-                case NS_ooxml::LN_Value_ST_Jc_center:
-                    nValue = text::HoriOrientation::CENTER;
-                    break;
-                case NS_ooxml::LN_Value_ST_Jc_right:
-                case NS_ooxml::LN_Value_ST_Jc_end:
-                    nValue = text::HoriOrientation::RIGHT;
-                    break;
-                }
-                m_pCurrentDefinition->GetCurrentLevel( )->Insert(
-                    PROP_ADJUST, uno::makeAny( nValue ) );
+                    text::HoriOrientation::LEFT,
+                    text::HoriOrientation::CENTER,
+                    text::HoriOrientation::RIGHT
+                };
+                m_pCurrentDefinition->GetCurrentLevel( )->Insert( 
+                    PROP_ADJUST, true, uno::makeAny( aWWAlignments[ nIntValue ] ) );
                     writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             }
             break;
             case NS_ooxml::LN_CT_Lvl_pPr:
             case NS_ooxml::LN_CT_PPrBase_ind:
-            {
+            {    
                 //todo: how to handle paragraph properties within numbering levels (except LeftIndent and FirstLineIndent)?
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
                 if(pProperties.get())
@@ -1047,6 +909,10 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                     pProperties->resolve(*this);
             }
             break;
+            case NS_ooxml::LN_CT_Lvl_suff:
+                //todo: currently unsupported suffix 
+                //can be: "none", "space", "tab"
+            break;
             case NS_ooxml::LN_CT_Lvl_pStyle:
             {
                 OUString sStyleName = rSprm.getValue( )->getString( );
@@ -1056,35 +922,10 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                 pLevel->SetParaStyle( pStyle );
             }
             break;
-            case NS_ooxml::LN_CT_Num_lvlOverride:
-            {
-                writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if (pProperties.get())
-                    pProperties->resolve(*this);
-            }
-            break;
-            case NS_ooxml::LN_CT_NumLvl_startOverride:
-            {
-                if(m_pCurrentDefinition)
-                {
-                    if (ListLevel::Pointer pCurrentLevel = m_pCurrentDefinition->GetCurrentLevel())
-                        // <w:num> -> <w:lvlOverride> -> <w:startOverride> is the non-abstract equivalent of
-                        // <w:abstractNum> -> <w:lvl> -> <w:start>
-                        pCurrentLevel->SetValue(NS_ooxml::LN_CT_Lvl_start, nIntValue);
-                }
-            }
-            break;
-            case NS_ooxml::LN_CT_AbstractNum_numStyleLink:
-            {
-                OUString sStyleName = rSprm.getValue( )->getString( );
-                AbstractListDef* pAbstractListDef = dynamic_cast< AbstractListDef* >( m_pCurrentDefinition.get( ) );
-                pAbstractListDef->SetNumStyleLink(sStyleName);
-            }
-            break;
             case NS_ooxml::LN_EG_RPrBase_rFonts: //contains font properties
             case NS_ooxml::LN_EG_RPrBase_color:
             case NS_ooxml::LN_EG_RPrBase_u:
-            case NS_ooxml::LN_EG_RPrBase_sz:
+            case NS_sprm::LN_CHps:    // sprmCHps
             case NS_ooxml::LN_EG_RPrBase_lang:
             case NS_ooxml::LN_EG_RPrBase_eastAsianLayout:
                 //no break!
@@ -1095,20 +936,20 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                     m_rDMapper.sprm( rSprm );
                     m_rDMapper.PopListProperties();
                 }
-        }
+        }    
     }
 }
 
-void ListsManager::lcl_entry( int /* pos */,
-                          writerfilter::Reference<Properties>::Pointer_t ref )
+void ListsManager::entry( int /* pos */, 
+        writerfilter::Reference<Properties>::Pointer_t ref )
 {
-    if( m_rDMapper.IsOOXMLImport() || m_rDMapper.IsRTFImport() )
+    if( m_rDMapper.IsOOXMLImport() )
     {
         ref->resolve(*this);
     }
     else
     {
-        if ( m_bIsLFOImport )
+        if ( m_bIsLFOImport ) 
         {
             // Create ListDef's
             OSL_ENSURE( !m_pCurrentDefinition.get(), "current entry has to be NULL here");
@@ -1141,33 +982,7 @@ AbstractListDef::Pointer ListsManager::GetAbstractList( sal_Int32 nId )
     while ( !pAbstractList.get( ) && i < nLen )
     {
         if ( m_aAbstractLists[i]->GetId( ) == nId )
-        {
-            if ( m_aAbstractLists[i]->GetNumStyleLink().getLength() > 0 )
-            {
-                // If the abstract num has a style linked, check the linked style's number id.
-                StyleSheetTablePtr pStylesTable = m_rDMapper.GetStyleSheetTable( );
-
-                const StyleSheetEntryPtr pStyleSheetEntry =
-                    pStylesTable->FindStyleSheetByISTD( m_aAbstractLists[i]->GetNumStyleLink() );
-
-                const StyleSheetPropertyMap* pStyleSheetProperties =
-                    dynamic_cast<const StyleSheetPropertyMap*>(pStyleSheetEntry ? pStyleSheetEntry->pProperties.get() : nullptr);
-
-                if( pStyleSheetProperties && pStyleSheetProperties->GetNumId() >= 0 )
-                {
-                    ListDef::Pointer pList = GetList( pStyleSheetProperties->GetNumId() );
-                    if ( pList!=nullptr )
-                        return pList->GetAbstractDefinition();
-                    else
-                        pAbstractList = m_aAbstractLists[i];
-                }
-
-            }
-            else
-            {
-                pAbstractList = m_aAbstractLists[i];
-            }
-        }
+            pAbstractList = m_aAbstractLists[i];
         i++;
     }
 
@@ -1194,7 +1009,7 @@ void ListsManager::CreateNumberingRules( )
 {
     // Loop over the definitions
     std::vector< ListDef::Pointer >::iterator listIt = m_aLists.begin( );
-    for ( ; listIt != m_aLists.end( ); ++listIt )
+    for ( ; listIt != m_aLists.end( ); listIt++ )
     {
         (*listIt)->CreateNumberingRules( m_rDMapper, m_xFactory );
     }

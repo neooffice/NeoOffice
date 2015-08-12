@@ -1,49 +1,56 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * This file is part of NeoOffice.
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_TDEFTABLEHANDLER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_TDEFTABLEHANDLER_HXX
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_TDEFTABLEHANDLER_HXX
+#define INCLUDED_TDEFTABLEHANDLER_HXX
 
-#include <resourcemodel/LoggedResources.hxx>
+#include <WriterFilterDllApi.hxx>
+#include <resourcemodel/WW8ResourceModel.hxx>
 #include <boost/shared_ptr.hpp>
 #include <vector>
-namespace com{ namespace sun{ namespace star{
-    namespace table {
-        struct BorderLine2;
-    }
-    namespace beans {
-        struct PropertyValue;
-    }
-}}}
+#if SUPD == 310
+#define BorderLine2 BorderLine
+#endif	// SUPD == 310
+namespace com{ namespace sun{ namespace star{namespace table {
+    struct BorderLine2;
+}}}}
 
 namespace writerfilter {
 namespace dmapper
 {
 class PropertyMap;
 class TablePropertyMap;
-class TDefTableHandler : public LoggedProperties
+class WRITERFILTER_DLLPRIVATE TDefTableHandler : public Properties
 {
 public:
 
 private:
     ::std::vector<sal_Int32>                                m_aCellBorderPositions;
     ::std::vector<sal_Int32>                                m_aCellVertAlign;
-
+    
     ::std::vector< ::com::sun::star::table::BorderLine2 >    m_aLeftBorderLines;
     ::std::vector< ::com::sun::star::table::BorderLine2 >    m_aRightBorderLines;
     ::std::vector< ::com::sun::star::table::BorderLine2 >    m_aTopBorderLines;
@@ -61,32 +68,23 @@ private:
 
     bool                                                m_bOOXML;
 
-    OUString m_aInteropGrabBagName;
-    std::vector<css::beans::PropertyValue> m_aInteropGrabBag;
-    void appendGrabBag(const OUString& aKey, const OUString& aValue);
-
     void localResolve(Id Name, writerfilter::Reference<Properties>::Pointer_t pProperties);
-
-    // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
-
 public:
     TDefTableHandler( bool bOOXML );
     virtual ~TDefTableHandler();
+
+    // Properties
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
 
     size_t                                      getCellCount() const;
     void                                        fillCellProperties( size_t nCell, ::boost::shared_ptr< TablePropertyMap > pCellProperties) const;
     ::boost::shared_ptr<PropertyMap>            getRowProperties() const;
     sal_Int32                                   getTableWidth() const;
-    void enableInteropGrabBag(const OUString& aName);
-    css::beans::PropertyValue getInteropGrabBag(const OUString& aName = OUString());
-    static OUString getBorderTypeString(sal_Int32 nType);
-    static OUString getThemeColorTypeString(sal_Int32 nType);
 };
 typedef boost::shared_ptr< TDefTableHandler >          TDefTableHandlerPtr;
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

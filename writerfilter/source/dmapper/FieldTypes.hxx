@@ -1,23 +1,32 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FIELDTYPES_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FIELDTYPES_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_FIELD_TYPES_HXX
+#define INCLUDED_FIELD_TYPES_HXX
 
 namespace writerfilter {
 namespace dmapper {
@@ -74,7 +83,6 @@ enum FieldId
         ww8filterimprovement: multiple languages now supported
      */
     ,FIELD_EDITTIME
-    ,FIELD_EQ
     /* FILLIN "text to fill in" \d defaultanswer \o \* MERGEFORMAT ->
         Function-InputField
      */
@@ -95,7 +103,7 @@ enum FieldId
     /* FORMCHECKBOX */
     ,FIELD_FORMCHECKBOX
     /* FORMDROPDOWN */
-    ,FIELD_FORMDROPDOWN
+    ,FIELD_FORMDROPDOWN  
     /* FORMTEXT */
     ,FIELD_FORMTEXT
     /* GOTOBUTTON text \* MERGEFORMAT ->
@@ -163,7 +171,6 @@ enum FieldId
      see lcl_ParseNumberingType
      */
     ,FIELD_PAGE
-    ,FIELD_PAGEREF
     /* REF targetbkm \f \* MERGEFORMAT ->
         imports a ShowVariable (bookmarkname)?
         \h hyerlink to paragraph
@@ -176,7 +183,7 @@ enum FieldId
         \w paragraph number in full context
         \* Upper/Lower...
      */
-    ,FIELD_REF
+    ,FIELD_REF          //
     /* REVNUM \* Numberingswitch \* MERGEFORMAT ->
      DocInfo-revision number
      */
@@ -259,7 +266,7 @@ enum FieldId
     \f Builds a table of contents using TC entries instead of outline levels
     \h Hyperlinks the entries and page numbers within the table of contents
     \l Defines the TC entries field level used to build a table of contents
-    \n Builds a table of contents or a range of entries, sucah as ï¿½1-9ï¿½, in a table of contents without page numbers
+    \n Builds a table of contents or a range of entries, sucah as “1-9”, in a table of contents without page numbers
     \o  Builds a table of contents by using outline levels instead of TC entries
     \p Defines the separator between the table entry and its page number
     \s  Builds a table of contents by using a sequence type
@@ -271,7 +278,7 @@ enum FieldId
      */
     ,FIELD_TOC
     /*
-     TOC entry: ï¿½textï¿½
+     TOC entry: “text”
         \f TC entry in doc with multiple tables
         \l Outline Level
         \n Suppress page numbers
@@ -287,22 +294,9 @@ enum FieldId
     /* document statistic - number of pages
      */
     ,FIELD_NUMPAGES
-    /* Document alphabetical index
-     */
-    ,FIELD_INDEX
-    /* Document alphabetical index marks
-     */
-    ,FIELD_XE
-    /**
-     * Bibliography
-     */
-    ,FIELD_BIBLIOGRAPHY
-    /* Citation
-     */
-    ,FIELD_CITATION
 };
 
 }}
-#endif // INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FIELDTYPES_HXX
+#endif // INCLUDED_FIELD_TYPES_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

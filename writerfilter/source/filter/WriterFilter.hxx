@@ -1,24 +1,33 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_WRITERFILTER_SOURCE_FILTER_WRITERFILTER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_FILTER_WRITERFILTER_HXX
+#ifndef _WRITERFILTER_HXX
+#define _WRITERFILTER_HXX
 
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
@@ -27,14 +36,10 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #include <cppuhelper/implbase5.hxx>
-#include <comphelper/sequenceashashmap.hxx>
-
-#if SUPD == 310
 #include <WriterFilterDllApi.hxx>
-#endif	// SUPD == 310
 
-/// Common DOC/DOCX filter, calls DocxExportFilter via UNO or does the DOCX import.
-class WriterFilter : public cppu::WeakImplHelper5
+/// Common DOC/DOCX filter, calls DocxExportFilter via UNO or does the DOC (currently unused) / DOCX import.
+class WRITERFILTER_DLLPUBLIC WriterFilter : public cppu::WeakImplHelper5
 <
     com::sun::star::document::XFilter,
     com::sun::star::document::XImporter,
@@ -47,6 +52,7 @@ class WriterFilter : public cppu::WeakImplHelper5
 protected:
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > m_xContext;
     ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > m_xSrcDoc, m_xDstDoc;
+    ::rtl::OUString m_sFilterName;
     ::com::sun::star::uno::Reference< ::com::sun::star::xml::sax::XDocumentHandler > m_xHandler;
 
 
@@ -56,75 +62,40 @@ public:
 
     // XFilter
     virtual sal_Bool SAL_CALL filter( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor )
-#if SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException);
     virtual void SAL_CALL cancel(  )
-#if SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+        throw (::com::sun::star::uno::RuntimeException);
 
     // XImporter
     virtual void SAL_CALL setTargetDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc )
-#if SUPD == 310
-        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
 
     // XExporter
     virtual void SAL_CALL setSourceDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc )
-#if SUPD == 310
-        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+        throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
 
     // XInitialization
     virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments )
-#if SUPD == 310
-        throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
+        throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException);
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName(  )
-#if SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
-    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName )
-#if SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
-    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames()
-#if SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
-#else	// SUPD == 310
-        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
-#endif	// SUPD == 310
-
-private:
-    void putPropertiesToDocumentGrabBag(const comphelper::SequenceAsHashMap& rProperties);
+    virtual ::rtl::OUString SAL_CALL getImplementationName(  )
+        throw (::com::sun::star::uno::RuntimeException);
+    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName )
+        throw (::com::sun::star::uno::RuntimeException);
+    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames()
+        throw (::com::sun::star::uno::RuntimeException);
 
 };
 
 
-OUString WriterFilter_getImplementationName()
+::rtl::OUString WriterFilter_getImplementationName()
     throw ( ::com::sun::star::uno::RuntimeException );
 
-bool SAL_CALL WriterFilter_supportsService( const OUString& ServiceName )
+sal_Bool SAL_CALL WriterFilter_supportsService( const ::rtl::OUString& ServiceName )
     throw ( ::com::sun::star::uno::RuntimeException );
 
-::com::sun::star::uno::Sequence< OUString > SAL_CALL WriterFilter_getSupportedServiceNames(  )
+::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL WriterFilter_getSupportedServiceNames(  )
     throw ( ::com::sun::star::uno::RuntimeException );
 
 ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL WriterFilter_createInstance(

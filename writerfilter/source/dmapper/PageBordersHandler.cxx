@@ -1,35 +1,14 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * This file incorporates work covered by the following license notice:
- *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-
 #include "PageBordersHandler.hxx"
 
 #include <ooxml/resourceids.hxx>
-
-#include "dmapperLoggers.hxx"
 
 namespace writerfilter {
 namespace dmapper {
 
 _PgBorder::_PgBorder( ) :
     m_nDistance( 0 ),
-    m_ePos( BORDER_RIGHT ),
-    m_bShadow(false)
+    m_ePos( BORDER_RIGHT )
 {
 }
 
@@ -38,9 +17,8 @@ _PgBorder::~_PgBorder( )
 }
 
 PageBordersHandler::PageBordersHandler( ) :
-LoggedProperties(dmapper_logger, "PageBordersHandler"),
-m_nDisplay( 0 ),
-m_nOffset( 0 )
+    m_nDisplay( 0 ),
+    m_nOffset( 0 )
 {
 }
 
@@ -48,7 +26,7 @@ PageBordersHandler::~PageBordersHandler( )
 {
 }
 
-void PageBordersHandler::lcl_attribute( Id eName, Value& rVal )
+void PageBordersHandler::attribute( Id eName, Value& rVal )
 {
     int nIntValue = rVal.getInt( );
     switch ( eName )
@@ -58,13 +36,13 @@ void PageBordersHandler::lcl_attribute( Id eName, Value& rVal )
             switch ( nIntValue )
             {
                 default:
-                case NS_ooxml::LN_Value_doc_ST_PageBorderDisplay_allPages:
+                case NS_ooxml::LN_Value_wordprocessingml_ST_PageBorderDisplay_allPages:
                     m_nDisplay = 0;
                     break;
-                case NS_ooxml::LN_Value_doc_ST_PageBorderDisplay_firstPage:
+                case NS_ooxml::LN_Value_wordprocessingml_ST_PageBorderDisplay_firstPage:
                     m_nDisplay = 1;
                     break;
-                case NS_ooxml::LN_Value_doc_ST_PageBorderDisplay_notFirstPage:
+                case NS_ooxml::LN_Value_wordprocessingml_ST_PageBorderDisplay_notFirstPage:
                     m_nDisplay = 2;
                     break;
             }
@@ -75,10 +53,10 @@ void PageBordersHandler::lcl_attribute( Id eName, Value& rVal )
             switch ( nIntValue )
             {
                 default:
-                case NS_ooxml::LN_Value_doc_ST_PageBorderOffset_page:
+                case NS_ooxml::LN_Value_wordprocessingml_ST_PageBorderOffset_page:
                     m_nOffset = 1;
                     break;
-                case NS_ooxml::LN_Value_doc_ST_PageBorderOffset_text:
+                case NS_ooxml::LN_Value_wordprocessingml_ST_PageBorderOffset_text:
                     m_nOffset = 0;
                     break;
             }
@@ -88,7 +66,7 @@ void PageBordersHandler::lcl_attribute( Id eName, Value& rVal )
     }
 }
 
-void PageBordersHandler::lcl_sprm( Sprm& rSprm )
+void PageBordersHandler::sprm( Sprm& rSprm )
 {
     switch ( rSprm.getId( ) )
     {
@@ -119,12 +97,11 @@ void PageBordersHandler::lcl_sprm( Sprm& rSprm )
                     break;
                     default:;
                 }
-
+                
                 _PgBorder aPgBorder;
                 aPgBorder.m_rLine = pBorderHandler->getBorderLine( );
                 aPgBorder.m_nDistance = pBorderHandler->getLineDistance( );
                 aPgBorder.m_ePos = ePos;
-                aPgBorder.m_bShadow = pBorderHandler->getShadow();
                 m_aBorders.push_back( aPgBorder );
             }
         }
@@ -138,7 +115,7 @@ void PageBordersHandler::SetBorders( SectionPropertyMap* pSectContext )
     for ( int i = 0, length = m_aBorders.size( ); i < length; i++ )
     {
         _PgBorder aBorder = m_aBorders[i];
-        pSectContext->SetBorder( aBorder.m_ePos, aBorder.m_nDistance, aBorder.m_rLine, aBorder.m_bShadow );
+        pSectContext->SetBorder( aBorder.m_ePos, aBorder.m_nDistance, aBorder.m_rLine );
     }
 }
 

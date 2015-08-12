@@ -1,221 +1,221 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * This file is part of NeoOffice.
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 #include <CellColorHandler.hxx>
 #include <PropertyMap.hxx>
+#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
-#include <TDefTableHandler.hxx>
 #include <ooxml/resourceids.hxx>
-#include <com/sun/star/drawing/FillStyle.hpp>
-#include <com/sun/star/drawing/ShadingPattern.hpp>
 #include <sal/macros.h>
-#if SUPD == 310
-#include <svx/util.hxx>
-#else	// SUPD == 310
-#include <filter/msfilter/util.hxx>
-#endif	// SUPD == 310
-#include "dmapperLoggers.hxx"
+
+#define OOXML_COLOR_AUTO 0x0a //todo: AutoColor needs symbol
 
 namespace writerfilter {
 namespace dmapper {
 
 using namespace ::com::sun::star;
+using namespace ::writerfilter;
+//using namespace ::std;
 
+/*-- 24.04.2007 09:06:35---------------------------------------------------
+
+  -----------------------------------------------------------------------*/
 CellColorHandler::CellColorHandler() :
-LoggedProperties(dmapper_logger, "CellColorHandler"),
-m_nShadingPattern( drawing::ShadingPattern::CLEAR ),
-m_nColor( 0xffffffff ),
-m_nFillColor( 0xffffffff ),
-    m_OutputFormat( Form )
+    m_nShadowType( 0 ),
+    m_nColor( 0xffffffff ),
+    m_nFillColor( 0xffffffff ),
+    m_bParagraph( false )
 {
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
+  -----------------------------------------------------------------------*/
 CellColorHandler::~CellColorHandler()
 {
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-// ST_Shd strings are converted to integers by the tokenizer, store strings in
-// the InteropGrabBag
-uno::Any lcl_ConvertShd(sal_Int32 nIntValue)
-{
-    OUString aRet;
-    // This should be in sync with the ST_Shd list in ooxml's model.xml.
-    switch (nIntValue)
-    {
-        case NS_ooxml::LN_Value_ST_Shd_clear: aRet = "clear"; break;
-        case NS_ooxml::LN_Value_ST_Shd_solid: aRet = "solid"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct5: aRet = "pct5"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct10: aRet = "pct10"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct20: aRet = "pct20"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct25: aRet = "pct25"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct30: aRet = "pct30"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct40: aRet = "pct40"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct50: aRet = "pct50"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct60: aRet = "pct60"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct70: aRet = "pct70"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct75: aRet = "pct75"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct80: aRet = "pct80"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct90: aRet = "pct90"; break;
-        case NS_ooxml::LN_Value_ST_Shd_horzStripe: aRet = "horzStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_vertStripe: aRet = "vertStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_reverseDiagStripe: aRet = "reverseDiagStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_diagStripe: aRet = "diagStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_horzCross: aRet = "horzCross"; break;
-        case NS_ooxml::LN_Value_ST_Shd_diagCross: aRet = "diagCross"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzStripe: aRet = "thinHorzStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinVertStripe: aRet = "thinVertStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinReverseDiagStripe: aRet = "thinReverseDiagStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagStripe: aRet = "thinDiagStripe"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzCross: aRet = "thinHorzCross"; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagCross: aRet = "thinDiagCross"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct12: aRet = "pct12"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct15: aRet = "pct15"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct35: aRet = "pct35"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct37: aRet = "pct37"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct45: aRet = "pct45"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct55: aRet = "pct55"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct62: aRet = "pct62"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct65: aRet = "pct65"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct85: aRet = "pct85"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct87: aRet = "pct87"; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct95: aRet = "pct95"; break;
-        case NS_ooxml::LN_Value_ST_Shd_nil: aRet = "nil"; break;
-    }
-    return uno::makeAny(aRet);
-}
-
-void CellColorHandler::lcl_attribute(Id rName, Value & rVal)
+  -----------------------------------------------------------------------*/
+void CellColorHandler::attribute(Id rName, Value & rVal)
 {
     sal_Int32 nIntValue = rVal.getInt();
+    (void)nIntValue;
+    (void)rName;
+    /* WRITERFILTERSTATUS: table: CellColor_attributedata */
     switch( rName )
     {
+        case NS_rtf::LN_cellTopColor:
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
+        case NS_rtf::LN_cellLeftColor:
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
+        case NS_rtf::LN_cellBottomColor:
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
+        case NS_rtf::LN_cellRightColor:
+            /* WRITERFILTERSTATUS: done: 0, planned: 0, spent: 0 */
+            // nIntValue contains the color, directly
+        break;
         case NS_ooxml::LN_CT_Shd_val:
+            /* WRITERFILTERSTATUS: done: 50, planned: 0, spent: 0 */        
         {
-            createGrabBag("val", lcl_ConvertShd(nIntValue));
-            m_nShadingPattern = nIntValue;
+            //might be clear, pct5...90, some hatch types
+            //TODO: The values need symbolic names!
+            m_nShadowType = nIntValue; //clear == 0, solid: 1, pct5: 2, pct50:8, pct95: x3c, horzStripe:0x0e, thinVertStripe: 0x15
         }
         break;
         case NS_ooxml::LN_CT_Shd_fill:
-#if SUPD == 310
-            createGrabBag("fill", uno::makeAny(OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8)));
-#else	// SUPD == 310
-            createGrabBag("fill", uno::makeAny(OUString::fromUtf8(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true))));
-#endif	// SUPD == 310
+            /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
             if( nIntValue == OOXML_COLOR_AUTO )
                 nIntValue = 0xffffff; //fill color auto means white
             m_nFillColor = nIntValue;
         break;
         case NS_ooxml::LN_CT_Shd_color:
-#if SUPD == 310
-            createGrabBag("color", uno::makeAny(OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8)));
-#else	// SUPD == 310
-            createGrabBag("color", uno::makeAny(OUString::fromUtf8(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true))));
-#endif	// SUPD == 310
+            /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
             if( nIntValue == OOXML_COLOR_AUTO )
                 nIntValue = 0; //shading color auto means black
             //color of the shading
             m_nColor = nIntValue;
         break;
+//        case NS_rtf::LN_rgbrc:
+//        {
+//            writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
+//            if( pProperties.get())
+//            {
+//                pProperties->resolve(*this);
+//                //
+//            }
+//        }
+//        break;
         case NS_ooxml::LN_CT_Shd_themeFill:
-            createGrabBag("themeFill", uno::makeAny(TDefTableHandler::getThemeColorTypeString(nIntValue)));
-        break;
-        case NS_ooxml::LN_CT_Shd_themeFillShade:
-            createGrabBag("themeFillShade", uno::makeAny(OUString::number(nIntValue, 16)));
-        break;
         case NS_ooxml::LN_CT_Shd_themeFillTint:
-            createGrabBag("themeFillTint", uno::makeAny(OUString::number(nIntValue, 16)));
-            break;
-        case NS_ooxml::LN_CT_Shd_themeColor:
-            createGrabBag("themeColor", uno::makeAny(TDefTableHandler::getThemeColorTypeString(nIntValue)));
-        break;
-        case NS_ooxml::LN_CT_Shd_themeShade:
-            createGrabBag("themeShade", uno::makeAny(OUString::number(nIntValue, 16)));
-        break;
-        case NS_ooxml::LN_CT_Shd_themeTint:
-            createGrabBag("themeTint", uno::makeAny(OUString::number(nIntValue, 16)));
+        case NS_ooxml::LN_CT_Shd_themeFillShade:
+            // ignored
             break;
         default:
-            OSL_FAIL( "unknown attribute");
+            OSL_ENSURE( false, "unknown attribute");
     }
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-void CellColorHandler::lcl_sprm(Sprm & rSprm)
+  -----------------------------------------------------------------------*/
+void CellColorHandler::sprm(Sprm & rSprm)
 {
     (void)rSprm;
 }
+/*-- 24.04.2007 09:09:01---------------------------------------------------
 
+  -----------------------------------------------------------------------*/
 TablePropertyMapPtr  CellColorHandler::getProperties()
 {
     TablePropertyMapPtr pPropertyMap(new TablePropertyMap);
-
-    // Code from binary word filter (the values are out of 1000)
-    sal_Int32 nWW8BrushStyle = 0;
-    switch (m_nShadingPattern)
+//code from binary word filter 
+    static const sal_Int32 eMSGrayScale[] =
     {
-        // Clear-Brush
-        case NS_ooxml::LN_Value_ST_Shd_clear: nWW8BrushStyle = 0; break;
+        // Nul-Brush
+           0,   // 0
         // Solid-Brush
-        case NS_ooxml::LN_Value_ST_Shd_solid: nWW8BrushStyle = 1000; break;
-        // Percent values
-        case NS_ooxml::LN_Value_ST_Shd_pct5: nWW8BrushStyle = 50; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct10: nWW8BrushStyle = 100; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct20: nWW8BrushStyle = 200; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct25: nWW8BrushStyle = 250; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct30: nWW8BrushStyle = 300; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct40: nWW8BrushStyle = 400; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct50: nWW8BrushStyle = 500; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct60: nWW8BrushStyle = 600; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct70: nWW8BrushStyle = 700; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct75: nWW8BrushStyle = 750; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct80: nWW8BrushStyle = 800; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct90: nWW8BrushStyle = 900; break;
-        // Special cases
-        case NS_ooxml::LN_Value_ST_Shd_horzStripe: nWW8BrushStyle = 333; break; // Dark Horizontal
-        case NS_ooxml::LN_Value_ST_Shd_vertStripe: nWW8BrushStyle = 333; break; // Dark Vertical
-        case NS_ooxml::LN_Value_ST_Shd_reverseDiagStripe: nWW8BrushStyle = 333; break; // Dark Forward Diagonal
-        case NS_ooxml::LN_Value_ST_Shd_diagStripe: nWW8BrushStyle = 333; break; // Dark Backward Diagonal
-        case NS_ooxml::LN_Value_ST_Shd_horzCross: nWW8BrushStyle = 333; break; // Dark Cross
-        case NS_ooxml::LN_Value_ST_Shd_diagCross: nWW8BrushStyle = 333; break; // Dark Diagonal Cross
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzStripe: nWW8BrushStyle = 333; break; // Horizontal
-        case NS_ooxml::LN_Value_ST_Shd_thinVertStripe: nWW8BrushStyle = 333; break; // Vertical
-        case NS_ooxml::LN_Value_ST_Shd_thinReverseDiagStripe: nWW8BrushStyle = 333; break; // Forward Diagonal
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagStripe: nWW8BrushStyle = 333; break; // Backward Diagonal
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzCross: nWW8BrushStyle = 333; break; // Cross
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagCross: nWW8BrushStyle = 333; break;   // 25   Diagonal Cross
-        // Different shading types
-        case NS_ooxml::LN_Value_ST_Shd_pct12: nWW8BrushStyle = 125; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct15: nWW8BrushStyle = 150; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct35: nWW8BrushStyle = 350; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct37: nWW8BrushStyle = 375; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct45: nWW8BrushStyle = 450; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct55: nWW8BrushStyle = 550; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct62: nWW8BrushStyle = 625; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct65: nWW8BrushStyle = 650; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct85: nWW8BrushStyle = 850; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct87: nWW8BrushStyle = 875; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct95: nWW8BrushStyle = 950; break;
-    };
+        1000,   // 1
+        // percent values
+          50,   // 2
+         100,   // 3
+         200,   // 4
+         250,   // 5
+         300,   // 6
+         400,   // 7
+         500,   // 8
+         600,   // 9
+         700,   // 10
+         750,   // 11
+         800,   // 12
+         900,   // 13
+         333, // 14 Dark Horizontal
+         333, // 15 Dark Vertical
+         333, // 16 Dark Forward Diagonal
+         333, // 17 Dark Backward Diagonal
+         333, // 18 Dark Cross
+         333, // 19 Dark Diagonal Cross
+         333, // 20 Horizontal
+         333, // 21 Vertical
+         333, // 22 Forward Diagonal
+         333, // 23 Backward Diagonal
+         333, // 24 Cross
+         333, // 25 Diagonal Cross
+         // some undefined values
+         500, // 26
+         500, // 27
+         500, // 28
+         500, // 29
+         500, // 30
+         500, // 31
+         500, // 32
+         500, // 33
+         500, // 34
+         // different shading types
+          25,   // 35
+          75,   // 36
+         125,   // 37
+         150,   // 38
+         175,   // 39
+         225,   // 40
+         275,   // 41
+         325,   // 42
+         350,   // 43
+         375,   // 44
+         425,   // 45
+         450,   // 46
+         475,   // 47
+         525,   // 48
+         550,   // 49
+         575,   // 50
+         625,   // 51
+         650,   // 52
+         675,   // 53
+         725,   // 54
+         775,   // 55
+         825,   // 56
+         850,   // 57
+         875,   // 58
+         925,   // 59
+         950,   // 60
+         975,   // 61
+         // und zu guter Letzt:
+         970
+    };// 62
+#if SUPD == 310
+    if( m_nShadowType >= (sal_Int32)( sizeof( eMSGrayScale ) / sizeof( eMSGrayScale[0] ) ) )
+#else	// SUPD == 310
+    if( m_nShadowType >= (sal_Int32)SAL_N_ELEMENTS( eMSGrayScale ) )
+#endif	// SUPD == 310
+        m_nShadowType = 0;
 
+    sal_Int32 nWW8BrushStyle = eMSGrayScale[m_nShadowType];
     sal_Int32 nApplyColor = 0;
     if( !nWW8BrushStyle )
     {
-        // Clear-Brush
-        nApplyColor = m_nFillColor;
+        // Null-Brush
+            nApplyColor = m_nFillColor;
     }
     else
     {
@@ -231,109 +231,11 @@ TablePropertyMapPtr  CellColorHandler::getProperties()
 
         nApplyColor = ( (nRed/1000) << 0x10 ) + ((nGreen/1000) << 8) + nBlue/1000;
     }
-
-    // Check if it is a 'Character'
-    if (m_OutputFormat == Character)
-    {
-        sal_Int32 nShadingPattern = drawing::ShadingPattern::CLEAR;
-        switch (m_nShadingPattern)
-        {
-        case NS_ooxml::LN_Value_ST_Shd_clear: nShadingPattern = drawing::ShadingPattern::CLEAR; break;
-        case NS_ooxml::LN_Value_ST_Shd_solid: nShadingPattern = drawing::ShadingPattern::SOLID; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct5: nShadingPattern = drawing::ShadingPattern::PCT5; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct10: nShadingPattern = drawing::ShadingPattern::PCT10; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct20: nShadingPattern = drawing::ShadingPattern::PCT20; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct25: nShadingPattern = drawing::ShadingPattern::PCT25; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct30: nShadingPattern = drawing::ShadingPattern::PCT30; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct40: nShadingPattern = drawing::ShadingPattern::PCT40; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct50: nShadingPattern = drawing::ShadingPattern::PCT50; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct60: nShadingPattern = drawing::ShadingPattern::PCT60; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct70: nShadingPattern = drawing::ShadingPattern::PCT70; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct75: nShadingPattern = drawing::ShadingPattern::PCT75; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct80: nShadingPattern = drawing::ShadingPattern::PCT80; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct90: nShadingPattern = drawing::ShadingPattern::PCT90; break;
-        case NS_ooxml::LN_Value_ST_Shd_horzStripe: nShadingPattern = drawing::ShadingPattern::HORZ_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_vertStripe: nShadingPattern = drawing::ShadingPattern::VERT_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_reverseDiagStripe: nShadingPattern = drawing::ShadingPattern::REVERSE_DIAG_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_diagStripe: nShadingPattern = drawing::ShadingPattern::DIAG_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_horzCross: nShadingPattern = drawing::ShadingPattern::HORZ_CROSS; break;
-        case NS_ooxml::LN_Value_ST_Shd_diagCross: nShadingPattern = drawing::ShadingPattern::DIAG_CROSS; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzStripe: nShadingPattern = drawing::ShadingPattern::THIN_HORZ_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinVertStripe: nShadingPattern = drawing::ShadingPattern::THIN_VERT_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinReverseDiagStripe: nShadingPattern = drawing::ShadingPattern::THIN_REVERSE_DIAG_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagStripe: nShadingPattern = drawing::ShadingPattern::THIN_DIAG_STRIPE; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinHorzCross: nShadingPattern = drawing::ShadingPattern::THIN_HORZ_CROSS; break;
-        case NS_ooxml::LN_Value_ST_Shd_thinDiagCross: nShadingPattern = drawing::ShadingPattern::THIN_DIAG_CROSS; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct12: nShadingPattern = drawing::ShadingPattern::PCT12; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct15: nShadingPattern = drawing::ShadingPattern::PCT15; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct35: nShadingPattern = drawing::ShadingPattern::PCT35; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct37: nShadingPattern = drawing::ShadingPattern::PCT37; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct45: nShadingPattern = drawing::ShadingPattern::PCT45; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct55: nShadingPattern = drawing::ShadingPattern::PCT55; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct62: nShadingPattern = drawing::ShadingPattern::PCT62; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct65: nShadingPattern = drawing::ShadingPattern::PCT65; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct85: nShadingPattern = drawing::ShadingPattern::PCT85; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct87: nShadingPattern = drawing::ShadingPattern::PCT87; break;
-        case NS_ooxml::LN_Value_ST_Shd_pct95: nShadingPattern = drawing::ShadingPattern::PCT95; break;
-        };
-
-        // Write the shading pattern property
-        pPropertyMap->Insert(PROP_CHAR_SHADING_VALUE, uno::makeAny( nShadingPattern ));
-    }
-
-    if (m_OutputFormat == Paragraph)
-    {
-        pPropertyMap->Insert(PROP_FILL_STYLE, uno::makeAny(drawing::FillStyle_SOLID));
-        pPropertyMap->Insert(PROP_FILL_COLOR, uno::makeAny(nApplyColor));
-    }
-    else
-        pPropertyMap->Insert( m_OutputFormat == Form ? PROP_BACK_COLOR
-                            : PROP_CHAR_BACK_COLOR, uno::makeAny( nApplyColor ));
-
-#if SUPD == 310
-    createGrabBag("originalColor", uno::makeAny(OStringToOUString(msfilter::util::ConvertColor(nApplyColor, true), RTL_TEXTENCODING_UTF8)));
-#else	// SUPD == 310
-    createGrabBag("originalColor", uno::makeAny(OUString::fromUtf8(msfilter::util::ConvertColor(nApplyColor, true))));
-#endif	// SUPD == 310
-
+        
+    pPropertyMap->Insert( m_bParagraph ? PROP_PARA_BACK_COLOR : PROP_BACK_COLOR, false,
+                            uno::makeAny( nApplyColor ));
     return pPropertyMap;
 }
-
-void CellColorHandler::createGrabBag(const OUString& aName, uno::Any aAny)
-{
-    if (m_aInteropGrabBagName.isEmpty())
-        return;
-
-    beans::PropertyValue aValue;
-    aValue.Name = aName;
-    aValue.Value = aAny;
-    m_aInteropGrabBag.push_back(aValue);
-}
-
-void CellColorHandler::enableInteropGrabBag(const OUString& aName)
-{
-    m_aInteropGrabBagName = aName;
-}
-
-beans::PropertyValue CellColorHandler::getInteropGrabBag()
-{
-    beans::PropertyValue aRet;
-    aRet.Name = m_aInteropGrabBagName;
-    aRet.Value = uno::makeAny(m_aInteropGrabBag.getAsConstList());
-    return aRet;
-}
-
-void CellColorHandler::disableInteropGrabBag()
-{
-    m_aInteropGrabBagName = "";
-    m_aInteropGrabBag.clear();
-}
-
-bool CellColorHandler::isInteropGrabBagEnabled()
-{
-    return !(m_aInteropGrabBagName.isEmpty());
-}
-
 } //namespace dmapper
 } //namespace writerfilter
 

@@ -1,35 +1,53 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * This file is part of NeoOffice.
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 
+#ifndef _CPPUHELPER_IMPLEMENTATIONENTRY_
 #include <cppuhelper/implementationentry.hxx>
+#endif
 #include <WriterFilter.hxx>
 #include <WriterFilterDetection.hxx>
+#if SUPD != 310
 #include <RtfFilter.hxx>
+#endif	// SUPD != 310
 
+using namespace ::rtl;
+using namespace ::cppu;
 using namespace ::com::sun::star;
 
+/*-- 22.02.2007 12:19:23---------------------------------------------------
+
+  -----------------------------------------------------------------------*/
 WriterFilter::WriterFilter( const uno::Reference< uno::XComponentContext >& rxContext)  :
     m_xContext( rxContext )
 {
 }
+/*-- 22.02.2007 12:19:23---------------------------------------------------
 
-
+  -----------------------------------------------------------------------*/
 WriterFilter::~WriterFilter()
 {
 }
@@ -37,15 +55,15 @@ WriterFilter::~WriterFilter()
 extern "C"
 {
 /* shared lib exports implemented with helpers */
-static const struct ::cppu::ImplementationEntry s_component_entries [] =
+static struct ::cppu::ImplementationEntry s_component_entries [] =
 {
-    { WriterFilter_createInstance, WriterFilter_getImplementationName, WriterFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0 },
-    { WriterFilterDetection_createInstance, WriterFilterDetection_getImplementationName, WriterFilterDetection_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0} ,
-    { RtfFilter_createInstance, RtfFilter_getImplementationName, RtfFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, nullptr, 0 },
-    { nullptr, nullptr, nullptr, nullptr, nullptr, 0 } // terminate with NULL
+    { WriterFilter_createInstance, WriterFilter_getImplementationName, WriterFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0 },
+    { WriterFilterDetection_createInstance, WriterFilterDetection_getImplementationName, WriterFilterDetection_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0} ,
+#if SUPD != 310
+    { RtfFilter_createInstance, RtfFilter_getImplementationName, RtfFilter_getSupportedServiceNames, ::cppu::createSingleComponentFactory, 0, 0 },
+#endif	// SUPD != 310
+    { 0, 0, 0, 0, 0, 0 } // terminate with NULL
 };
-
-#if SUPD == 310
 
 void SAL_CALL component_getImplementationEnvironment(const sal_Char ** ppEnvTypeName, uno_Environment ** /*ppEnv*/ )
 {
@@ -58,9 +76,6 @@ sal_Bool SAL_CALL component_writeInfo( ::com::sun::star::lang::XMultiServiceFact
 }
 
 void * SAL_CALL component_getFactory(sal_Char const * implName, ::com::sun::star::lang::XMultiServiceFactory * xMgr, ::com::sun::star::registry::XRegistryKey * xRegistry )
-#else	// SUPD == 310
-SAL_DLLPUBLIC_EXPORT void * SAL_CALL writerfilter_component_getFactory(sal_Char const * implName, void * xMgr, void * xRegistry )
-#endif	// SUPD == 310
 {
     return ::cppu::component_getFactoryHelper(implName, xMgr, xRegistry, s_component_entries );
 }

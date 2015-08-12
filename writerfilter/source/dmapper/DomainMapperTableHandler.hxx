@@ -1,27 +1,35 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEHANDLER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEHANDLER_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_DOMAIN_MAPPER_TABLE_HANDLER_HXX
+#define INCLUDED_DOMAIN_MAPPER_TABLE_HANDLER_HXX
 
 #include <resourcemodel/TableManager.hxx>
 #include <PropertyMap.hxx>
-#include <comphelper/sequenceasvector.hxx>
 
 #include <com/sun/star/text/XTextAppendAndConvert.hpp>
 
@@ -47,25 +55,8 @@ typedef std::vector<PropertyMapPtr>     PropertyMapVector1;
 typedef std::vector<PropertyMapVector1> PropertyMapVector2;
 
 class DomainMapper_Impl;
-class TableStyleSheetEntry;
-struct TableInfo;
-
-/// A horizontally merged cell is in fact a range of cells till its merge is performed.
-struct HorizontallyMergedCell
-{
-    sal_Int32 m_nFirstRow;
-    sal_Int32 m_nFirstCol;
-    sal_Int32 m_nLastRow;
-    sal_Int32 m_nLastCol;
-    HorizontallyMergedCell(sal_Int32 nFirstRow, sal_Int32 nFirstCol)
-        : m_nFirstRow(nFirstRow)
-        , m_nFirstCol(nFirstCol)
-        , m_nLastRow(0)
-        , m_nLastCol(0)
-    {
-    }
-};
-
+class TableStyleSheetEntry; 
+struct TableInfo;   
 class DomainMapperTableHandler : public TableDataHandler<Handle_t , TablePropertyMapPtr >
 {
     TextReference_t         m_xText;
@@ -80,30 +71,29 @@ class DomainMapperTableHandler : public TableDataHandler<Handle_t , TablePropert
     PropertyMapVector2      m_aCellProperties;
     PropertyMapVector1      m_aRowProperties;
     TablePropertyMapPtr     m_aTableProperties;
-
+    
     sal_Int32 m_nCellIndex;
     sal_Int32 m_nRowIndex;
 
-    TableStyleSheetEntry * endTableGetTableStyle(TableInfo & rInfo, comphelper::SequenceAsVector<css::beans::PropertyValue>& rFrameProperties);
-    CellPropertyValuesSeq_t endTableGetCellProperties(TableInfo & rInfo, std::vector<HorizontallyMergedCell>& rMerges);
+    TableStyleSheetEntry * endTableGetTableStyle(TableInfo & rInfo);
+    CellPropertyValuesSeq_t endTableGetCellProperties(TableInfo & rInfo);
     RowPropertyValuesSeq_t endTableGetRowProperties();
 
 public:
     typedef boost::shared_ptr<DomainMapperTableHandler> Pointer_t;
 
-    DomainMapperTableHandler(TextReference_t const& xText,
-                             DomainMapper_Impl& rDMapper_Impl);
+    DomainMapperTableHandler(TextReference_t xText, DomainMapper_Impl& rDMapper_Impl);
     virtual ~DomainMapperTableHandler();
 
     virtual void startTable(unsigned int nRows, unsigned int nDepth,
-                            TablePropertyMapPtr pProps) SAL_OVERRIDE;
-    virtual void endTable(unsigned int nestedTableLevel) SAL_OVERRIDE;
-    virtual void startRow(unsigned int nCells, TablePropertyMapPtr pProps) SAL_OVERRIDE;
-    virtual void endRow() SAL_OVERRIDE;
-    virtual void startCell(const Handle_t & start, TablePropertyMapPtr pProps) SAL_OVERRIDE;
-    virtual void endCell(const Handle_t & end) SAL_OVERRIDE;
+                            TablePropertyMapPtr pProps);
+    virtual void endTable();
+    virtual void startRow(unsigned int nCells, TablePropertyMapPtr pProps);
+    virtual void endRow();
+    virtual void startCell(const Handle_t & start, TablePropertyMapPtr pProps);
+    virtual void endCell(const Handle_t & end);
 
-    virtual Handle_t* getTable( )
+    virtual Handle_t* getTable( ) 
     {
         return &m_xTableRange;
     };
@@ -111,6 +101,6 @@ public:
 
 }}
 
-#endif // INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEHANDLER_HXX
+#endif // INCLUDED_DOMAIN_MAPPER_TABLE_HANDLER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

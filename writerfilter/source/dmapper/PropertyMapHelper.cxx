@@ -1,26 +1,39 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * $RCSfile$
+ * $Revision$
+ *
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
 #include <com/sun/star/text/TableColumnSeparator.hpp>
 #include <resourcemodel/TagLogger.hxx>
 #include "PropertyMapHelper.hxx"
 
+#ifdef DEBUG
 namespace writerfilter
 {
 namespace dmapper
@@ -28,80 +41,94 @@ namespace dmapper
 
 using namespace ::com::sun::star;
 
-void lcl_DumpTableColumnSeparators(const TagLogger::Pointer_t pLogger, const uno::Any & rTableColumnSeparators)
+XMLTag::Pointer_t lcl_TableColumnSeparatorsToTag(const uno::Any & rTableColumnSeparators)
 {
-    (void) pLogger;
-    (void) rTableColumnSeparators;
-#ifdef DEBUG_WRITERFILTER
     uno::Sequence<text::TableColumnSeparator> aSeq;
     rTableColumnSeparators >>= aSeq;
-
-    pLogger->startElement("property.TableColumnSeparators");
-
+    
+    XMLTag::Pointer_t pResult(new XMLTag("property.TableColumnSeparators"));
+    
     sal_uInt32 nLength = aSeq.getLength();
     for (sal_uInt32 n = 0; n < nLength; ++n)
     {
-        pLogger->startElement("separator");
-
-        pLogger->attribute("position", aSeq[n].Position);
-        pLogger->attribute("visible", aSeq[n].IsVisible);
-
-        pLogger->endElement();
+        XMLTag::Pointer_t pTagSeparator(new XMLTag("separator"));
+        
+        pTagSeparator->addAttr("position", aSeq[n].Position);
+        pTagSeparator->addAttr("visible", aSeq[n].IsVisible);
+        
+        pResult->addTag(pTagSeparator);
     }
-
-    pLogger->endElement();
-#endif // DEBUG_WRITERFILTER
+    
+    return pResult;
 }
-
-#ifdef DEBUG_WRITERFILTER
-void lcl_DumpPropertyValues(const TagLogger::Pointer_t pLogger, beans::PropertyValues & rValues)
+    
+XMLTag::Pointer_t lcl_PropertyValuesToTag(beans::PropertyValues & rValues)
 {
-    pLogger->startElement("propertyValues");
-
+    XMLTag::Pointer_t pResult(new XMLTag("propertyValues"));
+    
     beans::PropertyValue * pValues = rValues.getArray();
-
+    
     for (sal_Int32 n = 0; n < rValues.getLength(); ++n)
     {
-        pLogger->startElement("propertyValue");
-
-        pLogger->attribute("name", pValues[n].Name);
-
-        try
+        XMLTag::Pointer_t pTag(new XMLTag("propertyValue"));
+        
+        pTag->addAttr("name", pValues[n].Name);
+        
+        try 
         {
             sal_Int32 aInt = 0;
             pValues[n].Value >>= aInt;
-            pLogger->attribute("value", aInt);
+            pTag->addAttr("value", aInt);
         }
         catch (...)
         {
         }
-
-        if ( pValues[n].Name == "TableColumnSeparators" )
+        
+        if (pValues[n].Name.equalsAscii("TableColumnSeparators"))
         {
-            lcl_DumpTableColumnSeparators(pLogger, pValues[n].Value);
+            pTag->addTag(lcl_TableColumnSeparatorsToTag(pValues[n].Value));
         }
-
-        pLogger->endElement();
+        
+        pResult->addTag(pTag);                               
     }
-    pLogger->endElement();
-}
+    
+    return pResult;
+}   
 
-void lcl_DumpPropertyValueSeq(const TagLogger::Pointer_t pLogger, PropertyValueSeq_t & rPropValSeq)
+XMLTag::Pointer_t lcl_PropertyValueSeqToTag(PropertyValueSeq_t & rPropValSeq)
 {
-    pLogger->startElement("PropertyValueSeq");
-
+    XMLTag::Pointer_t pResult(new XMLTag("PropertyValueSeq"));
+    
     beans::PropertyValues * pValues = rPropValSeq.getArray();
-
+    
     for (sal_Int32 n = 0; n < rPropValSeq.getLength(); ++n)
     {
-        lcl_DumpPropertyValues(pLogger, pValues[n]);
+        XMLTag::Pointer_t pTag(lcl_PropertyValuesToTag(pValues[n]));
+        
+        pResult->addTag(pTag);
     }
-
-    pLogger->endElement();
+    
+    return pResult;
 }
-#endif // DEBUG_WRITERFILTER
-
+    
+XMLTag::Pointer_t lcl_PropertyValueSeqSeqToTag(PropertyValueSeqSeq_t rPropValSeqSeq)
+{
+    XMLTag::Pointer_t pResult(new XMLTag("PropertyValueSeq"));
+    
+    PropertyValueSeq_t * pValues = rPropValSeqSeq.getArray();
+    
+    for (sal_Int32 n = 0; n < rPropValSeqSeq.getLength(); ++n)
+    {
+        XMLTag::Pointer_t pTag(lcl_PropertyValueSeqToTag(pValues[n]));
+        
+        pResult->addTag(pTag);
+    }
+    
+    return pResult;
+}
+    
 }
 }
+#endif // DEBUG
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

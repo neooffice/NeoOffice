@@ -1,32 +1,30 @@
-#**************************************************************
-#  
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.
-#  
-#  $RCSfile$
-#  $Revision$
-#  
-#  This file is part of NeoOffice.
-#  
-#  NeoOffice is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 3
-#  only, as published by the Free Software Foundation.
-#  
-#  NeoOffice is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License version 3 for more details
-#  (a copy is included in the LICENSE file that accompanied this code).
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 3 along with NeoOffice.  If not, see
-#  <http://www.gnu.org/licenses/gpl-3.0.txt>
-#  for a copy of the GPLv3 License.
-#  
-#  Modified November 2014 by Patrick Luby. NeoOffice is distributed under
-#  GPL only under Section 4 of the Apache License v2.0.
-#  
-#**************************************************************
+#************************************************************************
+#
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+# 
+# Copyright 2000, 2010 Oracle and/or its affiliates.
+#
+# OpenOffice.org - a multi-platform office productivity suite
+#
+# This file is part of OpenOffice.org.
+#
+# OpenOffice.org is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenOffice.org is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenOffice.org.  If not, see
+# <http://www.openoffice.org/license.html>
+# for a copy of the LGPLv3 License.
+#
+# ***********************************************************************/
+
 PRJ=..$/..
 PRJNAME=writerfilter
 TARGET=resourcemodel
@@ -48,35 +46,18 @@ CDEFS+=-DWRITERFILTER_DLLIMPLEMENTATION
 
 # work around gcc taking hours and/or OOM'ing on this file
 NOOPTFILES= \
-	$(SLO)$/qnametostr.obj
+    $(SLO)$/qnametostr.obj
 
 SLOFILES= \
-	$(SLO)$/LoggedResources.obj \
-	$(SLO)$/ResourceModelHelper.obj \
-	$(SLO)$/TagLogger.obj \
-	$(SLO)$/qnametostr.obj \
-	$(SLO)$/util.obj
+    $(SLO)$/qnametostr.obj \
+    $(SLO)$/sprmcodetostr.obj \
+    $(SLO)$/resourcemodel.obj \
+    $(SLO)$/util.obj \
+    $(SLO)$/TagLogger.obj \
+    $(SLO)$/ResourceModelHelper.obj \
+    $(SLO)$/WW8Analyzer.obj \
+    $(SLO)$/Protocol.obj
 
-.IF "$(UPD)" == "310"
-SLOFILES += \
-	$(SLO)$/qnametostrcore.obj
-.ELSE		# "$(UPD)" == "310"
-SLOFILES += \
-	$(SLO)$/Fraction.obj \
-	$(SLO)$/Protocol.obj \
-	$(SLO)$/WW8Analyzer.obj \
-	$(SLO)$/XPathLogger.obj \
-	$(SLO)$/resourcemodel.obj \
-	$(SLO)$/sprmcodetostr.obj
-.ENDIF		# "$(UPD)" == "310"
-
-# FreeBSD/Linux 64-bit: compiler (gcc 4.2.x) fails with 'out of memory'
-.IF "$(OUTPATH)"=="unxfbsdx" || "$(OUTPATH)"=="unxfbsdi" || "$(OUTPATH)"=="unxlngx6"
-NOOPTFILES= \
-	$(SLO)$/qnametostr.obj
-.ENDIF
-
-.IF "$(UPD)" != "310"
 SHL1TARGET=$(TARGET)
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
@@ -90,8 +71,8 @@ OOXMLLIB=$(LB)$/iooxml.lib
 .ENDIF
 
 SHL1STDLIBS=$(SALLIB)\
-	$(CPPULIB)\
-	$(CPPUHELPERLIB) \
+    $(CPPULIB)\
+    $(CPPUHELPERLIB) \
     $(COMPHELPERLIB)
 
 SHL1IMPLIB=i$(SHL1TARGET)
@@ -102,7 +83,6 @@ SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 DEFLIB1NAME=$(TARGET)
-.ENDIF		# "$(UPD)" != "310"
 
 # --- Targets ------------------------------------------------------
 
@@ -116,12 +96,6 @@ DOCTOKHXXOUTDIRCREATED=$(DOCTOKHXXOUTDIR)$/created
 OOXMLHXXOUTDIRCREATED=$(OOXMLHXXOUTDIR)$/created
 
 OOXMLMODEL=..$/ooxml$/model.xml
-.IF "$(UPD)" == "310"
-OOXMLMODELVALIDATED=$(MISC)$/model.validated
-OOXMLPREPROCESSPY=..$/ooxml$/modelpreprocess.py
-OOXMLQNAMETOSTRPY=..$/ooxml$/qnametostr.py
-OOXMLRESOURCEIDSPY=..$/ooxml$/resourceids.py
-.ELSE		# "$(UPD)" == "310"
 OOXMLPREPROCESSXSL=..$/ooxml$/modelpreprocess.xsl
 OOXMLPREPROCESSXSLCOPIED=$(MISC)$/modelpreprocess.xsl
 OOXMLQNAMETOSTRXSL=..$/ooxml$/qnametostr.xsl
@@ -137,132 +111,88 @@ DOCTOKSPRMIDSXSL=..$/doctok$/sprmids.xsl
 DOCTOKRESOURCETOOLS=..$/doctok$/resourcetools.xsl
 
 NSPROCESS=namespace_preprocess.pl
-.ENDIF		# "$(UPD)" == "310"
 
 MODELPROCESSED=$(MISC)$/model_preprocessed.xml
 
 QNAMETOSTRCXX=$(RESOURCEMODELCXXOUTDIR)$/qnametostr.cxx
-.IF "$(UPD)" != "310"
 OOXMLQNAMETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/OOXMLqnameToStr.tmp
 DOCTOKQNAMETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/DOCTOKqnameToStr.tmp
 SPRMCODETOSTRCXX=$(RESOURCEMODELCXXOUTDIR)$/sprmcodetostr.cxx
 SPRMCODETOSTRTMP=$(RESOURCEMODELCXXOUTDIR)$/sprmcodetostr.tmp
 DOCTOKRESOURCEIDSHXX=$(DOCTOKHXXOUTDIR)$/resourceids.hxx
 SPRMIDSHXX=$(DOCTOKHXXOUTDIR)$/sprmids.hxx
-.ENDIF		# "$(UPD)" != "310"
 OOXMLRESOURCEIDSHXX=$(OOXMLHXXOUTDIR)$/resourceids.hxx
 
-.IF "$(UPD)" == "310"
-NAMESPACESTXT=$(PRJ)$/..$/oox$/$(INPATH)$/misc/namespaces.txt
-.ELSE		# "$(UPD)" == "310"
 NSXSL=$(MISC)$/namespacesmap.xsl
-NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/token$/namespaces.txt
-.ENDIF		# "$(UPD)" == "310"
+NAMESPACESTXT=$(SOLARVER)$/$(INPATH)$/inc$(UPDMINOREXT)$/oox$/namespaces.txt
 
-GENERATEDHEADERS=$(OOXMLRESOURCEIDSHXX)
+GENERATEDHEADERS=$(DOCTOKRESOURCEIDSHXX) $(OOXMLRESOURCEIDSHXX) $(SPRMIDSHXX)
 GENERATEDFILES= \
-	$(GENERATEDHEADERS) \
-	$(QNAMETOSTRCXX) \
-	$(MODELPROCESSED) \
+    $(GENERATEDHEADERS) \
+    $(QNAMETOSTRCXX) \
+    $(SPRMCODETOSTRCXX) \
+    $(MODELPROCESSED) \
+    $(OOXMLQNAMETOSTRTMP) \
+    $(DOCTOKQNAMETOSTRTMP) \
+    $(SPRMCODETOSTRTMP)
 
-.IF "$(UPD)" != "310"
-GENERATEDHEADERS += $(DOCTOKRESOURCEIDSHXX) $(SPRMIDSHXX)
-GENERATEDFILES += \
-	$(SPRMCODETOSTRCXX) \
-	$(OOXMLQNAMETOSTRTMP) \
-	$(DOCTOKQNAMETOSTRTMP) \
-	$(SPRMCODETOSTRTMP)
-.ENDIF		# "$(UPD)" != "310"
-
-.IF "$(UPD)" != "310"
 $(OOXMLQNAMETOSTRTMP): $(OOXMLQNAMETOSTRXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-	$(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
+    $(XSLTPROC) $(OOXMLQNAMETOSTRXSL:s!\!/!) $(MODELPROCESSED) > $@
 
 $(DOCTOKQNAMETOSTRTMP): $(DOCTOKQNAMETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-	$(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
-.ENDIF		# "$(UPD)" != "310"
+    $(XSLTPROC) $(DOCTOKQNAMETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
-.IF "$(UPD)" == "310"
-$(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRPY) $(MODELPROCESSED)
-	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
-	$(COMMAND_ECHO)python $(OOXMLQNAMETOSTRPY) $(MODELPROCESSED) > $@
-.ELSE		# "$(UPD)" == "310"
 $(QNAMETOSTRCXX): $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrheader qnametostrfooter $(OOXMLFACTORYTOOLSXSL) $(DOCTOKRESOURCETOOLS)
-	@$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
-.ENDIF		# "$(UPD)" == "310"
+    @$(TYPE) qnametostrheader $(OOXMLQNAMETOSTRTMP) $(DOCTOKQNAMETOSTRTMP) qnametostrfooter > $@
 
-.IF "$(UPD)" != "310"
 $(SPRMCODETOSTRTMP): $(DOCTOKSPRMCODETOSTRXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-	$(XSLTPROC) $(DOCTOKSPRMCODETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
+    $(XSLTPROC) $(DOCTOKSPRMCODETOSTRXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 $(SPRMCODETOSTRCXX): sprmcodetostrheader $(SPRMCODETOSTRTMP) sprmcodetostrfooter
-	@$(TYPE) $< > $@
+    @$(TYPE) $< > $@
 
 $(SLO)$/sprmcodetostr.obj: $(SPRMCODETOSTRCXX)
-.ENDIF		# "$(UPD)" != "310"
 $(SLO)$/qnametostr.obj: $(QNAMETOSTRCXX)
 
 $(SLOFILES): $(GENERATEDHEADERS)
 
 $(DOCTOKHXXOUTDIRCREATED):
-	@$(MKDIRHIER) $(DOCTOKHXXOUTDIR)
-	@$(TOUCH) $@
+    @$(MKDIRHIER) $(DOCTOKHXXOUTDIR)
+    @$(TOUCH) $@
 
-.IF "$(UPD)" != "310"
 $(DOCTOKRESOURCEIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKRESOURCETOOLS) $(DOCTOKRESOURCEIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKRESOURCEIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
-.ENDIF		# "$(UPD)" != "310"
+    $(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKRESOURCEIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 $(OOXMLHXXOUTDIRCREATED):
-	@$(MKDIRHIER) $(OOXMLHXXOUTDIR)
-	@$(TOUCH) $@
+    @$(MKDIRHIER) $(OOXMLHXXOUTDIR)
+    @$(TOUCH) $@
 
-.IF "$(UPD)" != "310"
 $(OOXMLPREPROCESSXSLCOPIED): $(OOXMLPREPROCESSXSL)
-	@$(COPY) $(OOXMLPREPROCESSXSL) $@
+    @$(COPY) $(OOXMLPREPROCESSXSL) $@
 
 $(NSXSL) : $(OOXMLMODEL) $(NAMESPACESTXT) $(NSPROCESS)
-	@$(PERL) $(NSPROCESS) $(NAMESPACESTXT) > $@
-.ENDIF		# "$(UPD)" != "310"
+    @$(PERL) $(NSPROCESS) $(NAMESPACESTXT) > $@
 
-.IF "$(UPD)" == "310"
-$(OOXMLMODELVALIDATED): ..$/..$/documentation$/ooxml$/model.rng $(OOXMLMODEL)
-	@echo "Making:   " $(@:f)
-	$(COMMAND_ECHO)xmllint --noout --relaxng ..$/..$/documentation$/ooxml$/model.rng $(OOXMLMODEL) >& $@ || (cat $@; false)
-
-$(MODELPROCESSED): $(OOXMLPREPROCESSPY) $(NAMESPACESTXT) $(OOXMLMODELVALIDATED)
-	@echo "Making:   " $(@:f)
-	$(COMMAND_ECHO)python $(OOXMLPREPROCESSPY) $(NAMESPACESTXT) $(OOXMLMODEL) > $@
-.ELSE		# "$(UPD)" == "310"
 $(MODELPROCESSED): $(NSXSL) $(OOXMLPREPROCESSXSLCOPIED) $(OOXMLMODEL)
-	@echo "Making:   " $(@:f)
-	$(COMMAND_ECHO)$(XSLTPROC) $(NSXSL) $(OOXMLMODEL) > $@
-.ENDIF		# "$(UPD)" == "310"
+    @echo "Making:   " $(@:f)
+    $(COMMAND_ECHO)$(XSLTPROC) $(NSXSL) $(OOXMLMODEL) > $@
 
-.IF "$(UPD)" == "310"
-$(OOXMLRESOURCEIDSHXX): $(OOXMLHXXOUTDIRCREATED) $(OOXMLRESOURCEIDSPY) $(MODELPROCESSED)
-    @echo "Making:   " $(@:f)   
-	$(COMMAND_ECHO)python $(OOXMLRESOURCEIDSPY) $(MODELPROCESSED) > $@
-.ELSE		# "$(UPD)" == "310"
 $(OOXMLRESOURCEIDSHXX): $(OOXMLHXXOUTDIRCREATED) $(OOXMLFACTORYTOOLSXSL) $(OOXMLRESOURCEIDSXSL) $(MODELPROCESSED)
     @echo "Making:   " $(@:f)   
-	$(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL:s!\!/!) $(MODELPROCESSED) > $@
-.ENDIF		# "$(UPD)" == "310"
+    $(COMMAND_ECHO)$(XSLTPROC) $(OOXMLRESOURCEIDSXSL:s!\!/!) $(MODELPROCESSED) > $@
 
-.IF "$(UPD)" != "310"
 $(SPRMIDSHXX): $(DOCTOKHXXOUTDIRCREATED) $(DOCTOKSPRMIDSXSL) $(DOCTOKMODEL)
     @echo "Making:   " $(@:f)   
-	$(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKSPRMIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
-.ENDIF		# "$(UPD)" != "310"
+    $(COMMAND_ECHO)$(XSLTPROC) $(DOCTOKSPRMIDSXSL:s!\!/!) $(DOCTOKMODEL) > $@
 
 .PHONY: genclean genmake gendirs
 
 genclean: 
-	rm -f $(GENERATEDFILES)
+    rm -f $(GENERATEDFILES)
 
 genmake: $(GENERATEDFILES)
 

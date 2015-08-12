@@ -1,35 +1,42 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_INC_OOXML_OOXMLDOCUMENT_HXX
-#define INCLUDED_WRITERFILTER_INC_OOXML_OOXMLDOCUMENT_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_OOXML_DOCUMENT_HXX
+#define INCLUDED_OOXML_DOCUMENT_HXX
 
 #include <sal/types.h>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <resourcemodel/WW8ResourceModel.hxx>
-#include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/xml/sax/XParser.hpp>
 #include <com/sun/star/xml/sax/XFastParser.hpp>
 #include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 #include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
-#include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/drawing/XDrawPage.hpp>
 
@@ -71,11 +78,13 @@ namespace writerfilter {
 namespace ooxml
 {
 
-class OOXMLStream
+using namespace com::sun::star;
+
+class WRITERFILTER_DLLPUBLIC OOXMLStream
 {
 public:
-    enum StreamType_t { UNKNOWN, DOCUMENT, STYLES, WEBSETTINGS, FONTTABLE, NUMBERING,
-        FOOTNOTES, ENDNOTES, COMMENTS, THEME, CUSTOMXML, CUSTOMXMLPROPS, ACTIVEX, ACTIVEXBIN, GLOSSARY, CHARTS, EMBEDDINGS, SETTINGS, VBAPROJECT, FOOTER, HEADER, SIGNATURE };
+    enum StreamType_t { UNKNOWN, DOCUMENT, STYLES, FONTTABLE, NUMBERING,
+        FOOTNOTES, ENDNOTES, COMMENTS, THEME, SETTINGS, VBAPROJECT };
     typedef boost::shared_ptr<OOXMLStream> Pointer_t;
 
     virtual ~OOXMLStream() {}
@@ -83,21 +92,21 @@ public:
     /**
        Returns parser for this stream.
      */
-    virtual css::uno::Reference<css::xml::sax::XParser> getParser() = 0;
+    virtual uno::Reference<xml::sax::XParser> getParser() = 0;
 
     /**
        Returns fast parser for this stream.
      */
-    virtual css::uno::Reference<css::xml::sax::XFastParser> getFastParser() = 0;
+    virtual uno::Reference<xml::sax::XFastParser> getFastParser() = 0;
 
-    virtual css::uno::Reference<css::io::XInputStream> getDocumentStream() = 0;
+    virtual uno::Reference<io::XInputStream> getDocumentStream() = 0;
 
-    virtual css::uno::Reference<css::io::XInputStream> getStorageStream() = 0;
+    virtual uno::Reference<io::XInputStream> getStorageStream() = 0;
 
     /**
        Returns component context for this stream.
      */
-    virtual css::uno::Reference<css::uno::XComponentContext> getContext() = 0;
+    virtual uno::Reference<uno::XComponentContext> getContext() = 0;
 
     /**
        Returns target URL from relationships for a given id.
@@ -106,16 +115,16 @@ public:
 
        @return the URL found or an empty string
      */
-    virtual OUString getTargetForId(const OUString & rId) = 0;
+    virtual ::rtl::OUString getTargetForId(const ::rtl::OUString & rId) = 0;
 
-    virtual const OUString & getTarget() const = 0;
+    virtual const ::rtl::OUString & getTarget() const = 0;
 
-    virtual css::uno::Reference<css::xml::sax::XFastTokenHandler>
-    getFastTokenHandler() = 0;
+    virtual uno::Reference<xml::sax::XFastTokenHandler>
+    getFastTokenHandler(uno::Reference<uno::XComponentContext> rContext) = 0;
 
 };
 
-class OOXMLDocument : public writerfilter::Reference<Stream>
+class WRITERFILTER_DLLPUBLIC OOXMLDocument : public writerfilter::Reference<Stream>
 {
 public:
     /**
@@ -130,7 +139,14 @@ public:
 
        @param rStream     stream handler to resolve this document to
      */
-    virtual void resolve(Stream & rStream) SAL_OVERRIDE = 0;
+    virtual void resolve(Stream & rStream) = 0;
+
+    /**
+       Returns string representation of the type of this reference.
+
+       DEBUGGING PURPOSE ONLY.
+     */
+    virtual string getType() const = 0;
 
     /**
        Resolves a footnote to a stream handler.
@@ -175,7 +191,7 @@ public:
        @param rPictureId    id of the picture to resolve
      */
     virtual void resolvePicture(Stream & rStream,
-                                const OUString & rPictureId) = 0;
+                                const rtl::OUString & rPictureId) = 0;
 
     /**
        Resolves a header to a stream handler.
@@ -190,7 +206,7 @@ public:
      */
     virtual void resolveHeader(Stream & rStream,
                                const sal_Int32 type,
-                               const OUString & rId) = 0;
+                               const rtl::OUString & rId) = 0;
 
     /**
        Resolves a footer to a stream handler.
@@ -205,7 +221,7 @@ public:
     */
     virtual void resolveFooter(Stream & rStream,
                                const sal_Int32 type,
-                               const OUString & rId) = 0;
+                               const rtl::OUString & rId) = 0;
 
 
     /**
@@ -215,41 +231,32 @@ public:
 
        @return the URL found or an empty string
      */
-    virtual OUString getTargetForId(const OUString & rId) = 0;
+    virtual ::rtl::OUString getTargetForId(const ::rtl::OUString & rId) = 0;
 
-    virtual void setModel(css::uno::Reference<css::frame::XModel> xModel) = 0;
-    virtual css::uno::Reference<css::frame::XModel> getModel() = 0;
-    virtual void setDrawPage(css::uno::Reference<css::drawing::XDrawPage> xDrawPage) = 0;
-    virtual css::uno::Reference<css::drawing::XDrawPage> getDrawPage() = 0;
-    virtual css::uno::Reference<css::io::XInputStream> getInputStream() = 0;
-    virtual css::uno::Reference<css::io::XInputStream> getStorageStream() = 0;
-    virtual css::uno::Reference<css::io::XInputStream> getInputStreamForId(const OUString & rId) = 0;
+    virtual void setModel(uno::Reference<frame::XModel> xModel) = 0;
+    virtual uno::Reference<frame::XModel> getModel() = 0;
+    virtual void setDrawPage(uno::Reference<drawing::XDrawPage> xDrawPage) = 0;
+    virtual uno::Reference<drawing::XDrawPage> getDrawPage() = 0;
+    virtual uno::Reference<io::XInputStream> getInputStream() = 0;
+    virtual uno::Reference<io::XInputStream> getStorageStream() = 0;
+    virtual uno::Reference<io::XInputStream> getInputStreamForId
+    (const ::rtl::OUString & rId) = 0;
     virtual void setXNoteId(const sal_Int32 nId) = 0;
     virtual sal_Int32 getXNoteId() const = 0;
     virtual void setXNoteType(const Id & nId) = 0;
     virtual const Id & getXNoteType() const = 0;
-    virtual const OUString & getTarget() const = 0;
-    virtual css::uno::Reference<css::xml::sax::XFastShapeContextHandler> getShapeContext( ) = 0;
-    virtual void setShapeContext( css::uno::Reference<css::xml::sax::XFastShapeContextHandler> xContext ) = 0;
-    virtual css::uno::Reference<css::xml::dom::XDocument> getThemeDom( ) = 0;
-    virtual void setThemeDom( css::uno::Reference<css::xml::dom::XDocument> xThemeDom ) = 0;
-    virtual css::uno::Reference<css::xml::dom::XDocument> getGlossaryDocDom( ) = 0;
-    virtual css::uno::Sequence<css::uno::Sequence< css::uno::Any> > getGlossaryDomList() = 0;
-    virtual css::uno::Sequence<css::uno::Reference<css::xml::dom::XDocument> > getCustomXmlDomList( ) = 0;
-    virtual css::uno::Sequence<css::uno::Reference<css::xml::dom::XDocument> > getCustomXmlDomPropsList( ) = 0;
-    virtual css::uno::Sequence<css::uno::Reference<css::xml::dom::XDocument> > getActiveXDomList( ) = 0;
-    virtual css::uno::Sequence<css::uno::Reference<css::io::XInputStream> > getActiveXBinList() = 0;
-    virtual css::uno::Sequence<css::beans::PropertyValue > getEmbeddingsList() = 0;
+    virtual const ::rtl::OUString & getTarget() const = 0;
+    virtual uno::Reference<xml::sax::XFastShapeContextHandler> getShapeContext( ) = 0;
+    virtual void setShapeContext( uno::Reference<xml::sax::XFastShapeContextHandler> xContext ) = 0;
 };
 
 
-class OOXMLDocumentFactory
+class WRITERFILTER_DLLPUBLIC OOXMLDocumentFactory
 {
 public:
     static OOXMLStream::Pointer_t
-    createStream(css::uno::Reference<css::uno::XComponentContext> rContext,
-                 css::uno::Reference<css::io::XInputStream> rStream,
-                 bool bRepairStorage,
+    createStream(uno::Reference<uno::XComponentContext> rContext,
+                 uno::Reference<io::XInputStream> rStream,
                  OOXMLStream::StreamType_t nStreamType = OOXMLStream::DOCUMENT);
 
     static OOXMLStream::Pointer_t
@@ -257,18 +264,16 @@ public:
                  OOXMLStream::StreamType_t nStreamType = OOXMLStream::DOCUMENT);
 
     static OOXMLStream::Pointer_t
-    createStream(OOXMLStream::Pointer_t pStream, const OUString & rId);
+    createStream(OOXMLStream::Pointer_t pStream, const rtl::OUString & rId);
 
     static OOXMLDocument *
-    createDocument(OOXMLStream::Pointer_t pStream, const css::uno::Reference<css::task::XStatusIndicator>& xStatusIndicator);
+    createDocument(OOXMLStream::Pointer_t pStream);
 
 };
 
 void ooxmlidsToXML(::std::iostream & out);
 
-std::string fastTokenToId(sal_uInt32 nToken);
-
 }}
-#endif // INCLUDED_WRITERFILTER_INC_OOXML_OOXMLDOCUMENT_HXX
+#endif // INCLUDED_OOXML_DOCUMENT_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

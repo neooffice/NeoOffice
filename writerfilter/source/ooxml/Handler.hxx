@@ -1,23 +1,32 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_HANDLER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_OOXML_HANDLER_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_HANDLER_HXX
+#define INCLUDED_HANDLER_HXX
 
 #include <resourcemodel/WW8ResourceModel.hxx>
 #include "OOXMLFastContextHandler.hxx"
@@ -33,8 +42,8 @@ public:
     OOXMLFootnoteHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLFootnoteHandler();
 
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLEndnoteHandler : public Properties
@@ -44,77 +53,67 @@ public:
     OOXMLEndnoteHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLEndnoteHandler();
 
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLFooterHandler : public Properties
 {
     OOXMLFastContextHandler * mpFastContext;
-    OUString msStreamId;
+    ::rtl::OUString msStreamId;
     sal_Int32 mnType;
 public:
     OOXMLFooterHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLFooterHandler();
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLHeaderHandler : public Properties
 {
     OOXMLFastContextHandler * mpFastContext;
-    OUString msStreamId;
+    ::rtl::OUString msStreamId;
     sal_Int32 mnType;
 public:
     OOXMLHeaderHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLHeaderHandler();
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLCommentHandler : public Properties
 {
     OOXMLFastContextHandler * mpFastContext;
+    ::rtl::OUString msStreamId;
 public:
     OOXMLCommentHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLCommentHandler();
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLOLEHandler : public Properties
 {
     OOXMLFastContextHandler * mpFastContext;
-
+    
 public:
     OOXMLOLEHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLOLEHandler();
 
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
-};
-
-class OOXMLEmbeddedFontHandler : public Properties
-{
-    OOXMLFastContextHandler * mpFastContext;
-
-public:
-    OOXMLEmbeddedFontHandler(OOXMLFastContextHandler * pContext);
-    virtual ~OOXMLEmbeddedFontHandler();
-
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLBreakHandler : public Properties
 {
+    OOXMLFastContextHandler * mpFastContext;
     sal_Int32 mnType, mnClear;
     Stream & mrStream;
 public:
-    OOXMLBreakHandler(Stream & rStream);
+    OOXMLBreakHandler(Stream & rStream, OOXMLFastContextHandler * pContext);
     virtual ~OOXMLBreakHandler();
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLPictureHandler : public Properties
@@ -124,26 +123,26 @@ public:
     OOXMLPictureHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLPictureHandler();
 
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);
 };
 
 class OOXMLHyperlinkHandler : public Properties
 {
     OOXMLFastContextHandler * mpFastContext;
-    OUString mFieldCode;
-    OUString mURL;
+    ::rtl::OUString mFieldCode;
+    ::rtl::OUString mURL;
 
 public:
     OOXMLHyperlinkHandler(OOXMLFastContextHandler * pContext);
     virtual ~OOXMLHyperlinkHandler();
 
-    virtual void attribute(Id name, Value & val) SAL_OVERRIDE;
-    virtual void sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id name, Value & val);
+    virtual void sprm(Sprm & sprm);    
 };
 
 
 }}
-#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_HANDLER_HXX
+#endif // INCLUDED_HANDLER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

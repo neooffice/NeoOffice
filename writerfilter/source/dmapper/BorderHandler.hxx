@@ -1,36 +1,47 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * This file is part of NeoOffice.
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_BORDERHANDLER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_BORDERHANDLER_HXX
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_BORDERHANDLER_HXX
+#define INCLUDED_BORDERHANDLER_HXX
 
-#include <vector>
-#include <resourcemodel/LoggedResources.hxx>
+#include <WriterFilterDllApi.hxx>
+#include <resourcemodel/WW8ResourceModel.hxx>
 #include <boost/shared_ptr.hpp>
+#if SUPD == 310
+#include <com/sun/star/table/BorderLine.hpp>
+#define BorderLine2 BorderLine
+#else	 // SUPD == 310
 #include <com/sun/star/table/BorderLine2.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <comphelper/sequenceasvector.hxx>
+#endif	// SUPD == 310
 
 namespace writerfilter {
 namespace dmapper
 {
 class PropertyMap;
-class BorderHandler : public LoggedProperties
+class WRITERFILTER_DLLPRIVATE BorderHandler : public Properties
 {
 public:
     //todo: order is a guess
@@ -52,33 +63,26 @@ private:
     sal_Int32       m_nLineType;
     sal_Int32       m_nLineColor;
     sal_Int32       m_nLineDistance;
-    bool            m_bShadow;
     bool            m_bOOXML;
 
     bool                                        m_aFilledLines[BORDER_COUNT];
     ::com::sun::star::table::BorderLine2        m_aBorderLines[BORDER_COUNT];
-    OUString m_aInteropGrabBagName;
-    comphelper::SequenceAsVector<css::beans::PropertyValue> m_aInteropGrabBag;
-    void appendGrabBag(const OUString& aKey, const OUString& aValue);
-
-    // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
 
 public:
     BorderHandler( bool bOOXML );
     virtual ~BorderHandler();
 
+    // Properties
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
+
     ::boost::shared_ptr<PropertyMap>            getProperties();
     ::com::sun::star::table::BorderLine2        getBorderLine();
     sal_Int32                                   getLineDistance() const { return m_nLineDistance;}
-    bool                                        getShadow() { return m_bShadow;}
-    void enableInteropGrabBag(const OUString& aName);
-    css::beans::PropertyValue getInteropGrabBag(const OUString& aName = OUString());
 };
 typedef boost::shared_ptr< BorderHandler >          BorderHandlerPtr;
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

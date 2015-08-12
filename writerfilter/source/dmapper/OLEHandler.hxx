@@ -1,25 +1,35 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_OLEHANDLER_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_OLEHANDLER_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_OLEHANDLER_HXX
+#define INCLUDED_OLEHANDLER_HXX
 
-#include <resourcemodel/LoggedResources.hxx>
+#include <WriterFilterDllApi.hxx>
+#include <resourcemodel/WW8ResourceModel.hxx>
 #include <boost/shared_ptr.hpp>
 #include <com/sun/star/awt/Size.hpp>
 #include <com/sun/star/awt/Point.hpp>
@@ -27,6 +37,9 @@
 #include <com/sun/star/drawing/XShape.hpp>
 
 namespace com{ namespace sun{ namespace star{
+    namespace embed{
+        class XEmbeddedObject;
+    }
     namespace graphic{
         class XGraphic;
     }
@@ -34,29 +47,26 @@ namespace com{ namespace sun{ namespace star{
         class XInputStream;
     }
     namespace text{
-        class XTextContent;
         class XTextDocument;
     }
-    namespace uno {
+    namespace uno{
         class XComponentContext;
     }
 }}}
 namespace writerfilter {
 namespace dmapper
 {
-class DomainMapper;
+//class PropertyMap;
 /** Handler for OLE objects
  */
-class OLEHandler : public LoggedProperties
+class WRITERFILTER_DLLPRIVATE OLEHandler : public Properties
 {
-    OUString     m_sObjectType;
-    OUString     m_sProgId;
-    OUString     m_sShapeId;
-    OUString     m_sDrawAspect;
-    OUString     m_sObjectId;
-    OUString     m_sr_id;
-    /// The stream URL right after the import of the raw data.
-    OUString     m_aURL;
+    ::rtl::OUString     m_sObjectType;
+    ::rtl::OUString     m_sProgId;
+    ::rtl::OUString     m_sShapeId;
+    ::rtl::OUString     m_sDrawAspect;
+    ::rtl::OUString     m_sObjectId;
+    ::rtl::OUString     m_sr_id;
 
     sal_Int32                   m_nDxaOrig;
     sal_Int32                   m_nDyaOrig;
@@ -68,45 +78,31 @@ class OLEHandler : public LoggedProperties
     ::com::sun::star::awt::Point m_aShapePosition;
 
     ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic > m_xReplacement;
-
+    
     ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > m_xInputStream;
-    DomainMapper& m_rDomainMapper;
+public:
+    OLEHandler();
+    virtual ~OLEHandler();
 
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
-
-    // Interoperability
-    virtual void saveInteropProperties( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > const& xTextDocument,
-                                        const OUString& sObjectName, const OUString& sOldObjectName = OUString() );
-
-public:
-    OLEHandler(DomainMapper& rDomainMapper);
-    virtual ~OLEHandler();
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
 
     inline ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > getShape( ) { return m_xShape; };
 
     inline bool isOLEObject( ) { return m_xInputStream.is( ); };
 
-    /// In case of a valid CLSID, import the native data to the previously created empty OLE object.
-    void importStream(css::uno::Reference<css::uno::XComponentContext> xComponentContext,
-                      css::uno::Reference<css::text::XTextDocument> xTextDocument,
-                      css::uno::Reference<css::text::XTextContent> xOLE);
-
-    /// Get the CLSID of the OLE object, in case we can find one based on m_sProgId.
-    OUString getCLSID(css::uno::Reference<css::uno::XComponentContext> xComponentContext) const;
-
-    OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > const & xTextDocument );
+    ::rtl::OUString copyOLEOStream( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument > xTextDocument );
 
     ::com::sun::star::awt::Size     getSize() const { return m_aShapeSize;}
     ::com::sun::star::awt::Point    getPosition() const { return m_aShapePosition;}
-    ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic >
+    ::com::sun::star::uno::Reference< ::com::sun::star::graphic::XGraphic > 
                                     getReplacement() const { return m_xReplacement; }
 
 };
 typedef boost::shared_ptr< OLEHandler >  OLEHandlerPtr;
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

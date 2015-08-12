@@ -1,28 +1,36 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPROPERTYSETIMPL_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPROPERTYSETIMPL_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_OOXML_PROPERTY_SET_IMPL_HXX
+#define INCLUDED_OOXML_PROPERTY_SET_IMPL_HXX
 
 #include <vector>
 #include "OOXMLPropertySet.hxx"
 #include "OOXMLBinaryObjectReference.hxx"
-#include <com/sun/star/embed/XEmbeddedObject.hpp>
 
 namespace com {
 namespace sun {
@@ -34,6 +42,8 @@ class XShape;
 namespace writerfilter {
 namespace ooxml
 {
+using namespace ::std;
+using ::com::sun::star::drawing::XShape;
 
 class OOXMLValue : public Value
 {
@@ -42,16 +52,14 @@ public:
     OOXMLValue();
     virtual ~OOXMLValue();
 
-    virtual int getInt() const SAL_OVERRIDE;
+    virtual int getInt() const;
     virtual bool getBool() const;
-    virtual OUString getString() const SAL_OVERRIDE;
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-    virtual writerfilter::Reference<Properties>::Pointer_t getProperties() SAL_OVERRIDE;
-    virtual writerfilter::Reference<Stream>::Pointer_t getStream() SAL_OVERRIDE;
-    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary() SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
+    virtual ::rtl::OUString getString() const;
+    virtual uno::Any getAny() const;
+    virtual writerfilter::Reference<Properties>::Pointer_t getProperties();
+    virtual writerfilter::Reference<Stream>::Pointer_t getStream();
+    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary();
+    virtual string toString() const;
     virtual OOXMLValue * clone() const;
 };
 
@@ -71,17 +79,16 @@ public:
     OOXMLPropertyImpl(const OOXMLPropertyImpl & rSprm);
     virtual ~OOXMLPropertyImpl();
 
-    virtual sal_uInt32 getId() const SAL_OVERRIDE;
-    virtual Value::Pointer_t getValue() SAL_OVERRIDE;
-    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary() SAL_OVERRIDE;
-    virtual writerfilter::Reference<Stream>::Pointer_t getStream() SAL_OVERRIDE;
-    virtual writerfilter::Reference<Properties>::Pointer_t getProps() SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string getName() const SAL_OVERRIDE;
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual Sprm * clone() SAL_OVERRIDE;
-    virtual void resolve(Properties & rProperties) SAL_OVERRIDE;
+    virtual sal_uInt32 getId() const;
+    virtual Value::Pointer_t getValue();
+    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary();
+    virtual writerfilter::Reference<Stream>::Pointer_t getStream();
+    virtual writerfilter::Reference<Properties>::Pointer_t getProps();
+    virtual string getName() const;
+    virtual Kind getKind();
+    virtual string toString() const;
+    virtual Sprm * clone();
+    virtual void resolve(Properties & rProperties);
 };
 
 class OOXMLBinaryValue : public OOXMLValue
@@ -92,97 +99,86 @@ public:
     explicit OOXMLBinaryValue(OOXMLBinaryObjectReference::Pointer_t pBinaryObj);
     virtual ~OOXMLBinaryValue();
 
-    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary() SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual writerfilter::Reference<BinaryObj>::Pointer_t getBinary();
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLBooleanValue : public OOXMLValue
 {
 protected:
     bool mbValue;
-    explicit OOXMLBooleanValue(bool bValue);
 public:
-    static OOXMLValue::Pointer_t Create (bool bValue);
-    static OOXMLValue::Pointer_t Create (const char *pValue);
-
+    explicit OOXMLBooleanValue(bool bValue);
+    explicit OOXMLBooleanValue(const rtl::OUString & rValue);
     virtual ~OOXMLBooleanValue();
 
-    virtual int getInt() const SAL_OVERRIDE;
-    virtual bool getBool() const SAL_OVERRIDE;
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual int getInt() const;
+    virtual bool getBool() const;
+    virtual uno::Any getAny() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLStringValue : public OOXMLValue
 {
 protected:
-    OUString mStr;
+    rtl::OUString mStr;
 public:
-    explicit OOXMLStringValue(const OUString & rStr);
+    explicit OOXMLStringValue(const rtl::OUString & rStr);
     virtual ~OOXMLStringValue();
-
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-    virtual OUString getString() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    
+    virtual uno::Any getAny() const;
+    virtual rtl::OUString getString() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLInputStreamValue : public OOXMLValue
 {
 protected:
-    css::uno::Reference<css::io::XInputStream> mxInputStream;
+    uno::Reference<io::XInputStream> mxInputStream;
 
 public:
-    explicit OOXMLInputStreamValue(css::uno::Reference<css::io::XInputStream> xInputStream);
+    explicit OOXMLInputStreamValue(uno::Reference<io::XInputStream> xInputStream);
     virtual ~OOXMLInputStreamValue();
 
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual uno::Any getAny() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 struct OOXMLPropertySetImplCompare
 {
-    bool operator()(const OOXMLProperty::Pointer_t x,
+    bool operator()(const OOXMLProperty::Pointer_t x, 
                     const OOXMLProperty::Pointer_t y) const;
 };
 
 class OOXMLPropertySetImpl : public OOXMLPropertySet
-{
+{    
 public:
-    typedef std::vector<OOXMLProperty::Pointer_t> OOXMLProperties_t;
+    typedef vector<OOXMLProperty::Pointer_t> OOXMLProperties_t;
 private:
     OOXMLProperties_t mProperties;
-    OString maType;
+    string msType;
 public:
     OOXMLPropertySetImpl();
     virtual ~OOXMLPropertySetImpl();
 
-    virtual void resolve(Properties & rHandler) SAL_OVERRIDE;
-    virtual void add(OOXMLProperty::Pointer_t pProperty) SAL_OVERRIDE;
-    virtual void add(OOXMLPropertySet::Pointer_t pPropertySet) SAL_OVERRIDE;
-    virtual OOXMLPropertySet * clone() const SAL_OVERRIDE;
+    virtual void resolve(Properties & rHandler);
+    virtual string getType() const;
+    virtual void add(OOXMLProperty::Pointer_t pProperty);
+    virtual void add(OOXMLPropertySet::Pointer_t pPropertySet);
+    virtual OOXMLPropertySet * clone() const;
 
     OOXMLProperties_t::iterator begin();
     OOXMLProperties_t::iterator end();
     OOXMLProperties_t::const_iterator begin() const;
     OOXMLProperties_t::const_iterator end() const;
 
-    virtual void setType(const std::string & rsType) SAL_OVERRIDE;
+    virtual void setType(const string & rsType);
 
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() SAL_OVERRIDE;
-#endif
+    virtual string toString();
 };
 
 class OOXMLPropertySetValue : public OOXMLValue
@@ -192,28 +188,24 @@ public:
     OOXMLPropertySetValue(OOXMLPropertySet::Pointer_t pPropertySet);
     virtual ~OOXMLPropertySetValue();
 
-    virtual writerfilter::Reference<Properties>::Pointer_t getProperties() SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual writerfilter::Reference<Properties>::Pointer_t getProperties();
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLIntegerValue : public OOXMLValue
 {
 protected:
     sal_Int32 mnValue;
-    explicit OOXMLIntegerValue(sal_Int32 nValue);
 public:
-    static OOXMLValue::Pointer_t Create (sal_Int32 nValue);
+    explicit OOXMLIntegerValue(sal_Int32 nValue);
+    explicit OOXMLIntegerValue(const rtl::OUString & rValue);
     virtual ~OOXMLIntegerValue();
 
-    virtual int getInt() const SAL_OVERRIDE;
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual int getInt() const;
+    virtual uno::Any getAny() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLHexValue : public OOXMLValue
@@ -222,60 +214,25 @@ protected:
     sal_uInt32 mnValue;
 public:
     explicit OOXMLHexValue(sal_uInt32 nValue);
-    explicit OOXMLHexValue(const char * pValue);
+    explicit OOXMLHexValue(const rtl::OUString & rValue);
     virtual ~OOXMLHexValue();
 
-    virtual int getInt() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
-};
-
-/// Handles OOXML's ST_UniversalMeasure value.
-class OOXMLUniversalMeasureValue : public OOXMLValue
-{
-protected:
-    sal_uInt32 mnValue;
-public:
-    explicit OOXMLUniversalMeasureValue(const char * pValue);
-    virtual ~OOXMLUniversalMeasureValue();
-
-    virtual int getInt() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue* clone() const SAL_OVERRIDE;
+    virtual int getInt() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLShapeValue : public OOXMLValue
 {
 protected:
-    css::uno::Reference<css::drawing::XShape> mrShape;
+    uno::Reference<XShape> mrShape;
 public:
-    explicit OOXMLShapeValue(css::uno::Reference<css::drawing::XShape> rShape);
+    explicit OOXMLShapeValue(uno::Reference<XShape> rShape);
     virtual ~OOXMLShapeValue();
 
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
-};
-
-class OOXMLStarMathValue : public OOXMLValue
-{
-protected:
-    css::uno::Reference< css::embed::XEmbeddedObject > component;
-public:
-    explicit OOXMLStarMathValue( css::uno::Reference< css::embed::XEmbeddedObject > component );
-    virtual ~OOXMLStarMathValue();
-
-    virtual css::uno::Any getAny() const SAL_OVERRIDE;
-#ifdef DEBUG_WRITERFILTER
-    virtual std::string toString() const SAL_OVERRIDE;
-#endif
-    virtual OOXMLValue * clone() const SAL_OVERRIDE;
+    virtual uno::Any getAny() const;
+    virtual string toString() const;
+    virtual OOXMLValue * clone() const;
 };
 
 class OOXMLTableImpl : public OOXMLTable
@@ -283,31 +240,32 @@ class OOXMLTableImpl : public OOXMLTable
 public:
     typedef boost::shared_ptr<OOXMLValue> ValuePointer_t;
 private:
-    typedef std::vector<ValuePointer_t> PropertySets_t;
+    typedef vector<ValuePointer_t> PropertySets_t;
     PropertySets_t mPropertySets;
 
 public:
     OOXMLTableImpl();
     virtual ~OOXMLTableImpl();
 
-    virtual void resolve(Table & rTable) SAL_OVERRIDE;
+    virtual void resolve(Table & rTable);
     virtual void add(ValuePointer_t pPropertySet);
-    virtual OOXMLTable * clone() const SAL_OVERRIDE;
+    virtual string getType() const;
+    virtual OOXMLTable * clone() const;
 };
 
 class OOXMLPropertySetEntryToString : public Properties
 {
     Id mnId;
-    OUString mStr;
+    ::rtl::OUString mStr;
 
 public:
     OOXMLPropertySetEntryToString(Id nId);
     virtual ~OOXMLPropertySetEntryToString();
 
-    virtual void sprm(Sprm & rSprm) SAL_OVERRIDE;
-    virtual void attribute(Id nId, Value & rValue) SAL_OVERRIDE;
+    virtual void sprm(Sprm & rSprm);
+    virtual void attribute(Id nId, Value & rValue);
 
-    const OUString & getString() const { return mStr;}
+    const ::rtl::OUString & getString() const;
 };
 
 class OOXMLPropertySetEntryToInteger : public Properties
@@ -318,15 +276,17 @@ public:
     OOXMLPropertySetEntryToInteger(Id nId);
     virtual ~OOXMLPropertySetEntryToInteger();
 
-    virtual void sprm(Sprm & rSprm) SAL_OVERRIDE;
-    virtual void attribute(Id nId, Value & rValue) SAL_OVERRIDE;
+    virtual void sprm(Sprm & rSprm);
+    virtual void attribute(Id nId, Value & rValue);
 
-    int getValue() const { return mnValue;}
+    int getValue() const;
 };
+
+Sprm::Kind SprmKind(sal_uInt32 nSprmCode);
 
 }  // namespace ooxml
 } // namespace writerfilter
 
-#endif // INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLPROPERTYSETIMPL_HXX
+#endif // INCLUDED_OOXML_PROPERTY_SET_IMPL_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

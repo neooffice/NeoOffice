@@ -1,46 +1,39 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 #include <OLEHandler.hxx>
-#include <dmapper/DomainMapper.hxx>
 #include <PropertyMap.hxx>
 #include "GraphicHelpers.hxx"
 
-#if SUPD == 310
-#include <svx/unoprnms.hxx>
-#else	// SUPD == 310
-#include <editeng/unoprnms.hxx>
-#endif	// SUPD == 310
+#include <doctok/resourceids.hxx>
 #include <ooxml/resourceids.hxx>
-#include <rtl/ustring.hxx>
-#include <osl/diagnose.h>
-#if SUPD == 310
-#include <comphelper/mediadescriptor.hxx>
-#else	// SUPD == 310
-#include <unotools/mediadescriptor.hxx>
-#include <officecfg/Office/Common.hxx>
-#endif	// SUPD == 310
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/document/XEmbeddedObjectResolver.hpp>
-#include <com/sun/star/document/XEmbeddedObjectSupplier.hpp>
-#include <com/sun/star/document/XFilter.hpp>
-#include <com/sun/star/document/XImporter.hpp>
 #include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
@@ -48,44 +41,40 @@
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/io/XStream.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
-
-#if SUPD == 310
-#include <sal/log.hxx>
-#endif	// SUPD == 310
-
-#include "dmapperLoggers.hxx"
 
 namespace writerfilter {
 namespace dmapper {
 
 using namespace ::com::sun::star;
+/*-- 23.04.2008 10:46:14---------------------------------------------------
 
-
-OLEHandler::OLEHandler(DomainMapper& rDomainMapper) :
-LoggedProperties(dmapper_logger, "OLEHandler"),
-m_nDxaOrig(0),
-m_nDyaOrig(0),
-    m_nWrapMode(1),
-    m_rDomainMapper(rDomainMapper)
+  -----------------------------------------------------------------------*/
+OLEHandler::OLEHandler() :
+    m_nDxaOrig(0),
+    m_nDyaOrig(0),
+    m_nWrapMode(1)
 {
 }
+/*-- 23.04.2008 10:46:14---------------------------------------------------
 
-
+  -----------------------------------------------------------------------*/
 OLEHandler::~OLEHandler()
 {
 }
+/*-- 23.04.2008 10:46:14---------------------------------------------------
 
-
-void OLEHandler::lcl_attribute(Id rName, Value & rVal)
+  -----------------------------------------------------------------------*/
+void OLEHandler::attribute(Id rName, Value & rVal)
 {
-    OUString sStringValue = rVal.getString();
+    rtl::OUString sStringValue = rVal.getString();
     (void)rName;
+    /* WRITERFILTERSTATUS: table: OLEHandler_attributedata */
     switch( rName )
     {
+        /* WRITERFILTERSTATUS: done: 1, planned: 0, spent: 0 */
         case NS_ooxml::LN_CT_OLEObject_Type:
             m_sObjectType = sStringValue;
         break;
@@ -114,47 +103,52 @@ void OLEHandler::lcl_attribute(Id rName, Value & rVal)
             m_nDyaOrig = rVal.getInt();
         break;
         case NS_ooxml::LN_shape:
+        /* WRITERFILTERSTATUS: done: 0, planned: 0.5, spent: 0 */
         {
-            uno::Reference< drawing::XShape > xTempShape;
+            uno::Reference< drawing::XShape > xTempShape; 
             rVal.getAny() >>= xTempShape;
             if( xTempShape.is() )
             {
                 m_xShape.set( xTempShape );
-                uno::Reference< beans::XPropertySet > xShapeProps( xTempShape, uno::UNO_QUERY );
-                PropertyNameSupplier& rNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
-
+                
                 try
                 {
-                    // Shapes in the header or footer should be in the background.
-                    if (m_rDomainMapper.IsInHeaderFooter())
-                        xShapeProps->setPropertyValue("Opaque", uno::makeAny(false));
-
                     m_aShapeSize = xTempShape->getSize();
                     m_aShapePosition = xTempShape->getPosition();
 
+                    uno::Reference< beans::XPropertySet > xShapeProps( xTempShape, uno::UNO_QUERY_THROW );
+                    PropertyNameSupplier& rNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
+
                     xShapeProps->getPropertyValue( rNameSupplier.GetName( PROP_BITMAP ) ) >>= m_xReplacement;
+               
+                    xShapeProps->setPropertyValue( 
+                        rNameSupplier.GetName( PROP_SURROUND ),
+                        uno::makeAny( m_nWrapMode ) );
                 }
                 catch( const uno::Exception& e )
                 {
-                    SAL_WARN("writerfilter", "Exception in OLE Handler: " << e.Message);
-                }
-                // No need to set the wrapping here as it's either set in oox or will be set later
+#if DEBUG
+                    clog << "Exception in OLE Handler: ";
+                    clog << rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( ) << endl;
+#endif
+                }    
             }
         }
-        break;
+        break;        
         default:
-            OSL_FAIL( "unknown attribute");
+            OSL_ENSURE( false, "unknown attribute");
     }
 }
+/*-- 23.04.2008 10:46:14---------------------------------------------------
 
-
-void OLEHandler::lcl_sprm(Sprm & rSprm)
+  -----------------------------------------------------------------------*/
+void OLEHandler::sprm(Sprm & rSprm)
 {
     sal_uInt32 nSprmId = rSprm.getId();
     switch( nSprmId )
     {
         case NS_ooxml::LN_OLEObject_OLEObject:
-        {
+        {    
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
             if( pProperties.get())
             {
@@ -173,128 +167,49 @@ void OLEHandler::lcl_sprm(Sprm & rSprm)
                 m_nWrapMode = pHandler->getWrapMode( );
 
                 try
-                {
+                { 
                     uno::Reference< beans::XPropertySet > xShapeProps( m_xShape, uno::UNO_QUERY_THROW );
                     PropertyNameSupplier& rNameSupplier = PropertyNameSupplier::GetPropertyNameSupplier();
 
-                    xShapeProps->setPropertyValue(
+                    xShapeProps->setPropertyValue( 
                         rNameSupplier.GetName( PROP_SURROUND ),
                         uno::makeAny( m_nWrapMode ) );
                 }
                 catch( const uno::Exception& e )
                 {
-                    SAL_WARN("writerfilter", "Exception in OLE Handler: " << e.Message);
-                }
+#if DEBUG
+                    clog << "Exception in OLE Handler: ";
+                    clog << rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr( ) << endl;
+#endif
+                } 
             }
         }
         break;
         default:
         {
-            OSL_FAIL( "unknown attribute");
+            OSL_ENSURE( false, "unknown attribute");
         }
     }
 }
+/*-- 23.04.2008 11:15:19---------------------------------------------------
 
-
-void OLEHandler::saveInteropProperties(uno::Reference<text::XTextDocument> const& xTextDocument, const OUString& sObjectName, const OUString& sOldObjectName)
+  -----------------------------------------------------------------------*/
+::rtl::OUString OLEHandler::copyOLEOStream( uno::Reference< text::XTextDocument > xTextDocument )
 {
-    static const char sEmbeddingsPropName[] = "EmbeddedObjects";
-
-    // get interop grab bag from document
-    uno::Reference< beans::XPropertySet > xDocProps( xTextDocument, uno::UNO_QUERY );
-    comphelper::SequenceAsHashMap aGrabBag(xDocProps->getPropertyValue(UNO_NAME_MISC_OBJ_INTEROPGRABBAG));
-
-    // get EmbeddedObjects property inside grab bag
-    comphelper::SequenceAsHashMap objectsList;
-    if (aGrabBag.find(sEmbeddingsPropName) != aGrabBag.end())
-        objectsList << aGrabBag[sEmbeddingsPropName];
-
-    uno::Sequence< beans::PropertyValue > aGrabBagAttribute(2);
-    aGrabBagAttribute[0].Name = "ProgID";
-    aGrabBagAttribute[0].Value = uno::Any( m_sProgId );
-    aGrabBagAttribute[1].Name = "DrawAspect";
-    aGrabBagAttribute[1].Value = uno::Any( m_sDrawAspect );
-
-    // If we got an "old name", erase that first.
-    if (!sOldObjectName.isEmpty())
-    {
-        comphelper::SequenceAsHashMap::iterator it = objectsList.find(sOldObjectName);
-        if (it != objectsList.end())
-            objectsList.erase(it);
-    }
-
-    objectsList[sObjectName] = uno::Any( aGrabBagAttribute );
-
-    // put objects list back into the grab bag
-    aGrabBag[sEmbeddingsPropName] = uno::Any(objectsList.getAsConstPropertyValueList());
-
-    // put grab bag back into the document
-    xDocProps->setPropertyValue(UNO_NAME_MISC_OBJ_INTEROPGRABBAG, uno::Any(aGrabBag.getAsConstPropertyValueList()));
-}
-
-void OLEHandler::importStream(uno::Reference<uno::XComponentContext> xComponentContext, uno::Reference<text::XTextDocument> xTextDocument, uno::Reference<text::XTextContent> xOLE)
-{
-    OUString aFilterService;
-    if (m_sProgId == "Word.Document.12")
-        aFilterService = "com.sun.star.comp.Writer.WriterFilter";
-
-    if (!m_xInputStream.is() || aFilterService.isEmpty())
-        return;
-
-    // Create the filter service.
-    uno::Reference<uno::XInterface> xInterface = xComponentContext->getServiceManager()->createInstanceWithContext(aFilterService, xComponentContext);
-
-    // Set target document.
-    uno::Reference<document::XImporter> xImporter(xInterface, uno::UNO_QUERY);
-    uno::Reference<document::XEmbeddedObjectSupplier> xSupplier(xOLE, uno::UNO_QUERY);
-    uno::Reference<lang::XComponent> xEmbeddedObject(xSupplier->getEmbeddedObject(), uno::UNO_QUERY);
-    xImporter->setTargetDocument( xEmbeddedObject );
-
-    // Import the input stream.
-#if SUPD == 310
-    comphelper::MediaDescriptor aMediaDescriptor;
-#else	// SUPD == 310
-    utl::MediaDescriptor aMediaDescriptor;
-#endif	// SUPD == 310
-    aMediaDescriptor["InputStream"] <<= m_xInputStream;
-    uno::Reference<document::XFilter> xFilter(xInterface, uno::UNO_QUERY);
-    xFilter->filter(aMediaDescriptor.getAsConstPropertyValueList());
-
-    // Now that the data is imported, update the (typically) changed stream name.
-    uno::Reference<beans::XPropertySet> xPropertySet(xOLE, uno::UNO_QUERY);
-    saveInteropProperties(xTextDocument, xPropertySet->getPropertyValue("StreamName").get<OUString>(), m_aURL);
-}
-
-OUString OLEHandler::getCLSID(uno::Reference<uno::XComponentContext> xComponentContext) const
-{
-    OUString aRet;
-
-#if SUPD == 310
-    if (m_sProgId == "Word.Document.12")
-#else	// SUPD == 310
-    if (officecfg::Office::Common::Filter::Microsoft::Import::WinWordToWriter::get(xComponentContext) && m_sProgId == "Word.Document.12")
-#endif	// SUPD == 310
-        aRet = "8BC6B165-B1B2-4EDD-aa47-dae2ee689dd6";
-
-    return aRet;
-}
-
-OUString OLEHandler::copyOLEOStream(
-        uno::Reference<text::XTextDocument> const& xTextDocument)
-{
-    OUString sRet;
+    ::rtl::OUString sRet;
     if( !m_xInputStream.is( ) )
         return sRet;
     try
     {
         uno::Reference < lang::XMultiServiceFactory > xFactory(xTextDocument, uno::UNO_QUERY_THROW);
         uno::Reference< document::XEmbeddedObjectResolver > xEmbeddedResolver(
-            xFactory->createInstance("com.sun.star.document.ImportEmbeddedObjectResolver"), uno::UNO_QUERY_THROW );
+            xFactory->createInstance(
+                ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.document.ImportEmbeddedObjectResolver" ))), uno::UNO_QUERY_THROW );
         //hack to work with the ImportEmbeddedObjectResolver
         static sal_Int32 nObjectCount = 100;
         uno::Reference< container::XNameAccess > xNA( xEmbeddedResolver, uno::UNO_QUERY_THROW );
-        OUString aURL("Obj");
-        aURL += OUString::number( nObjectCount++ );
+        ::rtl::OUString aURL(RTL_CONSTASCII_USTRINGPARAM("Obj" ));
+        aURL += ::rtl::OUString::valueOf( nObjectCount++ );
         uno::Reference < io::XOutputStream > xOLEStream;
         if( (xNA->getByName( aURL ) >>= xOLEStream) && xOLEStream.is() )
         {
@@ -312,20 +227,18 @@ OUString OLEHandler::copyOLEOStream(
                 }
             }
 
-            saveInteropProperties( xTextDocument, aURL );
-
-            static const char sProtocol[] = "vnd.sun.star.EmbeddedObject:";
-            OUString aPersistName( xEmbeddedResolver->resolveEmbeddedObjectURL( aURL ) );
-            sRet = aPersistName.copy( strlen(sProtocol) );
+            static const ::rtl::OUString sProtocol = ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("vnd.sun.star.EmbeddedObject:" ));
+            ::rtl::OUString aPersistName( xEmbeddedResolver->resolveEmbeddedObjectURL( aURL ) );
+            sRet = aPersistName.copy( sProtocol.getLength() );
 
         }
         uno::Reference< lang::XComponent > xComp( xEmbeddedResolver, uno::UNO_QUERY_THROW );
         xComp->dispose();
-        m_aURL = aURL;
     }
-    catch( const uno::Exception& )
+    catch( const uno::Exception& rEx)
     {
-        OSL_FAIL("exception in OLEHandler::createOLEObject");
+        (void)rEx;
+        OSL_ENSURE(false, "exception in OLEHandler::createOLEObject");
     }
     return sRet;
 }

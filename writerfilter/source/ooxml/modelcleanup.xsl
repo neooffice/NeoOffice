@@ -1,25 +1,32 @@
-<!--***********************************************************
- * 
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * 
- ***********************************************************-->
+<!--
+/*************************************************************************
+ *
+  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  
+  Copyright 2000, 2010 Oracle and/or its affiliates.
+ 
+  OpenOffice.org - a multi-platform office productivity suite
+ 
+  This file is part of OpenOffice.org.
+ 
+  OpenOffice.org is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3
+  only, as published by the Free Software Foundation.
+ 
+  OpenOffice.org is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License version 3 for more details
+  (a copy is included in the LICENSE file that accompanied this code).
+ 
+  You should have received a copy of the GNU Lesser General Public License
+  version 3 along with OpenOffice.org.  If not, see
+  <http://www.openoffice.org/license.html>
+  for a copy of the LGPLv3 License.
 
+ ************************************************************************/
 
+-->
 <xsl:stylesheet 
     version="1.0" 
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
@@ -33,9 +40,6 @@
   <xsl:key name="resources"
            match="resource[not(@generated)]" use="@name" />
 
-  <xsl:key name="resourcetags"
-           match="resource/@tag" use="ancestor::resource/@name"/>
-
   <xsl:template name="generateresource">
     <xsl:param name="resource"/>
     <xsl:element name="resource">
@@ -48,11 +52,6 @@
       <xsl:attribute name="generated">
         <xsl:text>yes</xsl:text>
       </xsl:attribute>
-      <xsl:for-each select="key('resourcetags', @name)">
-        <xsl:attribute name="tag">
-          <xsl:value-of select="."/>
-        </xsl:attribute>
-      </xsl:for-each>
     </xsl:element>
   </xsl:template>
 
@@ -67,11 +66,6 @@
       </xsl:attribute>
       <xsl:attribute name="resource">List</xsl:attribute>
       <xsl:attribute name="generated">yes</xsl:attribute>
-      <xsl:for-each select="key('resourcetags', @name)">
-        <xsl:attribute name="tag">
-          <xsl:value-of select="."/>
-        </xsl:attribute>
-      </xsl:for-each>
       <xsl:for-each select=".//rng:value">
         <xsl:element name="value">
           <xsl:attribute name="name">
@@ -154,18 +148,12 @@
         
     <xsl:template name="generatevalueresource">
         <xsl:variable name="name" select="@name"/>
-        <xsl:variable name="ns_id" select="generate-id(ancestor::namespace)"/>
         <resource>
             <xsl:attribute name="name">
                 <xsl:value-of select="@name"/>
             </xsl:attribute>
             <xsl:attribute name="resource">Value</xsl:attribute>
             <xsl:attribute name="generated">yes</xsl:attribute>
-            <xsl:for-each select="key('resourcetags', @name)[generate-id(ancestor::namespace) = $ns_id]">
-              <xsl:attribute name="tag">
-                <xsl:value-of select="."/>
-              </xsl:attribute>
-            </xsl:for-each>
             <xsl:for-each select=".//rng:attribute">
                 <xsl:variable name="type">
                     <xsl:choose>

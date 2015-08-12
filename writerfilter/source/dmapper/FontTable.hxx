@@ -1,29 +1,38 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FONTTABLE_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_FONTTABLE_HXX
+#ifndef INCLUDED_FONTTABLE_HXX
+#define INCLUDED_FONTTABLE_HXX
 
 #include <boost/shared_ptr.hpp>
-#include <resourcemodel/LoggedResources.hxx>
+#include <WriterFilterDllApi.hxx>
+#include <resourcemodel/WW8ResourceModel.hxx>
 #include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/io/XInputStream.hpp>
 
 namespace writerfilter {
 namespace dmapper
@@ -33,86 +42,71 @@ struct FontTable_Impl;
 struct FontEntry
 {
     typedef boost::shared_ptr<FontEntry> Pointer_t;
-
-    OUString sFontName;
-    OUString sFontName1;
+    
+    ::rtl::OUString sFontName;
+    ::rtl::OUString sFontName1;
     bool            bTrueType;
     sal_Int16       nPitchRequest;
     sal_Int32       nTextEncoding;
     sal_Int32       nFontFamilyId;
     sal_Int32       nBaseWeight;
     sal_Int32       nAltFontIndex;
-    OUString sFontSignature;
+    ::rtl::OUString sPanose;
+    ::rtl::OUString sFontSignature;
+    ::rtl::OUString sAlternativeFont;
     FontEntry() :
         bTrueType(false),
         nPitchRequest( 0 ),
-        nTextEncoding( RTL_TEXTENCODING_DONTKNOW ),
+        nTextEncoding( 0 ),
         nFontFamilyId( 0 ),
         nBaseWeight( 0 ),
         nAltFontIndex( 0 )
         {}
 };
-
-class FontTable : public LoggedProperties, public LoggedTable
-    /*,public BinaryObj*/, public LoggedStream
+class WRITERFILTER_DLLPRIVATE FontTable : public Properties, public Table
+                    /*,public BinaryObj*/, public Stream
 {
     FontTable_Impl   *m_pImpl;
 
- public:
+public:
     FontTable();
     virtual ~FontTable();
 
-    sal_uInt32          size();
-    const FontEntry::Pointer_t  getFontEntry(sal_uInt32 nIndex);
-
- private:
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
-    void resolveSprm(Sprm & r_sprm);
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
 
     // Table
-    virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
+    virtual void entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
+
+    // BinaryObj
+//    virtual void data(const sal_Int8* buf, size_t len,
+//                      writerfilter::Reference<Properties>::Pointer_t ref);
 
     // Stream
-    virtual void lcl_startSectionGroup() SAL_OVERRIDE;
-    virtual void lcl_endSectionGroup() SAL_OVERRIDE;
-    virtual void lcl_startParagraphGroup() SAL_OVERRIDE;
-    virtual void lcl_endParagraphGroup() SAL_OVERRIDE;
-    virtual void lcl_startCharacterGroup() SAL_OVERRIDE;
-    virtual void lcl_endCharacterGroup() SAL_OVERRIDE;
-    virtual void lcl_text(const sal_uInt8 * data, size_t len) SAL_OVERRIDE;
-    virtual void lcl_utext(const sal_uInt8 * data, size_t len) SAL_OVERRIDE;
-    virtual void lcl_props(writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_table(Id name,
-                           writerfilter::Reference<Table>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_substream(Id name,
-                               ::writerfilter::Reference<Stream>::Pointer_t ref) SAL_OVERRIDE;
-    virtual void lcl_info(const std::string & info) SAL_OVERRIDE;
-    virtual void lcl_startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > const& xShape ) SAL_OVERRIDE;
-    virtual void lcl_endShape( ) SAL_OVERRIDE;
+    virtual void startSectionGroup();
+    virtual void endSectionGroup();
+    virtual void startParagraphGroup();
+    virtual void endParagraphGroup();
+    virtual void startCharacterGroup();
+    virtual void endCharacterGroup();
+    virtual void text(const sal_uInt8 * data, size_t len);
+    virtual void utext(const sal_uInt8 * data, size_t len);
+    virtual void props(writerfilter::Reference<Properties>::Pointer_t ref);
+    virtual void table(Id name,
+                       writerfilter::Reference<Table>::Pointer_t ref);
+    virtual void substream(Id name,
+                           ::writerfilter::Reference<Stream>::Pointer_t ref);
+    virtual void info(const string & info);
+    virtual void startShape( ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShape > xShape );
+    virtual void endShape( );
 
+    const FontEntry::Pointer_t  getFontEntry(sal_uInt32 nIndex);
+    sal_uInt32          size();
 };
 typedef boost::shared_ptr< FontTable >          FontTablePtr;
-
-class EmbeddedFontHandler : public LoggedProperties
-{
-public:
-    EmbeddedFontHandler( const OUString& fontName, const char* style );
-    virtual ~EmbeddedFontHandler();
-private:
-    virtual void lcl_attribute( Id name, Value& val ) SAL_OVERRIDE;
-    virtual void lcl_sprm( Sprm& rSprm ) SAL_OVERRIDE;
-    OUString fontName;
-    const char* const style;
-    OUString id;
-    OUString fontKey;
-    ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > inputStream;
-};
-
-
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

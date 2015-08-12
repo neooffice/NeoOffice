@@ -1,32 +1,45 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
-#ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_STYLESHEETTABLE_HXX
-#define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_STYLESHEETTABLE_HXX
+ * This file is part of OpenOffice.org.
+ *
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
+ *
+ ************************************************************************/
+#ifndef INCLUDED_STYLESHEETTABLE_HXX
+#define INCLUDED_STYLESHEETTABLE_HXX
 
 #include "TblStylePrHandler.hxx"
 
+#include <WriterFilterDllApi.hxx>
 #include <dmapper/DomainMapper.hxx>
 #include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/beans/PropertyValues.hpp>
-#include "PropertyMap.hxx"
-#include "FontTable.hxx"
-#include <resourcemodel/LoggedResources.hxx>
+#include <PropertyMap.hxx>
+#include <FontTable.hxx>
+#include <resourcemodel/WW8ResourceModel.hxx>
+
+#ifdef DEBUG_DOMAINMAPPER
+#include <resourcemodel/TagLogger.hxx>
+#endif
 
 namespace com{ namespace sun { namespace star { namespace text{
     class XTextDocument;
@@ -44,83 +57,76 @@ enum StyleType
     STYLE_TYPE_PARA,
     STYLE_TYPE_CHAR,
     STYLE_TYPE_TABLE,
-    STYLE_TYPE_LIST
+    STYLE_LIST
 };
 
 struct StyleSheetTable_Impl;
 class StyleSheetEntry
 {
-    std::vector<css::beans::PropertyValue> m_aInteropGrabBag;
 public:
-    OUString sStyleIdentifierI;
-    OUString sStyleIdentifierD;
+    ::rtl::OUString sStyleIdentifierI;
+    ::rtl::OUString sStyleIdentifierD;
     bool            bIsDefaultStyle;
     bool            bInvalidHeight;
     bool            bHasUPE; //universal property expansion
     StyleType       nStyleTypeCode; //sgc
-    OUString sBaseStyleIdentifier;
-    OUString sNextStyleIdentifier;
-    OUString sStyleName;
-    OUString sStyleName1;
+    ::rtl::OUString sBaseStyleIdentifier;
+    ::rtl::OUString sNextStyleIdentifier;
+    ::rtl::OUString sStyleName;
+    ::rtl::OUString sStyleName1;
     PropertyMapPtr  pProperties;
-    OUString sConvertedStyleName;
-    std::vector<css::beans::PropertyValue> aLatentStyles; ///< Attributes of latentStyles
-    std::vector<css::beans::PropertyValue> aLsdExceptions; ///< List of lsdException attribute lists
-    bool           bAutoRedefine; ///< Writer calls this auto-update.
-
-    void AppendInteropGrabBag(css::beans::PropertyValue aValue);
-    css::beans::PropertyValue GetInteropGrabBag(); ///< Used for table styles, has a name.
-    css::beans::PropertyValues GetInteropGrabBagSeq(); ///< Used for existing styles, just a list of properties.
-
+    ::rtl::OUString sConvertedStyleName;
+    
+#ifdef DEBUG_DOMAINMAPPER
+    virtual XMLTag::Pointer_t toTag();
+#endif
+    
     StyleSheetEntry();
     virtual ~StyleSheetEntry();
 };
 
 typedef boost::shared_ptr<StyleSheetEntry> StyleSheetEntryPtr;
-typedef ::std::deque<StyleSheetEntryPtr> StyleSheetEntryDeque;
-typedef boost::shared_ptr<StyleSheetEntryDeque> StyleSheetEntryDequePtr;
 
 class DomainMapper;
 class StyleSheetTable :
-        public LoggedProperties,
-        public LoggedTable
+        public Properties,
+        public Table
 {
     StyleSheetTable_Impl   *m_pImpl;
 
 public:
     StyleSheetTable( DomainMapper& rDMapper,
-                        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument> const& xTextDocument, bool bIsNewDoc );
+                        ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextDocument> xTextDocument );
     virtual ~StyleSheetTable();
 
-    void ApplyStyleSheets( FontTablePtr rFontTable );
-    const StyleSheetEntryPtr FindStyleSheetByISTD(const OUString& sIndex);
-    const StyleSheetEntryPtr FindStyleSheetByStyleName(const OUString& rIndex);
-    const StyleSheetEntryPtr FindStyleSheetByConvertedStyleName(const OUString& rIndex);
-    const StyleSheetEntryPtr FindDefaultParaStyle();
-    // returns the parent of the one with the given name - if empty the parent of the current style sheet is returned
-    const StyleSheetEntryPtr FindParentStyleSheet(const OUString& sBaseStyle);
-
-    OUString ConvertStyleName( const OUString& rWWName, bool bExtendedSearch = false );
-
-    OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
-
-    /// Returns the default character properties.
-    PropertyMapPtr GetDefaultCharProps();
-
-private:
     // Properties
-    virtual void lcl_attribute(Id Name, Value & val) SAL_OVERRIDE;
-    virtual void lcl_sprm(Sprm & sprm) SAL_OVERRIDE;
+    virtual void attribute(Id Name, Value & val);
+    virtual void sprm(Sprm & sprm);
 
     // Table
-    virtual void lcl_entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref) SAL_OVERRIDE;
+    virtual void entry(int pos, writerfilter::Reference<Properties>::Pointer_t ref);
 
-    void applyDefaults(bool bParaProperties);
+    void ApplyStyleSheets( FontTablePtr rFontTable );
+    const StyleSheetEntryPtr FindStyleSheetByISTD(const ::rtl::OUString& sIndex);
+    const StyleSheetEntryPtr FindStyleSheetByStyleName(const ::rtl::OUString& rIndex);
+    const StyleSheetEntryPtr FindStyleSheetByConvertedStyleName(const ::rtl::OUString& rIndex);
+    // returns the parent of the one with the given name - if empty the parent of the current style sheet is returned
+    const StyleSheetEntryPtr FindParentStyleSheet(::rtl::OUString sBaseStyle);
+
+    ::rtl::OUString ConvertStyleName( const ::rtl::OUString& rWWName, bool bExtendedSearch = false );
+    ::rtl::OUString GetStyleIdFromIndex(const sal_uInt32 sti);
+
+    ::rtl::OUString getOrCreateCharStyle( PropertyValueVector_t& rCharProperties );
+
+private:
+    void resolveAttributeProperties(Value & val);
+    void resolveSprmProps(Sprm & sprm_);
+    void applyDefaults(bool bParaProperties); 
 };
 typedef boost::shared_ptr< StyleSheetTable >    StyleSheetTablePtr;
 
 
-class TableStyleSheetEntry :
+class WRITERFILTER_DLLPRIVATE TableStyleSheetEntry : 
     public StyleSheetEntry
 {
 private:
@@ -138,13 +144,14 @@ public:
     // fixes some possible properties conflicts, like borders ones.
     void AddTblStylePr( TblStyleType nType, PropertyMapPtr pProps );
 
-    // Gets all the properties
+    // Gets all the properties 
     //     + corresponding to the mask,
     //     + from the parent styles
-
-    // @param mask      mask describing which properties to return
-    // @param pStack    already processed StyleSheetEntries
-    PropertyMapPtr GetProperties( sal_Int32 nMask, StyleSheetEntryDequePtr pStack = StyleSheetEntryDequePtr());
+    PropertyMapPtr GetProperties( sal_Int32 nMask );
+    
+#ifdef DEBUG_DOMAINMAPPER
+    virtual XMLTag::Pointer_t toTag();
+#endif
 
     TableStyleSheetEntry( StyleSheetEntry& aEntry, StyleSheetTable* pStyles );
     virtual ~TableStyleSheetEntry( );
@@ -156,6 +163,6 @@ typedef boost::shared_ptr<TableStyleSheetEntry> TableStyleSheetEntryPtr;
 
 }}
 
-#endif
+#endif //
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

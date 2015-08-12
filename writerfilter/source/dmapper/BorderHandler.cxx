@@ -1,177 +1,185 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This file is part of the LibreOffice project.
+/*************************************************************************
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * This file incorporates work covered by the following license notice:
+ * This file is part of NeoOffice.
  *
- *   Licensed to the Apache Software Foundation (ASF) under one or more
- *   contributor license agreements. See the NOTICE file distributed
- *   with this work for additional information regarding copyright
- *   ownership. The ASF licenses this file to you under the Apache
- *   License, Version 2.0 (the "License"); you may not use this file
- *   except in compliance with the License. You may obtain a copy of
- *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
- */
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified September 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
 #include <BorderHandler.hxx>
-#include <TDefTableHandler.hxx>
 #include <PropertyMap.hxx>
+#include <resourcemodel/QNameToString.hxx>
+#include <doctok/resourceids.hxx>
 #include <ConversionHelper.hxx>
+#if SUPD == 310
+#include <com/sun/star/table/BorderLine.hpp>
+#else	 // SUPD == 310
 #include <com/sun/star/table/BorderLine2.hpp>
+#endif	// SUPD == 310
 #include <ooxml/resourceids.hxx>
 #include <dmapperLoggers.hxx>
-#if SUPD == 310
-#include <svx/util.hxx>
-#else	// SUPD == 310
-#include <filter/msfilter/util.hxx>
-#endif	// SUPD == 310
 
 namespace writerfilter {
 
 namespace dmapper {
 
 using namespace ::com::sun::star;
+//using namespace ::std;
 
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
+  -----------------------------------------------------------------------*/
 BorderHandler::BorderHandler( bool bOOXML ) :
-LoggedProperties(dmapper_logger, "BorderHandler"),
-m_nCurrentBorderPosition( BORDER_TOP ),
-m_nLineWidth(15), // Word default, in twips
-m_nLineType(0),
-m_nLineColor(0),
-m_nLineDistance(0),
-m_bShadow(false),
-m_bOOXML( bOOXML )
+    m_nCurrentBorderPosition( BORDER_TOP ),
+    m_nLineWidth(0),
+    m_nLineType(0),
+    m_nLineColor(0),
+    m_nLineDistance(0),
+    m_bOOXML( bOOXML )
 {
     const int nBorderCount(BORDER_COUNT);
     std::fill_n(m_aFilledLines, nBorderCount, false);
     std::fill_n(m_aBorderLines, nBorderCount, table::BorderLine2());
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
+  -----------------------------------------------------------------------*/
 BorderHandler::~BorderHandler()
 {
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
-void BorderHandler::lcl_attribute(Id rName, Value & rVal)
+  -----------------------------------------------------------------------*/
+void BorderHandler::attribute(Id rName, Value & rVal)
 {
+#ifdef DEBUG_DOMAINMAPPER
+    dmapper_logger->startElement("BorderHandler.attribute");
+    dmapper_logger->attribute("id", (*QNameToString::Instance())(rName));
+    dmapper_logger->endElement("BorderHandler.attribute");
+#endif
+
     sal_Int32 nIntValue = rVal.getInt();
+    /* WRITERFILTERSTATUS: table: BorderHandler_attributedata */
     switch( rName )
     {
-        case NS_ooxml::LN_CT_Border_sz:
-            //  width of a single line in 1/8 pt, max of 32 pt -> twip * 5 / 2.
-            m_nLineWidth = nIntValue * 5 / 2;
-            appendGrabBag("sz", OUString::number(nIntValue));
-        break;
-        case NS_ooxml::LN_CT_Border_val:
-            m_nLineType = nIntValue;
-            appendGrabBag("val", TDefTableHandler::getBorderTypeString(nIntValue));
-        break;
-        case NS_ooxml::LN_CT_Border_color:
-            m_nLineColor = nIntValue;
-#if SUPD == 310
-            appendGrabBag("color", OStringToOUString(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true), RTL_TEXTENCODING_UTF8));
-#else	// SUPD == 310
-            appendGrabBag("color", OUString::fromUtf8(msfilter::util::ConvertColor(nIntValue, /*bAutoColor=*/true)));
-#endif	// SUPD == 310
-        break;
-        case NS_ooxml::LN_CT_Border_space: // border distance in points
-            m_nLineDistance = ConversionHelper::convertTwipToMM100( nIntValue * 20 );
-            appendGrabBag("space", OUString::number(nIntValue));
-        break;
-        case NS_ooxml::LN_CT_Border_shadow:
-            m_bShadow = nIntValue;
-        break;
-        case NS_ooxml::LN_CT_Border_frame:
-        case NS_ooxml::LN_CT_Border_themeTint:
-            appendGrabBag("themeTint", OUString::number(nIntValue, 16));
-            break;
-        case NS_ooxml::LN_CT_Border_themeColor:
-            appendGrabBag("themeColor", TDefTableHandler::getThemeColorTypeString(nIntValue));
-            break;
-        default:
-            OSL_FAIL( "unknown attribute");
-    }
-}
-
-void BorderHandler::lcl_sprm(Sprm & rSprm)
-{
-    BorderPosition pos = BORDER_COUNT; // invalid pos
-    const bool rtl = false; // TODO detect
-    OUString aBorderPos;
-    switch( rSprm.getId())
-    {
-        case NS_ooxml::LN_CT_TblBorders_top:
-            pos = BORDER_TOP;
-            aBorderPos = "top";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_start:
-            pos = rtl ? BORDER_RIGHT : BORDER_LEFT;
-            aBorderPos = "start";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_left:
-            pos = BORDER_LEFT;
-            aBorderPos = "left";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_bottom:
-            pos = BORDER_BOTTOM;
-            aBorderPos = "bottom";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_end:
-            pos = rtl ? BORDER_LEFT : BORDER_RIGHT;
-            aBorderPos = "end";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_right:
-            pos = BORDER_RIGHT;
-            aBorderPos = "right";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_insideH:
-            pos = BORDER_HORIZONTAL;
-            aBorderPos = "insideH";
-            break;
-        case NS_ooxml::LN_CT_TblBorders_insideV:
-            pos = BORDER_VERTICAL;
-            aBorderPos = "insideV";
-            break;
-        default:
-            break;
-    }
-    if( pos != BORDER_COUNT )
-    {
-        writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_rgbrc:
         {
-            comphelper::SequenceAsVector<beans::PropertyValue> aSavedGrabBag;
-            if (!m_aInteropGrabBagName.isEmpty())
+            writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
+            if( pProperties.get())
             {
-                aSavedGrabBag = m_aInteropGrabBag;
-                m_aInteropGrabBag.clear();
-            }
-            pProperties->resolve(*this);
-            if (!m_aInteropGrabBagName.isEmpty())
-            {
-                aSavedGrabBag.push_back(getInteropGrabBag(aBorderPos));
-                m_aInteropGrabBag = aSavedGrabBag;
+                pProperties->resolve(*this);
+                ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,  
+                                                                                m_aBorderLines[m_nCurrentBorderPosition], m_bOOXML );
+                OSL_ENSURE(m_nCurrentBorderPosition < BORDER_COUNT, "too many border values");
+                ++m_nCurrentBorderPosition;
             }
         }
-        ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,
-                               m_aBorderLines[ pos ], m_bOOXML );
-        m_aFilledLines[ pos ] = true;
+        break;
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_DPTLINEWIDTH: // 0x2871
+            //  width of a single line in 1/8 pt, max of 32 pt -> twip * 5 / 2.
+            m_nLineWidth = ConversionHelper::convertTwipToMM100( nIntValue * 5 / 2 );
+        break;
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_rtf::LN_BRCTYPE:    // 0x2872
+            m_nLineType = nIntValue;
+        break;
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_Border_color:
+        case NS_rtf::LN_ICO:        // 0x2873
+            m_nLineColor = nIntValue;
+        break;
+        /* WRITERFILTERSTATUS: done: 100, planned: 0, spent: 0 */
+        case NS_rtf::LN_DPTSPACE:   // border distance in points
+            m_nLineDistance = ConversionHelper::convertTwipToMM100( nIntValue * 20 );
+        break;
+        case NS_rtf::LN_FSHADOW:    // 0x2875
+            //if 1 then line has shadow - unsupported
+        case NS_rtf::LN_FFRAME:     // 0x2876
+        case NS_rtf::LN_UNUSED2_15: // 0x2877
+            // ignored
+        break;
+        case NS_ooxml::LN_CT_Border_themeTint: break;
+        case NS_ooxml::LN_CT_Border_themeColor: break;
+        default:
+            OSL_ENSURE( false, "unknown attribute");
     }
 }
+/*-- 24.04.2007 09:06:35---------------------------------------------------
 
+  -----------------------------------------------------------------------*/
+void BorderHandler::sprm(Sprm & rSprm)
+{
+#ifdef DEBUG_DOMAINMAPPER
+    dmapper_logger->startElement("BorderHandler.sprm");
+    dmapper_logger->attribute("sprm", rSprm.toString());
+#endif
+    
+    /* WRITERFILTERSTATUS: table: BorderHandler_sprm */
+    switch( rSprm.getId())
+    {
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_top:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_left:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_bottom: 
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_right:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_insideH:
+        /* WRITERFILTERSTATUS: done: 75, planned: 0, spent: 0 */
+        case NS_ooxml::LN_CT_TblBorders_insideV:
+        {    
+            writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
+            if( pProperties.get())
+                pProperties->resolve(*this);
+            ConversionHelper::MakeBorderLine( m_nLineWidth,   m_nLineType, m_nLineColor,  
+                                   m_aBorderLines[rSprm.getId() - NS_ooxml::LN_CT_TblBorders_top], m_bOOXML );
+
+            m_aFilledLines[ rSprm.getId( ) - NS_ooxml::LN_CT_TblBorders_top] = true;
+        }
+        break;
+        default:;
+    }
+    
+#ifdef DEBUG_DOMAINMAPPER
+    dmapper_logger->endElement("BorderHandler.sprm");
+#endif
+                              
+}
+/*-- 24.04.2007 09:09:01---------------------------------------------------
+
+  -----------------------------------------------------------------------*/
 PropertyMapPtr  BorderHandler::getProperties()
 {
-    static const PropertyIds aPropNames[BORDER_COUNT] =
+    static const PropertyIds aPropNames[BORDER_COUNT] = 
     {
         PROP_TOP_BORDER,
         PROP_LEFT_BORDER,
         PROP_BOTTOM_BORDER,
         PROP_RIGHT_BORDER,
         META_PROP_HORIZONTAL_BORDER,
-        META_PROP_VERTICAL_BORDER
+        META_PROP_VERTICAL_BORDER 
     };
     PropertyMapPtr pPropertyMap(new PropertyMap);
     // don't fill in default properties
@@ -180,13 +188,13 @@ PropertyMapPtr  BorderHandler::getProperties()
         for( sal_Int32 nProp = 0; nProp < BORDER_COUNT; ++nProp)
         {
             if ( m_aFilledLines[nProp] ) {
-                pPropertyMap->Insert( aPropNames[nProp], uno::makeAny( m_aBorderLines[nProp] ) );
+                pPropertyMap->Insert( aPropNames[nProp], false, uno::makeAny( m_aBorderLines[nProp] ) );
             }
         }
     }
     return pPropertyMap;
 }
-/*-------------------------------------------------------------------------
+/*-- 14.11.2007 12:42:52---------------------------------------------------
     used only in OOXML import
   -----------------------------------------------------------------------*/
 table::BorderLine2 BorderHandler::getBorderLine()
@@ -194,32 +202,6 @@ table::BorderLine2 BorderHandler::getBorderLine()
     table::BorderLine2 aBorderLine;
     ConversionHelper::MakeBorderLine( m_nLineWidth, m_nLineType, m_nLineColor, aBorderLine, m_bOOXML );
     return aBorderLine;
-}
-
-
-void BorderHandler::enableInteropGrabBag(const OUString& aName)
-{
-    m_aInteropGrabBagName = aName;
-}
-
-beans::PropertyValue BorderHandler::getInteropGrabBag(const OUString& aName)
-{
-    beans::PropertyValue aRet;
-    if (aName.isEmpty())
-        aRet.Name = m_aInteropGrabBagName;
-    else
-        aRet.Name = aName;
-
-    aRet.Value = uno::makeAny(m_aInteropGrabBag.getAsConstList());
-    return aRet;
-}
-
-void BorderHandler::appendGrabBag(const OUString& aKey, const OUString& aValue)
-{
-    beans::PropertyValue aProperty;
-    aProperty.Name = aKey;
-    aProperty.Value = uno::makeAny(aValue);
-    m_aInteropGrabBag.push_back(aProperty);
 }
 
 } //namespace dmapper
