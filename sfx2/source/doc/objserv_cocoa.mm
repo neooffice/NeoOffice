@@ -153,13 +153,13 @@ static NSAlert *pSaveDisabledAlert = nil;
 		return;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-#ifdef PRODUCT_DOWNLOAD_URL
-	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_DOWNLOAD_URL )];
+#ifdef PRODUCT_MAC_APP_STORE_URL
+	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] && ![@"http" isEqualToString:[pURL scheme]] && ![@"https" isEqualToString:[pURL scheme]] )
 		pURL = nil;
-#else	// PRODUCT_DOWNLOAD_URL
+#else	// PRODUCT_MAC_APP_STORE_URL
 	NSURL *pURL = nil;
-#endif	// PRODUCT_DOWNLOAD_URL
+#endif	// PRODUCT_MAC_APP_STORE_URL
 
 	@try
 	{

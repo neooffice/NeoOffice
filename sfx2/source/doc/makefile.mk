@@ -39,8 +39,8 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
-.IF "$(PRODUCT_DOWNLOAD_URL)" != ""
-CFLAGS+=-DPRODUCT_DOWNLOAD_URL='"$(PRODUCT_DOWNLOAD_URL)"'
+.IF "$(PRODUCT_MAC_APP_STORE_URL)" != ""
+CFLAGS+=-DPRODUCT_MAC_APP_STORE_URL='"$(PRODUCT_MAC_APP_STORE_URL)"'
 .ENDIF
 
 # --- Files --------------------------------------------------------
