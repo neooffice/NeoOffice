@@ -50,7 +50,7 @@ LIBTARGET=NO
 
 .IF "$(UPD)" == "310"
 INCLOCAL+= \
-	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/cssxmlcrypto \
+	-I$(PRJ)$/..$/offapi$/$(INPATH)$/inc$/xsec-crypto \
 	-I$(PRJ)$/..$/sal$/inc
 .ENDIF		# "$(UPD)" == "310"
 
