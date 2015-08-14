@@ -2554,21 +2554,6 @@ static CFDataRef aRTFSelection = nil;
 	if ( pWindow && [pWindow isVisible] && [self isKindOfClass:[VCLView class]] )
 	{
 		[pWindow disableFlushWindow];
-
-		// Fix black window corners in presentation minimizer floating toolbar
-		// when running on OS X 10.11 by drawing the window's background color
-		if ( [self isOpaque] )
-		{
-			NSColor *pColor = [pWindow backgroundColor];
-			if ( !pColor || [pColor alphaComponent] != 1.0f )
-				pColor = [NSColor whiteColor];
-			if ( pColor )
-			{
-				[pColor set];
-				[NSBezierPath fillRect:aDirtyRect];
-			}
-		}
-
 		JavaSalFrame_drawToNSView( self, aDirtyRect );
 		[pWindow enableFlushWindow];
 	}
