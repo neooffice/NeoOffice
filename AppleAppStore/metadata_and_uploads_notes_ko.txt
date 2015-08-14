@@ -36,7 +36,7 @@ El Capitan Public Beta users: this version also fixes the following bugs:
 
 
 Keywords:
-neo,office,스프레드시트,텍스트,프레젠테이션,open,libre
+neo,office,document,word,스프레드시트,텍스트,프레젠테이션,open,libre,excel
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php

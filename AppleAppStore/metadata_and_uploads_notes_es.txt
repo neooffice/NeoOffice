@@ -36,7 +36,7 @@ El Capitan Public Beta users: this version also fixes the following bugs:
 
 
 Keywords:
-neo,office,hoja,texto,presentación,open,libre
+neo,office,document,word,hoja,texto,presentación,open,libre,excel
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
