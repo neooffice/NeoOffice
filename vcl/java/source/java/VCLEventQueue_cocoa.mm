@@ -689,7 +689,6 @@ static void RegisterMainBundleWithLaunchServices()
 - (MacOSBOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
 - (void)poseAsResignKeyWindow;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
-- (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
 static MacOSBOOL bJavaAWTInitialized = NO;

@@ -47,14 +47,6 @@
 
 #include "salinst_cocoa.h"
 
-#ifndef NSURLBookmarkCreationWithSecurityScope
-#define NSURLBookmarkCreationWithSecurityScope ( 1UL << 11 )
-#endif	// !NSURLBookmarkCreationWithSecurityScope
-
-#ifndef NSURLBookmarkResolutionWithSecurityScope
-#define NSURLBookmarkResolutionWithSecurityScope ( 1UL << 10 )
-#endif	// !NSURLBookmarkResolutionWithSecurityScope
-
 // Uncomment the following line to implement the panel:shouldEnableURL:
 // delegate selector. Note: implementing that selector will cause hanging in
 // Open dialogs after a Save panel has been displayed on Mac OS X 10.9
