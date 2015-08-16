@@ -1357,7 +1357,14 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 			CGLayerRelease( maLayer );
 		maLayer = aLayer;
 		if ( maLayer )
+		{
 			CGLayerRetain( maLayer );
+
+			// Fix black window corners in presentation minimizer floating
+			// toolbar when running on OS X 10.11 by forcing the entire layer
+			// to be displayed
+			addNeedsDisplayRect( maNativeBounds, 0 );
+		}
 	}
 }
 
