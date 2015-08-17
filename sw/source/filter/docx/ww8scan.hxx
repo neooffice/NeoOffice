@@ -25,6 +25,14 @@
  * Modified July 2015 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil -*- */
@@ -716,7 +724,11 @@ class WW8PLCFx_Book : public WW8PLCFx
 private:
     WW8PLCFspecial* pBook[2];           // Start and End Position
     ::std::vector<String> aBookNames;   // Name
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     eBookStatus* pStatus;
+#else	// NO_LIBO_BOOK_STATUS_FIX
+    std::vector<eBookStatus> aStatus;
+#endif	// NO_LIBO_BOOK_STATUS_FIX
     long nIMax;                         // Number of Booknotes
     USHORT nIsEnd;
 	int nBookmarkId; // counter incremented by GetUniqueBookmarkName.
