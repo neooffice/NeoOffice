@@ -108,7 +108,11 @@ SQLRETURN OAdabasConnection::Construct( const ::rtl::OUString& url,const Sequenc
 	}
 	m_sUser = aUID;
 
+#if SUPD == 310
+	if( sHostName.getLength() )
+#else	// SUPD == 310
 	if( !sHostName.isEmpty() )
+#endif	// SUPD == 310
 		aDSN = sHostName + ::rtl::OUString::createFromAscii(":") + aDSN;
 	SQLRETURN nSQLRETURN = openConnectionWithAuth(aDSN,nTimeout, aUID,aPWD);
 
