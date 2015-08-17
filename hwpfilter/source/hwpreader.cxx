@@ -47,7 +47,11 @@
 #define rendEl(x)       do { if (m_rxDocumentHandler.is()) m_rxDocumentHandler->endElement(x); } while(false)
 #define rchars(x)       do { if (m_rxDocumentHandler.is()) m_rxDocumentHandler->characters(x); } while(false)
 #define padd(x,y,z)     pList->addAttribute(x,y,z)
+#if SUPD == 310
+#define Double2Str(x)   OUString::valueOf((double)(x))
+#else	// SUPD == 310
 #define Double2Str(x)   OUString::number((double)(x))
+#endif	// SUPD == 310
 #define WTI(x)          ((double)(x) / 1800.)     // unit => inch
 #define WTMM(x)     ((double)(x) / 1800. * 25.4)  // unit => mm
 #define WTSM(x)     ((int)((x) / 1800. * 2540))   // unit ==> 1/100 mm
@@ -3138,25 +3142,41 @@ void HwpReader::makeFieldCode(hchar_string & rStr, FieldCode *hbox)
 /* 문서요약 */
     else if( hbox->type[0] == 3 && hbox->type[1] == 0 )
     {
+#if SUPD == 310
+        if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("title")))
+#else	// SUPD == 310
         if (hconv(hbox->str3) == "title")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:title"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:title") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("subject")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "subject")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:subject"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:subject") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("author")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "author")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:author-name"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:author-name") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("keywords")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "keywords")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:keywords"), rList );
             rchars(  hconv(hbox->str2) );
@@ -3166,61 +3186,101 @@ void HwpReader::makeFieldCode(hchar_string & rStr, FieldCode *hbox)
 /* 개인정보 */
     else if( hbox->type[0] == 3 && hbox->type[1] == 1 )
     {
+#if SUPD == 310
+        if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("User")))
+#else	// SUPD == 310
         if (hconv(hbox->str3) == "User")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-lastname"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-lastname") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Company")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Company")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-company"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-company") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Position")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Position")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-title"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-title") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Division")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Division")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-position"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-position") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Fax")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Fax")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-fax"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-fax") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Pager")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Pager")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:phone-private"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:phone-private") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("E-mail")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "E-mail")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-email"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-email") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Zipcode(office)")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Zipcode(office)")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-postal-code"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-postal-code") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Phone(office)")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Phone(office)")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-phone-work"), rList );
             rchars(  hconv(hbox->str2) );
             rendEl( ascii("text:sender-phone-work") );
         }
+#if SUPD == 310
+        else if (hconv(hbox->str3) == OUString(RTL_CONSTASCII_USTRINGPARAM("Address(office)")))
+#else	// SUPD == 310
         else if (hconv(hbox->str3) == "Address(office)")
+#endif	// SUPD == 310
         {
             rstartEl( ascii("text:sender-street"), rList );
             rchars(  hconv(hbox->str2) );
