@@ -3989,7 +3989,11 @@ void WW8ReadSTTBF(bool bVer8, SvStream& rStrm, UINT32 nStart, INT32 nLen,
 }
 
 WW8PLCFx_Book::WW8PLCFx_Book(SvStream* pTblSt, const WW8Fib& rFib)
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     : WW8PLCFx(rFib.GetFIBVersion(), false), pStatus(0), nIsEnd(0), nBookmarkId(1)
+#else	// NO_LIBO_BOOK_STATUS_FIX
+    : WW8PLCFx(rFib.GetFIBVersion(), false), nIsEnd(0), nBookmarkId(1)
+#endif	// NO_LIBO_BOOK_STATUS_FIX
 {
     if( !rFib.fcPlcfbkf || !rFib.lcbPlcfbkf || !rFib.fcPlcfbkl ||
         !rFib.lcbPlcfbkl || !rFib.fcSttbfbkmk || !rFib.lcbSttbfbkmk )
@@ -4015,14 +4019,20 @@ WW8PLCFx_Book::WW8PLCFx_Book(SvStream* pTblSt, const WW8Fib& rFib)
             nIMax = pBook[0]->GetIMax();
         if( pBook[1]->GetIMax() < nIMax )
             nIMax = pBook[1]->GetIMax();
+#ifdef NO_LIBO_BOOK_STATUS_FIX
         pStatus = new eBookStatus[ nIMax ];
         memset( pStatus, 0, nIMax * sizeof( eBookStatus ) );
+#else	// NO_LIBO_BOOK_STATUS_FIX
+        aStatus.resize(nIMax);
+#endif	// NO_LIBO_BOOK_STATUS_FIX
     }
 }
 
 WW8PLCFx_Book::~WW8PLCFx_Book()
 {
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     delete[] pStatus;
+#endif	// NO_LIBO_BOOK_STATUS_FIX
     delete pBook[1];
     delete pBook[0];
 }
@@ -4138,15 +4148,28 @@ long WW8PLCFx_Book::GetLen() const
 void WW8PLCFx_Book::SetStatus(USHORT nIndex, eBookStatus eStat )
 {
     ASSERT(nIndex < nIMax, "set status of non existing bookmark!");
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     pStatus[nIndex] = (eBookStatus)( pStatus[nIndex] | eStat );
+#else	// NO_LIBO_BOOK_STATUS_FIX
+    eBookStatus eStatus = aStatus.at(nIndex);
+    aStatus[nIndex] = static_cast<eBookStatus>(eStatus | eStat);
+#endif	// NO_LIBO_BOOK_STATUS_FIX
 }
 
 eBookStatus WW8PLCFx_Book::GetStatus() const
 {
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     if( !pStatus )
+#else	// NO_LIBO_BOOK_STATUS_FIX
+    if (aStatus.empty())
+#endif	// NO_LIBO_BOOK_STATUS_FIX
         return BOOK_NORMAL;
     long nEndIdx = GetHandle();
+#ifdef NO_LIBO_BOOK_STATUS_FIX
     return ( nEndIdx < nIMax ) ? pStatus[nEndIdx] : BOOK_NORMAL;
+#else	// NO_LIBO_BOOK_STATUS_FIX
+    return ( nEndIdx < nIMax ) ? aStatus[nEndIdx] : BOOK_NORMAL;
+#endif	// NO_LIBO_BOOK_STATUS_FIX
 }
 
 long WW8PLCFx_Book::GetHandle() const
