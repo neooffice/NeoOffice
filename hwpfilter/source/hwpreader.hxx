@@ -261,7 +261,11 @@ Sequence< OUString > HwpImportFilter::getSupportedServiceNames_Static() throw ()
 
 HwpImportFilter::HwpImportFilter( const Reference< XMultiServiceFactory > xFact )
 {
+#if SUPD == 310
+    OUString sService( RTL_CONSTASCII_USTRINGPARAM( WRITER_IMPORTER_NAME ) );
+#else	// SUPD == 310
     OUString sService( WRITER_IMPORTER_NAME );
+#endif	// SUPD == 310
     try {
         Reference< XDocumentHandler >
             xHandler( xFact->createInstance( sService ), UNO_QUERY );
@@ -318,7 +322,11 @@ void HwpImportFilter::setTargetDocument( const Reference< XComponent >& xDoc )
 
 OUString HwpImportFilter::getImplementationName_Static() throw()
 {
+#if SUPD == 310
+    return OUString( RTL_CONSTASCII_USTRINGPARAM( IMPLEMENTATION_NAME ) );
+#else	// SUPD == 310
     return OUString( IMPLEMENTATION_NAME );
+#endif	// SUPD == 310
 }
 
 #if SUPD == 310
@@ -327,7 +335,11 @@ OUString HwpImportFilter::getImplementationName() throw(::com::sun::star::uno::R
 OUString HwpImportFilter::getImplementationName() throw(::com::sun::star::uno::RuntimeException, std::exception)
 #endif	// SUPD == 310
 {
+#if SUPD == 310
+    return OUString( RTL_CONSTASCII_USTRINGPARAM( IMPLEMENTATION_NAME ) );
+#else	// SUPD == 310
     return OUString( IMPLEMENTATION_NAME );
+#endif	// SUPD == 310
 }
 
 #if SUPD == 310
@@ -371,7 +383,11 @@ OUString HwpImportFilter::detect( ::com::sun::star::uno::Sequence< ::com::sun::s
              detect_hwp_version(reinterpret_cast<const char*>(aData.getConstArray()))
            )
         {
+#if SUPD == 310
+            sTypeName = OUString(RTL_CONSTASCII_USTRINGPARAM("writer_MIZI_Hwp_97"));
+#else	// SUPD == 310
             sTypeName = OUString("writer_MIZI_Hwp_97");
+#endif	// SUPD == 310
         }
     }
 
@@ -386,8 +402,13 @@ Sequence< OUString> HwpImportFilter::getSupportedServiceNames() throw(::com::sun
 {
     Sequence < OUString > aRet(2);
     OUString* pArray = aRet.getArray();
+#if SUPD == 310
+    pArray[0] = OUString(RTL_CONSTASCII_USTRINGPARAM(SERVICE_NAME1));
+    pArray[1] = OUString(RTL_CONSTASCII_USTRINGPARAM(SERVICE_NAME2));
+#else	// SUPD == 310
     pArray[0] = OUString(SERVICE_NAME1);
     pArray[1] = OUString(SERVICE_NAME2);
+#endif	// SUPD == 310
     return aRet;
 }
 
@@ -442,7 +463,11 @@ extern "C"
 
             OUString aImplementationName = OUString::createFromAscii( pImplName );
 
+#if SUPD == 310
+            if (aImplementationName == OUString(RTL_CONSTASCII_USTRINGPARAM(IMPLEMENTATION_NAME)) )
+#else	// SUPD == 310
             if (aImplementationName == IMPLEMENTATION_NAME )
+#endif	// SUPD == 310
             {
                 xRet = createSingleFactory( xSMgr, aImplementationName,
                                             HwpImportFilter_CreateInstance,
