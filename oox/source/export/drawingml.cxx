@@ -25,6 +25,14 @@
  * Modified March 2012 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
  ************************************************************************/
 
 #include "tokens.hxx"
@@ -473,14 +481,7 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
 {
     GfxLink aLink = rGraphic.GetLink ();
     OUString sMediaType;
-#ifdef USE_JAVA
-    // Fix crashing when saving document in the following LibreOffice bug to
-    // .xlsx by setting the extension to an empty string:
-    // https://bugs.documentfoundation.org/show_bug.cgi?id=83666
-    const char* sExtension = "";
-#else	// USE_JAVA
     const char* sExtension = NULL;
-#endif	// USE_JAVA
     OUString sRelId;
 
     SvMemoryStream aStream;
@@ -562,7 +563,16 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
                 sExtension = ".emf";
             } else {
                 OSL_TRACE( "unhandled graphic type" );
+#if SUPD == 310
+                /*Earlier, even in case of unhandled graphic types we were
+                  proceeding to write the image, which would eventually
+                  write an empty image with a zero size, and return a valid
+                  relationID, which is incorrect.
+                  */
+                return sRelId;
+#else	// SUPD == 310
                 break;
+#endif	// SUPD == 310
             }
 #if defined USE_JAVA && defined MACOSX
             }
@@ -845,42 +855,62 @@ void DrawingML::WriteRunProperties( Reference< XTextRange > rRun, sal_Bool bIsFi
     }
 
     if( GETAD( CharFontName ) ) {
+#if SUPD != 310
         const char* typeface = NULL;
+#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
+#if SUPD == 310
+        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
+#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
+#endif	// SUPD == 310
 
 
 
         mpFS->singleElementNS( XML_a, XML_latin,
+#if SUPD == 310
+                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
+#else	// SUPD == 310
                                XML_typeface, typeface,
+#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
     }
 
     if( ( bComplex && GETAD( CharFontNameComplex ) ) || ( !bComplex && GETAD( CharFontNameAsian ) ) ) {
+#if SUPD != 310
         const char* typeface = NULL;
+#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
+#if SUPD == 310
+        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
+#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
+#endif	// SUPD == 310
 
         mpFS->singleElementNS( XML_a, bComplex ? XML_cs : XML_ea,
+#if SUPD == 310
+                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
+#else	// SUPD == 310
                                XML_typeface, typeface,
+#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
