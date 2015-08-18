@@ -855,42 +855,62 @@ void DrawingML::WriteRunProperties( Reference< XTextRange > rRun, sal_Bool bIsFi
     }
 
     if( GETAD( CharFontName ) ) {
+#if SUPD != 310
         const char* typeface = NULL;
+#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
+#if SUPD == 310
+        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
+#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
+#endif	// SUPD == 310
 
 
 
         mpFS->singleElementNS( XML_a, XML_latin,
+#if SUPD == 310
+                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
+#else	// SUPD == 310
                                XML_typeface, typeface,
+#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
     }
 
     if( ( bComplex && GETAD( CharFontNameComplex ) ) || ( !bComplex && GETAD( CharFontNameAsian ) ) ) {
+#if SUPD != 310
         const char* typeface = NULL;
+#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
+#if SUPD == 310
+        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
+#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
+#endif	// SUPD == 310
 
         mpFS->singleElementNS( XML_a, bComplex ? XML_cs : XML_ea,
+#if SUPD == 310
+                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
+#else	// SUPD == 310
                                XML_typeface, typeface,
+#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
