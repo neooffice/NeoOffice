@@ -1627,8 +1627,10 @@ static bool IsRunningMavericksOrLower()
 					aRealDrawRect.origin.x -= fWidthAdjust;
 					aRealDrawRect.size.width += fWidthAdjust;
 
-					float fCellHeight = [pTableHeaderCell cellSize].height;
-					float fOffscreenHeight = ( aRealDrawRect.size.height > fCellHeight ? aRealDrawRect.size.height : fCellHeight );
+					// Fix incorrect table header height on OS X 10.11 by
+					// ignoring the cell height when calculating the drawing
+					// bounds
+					float fOffscreenHeight = aRealDrawRect.size.height;
 					CGRect aAdjustedDestRect = CGRectMake( 0, 0, aRealDrawRect.size.width, fOffscreenHeight );
 					if ( mpBuffer->Create( (long)aRealDrawRect.origin.x, (long)aRealDrawRect.origin.y, (long)aRealDrawRect.size.width, (long)fOffscreenHeight, mpGraphics, fOffscreenHeight == aRealDrawRect.size.height ) )
 					{
