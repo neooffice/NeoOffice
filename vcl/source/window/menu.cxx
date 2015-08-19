@@ -956,7 +956,15 @@ void Menu::ImplInit()
 {
     mnHighlightedItemPos = ITEMPOS_INVALID;
     mpSalMenu       = NULL;
+#ifdef USE_JAVA
+    // Fix missing tab type image in the checked menu item in a ruler's "tab
+    // stop type" popup menu reported in the following NeoOffice forum topic by
+    // removing part of Go-oo's vcl-menu-fixes.diff patch:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8683
+    nMenuFlags      = MENU_FLAG_SHOWCHECKIMAGES;
+#else	// USE_JAVA
     nMenuFlags      = 0;
+#endif	// USE_JAVA
     nDefaultItem    = 0;
     //bIsMenuBar      = FALSE;  // this is now set in the ctor, must not be changed here!!!
     nSelectedId     = 0;
