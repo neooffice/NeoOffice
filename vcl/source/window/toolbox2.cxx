@@ -2193,6 +2193,23 @@ void ToolBox::SetMenuType( USHORT aType )
             mbFormat = TRUE;
             ImplFormat();
             ImplSetMinMaxFloatSize( this );
+
+#ifdef USE_JAVA
+            // Fix empty Sun presentation minimizer's toolbar by detecting when
+            // min/max float sizes are not large enough for the toolbar content
+            Size aMinSize, aMaxSize;
+            ImplCalcMinMaxFloatSize( this, aMinSize, aMaxSize );
+            Size aSize( ImplCalcFloatSize( this, mnFloatLines ) );
+            if ( aSize.Width() < aMinSize.Width() )
+                aSize.Width() = aMinSize.Width();
+            if ( aSize.Height() < aMinSize.Height() )
+                aSize.Height() = aMinSize.Height();
+            if ( aSize.Width() > aMaxSize.Width() )
+                aSize.Width() = aMaxSize.Width();
+            if ( aSize.Height() > aMaxSize.Height() )
+                aSize.Height() = aMaxSize.Height();
+            SetOutputSizePixel( aSize );
+#endif	// USE_JAVA
         }
         else
         {
