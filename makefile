@@ -198,8 +198,8 @@ YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2015
-NEO_TAG2:=NeoOffice-2015
-NEO_TAG3:=NeoOffice-2015
+NEO_TAG2:=NeoOffice-2015_Free_Edition
+NEO_TAG3:=NeoOffice-2015_Classic_Edition
 
 all: build.all
 
