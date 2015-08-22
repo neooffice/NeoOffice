@@ -25,14 +25,13 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 What's New in this Version:
 NeoOffice, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recommend that you click on the "Support för NeoOffice" link and read the list of changes.
 
-This version of NeoOffice fixes the following bugs. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided fixes for these bugs:
-• NeoOffice no longer crashes when opening some Hangul WP 97 .hwp documents.
-• NeoOffice no longer crashes when opening some older Microsoft Word .doc documents.
-• NeoOffice now asks the user for permission before updating links in a document. In previous versions of NeoOffice, NeoOffice would silently update links in some documents.
+This version of NeoOffice fixes the following bugs:
+• After starting a slide show from a presentation document that is in full screen mode, exiting the slide show would disable the OS X menubar until the presentation document was closed
+• When opening a document while in full screen mode that has linked but not embbeded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
+• When running on OS X El Capitan Public Beta, NeoOffice would draw native table headings with the wrong height
 
-El Capitan Public Beta users: this version also fixes the following bugs:
-• Opening a new window while in full screen mode no longer causes NeoOffice to hang
-• Typing text in a full screen mode window no longer fails
+This version also fixes the follow security vulnerability. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided a fix for this security vulnerability:
+• NeoOffice would crash when opening certain Microsoft Word .doc documents
 
 
 Keywords:
