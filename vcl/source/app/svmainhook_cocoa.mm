@@ -215,6 +215,11 @@ void NSApplication_run()
 			if ( pBundleURL )
 				LSRegisterURL( (CFURLRef)pBundleURL, false );
 
+			// Fix deadlock waiting for the application mutex when Oracle's Java
+			// calls [NSObject performSelectorOnMainThread:withObject:waitUntilDone:]
+			// by adding our custom run loop mode to the list of common modes
+			CFRunLoopAddCommonMode( CFRunLoopGetMain(), CFSTR( "AWTRunLoopMode" ) );
+
 			[pApp run];
 		}
 	}
