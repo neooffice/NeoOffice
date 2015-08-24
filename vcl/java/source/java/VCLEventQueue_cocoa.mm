@@ -865,36 +865,6 @@ static NSUInteger nMouseMask = 0;
 
 - (MacOSBOOL)canBecomeKeyWindow
 {
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_FULL_SCREEN_WINDOW_HACK
-	// Fix incorrect focus after closing a full screen window when running on
-	// OS X 10.11 by refusing focus for this window if it is a full screen
-	// window and a different full screen window is in front of this window
-	if ( mbCanBecomeKeyWindow && [self collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
-	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
-		{
-			NSArray *pWindows = [NSApp orderedWindows];
-			if ( pWindows )
-			{
-				unsigned int nCount = [pWindows count];
-				unsigned int i = nCount - 1;
-				for ( ; i >= 0; i-- )
-				{
-					NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
-					if ( pWindow == self )
-						break;
-
-					if ( pWindow && [pWindow isVisible] && [pWindow collectionBehavior] & NSWindowCollectionBehaviorFullScreenPrimary )
-						return NO;
-				}
-			}
-		}
-	}
-#endif	// USE_FULL_SCREEN_WINDOW_HACK
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
-
 	return mbCanBecomeKeyWindow;
 }
 
@@ -2827,49 +2797,6 @@ static CFDataRef aRTFSelection = nil;
 
 @end
 
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_FULL_SCREEN_WINDOW_HACK
-
-@interface NSObject (VCLObjectPoseAs)
-- (void)poseAsPerformSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes;
-@end
-
-@interface VCLObject : NSObject
-- (void)performSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes;
-@end
-
-@implementation VCLObject
-
-- (void)performSelectorOnMainThread:(SEL)aSelector withObject:(id)aArg waitUntilDone:(MacOSBOOL)bWait modes:(NSArray *)pModes
-{
-	if ( [super respondsToSelector:@selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:)] )
-	{
-		// Fix hanging when opening a new window in full screen mode while
-		// running on OS X 10.11 by releasing the application mutex if we are
-		// waiting until done. If no application mutex exists, ignore mutex as
-		// we are likely to crash.
-		ULONG nCount = ( bWait && !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst ? Application::ReleaseSolarMutex() : 0 );
-
-		@try
-		{
-			[super poseAsPerformSelectorOnMainThread:aSelector withObject:aArg waitUntilDone:bWait modes:pModes];
-		}
-		@catch ( NSException *pExc )
-		{
-		}
-
-		// If no application mutex exists, ignore mutex as we are likely to
-		// crash
-		if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
-			Application::AcquireSolarMutex( nCount );
-	}
-}
-
-@end
-
-#endif	// USE_FULL_SCREEN_WINDOW_HACK
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
-
 static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 
 @interface InstallVCLEventQueueClasses : NSObject
@@ -3157,24 +3084,6 @@ static MacOSBOOL bVCLEventQueueClassesInitialized = NO;
 		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
-
-	// VCLObject selectors
-
-#ifdef USE_NATIVE_FULL_SCREEN_MODE
-#ifdef USE_FULL_SCREEN_WINDOW_HACK
-	aSelector = @selector(performSelectorOnMainThread:withObject:waitUntilDone:modes:);
-	aPoseAsSelector = @selector(poseAsPerformSelectorOnMainThread:withObject:waitUntilDone:modes:);
-	aOldMethod = class_getInstanceMethod( [NSObject class], aSelector );
-	aNewMethod = class_getInstanceMethod( [VCLObject class], aSelector );
-	if ( aOldMethod && aNewMethod )
-	{
-		IMP aOldIMP = method_getImplementation( aOldMethod );
-		IMP aNewIMP = method_getImplementation( aNewMethod );
-		if ( aOldIMP && aNewIMP && class_addMethod( [NSObject class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
-			method_setImplementation( aOldMethod, aNewIMP );
-	}
-#endif	// USE_FULL_SCREEN_WINDOW_HACK
-#endif	// USE_NATIVE_FULL_SCREEN_MODE
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	VCLApplicationDelegate *pSharedDelegate = [VCLApplicationDelegate sharedDelegate];
