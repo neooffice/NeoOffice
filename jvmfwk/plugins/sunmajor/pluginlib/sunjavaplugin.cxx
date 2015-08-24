@@ -736,8 +736,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+8].optionString = (char *)"-Dapple.awt.graphics.UseQuartz=true";
     options[i+8].extraInfo = NULL;
 
-    // Using Oracle's Java AWT classes causes hanging on OS X 10.10
-    options[i+9].optionString = (char *)"-Djava.awt.headless=true";
+    // Enable Java AWT as the hanging caused by Oracle's Java AWT classes has
+    // been fixed in vcl/source/app/svmainhook_cocoa.mm
+    options[i+9].optionString = (char *)"-Djava.awt.headless=false";
     options[i+9].extraInfo = NULL;
 #endif	// MACOSX
 #endif	// USE_JAVA
