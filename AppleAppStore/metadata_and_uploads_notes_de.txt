@@ -27,7 +27,7 @@ NeoOffice, OpenOffice und LibreOffice Benutzer: Bevor Sie NeoOffice zu kaufen, e
 
 This version of NeoOffice fixes the following bugs:
 • After starting a slide show from a presentation document that is in full screen mode, exiting the slide show would disable the OS X menubar until the presentation document was closed
-• When opening a document while in full screen mode that has linked but not embbeded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
+• When opening a document while in full screen mode that has linked but not embedded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
 • When running on OS X El Capitan Public Beta, NeoOffice would draw native table headings with the wrong height
 
 This version also fixes the follow security vulnerability. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided a fix for this security vulnerability:
