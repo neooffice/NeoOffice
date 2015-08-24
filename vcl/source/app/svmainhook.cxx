@@ -145,6 +145,10 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     // for further details and an example
 
     CFRunLoopRef runLoopRef = CFRunLoopGetCurrent();
+#ifdef USE_JAVA
+    if ( runLoopRef != CFRunLoopGetMain() )
+        return FALSE;
+#endif	// USE_JAVA
     ThreadContext tcx;
     tcx.pRet = pbInit;  // the return value
     tcx.pRunLoopRef = &runLoopRef;
