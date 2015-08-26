@@ -696,7 +696,7 @@ static void AcquireSecurityScopedURL( const NSURL *pURL, MacOSBOOL bMustShowDial
 
 			// Display open panel only if we are running in the sandbox. In the
 			// sandbox, NSOpenPanel should not be a subclass of NSOpenPanel.
-			if ( mpOpenPanel && [mpOpenPanel isKindOfClass:[NSOpenPanel openPanel]] )
+			if ( mpOpenPanel && [mpOpenPanel isKindOfClass:[NSOpenPanel class]] )
 				mpOpenPanel = nil;
 
 			if ( mpOpenPanel )
