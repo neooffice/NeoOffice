@@ -579,7 +579,9 @@ const char *TempDirImpl( char *pBuf )
 {
 #ifdef MACOSX
 #ifdef USE_JAVA
-    const char *pValue = getenv( "TMPDIR" );
+    const char *pValue = getenv( "SAL_TMPDIR" );
+    if ( !pValue || strlen( pValue ) >= _MAX_PATH )
+        pValue = getenv( "TMPDIR" );
 
     /* If TMPDIR environment variable is not set, use "/tmp" instead
        of P_tmpdir because its value is "/var/tmp" and it is not
