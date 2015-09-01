@@ -27,7 +27,8 @@ NeoOffice, OpenOffice, and LibreOffice users: before you buy NeoOffice, we recom
 
 This version of NeoOffice fixes the following bugs:
 • After starting a slide show from a presentation document that is in full screen mode, exiting the slide show would disable the OS X menubar until the presentation document was closed
-• When opening a document while in full screen mode that has linked but not embedded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
+• When opening a document while in full screen mode that contains linked but not embedded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
+• When saving certain documents that contain embedded images or OLE objects, NeoOffice would would fail to save one or more of the embedded images or OLE objects
 • When running on OS X El Capitan Public Beta, NeoOffice would draw native table headings with the wrong height
 
 This version also fixes the follow security vulnerability. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided a fix for this security vulnerability:
@@ -35,7 +36,7 @@ This version also fixes the follow security vulnerability. Special thanks go to 
 
 
 Keywords:
-neo,office,document,word,regneark,tekst,præsentation,open,libre,excel
+neo,office,dokument,regneark,tekst,præsentation,open,libre
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
