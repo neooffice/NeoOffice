@@ -36,7 +36,7 @@ This version also fixes the follow security vulnerability. Special thanks go to 
 
 
 Keywords:
-neo,office,belge,hesap tablosu,metin,sunum,open,libre
+neo,office,belge,hesap,tablosu,metin,sunum,open,libre
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php

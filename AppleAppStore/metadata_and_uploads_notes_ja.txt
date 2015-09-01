@@ -36,7 +36,7 @@ This version also fixes the follow security vulnerability. Special thanks go to 
 
 
 Keywords:
-neo,office,ドキュメント,document,表計算ドキュメント,文書ドキュメント,プレゼンテーション,open,libre
+neo,office,ドキュメント,表計算ドキュメント,文書ドキュメント,プレゼンテーション,open,libre
 
 Support URL:
 http://www.neooffice.org/neojava/macappstore.php
