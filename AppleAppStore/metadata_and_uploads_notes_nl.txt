@@ -23,7 +23,7 @@ Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aa
 
 
 What's New in this Version:
-NeoOffice, OpenOffice en LibreOffice gebruikers: voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de lijst met wijzigingen.
+Voordat u koopt NeoOffice, raden we u klikt op de "NeoOffice Ondersteuning" link en lees de installatienotities.
 
 This version of NeoOffice fixes the following bugs:
 • After starting a slide show from a presentation document that is in full screen mode, exiting the slide show would disable the OS X menubar until the presentation document was closed
