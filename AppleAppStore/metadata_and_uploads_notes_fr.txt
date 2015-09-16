@@ -30,7 +30,7 @@ This version of NeoOffice fixes the following bugs:
 • When opening a document while in full screen mode that contains linked but not embedded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
 • When saving certain documents that contain embedded images or OLE objects, NeoOffice would would fail to save one or more of the embedded images or OLE objects
 
-This version also fixes the follow security vulnerability. Special thanks go to the security researchers and engineers at LibreOffice.org who identified and provided a fix for this security vulnerability:
+This version also fixes the follow bug. Special thanks go to the engineers at LibreOffice.org who identified and provided a fix for this bug:
 • NeoOffice would crash when opening certain Microsoft Word .doc documents
 
 
