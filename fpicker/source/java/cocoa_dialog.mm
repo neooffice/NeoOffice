@@ -500,7 +500,7 @@ using namespace vos;
 
 - (MacOSBOOL)finished
 {
-	return mbFinished;
+	return ( mbCancelled || mbFinished );
 }
 
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs
@@ -2213,7 +2213,12 @@ short NSFileDialog_showFileDialog( id pDialog )
 		pApplication_beginModalSheet = (Application_beginModalSheet_Type *)dlsym( RTLD_DEFAULT, "Application_beginModalSheet" );
 	if ( !pApplication_endModalSheet )
 		pApplication_endModalSheet = (Application_endModalSheet_Type *)dlsym( RTLD_DEFAULT, "Application_endModalSheet" );
-	if ( pDialog && pApplication_beginModalSheet && pApplication_endModalSheet )
+
+	// Fix bug caused by the Tools :: Options menu item's Java panel's Add
+	// button reusing native open folder dialogs reported in 09/20/2015 e-mail
+	// to elcapitanbugs@neooffice.org by checking if the dialog has already
+	// been used previously
+	if ( pApplication_beginModalSheet && pApplication_endModalSheet && pDialog && ![(ShowFileDialog *)pDialog finished] )
 	{
 		NSWindow *pNSWindow = nil;
 		if ( pApplication_beginModalSheet( &pNSWindow ) )
