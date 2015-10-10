@@ -98,10 +98,15 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 		return;
 
 	if ( !pSharedPanel )
-		pSharedPanel = [[UpdateNonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent title:mpTitle];
+		pSharedPanel = [[UpdateNonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent];
 
 	if(pSharedPanel)
 	{
+		if ( mpTitle )
+			[pSharedPanel setTitle:mpTitle];
+		else
+			[pSharedPanel setTitle:@""];
+
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 		if(![pSharedPanel isVisible])
 		{

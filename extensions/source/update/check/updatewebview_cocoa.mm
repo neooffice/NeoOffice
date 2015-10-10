@@ -2030,12 +2030,9 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	[super dealloc];
 }
 
-- (id)initWithUserAgent:(NSString *)pUserAgent title:(NSString *)pTitle
+- (id)initWithUserAgent:(NSString *)pUserAgent
 {
 	[super initWithContentRect:NSMakeRect(0, 0, kUpdateDefaultBrowserWidth, kUpdateDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
-	if ( pTitle )
-		[self setTitle:pTitle];
-	
 	mpuserAgent = pUserAgent;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
