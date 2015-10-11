@@ -119,6 +119,6 @@
 }
 - (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
-- (id)initWithUserAgent:(NSString *)pUserAgent title:(NSString *)pTitle;
+- (id)initWithUserAgent:(NSString *)pUserAgent;
 - (UpdateWebView *)webView;
 @end
