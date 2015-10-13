@@ -850,7 +850,7 @@ else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/i18npool.uno.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/i18npool/$(UOUTPUTDIR)/lib/i18npool.uno.dylib" "$(PWD)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/sw/$(UOUTPUTDIR)/lib/libswui$(DLLSUFFIX).dylib" "$(PWD)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 ifdef PRODUCT_BUILD3
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/extensions/$(UOUTPUTDIR)/lib/updchk.uno.dylib" "basis-link/program"
 endif
