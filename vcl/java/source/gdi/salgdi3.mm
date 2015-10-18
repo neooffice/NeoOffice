@@ -54,6 +54,7 @@ static void ImplFontListChanged();
 
 static bool bFontListChangedObserverAdded = false;
 static bool bNativeFontsLoaded = false;
+static const OUString aAppleColorEmoji( RTL_CONSTASCII_USTRINGPARAM( "AppleColorEmoji" ) );
 
 using namespace basegfx;
 using namespace rtl;
@@ -498,6 +499,13 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 	return pFontData;
 }
 
+// -----------------------------------------------------------------------
+
+static bool ImplIsImageFont( OUString &rFontName )
+{
+	return ( rFontName == aAppleColorEmoji );
+}
+
 // =======================================================================
 
 ::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadNativeFontIDMap;
@@ -568,6 +576,8 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCall
 
 JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maFontName( rFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
 {
+	mbImageFont = ImplIsImageFont( maFontName );
+
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
 

@@ -739,17 +739,22 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 									aPSName = OUString( pPSBuffer );
 								}
 
+								// Don't image fonts if there are other fonts
 								::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
-								if ( ffit != pSalData->maJavaFontNameMapping.end() )
+								if ( ffit != pSalData->maJavaFontNameMapping.end() && !ffit->second->mbImageFont )
 									mpFallbackFont = new JavaImplFont( ffit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 							}
 
 							if ( !mpFallbackFont )
 							{
 								// Look through our application font list for
-								// a font that has glyphs for the current char
+								// a non-image font that has glyphs for the
+								// current char
 								for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !mpFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
 								{
+									if ( nit->second->mbImageFont )
+										continue;
+
 									for ( j = 0; j < aRange.length; j++ )
 									{
 										UniChar nChar = mpHash->mpStr[ aRange.location + j ];
@@ -761,19 +766,42 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 										}
 									}
 								}
+							}
 
-								if ( !mpFallbackFont )
+							if ( !mpFallbackFont )
+							{
+								// Look through our application font list for
+								// an image font that has glyphs for the
+								// current char
+								for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !mpFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
 								{
-									if ( mpNeedFallback )
+									if ( !nit->second->mbImageFont )
+										continue;
+
+									for ( j = 0; j < aRange.length; j++ )
 									{
-										rtl_freeMemory( mpNeedFallback );
-										mpNeedFallback = NULL;
+										UniChar nChar = mpHash->mpStr[ aRange.location + j ];
+										CGGlyph nGlyph;
+										if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
+										{
+											mpFallbackFont = new JavaImplFont( nit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+											break;
+										}
 									}
-									if ( mpFallbackFont )
-									{
-										delete mpFallbackFont;
-										mpFallbackFont = NULL;
-									}
+								}
+							}
+
+							if ( !mpFallbackFont )
+							{
+								if ( mpNeedFallback )
+								{
+									rtl_freeMemory( mpNeedFallback );
+									mpNeedFallback = NULL;
+								}
+								if ( mpFallbackFont )
+								{
+									delete mpFallbackFont;
+									mpFallbackFont = NULL;
 								}
 							}
 						}
