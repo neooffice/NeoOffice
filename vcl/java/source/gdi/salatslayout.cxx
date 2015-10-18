@@ -152,7 +152,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 	CGPoint					maStartPoint;
 	int						mnGlyphCount;
 	CGGlyph*				mpGlyphs;
-	CGSize*					mpAdvances;
+	CGPoint*				mpPositions;
 	CTFontRef				mnFontID;
 	float					mfFontSize;
 	bool					mbAntialiased;
@@ -982,7 +982,7 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	maStartPoint( aStartPoint ),
 	mnGlyphCount( nGlyphCount ),
 	mpGlyphs( NULL ),
-	mpAdvances( NULL ),
+	mpPositions( NULL ),
 	mnFontID( (CTFontRef)pFont->getNativeFont() ),
 	mfFontSize( pFont->getSize() ),
 	mbAntialiased( pFont->isAntialiased() ),
@@ -1002,13 +1002,15 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 				mpGlyphs[ i ] = (CGGlyph)pGlyphs[ i ];
 		}
 
-		mpAdvances = (CGSize *)rtl_allocateMemory( mnGlyphCount * sizeof( CGSize ) );
-		if ( mpAdvances )
+		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGSize ) );
+		if ( mpPositions )
 		{
-			for ( int i = 0; i < mnGlyphCount; i++ )
+			mpPositions[ 0 ].x = 0.0f;
+			mpPositions[ 0 ].y = 0.0f;
+			for ( int i = 1; i <= mnGlyphCount; i++ )
 			{
-				mpAdvances[ i ].width = (float)pAdvances[ i ] / UNITS_PER_PIXEL;
-				mpAdvances[ i ].height = 0.0f;
+				mpPositions[ i ].x = mpPositions[ i - 1 ].x + ( (float)pAdvances[ i - 1 ] / UNITS_PER_PIXEL );
+				mpPositions[ i ].y = 0.0f;
 			}
 		}
 	}
@@ -1046,8 +1048,8 @@ JavaSalGraphicsDrawGlyphsOp::~JavaSalGraphicsDrawGlyphsOp()
 	if ( mpGlyphs )
 		rtl_freeMemory( mpGlyphs );
 
-	if ( mpAdvances )
-		rtl_freeMemory( mpAdvances );
+	if ( mpPositions )
+		rtl_freeMemory( mpPositions );
 
 	if ( mnFontID )
 		CFRelease( mnFontID );
@@ -1057,7 +1059,7 @@ JavaSalGraphicsDrawGlyphsOp::~JavaSalGraphicsDrawGlyphsOp()
 
 void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
-	if ( !pGraphics || !aContext || !mpGlyphs || !mpAdvances )
+	if ( !pGraphics || !aContext || !mpGlyphs || !mpPositions )
 		return;
 
 	CGRect aDrawBounds = aBounds;
@@ -1073,8 +1075,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 	{
 		if ( CGColorGetAlpha( aColor ) )
 		{
-			CGFontRef aFont = NULL;
-			aFont = CTFontCopyGraphicsFont( mnFontID, NULL );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( mnFontID, mfFontSize, NULL, NULL );
 			if ( aFont )
 			{
 				// Text draw bounds is never XOR'd so don't pass any bounds
@@ -1097,16 +1098,18 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 
 					CGContextSetFillColorWithColor( aContext, aColor );
 					CGContextSetStrokeColorWithColor( aContext, aColor );
-					CGContextSetFont( aContext, aFont );
-					CGContextSetFontSize( aContext, mfFontSize );
-					CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpAdvances, mnGlyphCount );
+					CTFontDrawGlyphs( aFont, mpGlyphs, mpPositions, mnGlyphCount, aContext );
 
 					// Calculate rough draw bounds including any transformations
 					if ( pGraphics->mpFrame )
 					{
-						float fWidth = mfFontSize * 4;
-						for ( int i = 0; i < mnGlyphCount; i++ )
-							fWidth += mpAdvances[ i ].width;
+						float fWidth = 0;
+						for ( int i = 0; i <= mnGlyphCount; i++ )
+						{
+							if ( fWidth < mpPositions[ i ].x )
+								fWidth = mpPositions[ i ].x;
+						}
+						fWidth += mfFontSize * 4;
 
 						float fPadding = mfFontSize * 2;
 						CGRect aUntransformedBounds = CGRectMake( maStartPoint.x, maStartPoint.y, fWidth + ( fabs( mfTranslateX ) * mfScaleX ) + fPadding, ( fabs( mfTranslateY ) * mfScaleY ) + ( fPadding * 2 ) );
@@ -1135,7 +1138,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 						pGraphics->addNeedsDisplayRect( aDrawBounds, mfLineWidth );
 				}
 
-				CGFontRelease( aFont );
+				CFRelease( aFont );
 			}
 		}
 
