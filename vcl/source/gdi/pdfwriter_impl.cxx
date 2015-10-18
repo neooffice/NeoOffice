@@ -12567,9 +12567,7 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-        CGFontRef aFont = NULL;
-        if ( it->first )
-            aFont = CTFontCopyGraphicsFont( (CTFontRef)it->first, NULL );
+        CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)it->first, 12.0f, NULL, NULL );
         if ( !aFont )
             continue;
 
@@ -12580,9 +12578,14 @@ void PDFWriterImpl::encodeGlyphs()
 
             // Fix bug 3600 by including zero glyphs in CGPDFContext
             CGGlyph aGlyphIDs[ 256 ];
+            CGPoint aGlyphPositions[ 256 ];
             int nGlyphIDs = 0;
-            for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
-                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
+            for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit, ++nGlyphIDs )
+            {
+                aGlyphIDs[ nGlyphIDs ] = (CGGlyph)fit->first;
+                aGlyphPositions[ nGlyphIDs ].x = nGlyphIDs;
+                aGlyphPositions[ nGlyphIDs ].y = 0.0f;
+            }
 
             if ( !nGlyphIDs )
                 continue;
@@ -12599,9 +12602,7 @@ void PDFWriterImpl::encodeGlyphs()
                     if ( aContext )
                     {
                         CGContextBeginPage( aContext, NULL );
-                        CGContextSetFont( aContext, aFont );
-                        CGContextSetFontSize( aContext, 12 );
-                        CGContextShowGlyphs( aContext, aGlyphIDs, nGlyphIDs );
+                        CTFontDrawGlyphs( aFont, aGlyphIDs, aGlyphPositions, nGlyphIDs, aContext );
                         CGContextEndPage( aContext );
                         CGContextRelease( aContext );
                     }
@@ -13166,7 +13167,7 @@ void PDFWriterImpl::encodeGlyphs()
             }
         }
 
-        CGFontRelease( aFont );
+        CFRelease( aFont );
     }
 }
 
