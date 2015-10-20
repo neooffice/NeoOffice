@@ -12578,14 +12578,9 @@ void PDFWriterImpl::encodeGlyphs()
 
             // Fix bug 3600 by including zero glyphs in CGPDFContext
             CGGlyph aGlyphIDs[ 256 ];
-            CGPoint aGlyphPositions[ 256 ];
             int nGlyphIDs = 0;
             for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit, ++nGlyphIDs )
-            {
                 aGlyphIDs[ nGlyphIDs ] = (CGGlyph)fit->first;
-                aGlyphPositions[ nGlyphIDs ].x = nGlyphIDs;
-                aGlyphPositions[ nGlyphIDs ].y = 0.0f;
-            }
 
             if ( !nGlyphIDs )
                 continue;
@@ -12601,6 +12596,18 @@ void PDFWriterImpl::encodeGlyphs()
                     CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
                     if ( aContext )
                     {
+                        CGPoint aGlyphPositions[ 256 ];
+                        CGSize aGlyphSizes[ 256 ];
+                        memset( aGlyphSizes, 0, sizeof( aGlyphSizes ) );
+                        CTFontGetAdvancesForGlyphs( aFont, kCTFontDefaultOrientation, aGlyphIDs, aGlyphSizes, nGlyphIDs );
+                        aGlyphPositions[ 0 ].x = 0.0f;
+                        aGlyphPositions[ 0 ].y = 0.0f;
+                        for ( int i = 1; i < nGlyphIDs; i++ )
+                        {
+                            aGlyphPositions[ i ].x = aGlyphPositions[ i - 1 ].x + aGlyphSizes[ i - 1 ].width;
+                            aGlyphPositions[ i ].y = aGlyphPositions[ i - 1 ].y + aGlyphSizes[ i - 1 ].height;
+                        }
+
                         CGContextBeginPage( aContext, NULL );
                         CTFontDrawGlyphs( aFont, aGlyphIDs, aGlyphPositions, nGlyphIDs, aContext );
                         CGContextEndPage( aContext );
