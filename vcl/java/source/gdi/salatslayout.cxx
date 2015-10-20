@@ -1773,7 +1773,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aAppleSymbols );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
-fprintf( stderr, "Here: %p\n", nChar );
 									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
