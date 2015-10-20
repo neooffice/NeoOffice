@@ -73,7 +73,6 @@ public:
 	mutable sal_IntPtr		mnNativeFontID;
 	::std::list< JavaImplFontData* >	maChildren;
 	::rtl::OUString			maFamilyName;
-	bool					mbImageFont;
 
 	static void				ClearNativeFonts();
 	static void				HandleBadFont( JavaImplFontData *pFontData );
