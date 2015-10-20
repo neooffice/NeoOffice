@@ -62,6 +62,7 @@
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
 
 static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
+static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "AppleSymbols" ) );
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
 static const String aHeitiSCMedium( RTL_CONSTASCII_USTRINGPARAM( "Heiti SC Medium" ) );
@@ -1748,6 +1749,31 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									it = pSalData->maFontNameMapping.find( aLucidaGrande );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( nChar >= 0x2600 && nChar < 0xf900 )
+						{
+							// If there is no fallback font and it is a
+							// miscellaneous symbol character, use the Apple
+							// Symbols font
+							if ( !pSymbolFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aAppleSymbols );
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+fprintf( stderr, "Here: %p\n", nChar );
 									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
 									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
 									{
