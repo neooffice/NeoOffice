@@ -12579,8 +12579,8 @@ void PDFWriterImpl::encodeGlyphs()
             // Fix bug 3600 by including zero glyphs in CGPDFContext
             CGGlyph aGlyphIDs[ 256 ];
             int nGlyphIDs = 0;
-            for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit, ++nGlyphIDs )
-                aGlyphIDs[ nGlyphIDs ] = (CGGlyph)fit->first;
+            for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
+                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
 
             if ( !nGlyphIDs )
                 continue;
