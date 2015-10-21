@@ -1706,6 +1706,13 @@ sal_uInt32 SwPostIt::MoveCaret()
 bool SwPostIt::CalcFollow()
 {
 	SwPosition * pPos = mpFmtFld->GetTxtFld()->GetPosition();
+#ifdef USE_JAVA
+	// Stop crashing when opening HTML 5 documents with an embedded image.
+	// LibreOffice saves images dragged into a document into an <img> tag
+	// with "src=data:..." and such files would crash when opened.
+	if ( !pPos )
+		return false;
+#endif	// USE_JAVA
 	const SwTxtNode* pTxtNd = pPos->nNode.GetNode().GetTxtNode();
 	SwTxtAttr* pTxtAttr = pTxtNd ? pTxtNd->GetTxtAttr( pPos->nContent.GetIndex()-1,RES_TXTATR_FIELD ) : 0;
 	const SwField* pFld = pTxtAttr ? pTxtAttr->GetFld().GetFld() : 0;
