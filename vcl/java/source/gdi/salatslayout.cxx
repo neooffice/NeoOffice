@@ -68,6 +68,8 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
+static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "Apple Symbols" ) );
+static const String aArialUnicodeMS( RTL_CONSTASCII_USTRINGPARAM( "Arial Unicode MS" ) );
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
 static const String aHeitiSCMedium( RTL_CONSTASCII_USTRINGPARAM( "Heiti SC Medium" ) );
@@ -1750,7 +1752,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							// Fix bug 3087 if there is no fallback font and it
 							// is a European or Cyrillic character by using a
-							// font that we can render those ranges nicely
+							// known font that we can render those ranges
 							if ( !pSymbolFallbackFont )
 							{
 								SalData *pSalData = GetSalData();
@@ -1795,6 +1797,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
+						else if ( nChar >= 0x2600 && nChar < 0x26ff )
+						{
+							// If there is no fallback font and it is a
+							// miscellaneous symbol character, use a known font
+							// other than the Apple Color Emoji font that can
+							// render those ranges
+							if ( !pSymbolFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aAppleSymbols );
+								if ( it == pSalData->maFontNameMapping.end() )
+									it = pSalData->maFontNameMapping.find( aArialUnicodeMS );
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
 						else if ( nChar >= 0xe000 && nChar < 0xf900 )
 						{
 							// If there is no fallback font and it is a Private
@@ -1822,7 +1851,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							// Fix bugs 2772 and 3097 if there is no fallback
 							// font and it is a CJK character by using a
-							// font that we can render those ranges nicely
+							// font that can render those ranges
 							if ( !pSymbolFallbackFont )
 							{
 								SalData *pSalData = GetSalData();
