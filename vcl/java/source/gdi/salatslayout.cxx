@@ -1762,7 +1762,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
-						else if ( nChar >= 0x2600 && nChar < 0x26ff )
+						else if ( nChar >= 0x2600 && nChar < 0x2700 )
 						{
 							// If there is no fallback font and it is a
 							// miscellaneous symbol character, use a known font
