@@ -64,14 +64,28 @@
 static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
 static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "Apple Symbols" ) );
 static const String aArialUnicodeMS( RTL_CONSTASCII_USTRINGPARAM( "Arial Unicode MS" ) );
+static const String aBanglaMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla MN" ) );
+static const String aBanglaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla Sangam MN" ) );
+static const String aDevanagariMT( RTL_CONSTASCII_USTRINGPARAM( "Devanagari MT" ) );
+static const String aDevanagariSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Devanagari Sangam MT" ) );
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
+static const String aGujaratiMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati MN" ) );
+static const String aGujaratiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati Sangam MN" ) );
+static const String aGurmukhiMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi MN" ) );
+static const String aGurmukhiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi Sangam MN" ) );
 static const String aHeitiSCMedium( RTL_CONSTASCII_USTRINGPARAM( "Heiti SC Medium" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
 static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
 static const String aLucidaGrande( RTL_CONSTASCII_USTRINGPARAM( "Lucida Grande" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
+static const String aOriyaMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya MN" ) );
+static const String aOriyaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya Sangam MN" ) );
+static const String aTamilMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil MN" ) );
+static const String aTamilSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil Sangam MN" ) );
+static const String aTeluguMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu MN" ) );
+static const String aTeluguSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu Sangam MN" ) );
 static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
 static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
@@ -1268,6 +1282,64 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bRet = false;
 	rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 
+	// Avoid crashing in OS X 10.11's IndicShapingEngine class by changing
+	// the font is an Arial font and we are laying out Indic characters
+	if ( mpFont )
+	{
+		for ( int i = rArgs.mnMinCharPos; i < rArgs.mnEndCharPos; i++ )
+		{
+			sal_Unicode nChar = rArgs.mpStr[ i ];
+			if ( nChar >= 0x0900 && nChar < 0x0c80 )
+			{
+				static CFStringRef aArialMT = CFSTR( "ArialMT" );
+				static CFStringRef aArialUnicodeMS = CFSTR( "ArialUnicodeMS" );
+
+				CFStringRef aFontPSName = CTFontCopyPostScriptName( (CTFontRef)mpFont->getNativeFont() );
+				if ( aFontPSName )
+				{
+					if ( CFStringCompare( aFontPSName, aArialMT, 0 ) == kCFCompareEqualTo || CFStringCompare( aFontPSName, aArialUnicodeMS, 0 ) == kCFCompareEqualTo )
+					{
+						SalData *pSalData = GetSalData();
+
+						::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aHelvetica );
+						if ( it != pSalData->maFontNameMapping.end() )
+							it = pSalData->maFontNameMapping.find( aLucidaGrande );
+						if ( it != pSalData->maFontNameMapping.end() )
+						{
+							Size aFontSize;
+							::std::hash_map< int, Size >::const_iterator fsit = mpGraphics->maFallbackFontSizes.find( mnFallbackLevel );
+							if ( fsit != mpGraphics->maFallbackFontSizes.end() )
+								aFontSize = fsit->second;
+							else
+								aFontSize = Size( 0, (long)mpFont->getSize() );
+
+							ImplFontSelectData aFontSelectData( *it->second, aFontSize, mpFont->getSize(), mpFont->getOrientation(), mpFont->isVertical() );
+							aFontSelectData.mbNonAntialiased = !mpFont->isAntialiased();
+							mpGraphics->SetFont( &aFontSelectData, mnFallbackLevel );
+
+							delete mpFont;
+							mpFont = NULL;
+							if ( mnFallbackLevel )
+							{
+								::std::hash_map< int, JavaImplFont* >::const_iterator fbit = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+								if ( fbit != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
+									mpFont = new JavaImplFont( fbit->second );
+							}
+							else
+							{
+								mpFont = new JavaImplFont( mpGraphics->mpFont );
+							}
+						}
+					}
+
+					CFRelease( aFontPSName );
+				}
+
+				break;
+			}
+		}
+	}
+
 	if ( !mpFont )
 		return bRet;
 
@@ -1748,6 +1820,69 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aTimesNewRoman );
 								if ( it == pSalData->maFontNameMapping.end() )
 									it = pSalData->maFontNameMapping.find( aLucidaGrande );
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( nChar >= 0x0900 && nChar < 0x0c80 )
+						{
+							// If there is no fallback font and it is an Indic
+							// character, use a font that can render Indic
+							if ( !pSymbolFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								String aFirstFontName;
+								String aSecondFontName;
+								if ( nChar < 0x0980 )
+								{
+									aFirstFontName = aDevanagariMT;
+									aSecondFontName = aDevanagariSangamMN;
+								}
+								else if ( nChar < 0x0a00 )
+								{
+									aFirstFontName = aBanglaMN;
+									aSecondFontName = aBanglaSangamMN;
+								}
+								else if ( nChar < 0x0a80 )
+								{
+									aFirstFontName = aGurmukhiMN;
+									aSecondFontName = aGurmukhiSangamMN;
+								}
+								else if ( nChar < 0x0b00 )
+								{
+									aFirstFontName = aGujaratiMN;
+									aSecondFontName = aGujaratiSangamMN;
+								}
+								else if ( nChar < 0x0b80 )
+								{
+									aFirstFontName = aOriyaMN;
+									aSecondFontName = aOriyaSangamMN;
+								}
+								else if ( nChar < 0x0c00 )
+								{
+									aFirstFontName = aTamilMN;
+									aSecondFontName = aTamilSangamMN;
+								}
+								else if ( nChar < 0x0c80 )
+								{
+									aFirstFontName = aTeluguMN;
+									aSecondFontName = aTeluguSangamMN;
+								}
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aFirstFontName );
+								if ( it == pSalData->maFontNameMapping.end() )
+									it = pSalData->maFontNameMapping.find( aSecondFontName );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
 									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
