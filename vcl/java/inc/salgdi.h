@@ -216,6 +216,7 @@ public:
 	JavaImplFontData*		mpFontData;
 	JavaImplFont*			mpFont;
 	::std::hash_map< int, JavaImplFont* >	maFallbackFonts;
+	::std::hash_map< int, Size >	maFallbackFontSizes;
 	ImplLayoutRuns			maFallbackRuns;
 	FontFamily				mnFontFamily;
 	FontWeight				mnFontWeight;

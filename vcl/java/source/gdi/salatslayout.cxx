@@ -65,19 +65,35 @@
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
+static bool bUseIndicFontHackInitialized = false;
+static bool bUseIndicFontHack = false;
 static bool bIsRunningSnowLeopardInitizalized  = false;
 static bool bIsRunningSnowLeopard = false;
 static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
 static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "Apple Symbols" ) );
 static const String aArialUnicodeMS( RTL_CONSTASCII_USTRINGPARAM( "Arial Unicode MS" ) );
+static const String aBanglaMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla MN" ) );
+static const String aBanglaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Bangla Sangam MN" ) );
+static const String aDevanagariMT( RTL_CONSTASCII_USTRINGPARAM( "Devanagari MT" ) );
+static const String aDevanagariSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Devanagari Sangam MT" ) );
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aGeezaProRegular( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro Regular" ) );
+static const String aGujaratiMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati MN" ) );
+static const String aGujaratiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gujarati Sangam MN" ) );
+static const String aGurmukhiMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi MN" ) );
+static const String aGurmukhiSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Gurmukhi Sangam MN" ) );
 static const String aHeitiSCMedium( RTL_CONSTASCII_USTRINGPARAM( "Heiti SC Medium" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
 static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
 static const String aLucidaGrande( RTL_CONSTASCII_USTRINGPARAM( "Lucida Grande" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
+static const String aOriyaMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya MN" ) );
+static const String aOriyaSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Oriya Sangam MN" ) );
+static const String aTamilMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil MN" ) );
+static const String aTamilSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Tamil Sangam MN" ) );
+static const String aTeluguMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu MN" ) );
+static const String aTeluguSangamMN( RTL_CONSTASCII_USTRINGPARAM( "Telugu Sangam MN" ) );
 static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
 static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
@@ -122,6 +138,8 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	ImplATSLayoutDataHash*	mpHash;
 	JavaImplFont*		mpFont;
 	bool*				mpNeedFallback;
+	::std::list< JavaImplFont* >	maFallbackFontList;
+	::std::map< int, JavaImplFont* >	maFallbackFontMap;
 	JavaImplFont*		mpFallbackFont;
 	CTFontRef			maFont;
 	CTTypesetterRef		maTypesetter;
@@ -149,6 +167,7 @@ protected:
 
 public:
 	void				Destroy();
+	JavaImplFont*		GetFallbackFont( int nCharPos );
 	const Rectangle&	GetGlyphBounds();
 	bool				IsValid() const { return mbValid; }
 	void				Reference() const;
@@ -729,62 +748,64 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 							mpNeedFallback[ aRange.location + j ] = true;
 
 						// Update font for next pass through
-						if ( !mpFallbackFont )
+						JavaImplFont *pFallbackFont = NULL;
+						SalData *pSalData = GetSalData();
+						if ( aFont )
 						{
-							SalData *pSalData = GetSalData();
-							if ( aFont )
+							OUString aPSName;
+							CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
+							if ( aPSString )
 							{
-								OUString aPSName;
-								CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
-								if ( aPSString )
-								{
-									CFIndex nPSLen = CFStringGetLength( aPSString );
-									CFRange aPSRange = CFRangeMake( 0, nPSLen );
-									sal_Unicode pPSBuffer[ nPSLen + 1 ];
-									CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-									pPSBuffer[ nPSLen ] = 0;
-									CFRelease( aPSString );
-									aPSName = OUString( pPSBuffer );
-								}
-
-								::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
-								if ( ffit != pSalData->maJavaFontNameMapping.end() )
-									mpFallbackFont = new JavaImplFont( ffit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+								CFIndex nPSLen = CFStringGetLength( aPSString );
+								CFRange aPSRange = CFRangeMake( 0, nPSLen );
+								sal_Unicode pPSBuffer[ nPSLen + 1 ];
+								CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
+								pPSBuffer[ nPSLen ] = 0;
+								CFRelease( aPSString );
+								aPSName = OUString( pPSBuffer );
 							}
 
-							if ( !mpFallbackFont )
-							{
-								// Look through our application font list for
-								// a font that has glyphs for the current char
-								for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !mpFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
-								{
-									for ( j = 0; j < aRange.length; j++ )
-									{
-										UniChar nChar = mpHash->mpStr[ aRange.location + j ];
-										CGGlyph nGlyph;
-										if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
-										{
-											mpFallbackFont = new JavaImplFont( nit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
-											break;
-										}
-									}
-								}
+							::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
+							if ( ffit != pSalData->maJavaFontNameMapping.end() )
+								pFallbackFont = new JavaImplFont( ffit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+						}
 
-								if ( !mpFallbackFont )
+						if ( !pFallbackFont )
+						{
+							// Look through our application font list for
+							// a font that has glyphs for the current char
+							for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !pFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
+							{
+								for ( j = 0; j < aRange.length; j++ )
 								{
-									if ( mpNeedFallback )
+									UniChar nChar = mpHash->mpStr[ aRange.location + j ];
+									CGGlyph nGlyph;
+									if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
 									{
-										rtl_freeMemory( mpNeedFallback );
-										mpNeedFallback = NULL;
-									}
-									if ( mpFallbackFont )
-									{
-										delete mpFallbackFont;
-										mpFallbackFont = NULL;
+										pFallbackFont = new JavaImplFont( nit->second->maFontName, mpHash->mfFontSize, mpFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+										break;
 									}
 								}
 							}
 						}
+
+						if ( pFallbackFont )
+						{
+							maFallbackFontList.push_back( pFallbackFont );
+							if ( !mpFallbackFont )
+								mpFallbackFont = pFallbackFont;
+						}
+						else
+						{
+							if ( mpNeedFallback )
+							{
+								rtl_freeMemory( mpNeedFallback );
+								mpNeedFallback = NULL;
+							}
+						}
+
+						for ( j = 0; j < aRange.length; j++ )
+							maFallbackFontMap[ aRange.location + j ] = pFallbackFont;
 					}
 				}
 			}
@@ -799,6 +820,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 ImplATSLayoutData::~ImplATSLayoutData()
 {
 	Destroy();
+}
+
+// ----------------------------------------------------------------------------
+
+JavaImplFont *ImplATSLayoutData::GetFallbackFont( int nCharPos )
+{
+	JavaImplFont *pRet = NULL;
+
+	::std::map< int, JavaImplFont* >::const_iterator it = maFallbackFontMap.find( nCharPos );
+	if ( it != maFallbackFontMap.end() )
+		pRet = it->second;
+
+	return pRet;
 }
 
 // ----------------------------------------------------------------------------
@@ -846,11 +880,14 @@ void ImplATSLayoutData::Destroy()
 		mpNeedFallback = NULL;
 	}
 
-	if ( mpFallbackFont )
+	while ( maFallbackFontList.size() )
 	{
-		delete mpFallbackFont;
-		mpFallbackFont = NULL;
+		delete maFallbackFontList.back();
+		maFallbackFontList.pop_back();
 	}
+
+	maFallbackFontMap.clear();
+	mpFallbackFont = NULL;
 
 	if ( maFont )
 	{
@@ -960,7 +997,40 @@ static bool IsRunningSnowLeopard()
 	return bIsRunningSnowLeopard;
 }
 
-// ----------------------------------------------------------------------------
+// ============================================================================
+
+static bool UseIndicFontHack()
+{
+	if ( !bUseIndicFontHackInitialized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				// Use Indic font hack if we are running OS X 10.11 or higher
+				SInt32 res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res >= 11 )
+						bUseIndicFontHack = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bUseIndicFontHackInitialized = true;
+	}
+
+	return bUseIndicFontHack;
+}
+
+// ============================================================================
 
 static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
 {
@@ -1517,6 +1587,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					aArabicTest[ 0 ] = 0x0634;
 					aArabicTest[ 1 ] = 0x0634;
 					aArabicTest[ 2 ] = 0x0640;
+#ifdef USE_INDIC_FONT_HACK
+					if ( SetIndicFontHack( aArabicTest, 0, 3 ) )
+						return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpFont, this );
 				}
 
@@ -1621,6 +1695,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 
+#ifdef USE_INDIC_FONT_HACK
+		if ( SetIndicFontHack( rArgs.mpStr, nMinFallbackCharPos, nEndFallbackCharPos ) )
+			return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 		if ( !pLayoutData )
 			continue;
@@ -1663,6 +1741,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		if ( bRelayout )
 		{
+#ifdef USE_INDIC_FONT_HACK
+			if ( SetIndicFontHack( rArgs.mpStr, nMinFallbackCharPos, nEndFallbackCharPos ) )
+				return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 			pLayoutData->Release();
 			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 			if ( !pLayoutData )
@@ -1675,11 +1757,16 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
 			{
 				if ( pLayoutData->mpNeedFallback[ i - nMinFallbackCharPos ] )
+				{
+					if ( !pFallbackFont )
+						pFallbackFont = pLayoutData->GetFallbackFont( i - nMinFallbackCharPos );
 					rArgs.NeedFallback( i, bRunRTL );
+				}
 			}
 
 			if ( !pFallbackFont )
 				pFallbackFont = pLayoutData->mpFallbackFont;
+
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
@@ -1708,6 +1795,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							sal_Unicode aMirrored[ 1 ];
 							aMirrored[ 0 ] = nMirroredChar;
+#ifdef USE_INDIC_FONT_HACK
+							if ( SetIndicFontHack( aMirrored, 0, 1 ) )
+								LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpFont, this );
 							if ( pCurrentLayoutData )
 							{
@@ -1797,7 +1888,70 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
-						else if ( nChar >= 0x2600 && nChar < 0x26ff )
+						else if ( nChar >= 0x0900 && nChar < 0x0c80 )
+						{
+							// If there is no fallback font and it is an Indic
+							// character, use a font that can render Indic
+							if ( !pSymbolFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								String aFirstFontName;
+								String aSecondFontName;
+								if ( nChar < 0x0980 )
+								{
+									aFirstFontName = aDevanagariMT;
+									aSecondFontName = aDevanagariSangamMN;
+								}
+								else if ( nChar < 0x0a00 )
+								{
+									aFirstFontName = aBanglaMN;
+									aSecondFontName = aBanglaSangamMN;
+								}
+								else if ( nChar < 0x0a80 )
+								{
+									aFirstFontName = aGurmukhiMN;
+									aSecondFontName = aGurmukhiSangamMN;
+								}
+								else if ( nChar < 0x0b00 )
+								{
+									aFirstFontName = aGujaratiMN;
+									aSecondFontName = aGujaratiSangamMN;
+								}
+								else if ( nChar < 0x0b80 )
+								{
+									aFirstFontName = aOriyaMN;
+									aSecondFontName = aOriyaSangamMN;
+								}
+								else if ( nChar < 0x0c00 )
+								{
+									aFirstFontName = aTamilMN;
+									aSecondFontName = aTamilSangamMN;
+								}
+								else if ( nChar < 0x0c80 )
+								{
+									aFirstFontName = aTeluguMN;
+									aSecondFontName = aTeluguSangamMN;
+								}
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aFirstFontName );
+								if ( it == pSalData->maFontNameMapping.end() )
+									it = pSalData->maFontNameMapping.find( aSecondFontName );
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new JavaImplFont( it->second->maFontName, mpFont->getSize(), mpFont->getOrientation(), mpFont->isAntialiased(), mpFont->isVertical(), mpFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( nChar >= 0x2600 && nChar < 0x2700 )
 						{
 							// If there is no fallback font and it is a
 							// miscellaneous symbol character, use a known font
@@ -1873,14 +2027,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
-						else if ( pCurrentLayoutData->mpFallbackFont )
+						else
 						{
 							// Fix bug 2091 by suppressing zero glyphs if there
 							// is a fallback font
 							if ( !pFallbackFont )
-								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
-							rArgs.NeedFallback( nCharPos, bRunRTL );
-							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+							{
+								pFallbackFont = pCurrentLayoutData->GetFallbackFont( nIndex );
+								if ( !pFallbackFont )
+									pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+							}
+
+							if ( pFallbackFont )
+							{
+								rArgs.NeedFallback( nCharPos, bRunRTL );
+								rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+							}
 						}
 					}
 
@@ -2505,3 +2667,91 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 
 	return nRet;
 }
+
+// ----------------------------------------------------------------------------
+
+#ifdef USE_INDIC_FONT_HACK
+
+// Avoid crashing in OS X 10.11's IndicShapingEngine class by changing
+// the font is a font that causes crashing when laying out Indic characters
+bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, int nEndCharPos )
+{
+	bool bRet = false;
+
+	if ( !UseIndicFontHack() )
+		return bRet;
+
+	if ( mpFont && pStr )
+	{
+		for ( int i = nMinCharPos; !bRet && i < nEndCharPos; i++ )
+		{
+			sal_Unicode nChar = pStr[ i ];
+			if ( nChar >= 0x0900 && nChar < 0x0c80 )
+			{
+				static CFStringRef aArialMTFontPSName = CFSTR( "ArialMT" );
+				static CFStringRef aArialUnicodeMSFontPSName = CFSTR( "ArialUnicodeMS" );
+
+				CFStringRef aFontPSName = CTFontCopyPostScriptName( (CTFontRef)mpFont->getNativeFont() );
+				if ( aFontPSName )
+				{
+					if ( CFStringCompare( aFontPSName, aArialMTFontPSName, 0 ) == kCFCompareEqualTo || CFStringCompare( aFontPSName, aArialUnicodeMSFontPSName, 0 ) == kCFCompareEqualTo )
+					{
+						SalData *pSalData = GetSalData();
+
+						::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aHelvetica );
+						if ( it != pSalData->maFontNameMapping.end() )
+							it = pSalData->maFontNameMapping.find( aLucidaGrande );
+						if ( it != pSalData->maFontNameMapping.end() )
+						{
+							Size aFontSize;
+							::std::hash_map< int, Size >::const_iterator fsit = mpGraphics->maFallbackFontSizes.find( mnFallbackLevel );
+							if ( fsit != mpGraphics->maFallbackFontSizes.end() )
+								aFontSize = fsit->second;
+							else
+								aFontSize = Size( 0, (long)mpFont->getSize() );
+
+							ImplFontSelectData aFontSelectData( *it->second, aFontSize, mpFont->getSize(), mpFont->getOrientation(), mpFont->isVertical() );
+							aFontSelectData.mbNonAntialiased = !mpFont->isAntialiased();
+							USHORT nSetFont = mpGraphics->SetFont( &aFontSelectData, mnFallbackLevel );
+
+							delete mpFont;
+							mpFont = NULL;
+
+							if ( !nSetFont )
+							{
+								JavaImplFont *pFont = NULL;
+								if ( mnFallbackLevel )
+								{
+									::std::hash_map< int, JavaImplFont* >::const_iterator fbit = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+									if ( fbit != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
+										pFont = new JavaImplFont( fbit->second );
+								}
+								else
+								{
+									pFont = new JavaImplFont( mpGraphics->mpFont );
+								}
+
+								if ( pFont )
+								{
+									CFStringRef aNewFontPSName = CTFontCopyPostScriptName( (CTFontRef)pFont->getNativeFont() );
+									if ( aNewFontPSName && CFStringCompare( aNewFontPSName, aFontPSName, 0 ) != kCFCompareEqualTo )
+										mpFont = pFont;
+									else
+										delete pFont;
+								}
+							}
+
+							bRet = true;
+						}
+					}
+
+					CFRelease( aFontPSName );
+				}
+			}
+		}
+	}
+
+	return bRet;
+}
+
+#endif	// USE_INDIC_FONT_HACK
