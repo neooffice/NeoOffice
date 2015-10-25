@@ -43,6 +43,8 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include <sys/sysctl.h>
 #include <unicode/ubidi.h>
 
@@ -61,6 +63,10 @@
 #define UNITS_PER_PIXEL 1
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
+static bool bUseIndicFontHackInitialized = false;
+static bool bUseIndicFontHack = false;
 static const String aAlBayanPlain( RTL_CONSTASCII_USTRINGPARAM( "Al Bayan Plain" ) );
 static const String aAppleSymbols( RTL_CONSTASCII_USTRINGPARAM( "Apple Symbols" ) );
 static const String aArialUnicodeMS( RTL_CONSTASCII_USTRINGPARAM( "Arial Unicode MS" ) );
@@ -955,6 +961,39 @@ void ImplATSLayoutData::Release() const
 
 	// const_cast because some compilers violate ANSI C++ spec
 	delete const_cast< ImplATSLayoutData* >( this );
+}
+
+// ============================================================================
+
+static bool UseIndicFontHack()
+{
+	if ( !bUseIndicFontHackInitialized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+			if ( pGestalt )
+			{
+				// Use Indic font hack if we are running OS X 10.11 or higher
+				long res = 0;
+				pGestalt( gestaltSystemVersionMajor, &res );
+				if ( res == 10 )
+				{
+					res = 0;
+					pGestalt( gestaltSystemVersionMinor, &res );
+					if ( res >= 11 )
+						bUseIndicFontHack = true;
+				}
+			}
+
+			dlclose( pLib );
+		}
+
+		bUseIndicFontHackInitialized = true;
+	}
+
+	return bUseIndicFontHack;
 }
 
 // ============================================================================
@@ -2597,6 +2636,9 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, int nEndCharPos )
 {
 	bool bRet = false;
+
+	if ( !UseIndicFontHack() )
+		return bRet;
 
 	if ( mpFont && pStr )
 	{
