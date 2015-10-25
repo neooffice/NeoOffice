@@ -87,6 +87,7 @@ public:
 	sal_Int32			GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
 
 	void				Destroy();
+	bool				SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, int nEndCharPos );
 };
 
 #endif // _SV_SALATSLAYOUT_HXX
