@@ -1517,8 +1517,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					aArabicTest[ 0 ] = 0x0634;
 					aArabicTest[ 1 ] = 0x0634;
 					aArabicTest[ 2 ] = 0x0640;
+#ifdef USE_INDIC_FONT_HACK
 					if ( SetIndicFontHack( aArabicTest, 0, 3 ) )
 						return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpFont, this );
 				}
 
@@ -1623,8 +1625,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 
+#ifdef USE_INDIC_FONT_HACK
 		if ( SetIndicFontHack( rArgs.mpStr, nMinFallbackCharPos, nEndFallbackCharPos ) )
 			return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 		if ( !pLayoutData )
 			continue;
@@ -1667,8 +1671,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		if ( bRelayout )
 		{
+#ifdef USE_INDIC_FONT_HACK
 			if ( SetIndicFontHack( rArgs.mpStr, nMinFallbackCharPos, nEndFallbackCharPos ) )
 				return LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 			pLayoutData->Release();
 			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpFont, this );
 			if ( !pLayoutData )
@@ -1719,8 +1725,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							sal_Unicode aMirrored[ 1 ];
 							aMirrored[ 0 ] = nMirroredChar;
+#ifdef USE_INDIC_FONT_HACK
 							if ( SetIndicFontHack( aMirrored, 0, 1 ) )
 								LayoutText( rArgs );
+#endif	// USE_INDIC_FONT_HACK
 							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpFont, this );
 							if ( pCurrentLayoutData )
 							{
@@ -2582,6 +2590,8 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 
 // ----------------------------------------------------------------------------
 
+#ifdef USE_INDIC_FONT_HACK
+
 // Avoid crashing in OS X 10.11's IndicShapingEngine class by changing
 // the font is a font that causes crashing when laying out Indic characters
 bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, int nEndCharPos )
@@ -2660,3 +2670,5 @@ bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, i
 
 	return bRet;
 }
+
+#endif	// USE_INDIC_FONT_HACK
