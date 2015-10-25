@@ -2647,13 +2647,12 @@ bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, i
 			sal_Unicode nChar = pStr[ i ];
 			if ( nChar >= 0x0900 && nChar < 0x0c80 )
 			{
-				static CFStringRef aArialMTFontPSName = CFSTR( "ArialMT" );
 				static CFStringRef aArialUnicodeMSFontPSName = CFSTR( "ArialUnicodeMS" );
 
 				CFStringRef aFontPSName = CTFontCopyPostScriptName( (CTFontRef)mpFont->getNativeFont() );
 				if ( aFontPSName )
 				{
-					if ( CFStringCompare( aFontPSName, aArialMTFontPSName, 0 ) == kCFCompareEqualTo || CFStringCompare( aFontPSName, aArialUnicodeMSFontPSName, 0 ) == kCFCompareEqualTo )
+					if ( CFStringCompare( aFontPSName, aArialUnicodeMSFontPSName, 0 ) == kCFCompareEqualTo )
 					{
 						SalData *pSalData = GetSalData();
 
