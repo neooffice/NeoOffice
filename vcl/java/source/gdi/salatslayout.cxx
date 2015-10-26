@@ -2647,61 +2647,107 @@ bool SalATSLayout::SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, i
 			sal_Unicode nChar = pStr[ i ];
 			if ( nChar >= 0x0900 && nChar < 0x0c80 )
 			{
-				static CFStringRef aArialUnicodeMSFontPSName = CFSTR( "ArialUnicodeMS" );
-
-				CFStringRef aFontPSName = CTFontCopyPostScriptName( (CTFontRef)mpFont->getNativeFont() );
-				if ( aFontPSName )
+				String aFamilyName;
+				CFStringRef aFamilyString = CTFontCopyFamilyName( (CTFontRef)mpFont->getNativeFont() );
+				if ( aFamilyString )
 				{
-					if ( CFStringCompare( aFontPSName, aArialUnicodeMSFontPSName, 0 ) == kCFCompareEqualTo )
+					CFIndex nFamilyLen = CFStringGetLength( aFamilyString );
+					CFRange aFamilyRange = CFRangeMake( 0, nFamilyLen );
+					sal_Unicode pFamilyBuffer[ nFamilyLen + 1 ];
+					CFStringGetCharacters( aFamilyString, aFamilyRange, pFamilyBuffer );
+					pFamilyBuffer[ nFamilyLen ] = 0;
+					CFRelease( aFamilyString );
+					aFamilyName = OUString( pFamilyBuffer );
+				}
+
+				if ( aFamilyName != aDevanagariMT
+					&& aFamilyName != aDevanagariSangamMN
+					&& aFamilyName != aBanglaMN
+					&& aFamilyName != aBanglaSangamMN
+					&& aFamilyName != aGurmukhiMN
+					&& aFamilyName != aGurmukhiSangamMN
+					&& aFamilyName != aGujaratiMN
+					&& aFamilyName != aGujaratiSangamMN
+					&& aFamilyName != aOriyaMN
+					&& aFamilyName != aOriyaSangamMN
+					&& aFamilyName != aTamilMN
+					&& aFamilyName != aTamilSangamMN
+					&& aFamilyName != aTeluguMN
+					&& aFamilyName != aTeluguSangamMN )
+				{
+					SalData *pSalData = GetSalData();
+					CFStringRef aFontPSName = CTFontCopyPostScriptName( (CTFontRef)mpFont->getNativeFont() );
+					USHORT nSetFont = SAL_SETFONT_BADFONT;
+
+					::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aDevanagariMT );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aDevanagariSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aBanglaMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aBanglaSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aGurmukhiMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aGurmukhiSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aGujaratiMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aGujaratiSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aOriyaMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aOriyaSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aTamilMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aTamilSangamMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aTeluguMN );
+					if ( it == pSalData->maFontNameMapping.end() )
+						it = pSalData->maFontNameMapping.find( aTeluguSangamMN );
+					if ( it != pSalData->maFontNameMapping.end() )
 					{
-						SalData *pSalData = GetSalData();
+						Size aFontSize;
+						::std::hash_map< int, Size >::const_iterator fsit = mpGraphics->maFallbackFontSizes.find( mnFallbackLevel );
+						if ( fsit != mpGraphics->maFallbackFontSizes.end() )
+							aFontSize = fsit->second;
+						else
+							aFontSize = Size( 0, (long)mpFont->getSize() );
 
-						::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aHelvetica );
-						if ( it != pSalData->maFontNameMapping.end() )
-							it = pSalData->maFontNameMapping.find( aLucidaGrande );
-						if ( it != pSalData->maFontNameMapping.end() )
+						ImplFontSelectData aFontSelectData( *it->second, aFontSize, mpFont->getSize(), mpFont->getOrientation(), mpFont->isVertical() );
+						aFontSelectData.mbNonAntialiased = !mpFont->isAntialiased();
+						nSetFont = mpGraphics->SetFont( &aFontSelectData, mnFallbackLevel );
+					}
+
+					delete mpFont;
+					mpFont = NULL;
+
+					if ( !nSetFont )
+					{
+						JavaImplFont *pFont = NULL;
+						if ( mnFallbackLevel )
 						{
-							Size aFontSize;
-							::std::hash_map< int, Size >::const_iterator fsit = mpGraphics->maFallbackFontSizes.find( mnFallbackLevel );
-							if ( fsit != mpGraphics->maFallbackFontSizes.end() )
-								aFontSize = fsit->second;
+							::std::hash_map< int, JavaImplFont* >::const_iterator fbit = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+							if ( fbit != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
+								pFont = new JavaImplFont( fbit->second );
+						}
+						else
+						{
+							pFont = new JavaImplFont( mpGraphics->mpFont );
+						}
+
+						if ( pFont )
+						{
+							CFStringRef aNewFontPSName = CTFontCopyPostScriptName( (CTFontRef)pFont->getNativeFont() );
+							if ( aNewFontPSName && CFStringCompare( aNewFontPSName, aFontPSName, 0 ) != kCFCompareEqualTo )
+								mpFont = pFont;
 							else
-								aFontSize = Size( 0, (long)mpFont->getSize() );
-
-							ImplFontSelectData aFontSelectData( *it->second, aFontSize, mpFont->getSize(), mpFont->getOrientation(), mpFont->isVertical() );
-							aFontSelectData.mbNonAntialiased = !mpFont->isAntialiased();
-							USHORT nSetFont = mpGraphics->SetFont( &aFontSelectData, mnFallbackLevel );
-
-							delete mpFont;
-							mpFont = NULL;
-
-							if ( !nSetFont )
-							{
-								JavaImplFont *pFont = NULL;
-								if ( mnFallbackLevel )
-								{
-									::std::hash_map< int, JavaImplFont* >::const_iterator fbit = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
-									if ( fbit != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
-										pFont = new JavaImplFont( fbit->second );
-								}
-								else
-								{
-									pFont = new JavaImplFont( mpGraphics->mpFont );
-								}
-
-								if ( pFont )
-								{
-									CFStringRef aNewFontPSName = CTFontCopyPostScriptName( (CTFontRef)pFont->getNativeFont() );
-									if ( aNewFontPSName && CFStringCompare( aNewFontPSName, aFontPSName, 0 ) != kCFCompareEqualTo )
-										mpFont = pFont;
-									else
-										delete pFont;
-								}
-							}
-
-							bRet = true;
+								delete pFont;
 						}
 					}
+
+					bRet = true;
 
 					CFRelease( aFontPSName );
 				}
