@@ -63,7 +63,7 @@ SLOFILES= \
 	$(SLO)$/salprn.obj \
 	$(SLO)$/salvd.obj
 
-APP1TARGET=$(TARGET)checknativefont
+APP1TARGET=checknativefont
 APP1OBJS=$(OBJ)$/salchecknativefont.obj
 APP1STDLIBS=-framework CoreFoundation -framework CoreText
 
