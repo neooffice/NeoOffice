@@ -1100,7 +1100,7 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 				mpGlyphs[ i ] = (CGGlyph)pGlyphs[ i ];
 		}
 
-		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGSize ) );
+		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGPoint ) );
 		if ( mpPositions )
 		{
 			mpPositions[ 0 ].x = 0.0f;
