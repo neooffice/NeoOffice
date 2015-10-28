@@ -49,9 +49,6 @@
 // Comment out the following line to disable subpixel text rendering
 #define USE_SUBPIXEL_TEXT_RENDERING
 
-// Comment out the following line to disable the OS X 10.11 Indic font hack
-#define USE_INDIC_FONT_HACK
-
 struct ImplATSLayoutData;
 class JavaImplFont;
 class JavaSalGraphics;
@@ -90,9 +87,6 @@ public:
 	sal_Int32			GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
 
 	void				Destroy();
-#ifdef USE_INDIC_FONT_HACK
-	bool				SetIndicFontHack( const sal_Unicode *pStr, int nMinCharPos, int nEndCharPos );
-#endif	// USE_INDIC_FONT_HACK
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

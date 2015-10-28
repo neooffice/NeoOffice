@@ -84,6 +84,17 @@ using namespace vos;
 
 static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *pObserver, CFStringRef aName, const void *pObject, CFDictionaryRef aUserInfo )
 {
+	static bool bInCallback = false;
+
+	if ( bInCallback )
+		return;
+
+	bInCallback = true;
+
+	// Consume any duplicate notifications that are already in the queue
+	while ( CFRunLoopRunInMode( kCFRunLoopDefaultMode, 0.1f, true ) == kCFRunLoopRunHandledSource )
+		;
+
 	// Queue font list update
 	if ( !Application::IsShutDown() )
 	{
@@ -93,6 +104,8 @@ static void ImplFontListChangedCallback( CFNotificationCenterRef aCenter, void *
 			Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
 		rSolarMutex.release();
 	}
+
+	bInCallback = false;
 }
 
 // ----------------------------------------------------------------------------
@@ -346,6 +359,22 @@ static void ImplFontListChanged()
 						aAttributes.mbEmbeddable = false;
 
 						JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, nNativeFont, aFamilyName );
+
+						// Check fonts that were previously marked as bad
+						::std::map< OUString, OUString >::iterator bfnit = JavaImplFontData::maBadNativeFontNameMap.find( aPSName );
+ 						if ( bfnit != JavaImplFontData::maBadNativeFontNameMap.end() )
+						{
+							if ( JavaImplFontData::IsBadFont( pFontData, false ) )
+							{
+								delete pFontData;
+								continue;
+							}
+							else
+							{
+								JavaImplFontData::maBadNativeFontNameMap.erase( bfnit );
+							}
+						}
+
 						pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
 
 						// Multiple native fonts can map to the same font
@@ -447,7 +476,7 @@ static void ImplFontListChanged()
 			// Fix bug 3095 by handling font change notifications
 			if ( !bFontListChangedObserverAdded )
 			{
-				CFNotificationCenterAddObserver( CFNotificationCenterGetLocalCenter(), NULL, ImplFontListChangedCallback, kCTFontManagerRegisteredFontsChangedNotification, NULL, CFNotificationSuspensionBehaviorDeliverImmediately );
+				CFNotificationCenterAddObserver( CFNotificationCenterGetLocalCenter(), NULL, ImplFontListChangedCallback, kCTFontManagerRegisteredFontsChangedNotification, NULL, CFNotificationSuspensionBehaviorCoalesce );
 				bFontListChangedObserverAdded = true;
 			}
 
@@ -500,18 +529,27 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 
 // =======================================================================
 
+::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadNativeFontCheckedMap;
+
+// -----------------------------------------------------------------------
+
 ::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadNativeFontIDMap;
+
+// -----------------------------------------------------------------------
+
+::std::map< OUString, OUString > JavaImplFontData::maBadNativeFontNameMap;
 
 // -----------------------------------------------------------------------
 
 void JavaImplFontData::ClearNativeFonts()
 {
-	JavaImplFontData::maBadNativeFontIDMap.clear();
+	maBadNativeFontCheckedMap.clear();
+	maBadNativeFontIDMap.clear();
 }
 
 // -----------------------------------------------------------------------
 
-void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
+void JavaImplFontData::HandleBadFont( const JavaImplFontData *pFontData )
 {
 	if ( !pFontData )
 		return;
@@ -523,6 +561,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 	{
 		bReloadFonts = true;
 		maBadNativeFontIDMap[ pFontData->mnNativeFontID ] = pFontData->mnNativeFontID;
+		maBadNativeFontNameMap[ pFontData->maFontName ] = pFontData->maFontName;
 	}
 
 	// Find any fonts that have the same family as the current font and mark
@@ -537,6 +576,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 			{
 				bReloadFonts = true;
 				maBadNativeFontIDMap[ it->second->mnNativeFontID ] = it->second->mnNativeFontID;
+				maBadNativeFontNameMap[ it->second->maFontName ] = it->second->maFontName;
 			}
 		}
 	}
@@ -545,6 +585,86 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 	// event are dispatched
 	if ( bReloadFonts )
 		Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandleIfBadFont )
+{
+	bool bRet = false;
+
+	if ( !pFontData )
+		return bRet;
+
+	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator cit = maBadNativeFontCheckedMap.find( pFontData->mnNativeFontID );
+	if ( cit == maBadNativeFontCheckedMap.end() )
+	{
+		maBadNativeFontCheckedMap[ pFontData->mnNativeFontID ] = pFontData->mnNativeFontID;
+
+		CFStringRef aPSString = CTFontCopyPostScriptName( (CTFontRef)pFontData->mnNativeFontID );
+		if ( aPSString )
+		{
+			if ( CFStringGetLength( aPSString ) )
+			{
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+				NSBundle *pBundle = [NSBundle mainBundle];
+				if ( pBundle && pBundle.bundlePath )
+				{
+					NSString *pCommandPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/checknativefont", pBundle.bundlePath];
+					if ( pCommandPath && !access( [pCommandPath UTF8String], R_OK | X_OK ) )
+					{
+						char *pCommandArgs[ 3 ];
+						pCommandArgs[ 0 ] = (char *)[pCommandPath UTF8String];
+						pCommandArgs[ 1 ] = (char *)[(NSString *)aPSString UTF8String];
+						pCommandArgs[ 2 ] = NULL;
+
+						// Execute the pagein command in child process
+						pid_t pid = fork();
+						if ( !pid )
+						{
+							close( 0 );
+							execvp( [pCommandPath UTF8String], pCommandArgs );
+							_exit( 0 );
+						}
+						else
+						{
+							// Get child process status
+							int status;
+							while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+								usleep( 10 );
+
+							// If the child process crashes, it is a bad font
+							if ( WTERMSIG( status ) == SIGSEGV )
+							{
+								bRet = true;
+
+								if ( bHandleIfBadFont )
+								{
+									SalData *pSalData = GetSalData();
+									::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.find( pFontData->mnNativeFontID );
+									if ( nit != pSalData->maNativeFontMapping.end() )
+										JavaImplFontData::HandleBadFont( nit->second );
+								}
+							}
+						}
+					}
+				}
+
+				[pPool release];
+			}
+
+			CFRelease( aPSString );
+		}
+	}
+	else
+	{
+		::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadNativeFontIDMap.find( pFontData->mnNativeFontID );
+		if ( bit != maBadNativeFontIDMap.end() )
+			bRet = true;
+	}
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
