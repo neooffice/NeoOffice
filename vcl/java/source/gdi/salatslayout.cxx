@@ -405,8 +405,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	SalData *pSalData = GetSalData();
-
 	if ( UseIndicFontHack() )
 	{
 		for ( int i = 0; i < mpHash->mnLen; i++ )
@@ -414,6 +412,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			sal_Unicode nChar = mpHash->mpStr[ i ];
 			if ( nChar >= 0x0900 && nChar < 0x0c80 )
 			{
+				SalData *pSalData = GetSalData();
+
 				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)mpHash->mnFontID );
 				if ( it == pSalData->maNativeFontMapping.end() || JavaImplFontData::IsBadFont( it->second ) )
 				{
