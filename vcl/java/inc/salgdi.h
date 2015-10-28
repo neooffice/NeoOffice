@@ -68,14 +68,17 @@ class SalATSLayout;
 class JavaImplFontData : public ImplFontData
 {
 public:
+	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadNativeFontCheckedMap;
 	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadNativeFontIDMap;
+	static ::std::map< OUString, OUString >	maBadNativeFontNameMap;
 	::rtl::OUString			maFontName;
 	mutable sal_IntPtr		mnNativeFontID;
 	::std::list< JavaImplFontData* >	maChildren;
 	::rtl::OUString			maFamilyName;
 
 	static void				ClearNativeFonts();
-	static void				HandleBadFont( JavaImplFontData *pFontData );
+	static void				HandleBadFont( const JavaImplFontData *pFontData );
+	static bool				IsBadFont( const JavaImplFontData *pFontData, bool bHandleIfBadFont = true );
 	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
 
 							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::rtl::OUString& rFontName, sal_IntPtr nNativeFontID, const ::rtl::OUString& rFamilyName );
