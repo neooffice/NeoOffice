@@ -63,9 +63,12 @@ SLOFILES= \
 	$(SLO)$/salprn.obj \
 	$(SLO)$/salvd.obj
 
+# checknativefont will only crash on bad fonts when run as a 64 bit application
+CFLAGSOBJ+=-arch x86_64
 APP1TARGET=checknativefont
 APP1OBJS=$(OBJ)$/salchecknativefont.obj
 APP1STDLIBS=-framework CoreFoundation -framework ApplicationServices
+APP1LINKFLAGS+=-arch x86_64
 
 .ENDIF	# "$(GUIBASE)"!="java"
 
