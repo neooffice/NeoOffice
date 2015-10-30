@@ -635,7 +635,7 @@ bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandl
 								usleep( 10 );
 
 							// If the child process crashes, it is a bad font
-							if ( WTERMSIG( status ) == SIGSEGV )
+							if ( EINTR != errno && WTERMSIG( status ) == SIGSEGV )
 							{
 								bRet = true;
 
