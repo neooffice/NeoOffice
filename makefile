@@ -148,7 +148,15 @@ PRODUCT_VERSION_EXT=
 PRODUCT_VERSION_EXT2=Free Edition
 PRODUCT_VERSION_EXT3=Classic Edition
 PRODUCT_DIR_VERSION=$(subst $(SPACE),_,$(PRODUCT_VERSION))
+ifdef PRODUCT_BUILD3
 PRODUCT_SHORT_VERSION=$(subst $(SPACE),,$(subst $(PRODUCT_VERSION_EXT),,$(PRODUCT_VERSION)))
+else ifdef PRODUCT_BUILD2
+# Use full version as it will always be less that the Mac App Store version
+PRODUCT_SHORT_VERSION=$(subst $(SPACE),,$(subst $(PRODUCT_VERSION_EXT),,$(PRODUCT_VERSION)))
+else
+# Use base version as Mac App Store requires consistently increasing versions
+PRODUCT_SHORT_VERSION=$(subst $(SPACE),,$(PRODUCT_VERSION_BASE))
+endif
 PREVIOUS_PRODUCT_VERSION_BASE=$(PRODUCT_VERSION_BASE)
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
