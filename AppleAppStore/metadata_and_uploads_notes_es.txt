@@ -26,12 +26,10 @@ What's New in this Version:
 Before you buy NeoOffice, we recommend that you click on the «Soporte técnico de NeoOffice» link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• After starting a slide show from a presentation document that is in full screen mode, exiting the slide show would disable the OS X menubar until the presentation document was closed
-• When opening a document while in full screen mode that contains linked but not embedded images or OLE objects, NeoOffice would shrink the newly opened full screen mode window
-• When saving certain documents that contain embedded images or OLE objects, NeoOffice would would fail to save one or more of the embedded images or OLE objects
-
-This version also fixes the follow bug. Special thanks go to the engineers at LibreOffice.org who identified and provided a fix for this bug:
-• NeoOffice would crash when opening certain Microsoft Word .doc documents
+• NeoOffice would ignore most keystrokes when typing many common Indic language words
+• Any color settings for changes in Writer documents that were set to "By author" or "[None]" would be unset when quitting NeoOffice
+• NeoOffice would crash when opening LibreOffice HTML files that contain images
+• NeoOffice would crash when rendering Indic characters using the "Arial Unicode MS" font
 
 
 Keywords:
