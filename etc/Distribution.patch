@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION) $(PRODUCT_DIR_PATCH_VERSION_EXTRA)</title>
+    <title>$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</title>
     <options customize="never" allow-external-scripts="yes" hostArchitectures="$(TARGET_MACHINE)"/>
     <domains enable_anywhere="true"/>
     <choices-outline>
         <line choice="choice0"/>
     </choices-outline>
-    <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION) $(PRODUCT_DIR_PATCH_VERSION_EXTRA)">
+    <choice id="choice0" title="$(PRODUCT_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)">
         <pkg-ref id="$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)_patch.pkg"/>
     </choice>
     <!--
