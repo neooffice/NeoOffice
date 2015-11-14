@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-product_minor_version=`echo '$(PRODUCT_VERSION)' | sed 's#^$(PRODUCT_VERSION_BASE)\(.*\)$(PRODUCT_VERSION_EXT).*$#\1#' | sed 's#[^0-9]*##g'`
+product_minor_version=`echo '$(PRODUCT_VERSION)' | sed 's#^$(PRODUCT_VERSION_BASE)\.*\([0-9]*\) *$(PRODUCT_VERSION_EXT)$#\1#'`
 product_patch_version=`echo '$(PRODUCT_PATCH_VERSION)' | sed 's#^Patch ##'`
 userinstall="$(PRODUCT_USER_INSTALL_DIR)"
 target_file_type="$(TARGET_FILE_TYPE)"
@@ -71,7 +71,7 @@ check_installation() {
 		fi
 		productkey=`echo "$productkey" | awk -F= '{ print $2 }'`
 		productpatch=`echo "$productpatch" | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
-		productminor=`echo "$productkey" | grep "^$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE).*$(PRODUCT_VERSION_EXT)"`
+		productminor=`echo "$productkey" | grep '^$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE)\.*[0-9]* *$(PRODUCT_VERSION_EXT)$'`
 
 		# Allow a product base match
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then
@@ -81,7 +81,7 @@ check_installation() {
 				return 0
 			fi
 		elif [ ! -z "$productminor" ] ; then
-			productminor=`echo "$productminor" | sed 's#^$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE)\(.*\)$(PRODUCT_VERSION_EXT).*$#\1#' | sed 's#[^0-9]*##g'`
+			productminor=`echo "$productminor" | sed 's#^$(PRODUCT_NAME) $(PRODUCT_VERSION_BASE)\.*\([0-9]*\) *$(PRODUCT_VERSION_EXT)$#\1#'`
 			if [ -z "$productminor" ] ; then
 				return 0
 			elif [ "$productminor" -le "$product_minor_version" ] ; then
