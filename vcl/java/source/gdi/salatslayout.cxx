@@ -1196,7 +1196,23 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 
 					CGContextSetFillColorWithColor( aContext, aColor );
 					CGContextSetStrokeColorWithColor( aContext, aColor );
-					CTFontDrawGlyphs( aFont, mpGlyphs, mpPositions, mnGlyphCount, aContext );
+
+					// Fix font scaling bug reported in 11/13/2015 e-mail to
+					// to elcapitanbugs@neooffice.org by unscaling the glyph
+					// positions by the same amount of X scale in the context's
+					// text matrix
+					if ( mfScaleX != 1.0 )
+					{
+						CGPoint aScaledPositions[ mnGlyphCount ];
+						memcpy( aScaledPositions, mpPositions, mnGlyphCount * sizeof( CGPoint ) );
+						for ( int i = 0; i < mnGlyphCount; i++ )
+							aScaledPositions[ i ].x /= mfScaleX;
+						CTFontDrawGlyphs( aFont, mpGlyphs, aScaledPositions, mnGlyphCount, aContext );
+					}
+					else
+					{
+						CTFontDrawGlyphs( aFont, mpGlyphs, mpPositions, mnGlyphCount, aContext );
+					}
 
 					// Calculate rough draw bounds including any transformations
 					if ( pGraphics->mpFrame )
