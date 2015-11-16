@@ -1587,6 +1587,17 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow && [mpWindow styleMask] & NSTitledWindowMask && [mpWindow respondsToSelector:@selector(_setModalWindowLevel)] )
 	{
+		// Do not make window modal if any of its parent windows are in full
+		// screen mode as this will cause any child windows, such as drop down
+		// lists, to be displayed at a lower window level
+		NSWindow *pParentWindow = mpWindow;
+		while ( pParentWindow )
+		{
+			if ( [pParentWindow styleMask] & NSFullScreenWindowMask )
+				return;
+			pParentWindow = [pParentWindow parentWindow];
+		}
+
 		[mpWindow _setModalWindowLevel];
 
 		// Run VCLWindow selector to ensure that the window level is set
