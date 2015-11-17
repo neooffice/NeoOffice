@@ -1346,23 +1346,22 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	GenericSalLayout::AdjustLayout( rArgs );
 
 	// Fix bug 2133 by scaling width of characters if the new width is narrower
-	// than the original width. Fix bug 2652 by only applying this fix when
-	// there is only a single character in the layout.
+	// than the original width. Fix glyph scaling when drawing a
+	// non-proportionally resized embedded spreadsheet during a slideshow
+	// without causing bug 2652 to reoccur by using the position array only
+	// when the layout width is zero.
 	mfGlyphScaleX = 1.0;
-	if ( rArgs.mnEndCharPos - rArgs.mnMinCharPos == 1 )
-	{
-		long nWidth;
-		if ( rArgs.mpDXArray )
-			nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ] * UNITS_PER_PIXEL;
-		else if ( rArgs.mnLayoutWidth )
-			nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL;
-		else
-			nWidth = mnOrigWidth;
+	long nWidth;
+	if ( rArgs.mnLayoutWidth )
+		nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL;
+	else if ( rArgs.mpDXArray )
+		nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ] * UNITS_PER_PIXEL;
+	else
+		nWidth = mnOrigWidth;
 
-		// Fix bug 2882 by ensuring that the glyph scale is never zero
-		if ( nWidth > 0 && nWidth < mnOrigWidth )
-			mfGlyphScaleX = (float)nWidth / mnOrigWidth;
-	}
+	// Fix bug 2882 by ensuring that the glyph scale is never zero
+	if ( nWidth > 0 && nWidth < mnOrigWidth )
+		mfGlyphScaleX = (float)nWidth / mnOrigWidth;
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
