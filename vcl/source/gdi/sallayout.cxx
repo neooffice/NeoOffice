@@ -1215,10 +1215,15 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                         // Apply delta proportionally to width of glyph so that
                         // glyphs following narrow characters such as "i" and
                         // "l" will not be shifted too far left
-                        int nShift = pG->mnNewWidth * nUnshiftedDelta / nUnshiftedWidth;
+                        int nShift = (int)((float)pG->mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
                         if( nShift > pNewGlyphWidths[ j ] )
                             nShift = pNewGlyphWidths[ j ];
                         pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
+                        if( pNewGlyphWidths[ j ] < 0 )
+                        {
+                            nShift += pNewGlyphWidths[ j ];
+                            pNewGlyphWidths[ j ] = 0;
+                        }
                         nUnshiftedWidth -= pG->mnNewWidth;
                         nUnshiftedDelta -= nShift;
                     }
