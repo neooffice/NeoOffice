@@ -923,7 +923,26 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 			MacOSBOOL bAppInFullScreen = ( [pApp presentationOptions] & NSApplicationPresentationFullScreen ? YES : NO );
 			MacOSBOOL bWindowInFullScreen = ( [pKeyWindow styleMask] & NSFullScreenWindowMask ? YES : NO );
 			if ( bAppInFullScreen || bWindowInFullScreen )
+			{
+				// If there is a non-full screen window that can obtain focus,
+				// do not set the focus. Otherwise, if there are full screen
+				// windows with a modal dialog child window, focus can never be
+				// set the modal dialog.
+				NSArray *pWindows = [pApp orderedWindows];
+				if ( pWindows )
+				{
+					NSUInteger nCount = [pWindows count];
+					NSUInteger i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSWindow *pWindow = [pWindows objectAtIndex:i];
+						if ( pWindow && [pWindow isVisible] && ! ( [pWindow styleMask] & NSFullScreenWindowMask ) && [pWindow canBecomeKeyWindow] )
+							return;
+					}
+				}
+
 				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
+			}
 		}
 	}
 }
