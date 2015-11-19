@@ -1175,8 +1175,8 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 
 #if defined USE_JAVA && defined  USE_SUBPIXEL_TEXT_RENDERING
     // Smooth out kerning by allocating deltas evenly within each word
+    long nUnshiftedWidth = 0;
     long nUnshiftedDelta = 0;
-    int nShiftable = 0;
     GlyphItem* pFirstUnshiftedGlyph = NULL;
 #endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
     bool bRTL;
@@ -1205,34 +1205,39 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
         if( j == mnGlyphCount || !pG->mnGlyphIndex || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
         {
             // Apply unshifted delta to previous clusters
-            if( nUnshiftedDelta && nShiftable && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
+            if( nUnshiftedWidth && nUnshiftedDelta && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
             {
                 pG--;
                 for( j = i - 1; pG >= pFirstUnshiftedGlyph; --j, --pG )
                 {
                     if( pNewGlyphWidths[ j ] )
                     {
-                        int nShift = nUnshiftedDelta;
-                        if( nShiftable )
-                            nShift /= nShiftable--;
+                        // Apply delta proportionally to width of glyph so that
+                        // glyphs following narrow characters such as "i" and
+                        // "l" will not be shifted too far left
+                        int nShift = (int)((float)pG->mnNewWidth * nUnshiftedDelta / nUnshiftedWidth );
                         if( nShift > pNewGlyphWidths[ j ] )
                             nShift = pNewGlyphWidths[ j ];
                         pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
+                        if( pNewGlyphWidths[ j ] < 0 )
+                        {
+                            nShift += pNewGlyphWidths[ j ];
+                            pNewGlyphWidths[ j ] = 0;
+                        }
+                        nUnshiftedWidth -= pG->mnNewWidth;
                         nUnshiftedDelta -= nShift;
                     }
                 }
             }
 
+            nUnshiftedWidth = 0;
             nUnshiftedDelta = 0;
-            nShiftable = 0;
             pFirstUnshiftedGlyph = NULL;
         }
         else
         {
             if( !pFirstUnshiftedGlyph )
                 pFirstUnshiftedGlyph = pG;
-            if( pNewGlyphWidths[ i ] > 0 )
-                nShiftable++;
 
             // calculate original and adjusted cluster width
             int nOldClusterWidth = pG->mnNewWidth;
@@ -1245,6 +1250,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 nOldClusterWidth += pClusterG->mnNewWidth;
                 nNewClusterWidth += pNewGlyphWidths[ j ];
             }
+            nUnshiftedWidth += nOldClusterWidth;
             nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
         }
 #endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
