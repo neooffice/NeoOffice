@@ -95,6 +95,7 @@ public:
 	BOOL					mbInShowFullScreen;
 	BOOL					mbInWindowDidExitFullScreen;
 	BOOL					mbInWindowWillEnterFullScreen;
+	BOOL					mbInSetWindowState;
 
 	static ::rtl::OUString	ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut );
 	static void				FlushAllFrames();
