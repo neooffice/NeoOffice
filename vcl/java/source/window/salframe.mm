@@ -941,7 +941,7 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 					}
 				}
 
- 				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
+				[pKeyWindow makeKeyAndOrderFront:pKeyWindow];
 			}
 		}
 	}
@@ -1749,17 +1749,23 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 - (void)setJavaFrame:(VCLWindowWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
+	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
     NSValue *pFrame = (NSValue *)[pArgArray objectAtIndex:0];
     if ( !pFrame )
         return;
 
+    NSNumber *pInSetWindowState = (NSNumber *)[pArgArray objectAtIndex:1];
+    if ( !pInSetWindowState )
+        return;
+
 	// Don't change size of windows in full screen mode or else the "update
 	// links" dialog that appears when opening certain documents will leave
-	// the window in a mixed state
-	if ( mpWindow && ! ( [mpWindow styleMask] & NSFullScreenWindowMask ) )
+	// the window in a mixed state. Fix the same bug when opening a form in a
+	// full screen mode database document by allowing the size to change when
+	// the window is not in the JavaSalFrame::SetWindowState() method.
+	if ( mpWindow && ( ![pInSetWindowState boolValue] || ! ( [mpWindow styleMask] & NSFullScreenWindowMask ) ) )
 	{
 		// Fix bug 3012 by only returning a minimum size when the window is
 		// visible
@@ -2286,7 +2292,8 @@ JavaSalFrame::JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent ) :
 	mbInShowOnlyMenus( FALSE ),
 	mbInShowFullScreen( FALSE ),
 	mbInWindowDidExitFullScreen( FALSE ),
-	mbInWindowWillEnterFullScreen( FALSE )
+	mbInWindowWillEnterFullScreen( FALSE ),
+	mbInSetWindowState( FALSE )
 {
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -3786,7 +3793,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		NSRect aFrame = NSMakeRect( nX, nY, nWidth, nHeight );
-		VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithRect:aFrame]]];
+		VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aFrame], [NSNumber numberWithBool:mbInSetWindowState], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[mpWindow performSelectorOnMainThread:@selector(setJavaFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
 
@@ -3850,6 +3857,9 @@ void JavaSalFrame::GetClientSize( long& rWidth, long& rHeight )
 
 void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 {
+	BOOL bOldInSetWindowState = mbInSetWindowState;
+	mbInSetWindowState = TRUE;
+
 	USHORT nFlags = 0;
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
 		nFlags |= SAL_FRAME_POSSIZE_X;
@@ -3870,6 +3880,8 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	// Fix bug 3078 by setting the state after setting the size
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
 		SetState( pState->mnState );
+
+	mbInSetWindowState = bOldInSetWindowState;
 }
 
 // -----------------------------------------------------------------------
