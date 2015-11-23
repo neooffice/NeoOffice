@@ -943,8 +943,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	if ( mpFont )
 	{
-		// Fix bug 3446 by only overriding the width if it is positive
-		long nWidth = (long)( mpFont->getSize() + 0.5 );
+		// Fix bug 3446 by only overriding the width if it is positive. Apply
+		// font scale to be consistent with OOo's Aqua implementation.
+		long nWidth = (long)( ( mpFont->getSize() * mpFont->getScaleX() ) + 0.5 );
 		if ( nWidth >= 0 )
 			pMetric->mnWidth = nWidth;
 		pMetric->mnOrientation = mpFont->getOrientation();
