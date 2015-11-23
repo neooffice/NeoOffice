@@ -617,7 +617,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	// Cache glyph widths
+	// Cache glyph widths. Do not apply font scale to advances as that causes
+	// unpredictable glyph scaling values in SalATSLayout::AdjustLayout method.
 	nBufSize = mnGlyphCount * sizeof( long );
 	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpGlyphAdvances, 0, nBufSize );
@@ -658,16 +659,16 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 					if ( j == nGlyphRunCount - 1 )
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
 					}
 					else
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j ].y - aPositions[ j + 1 ].y ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j ].y - aPositions[ j + 1 ].y ) * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * UNITS_PER_PIXEL );
 					}
 
 					// Make sure that ligature glyphs get all of the width and
@@ -1368,14 +1369,12 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	mfGlyphScaleX = 1.0;
 	long nWidth;
 	if ( rArgs.mnLayoutWidth )
-		nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL;
-	else if ( rArgs.mpDXArray )
-		nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ] * UNITS_PER_PIXEL;
+		nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL / mpFont->getScaleX();
 	else
 		nWidth = mnOrigWidth;
 
 	// Fix bug 2882 by ensuring that the glyph scale is never zero
-	if ( nWidth > 0 && nWidth < mnOrigWidth )
+	if ( nWidth > 0 && mnOrigWidth > 0 )
 		mfGlyphScaleX = (float)nWidth / mnOrigWidth;
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
