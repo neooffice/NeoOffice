@@ -1288,8 +1288,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			NSView *pContentView = [mpWindow contentView];
 			if ( pContentView )
 			{
-				[pContentView addSubview:mpWaitingView];
-
 				// Center in content view
 				NSRect aContentBounds = [pContentView bounds];
 				NSRect aWaitingFrame = [mpWaitingView frame];
@@ -1301,7 +1299,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		else
 		{
 			[mpWaitingView stopAnimation:self];
-			[mpWaitingView removeFromSuperview];
 		}
 	}
 }
@@ -1421,6 +1418,26 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( mbShowOnlyMenus )
 				aShowOnlyMenusWindowMap[ mpWindow ] = (VCLWindow *)mpWindow;
+
+			if ( !mbUndecorated || mbFullScreen )
+			{
+				// Attach waiting view before window is visible because adding
+				// and removing NSProgressIndicator instances to visble windows
+				// can cause high CPU usage and hanging for several seconds on
+				// OS X El Capitan
+				mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+				if ( mpWaitingView )
+				{
+					[mpWaitingView setIndeterminate:YES];
+					[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
+					[mpWaitingView setDisplayedWhenStopped:NO];
+					[mpWaitingView sizeToFit];
+					[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
+
+					[pContentView addSubview:mpWaitingView];
+				}
+			}
+
 		}
 	}
 
@@ -1942,19 +1959,6 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				bCanBecomeKeyWindow = [(VCLPanel *)mpWindow canBecomeKeyWindow];
 			else
 				bCanBecomeKeyWindow = [(VCLWindow *)mpWindow canBecomeKeyWindow];
-			if ( !mpWaitingView && ( !mbUndecorated || mbFullScreen ) )
-			{
-				mpWaitingView = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-				if ( mpWaitingView )
-				{
-					[mpWaitingView setIndeterminate:YES];
-					[mpWaitingView setStyle:NSProgressIndicatorSpinningStyle];
-					[mpWaitingView setDisplayedWhenStopped:NO];
-					[mpWaitingView sizeToFit];
-					[mpWaitingView setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
-				}
-			}
-
 			if ( bCanBecomeKeyWindow && ![pNoActivate boolValue] )
 				[mpWindow makeKeyWindow];
 
