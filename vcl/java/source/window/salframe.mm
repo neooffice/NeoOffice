@@ -2213,6 +2213,15 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 		return;
 	}
 
+	// Eliminate black squares that sporadically appear in bottom corners of
+	// windows on OS X 10.11 by filling with the window's background color
+	NSColor *pColor = [pWindow backgroundColor];
+	if ( pColor )
+	{
+		[pColor setFill];
+		[NSBezierPath fillRect:aDirtyRect];
+	}
+
 	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
 	if ( it != aNativeWindowMap.end() && it->second )
 	{
