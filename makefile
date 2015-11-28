@@ -467,22 +467,34 @@ endif
 # End of converted make rules
 
 build.package: build.neo_patches
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package"
+else
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME" != "$(PRODUCT_DIR_NAME)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "build.package_shared"
 	touch "$@"
+endif
 
 build.package2: build.neo_patches
 ifndef PRODUCT_BUILD2
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package2"
+else
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME2" != "$(PRODUCT_DIR_NAME2)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.package_shared"
 	touch "$@"
 endif
+endif
 
 build.package3: build.neo_patches
 ifndef PRODUCT_BUILD3
+ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
+	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package3"
+else
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" -o "$$PRODUCT_DOMAIN" != "$(PRODUCT_DOMAIN)" -o "$$PRODUCT_DIR_NAME3" != "$(PRODUCT_DIR_NAME3)" -o "$$PRODUCT_MAC_APP_STORE_URL" != "$(PRODUCT_MAC_APP_STORE_URL)" -o "$$PRODUCT_JAVA_DOWNLOAD_URL" != "$(PRODUCT_JAVA_DOWNLOAD_URL)" -o "$$PRODUCT_MIN_OSVERSION" != "$(PRODUCT_MIN_OSVERSION)" -o "$$PRODUCT_MAX_OSVERSION" != "$(PRODUCT_MAX_OSVERSION)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.package_shared"
 	touch "$@"
+endif
 endif
 
 build.package_shared:
