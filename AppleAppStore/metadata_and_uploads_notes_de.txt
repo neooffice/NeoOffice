@@ -26,10 +26,10 @@ What's New in this Version:
 Bevor Sie NeoOffice zu kaufen, empfehlen wir Ihnen, dass Sie auf den „NeoOffice Support” Link klicken und lesen die Installationshinweise.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would ignore most keystrokes when typing many common Indic language words
-• Any color settings for changes in Writer documents that were set to "By author" or "[None]" would be unset when quitting NeoOffice
-• NeoOffice would crash when opening LibreOffice HTML files that contain images
-• NeoOffice would crash when rendering Indic characters using the "Arial Unicode MS" font
+• When running in full screen mode on OS X El Capitan, NeoOffice would display some dialogs and dropdown lists behind the current document
+• NeoOffice would draw any text that has its "scaling the width" setting set to greater than 100% wider than normal
+• NeoOffice would generate an empty mail merge if you select the "From:" field in the Mail Merge dialog
+• NeoOffice would hang for a minute or longer when updating links in spreadsheets
 
 
 Keywords:
