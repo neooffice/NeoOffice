@@ -619,8 +619,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	// Cache glyph widths. Do not apply font scale to advances as that causes
-	// unpredictable glyph scaling values in SalATSLayout::AdjustLayout method.
+	// Cache glyph widths
 	nBufSize = mnGlyphCount * sizeof( long );
 	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpGlyphAdvances, 0, nBufSize );
