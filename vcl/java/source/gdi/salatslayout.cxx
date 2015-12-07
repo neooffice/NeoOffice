@@ -101,6 +101,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 || nChar == 0x00b7 ); }
 
+inline bool IsSurrogatePairChar( sal_Unicode nChar ) { return ( nChar >= 0xd800 && nChar <= 0xdfff ); }
+
 struct SAL_DLLPRIVATE ImplATSLayoutDataHash {
 	int					mnLen;
 	CTFontRef			mnFontID;
@@ -488,7 +490,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		for ( int i = 0; i < mpHash->mnLen; i++ )
 		{
-			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
+			// Fix hanging on OS X 10.8 by not using vertical forms for
+			// characters in the surrogate pair range
+			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK && !IsSurrogatePairChar( mpHash->mpStr[ i ] ) )
 				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
 		}
 
@@ -2569,7 +2573,9 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 				nX += pRet->mnBaselineDelta;
 			else
 				nX -= pRet->mnBaselineDelta;
-			nY = Float32ToLong( aTranslation.height * -1 * UNITS_PER_PIXEL );
+			// Divide out the font scale to fix vertical misplacement when
+			// scaled text
+			nY = Float32ToLong( aTranslation.height / pRet->mpHash->mfFontScaleX * -1 * UNITS_PER_PIXEL );
 			pRet->maVerticalGlyphTranslations[ nGlyphID ] = Point( nX, nY );
 		}
 		else
