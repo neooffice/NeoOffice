@@ -162,6 +162,7 @@ using namespace vos;
 	NSMutableDictionary*	mpTextFields;
 	NSArray*				mpURLs;
 	MacOSBOOL				mbUseFileOpenDialog;
+	MacOSBOOL				mbValidated;
 	NSWindow*				mpWindow;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
@@ -313,8 +314,9 @@ using namespace vos;
 - (void)checkForErrors:(id)pObject;
 {
 	// Detect if the sheet window has been closed without any call to the
-	// completion handler
-	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+	// completion handler. Fix inability to change file name in Save As dialog
+	// on OS X 10.8 by not cancelling if the URL has been validated.
+	if ( !mbFinished && !mbValidated && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
 		[self cancel:self];
 }
 
@@ -556,6 +558,7 @@ using namespace vos;
 	[super init];
 
 	mpAttachedSheet = nil;
+	mbCancelled = NO;
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
 	mpDirectoryURL = nil;
@@ -580,6 +583,7 @@ using namespace vos;
 	mbShowVersion = false;
 	mpURLs = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
+	mbValidated = NO;
 	mpWindow = nil;
 
 	mpControls = [NSMutableDictionary dictionary];
@@ -1001,7 +1005,8 @@ using namespace vos;
 	if ( ppError )
 		*ppError = nil;
 
-	return !mbInControlChange;
+	mbValidated = !mbInControlChange;
+	return mbValidated;
 }
 
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
