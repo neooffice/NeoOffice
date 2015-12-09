@@ -1095,35 +1095,6 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	mfScaleX( 1.0f ),
 	mfScaleY( 1.0f )
 {
-	if ( mnGlyphCount > 0 )
-	{
-		mpGlyphs = (CGGlyph *)rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) );
-		if ( mpGlyphs )
-		{
-			for ( int i = 0; i < mnGlyphCount; i++ )
-				mpGlyphs[ i ] = (CGGlyph)pGlyphs[ i ];
-		}
-
-		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGPoint ) );
-		if ( mpPositions )
-		{
-			mpPositions[ 0 ].x = 0.0f;
-			mpPositions[ 0 ].y = 0.0f;
-			for ( int i = 1; i <= mnGlyphCount; i++ )
-			{
-				mpPositions[ i ].x = mpPositions[ i - 1 ].x + ( (float)pAdvances[ i - 1 ] / UNITS_PER_PIXEL );
-				mpPositions[ i ].y = 0.0f;
-			}
-		}
-	}
-
-	if ( mnFontID )
-		CFRetain( mnFontID );
-
-	// Calculate glyph rotation and scale
-	if ( nOrientation )
-		mfRotateAngle += ( (float)nOrientation / 10 ) * M_PI / 180;
-
 	// Fix bug 2673 by applying font scale here instead of in the native method
 	nGlyphOrientation &= GF_ROTMASK;
 	if ( nGlyphOrientation & GF_ROTMASK )
@@ -1141,6 +1112,39 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	{
 		mfScaleX *= (float)pFont->getScaleX() * fGlyphScaleX;
 	}
+
+	if ( mnGlyphCount > 0 )
+	{
+		mpGlyphs = (CGGlyph *)rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) );
+		if ( mpGlyphs )
+		{
+			for ( int i = 0; i < mnGlyphCount; i++ )
+				mpGlyphs[ i ] = (CGGlyph)pGlyphs[ i ];
+		}
+
+		mpPositions = (CGPoint *)rtl_allocateMemory( ( mnGlyphCount + 1 )* sizeof( CGPoint ) );
+		if ( mpPositions )
+		{
+			mpPositions[ 0 ].x = 0.0f;
+			mpPositions[ 0 ].y = 0.0f;
+			for ( int i = 1; i <= mnGlyphCount; i++ )
+			{
+				// Fix font scaling bug reported in 11/13/2015 e-mail to
+				// to elcapitanbugs@neooffice.org by unscaling the glyph
+				// positions by the same amount of X scale in the context's
+				// text matrix
+				mpPositions[ i ].x = mpPositions[ i - 1 ].x + ( ( (float)pAdvances[ i - 1 ] / mfScaleX ) / UNITS_PER_PIXEL );
+				mpPositions[ i ].y = 0.0f;
+			}
+		}
+	}
+
+	if ( mnFontID )
+		CFRetain( mnFontID );
+
+	// Calculate glyph rotation and scale
+	if ( nOrientation )
+		mfRotateAngle += ( (float)nOrientation / 10 ) * M_PI / 180;
 }
 
 // ----------------------------------------------------------------------------
@@ -1201,22 +1205,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 					CGContextSetFillColorWithColor( aContext, aColor );
 					CGContextSetStrokeColorWithColor( aContext, aColor );
 
-					// Fix font scaling bug reported in 11/13/2015 e-mail to
-					// to elcapitanbugs@neooffice.org by unscaling the glyph
-					// positions by the same amount of X scale in the context's
-					// text matrix
-					if ( mfScaleX != 1.0 )
-					{
-						CGPoint aScaledPositions[ mnGlyphCount ];
-						memcpy( aScaledPositions, mpPositions, mnGlyphCount * sizeof( CGPoint ) );
-						for ( int i = 0; i < mnGlyphCount; i++ )
-							aScaledPositions[ i ].x /= mfScaleX;
-						CTFontDrawGlyphs( aFont, mpGlyphs, aScaledPositions, mnGlyphCount, aContext );
-					}
-					else
-					{
-						CTFontDrawGlyphs( aFont, mpGlyphs, mpPositions, mnGlyphCount, aContext );
-					}
+					CTFontDrawGlyphs( aFont, mpGlyphs, mpPositions, mnGlyphCount, aContext );
 
 					// Calculate rough draw bounds including any transformations
 					if ( pGraphics->mpFrame )
