@@ -948,6 +948,25 @@ void SfxToolBoxControl::SetPopupWindow( SfxPopupWindow* pWindow )
     pImpl->mpPopupWindow = pWindow;
     pImpl->mpPopupWindow->SetPopupModeEndHdl( LINK( this, SfxToolBoxControl, PopupModeEndHdl ));
     pImpl->mpPopupWindow->SetDeleteLink_Impl( LINK( this, SfxToolBoxControl, ClosePopupWindow ));
+
+#ifdef USE_JAVA
+    // Fix display of new table popup window in the Table toolbar by ensuring
+    // that the toolbar window is the popup window's parent
+    WinBits nBits = pImpl->mpPopupWindow->GetStyle();
+    if ( nBits & WB_SYSTEMWINDOW && ! ( nBits & WB_MOVEABLE ) && pImpl->pBox->IsFloatingMode() )
+    {
+        ::vos::OGuard aGuard( Application::GetSolarMutex() );
+        Window* pParentTbxWindow( pImpl->pBox );
+        if ( pParentTbxWindow && pParentTbxWindow != pImpl->mpPopupWindow->GetParent() )
+        {
+            pImpl->mpPopupWindow->SetParent( pParentTbxWindow );
+            Rectangle aItemRect = pImpl->pBox->GetItemRect( pImpl->nTbxId );
+            Size aSize = pImpl->mpPopupWindow->GetSizePixel();
+            Point aPos = pImpl->pBox->GetItemPopupPosition( pImpl->nTbxId, aSize );
+            pImpl->mpPopupWindow->SetPosPixel( aPos );
+        }
+    }
+#endif	// USE_JAVA
 }
 
 //--------------------------------------------------------------------

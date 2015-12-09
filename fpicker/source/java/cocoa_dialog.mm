@@ -54,10 +54,12 @@
 typedef sal_Bool Application_beginModalSheet_Type( id *pNSWindowForSheet );
 typedef void Application_endModalSheet_Type();
 typedef void Application_postWakeUpEvent_Type();
+typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
 static Application_beginModalSheet_Type *pApplication_beginModalSheet = NULL;
 static Application_endModalSheet_Type *pApplication_endModalSheet = NULL;
 static Application_postWakeUpEvent_Type *pApplication_postWakeUpEvent = NULL;
+static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 
 static NSString *pBlankItem = @" ";
 
@@ -143,6 +145,7 @@ using namespace vos;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	MacOSBOOL				mbFinished;
+	MacOSBOOL				mbInControlChange;
 	MacOSBOOL				mbMultiSelectionMode;
 	void*					mpPicker;
 	short					mnResult;
@@ -159,6 +162,7 @@ using namespace vos;
 	NSMutableDictionary*	mpTextFields;
 	NSArray*				mpURLs;
 	MacOSBOOL				mbUseFileOpenDialog;
+	MacOSBOOL				mbValidated;
 	NSWindow*				mpWindow;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
@@ -181,6 +185,7 @@ using namespace vos;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 - (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
 - (short)result;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
@@ -309,8 +314,9 @@ using namespace vos;
 - (void)checkForErrors:(id)pObject;
 {
 	// Detect if the sheet window has been closed without any call to the
-	// completion handler
-	if ( !mbFinished && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
+	// completion handler. Fix inability to change file name in Save As dialog
+	// on OS X 10.8 by not cancelling if the URL has been validated.
+	if ( !mbFinished && !mbValidated && ( !mpAttachedSheet || !mpWindow || [mpWindow attachedSheet] != mpAttachedSheet ) )
 		[self cancel:self];
 }
 
@@ -457,19 +463,32 @@ using namespace vos;
 {
 	if ( mpFilePanel && mpPicker && !mbCancelled && !mbFinished )
 	{
-		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
-		if ( pPopup )
-		{
-			JavaFilePicker_controlStateChanged( COCOA_CONTROL_ID_FILETYPE, mpPicker );
+		MacOSBOOL bOldInControlChange = mbInControlChange;
+		mbInControlChange = YES;
 
-			// Update filtering
-			NSString *pFilter = [self selectedFilter:nil];
-			if ( pFilter )
+		@try
+		{
+			NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+			if ( pPopup )
 			{
-				ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
-				[self setSelectedFilter:pSelectedFilterArgs];
+				JavaFilePicker_controlStateChanged( COCOA_CONTROL_ID_FILETYPE, mpPicker );
+
+				// Update filtering
+				NSString *pFilter = [self selectedFilter:nil];
+				if ( pFilter )
+				{
+					ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
+					[self setSelectedFilter:pSelectedFilterArgs];
+				}
 			}
 		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+
+		mbInControlChange = bOldInControlChange;
 	}
 }
 
@@ -539,12 +558,14 @@ using namespace vos;
 	[super init];
 
 	mpAttachedSheet = nil;
+	mbCancelled = NO;
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
 	mpDirectoryURL = nil;
 	mbExtensionHidden = NO;
 	mpFilePanel = nil;
 	mbFinished = NO;
+	mbInControlChange = NO;
 	mbMultiSelectionMode = NO;
 	mpPicker = pPicker;
 	mnResult = 0;
@@ -562,6 +583,7 @@ using namespace vos;
 	mbShowVersion = false;
 	mpURLs = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
+	mbValidated = NO;
 	mpWindow = nil;
 
 	mpControls = [NSMutableDictionary dictionary];
@@ -977,6 +999,15 @@ using namespace vos;
 }
 
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
+
+- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	mbValidated = !mbInControlChange;
+	return mbValidated;
+}
 
 - (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
 {
@@ -1607,10 +1638,26 @@ using namespace vos;
 				{
 					NSWindow *pOldAttachedSheet = [mpWindow attachedSheet];
 
+					// Detach the window from its parent window to stop the
+					// NSSavePanel sheet making parent windows modal when
+					// running in the sandbox on Mac OS X 10.8
+					NSWindow *pParentWindow = [mpWindow parentWindow];
+					if ( pParentWindow )
+					{
+						[pParentWindow retain];
+						[pParentWindow removeChildWindow:mpWindow];
+					}
+
 					// Retain self to ensure that we don't release it before
 					// the completion handler executes
 					[self retain];
 					[mpFilePanel beginSheetModalForWindow:mpWindow completionHandler:^(NSInteger nRet) {
+						if ( pParentWindow )
+						{
+							[pParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
+							[pParentWindow release];
+						}
+
 						[self setResult:nRet];
 						[self release];
 					}];

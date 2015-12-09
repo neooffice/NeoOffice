@@ -634,8 +634,10 @@ bool JavaImplFontData::IsBadFont( const JavaImplFontData *pFontData, bool bHandl
 							while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
 								usleep( 10 );
 
-							// If the child process crashes, it is a bad font
-							if ( EINTR != errno && WTERMSIG( status ) == SIGSEGV )
+							// If the child process crashes, it is a bad font.
+							// Check for termination from any signal, not just
+							// SIGSEGV.
+							if ( EINTR != errno && WIFSIGNALED( status ) )
 							{
 								bRet = true;
 
@@ -941,8 +943,11 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
+	float fFontSize = 0;
 	if ( mpFont )
 	{
+		fFontSize = mpFont->getSize();
+
 		// Fix bug 3446 by only overriding the width if it is positive. Apply
 		// font scale to be consistent with OOo's Aqua implementation.
 		long nWidth = (long)( ( mpFont->getSize() * mpFont->getScaleX() ) + 0.5 );
@@ -955,7 +960,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	{
 		if ( pMetric->mnWidth )
 		{
-			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFontData->mnNativeFontID, pMetric->mnWidth, NULL, NULL );
+			// Fix scaling of the line height in Writer by creating a font with
+			// the same font size, not the scaled width
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFontData->mnNativeFontID, fFontSize, NULL, NULL );
 			if ( aFont )
 			{
 				// Mac OS X seems to overstate the leading for some fonts

@@ -103,6 +103,8 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 || nChar == 0x00b7 ); }
 
+inline bool IsSurrogatePairChar( sal_Unicode nChar ) { return ( nChar >= 0xd800 && nChar <= 0xdfff ); }
+
 struct SAL_DLLPRIVATE ImplATSLayoutDataHash {
 	int					mnLen;
 	CTFontRef			mnFontID;
@@ -490,7 +492,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		for ( int i = 0; i < mpHash->mnLen; i++ )
 		{
-			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
+			// Fix hanging on OS X 10.8 by not using vertical forms for
+			// characters in the surrogate pair range
+			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK && !IsSurrogatePairChar( mpHash->mpStr[ i ] ) )
 				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
 		}
 
@@ -617,8 +621,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	// Cache glyph widths. Do not apply font scale to advances as that causes
-	// unpredictable glyph scaling values in SalATSLayout::AdjustLayout method.
+	// Cache glyph widths
 	nBufSize = mnGlyphCount * sizeof( long );
 	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpGlyphAdvances, 0, nBufSize );
@@ -659,16 +662,16 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 					if ( j == nGlyphRunCount - 1 )
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 					}
 					else
 					{
 						if ( bVerticalRun )
-							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j ].y - aPositions[ j + 1 ].y ) * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j ].y - aPositions[ j + 1 ].y ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 						else
-							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * UNITS_PER_PIXEL );
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 					}
 
 					// Make sure that ligature glyphs get all of the width and
@@ -1369,7 +1372,7 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	mfGlyphScaleX = 1.0;
 	long nWidth;
 	if ( rArgs.mnLayoutWidth )
-		nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL / mpFont->getScaleX();
+		nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL;
 	else
 		nWidth = mnOrigWidth;
 
@@ -2594,7 +2597,9 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 				nX += pRet->mnBaselineDelta;
 			else
 				nX -= pRet->mnBaselineDelta;
-			nY = Float32ToLong( aTranslation.height * -1 * UNITS_PER_PIXEL );
+			// Divide out the font scale to fix vertical misplacement when
+			// scaled text
+			nY = Float32ToLong( aTranslation.height / pRet->mpHash->mfFontScaleX * -1 * UNITS_PER_PIXEL );
 			pRet->maVerticalGlyphTranslations[ nGlyphID ] = Point( nX, nY );
 		}
 		else
