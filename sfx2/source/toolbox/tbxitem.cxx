@@ -973,7 +973,13 @@ void SfxToolBoxControl::SetPopupWindow( SfxPopupWindow* pWindow )
 
 IMPL_LINK( SfxToolBoxControl, PopupModeEndHdl, void *, EMPTYARG )
 {
+#ifdef USE_JAVA
+	// Fix crash when rapidly toggling new table popup window button in the
+	// Table toolbar and the toolbar does not have focus
+	if ( pImpl->mpPopupWindow && pImpl->mpPopupWindow->IsVisible() )
+#else	// USE_JAVA
 	if ( pImpl->mpPopupWindow->IsVisible() )
+#endif	// USE_JAVA
     {
         // Replace floating window with popup window and destroy
         // floating window instance.
