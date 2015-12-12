@@ -2420,37 +2420,24 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
 				continue;
 
-			long nTranslateX = 0;
-			long nTranslateY = 0;
-
-			aPolyPolygon.Move( aPos.X() * UNITS_PER_PIXEL, aPos.Y() * UNITS_PER_PIXEL );
-
-			sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 			if ( pCurrentLayoutData->mpHash->mbVertical )
 			{
+				// Do not apply any rotation for vertical glyphs as the OOo
+				// code will rotate the polypolygon
 				long nX;
 				long nY;
 				GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
-				if ( nGlyphOrientation == GF_ROTL )
-				{
-					nTranslateX = nX;
-					nTranslateY = nY;
-				}
-				else if ( nGlyphOrientation == GF_ROTR )
-				{
-					aPolyPolygon.Rotate( aPos, 1800 );
-					nTranslateX = nX;
-					nTranslateY = nY;
-				}
-				else
-				{
-					aPolyPolygon.Rotate( aPos, 2700 );
-					nTranslateX = nX;
-					nTranslateY = nY;
-				}
+				aPolyPolygon.Move( nX, nY );
 			}
 
-			aPolyPolygon.Move( nTranslateX, nTranslateY );
+			double fScale = mpFont->getScaleX() * mfGlyphScaleX;
+			if ( aGlyphArray[ 0 ] & GF_ROTMASK )
+				aPolyPolygon.Scale( 1.0f, fScale );
+			else
+				aPolyPolygon.Scale( fScale, 1.0f );
+
+			// Move to position after scaling of glyph
+			aPolyPolygon.Move( aPos.X() * UNITS_PER_PIXEL, aPos.Y() * UNITS_PER_PIXEL );
 
 			rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
 			break;
