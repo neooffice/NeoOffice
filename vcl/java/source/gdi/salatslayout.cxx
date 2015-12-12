@@ -1043,7 +1043,12 @@ static bool UseIndicFontHack()
 					res = 0;
 					pGestalt( gestaltSystemVersionMinor, &res );
 					if ( res >= 11 )
-						bUseIndicFontHack = true;
+					{
+						res = 0;
+						pGestalt( gestaltSystemVersionBugFix, &res );
+						if ( res <= 1 )
+							bUseIndicFontHack = true;
+					}
 				}
 			}
 
@@ -1166,8 +1171,8 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 		else
 			fRotateDegrees = -90.0f;
 		mfRotateAngle += fRotateDegrees * M_PI / 180;
-		mfScaleX *= (float)pFont->getScaleX();
-		mfScaleY *= fGlyphScaleX;
+		// Fix scaling the wrong axis by doing all scaling vertically
+		mfScaleY *= (float)pFont->getScaleX() * fGlyphScaleX;
 	}
 	else
 	{
@@ -2274,24 +2279,20 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 			if ( nGlyphOrientation )
 			{
+				// Don't apply font scale to fix vertical misplacement when
+				// using scaled text
 				long nX;
 				long nY;
-				ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ nStartGlyph ], aCharPosArray[ nStartGlyph ], nX, nY );
+				GetVerticalGlyphTranslation( aGlyphArray[ nStartGlyph ], aCharPosArray[ nStartGlyph ], nX, nY );
 				if ( nGlyphOrientation == GF_ROTL )
 				{
 					nTranslateX = nX;
-					if ( pFoundLayout )
-						nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * nY );
-					else
-						nTranslateY = nY;
+					nTranslateY = nY;
 				}
 				else
 				{
 					nTranslateX = nX;
-					if ( pFoundLayout )
-						nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * ( aDXArray[ nStartGlyph ] - nY ) );
-					else
-						nTranslateY = nY;
+					nTranslateY = aDXArray[ nStartGlyph ] - nY;
 				}
 			}
 
@@ -2597,10 +2598,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 				nX += pRet->mnBaselineDelta;
 			else
 				nX -= pRet->mnBaselineDelta;
-			// Divide out the font scale to fix vertical misplacement when
-			// scaled text
-			nY = Float32ToLong( aTranslation.height / pRet->mpHash->mfFontScaleX * -1 * UNITS_PER_PIXEL );
-			pRet->maVerticalGlyphTranslations[ nGlyphID ] = Point( nX, nY );
+			nY = Float32ToLong( aTranslation.height * -1 * UNITS_PER_PIXEL );
 		}
 		else
 		{

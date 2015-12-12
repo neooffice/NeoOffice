@@ -6798,12 +6798,6 @@ void PDFWriterImpl::drawVerticalGlyphs(
         Matrix3 aMat;
         if( fSkewB != 0.0 || fSkewA != 0.0 )
             aMat.skew( fSkewA, fSkewB );
-#ifdef USE_JAVA
-        // Glyph scaling is reversed for rotated glyphs
-        if( rGlyphs[i].m_nGlyphId & GF_ROTMASK )
-            aMat.scale( fYScale, fTempXScale );
-        else
-#endif	// USE_JAVA
         aMat.scale( fTempXScale, fYScale );
         aMat.rotate( fAngle+fDeltaAngle );
         aMat.translate( aCurPos.X()+aDeltaPos.X(), aCurPos.Y()+aDeltaPos.Y() );
