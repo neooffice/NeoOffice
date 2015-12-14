@@ -154,8 +154,6 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	long*				mpGlyphAdvances;
 	long				mnBaselineDelta;
 	bool				mbValid;
-	bool				mbGlyphBounds;
-	Rectangle			maGlyphBounds;
 	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
 	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
 
@@ -170,7 +168,6 @@ protected:
 public:
 	void				Destroy();
 	JavaImplFont*		GetFallbackFont( int nCharPos );
-	const Rectangle&	GetGlyphBounds();
 	bool				IsValid() const { return mbValid; }
 	void				Reference() const;
 	void				Release() const;
@@ -398,8 +395,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpCharsToChars( NULL ),
 	mpGlyphAdvances( NULL ),
 	mnBaselineDelta( 0 ),
-	mbValid( false ),
-	mbGlyphBounds( false )
+	mbValid( false )
 {
 	if ( !mpHash || !mpHash->mnFontID )
 	{
@@ -861,29 +857,6 @@ JavaImplFont *ImplATSLayoutData::GetFallbackFont( int nCharPos )
 
 // ----------------------------------------------------------------------------
 
-const Rectangle& ImplATSLayoutData::GetGlyphBounds()
-{
-	if ( !mbGlyphBounds )
-	{
-		CGContextRef aContext = ImplATSLayoutData::GetSharedContext();
-		if ( aContext )
-		{
-			CGRect aRect = CTLineGetImageBounds( maLine, aContext );
-			if ( !CGRectIsEmpty( aRect ) )
-			{
-				maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.origin.x * mpHash->mfFontScaleX ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * -1 ) ), Size( Float32ToLong( aRect.size.width * mpHash->mfFontScaleX ), Float32ToLong( aRect.size.height ) ) );
-				maGlyphBounds.Justify();
-			}
-		}
-
-		mbGlyphBounds = true;
-	}
-
-	return maGlyphBounds;
-}
-
-// ----------------------------------------------------------------------------
-
 void ImplATSLayoutData::Destroy()
 {
 	if ( mpHash )
@@ -965,8 +938,6 @@ void ImplATSLayoutData::Destroy()
 
 	mnBaselineDelta = 0;
 	mbValid = false;
-	mbGlyphBounds = false;
-	maGlyphBounds.SetEmpty();
 	maVerticalGlyphTranslations.clear();
 	maNativeGlyphWidths.clear();
 }
@@ -2288,27 +2259,145 @@ bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) cons
 {
 	rRect.SetEmpty();
 
-	Rectangle aRect;
-	for ( std::vector< ImplATSLayoutData* >::const_iterator it = maLayoutData.begin(); it != maLayoutData.end(); ++it )
-	{
-		Rectangle aGlyphBounds( (*it)->GetGlyphBounds() );
-		if ( aGlyphBounds.IsEmpty() )
-			continue;
-		if ( !aRect.IsEmpty() )
-			aGlyphBounds.setX( aGlyphBounds.Left() + aRect.Left() + aRect.GetWidth() );
-		aRect.Union( aGlyphBounds );
-	}
+	int nMaxGlyphs = 256;
+	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
+	sal_Int32 aDXArray[ nMaxGlyphs ];
+	int aCharPosArray[ nMaxGlyphs ];
 
-	if ( !aRect.IsEmpty() )
+	Point aPos;
+	int nFetchGlyphCount = nMaxGlyphs;
+	for ( int nStart = 0; ; )
 	{
-		// Fix bug 3578 by moving the rectangle to the layout's draw position
-		aRect += GetDrawPosition( Point( 0, 0 ) );
-		aRect.setWidth( Float32ToLong( (float)aRect.GetWidth() * mfGlyphScaleX ) );
+		int nOldStart = nStart;
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+
+		if ( !nTotalGlyphCount )
+			break;
+
+		// The GenericSalLayout class should return glyph runs with the same
+		// rotation mask
+		sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
+		if ( nGlyphOrientation && nFetchGlyphCount > 1 )
+		{
+			nFetchGlyphCount = 1;
+			nStart = nOldStart;
+			continue;
+		}
+		else if ( !nGlyphOrientation && nFetchGlyphCount < nMaxGlyphs )
+		{
+			nFetchGlyphCount = nMaxGlyphs;
+			nStart = nOldStart;
+			continue;
+		}
+
+		Point aCurrentPos( aPos );
+		int nCurrentGlyph = 0;
+		while ( nCurrentGlyph < nTotalGlyphCount )
+		{
+			int i;
+			int nStartGlyph = nCurrentGlyph;
+			int nGlyphCount = 0;
+
+			// Skip spacing glyphs
+			for ( ; nStartGlyph < nTotalGlyphCount && aGlyphArray[ nStartGlyph ] & GF_ISCHAR; nStartGlyph++ )
+				aCurrentPos.X() += aDXArray[ nStartGlyph ];
+
+			// Determine glyph count but only allow one glyph at a time for
+			// rotated glyphs
+			Point aStartPos( aCurrentPos );
+			if ( nStartGlyph < nTotalGlyphCount )
+			{
+				if ( nGlyphOrientation )
+				{
+					nGlyphCount++;
+					aCurrentPos.Y() += aDXArray[ nStartGlyph ];
+				}
+				else
+				{
+					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( aGlyphArray[ i ] & GF_ISCHAR ); i++ )
+					{
+						nGlyphCount++;
+						aCurrentPos.X() += aDXArray[ i ];
+					}
+				}
+			}
+
+			nCurrentGlyph = nStartGlyph + nGlyphCount;
+			if ( !nGlyphCount )
+				continue;
+
+			long nTranslateX = 0;
+			long nTranslateY = 0;
+
+			if ( nGlyphOrientation )
+			{
+				// Don't apply font scale to fix vertical misplacement when
+				// using scaled text
+				long nX;
+				long nY;
+				GetVerticalGlyphTranslation( aGlyphArray[ nStartGlyph ], aCharPosArray[ nStartGlyph ], nX, nY );
+				if ( nGlyphOrientation == GF_ROTL )
+				{
+					nTranslateX = nX;
+					nTranslateY = nY;
+				}
+				else
+				{
+					nTranslateX = nX;
+					nTranslateY = aDXArray[ nStartGlyph ] - nY;
+				}
+			}
+
+			for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
+				aGlyphArray[ i ] &= GF_IDXMASK;
+
+			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
+			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
+			float fScale = (float)mpFont->getScaleX() * mfGlyphScaleX;
+
+			// Fix bug 3578 by using layout's draw position
+			CGPoint aBoundPoint = CGPointMake( aStartPos.X(), aStartPos.Y() );
+			CGRect aBoundRect = CGRectNull;
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFont->getNativeFont(), mpFont->getSize(), NULL, NULL );
+			if ( aFont )
+			{
+				for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
+				{
+					CGGlyph nGlyphID = (CGGlyph)( aGlyphArray[ i ] );
+					CGRect aGlyphRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
+					if ( !CGRectIsEmpty( aGlyphRect ) )
+					{
+						if ( nGlyphOrientation == GF_ROTL )
+							aGlyphRect = CGRectMake( ( fTranslateY - aGlyphRect.origin.y - aGlyphRect.size.height ) * fScale, ( fTranslateX + aGlyphRect.origin.x + aGlyphRect.size.width ) * -1, aGlyphRect.size.height * fScale, aGlyphRect.size.width );
+						else if ( nGlyphOrientation == GF_ROTR )
+						{
+							aGlyphRect = CGRectMake( ( ( fTranslateY * -1 ) + aGlyphRect.origin.y ) * fScale, fTranslateX + aGlyphRect.origin.x, aGlyphRect.size.height * fScale, aGlyphRect.size.width );
+						}
+						else
+							aGlyphRect = CGRectMake( ( fTranslateX + aGlyphRect.origin.x ) * fScale, fTranslateY + ( ( aGlyphRect.origin.y + aGlyphRect.size.height ) * -1 ), aGlyphRect.size.width * fScale, aGlyphRect.size.height );
+
+						aGlyphRect.origin.x += aBoundPoint.x;
+						aGlyphRect.origin.y += aBoundPoint.y;
+						aBoundRect = CGRectUnion( aBoundRect, aGlyphRect );
+					}
+
+					aBoundPoint.x += (float)aDXArray[ i ] / UNITS_PER_PIXEL;
+				}
+
+				if ( !CGRectIsEmpty( aBoundRect ) )
+				{
+					Rectangle aRect( Point( Float32ToLong( aBoundRect.origin.x ), Float32ToLong( aBoundRect.origin.y ) ), Size( Float32ToLong( aBoundRect.size.width ), Float32ToLong( aBoundRect.size.height ) ) );
+					aRect.Justify();
+					rRect.Union( aRect );
+				}
+
+				CFRelease( aFont );
+			}
+		}
 	}
 
 	// Fix bug 2191 by always returning true so that the OOo code doesn't
-	// exeecute its "draw the glyph and see which pixels are black" code
-	rRect = aRect;
+	// execute its "draw the glyph and see which pixels are black" code
 	return true;
 }
 
