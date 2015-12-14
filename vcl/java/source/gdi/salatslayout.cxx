@@ -1105,6 +1105,24 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	mfScaleX( 1.0f ),
 	mfScaleY( 1.0f )
 {
+	// Fix bug 2673 by applying font scale here instead of in the native method
+	nGlyphOrientation &= GF_ROTMASK;
+	if ( nGlyphOrientation & GF_ROTMASK )
+	{
+		float fRotateDegrees;
+		if ( nGlyphOrientation == GF_ROTL )
+			fRotateDegrees = 90.0f;
+		else
+			fRotateDegrees = -90.0f;
+		mfRotateAngle += fRotateDegrees * M_PI / 180;
+		// Fix scaling the wrong axis by doing all scaling vertically
+		mfScaleY *= (float)pFont->getScaleX() * fGlyphScaleX;
+	}
+	else
+	{
+		mfScaleX *= (float)pFont->getScaleX() * fGlyphScaleX;
+	}
+
 	if ( mnGlyphCount > 0 )
 	{
 		mpGlyphs = (CGGlyph *)rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) );
@@ -1131,24 +1149,6 @@ JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aFrame
 	// Calculate glyph rotation and scale
 	if ( nOrientation )
 		mfRotateAngle += ( (float)nOrientation / 10 ) * M_PI / 180;
-
-	// Fix bug 2673 by applying font scale here instead of in the native method
-	nGlyphOrientation &= GF_ROTMASK;
-	if ( nGlyphOrientation & GF_ROTMASK )
-	{
-		float fRotateDegrees;
-		if ( nGlyphOrientation == GF_ROTL )
-			fRotateDegrees = 90.0f;
-		else
-			fRotateDegrees = -90.0f;
-		mfRotateAngle += fRotateDegrees * M_PI / 180;
-		// Fix scaling the wrong axis by doing all scaling vertically
-		mfScaleY *= (float)pFont->getScaleX() * fGlyphScaleX;
-	}
-	else
-	{
-		mfScaleX *= (float)pFont->getScaleX() * fGlyphScaleX;
-	}
 }
 
 // ----------------------------------------------------------------------------
@@ -2431,135 +2431,154 @@ bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) cons
 
 bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
 {
-	// Always return true so that the OOo code doesn't execute its
-	// "draw the glyph and see which pixels are black" code
-	bool bRet = true;
-
-	if ( !maLayoutData.size() )
-		return bRet;
-
-	int nMaxGlyphs( 1 );
+	int nMaxGlyphs = 256;
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
 	sal_Int32 aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
-	unsigned int nRunIndex = 0;
-	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
-	int nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
-	maRuns.ResetPos();
+	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
-		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+		int nOldStart = nStart;
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
 
-		if ( !nGlyphCount )
+		if ( !nTotalGlyphCount )
 			break;
 
-		if ( aGlyphArray[ 0 ] & GF_ISCHAR )
-			continue;
-
-		if ( !maRuns.PosIsInRun( aCharPosArray[ 0 ] ) )
+		// The GenericSalLayout class should return glyph runs with the same
+		// rotation mask
+		sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
+		if ( nGlyphOrientation && nFetchGlyphCount > 1 )
 		{
-			nRunIndex = 0;
-			pLayoutData = maLayoutData[ nRunIndex ];
-			nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
-			maRuns.ResetPos();
-			while ( !maRuns.PosIsInRun( aCharPosArray[ 0 ] ) )
+			nFetchGlyphCount = 1;
+			nStart = nOldStart;
+			continue;
+		}
+		else if ( !nGlyphOrientation && nFetchGlyphCount < nMaxGlyphs )
+		{
+			nFetchGlyphCount = nMaxGlyphs;
+			nStart = nOldStart;
+			continue;
+		}
+
+		Point aCurrentPos( aPos );
+		int nCurrentGlyph = 0;
+		while ( nCurrentGlyph < nTotalGlyphCount )
+		{
+			int i;
+			int nStartGlyph = nCurrentGlyph;
+			int nGlyphCount = 0;
+
+			// Skip spacing glyphs
+			for ( ; nStartGlyph < nTotalGlyphCount && aGlyphArray[ nStartGlyph ] & GF_ISCHAR; nStartGlyph++ )
+				aCurrentPos.X() += aDXArray[ nStartGlyph ];
+
+			// Determine glyph count but only allow one glyph at a time for
+			// rotated glyphs
+			Point aStartPos( aCurrentPos );
+			if ( nStartGlyph < nTotalGlyphCount )
 			{
-				maRuns.NextRun();
-				nRunIndex++;
-				if ( nRunIndex < maLayoutData.size() )
+				if ( nGlyphOrientation )
 				{
-					pLayoutData = maLayoutData[ nRunIndex ];
-					nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
+					nGlyphCount++;
+					aCurrentPos.Y() += aDXArray[ nStartGlyph ];
 				}
 				else
 				{
-					pLayoutData = NULL;
-					break;
+					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( aGlyphArray[ i ] & GF_ISCHAR ); i++ )
+					{
+						nGlyphCount++;
+						aCurrentPos.X() += aDXArray[ i ];
+					}
 				}
 			}
-		}
 
-		if ( !pLayoutData )
-			continue;
-
-		int nIndex = pLayoutData->mpCharsToChars[ aCharPosArray[ 0 ] - nMinCharPos ];
-		if ( nIndex < 0 )
-			continue;
-
-		ImplATSLayoutData *pCurrentLayoutData = pLayoutData;
-
-		// Check if this is a kashida glyph
-		if ( mpKashidaLayoutData && (CGGlyph)( aGlyphArray[ 0 ] & GF_IDXMASK ) == mpKashidaLayoutData->mpGlyphs[ 0 ] )
-		{
-			pCurrentLayoutData = mpKashidaLayoutData;
-			nIndex = mpKashidaLayoutData->mpHash->mnLen - 1;
-		}
-		// Check if this is a mirrored or ideographic space character
-		else if ( pCurrentLayoutData->mpHash->mbRTL )
-		{
-			sal_Unicode nChar = pCurrentLayoutData->mpHash->mpStr[ nIndex ];
-			::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
-			if ( mit != maMirroredLayoutData.end() )
-			{
-				pCurrentLayoutData = mit->second;
-				nIndex = 0;
-			}
-		}
-
-		for ( CFIndex i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphsToChars[ i ] == nIndex; i++ )
-		{
-			CGGlyph nGlyph = pCurrentLayoutData->mpGlyphs[ i ];
-			if ( (CGGlyph)( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
+			nCurrentGlyph = nStartGlyph + nGlyphCount;
+			if ( !nGlyphCount )
 				continue;
 
-			// Fix bug 2390 by ignoring the value of nErr passed by reference
-			::std::list< Polygon > aPolygonList;
-			CGPathRef aPath = CTFontCreatePathForGlyph( pCurrentLayoutData->maFont, pCurrentLayoutData->mpGlyphs[ i ], NULL );
-			if ( !aPath )
-				continue;
+			long nTranslateX = 0;
+			long nTranslateY = 0;
 
-			CGPathApply( aPath, (void *)&aPolygonList, SalCGPathApplier );
-			CGPathRelease( aPath );
-
-			PolyPolygon aPolyPolygon;
-			while ( aPolygonList.size() )
+			if ( nGlyphOrientation )
 			{
-				aPolyPolygon.Insert( aPolygonList.front() );
-				aPolygonList.pop_front();
-			}
-
-			// Fix bug 2537 by ignoring unusual bounds
-			Rectangle aRect = aPolyPolygon.GetBoundRect();
-			if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
-				continue;
-
-			if ( pCurrentLayoutData->mpHash->mbVertical )
-			{
-				// Do not apply any rotation for vertical glyphs as the OOo
-				// code will rotate the polypolygon
+				// Don't apply font scale to fix vertical misplacement when
+				// using scaled text
 				long nX;
 				long nY;
-				GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
-				aPolyPolygon.Move( nX, nY );
+				GetVerticalGlyphTranslation( aGlyphArray[ nStartGlyph ], aCharPosArray[ nStartGlyph ], nX, nY );
+				if ( nGlyphOrientation == GF_ROTL )
+				{
+					nTranslateX = nX;
+					nTranslateY = nY;
+				}
+				else
+				{
+					nTranslateX = nX;
+					nTranslateY = aDXArray[ nStartGlyph ] - nY;
+				}
 			}
 
+			for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
+				aGlyphArray[ i ] &= GF_IDXMASK;
+
 			double fScale = mpFont->getScaleX() * mfGlyphScaleX;
-			if ( aGlyphArray[ 0 ] & GF_ROTMASK )
-				aPolyPolygon.Scale( 1.0f, fScale );
-			else
-				aPolyPolygon.Scale( fScale, 1.0f );
 
-			// Move to position after scaling of glyph
-			aPolyPolygon.Move( aPos.X() * UNITS_PER_PIXEL, aPos.Y() * UNITS_PER_PIXEL );
+			CGPoint aBoundPoint = CGPointMake( aStartPos.X(), aStartPos.Y() );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFont->getNativeFont(), mpFont->getSize(), NULL, NULL );
+			if ( aFont )
+			{
+				for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
+				{
+					// Fix bug 2390 by ignoring the value of nErr passed by
+					// reference
+					CGGlyph nGlyphID = (CGGlyph)( aGlyphArray[ i ] );
+					CGPathRef aPath = CTFontCreatePathForGlyph( aFont, nGlyphID, NULL );
+					if ( aPath )
+					{
+						::std::list< Polygon > aPolygonList;
+						CGPathApply( aPath, (void *)&aPolygonList, SalCGPathApplier );
+						CGPathRelease( aPath );
 
-			rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
-			break;
+						PolyPolygon aPolyPolygon;
+						while ( aPolygonList.size() )
+						{
+							aPolyPolygon.Insert( aPolygonList.front() );
+							aPolygonList.pop_front();
+						}
+
+						// Fix bug 2537 by ignoring unusual bounds
+						Rectangle aRect = aPolyPolygon.GetBoundRect();
+						if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
+							continue;
+
+						// Do not apply any rotation for vertical glyphs as the OOo
+						// code will rotate the polypolygon
+						aPolyPolygon.Move( nTranslateX, nTranslateY );
+
+						if ( nGlyphOrientation )
+							aPolyPolygon.Scale( 1.0f, fScale );
+						else
+							aPolyPolygon.Scale( fScale, 1.0f );
+
+						// Move to position after scaling of glyph
+						aPolyPolygon.Move( Float32ToLong( aBoundPoint.x * UNITS_PER_PIXEL ), Float32ToLong( aBoundPoint.y * UNITS_PER_PIXEL ) );
+
+						rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
+					}
+
+					aBoundPoint.x += (float)aDXArray[ i ] / UNITS_PER_PIXEL;
+				}
+
+				CFRelease( aFont );
+			}
 		}
 	}
 
-	return bRet;
+	// Always return true so that the OOo code doesn't execute its
+	// "draw the glyph and see which pixels are black" code
+	return true;
 }
 
 // ----------------------------------------------------------------------------
