@@ -2525,7 +2525,9 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 			double fScale = mpFont->getScaleX() * mfGlyphScaleX;
 
-			CGPoint aBoundPoint = CGPointMake( aStartPos.X(), aStartPos.Y() );
+			// Calculate position of glyphs relative to 0, 0
+			Point aBoundPos( aStartPos - GetDrawPosition() );
+			CGPoint aBoundPoint = CGPointMake( aBoundPos.X() * UNITS_PER_PIXEL, aBoundPos.Y() * UNITS_PER_PIXEL );
 			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFont->getNativeFont(), mpFont->getSize(), NULL, NULL );
 			if ( aFont )
 			{
@@ -2553,8 +2555,8 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 						if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
 							continue;
 
-						// Do not apply any rotation for vertical glyphs as the OOo
-						// code will rotate the polypolygon
+						// Do not apply any rotation for vertical glyphs as the
+						// OOo code will rotate the polypolygon
 						aPolyPolygon.Move( nTranslateX, nTranslateY );
 
 						if ( nGlyphOrientation )
@@ -2563,12 +2565,12 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 							aPolyPolygon.Scale( fScale, 1.0f );
 
 						// Move to position after scaling of glyph
-						aPolyPolygon.Move( Float32ToLong( aBoundPoint.x * UNITS_PER_PIXEL ), Float32ToLong( aBoundPoint.y * UNITS_PER_PIXEL ) );
+						aPolyPolygon.Move( Float32ToLong( aBoundPoint.x ), Float32ToLong( aBoundPoint.y ) );
 
 						rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
 					}
 
-					aBoundPoint.x += (float)aDXArray[ i ] / UNITS_PER_PIXEL;
+					aBoundPoint.x += (float)aDXArray[ i ];
 				}
 
 				CFRelease( aFont );
