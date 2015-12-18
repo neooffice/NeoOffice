@@ -1174,9 +1174,12 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextR
 					// Fix bug 2674 by setting all translation, rotation, and
 					// scaling in the CGContext and not in the text matrix.
 					// Fix bug 2957 by moving the glyph scale back into the
-					// font transform.
-					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
-					CGContextSetTextMatrix( aContext, aTransform );
+					// font transform. Fix vertical scaling when scaling the
+					// Apple Color Emoji font by greater than 100% without
+					// causing bug 2957 to reoccur by drawing using
+					// CTFontDrawGlyphs() and scaling in the CGContext
+					// instead of in the text matrix.
+					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 
 					CGContextSetFillColorWithColor( aContext, aColor );
 					CGContextSetStrokeColorWithColor( aContext, aColor );
