@@ -3681,6 +3681,8 @@ bool PDFWriterImpl::emitFonts()
             CHECK_RETURN( ( osl_File_E_None == osl_openFile( rEmit.m_aFontFileName.pData, &aFontFile, osl_File_OpenFlag_Read ) ) );
 
             std::map< sal_Int32, sal_Int32 > aIDMapping;
+
+			// Add fonts
             for ( std::map< OString, sal_Int32 >::iterator pit = rEmit.m_aFontSubIDMapping.begin(); pit != rEmit.m_aFontSubIDMapping.end(); ++pit )
             {
                 PDFEmitObject& rObj = rEmit.m_aObjectMapping[ pit->second ];
@@ -3705,6 +3707,32 @@ bool PDFWriterImpl::emitFonts()
 
                 OString aFontStr = OStringBuffer().append( rEmit.m_nFontID ).append( '.' ).append( pit->second ).makeStringAndClear();
                 aFontStrToObject[ aFontStr ] = nFontObjID;
+            }
+
+			// Add font XObjects
+            for ( std::map< OString, sal_Int32 >::iterator pit = rEmit.m_aXObjectIDMapping.begin(); pit != rEmit.m_aXObjectIDMapping.end(); ++pit )
+            {
+                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ pit->second ];
+                sal_Int32 nXObjectID = writePDFObjectTree( rObj, aFontFile, rEmit.m_aObjectMapping, lit->m_nFontID, aIDMapping );
+
+                if ( !nXObjectID )
+                {
+                    // If writePDFObjectTree() fails, truncate any data and
+                    // remove any objects that were added
+                    CHECK_RETURN( ( osl_File_E_None == osl_setFilePos( m_aFile, osl_Pos_Absolut, nStartPos ) ) );
+                    CHECK_RETURN( ( osl_File_E_None == osl_setFileSize( m_aFile, nStartPos ) ) );
+
+                    std::vector< sal_uInt64 > aObjects;
+                    for ( int i = 0; i < nNumObjs; i++ )
+                        aObjects.push_back( m_aObjects[i] );
+                    m_aObjects = aObjects;
+
+                    aIDMapping.clear();
+
+                    continue;
+                }
+
+                pushResource( ResXObject, pit->first, nXObjectID );
             }
 
             osl_closeFile( aFontFile );
@@ -6413,6 +6441,7 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     bool* pMappedIdentityGlyphs,
                                     sal_Int32* pMappedFontObjects,
                                     sal_Int32* pMappedFontSubObjects,
+                                    OString pMappedXObjects[],
                                     const ImplFontData* pFallbackFonts[] )
 #else	// USE_JAVA && MACOSX
 void PDFWriterImpl::registerGlyphs( int nGlyphs,
@@ -6481,6 +6510,7 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
 #if defined USE_JAVA && defined MACOSX
                 pMappedFontSubObjects[i] = it->second.m_nFontSubID;
                 pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
+                pMappedXObjects[i] = it->second.m_aXObjectID;
 #endif	// USE_JAVA && MACOSX
             }
             else
@@ -6516,6 +6546,7 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 rNewGlyph.m_bIdentityGlyph = false;
                 pMappedFontSubObjects[i] = rNewGlyph.m_nFontSubID;
                 pMappedIdentityGlyphs[i] = rNewGlyph.m_bIdentityGlyph;
+                pMappedXObjects[i] = rNewGlyph.m_aXObjectID;
 #endif	// USE_JAVA && MACOSX
             }
             getReferenceDevice()->ImplGetGraphics();
@@ -6709,6 +6740,11 @@ void PDFWriterImpl::drawVerticalGlyphs(
         double fSkew,
         sal_Int32 nFontHeight )
 {
+#ifdef USE_JAVA
+    if ( !rGlyphs.size() )
+        return;
+#endif	// USE_JAVA
+
     long nXOffset = 0;
     Point aCurPos( rGlyphs[0].m_aPos );
     aCurPos = m_pReferenceDevice->PixelToLogic( aCurPos );
@@ -6800,11 +6836,26 @@ void PDFWriterImpl::drawVerticalGlyphs(
             aMat.skew( fSkewA, fSkewB );
         aMat.scale( fTempXScale, fYScale );
         aMat.rotate( fAngle+fDeltaAngle );
+#if defined USE_JAVA && defined MACOSX
+        OString aXObjectID = rGlyphs[i].m_aXObjectId;
+        if ( aXObjectID.getLength() )
+        {
+            double fImageScale = (double)rGlyphs[i].m_nRealNativeWidth * 72.0 / double(getReferenceDevice()->ImplGetDPIX());
+            Matrix3 aXObjectMat( aMat );
+            aXObjectMat.scale( fImageScale, fImageScale );
+            aXObjectMat.translate( aCurPos.X()+aDeltaPos.X(), aCurPos.Y()+aDeltaPos.Y() );
+            rLine.append( "q /Perceptual ri " );
+            aXObjectMat.append( m_aPages.back(), rLine );
+            rLine.append( " cm /" );
+            rLine.append( aXObjectID );
+            rLine.append( " Do /RelativeColorimetric ri Q\n" );
+        }
+#endif	// USE_JAVA && MACOSX
         aMat.translate( aCurPos.X()+aDeltaPos.X(), aCurPos.Y()+aDeltaPos.Y() );
         aMat.append( m_aPages.back(), rLine );
         rLine.append( " Tm" );
 #if defined USE_JAVA && defined MACOSX
-        if( i == 0 || rGlyphs[i-1].m_nMappedFontId != rGlyphs[i].m_nMappedFontId || rGlyphs[i-1].m_nMappedFontSubId != rGlyphs[i].m_nMappedFontSubId )
+        if( i == 0 || rGlyphs[i-1].m_nMappedFontId != rGlyphs[i].m_nMappedFontId || rGlyphs[i-1].m_nMappedFontSubId != rGlyphs[i].m_nMappedFontSubId || rGlyphs[i].m_aXObjectId.getLength() )
         {
             rLine.append( " /F" );
             rLine.append( rGlyphs[i].m_nMappedFontId );
@@ -6847,6 +6898,11 @@ void PDFWriterImpl::drawHorizontalGlyphs(
 {
     // horizontal (= normal) case
 
+#ifdef USE_JAVA
+    if ( !rGlyphs.size() )
+        return;
+#endif	// USE_JAVA
+
     // fill in  run end indices
     // end is marked by index of the first glyph of the next run
     // a run is marked by same mapped font id and same Y position
@@ -6857,6 +6913,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         if( rGlyphs[i].m_nMappedFontId != rGlyphs[i-1].m_nMappedFontId ||
 #if defined USE_JAVA && defined MACOSX
             rGlyphs[i].m_nMappedFontSubId != rGlyphs[i-1].m_nMappedFontSubId ||
+            rGlyphs[i].m_aXObjectId.getLength() ||
 #endif	// USE_JAVA && MACOSX
             rGlyphs[i].m_aPos.Y() != rGlyphs[i-1].m_aPos.Y() )
         {
@@ -6880,8 +6937,29 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // the texline matrix relative to what was set before
         // making use of that would drive us into rounding issues
         Matrix3 aMat;
+#if defined USE_JAVA && defined MACOSX
+        OString aXObjectID = rGlyphs[nBeginRun].m_aXObjectId;
+        double fImageScale;
+        if ( aXObjectID.getLength() )
+            fImageScale = (double)rGlyphs[nBeginRun].m_nRealNativeWidth * 72.0 / double(getReferenceDevice()->ImplGetDPIX());
+        else
+            fImageScale = 1.0f;
+#endif	// USE_JAVA && MACOSX
         if( nRun == 0 && fAngle == 0.0 && fXScale == 1.0 && fSkew == 0.0 )
         {
+#if defined USE_JAVA && defined MACOSX
+            if ( aXObjectID.getLength() )
+            {
+                Matrix3 aXObjectMat;
+                aXObjectMat.scale( fImageScale, fImageScale );
+                aXObjectMat.translate( aCurPos.X(), aCurPos.Y() );
+                rLine.append( "q /Perceptual ri " );
+                aXObjectMat.append( m_aPages.back(), rLine );
+                rLine.append( " cm /" );
+                rLine.append( aXObjectID );
+                rLine.append( " Do /RelativeColorimetric ri Q\n" );
+            }
+#endif	// USE_JAVA && MACOSX
             m_aPages.back().appendPoint( aCurPos, rLine, false );
             rLine.append( " Td " );
         }
@@ -6891,6 +6969,19 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aMat.skew( 0.0, fSkew );
             aMat.scale( fXScale, 1.0 );
             aMat.rotate( fAngle );
+#if defined USE_JAVA && defined MACOSX
+            if ( aXObjectID.getLength() )
+            {
+                Matrix3 aXObjectMat( aMat );
+                aXObjectMat.scale( fImageScale, fImageScale );
+                aXObjectMat.translate( aCurPos.X(), aCurPos.Y() );
+                rLine.append( "q /Perceptual ri " );
+                aXObjectMat.append( m_aPages.back(), rLine );
+                rLine.append( " cm /" );
+                rLine.append( aXObjectID );
+                rLine.append( " Do /RelativeColorimetric ri Q\n" );
+            }
+#endif	// USE_JAVA && MACOSX
             aMat.translate( aCurPos.X(), aCurPos.Y() );
             aMat.append( m_aPages.back(), rLine );
             rLine.append( " Tm\n" );
@@ -7004,6 +7095,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     sal_Int32 pMappedFontObjects[nMaxGlyphs];
 #if defined USE_JAVA && defined MACOSX
     sal_Int32 pMappedFontSubObjects[nMaxGlyphs];
+    OString pMappedXObjects[nMaxGlyphs];
 #endif	// USE_JAVA && MACOSX
     sal_Ucs   pUnicodes[nMaxGlyphs];
     int pCharPosAry[nMaxGlyphs];
@@ -7169,7 +7261,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
 
 #if defined USE_JAVA && defined MACOSX
-        registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+        registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pMappedXObjects, pFallbackFonts );
         if ( !isReplayWriter() )
             continue;
 
@@ -7206,6 +7298,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                                          pMappedGlyphs[i],
                                          pMappedFontSubObjects[i],
                                          pMappedIdentityGlyphs[i],
+                                         pMappedXObjects[i],
                                          pCharPosAry[i],
                                          nNativeGlyphWidth,
                                          &rLayout ) );
@@ -12590,20 +12683,11 @@ void PDFWriterImpl::encodeGlyphs()
                     CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
                     if ( aContext )
                     {
-                        CGPoint aGlyphPositions[ 256 ];
-                        CGSize aGlyphSizes[ 256 ];
-                        memset( aGlyphSizes, 0, sizeof( aGlyphSizes ) );
-                        CTFontGetAdvancesForGlyphs( aFont, kCTFontDefaultOrientation, aGlyphIDs, aGlyphSizes, nGlyphIDs );
-                        aGlyphPositions[ 0 ].x = 0.0f;
-                        aGlyphPositions[ 0 ].y = 0.0f;
-                        for ( int i = 1; i < nGlyphIDs; i++ )
-                        {
-                            aGlyphPositions[ i ].x = aGlyphPositions[ i - 1 ].x + aGlyphSizes[ i - 1 ].width;
-                            aGlyphPositions[ i ].y = aGlyphPositions[ i - 1 ].y + aGlyphSizes[ i - 1 ].height;
-                        }
-
+                        // Draw each glyph separately to parse emoji fonts
                         CGContextBeginPage( aContext, NULL );
-                        CTFontDrawGlyphs( aFont, aGlyphIDs, aGlyphPositions, nGlyphIDs, aContext );
+                        CGPoint aGlyphPosition = CGPointMake( 0, 0 );
+                        for ( int i = 0; i < nGlyphIDs; i++ )
+                            CTFontDrawGlyphs( aFont, aGlyphIDs + i, &aGlyphPosition, 1, aContext );
                         CGContextEndPage( aContext );
                         CGContextRelease( aContext );
                     }
@@ -12627,7 +12711,7 @@ void PDFWriterImpl::encodeGlyphs()
                 OString aFontDescriptorObjTag( "<< /Type /FontDescriptor " );
                 OString aFontFileTag( " /FontFile " );
                 OString aFontFile2Tag( " /FontFile2 " );
-    			OString aRefTag( " 0 R" );
+                OString aRefTag( " 0 R" );
                 sal_Int32 nPageContentObjID = 0;
                 sal_Int32 nProcSetObjID = 0;
                 sal_Int32 nFontDescriptorObjID = 0;
@@ -12732,26 +12816,31 @@ void PDFWriterImpl::encodeGlyphs()
                 }
 
                 // Map font IDs to objects
-                OString aFontIDTagF = OString( "/F" );
-                OString aFontIDTagG = OString( "/G" );
-                OString aFontIDTagTc = OString( "/Tc" );
-                OString aFontIDTagTT = OString( "/TT" );
-                OString aFontIDTagTy = OString( "/Ty" );
-                OString aFontIDTagC = OString( "/C" );
-                OString aFontIDTagCs = OString( "/Cs" );
-                sal_Int32 nFontIDTagLenF = aFontIDTagF.getLength();
-                sal_Int32 nFontIDTagLenG = aFontIDTagG.getLength();
-                sal_Int32 nFontIDTagLenTc = aFontIDTagTc.getLength();
-                sal_Int32 nFontIDTagLenTT = aFontIDTagTT.getLength();
-                sal_Int32 nFontIDTagLenTy = aFontIDTagTy.getLength();
-                sal_Int32 nFontIDTagLenC = aFontIDTagC.getLength();
-                sal_Int32 nFontIDTagLenCs = aFontIDTagCs.getLength();
+                static const OString aFontIDTagF = OString( "/F" );
+                static const OString aFontIDTagG = OString( "/G" );
+                static const OString aFontIDTagTc = OString( "/Tc" );
+                static const OString aFontIDTagTT = OString( "/TT" );
+                static const OString aFontIDTagTy = OString( "/Ty" );
+                static const OString aFontIDTagC = OString( "/C" );
+                static const OString aFontIDTagCs = OString( "/Cs" );
+                static const OString aXObjectIDTagIm = OString( "/Im" );
+                const sal_Int32 nFontIDTagLenF = aFontIDTagF.getLength();
+                const sal_Int32 nFontIDTagLenG = aFontIDTagG.getLength();
+                const sal_Int32 nFontIDTagLenTc = aFontIDTagTc.getLength();
+                const sal_Int32 nFontIDTagLenTT = aFontIDTagTT.getLength();
+                const sal_Int32 nFontIDTagLenTy = aFontIDTagTy.getLength();
+                const sal_Int32 nFontIDTagLenC = aFontIDTagC.getLength();
+                const sal_Int32 nFontIDTagLenCs = aFontIDTagCs.getLength();
+                const sal_Int32 nXObjectIDTagLenIm = aXObjectIDTagIm.getLength();
                 if ( nProcSetObjID )
                 {
                     PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
-                    OString aFontStartTag( " /Font << " );
-                    sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
-                    OString aFontEndTag( " >> " );
+                    static const OString aFontStartTag( " /Font << " );
+                    static const OString aFontEndTag( " >> " );
+                    static const OString aXObjectStartTag( " /XObject << " );
+                    static const OString aXObjectEndTag( " >> " );
+                    const sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
+                    const sal_Int32 nXObjectStartTagLen = aXObjectStartTag.getLength();
                     sal_Int32 nCurrentPos = 0;
                     sal_Int32 nCurrentPosC = 0;
                     sal_Int32 nCurrentPosF = 0;
@@ -12761,6 +12850,7 @@ void PDFWriterImpl::encodeGlyphs()
                     sal_Int32 nCurrentPosTy = 0;
                     sal_Int32 nCurrentFontIDTagLen;
                     sal_Int32 nFontStartPos;
+                    sal_Int32 nXObjectStartPos;
                     if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
                     {
                         nCurrentPos = nFontStartPos + nFontStartTagLen;
@@ -12799,16 +12889,16 @@ void PDFWriterImpl::encodeGlyphs()
                                 }
                                 else if ( nCurrentPosC >= 0 )
                                 {
-									while ( rObj.m_aContent.indexOf( aFontIDTagCs, nCurrentPosC ) == nCurrentPosC )
-									{
-										nCurrentPosC += nFontIDTagLenCs;
-                                		if ( ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPosC ) ) < 0 )
-										{
-                                    		nCurrentPos = nFontEndPos;
-                                    		nCurrentFontIDTagLen = 0;
-											break;
-										}
-									}
+                                    while ( rObj.m_aContent.indexOf( aFontIDTagCs, nCurrentPosC ) == nCurrentPosC )
+                                    {
+                                        nCurrentPosC += nFontIDTagLenCs;
+                                        if ( ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPosC ) ) < 0 )
+                                        {
+                                            nCurrentPos = nFontEndPos;
+                                            nCurrentFontIDTagLen = 0;
+                                            break;
+                                        }
+                                    }
 
                                     nCurrentPos = nCurrentPosC;
                                     nCurrentFontIDTagLen = nFontIDTagLenC;
@@ -12837,6 +12927,44 @@ void PDFWriterImpl::encodeGlyphs()
                                 sal_Int32 nFontSubID = OString( pBuf + nNextPos, nNextNextPos - nNextPos ).toInt32();
                                 if ( nFontSubID && aFontSubID.getLength() )
                                     rEmit.m_aFontSubIDMapping[ aFontSubID ] = nFontSubID;
+                            }
+                        }
+                    }
+
+                    // Apple Color Emoji fonts have XObjects
+                    if ( ( nXObjectStartPos = rObj.m_aContent.indexOf( aXObjectStartTag, nCurrentPos ) ) >= 0 )
+                    {
+                        nCurrentPos = nXObjectStartPos + nXObjectStartTagLen;
+
+                        sal_Int32 nXObjectEndPos;
+                        if ( ( nXObjectEndPos = rObj.m_aContent.indexOf( aXObjectEndTag, nCurrentPos ) ) >= 0 )
+                        {
+                            nCurrentPos = nXObjectStartPos + nXObjectStartTagLen;
+                            while ( ( nCurrentPos = rObj.m_aContent.indexOf( aXObjectIDTagIm, nCurrentPos ) ) >= 0 )
+                            {
+                                if ( nCurrentPos >= nXObjectEndPos )
+                                    break;
+
+                                nCurrentPos += nXObjectIDTagLenIm;
+
+                                sal_Int32 nNextPos = rObj.m_aContent.indexOf( ' ', nCurrentPos );
+                                if ( nNextPos < 0 )
+                                    continue;
+
+                                sal_Int32 nNextNextPos = rObj.m_aContent.indexOf( aRef, nCurrentPos );
+                                if ( nNextNextPos < 0 )
+                                    continue;
+
+                                const sal_Char *pBuf = rObj.m_aContent.getStr();
+                                sal_Int32 nXObjectID = OString( pBuf + nCurrentPos, nNextPos - nCurrentPos ).toInt32();
+                                sal_Int32 nXObjectRefID = OString( pBuf + nNextPos, nNextNextPos - nNextPos ).toInt32();
+                                if ( nXObjectID && nXObjectRefID )
+                                {
+                                    OString aXObjectID( aXObjectIDTagIm + OString::valueOf( rEmit.m_nFontID ) + OString( '.' ) + OString::valueOf( nXObjectID ) );
+                                    while ( aXObjectID.indexOf( '/' ) == 0 )
+                                        aXObjectID = aXObjectID.copy( 1 );
+                                    rEmit.m_aXObjectIDMapping[ aXObjectID ] = nXObjectRefID;
+                                }
                             }
                         }
                     }
@@ -12902,262 +13030,321 @@ void PDFWriterImpl::encodeGlyphs()
                                 }
                             }
 
-                            OString aFontRunTag( " Tf [ " );
-                            OString aFontTag( " Tf " );
-                            OString aAltFontTag( " Tm " );
-                            OString aTextRunTag( " ] TJ " );
-                            OString aTextTag( " Tj " );
-                            int nFontRunTagLen = aFontRunTag.getLength();
-                            int nFontTagLen = aFontTag.getLength();
-                            int nAltFontTagLen = aAltFontTag.getLength();
-                            int nTextRunTagLen = aTextRunTag.getLength();
-                            int nTextTagLen = aTextTag.getLength();
-                            int nCurrentGlyph = 0;
+                            static const OString aBeginTextTag( " BT " );
+                            static const OString aEndTextTag( " ET " );
+                            const sal_Int32 nEndTextTagLen = aEndTextTag.getLength();
                             sal_Int32 nCurrentPos = 0;
-                            OString aCurrentFontID;
-                            sal_Int32 nCurrentFontSubID = 0;
-                            sal_Int32 nFontIDPos;
-                            sal_Int32 nNextFontIDPos;
-                            sal_Int32 nNextFontPos;
-                            sal_Int32 nNextAltFontPos;
-                            sal_Int32 nTextPos;
-                            sal_Int32 nCurrentFontIDTagLen;
-                            while ( nCurrentGlyph < nGlyphIDs )
+                            sal_Int32 nNextTextEndPos = 0;
+                            std::list< OString > aTextContentList;
+                            while ( ( nNextTextEndPos = aPageContent.indexOf( aEndTextTag, nCurrentPos ) ) >= 0 )
                             {
-                                if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 )
-								{
-                                    nCurrentFontIDTagLen = nFontIDTagLenF;
-								}
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 )
-								{
-                                    nCurrentFontIDTagLen = nFontIDTagLenG;
-								}
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 )
-								{
-                                    nCurrentFontIDTagLen = nFontIDTagLenTc;
-								}
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 )
-								{
-                                    nCurrentFontIDTagLen = nFontIDTagLenTT;
-								}
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTy, nCurrentPos ) ) >= 0 )
-								{
-                                    nCurrentFontIDTagLen = nFontIDTagLenTy;
-								}
-                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
-								{
-									while ( aPageContent.indexOf( aFontIDTagCs, nNextFontIDPos ) == nNextFontIDPos )
-									{
-										nNextFontIDPos += nFontIDTagLenCs;
-                                		if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nNextFontIDPos ) ) < 0 )
-										{
-                                    		nCurrentFontIDTagLen = 0;
-											break;
-										}
-									}
+                                nNextTextEndPos += nEndTextTagLen;
+                                aTextContentList.push_back( OString( aPageContent.getStr() + nCurrentPos, nNextTextEndPos - nCurrentPos ) );
+                                nCurrentPos = nNextTextEndPos;
+                            }
 
-                                   	nCurrentFontIDTagLen = nFontIDTagLenC;
-								}
-                                else
-								{
-                                    nCurrentFontIDTagLen = 0;
-								}
+                            int nCurrentGlyph = 0;
+                            while ( aTextContentList.size() )
+                            {
+                                static const OString aFontRunTag( " Tf [ " );
+                                static const OString aFontTag( " Tf " );
+                                static const OString aAltFontTag( " Tm " );
+                                static const OString aTextRunTag( " ] TJ " );
+                                static const OString aTextTag( " Tj " );
+                                const int nFontRunTagLen = aFontRunTag.getLength();
+                                const int nFontTagLen = aFontTag.getLength();
+                                const int nAltFontTagLen = aAltFontTag.getLength();
+                                const int nTextRunTagLen = aTextRunTag.getLength();
+                                const int nTextTagLen = aTextTag.getLength();
+                                OString aCurrentFontID;
+                                sal_Int32 nCurrentFontSubID = 0;
+                                sal_Int32 nFontIDPos;
+                                sal_Int32 nNextFontIDPos;
+                                sal_Int32 nNextFontPos;
+                                sal_Int32 nNextAltFontPos;
+                                sal_Int32 nTextPos;
+                                sal_Int32 nCurrentFontIDTagLen;
 
-                                bool bIsTextRun = false;
-                                if ( aCurrentFontID.getLength() )
+                                const OString aTextContent( aTextContentList.front() );
+                                aTextContentList.pop_front();
+                                nCurrentPos = 0;
+                                while ( nCurrentGlyph < nGlyphIDs )
                                 {
-                                    // Fix bug 3570 by detecting when both the
-                                    // font tag and the font run tag are used
-                                    // in the same page content
-                                    nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
-                                    sal_Int32 nNextFontRunPos = aPageContent.indexOf( aFontRunTag, nCurrentPos );
-                                    if ( nNextFontRunPos >= 0 && nNextFontRunPos <= nNextFontPos )
+                                    if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 )
                                     {
-                                         nNextFontPos = nNextFontRunPos;
-                                         bIsTextRun = true;
+                                        nCurrentFontIDTagLen = nFontIDTagLenF;
                                     }
-                                    nNextAltFontPos = aPageContent.indexOf( aAltFontTag, nCurrentPos );
-                                }
-                                else
-                                {
-                                    nNextFontPos = -1;
-                                    nNextAltFontPos = -1;
-                                }
-
-                                const sal_Char *pBuf = aPageContent.getStr();
-
-                                if ( nNextFontIDPos >= 0 && ( nNextFontPos < 0 || nNextFontIDPos < nNextFontPos ) && ( nNextAltFontPos < 0 || nNextFontIDPos < nNextAltFontPos ) )
-                                {
-                                    nCurrentPos = nNextFontIDPos + nCurrentFontIDTagLen;
-                                    if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
-                                        continue;
-
-                                    nCurrentFontSubID = 0;
-                                    aCurrentFontID = OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos );
-                                    std::map< OString, sal_Int32 >::iterator sit = rEmit.m_aFontSubIDMapping.find( aCurrentFontID );
-                                    if ( sit != rEmit.m_aFontSubIDMapping.end() )
-                                        nCurrentFontSubID = sit->second;
-
-                                    continue;
-                                }
-                                else if ( nNextFontPos >= 0 && ( nNextAltFontPos < 0 || nNextFontPos < nNextAltFontPos ) )
-                                {
-                                    nCurrentPos = nNextFontPos + ( bIsTextRun ? nFontRunTagLen : nFontTagLen );
-                                }
-                                else if ( nNextAltFontPos >= 0 && ( nNextFontPos < 0 || nNextAltFontPos < nNextFontPos ) )
-                                {
-                                    nCurrentPos = nNextAltFontPos + nAltFontTagLen;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-
-                                sal_Int32 nTextStart = nCurrentPos;
-
-                                if ( bIsTextRun && ( nTextPos = aPageContent.indexOf( aTextRunTag, nCurrentPos ) ) >= 0 )
-                                    nCurrentPos = nTextPos + nTextRunTagLen;
-                                else if ( !bIsTextRun && ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) >= 0 )
-                                    nCurrentPos = nTextPos + nTextTagLen;
-                                else
-                                    break;
-
-                                sal_Int32 nTextEnd = nTextPos - 1;
-
-                                bool bTextIsHex;
-                                if ( pBuf[ nTextStart ] == '<' )
-                                    bTextIsHex = true;
-                                else if ( pBuf[ nTextStart ] == '(' )
-                                    bTextIsHex = false;
-                                else
-                                    continue;
-                                nTextStart++;
-
-                                sal_Int32 nTextLen = nTextEnd - nTextStart;
-                                if ( nTextLen <= 0 )
-                                    continue;
-
-                                // Note: we assume that Mac OS X only generates
-                                // hexadecimal strings when the font encoding
-                                // is Identity-H or Identity-V
-                                OStringBuffer aGlyphBuf;
-                                pBuf = aPageContent.getStr() + nTextStart;
-                                if ( bTextIsHex )
-                                {
-                                    for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
-                                        if ( bIsTextRun && *pBuf == '>' )
+                                    else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 )
+                                    {
+                                        nCurrentFontIDTagLen = nFontIDTagLenG;
+                                    }
+                                    else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagTc, nCurrentPos ) ) >= 0 )
+                                    {
+                                        nCurrentFontIDTagLen = nFontIDTagLenTc;
+                                    }
+                                    else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 )
+                                    {
+                                        nCurrentFontIDTagLen = nFontIDTagLenTT;
+                                    }
+                                    else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagTy, nCurrentPos ) ) >= 0 )
+                                    {
+                                        nCurrentFontIDTagLen = nFontIDTagLenTy;
+                                    }
+                                    else if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
+                                    {
+                                        while ( aTextContent.indexOf( aFontIDTagCs, nNextFontIDPos ) == nNextFontIDPos )
                                         {
-                                            // Fix bug 3502 by skipping
-                                            // characters not in a text run
-                                            j++;
-                                            pBuf++;
-                                            for ( ; j < nTextLen && *pBuf != '<'; j++, pBuf++ )
-                                                ;
-                                            if ( j < nTextLen )
+                                            nNextFontIDPos += nFontIDTagLenCs;
+                                            if ( ( nNextFontIDPos = aTextContent.indexOf( aFontIDTagC, nNextFontIDPos ) ) < 0 )
                                             {
-                                                j--;
-                                                pBuf--;
+                                                nCurrentFontIDTagLen = 0;
+                                                break;
                                             }
                                         }
-                                        else
-                                        {
-                                            aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
-                                        }
-                                }
-                                else
-                                {
-                                    OStringBuffer aOctalBuf;
-                                    bool bLastSlash = false;
-                                    for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
-                                    {
-                                        sal_Int32 nOctalBufLen = aOctalBuf.getLength();
-                                        // Fix bug 3481 by limiting octal
-                                        // strings to only 3 digits
-                                        if ( nOctalBufLen && ( nOctalBufLen > 2 || *pBuf < '0' || *pBuf > '9' ) )
-                                        {
-                                            aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
-                                            nOctalBufLen = 0;
-                                        }
 
-                                        if ( !bLastSlash && *pBuf == '\\' )
-                                        {
-                                            bLastSlash = true;
-                                        }
-                                        else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || nOctalBufLen ) )
-                                        {
-                                            bLastSlash = false;
-                                            aOctalBuf.append( *pBuf );
-                                        }
-                                        else if ( bLastSlash )
-                                        {
-                                            bLastSlash = false;
-                                            switch ( *pBuf )
-                                            {
-                                                case 'n':
-                                                    aGlyphBuf.append( (sal_Char)0x0a );
-                                                    break;
-                                                case 'r':
-                                                    aGlyphBuf.append( (sal_Char)0x0d );
-                                                    break;
-                                                case 't':
-                                                    aGlyphBuf.append( (sal_Char)0x09 );
-                                                    break;
-                                                case 'b':
-                                                    aGlyphBuf.append( (sal_Char)0x09 );
-                                                    break;
-                                                case 'f':
-                                                    aGlyphBuf.append( (sal_Char)0x0c );
-                                                    break;
-                                                default:
-                                                    aGlyphBuf.append( *pBuf );
-                                                    break;
-                                            }
-                                        }
-                                        else if ( bIsTextRun && *pBuf == ')' )
-                                        {
-                                            // Fix bug 3502 by skipping
-                                            // characters not in a text run
-                                            j++;
-                                            pBuf++;
-                                            for ( ; j < nTextLen && *pBuf != '('; j++, pBuf++ )
-                                                ;
-                                        }
-                                        else
-                                        {
-                                            aGlyphBuf.append( *pBuf );
-                                        }
-                                    }
-
-                                    if ( aOctalBuf.getLength() )
-                                        aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
-                                }
-
-                                pBuf = aGlyphBuf.getStr();
-                                nTextLen = aGlyphBuf.getLength();
-                                for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
-                                {
-                                    long nGlyph = (long)aGlyphIDs[ nCurrentGlyph ];
-
-                                    sal_uInt16 nEncodedGlyph;
-                                    if ( bTextIsHex )
-                                    {
-                                        nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
-                                        if ( ++pBuf && ++j < nTextLen )
-                                            nEncodedGlyph |= (sal_uInt8)( *pBuf );
+                                        nCurrentFontIDTagLen = nFontIDTagLenC;
                                     }
                                     else
                                     {
-                                        nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
+                                        nCurrentFontIDTagLen = 0;
                                     }
 
-                                    // Cache encoding
-                                    rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+                                    bool bIsTextRun = false;
+                                    if ( aCurrentFontID.getLength() )
+                                    {
+                                        // Fix bug 3570 by detecting when both
+                                        // the font tag and the font run tag
+                                        // are used in the same page content
+                                        nNextFontPos = aTextContent.indexOf( aFontTag, nCurrentPos );
+                                        sal_Int32 nNextFontRunPos = aTextContent.indexOf( aFontRunTag, nCurrentPos );
+                                        if ( nNextFontRunPos >= 0 && nNextFontRunPos <= nNextFontPos )
+                                        {
+                                             nNextFontPos = nNextFontRunPos;
+                                             bIsTextRun = true;
+                                        }
+                                        nNextAltFontPos = aTextContent.indexOf( aAltFontTag, nCurrentPos );
+                                    }
+                                    else
+                                    {
+                                        nNextFontPos = -1;
+                                        nNextAltFontPos = -1;
+                                    }
 
-                                    // Update glyph mappings
-                                    rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                                    rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nCurrentFontSubID;
-                                    rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
-                                    rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                    const sal_Char *pBuf = aTextContent.getStr();
+
+                                    if ( nNextFontIDPos >= 0 && ( nNextFontPos < 0 || nNextFontIDPos < nNextFontPos ) && ( nNextAltFontPos < 0 || nNextFontIDPos < nNextAltFontPos ) )
+                                    {
+                                        nCurrentPos = nNextFontIDPos + nCurrentFontIDTagLen;
+                                        if ( ( nFontIDPos = aTextContent.indexOf( ' ', nCurrentPos ) ) < 0 )
+                                            continue;
+
+                                        nCurrentFontSubID = 0;
+                                        aCurrentFontID = OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos );
+                                        std::map< OString, sal_Int32 >::iterator sit = rEmit.m_aFontSubIDMapping.find( aCurrentFontID );
+                                        if ( sit != rEmit.m_aFontSubIDMapping.end() )
+                                            nCurrentFontSubID = sit->second;
+
+                                        continue;
+                                    }
+                                    else if ( nNextFontPos >= 0 && ( nNextAltFontPos < 0 || nNextFontPos < nNextAltFontPos ) )
+                                    {
+                                        nCurrentPos = nNextFontPos + ( bIsTextRun ? nFontRunTagLen : nFontTagLen );
+                                    }
+                                    else if ( nNextAltFontPos >= 0 && ( nNextFontPos < 0 || nNextAltFontPos < nNextFontPos ) )
+                                    {
+                                        nCurrentPos = nNextAltFontPos + nAltFontTagLen;
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+
+                                    sal_Int32 nTextStart = nCurrentPos;
+
+                                    if ( bIsTextRun && ( nTextPos = aTextContent.indexOf( aTextRunTag, nCurrentPos ) ) >= 0 )
+                                        nCurrentPos = nTextPos + nTextRunTagLen;
+                                    else if ( !bIsTextRun && ( nTextPos = aTextContent.indexOf( aTextTag, nCurrentPos ) ) >= 0 )
+                                        nCurrentPos = nTextPos + nTextTagLen;
+                                    else
+                                        break;
+
+                                    sal_Int32 nTextEnd = nTextPos - 1;
+
+                                    bool bTextIsHex;
+                                    if ( pBuf[ nTextStart ] == '<' )
+                                        bTextIsHex = true;
+                                    else if ( pBuf[ nTextStart ] == '(' )
+                                        bTextIsHex = false;
+                                    else
+                                        continue;
+                                    nTextStart++;
+
+                                    sal_Int32 nTextLen = nTextEnd - nTextStart;
+                                    if ( nTextLen <= 0 )
+                                        continue;
+
+                                    // Note: we assume that Mac OS X only
+                                    // generates hexadecimal strings when the
+                                    // font encoding is Identity-H or Identity-V
+                                    OStringBuffer aGlyphBuf;
+                                    pBuf = aTextContent.getStr() + nTextStart;
+                                    if ( bTextIsHex )
+                                    {
+                                        for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
+                                            if ( bIsTextRun && *pBuf == '>' )
+                                            {
+                                                // Fix bug 3502 by skipping
+                                                // characters not in a text run
+                                                j++;
+                                                pBuf++;
+                                                for ( ; j < nTextLen && *pBuf != '<'; j++, pBuf++ )
+                                                    ;
+                                                if ( j < nTextLen )
+                                                {
+                                                    j--;
+                                                    pBuf--;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                            }
+                                    }
+                                    else
+                                    {
+                                        OStringBuffer aOctalBuf;
+                                        bool bLastSlash = false;
+                                        for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
+                                        {
+                                            sal_Int32 nOctalBufLen = aOctalBuf.getLength();
+                                            // Fix bug 3481 by limiting octal
+                                            // strings to only 3 digits
+                                            if ( nOctalBufLen && ( nOctalBufLen > 2 || *pBuf < '0' || *pBuf > '9' ) )
+                                            {
+                                                aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                                nOctalBufLen = 0;
+                                            }
+
+                                            if ( !bLastSlash && *pBuf == '\\' )
+                                            {
+                                                bLastSlash = true;
+                                            }
+                                            else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || nOctalBufLen ) )
+                                            {
+                                                bLastSlash = false;
+                                                aOctalBuf.append( *pBuf );
+                                            }
+                                            else if ( bLastSlash )
+                                            {
+                                                bLastSlash = false;
+                                                switch ( *pBuf )
+                                                {
+                                                    case 'n':
+                                                        aGlyphBuf.append( (sal_Char)0x0a );
+                                                        break;
+                                                    case 'r':
+                                                        aGlyphBuf.append( (sal_Char)0x0d );
+                                                        break;
+                                                    case 't':
+                                                        aGlyphBuf.append( (sal_Char)0x09 );
+                                                        break;
+                                                    case 'b':
+                                                        aGlyphBuf.append( (sal_Char)0x09 );
+                                                        break;
+                                                    case 'f':
+                                                        aGlyphBuf.append( (sal_Char)0x0c );
+                                                        break;
+                                                    default:
+                                                        aGlyphBuf.append( *pBuf );
+                                                        break;
+                                                }
+                                            }
+                                            else if ( bIsTextRun && *pBuf == ')' )
+                                            {
+                                                // Fix bug 3502 by skipping
+                                                // characters not in a text run
+                                                j++;
+                                                pBuf++;
+                                                for ( ; j < nTextLen && *pBuf != '('; j++, pBuf++ )
+                                                    ;
+                                            }
+                                            else
+                                            {
+                                                aGlyphBuf.append( *pBuf );
+                                            }
+                                        }
+
+                                        if ( aOctalBuf.getLength() )
+                                            aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                    }
+
+                                    int nCurrentXObjectGlyph = nCurrentGlyph;
+                                    pBuf = aGlyphBuf.getStr();
+                                    nTextLen = aGlyphBuf.getLength();
+                                    for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
+                                    {
+                                        sal_GlyphId nGlyph = (sal_GlyphId)aGlyphIDs[ nCurrentGlyph ];
+
+                                        sal_uInt16 nEncodedGlyph;
+                                        if ( bTextIsHex )
+                                        {
+                                            nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
+                                            if ( ++pBuf && ++j < nTextLen )
+                                                nEncodedGlyph |= (sal_uInt8)( *pBuf );
+                                        }
+                                        else
+                                        {
+                                            nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
+                                        }
+
+                                        // Cache encoding
+                                        rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                                        // Update glyph mappings
+                                        rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                        rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nCurrentFontSubID;
+                                        rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
+                                        rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                    }
+
+                                    // Handle any XObject references preceding
+                                    // the current glyph run
+                                    sal_Int32 nBeginTextPos = aTextContent.lastIndexOf( aBeginTextTag, nTextStart );
+                                    if ( nBeginTextPos >= 0 )
+                                    {
+                                        sal_Int32 nLastEndTextPos = aTextContent.lastIndexOf( aEndTextTag, nBeginTextPos );
+                                        if ( nLastEndTextPos >= 0 )
+                                            nLastEndTextPos += nEndTextTagLen;
+                                        else 
+                                            nLastEndTextPos = 0;
+
+                                        sal_Int32 nPreBeginTextLen = nBeginTextPos - nLastEndTextPos;
+                                        if ( nPreBeginTextLen > 0 )
+                                        {
+                                            OString aPreBeginText = aTextContent.copy( nLastEndTextPos, nPreBeginTextLen );
+                                            sal_Int32 nIndex = 0;
+                                            while ( nIndex >= 0 && nCurrentXObjectGlyph < nGlyphIDs )
+                                            {
+                                                OString aToken = aPreBeginText.getToken( 0, ' ', nIndex );
+                                                if ( aToken.indexOf( aXObjectIDTagIm ) == 0 && aToken.getLength() > nXObjectIDTagLenIm )
+                                                {
+                                                    pBuf = aToken.getStr();
+                                                    sal_Int32 nXObjectID = OString( pBuf + nXObjectIDTagLenIm, aToken.getLength() - nXObjectIDTagLenIm ).toInt32();
+                                                    if ( nXObjectID )
+                                                    {
+                                                        OString aXObjectID( aXObjectIDTagIm + OString::valueOf( rEmit.m_nFontID ) + OString( '.' ) + OString::valueOf( nXObjectID ) );
+                                                        while ( aXObjectID.indexOf( '/' ) == 0 )
+                                                            aXObjectID = aXObjectID.copy( 1 );
+                                                        if ( rEmit.m_aXObjectIDMapping.find( aXObjectID ) != rEmit.m_aXObjectIDMapping.end() )
+                                                        {
+                                                            sal_GlyphId nGlyph = (sal_GlyphId)aGlyphIDs[ nCurrentXObjectGlyph++ ];
+                                                            rSubset.m_aMapping[ nGlyph ].m_aXObjectID = aXObjectID;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
