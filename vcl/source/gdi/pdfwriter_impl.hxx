@@ -301,9 +301,10 @@ public:
         FontEmitMapping		m_aMapping;
 #if defined USE_JAVA && defined MACOSX
         rtl::OUString		m_aFontFileName;
-        std::map< long, sal_uInt16 >	m_aGlyphEncoding;
+        std::map< sal_GlyphId, sal_uInt16 >	m_aGlyphEncoding;
         PDFObjectMapping	m_aObjectMapping;
         std::map< rtl::OString, sal_Int32 > m_aFontSubIDMapping;
+        std::map< rtl::OString, sal_Int32 > m_aXObjectIDMapping;
 #endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
@@ -319,6 +320,7 @@ public:
         sal_Int32	m_nFontSubID;
         bool		m_bIdentityGlyph;
         sal_uInt16	m_nSubsetGlyphID;
+        rtl::OString	m_aXObjectID;
 #else	// USE_JAVA && MACOSX
         sal_uInt8	m_nSubsetGlyphID;
 #endif	// USE_JAVA && MACOSX
@@ -554,6 +556,7 @@ public:
         sal_uInt16  m_nMappedGlyphId;
         sal_Int32   m_nMappedFontSubId;
         bool        m_bIdentityGlyph;
+        rtl::OString m_aXObjectId;
         int         m_nCharPos;
         sal_Int32   m_nRealNativeWidth;
         SalLayout*  m_pLayout;
@@ -569,6 +572,7 @@ public:
                   sal_uInt16 nMappedGlyphId,
                   sal_Int32 nFontSubId,
                   bool bIdentityGlyph,
+                  const rtl::OString &aXObjectId,
                   int nCharPos,
                   sal_Int32 nRealNativeWidth,
                   SalLayout *pLayout )
@@ -580,6 +584,7 @@ public:
 #if defined USE_JAVA && defined MACOSX
           , m_nMappedFontSubId( nFontSubId )
           , m_bIdentityGlyph( bIdentityGlyph )
+          , m_aXObjectId( aXObjectId )
           , m_nCharPos( nCharPos )
           , m_nRealNativeWidth( nRealNativeWidth )
           , m_pLayout( pLayout )
@@ -930,7 +935,7 @@ i12626
 
     /* creates fonts and subsets that will be emitted later */
 #if defined USE_JAVA && defined MACOSX
-    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Ucs* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, const ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Ucs* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, rtl::OString pMappedXObjects[], const ImplFontData* pFallbackFonts[] );
 #else	// USE_JAVA && MACOSX
     void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const ImplFontData* pFallbackFonts[] );
 #endif	// USE_JAVA && MACOSX
