@@ -3818,6 +3818,55 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	pEvent->dispatch();
 	pEvent->release();
 
+	// When fitting most non-resizeable dialogs to the visible screen area,
+	// the OOo code will not change the positions of the controls in dialogs
+	// such as the File > Export as PDF menu item's dialog. This, in turn, will
+	// hide any buttons and other controls at the bottom of the dialog so we
+	// resize the height to fit all of the dialog's children so that the user
+	// might be able to see all of the controls if they hide the OS X Dock or
+	// drag the dialog to another monitor.
+	if ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE ) && ! ( mnStyle & SAL_FRAME_STYLE_SIZEABLE ) )
+	{
+		Window *pWindow = Application::GetFirstTopLevelWindow();
+		while ( pWindow && pWindow->ImplGetFrame() != this )
+			pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+		if ( pWindow )
+		{
+			long nMinHeight = maGeometry.nHeight;
+			USHORT nCount = pWindow->GetChildCount();
+			for ( USHORT i = 0; i < nCount; i++ )
+			{
+				Window *pChildWindow = pWindow->GetChild( i );
+				if ( pChildWindow )
+				{
+					long nChildBottom = pChildWindow->GetOutOffYPixel() + pChildWindow->GetOutputHeightPixel();
+					if ( nMinHeight < nChildBottom )
+						nMinHeight = nChildBottom;
+				}
+			}
+
+			if ( nMinHeight > (long)maGeometry.nHeight )
+			{
+				nHeight = nMinHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
+
+				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+				NSRect aFrame = NSMakeRect( nX, nY, nWidth, nHeight );
+				VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aFrame], [NSNumber numberWithBool:mbInSetWindowState], nil]];
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[mpWindow performSelectorOnMainThread:@selector(setJavaFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
+
+				[pPool release];
+			}
+
+			// Update the cached position immediately
+			pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
+			pEvent->dispatch();
+			pEvent->release();
+		}
+	}
+
 	mbInSetPosSize = FALSE;
 }
 
