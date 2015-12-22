@@ -26,10 +26,13 @@ What's New in this Version:
 Before you buy NeoOffice, we recommend that you click on the "NeoOffice 지원" link and read the installation notes.
 
 This version of NeoOffice fixes the following bugs:
-• When running in full screen mode on OS X El Capitan, NeoOffice would display some dialogs and dropdown lists behind the current document
-• NeoOffice would draw any text that has its "scaling the width" setting set to greater than 100% wider than normal
-• NeoOffice would generate an empty mail merge if you select the "From:" field in the Mail Merge dialog
-• NeoOffice would hang for a minute or longer when updating links in spreadsheets
+• When exporting a document to PDF, NeoOffice would not include any characters that use the Apple Color Emoji font
+• In compressed and stretched horizontal text, NeoOffice would compress or stretch the text less than the text's "Scale width" setting
+• In compressed and stretched vertical text, NeoOffice would compress or stretch Chinese, Japanese, and Korean characters horizontally instead of vertically
+• In fontwork objects that have multiple lines of text, NeoOffice would draw all but the first line of text too far to the right
+• NeoOffice would sometimes hang when opening .odb files
+• When running on OS X Mountain Lion, NeoOffice would ignore changes to the file name in the Save As dialog and would save to the original file name
+• When using an 800 x 600 or smaller monitor, NeoOffice would cut off the buttons at the bottom of tall dialogs
 
 
 Keywords:
