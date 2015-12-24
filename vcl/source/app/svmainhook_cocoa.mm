@@ -259,7 +259,7 @@ void NSApplication_terminate()
 					{
 						MacOSBOOL bSigned = NO;
 						size_t nSigners = 0;
-						if ( CMSDecoderGetNumSigners( aDecoder, &nSigners ) == errSecSuccess &&& nSigners > 0 )
+						if ( CMSDecoderGetNumSigners( aDecoder, &nSigners ) == errSecSuccess && nSigners > 0 )
 						{
 							SecPolicyRef aPolicy = SecPolicyCreateBasicX509();
 							if ( aPolicy )
