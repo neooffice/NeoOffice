@@ -3814,6 +3814,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	}
 
 	// Update the cached position immediately
+	unsigned long nOrigHeight = maGeometry.nHeight;
 	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, this, NULL );
 	pEvent->dispatch();
 	pEvent->release();
@@ -3825,7 +3826,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// resize the height to fit all of the dialog's children so that the user
 	// might be able to see all of the controls if they hide the OS X Dock or
 	// drag the dialog to another monitor.
-	if ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE ) && ! ( mnStyle & SAL_FRAME_STYLE_SIZEABLE ) )
+	if ( maGeometry.nHeight > nOrigHeight && mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE ) && ! ( mnStyle & SAL_FRAME_STYLE_SIZEABLE ) )
 	{
 		Window *pWindow = Application::GetFirstTopLevelWindow();
 		while ( pWindow && pWindow->ImplGetFrame() != this )
@@ -3833,12 +3834,12 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 		if ( pWindow )
 		{
-			long nMinHeight = maGeometry.nHeight;
+			long nMinHeight = nOrigHeight;
 			USHORT nCount = pWindow->GetChildCount();
 			for ( USHORT i = 0; i < nCount; i++ )
 			{
 				Window *pChildWindow = pWindow->GetChild( i );
-				if ( pChildWindow )
+				if ( pChildWindow && pChildWindow->IsVisible() )
 				{
 					long nChildBottom = pChildWindow->GetOutOffYPixel() + pChildWindow->GetOutputHeightPixel();
 					if ( nMinHeight < nChildBottom )
