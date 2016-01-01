@@ -39,10 +39,10 @@ Keywords:
 neo,office,dokument,regneark,tekst,presentasjon,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+http://www.neooffice.org/neojava/contact.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+http://www.neooffice.org/neojava/macappstore.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_no.png file. Note: the ScreenSnapshotWriterAndCalc_no.png was created using the document files in the ScreenSnapshotWriterAndCalc/no subdirectory.

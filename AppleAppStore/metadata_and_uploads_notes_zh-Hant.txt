@@ -39,10 +39,10 @@ Keywords:
 neo,office,文件,試算表,文字文件,簡報,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+http://www.neooffice.org/neojava/contact.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+http://www.neooffice.org/neojava/macappstore.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_zh-Hant.png file. Note: the ScreenSnapshotWriterAndCalc_zh-Hant.png was created using the document files in the ScreenSnapshotWriterAndCalc/zh-Hant subdirectory.

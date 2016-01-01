@@ -39,10 +39,10 @@ Keywords:
 neo,office,belge,hesap,tablosu,metin,sunum,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+http://www.neooffice.org/neojava/contact.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+http://www.neooffice.org/neojava/macappstore.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_tr.png file. Note: the ScreenSnapshotWriterAndCalc_tr.png was created using the document files in the ScreenSnapshotWriterAndCalc/tr subdirectory.
