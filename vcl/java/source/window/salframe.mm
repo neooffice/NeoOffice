@@ -903,6 +903,13 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 
 - (void)setNeedsDisplay:(id)pObject
 {
+	for ( ::std::map< NSWindow*, JavaSalGraphics* >::const_iterator it = aNativeWindowMap.begin(); it != aNativeWindowMap.end(); ++it )
+	{
+		NSView *pContentView = [it->first contentView];
+		if ( pContentView )
+			it->second->setNeedsDisplay( pContentView );
+	}
+
 	// After using the Window menu to set focus to a non-full screen window and
 	// after closing that window sets the focus to a full screen window,
 	// closing the full screen focus will cause OS X to exit full screen mode
@@ -2801,12 +2808,6 @@ OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut 
 
 void JavaSalFrame::FlushAllFrames()
 {
-	// Call Flush() on each frame as that method will coalesce this flush with
-	// any pending flushes
-	SalData *pSalData = GetSalData();
-	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		(*it)->Flush();
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetNeedsDisplayAllViews *pVCLSetNeedsDisplayAllViews = [VCLSetNeedsDisplayAllViews create];
