@@ -59,6 +59,7 @@
 
 static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
 static ::std::map< NSWindow*, NSCursor* > aNativeCursorMap;
+static ::std::map< NSWindow*, NSTimer* > aNativeFlushTimerMap;
 static bool bScreensInitialized = false;
 static unsigned int nMainScreen = 0;
 static NSRect aTotalScreenBounds = NSZeroRect;
@@ -507,6 +508,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)flush:(id)pObject;
+- (void)flushTimer:(id)pObject;
 - (void)getContentView:(VCLWindowWrapperArgs *)pArgs;
 - (void)getFrame:(VCLWindowWrapperArgs *)pArgs;
 - (void)getState:(VCLWindowWrapperArgs *)pArgs;
@@ -901,13 +903,6 @@ static ::std::map< PointerStyle, NSCursor* > aVCLCustomCursors;
 
 - (void)setNeedsDisplay:(id)pObject
 {
-	for ( ::std::map< NSWindow*, JavaSalGraphics* >::const_iterator it = aNativeWindowMap.begin(); it != aNativeWindowMap.end(); ++it )
-	{
-		NSView *pContentView = [it->first contentView];
-		if ( pContentView )
-			it->second->setNeedsDisplay( pContentView );
-	}
-
 	// After using the Window menu to set focus to a non-full screen window and
 	// after closing that window sets the focus to a full screen window,
 	// closing the full screen focus will cause OS X to exit full screen mode
@@ -1465,12 +1460,40 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow )
 	{
-		::std::map< NSWindow*, JavaSalGraphics* >::const_iterator it = aNativeWindowMap.find( mpWindow );
-		if ( it != aNativeWindowMap.end() )
+		// Eliminate slow drawing on OS X 10.11 when the OOo code flushes
+		// progress bars by doing the actual flushing in a native timer so that
+		// OOo flushes can be coalesced
+		::std::map< NSWindow*, NSTimer* >::const_iterator ftit = aNativeFlushTimerMap.find( mpWindow );
+		if ( ftit == aNativeFlushTimerMap.end() )
 		{
-			NSView *pContentView = [it->first contentView];
+			NSTimer *pTimer = [NSTimer scheduledTimerWithTimeInterval:0.01f target:self selector:@selector(flushTimer:) userInfo:nil repeats:NO];
+			if ( pTimer )
+			{
+				[pTimer retain];
+				aNativeFlushTimerMap[ mpWindow ] = pTimer;
+			}
+		}
+	}
+}
+
+- (void)flushTimer:(id)pObject
+{
+	if ( mpWindow )
+	{
+		::std::map< NSWindow*, JavaSalGraphics* >::const_iterator nwit = aNativeWindowMap.find( mpWindow );
+		if ( nwit != aNativeWindowMap.end() )
+		{
+			NSView *pContentView = [nwit->first contentView];
 			if ( pContentView )
-				it->second->setNeedsDisplay( pContentView );
+				nwit->second->setNeedsDisplay( pContentView );
+		}
+
+		::std::map< NSWindow*, NSTimer* >::iterator ftit = aNativeFlushTimerMap.find( mpWindow );
+		if ( ftit != aNativeFlushTimerMap.end() )
+		{
+			[ftit->second invalidate];
+			[ftit->second release];
+			aNativeFlushTimerMap.erase( ftit );
 		}
 	}
 }
@@ -1498,6 +1521,14 @@ static ::std::map< VCLWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		{
 			[cit->second release];
 			aNativeCursorMap.erase( cit );
+		}
+
+		::std::map< NSWindow*, NSTimer* >::iterator ftit = aNativeFlushTimerMap.find( mpWindow );
+		if ( ftit != aNativeFlushTimerMap.end() )
+		{
+			[ftit->second invalidate];
+			[ftit->second release];
+			aNativeFlushTimerMap.erase( ftit );
 		}
 
 		::std::map< VCLWindow*, VCLWindow* >::iterator somwit = aShowOnlyMenusWindowMap.find ( mpWindow );
@@ -2770,6 +2801,12 @@ OUString JavaSalFrame::ConvertVCLKeyCode( USHORT nKeyCode, bool bIsMenuShortcut 
 
 void JavaSalFrame::FlushAllFrames()
 {
+	// Call Flush() on each frame as that method will coalesce this flush with
+	// any pending flushes
+	SalData *pSalData = GetSalData();
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		(*it)->Flush();
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetNeedsDisplayAllViews *pVCLSetNeedsDisplayAllViews = [VCLSetNeedsDisplayAllViews create];
