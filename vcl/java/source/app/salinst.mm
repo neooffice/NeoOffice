@@ -144,7 +144,7 @@ static ULONG ReleaseEventQueueMutex()
 {
 	if ( aEventQueueMutex.GetThreadId() == OThread::getCurrentIdentifier() )
 	{
-		ULONG nCount = aEventQueueMutex.GetAcquireCount();
+		ULONG nCount = aEventQueueMutex.ReleaseAcquireCount();
 		ULONG n = nCount;
 		while ( n )
 		{
@@ -450,9 +450,9 @@ void DestroySalInstance( SalInstance* pInst )
 
 // =======================================================================
 
-JavaSalInstance::JavaSalInstance()
+JavaSalInstance::JavaSalInstance() :
+	mpSalYieldMutex( new SalYieldMutex() )
 {
-	mpSalYieldMutex = new SalYieldMutex();
 	mpSalYieldMutex->acquire();
 }
 
@@ -478,28 +478,7 @@ IMutex* JavaSalInstance::GetYieldMutex()
 
 ULONG JavaSalInstance::ReleaseYieldMutex()
 {
-	// Never release the mutex in the main thread as it can cause crashing
-	// when dragging when the OOo code's VCL event dispatching thread runs
-	// while we are in the middle of a native drag event
-	if ( ( !bAllowReleaseYieldMutex || bInNativeDrag ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
-		return 0;
-
-	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
-	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
-	{
-		ULONG nCount = pYieldMutex->GetAcquireCount();
-		ULONG n = nCount;
-		while ( n )
-		{
-			pYieldMutex->release();
-			n--;
-		}
-		return nCount;
-	}
-	else
-	{
-		return 0;
-	}
+	return mpSalYieldMutex->ReleaseAcquireCount();
 }
 
 // -----------------------------------------------------------------------
@@ -1038,12 +1017,13 @@ SalSystem* JavaSalInstance::CreateSalSystem()
 
 // =========================================================================
 
-SalYieldMutex::SalYieldMutex()
+SalYieldMutex::SalYieldMutex() :
+	mnCount( 0 ),
+	mnThreadId( 0 ),
+	mnReacquireThreadId( 0 )
 {
-	mnCount	 = 0;
-	mnThreadId  = 0;
-
 	maMainThreadCondition.set();
+	maReacquireThreadCondition.set();
 }
 
 // -------------------------------------------------------------------------
@@ -1101,11 +1081,28 @@ void SalYieldMutex::acquire()
 
 			return;
 		}
+		else if ( mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() )
+		{
+			while ( !Application::IsShutDown() && !maReacquireThreadCondition.check() )
+			{
+				TimeValue aDelay;
+				aDelay.Seconds = 0;
+				aDelay.Nanosec = 10000;
+				maReacquireThreadCondition.wait( &aDelay );
+			}
+		}
 	}
+
+	WaitForReacquireThread();
 
 	OMutex::acquire();
 	mnThreadId = OThread::getCurrentIdentifier();
 	mnCount++;
+	if ( mnReacquireThreadId == OThread::getCurrentIdentifier() )
+	{
+		mnReacquireThreadId = 0;
+		maReacquireThreadCondition.set();
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -1135,14 +1132,90 @@ void SalYieldMutex::release()
 
 sal_Bool SalYieldMutex::tryToAcquire()
 {
+	WaitForReacquireThread();
+
 	if ( OMutex::tryToAcquire() )
 	{
 		mnThreadId = OThread::getCurrentIdentifier();
 		mnCount++;
+		if ( mnReacquireThreadId == OThread::getCurrentIdentifier() )
+		{
+			mnReacquireThreadId = 0;
+			maReacquireThreadCondition.set();
+		}
+
 		return sal_True;
 	}
 	else
 		return sal_False;
+}
+
+// -------------------------------------------------------------------------
+
+ULONG SalYieldMutex::ReleaseAcquireCount()
+{
+	ULONG nRet = 0;
+
+	// Never release the mutex in the main thread as it can cause crashing
+	// when dragging when the OOo code's VCL event dispatching thread runs
+	// while we are in the middle of a native drag event
+	if ( ( !bAllowReleaseYieldMutex || bInNativeDrag ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+		return nRet;
+
+	if ( mnThreadId == OThread::getCurrentIdentifier() )
+	{
+		if ( mnCount )
+		{
+			// If this thread is not the main thread, make other threads aware
+			// that this thread should have priority for reacquiring the mutex
+			if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+			{
+				mnReacquireThreadId = 0;
+				maReacquireThreadCondition.set();
+			}
+			else
+			{
+				mnReacquireThreadId = OThread::getCurrentIdentifier();
+				maReacquireThreadCondition.reset();
+			}
+
+			nRet = mnCount;
+			while ( mnCount && mnThreadId == OThread::getCurrentIdentifier() )
+				release();
+		}
+	}
+
+	return nRet;
+}
+
+// -------------------------------------------------------------------------
+
+void SalYieldMutex::WaitForReacquireThread()
+{
+	if ( mnThreadId != OThread::getCurrentIdentifier() && CFRunLoopGetCurrent() != CFRunLoopGetMain() && mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() )
+	{
+		// Fix hang that occurs when the native frame is being created on a
+    	// thread other than the OOo event dispatch thread while opening a Base
+		// document by letting the thread that invoked ReleaseAcquireCount()
+		// have a chance to reacquire the lock first. There may be cases where
+		// the reacquiring thread actually expects the current thread to do
+		// some work so stop waiting after a short period of time.
+		timeval aTimeoutTime;
+		gettimeofday( &aTimeoutTime, NULL );
+		aTimeoutTime += 100;
+		while ( !Application::IsShutDown() && !maReacquireThreadCondition.check() )
+		{
+			TimeValue aDelay;
+			aDelay.Seconds = 0;
+			aDelay.Nanosec = 10000;
+			maReacquireThreadCondition.wait( &aDelay );
+
+			timeval aCurrentTime;
+			gettimeofday( &aCurrentTime, NULL );
+			if ( aCurrentTime >= aTimeoutTime )
+				break;
+		}
+	}
 }
 
 // =========================================================================

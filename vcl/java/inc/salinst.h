@@ -61,15 +61,19 @@ class SalYieldMutex : public ::vos::OMutex
 {
 	ULONG					mnCount;
 	::osl::Condition		maMainThreadCondition;
+	::osl::Condition		maReacquireThreadCondition;
 	::vos::OThread::TThreadIdentifier	mnThreadId;
+	::vos::OThread::TThreadIdentifier	mnReacquireThreadId;
 
 public:
 							SalYieldMutex();
 	virtual void			acquire();
 	virtual void			release();
 	virtual sal_Bool		tryToAcquire();
-	ULONG					GetAcquireCount() { return mnCount; }
 	::vos::OThread::TThreadIdentifier	GetThreadId() { return mnThreadId; }
+	::vos::OThread::TThreadIdentifier	GetReacquireThreadId() { return mnReacquireThreadId; }
+	ULONG					ReleaseAcquireCount();
+	void					WaitForReacquireThread();
 };
 
 // -------------------
