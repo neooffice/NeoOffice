@@ -1081,16 +1081,6 @@ void SalYieldMutex::acquire()
 
 			return;
 		}
-		else if ( mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() )
-		{
-			while ( !Application::IsShutDown() && !maReacquireThreadCondition.check() )
-			{
-				TimeValue aDelay;
-				aDelay.Seconds = 0;
-				aDelay.Nanosec = 10000;
-				maReacquireThreadCondition.wait( &aDelay );
-			}
-		}
 	}
 
 	WaitForReacquireThread();
@@ -1192,7 +1182,7 @@ ULONG SalYieldMutex::ReleaseAcquireCount()
 
 void SalYieldMutex::WaitForReacquireThread()
 {
-	if ( mnThreadId != OThread::getCurrentIdentifier() && CFRunLoopGetCurrent() != CFRunLoopGetMain() && mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() )
+	if ( mnReacquireThreadId && mnReacquireThreadId != OThread::getCurrentIdentifier() && mnThreadId != OThread::getCurrentIdentifier() && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 	{
 		// Fix hang that occurs when the native frame is being created on a
     	// thread other than the OOo event dispatch thread while opening a Base
