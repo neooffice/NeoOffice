@@ -2201,6 +2201,15 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
+		// Stop repeating characters when pressing and holding a vowel key
+		// causes OS X to display a text input window by setting the uncommitted
+		// text to a non-nil string
+		if ( !mpTextInput && mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
+		{
+			mpTextInput = @"";
+			[mpTextInput retain];
+		}
+
 		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
