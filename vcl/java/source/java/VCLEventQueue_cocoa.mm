@@ -1820,6 +1820,9 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)keyDown:(NSEvent *)pEvent
 {
+	MacOSBOOL bOldInKeyDown = mbInKeyDown;
+	mbInKeyDown = YES;
+
 	if ( mpLastKeyDownEvent )
 		[mpLastKeyDownEvent release];
 	mpLastKeyDownEvent = ( [pEvent type] == NSKeyDown ? pEvent : nil );
@@ -1838,7 +1841,33 @@ static CFDataRef aRTFSelection = nil;
 	// the key down event if the interpretKeyEvents: selector does not post
 	// anything. Do not do this step if there is uncommitted text.
 	if ( !mpTextInput && mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
+	{
 		[self insertText:[mpLastKeyDownEvent characters] replacementRange:NSMakeRange( NSNotFound, 0 )];
+	}
+	// Handle the one case where we need to do this step for uncommitted text
+	else if ( mpTextInput && mbTextInputWantsNonRepeatKeyDown && mpLastKeyDownEvent && ![mpLastKeyDownEvent isARepeat] )
+	{
+		NSString *pChars = [mpLastKeyDownEvent characters];
+		if ( pChars )
+		{
+			NSUInteger i = 0;
+			NSUInteger nLength = [pChars length];
+			for ( ; i < nLength; i++ )
+			{
+				USHORT nChar = (USHORT)[pChars characterAtIndex:i];
+				USHORT nCode = GetKeyCode( UNDEFINED_KEY_CODE, nChar );
+				if ( nCode == KEY_RETURN )
+				{
+					id pTextInput = mpTextInput;
+					[pTextInput retain];
+					[self insertText:pTextInput replacementRange:NSMakeRange( NSNotFound, 0 )];
+					[pTextInput release];
+				}
+			}
+		}
+	}
+
+	mbInKeyDown = bOldInKeyDown;
 }
 
 - (void)keyUp:(NSEvent *)pEvent
@@ -1909,6 +1938,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		[mpTextInput release];
 		mpTextInput = nil;
+		mbTextInputWantsNonRepeatKeyDown = NO;
 	}
 
 	if ( aString )
@@ -2017,6 +2047,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		[mpTextInput release];
 		mpTextInput = nil;
+		mbTextInputWantsNonRepeatKeyDown = NO;
 
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] && mpFrame )
@@ -2091,6 +2122,7 @@ static CFDataRef aRTFSelection = nil;
 	{
 		[mpTextInput release];
 		mpTextInput = nil;
+		mbTextInputWantsNonRepeatKeyDown = NO;
 
 		NSWindow *pWindow = [self window];
 		if ( pWindow && [pWindow isVisible] && mpFrame )
@@ -2201,6 +2233,46 @@ static CFDataRef aRTFSelection = nil;
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [pWindow isVisible] && mpFrame )
 	{
+		// Stop repeating characters when pressing and holding a vowel key
+		// causes OS X to display a text input window by setting the uncommitted
+		// text to a non-nil string
+		if ( mbInKeyDown && !mpTextInput && mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
+		{
+			// Improve emulation of the TextEdit application's behavior when
+			// pressing and holding a vowel key by posting a backspace event
+			// and then marking the current character
+			mpTextInput = [mpLastKeyDownEvent characters];
+			if ( mpTextInput )
+			{
+				[mpTextInput retain];
+
+				NSUInteger i = 0;
+				NSUInteger nLength = [mpTextInput length];
+				for ( ; i < nLength; i++ )
+				{
+					SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+					pKeyDownEvent->mnTime = (ULONG)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+					pKeyDownEvent->mnCode = KEY_BACKSPACE;
+					pKeyDownEvent->mnCharCode = 0;
+					pKeyDownEvent->mnRepeat = 0;
+
+					// Only post a key down event. Posting a matching key up
+					// event will backspace two characters instead of one.
+					JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+					JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
+					pSalKeyDownEvent->release();
+				}
+
+				id pTextInput = mpTextInput;
+				[pTextInput retain];
+				[self setMarkedText:pTextInput selectedRange:NSMakeRange( 0, nLength ) replacementRange:NSMakeRange( 0, nLength )];
+				[pTextInput release];
+
+				if ( mpTextInput )
+					mbTextInputWantsNonRepeatKeyDown = YES;
+			}
+		}
+
 		::vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
@@ -2554,12 +2626,14 @@ static CFDataRef aRTFSelection = nil;
 	[super initWithFrame:aFrame];
 
 	mpFrame = NULL;
+	mbInKeyDown = NO;
 	mpInputManager = nil;
 	mpLastKeyDownEvent = nil;
 	mpPendingKeyUpEvent = NULL;
 	maSelectedRange = NSMakeRange( NSNotFound, 0 );
 	mpTextInput = nil;
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
+	mbTextInputWantsNonRepeatKeyDown = NO;
 
 	return self;
 }
