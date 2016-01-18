@@ -1856,7 +1856,7 @@ static CFDataRef aRTFSelection = nil;
 			{
 				USHORT nChar = (USHORT)[pChars characterAtIndex:i];
 				USHORT nCode = GetKeyCode( UNDEFINED_KEY_CODE, nChar );
-				if ( nCode == KEY_RETURN )
+				if ( nCode == KEY_ESCAPE || nCode == KEY_RETURN )
 				{
 					id pTextInput = mpTextInput;
 					[pTextInput retain];
