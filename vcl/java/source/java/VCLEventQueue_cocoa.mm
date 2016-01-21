@@ -1835,6 +1835,20 @@ static CFDataRef aRTFSelection = nil;
 		mpPendingKeyUpEvent = NULL;
 	}
 
+	// If this is a repeat key, allow a little time for OS X to call the
+	// firstRectForCharacterRange:actualRange: selector
+	if ( mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			NSDate *pDate = [NSDate date];
+			if ( pDate )
+				pDate = [NSDate dateWithTimeInterval:0.05f sinceDate:pDate];
+			[pApp nextEventMatchingMask:NSEventMaskFromType( NSKeyDown ) untilDate:pDate inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:NO];
+		}
+	}
+
 	[self interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
 	// Fix broken repeat key events on Mac OS X 10.8 by explicitly posting
