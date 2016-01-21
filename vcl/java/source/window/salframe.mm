@@ -1035,17 +1035,9 @@ static VCLUpdateSystemColors *pVCLUpdateSystemColors = nil;
 {
 	HandleSystemColorsChangedRequest();
 
-	// Don't allow callback during adding of the observer otherwise deadlock
-	// will occur
-	// Queue window settings update
-	if ( !mbInStartHandler && !Application::IsShutDown() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-			Application::PostUserEvent( STATIC_LINK( NULL, JavaSalFrame, RunUpdateSettings ) );
-		rSolarMutex.release();
-	}
+	JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SYSTEMCOLORSCHANGED, NULL, NULL );
+	JavaSalEventQueue::postCachedEvent( pEvent );
+	pEvent->release();
 }
 
 - (void)updateSystemColors:(id)pObject
@@ -3007,51 +2999,6 @@ BOOL JavaSalFrame::GetSelectedMenuItemTextColor( SalColor& rSalColor )
 
 // -----------------------------------------------------------------------
 
-IMPL_STATIC_LINK_NOINSTANCE( JavaSalFrame, RunUpdateSettings, void*, pCallData )
-{
-	if ( !Application::IsShutDown() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
-			ImplSVData *pSVData = ImplGetSVData();
-
-			// Reset the radio button and checkbox images
-			if ( pSVData->maCtrlData.mpRadioImgList )
-			{
-				delete pSVData->maCtrlData.mpRadioImgList;
-				pSVData->maCtrlData.mpRadioImgList = NULL;
-			}
-			if ( pSVData->maCtrlData.mpCheckImgList )
-			{
-				delete pSVData->maCtrlData.mpCheckImgList;
-				pSVData->maCtrlData.mpCheckImgList = NULL;
-			}
-
-			// Force update of window settings
-			pSVData->maAppData.mbSettingsInit = FALSE;
-			if ( pSVData->maAppData.mpSettings )
-			{
-				Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
-				Window *pWindow = Application::GetFirstTopLevelWindow();
-				while ( pWindow )
-				{
-					pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
-					pWindow = Application::GetNextTopLevelWindow( pWindow );
-				}
-			}
-		}
-
-		rSolarMutex.release();
-	}
-
-	return 0;
-}
-
-// -----------------------------------------------------------------------
-
 void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 {
 	if ( pObject )
@@ -3304,11 +3251,7 @@ void JavaSalFrame::SetVisible( sal_Bool bVisible, sal_Bool bNoActivate )
 
 		VCLWindowWrapperArgs *pSetVisibleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:bVisible], [NSNumber numberWithBool:bNoActivate], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		// Release mutex to prevent hanging on OS X 10.11 when opening a window
-		// while in full screen mode
-		ULONG nCount = Application::ReleaseSolarMutex();
 		[mpWindow performSelectorOnMainThread:@selector(setVisible:) withObject:pSetVisibleArgs waitUntilDone:YES modes:pModes];
-		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
 	}
@@ -3696,9 +3639,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];
@@ -4022,9 +3963,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:NO];
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
-			Application::AcquireSolarMutex( nCount );
 		}
 
 		[pPool release];

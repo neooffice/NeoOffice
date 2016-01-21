@@ -178,7 +178,6 @@ SAL_DLLPRIVATE MacOSBOOL NSWindow_hasMarkedText( NSWindow *pWindow );
 #endif	// __OBJC__
 
 SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();
-SAL_DLLPRIVATE void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
 SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
 SAL_DLLPRIVATE BOOL VCLEventQueue_paste( void *pNSWindow );
 SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();

@@ -63,8 +63,14 @@
 #include <vcl/saltimer.hxx>
 #include <vcl/unohelp.hxx>
 #include <vos/module.hxx>
+#include <comphelper/processfactory.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
+#include <com/sun/star/frame/XDispatchHelper.hpp>
+#include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFramesSupplier.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
 #include <premac.h>
 #include <CoreServices/CoreServices.h>
@@ -96,6 +102,7 @@ static bool bInNativeDrag = false;
 static SalYieldMutex aEventQueueMutex;
 static ULONG nCurrentTimeout = 0;
 
+using namespace com::sun::star;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
@@ -1467,6 +1474,47 @@ void JavaSalEvent::dispatch()
 			}
 			return;
 		}
+		case SALEVENT_SCREENPARAMSCHANGED:
+		{
+			for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+					(*it)->SetPosSize( 0, 0, 0, 0, 0 );
+			}
+			return;
+		}
+		case SALEVENT_SYSTEMCOLORSCHANGED:
+		{
+			ImplSVData *pSVData = ImplGetSVData();
+			if ( pSVData )
+			{
+				// Reset the radio button and checkbox images
+				if ( pSVData->maCtrlData.mpRadioImgList )
+				{
+					delete pSVData->maCtrlData.mpRadioImgList;
+					pSVData->maCtrlData.mpRadioImgList = NULL;
+				}
+				if ( pSVData->maCtrlData.mpCheckImgList )
+				{
+					delete pSVData->maCtrlData.mpCheckImgList;
+					pSVData->maCtrlData.mpCheckImgList = NULL;
+				}
+
+				// Force update of window settings
+				pSVData->maAppData.mbSettingsInit = FALSE;
+				if ( pSVData->maAppData.mpSettings )
+				{
+					Application::MergeSystemSettings( *pSVData->maAppData.mpSettings );
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow )
+					{
+						pWindow->UpdateSettings( *pSVData->maAppData.mpSettings, TRUE );
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					}
+				}
+			}
+			return;
+		}
 		case SALEVENT_ABOUT:
 		{
 			// Load libsfx and invoke the native preferences handler
@@ -1556,6 +1604,67 @@ void JavaSalEvent::dispatch()
 				UpdateMenusForFrame( pFrame, NULL, true );
 				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, pFrame, NULL );
 				aEvent.dispatch();
+			}
+			break;
+		}
+		case SALEVENT_FULLSCREENENTERED:
+		case SALEVENT_FULLSCREENEXITED:
+		{
+			BOOL bFullScreen = SALEVENT_FULLSCREENENTERED ? TRUE : FALSE;
+			if ( pFrame && !pFrame->mbInShowFullScreen && bFullScreen != pFrame->mbFullScreen )
+			{
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+				if ( pWindow )
+				{
+					uno::Reference< frame::XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), uno::UNO_QUERY );
+					if ( xFramesSupplier.is() )
+					{
+						uno::Reference< container::XIndexAccess > xList( xFramesSupplier->getFrames(), uno::UNO_QUERY );
+						if ( xList.is() )
+						{
+							sal_Int32 nCount = xList->getCount();
+							for ( sal_Int32 i = 0; i < nCount; i++ )
+							{
+								uno::Reference< frame::XFrame > xFrame;
+								xList->getByIndex( i ) >>= xFrame;
+								if ( xFrame.is() )
+								{
+									uno::Reference< awt::XWindow > xWindow = xFrame->getComponentWindow();
+									if ( xWindow.is() )
+									{
+										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+											pCurrentWindow = pCurrentWindow->GetParent();
+										if ( pCurrentWindow == pWindow )
+										
+										{
+											uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, uno::UNO_QUERY );
+											if ( xDispatchProvider.is() )
+											{
+												uno::Reference< frame::XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), uno::UNO_QUERY );
+												if ( xDispatchHelper.is() )
+												{
+													pFrame->mbInWindowDidExitFullScreen = !bFullScreen;
+													pFrame->mbInWindowWillEnterFullScreen = bFullScreen;
+
+													uno::Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, uno::Sequence< beans::PropertyValue >() );
+
+													pFrame->mbInWindowDidExitFullScreen = FALSE;
+													pFrame->mbInWindowWillEnterFullScreen = FALSE;
+												}
+											}
+
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 			break;
 		}

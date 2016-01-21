@@ -171,20 +171,9 @@ static void HandleDidChangeScreenParametersRequest()
 	// crash
 	if ( !Application::IsShutDown() && ImplGetSVData() && ImplGetSVData()->mpDefInst )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
-			SalData *pSalData = GetSalData();
-			for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					(*it)->SetPosSize( 0, 0, 0, 0, 0 );
-			}
-		}
-
-		rSolarMutex.release();
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SCREENPARAMSCHANGED, NULL, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
 	}
 }
 
