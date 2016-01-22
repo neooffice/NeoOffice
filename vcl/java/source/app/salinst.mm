@@ -1610,7 +1610,7 @@ void JavaSalEvent::dispatch()
 		case SALEVENT_FULLSCREENENTERED:
 		case SALEVENT_FULLSCREENEXITED:
 		{
-			BOOL bFullScreen = SALEVENT_FULLSCREENENTERED ? TRUE : FALSE;
+			BOOL bFullScreen = ( nID == SALEVENT_FULLSCREENENTERED ? TRUE : FALSE );
 			if ( pFrame && !pFrame->mbInShowFullScreen && bFullScreen != pFrame->mbFullScreen )
 			{
 				Window *pWindow = Application::GetFirstTopLevelWindow();
