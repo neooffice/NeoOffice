@@ -108,7 +108,6 @@ public:
 	static BOOL				GetDisabledControlTextColor( SalColor& rSalColor );
 	static BOOL				GetSelectedControlTextColor( SalColor& rSalColor );
 	static BOOL				GetSelectedMenuItemTextColor( SalColor& rSalColor );
-	DECL_STATIC_LINK( JavaSalFrame, RunUpdateSettings, void* );
 
 							JavaSalFrame( ULONG nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();

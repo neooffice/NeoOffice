@@ -1600,7 +1600,11 @@ static NSUInteger nMouseMask = 0;
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-		VCLEventQueue_fullScreen( self, NO );
+	{
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_FULLSCREENEXITED, mpFrame, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
+	}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 
@@ -1608,7 +1612,11 @@ static NSUInteger nMouseMask = 0;
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
 	if ( [self isVisible] && ( [self isKindOfClass:[VCLPanel class]] || [self isKindOfClass:[VCLWindow class]] ) )
-		VCLEventQueue_fullScreen( self, YES );
+	{
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_FULLSCREENENTERED, mpFrame, NULL);
+		JavaSalEventQueue::postCachedEvent( pEvent );
+		pEvent->release();
+}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 
