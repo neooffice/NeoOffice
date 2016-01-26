@@ -1165,12 +1165,7 @@ ULONG SalYieldMutex::ReleaseAcquireCount()
 		{
 			// If this thread is not the main thread, make other threads aware
 			// that this thread should have priority for reacquiring the mutex
-			if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
-			{
-				mnReacquireThreadId = 0;
-				maReacquireThreadCondition.set();
-			}
-			else
+			if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 			{
 				mnReacquireThreadId = OThread::getCurrentIdentifier();
 				maReacquireThreadCondition.reset();
@@ -1197,20 +1192,12 @@ void SalYieldMutex::WaitForReacquireThread()
 		// have a chance to reacquire the lock first. There may be cases where
 		// the reacquiring thread actually expects the current thread to do
 		// some work so stop waiting after a short period of time.
-		timeval aTimeoutTime;
-		gettimeofday( &aTimeoutTime, NULL );
-		aTimeoutTime += 100;
-		while ( !Application::IsShutDown() && !maReacquireThreadCondition.check() )
+		if ( !Application::IsShutDown() && !maReacquireThreadCondition.check() )
 		{
 			TimeValue aDelay;
 			aDelay.Seconds = 0;
 			aDelay.Nanosec = 10000;
 			maReacquireThreadCondition.wait( &aDelay );
-
-			timeval aCurrentTime;
-			gettimeofday( &aCurrentTime, NULL );
-			if ( aCurrentTime >= aTimeoutTime )
-				break;
 		}
 	}
 }
