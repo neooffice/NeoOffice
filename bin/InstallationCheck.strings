@@ -1,3 +1,3 @@
-"16" = "One or more Mac OS X commands were not found on this machine. You must have all of the following Mac OS X commands installed on your machine to install $(PRODUCT_NAME) on this machine:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
-"25" = "You must quit $(PRODUCT_NAME) before you can install $(PRODUCT_NAME). Quit $(PRODUCT_NAME) by Control-clicking on the $(PRODUCT_NAME) icon in the Dock and selecting Quit from the popup menu that appears.";
+"16" = "One or more OS X commands were not found on this computer. You must have all of the following OS X commands installed on your computer to install $(PRODUCT_NAME) on this computer:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"25" = "$(PRODUCT_NAME) is running. You must quit $(PRODUCT_NAME) before you can install $(PRODUCT_NAME).";
 
