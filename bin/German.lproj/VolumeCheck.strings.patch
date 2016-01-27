@@ -1,0 +1,3 @@
+"48" = "Sie verfügen nicht über $(PRODUCT_NAME) $(PRODUCT_VERSION) installiert. Sie müssen $(PRODUCT_NAME) $(PRODUCT_VERSION) installieren, bevor Sie diesen Patch installieren.";
+"49" = "Sie haben eine alte Version von $(PRODUCT_NAME). Sie müssen $(PRODUCT_NAME) $(PRODUCT_VERSION) installieren, bevor Sie diesen Patch installieren.";
+

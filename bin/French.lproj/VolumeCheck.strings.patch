@@ -1,0 +1,3 @@
+"48" = "Vous ne disposez pas de $(PRODUCT_NAME) $(PRODUCT_VERSION) installé. Vous devez installer $(PRODUCT_NAME) $(PRODUCT_VERSION) avant de pouvoir installer ce correctif.";
+"49" = "Vous avez une ancienne version de $(PRODUCT_NAME). Vous devez installer $(PRODUCT_NAME) $(PRODUCT_VERSION) avant de pouvoir installer ce correctif.";
+
