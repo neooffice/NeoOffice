@@ -1,0 +1,3 @@
+"48" = "Non si dispone di $(PRODUCT_NAME) $(PRODUCT_VERSION) installato. È necessario installare $(PRODUCT_NAME) $(PRODUCT_VERSION) prima di poter installare questo pacchetto linguistico.";
+"49" = "Hai una vecchia versione di $(PRODUCT_NAME). È necessario installare $(PRODUCT_NAME) $(PRODUCT_VERSION) prima di poter installare questo pacchetto linguistico.";
+

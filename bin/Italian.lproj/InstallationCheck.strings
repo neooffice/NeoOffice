@@ -1,0 +1,3 @@
+"16" = "Uno o più comandi OS X non sono state trovate su questo computer. È necessario disporre di tutti i seguenti comandi OS X installato sul vostro computer per installare $(PRODUCT_NAME) su questo computer:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"25" = "$(PRODUCT_NAME) sia in esecuzione. È necessario abbandonare $(PRODUCT_NAME) prima di installare $(PRODUCT_NAME).";
+

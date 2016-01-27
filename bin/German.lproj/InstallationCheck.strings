@@ -1,0 +1,3 @@
+"16" = "Ein oder mehrere OS X Befehle wurden auf diesem Computer nicht gefunden. Sie müssen alle der folgenden OS X Befehle auf Ihrem Computer installiert haben, um $(PRODUCT_NAME) auf diesem Computer zu installieren:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"25" = "$(PRODUCT_NAME) läuft. Sie müssen $(PRODUCT_NAME) beenden, bevor Sie installieren können $(PRODUCT_NAME).";
+

@@ -1,0 +1,3 @@
+"48" = "U hoeft niet $(PRODUCT_NAME) $(PRODUCT_VERSION) geïnstalleerd. U moet installeren $(PRODUCT_NAME) $(PRODUCT_VERSION) voordat u deze taalpakket kunt installeren.";
+"49" = "U hebt een oude versie van $(PRODUCT_NAME). U moet installeren $(PRODUCT_NAME) $(PRODUCT_VERSION) voordat u deze taalpakket kunt installeren.";
+

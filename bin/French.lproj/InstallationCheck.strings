@@ -1,0 +1,3 @@
+"16" = "Une ou plusieurs commandes OS X sont introuvables sur cet ordinateur. Vous devez avoir toutes les commandes OS X suivants installés sur votre ordinateur pour installer $(PRODUCT_NAME) sur cet ordinateur :\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"25" = "$(PRODUCT_NAME) est en cours d'exécution. Vous devez quitter $(PRODUCT_NAME) avant de pouvoir installer $(PRODUCT_NAME).";
+

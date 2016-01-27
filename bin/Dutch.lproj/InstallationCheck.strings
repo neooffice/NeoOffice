@@ -1,0 +1,3 @@
+"16" = "Eén of meer OS X commando's werden niet gevonden op deze computer. U moet alle van de volgende OS X commando's op uw computer hebben geïnstalleerd om $(PRODUCT_NAME) op deze computer te installeren:\n\n$(INSTALLATION_CHECK_REQUIRED_COMMANDS)";
+"25" = "$(PRODUCT_NAME) wordt uitgevoerd. U moet afsluiten $(PRODUCT_NAME) voordat u kunt installeren $(PRODUCT_NAME).";
+
