@@ -26,23 +26,20 @@ What's New in this Version:
 Prima di acquistare NeoOffice, si consiglia di cliccare sul link «Supporto per NeoOffice» e leggere le note d'installazione.
 
 This version of NeoOffice fixes the following bugs:
-• When exporting a document to PDF, NeoOffice would not include any characters that use the Apple Color Emoji font
-• In compressed and stretched horizontal text, NeoOffice would compress or stretch the text less than the text's "Scale width" setting
-• In compressed and stretched vertical text, NeoOffice would compress or stretch Chinese, Japanese, and Korean characters horizontally instead of vertically
-• In fontwork objects that have multiple lines of text, NeoOffice would draw all but the first line of text too far to the right
-• NeoOffice would sometimes hang when opening .odb files
-• When running on OS X Mountain Lion, NeoOffice would ignore changes to the file name in the Save As dialog and would save to the original file name
-• When using an 800 x 600 or smaller monitor, NeoOffice would cut off the buttons at the bottom of tall dialogs
+• When pressing and holding a vowel key, NeoOffice would repeatedly enter the unaccented character even after OS X displayed a list of accented characters
+• NeoOffice would draw native progress bars significantly slower on OS X El Capitan than on older OS X versions
+• NeoOffice would display the Find dialog with a larger than normal height
+• NeoOffice would hang when opening an .odb file from an icon in the OS X Dock
 
 
 Keywords:
 neo,office,documento,foglio,testo,presentazioni,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/contact.php
+http://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/macappstore.php
+http://www.neooffice.org/neojava/features.php
 
 Mac OS X App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_it.png file. Note: the ScreenSnapshotWriterAndCalc_it.png was created using the document files in the ScreenSnapshotWriterAndCalc/it subdirectory.
