@@ -30,6 +30,7 @@ This version of NeoOffice fixes the following bugs:
 • NeoOffice would draw native progress bars significantly slower on OS X El Capitan than on older OS X versions
 • NeoOffice would display the Find dialog with a larger than normal height
 • NeoOffice would hang when opening an .odb file from an icon in the OS X Dock
+• When printing envelopes, NeoOffice would incorrectly rotate the envelope 90 degrees
 
 
 Keywords:
