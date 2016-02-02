@@ -161,6 +161,9 @@ using namespace ::com::sun::star::container;
 
 #if defined USE_JAVA && defined MACOSX
 
+#define CANSAVETIMERINITIALTIMEOUT 5000
+#define CANSAVETIMERREPEATTIMEOUT 600000
+
 class SAL_DLLPRIVATE CheckIfCanSaveTimer : public Timer
 {
 public:
@@ -180,8 +183,14 @@ IMPL_LINK( CheckIfCanSaveTimer, TimeoutHdl, void *, EMPTYARG )
 		{
 			if ( pObjShell->IsModified() )
 			{
-				bCheckIfCanSave = false;
-				SfxObjectShell_canSave( pObjShell, SID_SAVEDOC );
+				bCheckIfCanSave = !SfxObjectShell_canSave( pObjShell, SID_SAVEDOC );
+				if ( bCheckIfCanSave )
+				{
+					// Reset timer to remind user that saving is disabled
+					aCheckIfCanSaveTimer.SetTimeout( CANSAVETIMERREPEATTIMEOUT );
+					aCheckIfCanSaveTimer.Start();
+				}
+
 				break;
 			}
 		}
@@ -443,10 +452,11 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 
 			// Check if we can save after first edit
-			if ( bCheckIfCanSave && IsModified() && !aCheckIfCanSaveTimer.IsActive() )
+			if ( bCheckIfCanSave && IsModified() )
 			{
-				aCheckIfCanSaveTimer.SetTimeout( 5000 );
-				aCheckIfCanSaveTimer.SetTimeoutHdl( LINK( &aCheckIfCanSaveTimer, CheckIfCanSaveTimer, TimeoutHdl ) );
+				if ( !aCheckIfCanSaveTimer.IsActive() )
+					aCheckIfCanSaveTimer.SetTimeoutHdl( LINK( &aCheckIfCanSaveTimer, CheckIfCanSaveTimer, TimeoutHdl ) );
+				aCheckIfCanSaveTimer.SetTimeout( CANSAVETIMERINITIALTIMEOUT );
 				aCheckIfCanSaveTimer.Start();
 			}
 		}
