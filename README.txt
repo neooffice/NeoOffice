@@ -2,22 +2,19 @@ Intructions for Building NeoOffice
 ----------------------------------
 
 
-Steps for building on 10.8 Mountain Lion for Intel
+Steps for building on 10.9 Mavericks for Intel
 --------------------------------------------------
 
-At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
+At this time, NeoOffice will only build on Mac OS X 10.9 Mavericks.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   Xcode Tools v4.6.3
+   Xcode Tools v6.2
+   Command Line Tools for Xcode v6.2
 
-   After installing Xcode, install the XCode Command Line Tools by launching XCode and selecting the Xcode :: Preferences menu. In the dialog that appears, click on the Downloads tab and press the "Install" button for the "Command Line Tools" option.
+2. Download and install the Oracle's Java 1.8 Development Kit (JDK) from the following URL:
 
-   Warning: do *not* install Xcode 5 or a separately downloaded command line tools package as it will cause the "gcc" and "g++" to really use the clang compiler instead of the gcc compiler.
-
-2. Download and install the Apple's Java 1.6 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs:
-
-   http://support.apple.com/kb/DL1572
+   http://www.oracle.com/technetwork/java/javase/downloads/index.html
 
 3. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
@@ -28,6 +25,7 @@ At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
    sudo /opt/local/bin/port install flex
    sudo /opt/local/bin/port install wget
    sudo /opt/local/bin/port install gnutar
+   sudo /opt/local/bin/port install poppler
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can find the "autoconf" and other commands.
 
@@ -35,11 +33,7 @@ At this time, the NeoOffice will only build on Mac OS X 10.8 Mountain Lion.
 
    Archive::Zip
 
-5. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
-
-   http://subversion.tigris.org/project_packages.html
-
-6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+5. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>

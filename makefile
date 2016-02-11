@@ -35,8 +35,8 @@
 
 # Macros that are overridable by make command line options
 # Use gcc as build will fail with clang
-CC=gcc
-CXX=g++
+CC=cc
+CXX=c++
 EXTRA_PATH=/opt/local/bin
 GNUCP=$(EXTRA_PATH)/gcp
 LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
@@ -73,19 +73,11 @@ UNAME:=$(shell uname -p)
 ifeq ("$(shell uname -s)","Darwin")
 OS_TYPE=MacOSX
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $$2 }' | awk -F. '{ print $$1 "." $$2 }')
-ifeq ("$(UNAME)","powerpc")
-ULONGNAME=PowerPC
-CPUNAME=P
-UOUTPUTDIR=unxmacxp.pro
-DLLSUFFIX=mxp
-TARGET_MACHINE=ppc
-else
 ULONGNAME=Intel
 CPUNAME=I
-UOUTPUTDIR=unxmacxi.pro
+UOUTPUTDIR=unxmaccx.pro
 DLLSUFFIX=mxi
 TARGET_MACHINE=x86_64
-endif
 TARGET_FILE_TYPE=Mach-O 64-bit executable $(TARGET_MACHINE)
 else
 OS_TYPE=Win32
@@ -108,27 +100,22 @@ PATCH_INSTALL_HOME:=patch_install
 endif
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
+APACHE_PATCHES_HOME:=patches/apache
 MOZILLA_PATCHES_HOME:=patches/mozilla
 NEOOFFICE_PATCHES_HOME:=patches/neooffice
 OO_PATCHES_HOME:=patches/openoffice
-OOO-BUILD_PATCHES_HOME:=patches/ooo-build
-OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
-OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
-IMEDIA_PATCHES_HOME:=patches/imedia
+OO_PACKAGE=aoo-4.1.2
+OO_SOURCE_FILE=apache-openoffice-4.1.2-r1709696-src.tar.gz
+OO_BUILD_HOME=$(BUILD_HOME)/$(OO_PACKAGE)/main
+OOO-BUILD_PATCHES_HOME:=patches/ooo-build/src
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
 ifeq ("$(OS_TYPE)","MacOSX")
-ifeq ("$(UNAME)","powerpc")
-OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXPPCEnv.Set
-OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
-else
-OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXX86Env.Set
+OO_ENV_AQUA:=$(OO_BUILD_HOME)/MacOSXX86Env.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
-endif
 else
-OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/winenv.set
+OO_ENV_AQUA:=$(OO_BUILD_HOME)/winenv.set
 OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
-COMPILERDIR=$(OOO-BUILD_BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 OO_LANGUAGES:=$(shell cat '$(PWD)/etc/supportedlanguages.txt' | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
@@ -196,8 +183,10 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 endif
 
 # CVS macros
-IMEDIA_PACKAGE=imedia-read-only
-IMEDIA_SOURCE_FILENAME=imedia-read-only.tar.gz
+ANT_PACKAGE=apache-ant-1.9.6
+ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
+JFREEREPORT_PACKAGE=ooo310-m19-extensions
+JFREEREPORT_SOURCE_FILENAME=ooo310-m19-extensions.tar.bz2
 REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
@@ -213,28 +202,39 @@ all: build.all
 # Include dependent makefiles
 include neo_configure.mk
 
-build.ooo-build_checkout: $(OOO-BUILD_PATCHES_HOME)/$(OOO-BUILD_PACKAGE).tar.gz
-	mkdir -p "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)"
+build.oo_src_checkout: $(OO_PATCHES_HOME)/$(OO_SOURCE_FILE)
+	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OOO-BUILD_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OO_PACKAGE)"
 	touch "$@"
 
-build.sun-source_download: build.ooo-build_checkout
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ( ( cd "$(PWD)/$(OOO-BUILD_PATCHES_HOME)" ; gnutar cvf - --exclude CVS src ) | gnutar xvf - )
+build.ant_checkout:
+	rm -Rf "$(BUILD_HOME)/$(ANT_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)"
 	touch "$@"
 
-build.ooo-build_configure: build.ooo-build_checkout build.sun-source_download
-# Include OpenOffice.org extenstions and templates. Note that we exclude the
-# wiki-publisher.oxt file as it has been found to have buggy network
-# connectivity.
+build.jfreereport_checkout: build.oo_src_checkout
+	rm -Rf "$(BUILD_HOME)/$(JFREEREPORT_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)" | tar xvf - "$(JFREEREPORT_PACKAGE)/jfreereport/download"
+	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
+	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
+	sh -c -e 'for i in `find "$(BUILD_HOME)/$(JFREEREPORT_PACKAGE)/jfreereport/download" -name "*.zip"` ; do filename=`md5 -q "$${i}"`-`basename "$${i}"` ; cp "$${i}" "$(OO_BUILD_HOME)/../ext_sources/$${filename}" ; done'
+	touch "$@"
+
+build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_checkout
+	touch "$@"
+
+build.oo_configure: build.oo_checkout
 ifeq ("$(OS_TYPE)","MacOSX")
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=cocoa --with-gnu-cp="$(GNUCP)" --with-system-curl --with-system-odbc-headers --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=cocoa --with-gnu-cp="$(GNUCP)" --with-system-curl --with-system-odbc-headers --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
 endif
 	@sh -c -e 'if [ ! -r "$(JDK_HOME)/lib/tools.jar" ] ; then echo "You must set JDK_HOME to the path of a valid Java Development Kit" ; exit 1 ; fi'
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) WGET=/usr/bin/wget --with-distro=Win32 --disable-atl --disable-activex --disable-layout --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) WGET=/usr/bin/wget --with-distro=Win32 --disable-atl --disable-activex --disable-layout --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 endif
 	touch "$@"
 
@@ -242,8 +242,8 @@ build.ooo-build_patches: \
 	build.ooo-build_apply_patch \
 	build.ooo-build_update_patch \
 	build.ooo-build_cws-ooxml03-opc-svx-and-ptt-split.diff_patch
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ./download
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv LANG C ; $(MAKE) build.prepare
+	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; ./download
+	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv LANG C ; $(MAKE) build.prepare
 	touch "$@"
 
 build.oo_patches: \
@@ -290,53 +290,50 @@ build.oo_patches: \
 	build.oo_wizards_patch \
 	build.oo_xmlhelp_patch \
 	build.oo_xmlsecurity_patch
-# Copy modified compiler scripts to force 64 bit compilation of all binaries
-	mkdir -p "$(COMPILERDIR)"
-	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
-	-( cd "$(OOO-BUILD_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OOO-BUILD_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(OO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_bridges_patch: $(OO_PATCHES_HOME)/bridges.patch build.ooo-build_patches
-	cd "$(OOO-BUILD_BUILD_HOME)/bridges/source/cpp_uno/gcc3_macosx_intel" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/bridges_source_cpp_uno_cxx_macosx_x86-64.tar.gz"
-	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cd "$(OO_BUILD_HOME)/bridges/source/cpp_uno/gcc3_macosx_intel" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/bridges_source_cpp_uno_cxx_macosx_x86-64.tar.gz"
+	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
-	cd "$(OOO-BUILD_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/nss.tar.gz"
-	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/nss-3.16-with-nspr-4.10.4.tar.gz" .
+	cd "$(OO_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/nss.tar.gz"
+	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cd "$(OO_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/nss-3.16-with-nspr-4.10.4.tar.gz" .
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 ifeq ("$(OS_TYPE)","MacOSX")
-	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 else
-	-cat "$<" | unix2dos | ( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
-	cat "$<" | unix2dos | ( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+	-cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
 endif
 	touch "$@"
 
 build.ooo-build_all: build.oo_patches
 ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
+	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
 else
 # Copy Visual Studio 9.0 dbghelp.ddl
-	sh -e -c 'if [ ! -f "$(OOO-BUILD_BUILD_HOME)/external/dbghelp/dbghelp.dll" ] ; then cp "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE/dbghelp.dll" "$(OOO-BUILD_BUILD_HOME)/external/dbghelp/dbghelp.dll" ; fi'
+	sh -e -c 'if [ ! -f "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ] ; then cp "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE/dbghelp.dll" "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ; fi'
 # Prepend Visual Studio 9.0 tools to path
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/bin:$$PATH" ; "$(MAKE)" build
+	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv PATH "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/bin:$$PATH" ; "$(MAKE)" build
 endif
 	touch "$@"
 
-build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_configure
-	-( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+build.ooo-build_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_configure
+	-( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.neo_configure: build.ooo-build_all neo_configure.mk
@@ -402,12 +399,12 @@ build.neo_patches: build.ooo-build_all \
 
 build.neo_%_patch: % build.neo_configure
 	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do mkdir -p "$$i" ; done'
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
-	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(OO_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OO_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
@@ -418,35 +415,12 @@ build.neo_%_component: % build.neo_configure
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
-build.imedia_checkout:
-	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; mkdir "$(IMEDIA_PACKAGE)"
-	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(IMEDIA_PATCHES_HOME)/$(IMEDIA_SOURCE_FILENAME)"
-	touch "$@"
-
 build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
-
-build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
-	touch "$@"
-
-ifeq ("$(OS_TYPE)","MacOSX")
-build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
-	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
-	touch "$@"
-else
-build.imedia_patches:
-	touch "$@"
-endif
 
 build.remotecontrol_src_untar: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
@@ -502,7 +476,7 @@ build.package_shared:
 	@sh -e -c 'for i in codesign productsign ; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	sh -e -c 'if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ; fi'
-	hdiutil attach -nobrowse "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
+	hdiutil attach -nobrowse "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)/OpenOffice.org.app" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) )
 	hdiutil eject -force "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)"
@@ -516,14 +490,14 @@ build.package_shared:
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/extension"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/share/uno_packages"
 # Regroup the OOo language packs
-	cd "$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^follow_me$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
+	cd "$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^follow_me$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
 # Include certain languages in the main installer
-	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
+	sh -e -c 'for i in $(PRODUCT_BUNDLED_LANG_PACKS) ; do if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; done'
 ifndef LANGPACKS
 # Bypass the language pack installers
 else
 # Create the language pack installers
-	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OOO-BUILD_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; rm -f "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/MacOS/resource/ooo"*.res "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/basis-link/program/resource/dba"*.res ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
+	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed $(foreach BUNDLED_LANG_PACK,$(PRODUCT_BUNDLED_LANG_PACKS),-e "/^$(BUNDLED_LANG_PACK)\\$$/d")` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$3 }"` ; langdirname=`echo "$${langname}" | sed "s# #_#g"` ; if [ -z "$${langname}" -o -z "$${langdirname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents" ; if [ -d "/Volumes/OpenOffice.org $(OO_PRODUCT_VERSION_FAMILY)" ] ; then hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; fi ; hdiutil attach -nobrowse "$(PWD)/$(OO_BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install/$${i}/OpenOffice.org-langpack-$(OO_PRODUCT_VERSION)_$${i}.dmg" ; bunzip2 -dc "/Volumes/OpenOffice.org Languagepack/OpenOffice.org Languagepack.app/Contents/tarball.tar.bz2" | ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}" ; gnutar xvf - --exclude="._*" ) ; hdiutil eject -force "/Volumes/OpenOffice.org Languagepack" ; rm -f "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/MacOS/resource/ooo"*.res "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/basis-link/program/resource/dba"*.res ; helpflag=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | awk -F, "{ print \\$$2 }"` ; if [ "$${helpflag}" != "1" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help/$${i}" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${langdirname}/Contents/help" ; ln -s "en" "$${i}" ) ; fi ; "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_LOCALE=$${i}" "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_LANG_PACK_VERSION) $${langname}" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_LANG_PACK_VERSION)_$${langdirname}" "build.package_$${langdirname}" ; done'
 endif
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
 	cd "$(INSTALL_HOME)/package/Contents" ; mv -f "MacOS/resource" "etc" ; ln -sf "../etc/resource" "MacOS/resource"
@@ -717,9 +691,9 @@ endif
 # sun-report-builder.oxt because it requires Java. Fix crashing bug by using
 # our patched build of pdfimport.oxt. Fix bug 3501 by using our patched build
 # of sun-presentation-minimizer.oxt.
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OOO-BUILD_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" | grep -v "sun-report-builder.oxt" | grep -v "wiki-publisher.oxt" | grep -v "pdfimport.oxt" | grep -v "sun-presentation-minimizer.oxt"` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/pdfimport.oxt" "$(PWD)/sdext/$(UOUTPUTDIR)/bin/sun-presentation-minimizer.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OO_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" | grep -v "sun-report-builder.oxt" | grep -v "wiki-publisher.oxt" | grep -v "pdfimport.oxt" | grep -v "sun-presentation-minimizer.oxt"` "$(PWD)/sdext/$(UOUTPUTDIR)/bin/pdfimport.oxt" "$(PWD)/sdext/$(UOUTPUTDIR)/bin/sun-presentation-minimizer.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 ifdef PRODUCT_BUILD3
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OOO-BUILD_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "sun-report-builder.oxt"` ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(OO_BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "sun-report-builder.oxt"` ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 endif
 # Reinstall dictionary .oxt files removed by patches/openoffice/scp2.patch
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find -E "$(PWD)/dictionaries/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" -regex ".*\/dict-(en|es|fr)\.oxt"` ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
