@@ -34,14 +34,6 @@
 ##########################################################################
 
 # Macros that are overridable by make command line options
-# Use gcc as build will fail with clang
-CC=cc
-CXX=c++
-EXTRA_PATH=/opt/local/bin
-GNUCP=$(EXTRA_PATH)/gcp
-LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
-PKG_CONFIG=$(EXTRA_PATH)/pkg-config
-PKG_CONFIG_PATH=$(EXTRA_PATH)/../lib/pkgconfig/
 ifeq ("$(shell uname -s)","Darwin")
 JDK_HOME=/System/Library/Frameworks/JavaVM.framework/Home
 else
@@ -102,6 +94,7 @@ SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 APACHE_PATCHES_HOME:=patches/apache
 MOZILLA_PATCHES_HOME:=patches/mozilla
+MSWEET_PATCHES_HOME:=patches/msweet
 NEOOFFICE_PATCHES_HOME:=patches/neooffice
 OO_PATCHES_HOME:=patches/openoffice
 OO_PACKAGE=aoo-4.1.2
@@ -110,8 +103,8 @@ OO_BUILD_HOME=$(BUILD_HOME)/$(OO_PACKAGE)/main
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build/src
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
 ifeq ("$(OS_TYPE)","MacOSX")
-OO_ENV_AQUA:=$(OO_BUILD_HOME)/MacOSXX86Env.Set
-OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
+OO_ENV_AQUA:=$(OO_BUILD_HOME)/MacOSXX64Env.Set
+OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX64EnvJava.Set
 else
 OO_ENV_AQUA:=$(OO_BUILD_HOME)/winenv.set
 OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
@@ -185,6 +178,8 @@ endif
 # CVS macros
 ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
+DMAKE_SOURCE_FILENAME=dmake-4.12.tar.bz2
+EPM_SOURCE_FILENAME=epm-3.7-source.tar.gz
 JFREEREPORT_PACKAGE=ooo310-m19-extensions
 JFREEREPORT_SOURCE_FILENAME=ooo310-m19-extensions.tar.bz2
 OO_EXTENSIONS_PACKAGE=OOO330_m20
@@ -221,12 +216,16 @@ build.jfreereport_checkout: build.oo_src_checkout $(OO_PATCHES_HOME)/$(OO_EXTENS
 	mkdir -p "$(OO_BUILD_HOME)"
 	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OO_PATCHES_HOME)/$(OO_EXTENSIONS_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(OO_EXTENSIONS_PACKAGE)/jfreereport"
 	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(JFREEREPORT_PACKAGE)/jfreereport/download"
-	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
-	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
-	sh -c -e 'for i in `find "$(OO_BUILD_HOME)/jfreereport/download" -name "*.zip"` ; do filename=`md5 -q "$${i}"`-`basename "$${i}"` ; cp "$${i}" "$(OO_BUILD_HOME)/../ext_sources/$${filename}" ; done'
 	touch "$@"
 
-build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_checkout
+build.oo_ext_sources_checkout: build.jfreereport_checkout
+	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
+	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
+	cd "$(OO_PATCHES_HOME)/ext_sources" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$i" ; done'
+	cd "$(OO_BUILD_HOME)/jfreereport/download" ; sh -c -e 'for i in `find . -name "*.zip" -maxdepth 1` ; do filename=`md5 -q "$$i"`-`basename "$$i"` ; cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename" ; done'
+	touch "$@"
+
+build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_checkout build.oo_ext_sources_checkout
 	touch "$@"
 
 build.oo_patches: \
@@ -255,7 +254,7 @@ endif
 
 build.oo_configure: build.oo_patches
 ifeq ("$(OS_TYPE)","MacOSX")
-	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=cocoa --with-gnu-cp="$(GNUCP)" --with-system-curl --with-system-odbc-headers --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	cd "$(OO_BUILD_HOME)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; unsetenv DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-stlport --with-dmake-url="file://$(PWD)/$(APACHE_PATCHES_HOME)/$(DMAKE_SOURCE_FILENAME)" --with-epm-url="file://$(PWD)/$(MSWEET_PATCHES_HOME)/$(EPM_SOURCE_FILENAME)" --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --without-junit --disable-cairo --disable-cups --disable-gtk --disable-odk --with-gnu-cp=/opt/local/bin/gcp --with-system-curl --with-system-odbc --with-lang="$(OO_LANGUAGES)" --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-crashdump=no --enable-category-b --enable-bundled-dictionaries --enable-pdfimport --with-system-poppler --enable-report-builder
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
@@ -267,7 +266,8 @@ endif
 
 build.oo_all: build.oo_configure
 ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
+	cd "$(OO_BUILD_HOME)" ; ./bootstrap
+	source "$(OO_ENV_AQUA)" ; cd "$(OO_BUILD_HOME)/instsetoo_native" ; perl "$$SOLARENV/bin/build.pl" --all
 else
 # Copy Visual Studio 9.0 dbghelp.ddl
 	sh -e -c 'if [ ! -f "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ] ; then cp "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE/dbghelp.dll" "$(OO_BUILD_HOME)/external/dbghelp/dbghelp.dll" ; fi'
