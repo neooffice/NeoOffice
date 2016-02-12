@@ -1,7 +1,0 @@
---- prj/build.lst	2008-10-01 03:04:58.000000000 -0700
-+++ prj/build.lst	2010-02-10 17:30:49.000000000 -0800
-@@ -1,4 +1 @@
- qa  qadevOOo    : javaunohelper jurt ridljar unoil NULL
--qa  qadevOOo                                             usr1    -   all qa_mkout NULL
--qa  qadevOOo			                         nmake   -   all qa_runner_ant_build NULL
--qa  qadevOOo\runner			                 nmake   -   all qa_make_package qa_runner_ant_build NULL

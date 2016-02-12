@@ -1,53 +1,28 @@
---- java/com/sun/star/report/SDBCReportDataFactory.java	2009-01-23 01:37:27.000000000 -0800
-+++ java/com/sun/star/report/SDBCReportDataFactory.java.new	2010-02-10 22:39:20.000000000 -0800
-@@ -397,7 +397,7 @@
-         try
-         {
-             final Object[] param = new Object[2];
--            param[0] = commandType;
-+            param[0] = new Integer(commandType);
-             param[1] = command;
-             Method call = tools.getClass().getMethod("getComposer", parameter);
-             return (XSingleSelectQueryComposer) call.invoke(tools, param);
---- java/com/sun/star/report/pentaho/SOFormulaParser.java	2009-04-15 00:09:22.000000000 -0700
-+++ java/com/sun/star/report/pentaho/SOFormulaParser.java.new	2010-02-11 08:27:56.000000000 -0800
-@@ -115,7 +115,7 @@
-             opCodes = mapper.getAvailableMappings(FormulaLanguage.ODFF, FormulaMapGroup.BINARY_OPERATORS);
-             addOpCodes(names, opCodes, BINARY_OPERATORS);
+--- java/com/sun/star/report/pentaho/makefile.mk	2014-02-25 00:20:44.000000000 -0800
++++ java/com/sun/star/report/pentaho/makefile.mk	2015-09-29 17:21:11.000000000 -0700
+@@ -58,6 +58,14 @@
  
--            names = GeneratedFormulaParserConstants.tokenImage.clone();
-+            names = (String[])GeneratedFormulaParserConstants.tokenImage.clone();
-             for (int i = 0; i < names.length; i++)
-             {
-                 final String token = names[i];
-@@ -136,7 +136,7 @@
-             for (int i = 0; i < opCodes.length; i++)
-             {
-                 final FormulaOpCodeMapEntry opCode = opCodes[i];
--                parserAllOpCodes.put(opCode.Token.OpCode, opCode);
-+                parserAllOpCodes.put(new Integer(opCode.Token.OpCode), opCode);
-                 specialOpCodes.add(opCode);
-             }
-         // addOpCodes(names, opCodes,SPECIAL,false);
-@@ -251,8 +251,8 @@
-             {
-                 ret.append(formulaToken.Data);
-             }
--            else if ( parserAllOpCodes.containsKey(formulaToken.OpCode) )
-+            else if ( parserAllOpCodes.containsKey(new Integer(formulaToken.OpCode)) )
-             {
--                final FormulaOpCodeMapEntry opCode = (FormulaOpCodeMapEntry) parserAllOpCodes.get(formulaToken.OpCode);
-+                final FormulaOpCodeMapEntry opCode = (FormulaOpCodeMapEntry) parserAllOpCodes.get(new Integer(formulaToken.OpCode));
-                 if ( opCode.Name.length() > 0 )
-                     ret.append(opCode.Name);
-@@ -379,8 +379,8 @@
-                 opCode = new FormulaOpCodeMapEntry(names[j], token);
-             }
-             parserNames.put(names[j], opCode);
--            parserAllOpCodes.put(opCode.Token.OpCode, opCode);
--            groupOpCodes[group].put(opCode.Token.OpCode, opCode);
-+            parserAllOpCodes.put(new Integer(opCode.Token.OpCode), opCode);
-+            groupOpCodes[group].put(new Integer(opCode.Token.OpCode), opCode);
-         }
-     }
+ .IF "$(SYSTEM_JFREEREPORT)" == "YES" || "$(SYSTEM_APACHE_COMMONS)" == "YES"
+ COMP=fix_system_libs
++.ELIF "$(SYSTEM_JFREEREPORT)" != "YES"
++COMP=fix_jar_names
++.ENDIF
++
++.IF "$(OS)" == "MACOSX"
++SEDINPLACEOPTION=-i ''
++.ELSE
++SEDINPLACEOPTION=-i
+ .ENDIF
  
+ JAVAFILES       := $(shell @$(FIND) . -name "*.java")
+@@ -126,6 +134,10 @@
+ 	-i $<
+ .ENDIF
+ 
++fix_jar_names: $(JARMANIFEST)
++	@$(SED) $(SEDINPLACEOPTION) '/flute/,/sac/d' $<
++	@$(SED) $(SEDINPLACEOPTION) "s#^Class-Path.*#& flute-$(FLUTE_VERSION).jar libserializer-$(LIBSERIALIZER_VERSION).jar libbase-$(LIBBASE_VERSION).jar libfonts-$(LIBFONTS_VERSION).jar libformula-$(LIBFORMULA_VERSION).jar liblayout-$(LIBLAYOUT_VERSION).jar libloader-$(LIBLOADER_VERSION).jar librepository-$(LIBREPOSITORY_VERSION).jar libxml-$(LIBXML_VERSION).jar flow-engine-$(FLOW_ENGINE_VERSION).jar sac.jar commons-logging-1.1.1.jar#" $<
++
+ $(CLASSDIR)$/$(PACKAGE)$/%.properties : %.properties
+ 	@@-$(MKDIRHIER) $(@:d)
+     $(COPY) $< $@

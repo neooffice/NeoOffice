@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Force 64 bit compilation for all binaries
-exec /usr/bin/`basename "$0"` -arch x86_64 "${@}"

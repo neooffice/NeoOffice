@@ -1,37 +1,81 @@
---- configure.in	2014-04-22 16:31:37.000000000 -0700
-+++ configure.in	2014-04-22 16:59:18.000000000 -0700
-@@ -2559,7 +2559,7 @@
-       LDFLAGS=$sharedlink_ldflags_save
-    fi
+--- configure.in	2015-10-09 00:11:14.000000000 -0700
++++ configure.in	2015-11-03 18:43:15.000000000 -0800
+@@ -3924,20 +3924,20 @@
  
--   if test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
-+   if test "$_os" != "Darwin" -a test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
-       AC_MSG_CHECKING([if gcc has a visibility bug with class-level attributes (GCC bug 26905)])
-       cat >visibility.cxx <<_ACEOF
- #pragma GCC visibility push(hidden)
-@@ -4305,9 +4305,11 @@
  
- if test "$BUILD_MOZAB" = "TRUE"; then
-    if test -z "$MOZILLA_VERSION"; then
--      MOZILLA_VERSION=1.7.5
-+      MOZILLA_VERSION=3.16
+ dnl ===================================================================
+-dnl Checks for a MacOS platform SDK compatible with an OSX 10.7 deployment target
++dnl Checks for a MacOS platform SDK compatible with an OSX 10.8 deployment target
+ dnl ===================================================================
+ if test  "$_os" = "Darwin"; then
+-   sdk_target=10.7
++   sdk_target=10.8
+    AC_MSG_CHECKING([checking SDK compatiblity with OSX $sdk_target])
+ 
+    sdk_minor=`echo $sdk_target | cut -d"." -f2`
+ 
+-   if test "$sdk_minor" -lt "7"; then
+-      AC_MSG_ERROR([SDK version < 10.7 is not longer supported])
++   if test "$sdk_minor" -lt "8"; then
++      AC_MSG_ERROR([SDK version < 10.8 is not longer supported])
+    else
+       MACOSX_DEPLOYMENT_TARGET=$sdk_target
+ 
+-      sdk_found=`xcodebuild -showsdks | egrep "sdk macosx10.(7|8|9|10)" | sed -e "s/.*sdk //" | tail -n1`
++      sdk_found=`xcodebuild -showsdks | egrep "sdk macosx10.(8|9|10)" | sed -e "s/.*sdk //" | tail -n1`
+       if test -z "$sdk_found"; then
+          AC_MSG_ERROR([No SDK with OSX $sdk_target compatibility found])
+       else
+@@ -3967,7 +3967,7 @@
+ if test "$_os" = "Darwin" && test "$with_system_python" != "no"; then
+    with_system_python=yes
+ 
+-   _python="/Library/Frameworks/Python.framework/Versions/Current/bin/python" 
++   _python="/System/Library/Frameworks/Python.framework/Versions/Current/bin/python" 
+    if test ! -f $_python; then
+    	  _python="/usr/bin/python"
     fi
--   if test "$MOZILLA_VERSION" = "1.7b" ; then
-+   if test "$MOZILLA_VERSION" = "3.16" ; then
-+      MOZILLA_SOURCE_VERSION="nss-3.16-with-nspr-4.10.4"
-+   elif test "$MOZILLA_VERSION" = "1.7b" ; then
-       MOZILLA_SOURCE_VERSION="mozilla-source-1.7b-source"
-    else
-       MOZILLA_SOURCE_VERSION="mozilla-source-${MOZILLA_VERSION}"
-@@ -4346,11 +4348,6 @@
-       if test "$MOZILLA_TOOLKIT" = "gtk2"; then
-          AC_MSG_NOTICE([checking whether mozilla can be built...])
-          PKG_CHECK_MODULES(MOZGTK2, gtk+-2.0 >= 2.4 libIDL-2.0 >= 0.8, AC_MSG_NOTICE([OK - can build mozilla]), AC_MSG_ERROR([Prerequisites to build mozilla not met. Either use the precompiled mozilla binaries or install the missing packages]))
--      else
--         PKG_CHECK_MODULES(MOZLIBREQ, libIDL >= 0.6.3 libIDL <= 0.6.8, MOZIDL="TRUE", MOZIDL="")
--         if test -z "$MOZIDL"; then
--            AC_MSG_ERROR([libIDL 0.6.3 - 0.6.8 is needed when not using GTK2 to build mozilla.])
--         fi
-       fi
-    else
-       # Generic Unix/Linux section
+@@ -3982,8 +3982,8 @@
+ 
+ 	  _python_ver=`$_python -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('VERSION'));"`
+ 	  
+-	  if test -d "/Library/Frameworks/Python.framework/Versions/$_python_ver/include/python$_python_ver"; then
+-	  	 PYTHON_CFLAGS="-I/Library/Frameworks/Python.framework/Versions/$_python_ver/include/python$_python_ver"
++	  if test -d "/System/Library/Frameworks/Python.framework/Versions/$_python_ver/include/python$_python_ver"; then
++	  	 PYTHON_CFLAGS="-I/System/Library/Frameworks/Python.framework/Versions/$_python_ver/include/python$_python_ver"
+          elif test -d "$MACOSX_SDK_PATH/usr/include/python$_python_ver"; then
+              PYTHON_CFLAGS="-I$MACOSX_SDK_PATH/usr/include/python$_python_ver"
+ 	  else
+@@ -6118,7 +6118,6 @@
+ if test -n "$enable_report_builder" -a "$enable_report_builder" != "no" && test "$WITH_JAVA" != "no"; then
+   AC_MSG_RESULT([yes])
+   ENABLE_REPORTBUILDER=YES
+-  SYSTEM_JFREEREPORT=YES
+   AC_MSG_CHECKING([for reportbuilder module])
+   if test -d ./reportbuilder; then
+     AC_MSG_RESULT([OK])
+@@ -6126,6 +6125,8 @@
+     AC_MSG_ERROR([not existing. get it (did you get the -extensions tarball?)])
+   fi
+   AC_MSG_CHECKING([which jfreereport libs to use (for Report Builder extension)])
++if test "$with_system_jfreereport" == "yes"; then
++  SYSTEM_JFREEREPORT=YES
+   AC_MSG_RESULT([external])
+   if test -z $SAC_JAR; then
+          SAC_JAR=/usr/share/java/sac.jar
+@@ -6283,6 +6284,15 @@
+     AC_CHECK_FILE($LIBBASE_JAR, [],
+          [AC_MSG_ERROR(libbase.jar not found.)], [])
+   fi
++else
++  AC_MSG_CHECKING([for jfreereport module])
++  if test -d ./jfreereport; then
++    AC_MSG_RESULT([OK])
++  else
++    AC_MSG_ERROR([not existing. get it (did you get the -extensions tarball?)])
++  fi
++  BUILD_TYPE="$BUILD_TYPE JFREEREPORT"
++fi
+   BUILD_TYPE="$BUILD_TYPE REPORTBUILDER"
+ else
+   AC_MSG_RESULT([no])

@@ -1,63 +1,28 @@
-Index: source/xml/saxnamespacefilter.cxx
-===================================================================
-RCS file: /cvs/framework/framework/source/xml/saxnamespacefilter.cxx,v
-retrieving revision 1.6
-diff -u -r1.6 saxnamespacefilter.cxx
---- source/xml/saxnamespacefilter.cxx	12 Oct 2006 10:44:43 -0000	1.6
-+++ source/xml/saxnamespacefilter.cxx	28 Jun 2007 22:39:20 -0000
-@@ -151,7 +151,16 @@
- 		throw e;
- 	}
+--- Library_fwk.mk	2014-02-25 00:30:06.000000000 -0800
++++ Library_fwk.mk	2015-09-30 18:28:02.000000000 -0700
+@@ -109,7 +109,6 @@
+ 	framework/source/layoutmanager/panelmanager \
+ 	framework/source/layoutmanager/toolbarlayoutmanager \
+ 	framework/source/layoutmanager/uielement \
+-	framework/source/loadenv/loadenv \
+ 	framework/source/loadenv/targethelper \
+ 	framework/source/register/registerservices \
+ 	framework/source/services/ContextChangeEventMultiplexer \
+@@ -186,4 +185,17 @@
+ 	framework/source/xml/imagesdocumenthandler \
+ ))
  
--	xDocumentHandler->startElement( aNamespaceElementName, pNewList );
-+	try {
-+		xDocumentHandler->startElement( aNamespaceElementName, pNewList );
-+	}
-+	catch ( RuntimeException& re )
-+	{
-+		re.Message = ::rtl::OUString( getErrorLineString() + re.Message );
-+		SAXException e;
-+		e.Message = re.Message;
-+		throw e;
-+	}
- }
- 
- void SAL_CALL SaxNamespaceFilter::endElement(const OUString& aName)
---- source/uielement/rootitemcontainer.cxx	2008-06-24 10:02:19.000000000 -0700
-+++ source/uielement/rootitemcontainer.cxx	2012-09-24 13:42:08.000000000 -0700
-@@ -335,13 +335,13 @@
- Reference< XInterface > SAL_CALL RootItemContainer::createInstanceWithContext( const Reference< XComponentContext >& )
- throw ( Exception, RuntimeException)
- {
--    return (OWeakObject *)(new ItemContainer( m_aShareMutex ));
-+    return Reference< XInterface >((OWeakObject *)(new ItemContainer( m_aShareMutex )));
- }
- 
- Reference< XInterface > SAL_CALL RootItemContainer::createInstanceWithArgumentsAndContext( const Sequence< Any >&, const Reference< XComponentContext >& )
- throw (Exception, RuntimeException)
- {
--    return (OWeakObject *)(new ItemContainer( m_aShareMutex ));
-+    return Reference< XInterface >((OWeakObject *)(new ItemContainer( m_aShareMutex )));
- }
- 
- // XPropertySet helper
---- source/uifactory/windowcontentfactorymanager.cxx	2009-02-18 08:07:12.000000000 -0800
-+++ source/uifactory/windowcontentfactorymanager.cxx	2012-09-24 13:49:23.000000000 -0700
-@@ -452,7 +452,7 @@
-     uno::Reference< uno::XInterface > xWindow( xDialogControl->getPeer(), uno::UNO_QUERY );
- */
-     uno::Reference< uno::XInterface > xWindow;
--    return xWindow;
-+    return uno::Reference< uno::XInterface >(xWindow);
- }
- 
- uno::Reference< uno::XInterface > SAL_CALL WindowContentFactoryManager::createInstanceWithArgumentsAndContext( 
-@@ -544,7 +544,7 @@
-         xWindow = createInstanceWithContext(Context);
-     }
- 
--    return xWindow;
-+    return uno::Reference< uno::XInterface >(xWindow);
- }
- 
- } // namespace framework
++ifeq ($(OS),MACOSX)
++# Fix infinite loop when pressing the "Create Table in Design View" link in
++# a Base database by disabling optimization
++$(eval $(call gb_Library_add_cxxobjects,fwk,\
++	framework/source/loadenv/loadenv \
++    , $(gb_COMPILERNOOPTFLAGS) $(gb_LinkTarget_EXCEPTIONFLAGS) \
++))
++else
++$(eval $(call gb_Library_add_exception_objects,fwk,\
++	framework/source/loadenv/loadenv \
++))
++endif
++
+ # vim: set noet sw=4 ts=4:
