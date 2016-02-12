@@ -187,6 +187,8 @@ ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
 JFREEREPORT_PACKAGE=ooo310-m19-extensions
 JFREEREPORT_SOURCE_FILENAME=ooo310-m19-extensions.tar.bz2
+OO_EXTENSIONS_PACKAGE=OOO330_m20
+OO_EXTENSIONS_SOURCE_FILENAME=OOo_3.3.0_src_extensions.tar.bz2
 REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
@@ -208,25 +210,50 @@ build.oo_src_checkout: $(OO_PATCHES_HOME)/$(OO_SOURCE_FILE)
 	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OO_PACKAGE)"
 	touch "$@"
 
-build.ant_checkout:
+build.ant_checkout: $(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)
 	rm -Rf "$(BUILD_HOME)/$(ANT_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$(APACHE_PATCHES_HOME)/$(ANT_SOURCE_FILENAME)"
 	touch "$@"
 
-build.jfreereport_checkout: build.oo_src_checkout
-	rm -Rf "$(BUILD_HOME)/$(JFREEREPORT_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)" | tar xvf - "$(JFREEREPORT_PACKAGE)/jfreereport/download"
+build.jfreereport_checkout: build.oo_src_checkout $(OO_PATCHES_HOME)/$(OO_EXTENSIONS_SOURCE_FILENAME) $(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)
+	rm -Rf "$(OO_BUILD_HOME)/jfreereport"
+	mkdir -p "$(OO_BUILD_HOME)"
+	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OO_PATCHES_HOME)/$(OO_EXTENSIONS_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(OO_EXTENSIONS_PACKAGE)/jfreereport"
+	cd "$(OO_BUILD_HOME)" ; bunzip2 -dc "$(PWD)/$(OOO-BUILD_PATCHES_HOME)/$(JFREEREPORT_SOURCE_FILENAME)" | tar xvf - --strip-components=1 "$(JFREEREPORT_PACKAGE)/jfreereport/download"
 	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
 	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
-	sh -c -e 'for i in `find "$(BUILD_HOME)/$(JFREEREPORT_PACKAGE)/jfreereport/download" -name "*.zip"` ; do filename=`md5 -q "$${i}"`-`basename "$${i}"` ; cp "$${i}" "$(OO_BUILD_HOME)/../ext_sources/$${filename}" ; done'
+	sh -c -e 'for i in `find "$(OO_BUILD_HOME)/jfreereport/download" -name "*.zip"` ; do filename=`md5 -q "$${i}"`-`basename "$${i}"` ; cp "$${i}" "$(OO_BUILD_HOME)/../ext_sources/$${filename}" ; done'
 	touch "$@"
 
 build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_checkout
 	touch "$@"
 
-build.oo_configure: build.oo_checkout
+build.oo_patches: \
+	build.oo_configure.in_patch \
+	build.oo_framework_patch \
+	build.oo_jfreereport_patch \
+	build.oo_reportbuilder_patch \
+	build.oo_sal_patch \
+	build.oo_sdext_patch
+	touch "$@"
+
+build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.oo_checkout
+	-( cd "$(OO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
+build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
+ifeq ("$(OS_TYPE)","MacOSX")
+	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+else
+	-cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
+	cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
+endif
+	touch "$@"
+
+build.oo_configure: build.oo_patches
 ifeq ("$(OS_TYPE)","MacOSX")
 	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.6 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=cocoa --with-gnu-cp="$(GNUCP)" --with-system-curl --with-system-odbc-headers --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
@@ -238,89 +265,7 @@ endif
 endif
 	touch "$@"
 
-build.ooo-build_patches: \
-	build.ooo-build_apply_patch \
-	build.ooo-build_update_patch \
-	build.ooo-build_cws-ooxml03-opc-svx-and-ptt-split.diff_patch
-	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; ./download
-	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; setenv LANG C ; $(MAKE) build.prepare
-	touch "$@"
-
-build.oo_patches: \
-	build.oo_configure.in_patch \
-	build.oo_set_soenv.in_patch \
-	build.oo_avmedia_patch \
-	build.oo_basic_patch \
-	build.oo_bean_patch \
-	build.oo_binfilter_patch \
-	build.oo_bridges_patch \
-	build.oo_connectivity_patch \
-	build.oo_cppu_patch \
-	build.oo_cppuhelper_patch \
-	build.oo_cpputools_patch \
-	build.oo_dbaccess_patch \
-	build.oo_dtrans_patch \
-	build.oo_extensions_patch \
-	build.oo_fpicker_patch \
-	build.oo_framework_patch \
-	build.oo_i18npool_patch \
-	build.oo_idlc_patch \
-	build.oo_jfreereport_patch \
-	build.oo_jvmfwk_patch \
-	build.oo_lingucomponent_patch \
-	build.oo_lpsolve_patch \
-	build.oo_moz_patch \
-	build.oo_postprocess_patch \
-	build.oo_qadevOOo_patch \
-	build.oo_reportbuilder_patch \
-	build.oo_reportdesign_patch \
-	build.oo_sal_patch \
-	build.oo_sc_patch \
-	build.oo_scp2_patch \
-	build.oo_sfx2_patch \
-	build.oo_solenv_patch \
-	build.oo_soltools_patch \
-	build.oo_svx_patch \
-	build.oo_sw_patch \
-	build.oo_testshl2_patch \
-	build.oo_ucb_patch \
-	build.oo_ucbhelper_patch \
-	build.oo_vcl_patch \
-	build.oo_vos_patch \
-	build.oo_wizards_patch \
-	build.oo_xmlhelp_patch \
-	build.oo_xmlsecurity_patch
-	touch "$@"
-
-build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
-	-( cd "$(OO_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	touch "$@"
-
-build.oo_bridges_patch: $(OO_PATCHES_HOME)/bridges.patch build.ooo-build_patches
-	cd "$(OO_BUILD_HOME)/bridges/source/cpp_uno/gcc3_macosx_intel" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/bridges_source_cpp_uno_cxx_macosx_x86-64.tar.gz"
-	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	touch "$@"
-
-build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
-	cd "$(OO_BUILD_HOME)/moz" ; tar zxvf "$(PWD)/$(OO_PATCHES_HOME)/aoo-4.0.1/nss.tar.gz"
-	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(OO_BUILD_HOME)/moz/download" ; cp "$(PWD)/$(MOZILLA_PATCHES_HOME)/nss-3.16-with-nspr-4.10.4.tar.gz" .
-	touch "$@"
-
-build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
-ifeq ("$(OS_TYPE)","MacOSX")
-	-( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-else
-	-cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" )
-	cat "$<" | unix2dos | ( cd "$(OO_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" )
-endif
-	touch "$@"
-
-build.ooo-build_all: build.oo_patches
+build.oo_all: build.oo_configure
 ifeq ("$(OS_TYPE)","MacOSX")
 	cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
 else

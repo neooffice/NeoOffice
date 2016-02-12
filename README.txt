@@ -12,9 +12,9 @@ At this time, NeoOffice will only build on Mac OS X 10.9 Mavericks.
    Xcode Tools v6.2
    Command Line Tools for Xcode v6.2
 
-2. Download and install the Oracle's Java 1.8 Development Kit (JDK) from the following URL:
+2. Download and install the Apple's Java 1.6 Development Kit (JDK) from the following URL. Note: the build will ignore Oracle's JDKs:
 
-   http://www.oracle.com/technetwork/java/javase/downloads/index.html
+   http://support.apple.com/kb/DL1572
 
 3. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
