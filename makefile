@@ -179,6 +179,7 @@ endif
 ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
 DMAKE_SOURCE_FILENAME=dmake-4.12.tar.bz2
+EPM_PACKAGE=epm-3.7
 EPM_SOURCE_FILENAME=epm-3.7-source.tar.gz
 JFREEREPORT_PACKAGE=ooo310-m19-extensions
 JFREEREPORT_SOURCE_FILENAME=ooo310-m19-extensions.tar.bz2
@@ -222,6 +223,11 @@ build.oo_ext_sources_checkout: build.jfreereport_checkout
 	rm -Rf "$(OO_BUILD_HOME)/../ext_sources"
 	mkdir -p "$(OO_BUILD_HOME)/../ext_sources"
 	cd "$(OO_PATCHES_HOME)/ext_sources" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$i" ; done'
+	cd "$(APACHE_PATCHES_HOME)" ; sh -c -e 'for i in `find . -type f -maxdepth 1 | grep -v /CVS/` ; do cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$i" ; done'
+# OOo perl script renames the dmake and epm source filenames incorrectly so
+# copy them with the correct name
+	cd "$(APACHE_PATCHES_HOME)" ; sh -c -e 'filename=`md5 -q "$(DMAKE_SOURCE_FILENAME)"`-"$(DMAKE_SOURCE_FILENAME)" ; cp "$(DMAKE_SOURCE_FILENAME)" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename"'
+	cd "$(MSWEET_PATCHES_HOME)" ; sh -c -e 'filename=`md5 -q "$(EPM_SOURCE_FILENAME)"`-"$(EPM_PACKAGE).tar.gz" ; cp "$(EPM_SOURCE_FILENAME)" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename"'
 	cd "$(OO_BUILD_HOME)/jfreereport/download" ; sh -c -e 'for i in `find . -name "*.zip" -maxdepth 1` ; do filename=`md5 -q "$$i"`-`basename "$$i"` ; cp "$$i" "$(PWD)/$(OO_BUILD_HOME)/../ext_sources/$$filename" ; done'
 	touch "$@"
 
