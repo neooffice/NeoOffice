@@ -120,7 +120,7 @@
 typedef void GetSystemUIMode_Type( SystemUIMode *nMode, SystemUIOptions *nOptions );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
-const static NSString *kRemoteControlFrameworkName=@"RemoteControl.framework";
+static NSString *kRemoteControlFrameworkName=@"RemoteControl.framework";
 
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
@@ -170,9 +170,6 @@ public:
 	Reference< XComponentContext > m_xServiceManager;
 
 private:	
-	sal_Int32 m_nRefCount;
-	sal_Int32 m_nCount;
-
 	static RemoteControlDelegateImpl *imp;
 	
 public:
@@ -354,7 +351,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 #pragma mark -
 
 MacOSXRemoteControlImpl::MacOSXRemoteControlImpl( const Reference< XComponentContext > & xServiceManager )
-	: m_xServiceManager( xServiceManager ), m_nRefCount( 0 )
+	: m_xServiceManager( xServiceManager )
 {
 }
 
@@ -378,7 +375,7 @@ MacOSXRemoteControlImpl::~MacOSXRemoteControlImpl()
 - (void)applicationWillResignActive:(NSNotification *)pNotification;
 @end
 
-@interface RemoteControlDelegateImpl : NSObject
+@interface RemoteControlDelegateImpl : NSObject <NSApplicationDelegate>
 {
 id realAppDelegate;
 id rcController;
@@ -388,7 +385,7 @@ id rcControl;
 - (id)init;
 - (void)dealloc;
 - (void)bindRemoteControls:(id)obj;
-- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown remoteControl: (id)remoteControl;
+- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (BOOL) pressedDown remoteControl: (id)remoteControl;
 - (void)startPresentation:(id)obj;
 - (void)previousSlide:(id)obj;
 - (void)nextSlide:(id)obj;
@@ -396,7 +393,7 @@ id rcControl;
 - (void)applicationWillResignActive:(NSNotification *)pNotification;
 - (void)forwardInvocation:(NSInvocation *)pInvocation;
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
-- (MacOSBOOL)respondsToSelector:(SEL)aSelector;
+- (BOOL)respondsToSelector:(SEL)aSelector;
 @end
 
 /**
@@ -564,7 +561,7 @@ id rcControl;
 	}
 }
 
-- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown remoteControl: (id)remoteControl
+- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (BOOL) pressedDown remoteControl: (id)remoteControl
 {	
 	switch(buttonIdentifier) 
 	{
@@ -754,7 +751,7 @@ id rcControl;
 
 - (void)forwardInvocation:(NSInvocation *)pInvocation
 {
-	MacOSBOOL bHandled = NO;
+	BOOL bHandled = NO;
 
 	SEL aSelector = [pInvocation selector];
 
@@ -778,9 +775,9 @@ id rcControl;
 	return pRet;
 }
 
-- (MacOSBOOL)respondsToSelector:(SEL)aSelector
+- (BOOL)respondsToSelector:(SEL)aSelector
 {
-	MacOSBOOL bRet = [super respondsToSelector:aSelector];
+	BOOL bRet = [super respondsToSelector:aSelector];
 
 	if (!bRet && realAppDelegate)
 		bRet = [realAppDelegate respondsToSelector:aSelector];
