@@ -75,16 +75,6 @@
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
-
 #define SERVICENAME "org.neooffice.ImageCapture"
 #define IMPLNAME	"org.neooffice.XImageCapture"
 
@@ -127,13 +117,10 @@ class MacOSXImageCaptureImpl
 {
 	// to obtain other services if needed
 	Reference< XComponentContext > m_xServiceManager;
-	
-	sal_Int32 m_nRefCount;
-	sal_Int32 m_nCount;
-	
+
 public:
 	MacOSXImageCaptureImpl( const Reference< XComponentContext > & xServiceManager )
-		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 ) {}
+		: m_xServiceManager( xServiceManager ) {}
 	virtual ~MacOSXImageCaptureImpl() {}
 
     // XServiceInfo	implementation
