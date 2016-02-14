@@ -324,18 +324,6 @@ extern "C" void SAL_CALL component_getImplementationEnvironment(const sal_Char *
 }
 
 /**
- * This function creates an implementation section in the registry and another subkey
- *
- * for each supported service.
- * @param pServiceManager   the service manager
- * @param pRegistryKey      the registry key
- */
-extern "C" sal_Bool SAL_CALL component_writeInfo(XMultiServiceFactory * pServiceManager, XRegistryKey * pRegistryKey)
-{
-	return ::cppu::component_writeInfoHelper(pServiceManager, pRegistryKey, ::neo_MacOSXRemoteControl_impl::s_component_entries);
-}
-
-/**
  * This function is called to get service factories for an implementation.
  *
  * @param pImplName       name of implementation
