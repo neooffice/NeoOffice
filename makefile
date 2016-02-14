@@ -282,12 +282,7 @@ else
 endif
 	touch "$@"
 
-build.ooo-build_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_configure
-	-( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(OO_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	touch "$@"
-
-build.neo_configure: build.ooo-build_all neo_configure.mk
+build.neo_configure: build.oo_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
