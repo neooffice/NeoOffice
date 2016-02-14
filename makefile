@@ -161,7 +161,7 @@ PRODUCT_BUNDLED_LANG_PACKS=en-US de fr it he ja ar es ru nl en-GB sv pl nb fi pt
 PRODUCT_BUNDLED_LANG_PACKS2=$(PRODUCT_BUNDLED_LANG_PACKS)
 PRODUCT_BUNDLED_LANG_PACKS3=$(PRODUCT_BUNDLED_LANG_PACKS)
 ifeq ("$(OS_TYPE)","MacOSX")
-PRODUCT_COMPONENT_MODULES+=imagecapture remotecontrol
+PRODUCT_COMPONENT_MODULES=imagecapture remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=
 PREFLIGHT_REQUIRED_COMMANDS=defaults find id open touch
 INSTALLATION_CHECK_REQUIRED_COMMANDS=$(PREFLIGHT_REQUIRED_COMMANDS) awk basename chmod dirname file grep mv pax rm ps pwd sed sort unzip
@@ -286,7 +286,7 @@ build.neo_configure: build.oo_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
-build.neo_patches: build.ooo-build_all \
+build.neo_patches:
 	build.remotecontrol_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
@@ -361,7 +361,7 @@ build.neo_%_component: % build.neo_configure
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
-build.remotecontrol_checkout:
+build.remotecontrol_checkout: build.neo_configure
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
