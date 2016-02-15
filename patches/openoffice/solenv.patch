@@ -1,0 +1,13 @@
+--- inc/unxmacx.mk	2014-02-25 00:33:35.000000000 -0800
++++ inc/unxmacx.mk	2016-02-15 13:36:39.000000000 -0800
+@@ -45,6 +45,10 @@
+ CDEFS+=-DQUARTZ 
+ EXTRA_CDEFS*=-isysroot /Developer/SDKs/MacOSX10.4u.sdk
+ 
++.IF "$(GUIBASE)"=="java"
++CDEFS+=-DUSE_JAVA
++.ENDIF
++
+ # Name of library where static data members are initialized
+ # STATICLIBNAME=static$(DLLPOSTFIX)
+ # STATICLIB=-l$(STATICLIBNAME)
