@@ -1,31 +1,25 @@
-/*************************************************************************
- *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_basic.hxx"
@@ -36,24 +30,20 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
-#ifndef __RSC //autogen
 #include <tools/errinf.hxx>
-#endif
 #include <osl/mutex.hxx>
 #include <vos/diagnose.hxx>
 #include <rtl/uri.hxx>
 #include <rtl/strbuf.hxx>
 #include <comphelper/processfactory.hxx>
-#ifndef INCLUDED_COMPHELPER_ANYTOSTRING_HXX
 #include <comphelper/anytostring.hxx>
-#endif
 
 #include "namecont.hxx"
 #include <basic/basicmanagerrepository.hxx>
 #include <tools/diagnose_ex.h>
 #include <tools/urlobj.hxx>
 #include <unotools/streamwrap.hxx>
-#include <svtools/pathoptions.hxx>
+#include <unotools/pathoptions.hxx>
 #include <svtools/sfxecode.hxx>
 #include <svtools/ehdl.hxx>
 #include <basic/basmgr.hxx>
@@ -67,17 +57,11 @@
 #include <com/sun/star/uno/DeploymentException.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/script/LibraryNotLoadedException.hpp>
-#include "com/sun/star/deployment/thePackageManagerFactory.hpp"
+#include <com/sun/star/script/vba/VBAScriptEventId.hpp>
+#include <com/sun/star/deployment/ExtensionManager.hpp>
 #include <comphelper/storagehelper.hxx>
-#ifndef _RTL_USTRING_HXX_
-#include <comphelper/anytostring.hxx>
-#endif
 #include <cppuhelper/exc_hlp.hxx>
 #include <basic/sbmod.hxx>
-
-#ifndef _COM_SUN_STAR_SCRIPT_MODULEINFO_HPP_
-#include <com/sun/star/script/ModuleInfo.hpp>
-#endif
 
 #ifdef USE_JAVA
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
@@ -107,7 +91,7 @@ using namespace osl;
 
 using com::sun::star::uno::Reference;
 
-// #i34411: Flag for error handling during migration 
+// #i34411: Flag for error handling during migration
 static bool GbMigrationSuppressErrors = false;
 
 //============================================================================
@@ -161,7 +145,7 @@ void NameContainer::replaceByName( const OUString& aName, const Any& aElement )
 	throw(IllegalArgumentException, NoSuchElementException, WrappedTargetException, RuntimeException)
 {
 	Type aAnyType = aElement.getValueType();
-    if( mType != aAnyType && aAnyType != getCppuType( static_cast< ModuleInfo* >( NULL ) ) )
+    if( mType != aAnyType )
 		throw IllegalArgumentException();
 
 	NameContainerNameMap::iterator aIt = mHashMap.find( aName );
@@ -175,26 +159,30 @@ void NameContainer::replaceByName( const OUString& aName, const Any& aElement )
 
 
 	// Fire event
-	ContainerEvent aEvent;
-	aEvent.Source = mpxEventSource;
-	aEvent.Accessor <<= aName;
-	aEvent.Element = aElement;
-	aEvent.ReplacedElement = aOldElement;
-
-	OInterfaceIteratorHelper aIterator( maListenerContainer );
-	while( aIterator.hasMoreElements() )
+	if( maContainerListeners.getLength() > 0 )
 	{
-		Reference< XInterface > xIface = aIterator.next();
-		Reference< XContainerListener > xListener( xIface, UNO_QUERY );
-        try
-        {
-            xListener->elementReplaced( aEvent );
-        }
-        catch(RuntimeException&)
-        {
-            aIterator.remove();
-        }
-	}
+    	ContainerEvent aEvent;
+    	aEvent.Source = mpxEventSource;
+    	aEvent.Accessor <<= aName;
+    	aEvent.Element = aElement;
+    	aEvent.ReplacedElement = aOldElement;
+        maContainerListeners.notifyEach( &XContainerListener::elementReplaced, aEvent );
+    }
+
+    /*  After the container event has been fired (one listener will update the
+        core Basic manager), fire change event. Listeners can rely that the
+        Basic source code of the core Basic manager is up-to-date. */
+    if( maChangesListeners.getLength() > 0 )
+    {
+        ChangesEvent aEvent;
+        aEvent.Source = mpxEventSource;
+        aEvent.Base <<= aEvent.Source;
+        aEvent.Changes.realloc( 1 );
+        aEvent.Changes[ 0 ].Accessor <<= aName;
+        aEvent.Changes[ 0 ].Element <<= aElement;
+    	aEvent.Changes[ 0 ].ReplacedElement = aOldElement;
+        maChangesListeners.notifyEach( &XChangesListener::changesOccurred, aEvent );
+    }
 }
 
 
@@ -203,7 +191,7 @@ void NameContainer::insertByName( const OUString& aName, const Any& aElement )
 	throw(IllegalArgumentException, ElementExistException, WrappedTargetException, RuntimeException)
 {
 	Type aAnyType = aElement.getValueType();
-    if( mType != aAnyType && aAnyType != getCppuType( static_cast< ModuleInfo* >( NULL ) ) )
+    if( mType != aAnyType )
 		throw IllegalArgumentException();
 
 	NameContainerNameMap::iterator aIt = mHashMap.find( aName );
@@ -221,33 +209,35 @@ void NameContainer::insertByName( const OUString& aName, const Any& aElement )
 	mHashMap[ aName ] = nCount;
 	mnElementCount++;
 
-
 	// Fire event
-	ContainerEvent aEvent;
-	aEvent.Source = mpxEventSource;
-	aEvent.Accessor <<= aName;
-	aEvent.Element = aElement;
-
-	OInterfaceIteratorHelper aIterator( maListenerContainer );
-	while( aIterator.hasMoreElements() )
+	if( maContainerListeners.getLength() > 0 )
 	{
-		Reference< XInterface > xIface = aIterator.next();
-		Reference< XContainerListener > xListener( xIface, UNO_QUERY );
-        try
-        {
-            xListener->elementInserted( aEvent );
-        }
-        catch(RuntimeException&)
-        {
-            aIterator.remove();
-        }
+    	ContainerEvent aEvent;
+    	aEvent.Source = mpxEventSource;
+    	aEvent.Accessor <<= aName;
+    	aEvent.Element = aElement;
+        maContainerListeners.notifyEach( &XContainerListener::elementInserted, aEvent );
 	}
+
+    /*  After the container event has been fired (one listener will update the
+        core Basic manager), fire change event. Listeners can rely that the
+        Basic source code of the core Basic manager is up-to-date. */
+    if( maChangesListeners.getLength() > 0 )
+    {
+        ChangesEvent aEvent;
+        aEvent.Source = mpxEventSource;
+        aEvent.Base <<= aEvent.Source;
+        aEvent.Changes.realloc( 1 );
+        aEvent.Changes[ 0 ].Accessor <<= aName;
+        aEvent.Changes[ 0 ].Element <<= aElement;
+        maChangesListeners.notifyEach( &XChangesListener::changesOccurred, aEvent );
+    }
 }
 
-void NameContainer::removeByName( const OUString& Name )
+void NameContainer::removeByName( const OUString& aName )
 	throw(NoSuchElementException, WrappedTargetException, RuntimeException)
 {
-	NameContainerNameMap::iterator aIt = mHashMap.find( Name );
+	NameContainerNameMap::iterator aIt = mHashMap.find( aName );
 	if( aIt == mHashMap.end() )
 	{
 		throw NoSuchElementException();
@@ -269,27 +259,30 @@ void NameContainer::removeByName( const OUString& Name )
 	mValues.realloc( iLast );
 	mnElementCount--;
 
-
 	// Fire event
-	ContainerEvent aEvent;
-	aEvent.Source = mpxEventSource;
-	aEvent.Accessor <<= Name;
-	aEvent.Element = aOldElement;
-
-	OInterfaceIteratorHelper aIterator( maListenerContainer );
-	while( aIterator.hasMoreElements() )
+	if( maContainerListeners.getLength() > 0 )
 	{
-		Reference< XInterface > xIface = aIterator.next();
-		Reference< XContainerListener > xListener( xIface, UNO_QUERY );
-        try
-        {
-            xListener->elementRemoved( aEvent );
-        }
-        catch(RuntimeException&)
-        {
-            aIterator.remove();
-        }
+    	ContainerEvent aEvent;
+    	aEvent.Source = mpxEventSource;
+    	aEvent.Accessor <<= aName;
+    	aEvent.Element = aOldElement;
+        maContainerListeners.notifyEach( &XContainerListener::elementRemoved, aEvent );
 	}
+
+    /*  After the container event has been fired (one listener will update the
+        core Basic manager), fire change event. Listeners can rely that the
+        Basic source code of the core Basic manager is up-to-date. */
+    if( maChangesListeners.getLength() > 0 )
+    {
+        ChangesEvent aEvent;
+        aEvent.Source = mpxEventSource;
+        aEvent.Base <<= aEvent.Source;
+        aEvent.Changes.realloc( 1 );
+        aEvent.Changes[ 0 ].Accessor <<= aName;
+        // aEvent.Changes[ 0 ].Element remains empty (meaning "replaced with nothing")
+        aEvent.Changes[ 0 ].ReplacedElement = aOldElement;
+        maChangesListeners.notifyEach( &XChangesListener::changesOccurred, aEvent );
+    }
 }
 
 
@@ -300,7 +293,7 @@ void SAL_CALL NameContainer::addContainerListener( const Reference< XContainerLi
 	if( !xListener.is() )
 		throw RuntimeException();
 	Reference< XInterface > xIface( xListener, UNO_QUERY );
-	maListenerContainer.addInterface( xIface );
+	maContainerListeners.addInterface( xIface );
 }
 
 void SAL_CALL NameContainer::removeContainerListener( const Reference< XContainerListener >& xListener )
@@ -309,7 +302,26 @@ void SAL_CALL NameContainer::removeContainerListener( const Reference< XContaine
 	if( !xListener.is() )
 		throw RuntimeException();
 	Reference< XInterface > xIface( xListener, UNO_QUERY );
-	maListenerContainer.removeInterface( xIface );
+	maContainerListeners.removeInterface( xIface );
+}
+
+// Methods XChangesNotifier
+void SAL_CALL NameContainer::addChangesListener( const Reference< XChangesListener >& xListener )
+    throw (RuntimeException)
+{
+	if( !xListener.is() )
+		throw RuntimeException();
+	Reference< XInterface > xIface( xListener, UNO_QUERY );
+	maChangesListeners.addInterface( xIface );
+}
+
+void SAL_CALL NameContainer::removeChangesListener( const Reference< XChangesListener >& xListener )
+    throw (RuntimeException)
+{
+	if( !xListener.is() )
+		throw RuntimeException();
+	Reference< XInterface > xIface( xListener, UNO_QUERY );
+	maChangesListeners.removeInterface( xIface );
 }
 
 //============================================================================
@@ -330,12 +342,29 @@ void ModifiableHelper::setModified( sal_Bool _bModified )
 
 //============================================================================
 
+VBAScriptListenerContainer::VBAScriptListenerContainer( ::osl::Mutex& rMutex ) :
+    VBAScriptListenerContainer_BASE( rMutex )
+{
+}
+
+bool VBAScriptListenerContainer::implTypedNotify( const Reference< vba::XVBAScriptListener >& rxListener, const vba::VBAScriptEvent& rEvent ) throw (Exception)
+{
+    rxListener->notifyVBAScriptEvent( rEvent );
+    return true;    // notify all other listeners too
+}
+
+//============================================================================
+
 // Implementation class SfxLibraryContainer
 DBG_NAME( SfxLibraryContainer )
 
 // Ctor
 SfxLibraryContainer::SfxLibraryContainer( void )
-	: LibraryContainerHelper( maMutex )
+	: SfxLibraryContainer_BASE( maMutex )
+
+    , maVBAScriptListeners( maMutex )
+    , mnRunningVBAScripts( 0 )
+    , mbVBACompat( sal_False )
     , maModifiable( *this, maMutex )
     , maNameContainer( getCppuType( (Reference< XNameAccess >*) NULL ) )
     , mbOldInfoFormat( sal_False )
@@ -580,7 +609,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
     meInitMode = DEFAULT;
     INetURLObject aInitUrlInetObj( maInitialDocumentURL );
     OUString aInitFileName = aInitUrlInetObj.GetMainURL( INetURLObject::NO_DECODE );
-    if( aInitFileName.getLength() )
+    if( !aInitFileName.isEmpty() )
     {
         // We need a BasicManager to avoid problems
         StarBASIC* pBas = new StarBASIC();
@@ -745,7 +774,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
                 if( nPass == 0 )
                 {
 		            SfxErrorContext aEc( ERRCTX_SFX_LOADBASIC, aFileName );
-                    ULONG nErrorCode = ERRCODE_IO_GENERAL;
+                    sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
                     ErrorHandler::HandleError( nErrorCode );
                 }
 			}
@@ -767,7 +796,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
 				{
     				xInput.clear();
 		            SfxErrorContext aEc( ERRCTX_SFX_LOADBASIC, aFileName );
-                    ULONG nErrorCode = ERRCODE_IO_GENERAL;
+                    sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
                     ErrorHandler::HandleError( nErrorCode );
 				}
 			}
@@ -809,7 +838,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
 
 			    // Check storage URL
 			    OUString aStorageURL = rLib.aStorageURL;
-			    if( !bStorage && !aStorageURL.getLength() && nPass == 0 )
+			    if( !bStorage && aStorageURL.isEmpty() && nPass == 0 )
 			    {
 					String aLibraryPath;
 					if( meInitMode == CONTAINER_INIT_FILE )
@@ -963,7 +992,17 @@ sal_Bool SfxLibraryContainer::init_Impl(
 	// #110009
 
 	if( !bStorage && meInitMode == DEFAULT )
-		implScanExtensions();
+    {
+        try
+        {
+            implScanExtensions();
+        }
+        catch( uno::Exception& )
+        {
+            // TODO: error handling?
+            OSL_ASSERT( "Cannot access extensions!" );
+        }
+    }
 
 	// #110009 Preload?
     {
@@ -1096,6 +1135,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
 
 				OUString aUserSearchStr   = OUString::createFromAscii( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE" );
 				OUString aSharedSearchStr = OUString::createFromAscii( "vnd.sun.star.expand:$UNO_SHARED_PACKAGES_CACHE" );
+            	OUString aBundledSearchStr = OUString::createFromAscii( "vnd.sun.star.expand:$BUNDLED_EXTENSIONS" );
 				OUString aInstSearchStr   = OUString::createFromAscii( "$(INST)" );
 
 				Sequence< OUString > aNames = pPrevCont->getElementNames();
@@ -1127,6 +1167,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
 						bool bCreateLink = true;
 						if( aStorageURL.indexOf( aUserSearchStr   ) != -1 ||
 							aStorageURL.indexOf( aSharedSearchStr ) != -1 ||
+							aStorageURL.indexOf( aBundledSearchStr ) != -1 ||
 							aStorageURL.indexOf( aInstSearchStr   ) != -1 )
 						{
 							bCreateLink = false;
@@ -1219,7 +1260,7 @@ void SfxLibraryContainer::implScanExtensions( void )
 	rtl::OUString aLibURL;
 
 	bool bPureDialogLib = false;
-	while( (aLibURL = aScriptIt.nextBasicOrDialogLibrary( bPureDialogLib )).getLength() > 0 )
+	while( (aLibURL = aScriptIt.nextBasicOrDialogLibrary( bPureDialogLib )).isEmpty() == false )
 	{
 		if( bPureDialogLib && maInfoFileName.equalsAscii( "script" ) )
 			continue;
@@ -1294,28 +1335,28 @@ SfxLibrary* SfxLibraryContainer::getImplLib( const String& rLibraryName )
 // Storing with password encryption
 
 // Empty implementation, avoids unneccesary implementation in dlgcont.cxx
-sal_Bool SfxLibraryContainer::implStorePasswordLibrary( 
+sal_Bool SfxLibraryContainer::implStorePasswordLibrary(
     SfxLibrary*,
-    const OUString&, 
+    const OUString&,
     const uno::Reference< embed::XStorage >&, const uno::Reference< task::XInteractionHandler >&  )
 {
     return sal_False;
 }
 
-sal_Bool SfxLibraryContainer::implStorePasswordLibrary( 
-    SfxLibrary* /*pLib*/, 
-    const ::rtl::OUString& /*aName*/, 
+sal_Bool SfxLibraryContainer::implStorePasswordLibrary(
+    SfxLibrary* /*pLib*/,
+    const ::rtl::OUString& /*aName*/,
     const ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage >& /*xStorage*/,
-    const ::rtl::OUString& /*aTargetURL*/, 
+    const ::rtl::OUString& /*aTargetURL*/,
     const Reference< XSimpleFileAccess > /*xToUseSFI*/,
     const uno::Reference< task::XInteractionHandler >&  )
 {
     return sal_False;
 }
 
-sal_Bool SfxLibraryContainer::implLoadPasswordLibrary( 
-    SfxLibrary* /*pLib*/, 
-    const OUString& /*Name*/, 
+sal_Bool SfxLibraryContainer::implLoadPasswordLibrary(
+    SfxLibrary* /*pLib*/,
+    const OUString& /*Name*/,
     sal_Bool /*bVerifyPasswordOnly*/ )
 throw(WrappedTargetException, RuntimeException)
 {
@@ -1331,7 +1372,7 @@ OUString SfxLibraryContainer::createAppLibraryFolder
     ( SfxLibrary* pLib, const OUString& aName )
 {
 	OUString aLibDirPath = pLib->maStorageURL;
-	if( !aLibDirPath.getLength() )
+	if( aLibDirPath.isEmpty() )
     {
 		INetURLObject aInetObj( String(maLibraryPath).GetToken(1) );
 		aInetObj.insertName( aName, sal_True, INetURLObject::LAST_SEGMENT, sal_True, INetURLObject::ENCODE_ALL );
@@ -1385,8 +1426,8 @@ void SfxLibraryContainer::implStoreLibrary( SfxLibrary* pLib,
 			OUString aStreamName = aElementName;
 			aStreamName += String( RTL_CONSTASCII_USTRINGPARAM(".xml") );
 
-			Any aElement = pLib->getByName( aElementName );
-			if( !isLibraryElementValid( aElement ) )
+			/*Any aElement = pLib->getByName( aElementName );*/
+			if( !isLibraryElementValid( pLib->getByName( aElementName ) ) )
             {
             #if OSL_DEBUG_LEVEL > 0
                 ::rtl::OStringBuffer aMessage;
@@ -1422,7 +1463,8 @@ void SfxLibraryContainer::implStoreLibrary( SfxLibrary* pLib,
                     xProps->setPropertyValue( aPropName, uno::makeAny( sal_True ) );
 
                     Reference< XOutputStream > xOutput = xElementStream->getOutputStream();
-                    writeLibraryElement( aElement, aElementName, xOutput );
+					Reference< XNameContainer > xLib( pLib );
+                    writeLibraryElement( xLib, aElementName, xOutput );
 					// writeLibraryElement closes the stream
                     // xOutput->closeOutput();
                 }
@@ -1474,8 +1516,8 @@ void SfxLibraryContainer::implStoreLibrary( SfxLibrary* pLib,
 				aElementInetObj.setExtension( maLibElementFileExtension );
 				String aElementPath( aElementInetObj.GetMainURL( INetURLObject::NO_DECODE ) );
 
-				Any aElement = pLib->getByName( aElementName );
-				if( !isLibraryElementValid( aElement ) )
+				/*Any aElement = pLib->getByName( aElementName );*/
+				if( !isLibraryElementValid( pLib->getByName( aElementName ) ) )
                 {
                 #if OSL_DEBUG_LEVEL > 0
                     ::rtl::OStringBuffer aMessage;
@@ -1493,7 +1535,8 @@ void SfxLibraryContainer::implStoreLibrary( SfxLibrary* pLib,
 				    if( xSFI->exists( aElementPath ) )
 					    xSFI->kill( aElementPath );
 					Reference< XOutputStream > xOutput = xSFI->openFileWrite( aElementPath );
-				    writeLibraryElement( aElement, aElementName, xOutput );
+					Reference< XNameContainer > xLib( pLib );
+				    writeLibraryElement( xLib, aElementName, xOutput );
 				    xOutput->closeOutput();
                 }
         		catch( Exception& )
@@ -1502,7 +1545,7 @@ void SfxLibraryContainer::implStoreLibrary( SfxLibrary* pLib,
 						throw;
 
 		            SfxErrorContext aEc( ERRCTX_SFX_SAVEDOC, aElementPath );
-                    ULONG nErrorCode = ERRCODE_IO_GENERAL;
+                    sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
             	    ErrorHandler::HandleError( nErrorCode );
                 }
 			}
@@ -1615,7 +1658,7 @@ void SfxLibraryContainer::implStoreLibraryIndexFile( SfxLibrary* pLib,
 				throw;
 
 			SfxErrorContext aEc( ERRCTX_SFX_SAVEDOC, aLibInfoPath );
-            ULONG nErrorCode = ERRCODE_IO_GENERAL;
+            sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
             ErrorHandler::HandleError( nErrorCode );
         }
 	}
@@ -1690,7 +1733,7 @@ sal_Bool SfxLibraryContainer::implLoadLibraryIndexFile(  SfxLibrary* pLib,
 			if( !GbMigrationSuppressErrors )
 			{
 				SfxErrorContext aEc( ERRCTX_SFX_LOADBASIC, aLibInfoPath );
-				ULONG nErrorCode = ERRCODE_IO_GENERAL;
+				sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
 				ErrorHandler::HandleError( nErrorCode );
 			}
 		}
@@ -1717,7 +1760,7 @@ sal_Bool SfxLibraryContainer::implLoadLibraryIndexFile(  SfxLibrary* pLib,
 		//								makeAny( e ) );
 		OSL_ENSURE( 0, "Parsing error\n" );
 		SfxErrorContext aEc( ERRCTX_SFX_LOADBASIC, aLibInfoPath );
-        ULONG nErrorCode = ERRCODE_IO_GENERAL;
+        sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
         ErrorHandler::HandleError( nErrorCode );
 		return sal_False;
 	}
@@ -1760,7 +1803,7 @@ void SfxLibraryContainer::implImportLibDescriptor
 
 
 // Methods of new XLibraryStorage interface?
-void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XStorage >& xStorage, sal_Bool bComplete )
+void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XStorage >& i_rStorage, sal_Bool bComplete )
 {
 	const Sequence< OUString > aNames = maNameContainer.getElementNames();
 	sal_Int32 nNameCount = aNames.getLength();
@@ -1781,68 +1824,73 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 	::xmlscript::LibDescriptorArray* pLibArray = new ::xmlscript::LibDescriptorArray( nLibsToSave );
 
 	// Write to storage?
-	sal_Bool bStorage = xStorage.is();
-	uno::Reference< embed::XStorage > xLibrariesStor;
+	sal_Bool bStorage = i_rStorage.is();
 	uno::Reference< embed::XStorage > xSourceLibrariesStor;
-	if( bStorage )
+	uno::Reference< embed::XStorage > xTargetLibrariesStor;
+    ::rtl::OUString sTempTargetStorName;
+    const bool bInplaceStorage = bStorage && ( i_rStorage == mxStorage );
+	if ( bStorage )
 	{
-        // when we save to our root storage, ensure the libs are all loaded. Else the below cleaning
-        // of the target storage will loose them.
-        if ( xStorage == mxStorage )
-        {
-	        pName = aNames.getConstArray();
-	        for ( ; pName != pNamesEnd; ++pName )
-	        {
-                if ( !isLibraryLoaded( *pName ) )
-                    loadLibrary( *pName );
-	        }
-        }
-
-		// first of all, clean the target library storage, since the storing procedure must do overwrite
-		try
-        {
-			if ( xStorage->hasByName( maLibrariesDir ) )
-				xStorage->removeElement( maLibrariesDir );
-		}
-		catch( const uno::Exception& )
-		{
-            DBG_UNHANDLED_EXCEPTION();
-			return;
-		}
-
         // Don't write if only empty standard lib exists
         if ( ( nNameCount == 1 ) && ( aNames[0].equalsAscii( "Standard" ) ) )
         {
 		    Any aLibAny = maNameContainer.getByName( aNames[0] );
 		    Reference< XNameAccess > xNameAccess;
 		    aLibAny >>= xNameAccess;
-            if ( !xNameAccess->hasElements() )
+            if ( !xNameAccess->hasElements() ){
+                delete pLibArray;
                 return;
+            }
         }
 
-		try {
-			xLibrariesStor.set( xStorage->openStorageElement( maLibrariesDir, embed::ElementModes::READWRITE ), UNO_QUERY_THROW );
-		}
-		catch( uno::Exception& )
-		{
-        #if OSL_DEBUG_LEVEL > 0
-            Any aError( ::cppu::getCaughtException() );
-            ::rtl::OStringBuffer aMessage;
-            aMessage.append( "couln't open source library storage.\n\nException:" );
-            aMessage.append( ::rtl::OUStringToOString( ::comphelper::anyToString( aError ), osl_getThreadTextEncoding() ) );
-		    OSL_ENSURE( false, aMessage.makeStringAndClear().getStr() );
-        #endif
-			return;
-		}
+        // create the empty target storage
+        try
+        {
+            ::rtl::OUString sTargetLibrariesStoreName;
+            if ( bInplaceStorage )
+            {
+                // create a temporary target storage
+                const ::rtl::OUStringBuffer aTempTargetNameBase = maLibrariesDir + ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_temp_" ) );
+                sal_Int32 index = 0;
+                do
+                {
+                    ::rtl::OUStringBuffer aTempTargetName( aTempTargetNameBase );
+                    aTempTargetName.append( index++ );
 
+                    sTargetLibrariesStoreName = aTempTargetName.makeStringAndClear();
+                    if ( !i_rStorage->hasByName( sTargetLibrariesStoreName ) )
+                        break;
+                }
+                while ( true );
+                sTempTargetStorName = sTargetLibrariesStoreName;
+            }
+            else
+            {
+                sTargetLibrariesStoreName = maLibrariesDir;
+			    if ( i_rStorage->hasByName( sTargetLibrariesStoreName ) )
+				    i_rStorage->removeElement( sTargetLibrariesStoreName );
+            }
+
+            xTargetLibrariesStor.set( i_rStorage->openStorageElement( sTargetLibrariesStoreName, embed::ElementModes::READWRITE ), UNO_QUERY_THROW );
+	    }
+	    catch( const uno::Exception& )
+	    {
+            DBG_UNHANDLED_EXCEPTION();
+		    return;
+	    }
+
+        // open the source storage which might be used to copy yet-unmodified libraries
 		try
         {
-            if ( ( mxStorage != xStorage ) && ( mxStorage->hasByName( maLibrariesDir ) ) )
-			    xSourceLibrariesStor = mxStorage->openStorageElement( maLibrariesDir, embed::ElementModes::READ );
+            if ( mxStorage->hasByName( maLibrariesDir ) )
+                xSourceLibrariesStor = mxStorage->openStorageElement( maLibrariesDir, bInplaceStorage ? embed::ElementModes::READWRITE : embed::ElementModes::READ );
+            else if ( bInplaceStorage )
+                xSourceLibrariesStor = mxStorage->openStorageElement( maLibrariesDir, embed::ElementModes::READWRITE );
 		}
 		catch( const uno::Exception& )
 		{
             DBG_UNHANDLED_EXCEPTION();
+			return;
         }
 	}
 
@@ -1854,7 +1902,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
         SfxLibrary* pImplLib = getImplLib( *pName );
 		if( pImplLib->mbSharedIndexFile )
 			continue;
-		bool bExtensionLib = pImplLib->mbExtension;
+		const bool bExtensionLib = pImplLib->mbExtension;
 		::xmlscript::LibDescriptor& rLib = bExtensionLib ?
 			aLibDescriptorForExtensionLibs : pLibArray->mpLibs[iArray];
 		if( !bExtensionLib )
@@ -1874,12 +1922,14 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 
 		if( pImplLib->implIsModified() || bComplete )
 		{
-            // Can we copy the storage?
+            // Can we simply copy the storage?
             if( !mbOldInfoFormat && !pImplLib->implIsModified() && !mbOasis2OOoFormat && xSourceLibrariesStor.is() )
             {
-				try {
-                	xSourceLibrariesStor->copyElementTo( rLib.aName, xLibrariesStor, rLib.aName );
-				} catch( uno::Exception& )
+				try
+                {
+                	xSourceLibrariesStor->copyElementTo( rLib.aName, xTargetLibrariesStor, rLib.aName );
+				}
+                catch( const uno::Exception& )
 				{
                     DBG_UNHANDLED_EXCEPTION();
                     // TODO: error handling?
@@ -1892,7 +1942,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 				{
 					try
                     {
-						xLibraryStor = xLibrariesStor->openStorageElement(
+						xLibraryStor = xTargetLibrariesStor->openStorageElement(
 																		rLib.aName,
 																		embed::ElementModes::READWRITE );
 					}
@@ -1924,7 +1974,8 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
                 implStoreLibraryIndexFile( pImplLib, rLib, xLibraryStor );
 				if( bStorage )
 				{
-					try {
+					try
+                    {
 						uno::Reference< embed::XTransactedObject > xTransact( xLibraryStor, uno::UNO_QUERY_THROW );
 						xTransact->commit();
 					}
@@ -1943,6 +1994,59 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
         // For container info ReadOnly refers to mbReadOnlyLink
 		rLib.bReadOnly = pImplLib->mbReadOnlyLink;
 	}
+
+    // if we did an in-place save into a storage (i.e. a save into the storage we were already based on),
+    // then we need to clean up the temporary storage we used for this
+    if ( bInplaceStorage && !sTempTargetStorName.isEmpty() )
+    {
+        OSL_ENSURE( xSourceLibrariesStor.is(), "SfxLibrariesContainer::storeLibraries_impl: unexpected: we should have a source storage here!" );
+        try
+        {
+            // for this, we first remove everything from the source storage, then copy the complete content
+            // from the temporary target storage. From then on, what used to be the "source storage" becomes
+            // the "targt storage" for all subsequent operations.
+
+            // (We cannot simply remove the storage, denoted by maLibrariesDir, from i_rStorage - there might be
+            // open references to it.)
+
+            if ( xSourceLibrariesStor.is() )
+            {
+                // remove
+                const Sequence< ::rtl::OUString > aRemoveNames( xSourceLibrariesStor->getElementNames() );
+                for (   const ::rtl::OUString* pRemoveName = aRemoveNames.getConstArray();
+                        pRemoveName != aRemoveNames.getConstArray() + aRemoveNames.getLength();
+                            ++pRemoveName
+                    )
+                {
+                    xSourceLibrariesStor->removeElement( *pRemoveName );
+                }
+
+                // copy
+                const Sequence< ::rtl::OUString > aCopyNames( xTargetLibrariesStor->getElementNames() );
+                for (   const ::rtl::OUString* pCopyName = aCopyNames.getConstArray();
+                        pCopyName != aCopyNames.getConstArray() + aCopyNames.getLength();
+                        ++pCopyName
+                    )
+                {
+                	xTargetLibrariesStor->copyElementTo( *pCopyName, xSourceLibrariesStor, *pCopyName );
+                }
+            }
+
+            // close and remove temp target
+            xTargetLibrariesStor->dispose();
+            i_rStorage->removeElement( sTempTargetStorName );
+            xTargetLibrariesStor.clear();
+            sTempTargetStorName = ::rtl::OUString();
+
+            // adjust target
+            xTargetLibrariesStor = xSourceLibrariesStor;
+            xSourceLibrariesStor.clear();
+        }
+        catch( const Exception& )
+        {
+        	DBG_UNHANDLED_EXCEPTION();
+        }
+    }
 
 	if( !mbOldInfoFormat && !maModifiable.isModified() )
 		return;
@@ -1969,7 +2073,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 		aStreamName += String( RTL_CONSTASCII_USTRINGPARAM("-lc.xml") );
 
 		try {
-			xInfoStream = xLibrariesStor->openStreamElement( aStreamName, embed::ElementModes::READWRITE );
+			xInfoStream = xTargetLibrariesStor->openStreamElement( aStreamName, embed::ElementModes::READWRITE );
 			uno::Reference< beans::XPropertySet > xProps( xInfoStream, uno::UNO_QUERY );
 			OSL_ENSURE ( xProps.is(), "The stream must implement XPropertySet!\n" );
 			if ( !xProps.is() )
@@ -1987,7 +2091,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 		}
 		catch( uno::Exception& )
 		{
-			ULONG nErrorCode = ERRCODE_IO_GENERAL;
+			sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
 			ErrorHandler::HandleError( nErrorCode );
 		}
 	}
@@ -2009,7 +2113,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
         {
             xOut.clear();
 			SfxErrorContext aEc( ERRCTX_SFX_SAVEDOC, aLibInfoPath );
-            ULONG nErrorCode = ERRCODE_IO_GENERAL;
+            sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
             ErrorHandler::HandleError( nErrorCode );
         }
 
@@ -2023,12 +2127,12 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
 	Reference< XActiveDataSource > xSource( xHandler, UNO_QUERY );
 	xSource->setOutputStream( xOut );
 
-    try 
+    try
 	{
 		xmlscript::exportLibraryContainer( xHandler, pLibArray );
 		if ( bStorage )
 		{
-            uno::Reference< embed::XTransactedObject > xTransact( xLibrariesStor, uno::UNO_QUERY );
+            uno::Reference< embed::XTransactedObject > xTransact( xTargetLibrariesStor, uno::UNO_QUERY );
             OSL_ENSURE( xTransact.is(), "The storage must implement XTransactedObject!\n" );
             if ( !xTransact.is() )
                 throw uno::RuntimeException();
@@ -2039,7 +2143,7 @@ void SfxLibraryContainer::storeLibraries_Impl( const uno::Reference< embed::XSto
     catch( uno::Exception& )
     {
 		OSL_ENSURE( sal_False, "Problem during storing of libraries!\n" );
-        ULONG nErrorCode = ERRCODE_IO_GENERAL;
+        sal_uIntPtr nErrorCode = ERRCODE_IO_GENERAL;
         ErrorHandler::HandleError( nErrorCode );
     }
 
@@ -2124,6 +2228,7 @@ Reference< XNameAccess > SAL_CALL SfxLibraryContainer::createLibraryLink
 	SfxLibrary* pNewLib = implCreateLibraryLink( Name, aLibInfoFileURL, aLibDirURL, ReadOnly );
     pNewLib->maLibElementFileExtension = maLibElementFileExtension;
     pNewLib->maUnexpandedStorageURL = aUnexpandedStorageURL;
+    pNewLib->maOrignialStorageURL = StorageURL;
 
     OUString aInitFileName;
 	uno::Reference< embed::XStorage > xDummyStor;
@@ -2139,11 +2244,12 @@ Reference< XNameAccess > SAL_CALL SfxLibraryContainer::createLibraryLink
 
 	OUString aUserSearchStr   = OUString::createFromAscii( "vnd.sun.star.expand:$UNO_USER_PACKAGES_CACHE" );
 	OUString aSharedSearchStr = OUString::createFromAscii( "vnd.sun.star.expand:$UNO_SHARED_PACKAGES_CACHE" );
+	OUString aBundledSearchStr = OUString::createFromAscii( "vnd.sun.star.expand:$BUNDLED_EXTENSIONS" );
 	if( StorageURL.indexOf( aUserSearchStr ) != -1 )
 	{
 	    pNewLib->mbExtension = sal_True;
 	}
-	else if( StorageURL.indexOf( aSharedSearchStr ) != -1 )
+	else if( StorageURL.indexOf( aSharedSearchStr ) != -1 || StorageURL.indexOf( aBundledSearchStr ) != -1 )
 	{
 	    pNewLib->mbExtension = sal_True;
 	    pNewLib->mbReadOnly = sal_True;
@@ -2337,7 +2443,9 @@ void SAL_CALL SfxLibraryContainer::loadLibrary( const OUString& Name )
 				aFile = aElementInetObj.GetMainURL( INetURLObject::NO_DECODE );
 			}
 
-			Any aAny = importLibraryElement( aFile, xInStream );
+			Reference< XNameContainer > xLib( pImplLib );
+			Any aAny = importLibraryElement( xLib, aElementName, 
+					   						 aFile, xInStream );
 			if( pImplLib->hasByName( aElementName ) )
             {
                 if( aAny.hasValue() )
@@ -2598,6 +2706,9 @@ void SfxLibraryContainer::_disposing( const EventObject& _rSource )
 // OComponentHelper
 void SAL_CALL SfxLibraryContainer::disposing()
 {
+    Reference< XModel > xModel = mxOwnerDocument;
+    EventObject aEvent( xModel.get() );
+    maVBAScriptListeners.disposing( aEvent );
     stopAllComponentListening();
     mxOwnerDocument = WeakReference< XModel >();
 }
@@ -2625,7 +2736,7 @@ sal_Bool SAL_CALL SfxLibraryContainer::verifyLibraryPassword
 	throw IllegalArgumentException();
 }
 
-void SAL_CALL SfxLibraryContainer::changeLibraryPassword( 
+void SAL_CALL SfxLibraryContainer::changeLibraryPassword(
     const OUString&, const OUString&, const OUString& )
         throw (IllegalArgumentException, NoSuchElementException, RuntimeException)
 {
@@ -2650,8 +2761,8 @@ void SAL_CALL SfxLibraryContainer::removeContainerListener( const Reference< XCo
 }
 
 // Methods XLibraryContainerExport
-void SAL_CALL SfxLibraryContainer::exportLibrary( const OUString& Name, const OUString& URL, 
-	const Reference< XInteractionHandler >& Handler ) 
+void SAL_CALL SfxLibraryContainer::exportLibrary( const OUString& Name, const OUString& URL,
+	const Reference< XInteractionHandler >& Handler )
 		throw ( uno::Exception, NoSuchElementException, RuntimeException)
 {
     LibraryContainerMethodGuard aGuard( *this );
@@ -2742,37 +2853,96 @@ OUString SfxLibraryContainer::expand_url( const OUString& url )
     }
 }
 
-::sal_Bool SAL_CALL SfxLibraryContainer::getVBACompatModeOn() throw (RuntimeException)
+//XLibraryContainer3
+OUString SAL_CALL SfxLibraryContainer::getOriginalLibraryLinkURL( const OUString& Name )
+    throw (IllegalArgumentException, NoSuchElementException, RuntimeException)
 {
-	sal_Bool bVBACompat = sal_False;
-	BasicManager* pBasMgr = getBasicManager();
-	if( pBasMgr )
-	{
-		// get the standard library
-		String aLibName( RTL_CONSTASCII_USTRINGPARAM( "Standard" ) );
+    LibraryContainerMethodGuard aGuard( *this );
+    SfxLibrary* pImplLib = getImplLib( Name );
+	sal_Bool bLink = pImplLib->mbLink;
+	if( !bLink )
+		throw IllegalArgumentException();
+    OUString aRetStr = pImplLib->maOrignialStorageURL;
+    return aRetStr;
+}
+    
 
-                if ( pBasMgr->GetName().Len() )
-                    aLibName = pBasMgr->GetName();
-
-		StarBASIC* pBasic = pBasMgr->GetLib( aLibName );
-		if( pBasic )
-			bVBACompat = pBasic->isVBAEnabled();
-	}
-
-	return bVBACompat;
+// XVBACompatibility
+::sal_Bool SAL_CALL SfxLibraryContainer::getVBACompatibilityMode() throw (RuntimeException)
+{
+	return mbVBACompat;
 }
 
-void SAL_CALL SfxLibraryContainer::setVBACompatModeOn( ::sal_Bool _vbacompatmodeon ) throw (RuntimeException)
+void SAL_CALL SfxLibraryContainer::setVBACompatibilityMode( ::sal_Bool _vbacompatmodeon ) throw (RuntimeException)
 {
-	BasicManager* pBasMgr = getBasicManager();
-	if( pBasMgr )
+    /*  The member variable mbVBACompat must be set first, the following call
+        to getBasicManager() may call getVBACompatibilityMode() which returns
+        this value. */
+    mbVBACompat = _vbacompatmodeon;
+	if( BasicManager* pBasMgr = getBasicManager() )
 	{
 		// get the standard library
-		String aLibName( RTL_CONSTASCII_USTRINGPARAM( "Standard" ) );
-		StarBASIC* pBasic = pBasMgr->GetLib( aLibName );
-		if( pBasic )
+        String aLibName = pBasMgr->GetName();
+        if ( aLibName.Len() == 0 )
+            aLibName = String( RTL_CONSTASCII_USTRINGPARAM( "Standard" ) );
+
+		if( StarBASIC* pBasic = pBasMgr->GetLib( aLibName ) )
 			pBasic->SetVBAEnabled( _vbacompatmodeon );
+
+        /*  If in VBA compatibility mode, force creation of the VBA Globals
+            object. Each application will create an instance of its own
+            implementation and store it in its Basic manager. Implementations
+            will do all necessary additional initialization, such as
+            registering the global "This***Doc" UNO constant, starting the
+            document events processor etc.
+         */
+        if( mbVBACompat ) try
+        {
+            Reference< XModel > xModel( mxOwnerDocument );   // weak-ref -> ref
+            Reference< XMultiServiceFactory > xFactory( xModel, UNO_QUERY_THROW );
+            xFactory->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "ooo.vba.VBAGlobals" ) ) );
+        }
+        catch( Exception& )
+        {
+        }
 	}
+}
+
+sal_Int32 SAL_CALL SfxLibraryContainer::getRunningVBAScripts() throw (RuntimeException)
+{
+    LibraryContainerMethodGuard aGuard( *this );
+    return mnRunningVBAScripts;
+}
+
+void SAL_CALL SfxLibraryContainer::addVBAScriptListener( const Reference< vba::XVBAScriptListener >& rxListener ) throw (RuntimeException)
+{
+    maVBAScriptListeners.addTypedListener( rxListener );
+}
+
+void SAL_CALL SfxLibraryContainer::removeVBAScriptListener( const Reference< vba::XVBAScriptListener >& rxListener ) throw (RuntimeException)
+{
+    maVBAScriptListeners.removeTypedListener( rxListener );
+}
+
+void SAL_CALL SfxLibraryContainer::broadcastVBAScriptEvent( sal_Int32 nIdentifier, const ::rtl::OUString& rModuleName ) throw (RuntimeException)
+{
+    // own lock for accessing the number of running scripts
+    enterMethod();
+    switch( nIdentifier )
+    {
+        case vba::VBAScriptEventId::SCRIPT_STARTED:
+            ++mnRunningVBAScripts;
+        break;
+        case vba::VBAScriptEventId::SCRIPT_STOPPED:
+            --mnRunningVBAScripts;
+        break;
+    }
+    leaveMethod();
+
+    Reference< XModel > xModel = mxOwnerDocument;  // weak-ref -> ref
+    Reference< XInterface > xSender( xModel, UNO_QUERY_THROW );
+    vba::VBAScriptEvent aEvent( xSender, nIdentifier, rModuleName );
+    maVBAScriptListeners.notify( aEvent );
 }
 
 // Methods XServiceInfo
@@ -2868,7 +3038,9 @@ Any SAL_CALL SfxLibrary::queryInterface( const Type& rType )
 		aRet = Any( ::cppu::queryInterface( rType,
 			static_cast< XContainer * >( this ),
 			static_cast< XNameContainer * >( this ),
-			static_cast< XNameAccess * >( this ) ) );
+			static_cast< XNameAccess * >( this ),
+			static_cast< XElementAccess * >( this ),
+			static_cast< XChangesNotifier * >( this ) ) );
 	//}
 	if( !aRet.hasValue() )
 		aRet = OComponentHelper::queryInterface( rType );
@@ -2968,7 +3140,7 @@ void SfxLibrary::impl_removeWithoutChecks( const ::rtl::OUString& _rElementName 
 	implSetModified( sal_True );
 
     // Remove element file
-	if( maStorageURL.getLength() )
+	if( !maStorageURL.isEmpty() )
 	{
 		INetURLObject aElementInetObj( maStorageURL );
 		aElementInetObj.insertName( _rElementName, sal_False,
@@ -3010,6 +3182,7 @@ Sequence< Type > SfxLibrary::getTypes()
 				static OTypeCollection s_aTypes_NameContainer(
 					::getCppuType( (const Reference< XNameContainer > *)0 ),
 					::getCppuType( (const Reference< XContainer > *)0 ),
+					::getCppuType( (const Reference< XChangesNotifier > *)0 ),
 					OComponentHelper::getTypes() );
 				s_pTypes_NameContainer = &s_aTypes_NameContainer;
 			}
@@ -3037,9 +3210,6 @@ Sequence< sal_Int8 > SfxLibrary::getImplementationId()
 	}
 }
 
-
-//============================================================================
-
 // Methods XContainer
 void SAL_CALL SfxLibrary::addContainerListener( const Reference< XContainerListener >& xListener )
 	throw (RuntimeException)
@@ -3054,6 +3224,19 @@ void SAL_CALL SfxLibrary::removeContainerListener( const Reference< XContainerLi
 	maNameContainer.removeContainerListener( xListener );
 }
 
+// Methods XChangesNotifier
+void SAL_CALL SfxLibrary::addChangesListener( const Reference< XChangesListener >& xListener )
+    throw (RuntimeException)
+{
+	maNameContainer.setEventSource( static_cast< XInterface* >( (OWeakObject*)this ) );
+	maNameContainer.addChangesListener( xListener );
+}
+
+void SAL_CALL SfxLibrary::removeChangesListener( const Reference< XChangesListener >& xListener )
+    throw (RuntimeException)
+{
+	maNameContainer.removeChangesListener( xListener );
+}
 
 //============================================================================
 // Implementation class ScriptExtensionIterator
@@ -3065,8 +3248,10 @@ ScriptExtensionIterator::ScriptExtensionIterator( void )
 	: m_eState( USER_EXTENSIONS )
 	, m_bUserPackagesLoaded( false )
 	, m_bSharedPackagesLoaded( false )
+    , m_bBundledPackagesLoaded( false )
 	, m_iUserPackage( 0 )
 	, m_iSharedPackage( 0 )
+   	, m_iBundledPackage( 0 )
 	, m_pScriptSubPackageIterator( NULL )
 {
 	Reference< XMultiServiceFactory > xFactory = comphelper::getProcessServiceFactory();
@@ -3090,7 +3275,7 @@ rtl::OUString ScriptExtensionIterator::nextBasicOrDialogLibrary( bool& rbPureDia
 {
 	rtl::OUString aRetLib;
 
-	while( !aRetLib.getLength() && m_eState != END_REACHED )
+	while( aRetLib.isEmpty() && m_eState != END_REACHED )
 	{
 		switch( m_eState )
 		{
@@ -3107,7 +3292,7 @@ rtl::OUString ScriptExtensionIterator::nextBasicOrDialogLibrary( bool& rbPureDia
 
 			case SHARED_EXTENSIONS:
 			{
-				Reference< deployment::XPackage > xScriptPackage = 
+				Reference< deployment::XPackage > xScriptPackage =
 					implGetNextSharedScriptPackage( rbPureDialogLib );
 				if( !xScriptPackage.is() )
 					break;
@@ -3115,7 +3300,17 @@ rtl::OUString ScriptExtensionIterator::nextBasicOrDialogLibrary( bool& rbPureDia
 				aRetLib = xScriptPackage->getURL();
 				break;
 			}
-			case END_REACHED:
+			case BUNDLED_EXTENSIONS:
+			{
+				Reference< deployment::XPackage > xScriptPackage = 
+					implGetNextBundledScriptPackage( rbPureDialogLib );
+				if( !xScriptPackage.is() )
+					break;
+
+				aRetLib = xScriptPackage->getURL();
+				break;
+			}
+            case END_REACHED:
 				VOS_ENSURE( false, "ScriptExtensionIterator::nextBasicOrDialogLibrary(): Invalid case END_REACHED" );
 				break;
 		}
@@ -3285,10 +3480,11 @@ Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextUserScript
 	{
 		try
 		{
-			Reference< XPackageManager > xUserManager =
-				thePackageManagerFactory::get( m_xContext )->getPackageManager( rtl::OUString::createFromAscii("user") );
-			m_aUserPackagesSeq = xUserManager->getDeployedPackages
-				( Reference< task::XAbortChannel >(), Reference< ucb::XCommandEnvironment >() );
+			Reference< XExtensionManager > xManager =
+				ExtensionManager::get( m_xContext );
+			m_aUserPackagesSeq = xManager->getDeployedExtensions
+				(rtl::OUString::createFromAscii("user"),
+                 Reference< task::XAbortChannel >(), Reference< ucb::XCommandEnvironment >() );
 		}
 		catch( com::sun::star::uno::DeploymentException& )
 		{
@@ -3348,10 +3544,11 @@ Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextSharedScri
 	{
 		try
 		{
-			Reference< XPackageManager > xSharedManager =
-				thePackageManagerFactory::get( m_xContext )->getPackageManager( rtl::OUString::createFromAscii("shared") );
-			m_aSharedPackagesSeq = xSharedManager->getDeployedPackages
-				( Reference< task::XAbortChannel >(), Reference< ucb::XCommandEnvironment >() );
+			Reference< XExtensionManager > xSharedManager =
+				ExtensionManager::get( m_xContext ); 
+			m_aSharedPackagesSeq = xSharedManager->getDeployedExtensions
+				(rtl::OUString::createFromAscii("shared"),
+                 Reference< task::XAbortChannel >(), Reference< ucb::XCommandEnvironment >() );
 		}
 		catch( com::sun::star::uno::DeploymentException& )
 		{
@@ -3364,7 +3561,7 @@ Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextSharedScri
 
 	if( m_iSharedPackage == m_aSharedPackagesSeq.getLength() )
 	{
-		m_eState = END_REACHED;
+		m_eState = BUNDLED_EXTENSIONS;
 	}
 	else
 	{
@@ -3384,6 +3581,59 @@ Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextSharedScri
 				delete m_pScriptSubPackageIterator;
 				m_pScriptSubPackageIterator = NULL;
 				m_iSharedPackage++;
+			}
+		}
+	}
+
+	return xScriptPackage;
+}
+
+Reference< deployment::XPackage > ScriptExtensionIterator::implGetNextBundledScriptPackage
+	( bool& rbPureDialogLib )
+{
+	Reference< deployment::XPackage > xScriptPackage;
+
+	if( !m_bBundledPackagesLoaded )
+	{
+		try
+		{
+			Reference< XExtensionManager > xManager =
+				ExtensionManager::get( m_xContext ); 
+			m_aBundledPackagesSeq = xManager->getDeployedExtensions
+				(rtl::OUString::createFromAscii("bundled"),
+                 Reference< task::XAbortChannel >(), Reference< ucb::XCommandEnvironment >() );
+		}
+		catch( com::sun::star::uno::DeploymentException& )
+		{
+			// Special Office installations may not contain deployment code
+			return xScriptPackage;
+		}
+
+		m_bBundledPackagesLoaded = true;
+	}
+
+	if( m_iBundledPackage == m_aBundledPackagesSeq.getLength() )
+	{
+		m_eState = END_REACHED;
+	}
+	else
+	{
+		if( m_pScriptSubPackageIterator == NULL )
+		{
+			const Reference< deployment::XPackage >* pBundledPackages = m_aBundledPackagesSeq.getConstArray();
+			Reference< deployment::XPackage > xPackage = pBundledPackages[ m_iBundledPackage ];
+			VOS_ENSURE( xPackage.is(), "ScriptExtensionIterator::implGetNextBundledScriptPackage(): Invalid package" );
+			m_pScriptSubPackageIterator = new ScriptSubPackageIterator( xPackage );
+		}
+
+		if( m_pScriptSubPackageIterator != NULL )
+		{
+			xScriptPackage = m_pScriptSubPackageIterator->getNextScriptSubPackage( rbPureDialogLib );
+			if( !xScriptPackage.is() )
+			{
+				delete m_pScriptSubPackageIterator;
+				m_pScriptSubPackageIterator = NULL;
+				m_iBundledPackage++;
 			}
 		}
 	}
