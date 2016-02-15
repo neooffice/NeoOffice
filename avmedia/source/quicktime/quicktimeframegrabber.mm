@@ -121,10 +121,10 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 						BitmapWriteAccess *pAccess = aBitmap.AcquireWriteAccess();
 						if ( pAccess )
 						{
-							MacOSBOOL bDrawn = NO;
+							BOOL bDrawn = NO;
 							long nWidth = pAccess->Width();
 							long nHeight = pAccess->Height();
-							ULONG nScanlineSize = pAccess->GetScanlineSize();
+							sal_uLong nScanlineSize = pAccess->GetScanlineSize();
 							Scanline pBits = pAccess->GetBuffer();
 							if ( nWidth > 0 && nHeight > 0 && nScanlineSize > 0 && pBits )
 							{

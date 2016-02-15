@@ -42,16 +42,6 @@
 #import <objc/objc-class.h>
 #import <postmac.h>
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
-
 @interface AvmediaArgs : NSObject
 {
 	NSArray*				mpArgs;
@@ -85,10 +75,10 @@
 - (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs;
 - (id)initWithURL:(NSURL *)pURL;
 - (void)initialize:(id)pObject;
-- (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs;
+- (BOOL)isPlaying:(AvmediaArgs *)pArgs;
 - (NSObject *)movie;
 - (AvmediaMovieView *)movieView;
-- (MacOSBOOL)mute:(AvmediaArgs *)pArgs;
+- (BOOL)mute:(AvmediaArgs *)pArgs;
 - (void)play:(id)pObject;
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
@@ -116,11 +106,11 @@
 	NSView*					mpQTMovieView;
 }
 + (NSMenu *)defaultMenu;
-- (MacOSBOOL)becomeFirstResponder;
+- (BOOL)becomeFirstResponder;
 - (void)dealloc;
 - (NSView *)hitTest:(NSPoint)aPoint;
 - (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isFlipped;
+- (BOOL)isFlipped;
 - (NSMenu *)menuForEvent:(NSEvent *)pEvent;
 - (void)mouseDown:(NSEvent *)pEvent;
 - (void)mouseDragged:(NSEvent *)pEvent;
@@ -139,7 +129,7 @@
 - (void)setFrame:(NSRect)aRect;
 - (void)setMovie:(NSObject *)pMovie;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
-- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio;
+- (void)setPreservesAspectRatio:(BOOL)bPreservesAspectRatio;
 @end
 
 #endif	// _COMMON_H

@@ -1,83 +1,125 @@
-##########################################################################
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
 # 
-#   $RCSfile$
-# 
-#   $Revision$
-# 
-#   last change: $Author$ $Date$
-# 
-#   The Contents of this file are made available subject to the terms of
-#   either of the following licenses
-# 
-#          - GNU General Public License Version 2.1
-# 
-#   Patrick Luby, May 2006
-# 
-#   GNU General Public License Version 2.1
-#   =============================================
-#   Copyright 2006 Planamesa Inc.
-# 
-#   This library is free software; you can redistribute it and/or
-#   modify it under the terms of the GNU General Public
-#   License version 2.1, as published by the Free Software Foundation.
-# 
-#   This library is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#   General Public License for more details.
-# 
-#   You should have received a copy of the GNU General Public
-#   License along with this library; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#   MA  02111-1307  USA
-# 
-##########################################################################
+#    Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#**************************************************************
+
+
 
 PRJ=..$/..
-PRJNAME=avmediaquicktime
-TARGET=avmediaquicktime
-ENABLE_EXCEPTIONS=TRUE
+PRJNAME=avmedia
+.IF "$(GUIBASE)" == "java"
+TARGET=avmediajava
+.ELSE		# "$(GUIBASE)" == "java"
+TARGET=avmediaQuickTime
+.ENDIF		# "$(GUIBASE)" == "java"
+
+# the QuickTime API has been deprecated since OSX 10.5 and has been removed in the OSX SDK 10.7
+.IF "$(GUIBASE)" != "aqua" && "$(GUIBASE)" != "java"
+dummy:
+	@echo " Nothing to build for GUIBASE=$(GUIBASE) and OSX$(MACOSX_DEPLOYMENT_TARGET)"
+.ELSE
 
 # --- Settings ----------------------------------
 
 .INCLUDE :  	settings.mk
 
+.IF "$(verbose)"!="" || "$(VERBOSE)"!=""
+CDEFS+= -DVERBOSE
+.ENDIF
+
 # --- Files ----------------------------------
 
-.IF "$(OS)" == "MACOSX"
+CFLAGSCXX+=$(OBJCXXFLAGS)
 
+.IF "$(GUIBASE)" == "java"
 SLOFILES= \
-	$(SLO)$/quicktimecommon.obj \
-	$(SLO)$/quicktimeframegrabber.obj \
-	$(SLO)$/quicktimemanager.obj \
-	$(SLO)$/quicktimeplayer.obj \
-	$(SLO)$/quicktimeuno.obj \
-	$(SLO)$/quicktimewindow.obj
+		$(SLO)$/quicktimeuno.obj  \
+		$(SLO)$/quicktimecommon.obj \
+		$(SLO)$/quicktimeframegrabber.obj \
+		$(SLO)$/quicktimemanager.obj \
+		$(SLO)$/quicktimeplayer.obj \
+		$(SLO)$/quicktimewindow.obj
+.ELSE		# "$(GUIBASE)" == "java"
+SLOFILES= \
+		$(SLO)$/quicktimeuno.obj  \
+		$(SLO)$/framegrabber.obj        \
+		$(SLO)$/manager.obj       \
+		$(SLO)$/window.obj        \
+		$(SLO)$/player.obj
+.ENDIF		# "$(GUIBASE)" == "java"
 
+.IF "$(GUIBASE)" == "java"
 EXCEPTIONSFILES= \
-	$(SLO)$/quicktimeuno.obj
+		$(SLO)$/quicktimeuno.obj
+.ELSE		# "$(GUIBASE)" == "java"
+EXCEPTIONSFILES= \
+		$(SLO)$/framegrabber.obj        \
+		$(SLO)$/quicktimeuno.obj
+.ENDIF		# "$(GUIBASE)" == "java"
 
-SHL1TARGET=$(TARGET)
+SHL1TARGET= $(TARGET)$(DLLPOSTFIX)
+
 SHL1STDLIBS= \
-	$(CPPULIB) \
-	$(SALLIB) \
-	$(COMPHELPERLIB) \
-	$(CPPUHELPERLIB) \
-	$(UNOTOOLSLIB) \
-	$(TOOLSLIB) \
-	$(VOSLIB) \
-	$(VCLLIB)
+             $(CPPULIB) \
+             $(SALLIB)  \
+             $(COMPHELPERLIB) \
+             $(CPPUHELPERLIB) \
+             $(TOOLSLIB) \
+             $(VCLLIB) 
 
-SHL1IMPLIB=i$(TARGET)
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS+= \
+             -framework AppKit
+.ELSE		# "$(GUIBASE)" == "java"
+SHL1STDLIBS+= \
+             -framework Cocoa \
+             -framework QTKit \
+             -framework QuickTime
+.ENDIF		# "$(GUIBASE)" == "java"
+
+# build DLL
 SHL1LIBS=$(SLB)$/$(TARGET).lib
+SHL1IMPLIB=i$(TARGET)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 
-DEF1NAME=$(SHL1TARGET)
+SHL1VERSIONMAP=$(SOLARENV)/src/component.map
 
-SHL1STDLIBS += \
-	-framework AppKit
+# --- Targets ------------------------------------------------------
 
-.ENDIF	# "$(OS)" == "MACOSX"
+.INCLUDE : target.mk
 
-# --- Targets -----------------------------------
-.INCLUDE :  	target.mk
+.ENDIF
+
+ALLTAR : $(MISC)/avmediaQuickTime.component
+
+$(MISC)/avmediaQuickTime.component .ERRREMOVE : \
+        $(SOLARENV)/bin/createcomponent.xslt avmediaQuickTime.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt avmediaQuickTime.component
+

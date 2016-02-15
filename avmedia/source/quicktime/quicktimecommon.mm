@@ -45,7 +45,7 @@
 
 typedef id Application_acquireSecurityScopedURLFromNSURL_Type( const id pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const id pDialogTitle );
 typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
-typedef MacOSBOOL QTGetTimeInterval_Type( QTTime time, NSTimeInterval *timeInterval );
+typedef BOOL QTGetTimeInterval_Type( QTTime time, NSTimeInterval *timeInterval );
 typedef QTTimeRange QTMakeTimeRange_Type( QTTime time, QTTime duration );
 typedef QTTime QTMakeTimeWithTimeInterval_Type( NSTimeInterval timeInterval );
 typedef NSString * const QTMovieLoopsAttribute_Type;
@@ -55,12 +55,12 @@ static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecuritySc
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
 #if __x86_64__
-static MacOSBOOL bAVKitInitialized = NO;
+static BOOL bAVKitInitialized = NO;
 static Class aAVAssetClass = nil;
 static Class aAVPlayerClass = nil;
 static Class aAVPlayerViewClass = nil;
 #endif	// __x86_64__
-static MacOSBOOL bQTKitInitialized = NO;
+static BOOL bQTKitInitialized = NO;
 static Class aQTMovieClass = nil;
 static Class aQTMovieViewClass = nil;
 static QTGetTimeInterval_Type *pQTGetTimeInterval = NULL;
@@ -267,12 +267,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (QTTime)currentTime;
 - (QTTime)duration;
 - (NSImage *)frameImageAtTime:(QTTime)aTime;
-- (MacOSBOOL)muted;
+- (BOOL)muted;
 - (float)rate;
 - (QTTime)selectionEnd;
 - (void)setAttribute:(id)pValue forKey:(NSString *)pAttributeKey;
 - (void)setCurrentTime:(QTTime)aTime;
-- (void)setMuted:(MacOSBOOL)bMute;
+- (void)setMuted:(BOOL)bMute;
 - (void)setRate:(float)fRate;
 - (void)setSelection:(QTTimeRange)aSelection;
 - (void)setVolume:(float)fVolume;
@@ -282,11 +282,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 @end
 
 @interface NSView (QTMovieView)
-- (void)setControllerVisible:(MacOSBOOL)bControllerVisible;
-- (void)setEditable:(MacOSBOOL)bEditable;
+- (void)setControllerVisible:(BOOL)bControllerVisible;
+- (void)setEditable:(BOOL)bEditable;
 - (void)setMovie:(QTMovie *)pMovie;
-- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio;
-- (void)setShowsResizeIndicator:(MacOSBOOL)bShow;
+- (void)setPreservesAspectRatio:(BOOL)bPreservesAspectRatio;
+- (void)setShowsResizeIndicator:(BOOL)bShow;
 @end
 
 @implementation AvmediaMoviePlayer
@@ -470,7 +470,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		if ( mpMovie && !pError )
 		{
 			[mpMovie retain];
-			if ( [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] );
+			if ( [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] )
 				[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:*pQTMovieLoopsAttribute];
 			if ( [mpMovie respondsToSelector:@selector(setSelection:)] && [mpMovie respondsToSelector:@selector(duration)] )
 				[mpMovie setSelection:pQTMakeTimeRange( pQTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
@@ -502,9 +502,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return mpMovieView;
 }
 
-- (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs
+- (BOOL)isPlaying:(AvmediaArgs *)pArgs
 {
-	MacOSBOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
+	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(rate)] && [mpMovie rate] != 0 );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -522,9 +522,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return fRet;
 }
 
-- (MacOSBOOL)mute:(AvmediaArgs *)pArgs
+- (BOOL)mute:(AvmediaArgs *)pArgs
 {
-	MacOSBOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
+	BOOL bRet = ( mpMovie && [mpMovie respondsToSelector:@selector(muted)] ? [mpMovie muted] : NO );
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:bRet]];
@@ -673,7 +673,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pLooping )
 		return;
 
-	if ( mpMovie && [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] && pQTMovieLoopsAttribute );
+	if ( mpMovie && [mpMovie respondsToSelector:@selector(setAttribute:forKey:)] && pQTMovieLoopsAttribute )
 		[mpMovie setAttribute:pLooping forKey:*pQTMovieLoopsAttribute];
 }
 
@@ -888,9 +888,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return nil;
 }
 
-- (MacOSBOOL)becomeFirstResponder
+- (BOOL)becomeFirstResponder
 {
-	MacOSBOOL bRet = [super becomeFirstResponder];
+	BOOL bRet = [super becomeFirstResponder];
 
 	// Only process the event if both the event and the view are visible
 	if ( bRet && mpMoviePlayer && [self window] && [[self window] isVisible] )
@@ -962,7 +962,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return self;
 }
 
-- (MacOSBOOL)isFlipped
+- (BOOL)isFlipped
 {
 	return YES;
 }
@@ -1089,7 +1089,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMoviePlayer retain];
 }
 
-- (void)setPreservesAspectRatio:(MacOSBOOL)bPreservesAspectRatio
+- (void)setPreservesAspectRatio:(BOOL)bPreservesAspectRatio
 {
 	if ( mpQTMovieView && [mpQTMovieView respondsToSelector:@selector(setPreservesAspectRatio:)] )
 		[mpQTMovieView setPreservesAspectRatio:bPreservesAspectRatio];

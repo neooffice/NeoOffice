@@ -1,41 +1,44 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
 
-#include <stdio.h> 
- 
+
+
+#include <stdio.h>
+
 #include <avmedia/mediawindow.hxx>
 #include "mediawindow_impl.hxx"
 #include "mediamisc.hxx"
 #include "mediawindow.hrc"
 #include <tools/urlobj.hxx>
 #include <vcl/msgbox.hxx>
-#include <svtools/pathoptions.hxx>
+#include <unotools/pathoptions.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -76,7 +79,7 @@ void MediaWindow::setURL( const ::rtl::OUString& rURL )
 }
 
 // -------------------------------------------------------------------------
-        
+
 const ::rtl::OUString& MediaWindow::getURL() const
 {
     return mpImpl->getURL();
@@ -164,7 +167,9 @@ Size MediaWindow::getPreferredSize() const
 void MediaWindow::setPosSize( const Rectangle& rNewRect )
 {
     if( mpImpl )
+    {
         mpImpl->setPosSize( rNewRect );
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -377,33 +382,32 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "AVI", "avi",
                                         "CD Audio", "cda",
                                         "FLAC Audio", "flac",
-#ifdef USE_JAVA
                                         "Flash Video", "flv",
-                                        "Matroska Video", "mkv",
-#endif	// USE_JAVA
+                                        "Matroska Media", "mkv",
                                         "MIDI Audio", "mid;midi",
 #ifdef USE_JAVA
                                         "MPEG Audio", "mp2;mp3;mpa;m1a;m2a",
                                         "MPEG Video", "mpg;mpeg;mpv;mp4;m1v;m2v;m4v",
-                                        "OGG Audio/Video", "ogg;oga;ogm;ogv;ogx",
+                                        "Ogg bitstream", "ogg;oga;ogm;ogv;ogx",
 #else	// USE_JAVA
                                         "MPEG Audio", "mp2;mp3;mpa",
                                         "MPEG Video", "mpg;mpeg;mpv;mp4",
-                                        "Ogg bitstream", "ogg",
+                                        "Ogg bitstream", "ogg;oga;ogv",
 #endif	// USE_JAVA
                                         "Quicktime Video", "mov",
                                         "Vivo Video", "viv",
-#ifdef USE_JAVA
                                         "WAVE Audio", "wav",
-                                        "Windows Media Audio/Video", "asf;wma;wmv" };
+#ifdef USE_JAVA
+                                        "Windows Media Audio", "wma",
+                                        "Windows Media Video", "asf;wmv" };
 #else	// USE_JAVA
-                                        "WAVE Audio", "wav" };
+                                        "Windows Media Video", "wmv" };
 #endif	// USE_JAVA
-    
+
     unsigned int i;
 	for( i = 0; i < ( sizeof( pFilters ) / sizeof( char* ) ); i += 2 )
     {
-        rFilterNameVector.push_back( ::std::make_pair< ::rtl::OUString, ::rtl::OUString >( 
+        rFilterNameVector.push_back( ::std::make_pair< ::rtl::OUString, ::rtl::OUString >(
                                         ::rtl::OUString::createFromAscii( pFilters[ i ] ),
                                         ::rtl::OUString::createFromAscii( pFilters[ i + 1 ] ) ) );
     }
@@ -418,9 +422,9 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
     FilterNameVector                aFilters;
     const ::rtl::OUString           aSeparator( RTL_CONSTASCII_USTRINGPARAM( ";" ) );
     ::rtl::OUString                 aAllTypes;
-    
+
     aDlg.SetTitle( AVMEDIA_RESID( bInsertDialog ? AVMEDIA_STR_INSERTMEDIA_DLG : AVMEDIA_STR_OPENMEDIA_DLG ) );
-    
+
     getMediaFilters( aFilters );
 
 	unsigned int i;
@@ -432,29 +436,29 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
     {
         for( sal_Int32 nIndex = 0; nIndex >= 0; )
         {
-            if( aAllTypes.getLength() )
+            if( !aAllTypes.isEmpty() )
                 aAllTypes += aSeparator;
-        
+
             ( aAllTypes += aWildcard ) += aFilters[ i ].second.getToken( 0, ';', nIndex );
         }
     }
-    
+
     // add filter for all media types
     aDlg.AddFilter( AVMEDIA_RESID( AVMEDIA_STR_ALL_MEDIAFILES ), aAllTypes );
 #endif	// USE_JAVA
-        
+
     for( i = 0; i < aFilters.size(); ++i )
     {
         ::rtl::OUString aTypes;
-        
+
         for( sal_Int32 nIndex = 0; nIndex >= 0; )
         {
-            if( aTypes.getLength() )
+            if( !aTypes.isEmpty() )
                 aTypes += aSeparator;
-        
+
             ( aTypes += aWildcard ) += aFilters[ i ].second.getToken( 0, ';', nIndex );
         }
-        
+
         // add single filters
         aDlg.AddFilter( aFilters[ i ].first, aTypes );
     }
@@ -463,16 +467,16 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
     // add filter for all types
     aDlg.AddFilter( AVMEDIA_RESID( AVMEDIA_STR_ALL_FILES ), String( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
 #endif	// USE_JAVA
-        
+
     if( aDlg.Execute() == ERRCODE_NONE )
     {
         const INetURLObject aURL( aDlg.GetPath() );
         rURL = aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS );
     }
-    else if( rURL.getLength() )
+    else if( !rURL.isEmpty() )
         rURL = ::rtl::OUString();
 
-    return( rURL.getLength() > 0 );
+    return !rURL.isEmpty();
 }
 
 // -------------------------------------------------------------------------
@@ -480,7 +484,7 @@ bool MediaWindow::executeMediaURLDialog( Window* /* pParent */, ::rtl::OUString&
 void MediaWindow::executeFormatErrorBox( Window* pParent )
 {
     ErrorBox aErrBox( pParent, AVMEDIA_RESID( AVMEDIA_ERR_URL ) );
-    
+
     aErrBox.Execute();
 }
 
@@ -490,51 +494,40 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
 {
     const INetURLObject aURL( rURL );
     bool                bRet = false;
-    
+
     if( aURL.GetProtocol() != INET_PROT_NOT_VALID )
     {
         if( bDeep || pPreferredSizePixel )
         {
-            uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-        
-            if( xFactory.is() )
+            try
             {
-                try
+                sal_Bool bIsJavaBasedMediaWindow;
+    	        uno::Reference< media::XPlayer > xPlayer( priv::MediaWindowImpl::createPlayer(
+        	                                                aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ),
+                                                            bIsJavaBasedMediaWindow ) );
+
+            	if( xPlayer.is() )
                 {
-                    fprintf(stderr, "-->%s uno reference \n\n",AVMEDIA_MANAGER_SERVICE_NAME);
-                    
-                    uno::Reference< ::com::sun::star::media::XManager > xManager(
-                        xFactory->createInstance( ::rtl::OUString::createFromAscii( AVMEDIA_MANAGER_SERVICE_NAME ) ),
-                        uno::UNO_QUERY );
-        
-                    if( xManager.is() )
+                    bRet = true;
+
+                    if( pPreferredSizePixel )
                     {
-                        uno::Reference< media::XPlayer > xPlayer( xManager->createPlayer( aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ) ) );
-                        
-                        if( xPlayer.is() )
-                        {
-                            bRet = true;
-                            
-                            if( pPreferredSizePixel )
-                            {
-                                const awt::Size aAwtSize( xPlayer->getPreferredPlayerWindowSize() );
-                                
-                                pPreferredSizePixel->Width() = aAwtSize.Width;
-                                pPreferredSizePixel->Height() = aAwtSize.Height;
-                            }
-                        }
+                        const awt::Size aAwtSize( xPlayer->getPreferredPlayerWindowSize() );
+
+                        pPreferredSizePixel->Width() = aAwtSize.Width;
+                        pPreferredSizePixel->Height() = aAwtSize.Height;
                     }
                 }
-                catch( ... )
-                {
-                }
+            }
+            catch( ... )
+            {
             }
         }
         else
         {
             FilterNameVector        aFilters;
             const ::rtl::OUString   aExt( aURL.getExtension() );
-            
+
             getMediaFilters( aFilters );
 
 			unsigned int i;
@@ -548,7 +541,7 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
             }
         }
     }
-    
+
     return bRet;
 }
 
@@ -556,11 +549,12 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
 
 uno::Reference< media::XPlayer > MediaWindow::createPlayer( const ::rtl::OUString& rURL )
 {
-    return priv::MediaWindowImpl::createPlayer( rURL );
+    sal_Bool bJavaBased = sal_False;
+    return priv::MediaWindowImpl::createPlayer( rURL, bJavaBased );
 }
 
 // -------------------------------------------------------------------------
-                    
+
 uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUString& rURL,
                                                             bool bAllowToCreateReplacementGraphic,
                                                             double fMediaTime )
@@ -568,26 +562,26 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUStrin
     uno::Reference< media::XPlayer >    xPlayer( createPlayer( rURL ) );
     uno::Reference< graphic::XGraphic > xRet;
     ::std::auto_ptr< Graphic >          apGraphic;
-    
+
     if( xPlayer.is() )
     {
         uno::Reference< media::XFrameGrabber > xGrabber( xPlayer->createFrameGrabber() );
-        
+
         if( xGrabber.is() )
         {
             if( AVMEDIA_FRAMEGRABBER_DEFAULTFRAME == fMediaTime )
                 fMediaTime = AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME;
-                
+
             if( fMediaTime >= xPlayer->getDuration() )
                 fMediaTime = ( xPlayer->getDuration() * 0.5 );
-        
+
             xRet = xGrabber->grabFrame( fMediaTime );
         }
-    
+
         if( !xRet.is() && bAllowToCreateReplacementGraphic  )
         {
             awt::Size aPrefSize( xPlayer->getPreferredPlayerWindowSize() );
-            
+
             if( !aPrefSize.Width && !aPrefSize.Height )
             {
                 const BitmapEx aBmpEx( AVMEDIA_RESID( AVMEDIA_BMP_AUDIOLOGO ) );
@@ -595,16 +589,16 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const ::rtl::OUStrin
             }
         }
     }
-    
+
     if( !xRet.is() && !apGraphic.get() && bAllowToCreateReplacementGraphic )
     {
         const BitmapEx aBmpEx( AVMEDIA_RESID( AVMEDIA_BMP_EMPTYLOGO ) );
         apGraphic.reset( new Graphic( aBmpEx ) );
     }
-    
+
     if( apGraphic.get() )
         xRet = apGraphic->GetXGraphic();
-    
+
     return xRet;
 }
 
