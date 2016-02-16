@@ -297,7 +297,6 @@ build.neo_patches:
 	build.neo_connectivity_patch \
 	build.neo_cppcanvas_patch \
 	build.neo_cppuhelper_patch \
-	build.neo_cpputools_patch \
 	build.neo_dbaccess_patch \
 	build.neo_desktop_patch \
 	build.neo_dictionaries_patch \
