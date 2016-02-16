@@ -1,3 +1,32 @@
+###############################################################
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################
 UDK_3_0_0 {
 	global:
 GetVersionInfo;
@@ -372,7 +401,22 @@ UDK_3.5 { # OOo 3.0
     global:
         _ZN4cppu18OPropertySetHelperC1ERNS_19OBroadcastHelperVarINS_34OMultiTypeInterfaceContainerHelperEN3com3sun4star3uno4TypeEEEPNS_22IEventNotificationHookEb;
         _ZN4cppu18OPropertySetHelperC2ERNS_19OBroadcastHelperVarINS_34OMultiTypeInterfaceContainerHelperEN3com3sun4star3uno4TypeEEEPNS_22IEventNotificationHookEb;
-#if SUPD == 310
-        _ZN4cppu15supportsServiceEPN3com3sun4star4lang12XServiceInfoERKN3rtl8OUStringE;
-#endif	// SUPD == 310
 } UDK_3.4;
+
+UDK_3.6 { # OOo 3.3
+    global:
+        _ZN4cppu11OWeakObject26disposeWeakConnectionPointEv;
+        _ZN3com3sun4star3uno19WeakReferenceHelperaSERKNS2_9ReferenceINS2_10XInterfaceEEE;
+        _ZN3com3sun4star3uno19WeakReferenceHelper5clearEv;
+        _ZN4cppu33createOneInstanceComponentFactoryEPFN3com3sun4star3uno9ReferenceINS3_10XInterfaceEEERKNS4_INS3_17XComponentContextEEEERKN3rtl8OUStringERKNS3_8SequenceISE_EEP16_rtl_ModuleCount;
+} UDK_3.5;
+
+
+UDK_3.7 { # OOo 3.4
+    global:
+        _ZN4cppu18OPropertySetHelper29setDependentFastPropertyValueE?RKN3com3sun4star3uno3AnyE;
+#if SUPD == 412
+        _ZN4cppu15supportsServiceEPN3com3sun4star4lang12XServiceInfoERKN3rtl8OUStringE;
+#endif	// SUPD == 412
+} UDK_3.6;
+

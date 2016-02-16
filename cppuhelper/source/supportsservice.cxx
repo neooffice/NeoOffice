@@ -17,6 +17,10 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
+#if SUPD == 412
+namespace css = com::sun::star;
+#endif	// SUPD == 412
+
 bool cppu::supportsService(
     css::lang::XServiceInfo * implementation, rtl::OUString const & name)
 {

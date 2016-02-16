@@ -1,32 +1,34 @@
-#*************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2008 by Sun Microsystems, Inc.
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified January 2009 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-#*************************************************************************
+#**************************************************************
+
+
 PRJ=..
 
 PRJNAME=cppuhelper
@@ -48,19 +50,6 @@ UNIXVERSIONNAMES=UDK
 
 .INCLUDE :  settings.mk
 
-.IF "$(GUIBASE)" == "java"
-CDEFS+=-g
-.ENDIF
-
-.IF "$(OS)" == "MACOSX"
-CDEFS+=-O0
-.ENDIF
-
-.IF "$(UPD)" == "310"
-INCLOCAL+= \
-	-I$(PRJ)$/..$/sal$/inc
-.ENDIF		# "$(UPD)" == "310"
-
 # --- Files --------------------------------------------------------
 
 UNOUCRRDB=$(SOLARBINDIR)$/udkapi.rdb
@@ -80,10 +69,12 @@ UNOTYPES= \
 		com.sun.star.bridge.UnoUrlResolver \
 		com.sun.star.bridge.XUnoUrlResolver \
 		com.sun.star.connection.SocketPermission \
+		com.sun.star.container.XContentEnumerationAccess \
 		com.sun.star.container.XElementAccess \
 		com.sun.star.container.XEnumerationAccess \
 		com.sun.star.container.XHierarchicalNameAccess \
 		com.sun.star.container.XNameAccess \
+		com.sun.star.container.XNameReplace \
 		com.sun.star.container.XNameContainer \
 		com.sun.star.container.XSet \
 		com.sun.star.io.FilePermission \
@@ -98,6 +89,7 @@ UNOTYPES= \
 		com.sun.star.lang.XServiceInfo \
 		com.sun.star.lang.XSingleComponentFactory \
 		com.sun.star.lang.XSingleServiceFactory \
+		com.sun.star.lang.XUnoTunnel \
 		com.sun.star.lang.XTypeProvider \
 		com.sun.star.loader.XImplementationLoader \
 		com.sun.star.reflection.XArrayTypeDescription \
@@ -143,6 +135,7 @@ SLOFILES= \
 		$(SLO)$/exc_thrower.obj 	\
 		$(SLO)$/servicefactory.obj 	\
 		$(SLO)$/bootstrap.obj 		\
+		$(SLO)$/primeweak.obj 		\
 		$(SLO)$/implbase.obj 		\
 		$(SLO)$/implbase_ex.obj 	\
 		$(SLO)$/propshlp.obj 		\
@@ -161,17 +154,16 @@ SLOFILES= \
 		$(SLO)$/propertysetmixin.obj \
         $(SLO)$/findsofficepath.obj
 
-.IF "$(UPD)" == "310"
+.IF "$(UPD)" == "412"
 SLOFILES += \
         $(SLO)$/supportsservice.obj
-.ENDIF		# "$(SUPD)" == "310"
+.ENDIF		# "$(SUPD)" == "412"
 
 OBJFILES = $(OBJ)$/findsofficepath.obj
 
 .IF "$(GUI)" == "WNT"
 SHL1TARGET=$(TARGET)$(UDK_MAJOR)$(COMID)
 .ELIF "$(GUI)" == "OS2"
-SHL1TARGET=cppuh
 SHL1TARGET=cppuh$(UDK_MAJOR)
 .ELSE
 SHL1TARGET=uno_$(TARGET)$(COMID)
@@ -200,7 +192,7 @@ SHL1VERSIONMAP=msvc_win32_intel.map
 SHL1VERSIONMAP=cc5_solaris_sparc.map
 .ELIF "$(GUI)$(COMNAME)"=="OS2gcc3"
 SHL1VERSIONMAP=gcc3os2.map
-.ELIF "$(COMNAME)"=="gcc3"
+.ELSE
 SHL1VERSIONMAP=gcc3.map
 .ENDIF
 
