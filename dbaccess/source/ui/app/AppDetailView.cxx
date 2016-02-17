@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_dbaccess.hxx"
@@ -101,6 +104,7 @@
 #include <algorithm>
 #include "dbtreelistbox.hxx"
 #include "IApplicationController.hxx"
+#include "imageprovider.hxx"
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -128,7 +132,7 @@ using ::com::sun::star::sdb::application::NamedDatabaseObject;
 #define SPACEBETWEENENTRIES		4
 
 // -----------------------------------------------------------------------------
-TaskEntry::TaskEntry( const sal_Char* _pAsciiUNOCommand, USHORT _nHelpID, USHORT _nTitleResourceID, bool _bHideWhenDisabled )
+TaskEntry::TaskEntry( const sal_Char* _pAsciiUNOCommand, sal_uInt16 _nHelpID, sal_uInt16 _nTitleResourceID, bool _bHideWhenDisabled )
     :sUNOCommand( ::rtl::OUString::createFromAscii( _pAsciiUNOCommand ) )
     ,nHelpID( _nHelpID )
     ,sTitle( ModuleRes( _nTitleResourceID ) )
@@ -143,10 +147,11 @@ OCreationList::OCreationList( OTasksWindow& _rParent )
     ,m_pMouseDownEntry( NULL )
     ,m_pLastActiveEntry( NULL )
 {
-	USHORT nSize = SPACEBETWEENENTRIES;
+	sal_uInt16 nSize = SPACEBETWEENENTRIES;
 	SetSpaceBetweenEntries(nSize);
     SetSelectionMode( NO_SELECTION );
     SetExtendedWinBits( EWB_NO_AUTO_CURENTRY );
+    SetNodeDefaultImages( );
     EnableEntryMnemonics();
 }
 // -----------------------------------------------------------------------------
@@ -173,7 +178,7 @@ void OCreationList::PreparePaint( SvLBoxEntry* _pEntry )
         {
             // draw a selection background
             bool bIsMouseDownEntry = ( _pEntry == m_pMouseDownEntry );
-            DrawSelectionBackground( GetBoundingRect( _pEntry ), bIsMouseDownEntry ? 1 : 2, FALSE, TRUE, FALSE );
+            DrawSelectionBackground( GetBoundingRect( _pEntry ), bIsMouseDownEntry ? 1 : 2, sal_False, sal_True, sal_False );
 
             if ( bIsMouseDownEntry )
             {
@@ -205,7 +210,7 @@ void OCreationList::SelectSearchEntry( const void* _pEntry )
 }
 
 // -----------------------------------------------------------------------------
-void OCreationList::ExecuteSearchEntry( const void* _pEntry )
+void OCreationList::ExecuteSearchEntry( const void* _pEntry ) const
 {
     SvLBoxEntry* pEntry = const_cast< SvLBoxEntry* >( static_cast< const SvLBoxEntry* >( _pEntry ) );
     DBG_ASSERT( pEntry, "OCreationList::ExecuteSearchEntry: invalid entry!" );
@@ -364,7 +369,7 @@ bool OCreationList::setCurrentEntryInvalidate( SvLBoxEntry* _pEntry )
 // -----------------------------------------------------------------------------
 void OCreationList::updateHelpText()
 {
-    USHORT nHelpTextId = 0;
+    sal_uInt16 nHelpTextId = 0;
     if ( GetCurEntry() )
         nHelpTextId = reinterpret_cast< TaskEntry* >( GetCurEntry()->GetUserData() )->nHelpID;
     m_rTaskWindow.setHelpText( nHelpTextId );
@@ -424,6 +429,12 @@ OTasksWindow::OTasksWindow(Window* _pParent,OApplicationDetailView* _pDetailView
 	m_aHelpText.SetHelpId(HID_APP_HELP_TEXT);
 	m_aDescription.SetHelpId(HID_APP_DESCRIPTION_TEXT);
 	m_aDescription.SetText(ModuleRes(STR_DESCRIPTION));
+
+    ImageProvider aImageProvider;
+    Image aFolderImage = aImageProvider.getFolderImage( DatabaseObject::FORM, false );
+    m_aCreation.SetDefaultCollapsedEntryBmp( aFolderImage );
+    m_aCreation.SetDefaultExpandedEntryBmp( aFolderImage );
+    
 	ImplInitSettings(sal_True,sal_True,sal_True);
 }
 // -----------------------------------------------------------------------------
@@ -483,7 +494,7 @@ void OTasksWindow::ImplInitSettings( sal_Bool bFont, sal_Bool bForeground, sal_B
 	m_aDescription.SetControlFont(aFont);
 }
 // -----------------------------------------------------------------------------
-void OTasksWindow::setHelpText(USHORT _nId)
+void OTasksWindow::setHelpText(sal_uInt16 _nId)
 {
 	DBG_CHKTHIS(OTasksWindow,NULL);
     if ( _nId )
@@ -581,7 +592,7 @@ void OTasksWindow::fillTaskEntryList( const TaskEntryList& _rList )
 	}
 
 	m_aCreation.Show();	
-	m_aCreation.SelectAll(FALSE);
+	m_aCreation.SelectAll(sal_False);
 	m_aHelpText.Show();
 	m_aDescription.Show();
 	m_aFL.Show();

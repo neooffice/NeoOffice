@@ -1,42 +1,44 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _DBA_CORE_RESOURCE_HRC_
 #define _DBA_CORE_RESOURCE_HRC_
 
 #ifndef _SOLAR_HRC
-#include <svtools/solar.hrc>
+#include <svl/solar.hrc>
 #endif
 
 //------------------------------------------------------------------------------
 #define	RID_CORE_STRINGS_START					RID_DBACCESS_START
-#define	RID_CORE_OTHER_START					RID_DBACCESS_START
 
 //------------------------------------------------------------------------------
 //- String-IDs
@@ -87,12 +89,33 @@
 #define RID_STR_OBJECT_ALREADY_CONTAINED        ( RID_CORE_STRINGS_START + 44 )
 #define RID_STR_NAME_NOT_FOUND                  ( RID_CORE_STRINGS_START + 45 )
 #define RID_STR_QUERY_DOES_NOT_EXIST            ( RID_CORE_STRINGS_START + 46 )
-// #ifdef USE_JAVA
-#define RID_STR_COULDNOTCONNECT_NOJAVA			( RID_CORE_STRINGS_START + 47 )
-// #endif	// USE_JAVA
+#define RID_STR_ERROR_WHILE_SAVING              ( RID_CORE_STRINGS_START + 47 )
+#define RID_STR_NO_SUB_FOLDER					( RID_CORE_STRINGS_START + 48 )
 
-#define RSC_DATASOURCE_TYPES			        ( RID_CORE_OTHER_START + 1 )
-#define RSC_DATASOURCE_TYPE_UINAMES             ( RID_CORE_OTHER_START + 2 )
+#define RID_STR_NO_DELETE_BEFORE_AFTER			( RID_CORE_STRINGS_START + 49 )
+#define RID_STR_NO_DELETE_INSERT_ROW			( RID_CORE_STRINGS_START + 50 )
+#define RID_STR_RESULT_IS_READONLY				( RID_CORE_STRINGS_START + 51 )
+#define RID_STR_NO_DELETE_PRIVILEGE				( RID_CORE_STRINGS_START + 52 )
+#define RID_STR_ROW_ALREADY_DELETED				( RID_CORE_STRINGS_START + 53 )
+#define RID_STR_UPDATE_FAILED					( RID_CORE_STRINGS_START + 54 )
+
+#define RID_STR_INVALID_INDEX					( RID_CORE_STRINGS_START + 55 )
+#define RID_STR_NO_INSERT_PRIVILEGE				( RID_CORE_STRINGS_START + 56 )
+#define RID_STR_INTERNAL_ERROR					( RID_CORE_STRINGS_START + 57 )
+#define RID_STR_EXPRESSION1						( RID_CORE_STRINGS_START + 58 )
+#define RID_STR_NO_SQL_COMMAND					( RID_CORE_STRINGS_START + 59 )
+#define RID_STR_INVALID_CURSOR_STATE			( RID_CORE_STRINGS_START + 60 )
+#define RID_STR_CURSOR_BEFORE_OR_AFTER			( RID_CORE_STRINGS_START + 61 )
+#define RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER		( RID_CORE_STRINGS_START + 62 )
+#define RID_STR_NO_BOOKMARK_DELETED				( RID_CORE_STRINGS_START + 63 )
+#define RID_STR_NO_EMBEDDING					( RID_CORE_STRINGS_START + 64 )
+#define RID_STR_CONNECTION_REQUEST				( RID_CORE_STRINGS_START + 65 )
+#define RID_STR_MISSING_EXTENSION				( RID_CORE_STRINGS_START + 66 )
+
+#define RID_NO_SUCH_DATA_SOURCE                 ( RID_CORE_STRINGS_START + 67 )
+// #ifdef USE_JAVA
+#define RID_STR_COULDNOTCONNECT_NOJAVA			( RID_CORE_STRINGS_START + 68 )
+// #endif	// USE_JAVA
 
 #endif // _DBA_CORE_RESOURCE_HRC_
 

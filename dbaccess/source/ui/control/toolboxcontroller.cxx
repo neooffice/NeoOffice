@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_dbaccess.hxx"
@@ -72,7 +75,7 @@
 #include <svtools/miscopt.hxx>
 #endif
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
-#include <svtools/moduleoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 #endif
 #ifndef TOOLS_DIAGNOSE_EX_H
 #include <tools/diagnose_ex.h>
@@ -118,7 +121,7 @@ namespace dbaui
 
     namespace
     {
-        void lcl_copy(Menu* _pMenu,USHORT _nMenuId,USHORT _nMenuPos,ToolBox* _pToolBox,USHORT _nToolId,const ::rtl::OUString& _sCommand)
+        void lcl_copy(Menu* _pMenu,sal_uInt16 _nMenuId,sal_uInt16 _nMenuPos,ToolBox* _pToolBox,sal_uInt16 _nToolId,const ::rtl::OUString& _sCommand)
         {
             if ( _pMenu->GetItemType(_nMenuPos) != MENUITEM_STRING )
                 _pToolBox->SetItemImage(_nToolId, _pMenu->GetItemImage(_nMenuId));
@@ -184,23 +187,24 @@ namespace dbaui
 		}
 
 		TCommandState::iterator aIter = m_aStates.begin();
-		for (; aIter != m_aStates.end(); ++aIter)
+        TCommandState::iterator aEnd = m_aStates.end();
+		for (; aIter != aEnd; ++aIter)
 			addStatusListener(aIter->first);
 
 		ToolBox*    pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
 		if ( pToolBox )
 		{
-			USHORT nCount = pToolBox->GetItemCount();
-			for (USHORT nPos = 0; nPos < nCount; ++nPos)
+			sal_uInt16 nCount = pToolBox->GetItemCount();
+			for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
 			{
-				USHORT nItemId = pToolBox->GetItemId(nPos);
+				sal_uInt16 nItemId = pToolBox->GetItemId(nPos);
 				if ( pToolBox->GetItemCommand(nItemId) == String(m_aCommandURL) )
 				{
 					m_nToolBoxId = nItemId;
 					break;
 				}
 			}
-			
+
             // check if paste special is allowed, when not don't add DROPDOWN
 			pToolBox->SetItemBits(m_nToolBoxId,pToolBox->GetItemBits(m_nToolBoxId) | TIB_DROPDOWN);
 		}
@@ -209,7 +213,7 @@ namespace dbaui
 	void SAL_CALL OToolboxController::statusChanged( const FeatureStateEvent& Event ) throw ( RuntimeException )
 	{
         vos::OGuard aSolarMutexGuard( Application::GetSolarMutex() );
-		::osl::MutexGuard aGuard(m_aMutex);	
+		::osl::MutexGuard aGuard(m_aMutex);
 		TCommandState::iterator aFind = m_aStates.find( Event.FeatureURL.Complete );
 		if ( aFind != m_aStates.end() )
         {
@@ -217,10 +221,10 @@ namespace dbaui
             if ( m_aCommandURL == aFind->first && !Event.IsEnabled )
             {
                 ::std::auto_ptr<PopupMenu> pMenu = getMenu();
-                USHORT nCount = pMenu->GetItemCount();
-                for (USHORT i = 0; i < nCount; ++i)
+                sal_uInt16 nCount = pMenu->GetItemCount();
+                for (sal_uInt16 i = 0; i < nCount; ++i)
                 {
-                    USHORT nItemId = pMenu->GetItemId(i);
+                    sal_uInt16 nItemId = pMenu->GetItemId(i);
                     aFind = m_aStates.find(pMenu->GetItemCommand(nItemId));
                     if ( aFind != m_aStates.end() && aFind->second )
                     {
@@ -252,7 +256,7 @@ namespace dbaui
 				PopupMenu *pPopup = pMenu.get();
 				if ( pPopup )
 				{
-					USHORT i = pPopup->GetItemCount();
+					sal_uInt16 i = pPopup->GetItemCount();
 					while ( i )
 					{
 						XubString aCommand( pPopup->GetItemCommand( pPopup->GetItemId( --i ) ) );
@@ -271,22 +275,22 @@ namespace dbaui
 				Reference<XUIConfigurationManager> xUIConfigMgr = xModuleCfgMgrSupplier->getUIConfigurationManager(::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.sdb.OfficeDatabaseDocument")));
 				Reference<XImageManager> xImageMgr(xUIConfigMgr->getImageManager(),UNO_QUERY);
 
-				
+
 				short nImageType = hasBigImages() ? ImageType::SIZE_LARGE : ImageType::SIZE_DEFAULT;
 				if ( bHighContrast )
 					nImageType |= ImageType::COLOR_HIGHCONTRAST;
 
 				Sequence< ::rtl::OUString> aSeq(1);
-				USHORT nCount = pMenu->GetItemCount();
-				for (USHORT nPos = 0; nPos < nCount; ++nPos)
+				sal_uInt16 nCount = pMenu->GetItemCount();
+				for (sal_uInt16 nPos = 0; nPos < nCount; ++nPos)
 				{
                     if ( pMenu->GetItemType( nPos ) == MENUITEM_SEPARATOR )
                         continue;
 
-					USHORT nItemId = pMenu->GetItemId(nPos);
+					sal_uInt16 nItemId = pMenu->GetItemId(nPos);
 					aSeq[0] = pMenu->GetItemCommand(nItemId);
 					Sequence< Reference<XGraphic> > aImages = xImageMgr->getImages(nImageType,aSeq);
-					
+
 					Image aImage(aImages[0]);
 					pMenu->SetItemImage(nItemId,aImage);
 					TCommandState::iterator aFind = m_aStates.find( aSeq[0] );
@@ -312,12 +316,12 @@ namespace dbaui
 	{
 		// execute the menu
 		vos::OGuard aSolarMutexGuard( Application::GetSolarMutex() );
-		::osl::MutexGuard aGuard(m_aMutex);	
+		::osl::MutexGuard aGuard(m_aMutex);
 
 		ToolBox* pToolBox = static_cast<ToolBox*>(VCLUnoHelper::GetWindow(getParent()));
         ::std::auto_ptr<PopupMenu> pMenu = getMenu();
 
-		USHORT nSelected = pMenu->Execute(pToolBox, pToolBox->GetItemRect( m_nToolBoxId ),POPUPMENU_EXECUTE_DOWN);
+		sal_uInt16 nSelected = pMenu->Execute(pToolBox, pToolBox->GetItemRect( m_nToolBoxId ),POPUPMENU_EXECUTE_DOWN);
 		// "cleanup" the toolbox state
 		Point aPoint = pToolBox->GetItemRect( m_nToolBoxId ).TopLeft();
 		MouseEvent aLeave( aPoint, 0, MOUSE_LEAVEWINDOW | MOUSE_SYNTHETIC );
@@ -331,7 +335,7 @@ namespace dbaui
 
 			Reference<XDispatch> xDispatch = m_aListenerMap.find(m_aCommandURL)->second;
 			if ( xDispatch.is() )
-			{   
+			{
 				URL aUrl;
 				Sequence < PropertyValue > aArgs;
 				aUrl.Complete = m_aCommandURL;
@@ -339,7 +343,7 @@ namespace dbaui
 				if ( getURLTransformer().is() )
 					getURLTransformer()->parseStrict(aUrl);
 				xDispatch->dispatch(aUrl,aArgs);
-                
+
 			}
 		}
 		return Reference< ::com::sun::star::awt::XWindow >();
