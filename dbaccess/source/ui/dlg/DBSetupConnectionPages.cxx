@@ -978,9 +978,7 @@ DBG_NAME(OFinalDBPageSetup)
 		m_aCBOpenAfterwards.SetClickHdl(LINK(this, OFinalDBPageSetup, OnOpenSelected));
 #if defined USE_JAVA && defined MACOSX
         if (!bCanUseJava)
-#endif	// USE_JAVA && MACOSX
             m_aCBStartTableWizard.Hide();
-#if defined USE_JAVA && defined MACOSX
         else
 #endif	// USE_JAVA && MACOSX
 		m_aCBStartTableWizard.SetClickHdl(getControlModifiedLink());
