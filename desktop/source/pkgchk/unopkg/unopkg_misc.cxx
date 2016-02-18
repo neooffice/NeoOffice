@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_desktop.hxx"
@@ -50,6 +53,7 @@
 #include "unotools/configmgr.hxx"
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 #include "cppuhelper/bootstrap.hxx"
+#include "comphelper/sequence.hxx"
 #include <stdio.h>
 
 using ::rtl::OUString;
@@ -324,7 +328,10 @@ void printf_package(
             xPackage->getBundle( Reference<task::XAbortChannel>(), xCmdEnv ) );
         printf_space( level + 1 );
         dp_misc::writeConsole("bundled Packages: {\n");
-        printf_packages( seq, xCmdEnv, level + 2 );
+        ::std::vector<Reference<deployment::XPackage> >vec_bundle;
+        ::comphelper::sequenceToContainer(vec_bundle, seq);
+        printf_packages( vec_bundle, ::std::vector<bool>(vec_bundle.size()),
+                         xCmdEnv, level + 2 );
         printf_space( level + 1 );
         dp_misc::writeConsole("}\n");
     }
@@ -332,22 +339,44 @@ void printf_package(
 
 } // anon namespace
 
+void printf_unaccepted_licenses(
+    Reference<deployment::XPackage> const & ext)
+{
+        OUString id(
+            dp_misc::getIdentifier(ext) );
+        printf_line( OUSTR("Identifier"), id, 0 );
+        printf_space(1);
+        dp_misc::writeConsole(OUSTR("License not accepted\n\n"));
+}
+
 //==============================================================================
 void printf_packages(
-    Sequence< Reference<deployment::XPackage> > const & seq,
+    ::std::vector< Reference<deployment::XPackage> > const & allExtensions,
+    ::std::vector<bool> const & vecUnaccepted,
     Reference<XCommandEnvironment> const & xCmdEnv, sal_Int32 level )
 {
-    sal_Int32 len = seq.getLength();
-    Reference< deployment::XPackage > const * p = seq.getConstArray();
-    if (len == 0) {
+    OSL_ASSERT(allExtensions.size() == vecUnaccepted.size());
+
+    if (allExtensions.size() == 0)
+    {
         printf_space( level );
         dp_misc::writeConsole("<none>\n");
     }
-    else {
-        for ( sal_Int32 pos = 0; pos < len; ++pos )
-            printf_package( p[ pos ], xCmdEnv, level );
+    else
+    {
+        typedef ::std::vector< Reference<deployment::XPackage> >::const_iterator I_EXT;
+        int index = 0;
+        for (I_EXT i = allExtensions.begin(); i != allExtensions.end(); i++, index++)
+        {
+            if (vecUnaccepted[index])
+                printf_unaccepted_licenses(*i);
+            else
+                printf_package( *i, xCmdEnv, level );
+            dp_misc::writeConsole(OUSTR("\n"));
+        }
     }
 }
+
 
 //##############################################################################
 
@@ -377,6 +406,7 @@ Reference<XComponentContext> bootstrapStandAlone(
     if (! ::ucbhelper::ContentBroker::initialize( xServiceManager, ucb_args ))
         throw RuntimeException( OUSTR("cannot initialize UCB!"), 0 );
     
+    disposeGuard.setDeinitUCB();
     return xContext;
 }
 
@@ -435,7 +465,7 @@ Reference<XComponentContext> connectToOffice(
 OUString getLockFilePath()
 {   
     OUString ret;
-    OUString sBootstrap(RTL_CONSTASCII_USTRINGPARAM("${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}"));
+    OUString sBootstrap(RTL_CONSTASCII_USTRINGPARAM("${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}"));
     rtl::Bootstrap::expandMacros(sBootstrap);
     OUString sAbs;
     if (::osl::File::E_None ==  ::osl::File::getAbsoluteFileURL(
@@ -475,10 +505,10 @@ Reference<XComponentContext> getUNO(
     {
         if (! s_lockfile.check( 0 ))
         {
-            //String sMsg(ResId(RID_STR_CONCURRENTINSTANCE, *DeploymentResMgr::get()));
-            OUString sMsg(RTL_CONSTASCII_USTRINGPARAM(
-                              "unopkg cannot be started. The lock file indicates it as already running. "
-                              "If this does not apply, delete the lock file at:"));	
+            String sMsg(ResId(RID_STR_CONCURRENTINSTANCE, *DeploymentResMgr::get()));
+            //Create this string before we call DeInitVCL, because this will kill
+            //the ResMgr
+            String sError(ResId(RID_STR_UNOPKG_ERROR, *DeploymentResMgr::get())); 
 
             sMsg = sMsg + OUSTR("\n") + getLockFilePath();
 
@@ -501,14 +531,118 @@ Reference<XComponentContext> getUNO(
                 DeInitVCL();
             }
 
-//            String sError(ResId(RID_STR_UNOPKG_ERROR, *DeploymentResMgr::get())); 
             throw LockFileException(
-                OUSTR("\n") + OUSTR("ERROR: ") + sMsg + OUSTR("\n"));
+                OUSTR("\n") + sError + sMsg + OUSTR("\n"));
         }
     }
     
     return xComponentContext;
 }
 
+//Determines if a folder does not contains a folder.
+//Return false may also mean that the status could not be determined
+//because some error occurred.
+bool hasNoFolder(OUString const & folderUrl)
+{
+    bool ret = false;
+    OUString url = folderUrl;
+    ::rtl::Bootstrap::expandMacros(url);
+    ::osl::Directory dir(url);
+    osl::File::RC rc = dir.open();
+    if (rc == osl::File::E_None)
+    {
+        bool bFolderExist = false;
+        osl::DirectoryItem i;
+        osl::File::RC rcNext = osl::File::E_None;
+        while ( (rcNext = dir.getNextItem(i)) == osl::File::E_None)
+        {
+            osl::FileStatus stat(FileStatusMask_Type);
+            if (i.getFileStatus(stat) == osl::File::E_None)
+            {
+                if (stat.getFileType() == osl::FileStatus::Directory)
+                {
+                    bFolderExist = true;
+                    break;
+                }
+            }
+            else
+            {
+                dp_misc::writeConsole(
+                    OUSTR("unopkg: Error while investigating ") + url + OUSTR("\n"));
+                break;
+            }
+            i = osl::DirectoryItem();
+        }
+                
+        if (rcNext == osl::File::E_NOENT ||
+            rcNext == osl::File::E_None)
+        {
+            if (!bFolderExist)
+                ret = true;
+        }
+        else
+        {
+            dp_misc::writeConsole(
+                OUSTR("unopkg: Error while investigating ") + url + OUSTR("\n"));
+        }
+        
+        dir.close();
+    }
+    else
+    {
+        dp_misc::writeConsole(
+            OUSTR("unopkg: Error while investigating ") + url + OUSTR("\n"));
+    }
+    return ret;
 }
 
+void removeFolder(OUString const & folderUrl)
+{
+    OUString url = folderUrl;
+    ::rtl::Bootstrap::expandMacros(url);
+    ::osl::Directory dir(url);
+    ::osl::File::RC rc = dir.open();
+    if (rc == osl::File::E_None)
+    {
+        ::osl::DirectoryItem i;
+        ::osl::File::RC rcNext = ::osl::File::E_None;
+        while ( (rcNext = dir.getNextItem(i)) == ::osl::File::E_None)
+        {
+            ::osl::FileStatus stat(FileStatusMask_Type | FileStatusMask_FileURL);
+            if (i.getFileStatus(stat) == ::osl::File::E_None)
+            {
+                ::osl::FileStatus::Type t = stat.getFileType();
+                if (t == ::osl::FileStatus::Directory)
+                {
+                    //remove folder
+                    removeFolder(stat.getFileURL());
+                }
+                else if (t == ::osl::FileStatus::Regular)
+                {
+                    //remove file
+                    ::osl::File::remove(stat.getFileURL());
+                }
+                else
+                {
+                    OSL_ASSERT(0);
+                }
+            }
+            else
+            {
+                dp_misc::writeConsole(
+                    OUSTR("unopkg: Error while investigating ") + url + OUSTR("\n"));
+                break;
+            }
+            i = ::osl::DirectoryItem();
+        }
+        dir.close();
+        ::osl::Directory::remove(url);
+    }
+    else if (rc != osl::File::E_NOENT)
+    {
+        dp_misc::writeConsole(
+            OUSTR("unopkg: Error while removing ") + url + OUSTR("\n"));
+    }    
+}
+
+}

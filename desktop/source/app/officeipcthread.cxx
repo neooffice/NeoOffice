@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_desktop.hxx"
@@ -46,7 +49,7 @@
 #include <rtl/ustrbuf.hxx>
 #include <rtl/instance.hxx>
 #include <osl/conditn.hxx>
-#include <svtools/moduleoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/strbuf.hxx>
 #include <comphelper/processfactory.hxx>
@@ -506,16 +509,29 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	do
 	{
 		OSecurity &rSecurity = Security::get();
-		// Try to create pipe
-		if ( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Create, rSecurity ))
+		// #119950# Try to connect pipe first. If connected, means another instance already launched.
+		if( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Open, rSecurity )) 
+		{
+			// #119950# Test if launched in a new terminal session for same user. On Windows platform, normally a user is resticted
+			// to have only one terminal session. But if mutiple terminal session for one user is allowed, crash will happen if launched
+			// OpenOffice from more than one terminal session. So need to detect and prevent this happen.
+
+			// Will try to create a same name pipe. If creation is successfully, means current instance is launched in a new session.
+			vos::OPipe	maSessionPipe;
+			if ( maSessionPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Create, rSecurity )) {
+				// Can create a pipe with same name. This can only happen in multiple terminal session environment on Windows platform.
+				// Will display a warning dialog and exit.
+				return IPC_STATUS_MULTI_TS_ERROR;
+			} else {
+				// Pipe connected to first office
+				nPipeMode = PIPEMODE_CONNECTED;
+			}
+
+		}
+		else if ( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Create, rSecurity )) // Connection not successfull, now we try to create
 		{
 			// Pipe created
 			nPipeMode = PIPEMODE_CREATED;
-		}
-		else if( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Open, rSecurity )) // Creation not successfull, now we try to connect
-		{
-			// Pipe connected to first office
-			nPipeMode = PIPEMODE_CONNECTED;
 		}
 		else
 		{
@@ -853,8 +869,6 @@ void SAL_CALL OfficeIPCThread::run()
                     aHelpURLBuffer.appendAscii("&System=UNX");
 #elif defined WNT
                     aHelpURLBuffer.appendAscii("&System=WIN");
-#elif defined MAC
-                    aHelpURLBuffer.appendAscii("&System=MAC");
 #elif defined OS2
                     aHelpURLBuffer.appendAscii("&System=OS2");
 #endif

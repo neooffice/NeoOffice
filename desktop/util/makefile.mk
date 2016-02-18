@@ -1,32 +1,34 @@
-#*************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2008 by Sun Microsystems, Inc.
-#
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified November 2008 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-#*************************************************************************
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
+
+
 
 PRJ=..
 
@@ -62,7 +64,7 @@ LINKFLAGSAPPGUI!:=	$(LINKFLAGSAPPGUI:s/-bind_at_load//)
 
 .IF "$(GUIBASE)" == "java"
 JAVAAPPOBJS = $(OBJ)$/main_java.obj
-JAVAAPPSTDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib
+JAVAAPPSTDLIBS = -Wl,-rpath,@executable_path/../basis-link/program -Wl,-rpath,@executable_path/../basis-link/ure-link/lib -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib -framework AppKit
 .ENDIF		# "$(GUIBASE)" == "java"
 
 #.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD" || "$(OS)" == "NETBSD"
@@ -82,6 +84,8 @@ RESLIB1IMAGES=		$(PRJ)$/res
 RESLIB1SRSFILES=	$(SRS)$/desktop.srs \
                     $(SRS)$/wizard.srs
 
+.IF "$(L10N_framework)"==""
+.IF "$(LINK_SO)"=="TRUE"
 .IF "$(GUI)" != "OS2"
 APP1TARGET=so$/$(TARGET)
 APP1NOSAL=TRUE
@@ -95,12 +99,6 @@ APP1STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
-.IF "$(GUI)" == "UNX"
-.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD"
-APP1STDLIBS+= -lXext -lSM -lICE
-.ENDIF
-.ENDIF
-
 APP1DEPN= $(APP1RES) verinfo.rc
 
 .IF "$(GUI)" == "WNT"
@@ -119,6 +117,8 @@ APP1STACK=10000000
 
 .ENDIF # "$(GUI)" != "OS2"
 
+.ENDIF # "$(LINK_SO)"=="TRUE"
+
 APP5TARGET=soffice
 APP5NOSAL=TRUE
 APP5RPATH=BRAND
@@ -132,7 +132,8 @@ APP5STDLIBS = $(JAVAAPPSTDLIBS)
 APP5STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
 .IF "$(OS)" == "LINUX"
-APP5STDLIBS+= -lXext -lSM -lICE
+APP5STDLIBS+= -lXext -lX11
+#APP5STDLIBS+= -lXext -lSM -lICE
 .ENDIF # LINUX
 
 APP5DEPN= $(APP1TARGETN) $(APP5RES) ooverinfo.rc
@@ -155,6 +156,7 @@ APP5LINKRES=$(MISC)$/ooffice.res
 .ENDIF # OS2
 
 .IF "$(GUI)" == "WNT"
+.IF "$(LINK_SO)"=="TRUE"
 APP6TARGET=so$/officeloader
 APP6RES=$(RES)$/soloader.res
 APP6NOSAL=TRUE
@@ -167,6 +169,7 @@ APP6OBJS = \
     $(OBJ)$/officeloader.obj \
     $(SOLARLIBDIR)$/pathutils-obj.obj
 STDLIB6=$(ADVAPI32LIB) $(SHELL32LIB) $(SHLWAPILIB)
+.ENDIF # "$(LINK_SO)"=="TRUE"
 
 APP7TARGET=officeloader
 APP7RES=$(RES)$/ooloader.res
@@ -204,9 +207,6 @@ APP8STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP8STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
-.IF "$(OS)" == "LINUX"
-APP8STDLIBS+= -lXext -lSM -lICE
-.ENDIF # LINUX
 
 APP8DEPN= $(APP1TARGETN) $(APP8RES) ooverinfo.rc
 APP8DEF=    $(MISCX)$/$(TARGET).def
@@ -215,7 +215,7 @@ APP8DEF=    $(MISCX)$/$(TARGET).def
 APP8RES=    $(RES)$/oodesktop.res
 APP8ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
 APP8VERINFO=ooverinfo.rc
-APP8LINKRES=$(MISC)$/ooffice8.res
+APP8LINKRES=$(MISC)$/ooffice5.res
 APP8STACK=10000000
 .ENDIF # WNT
 
@@ -231,9 +231,6 @@ APP9STDLIBS = $(JAVAAPPSTDLIBS)
 .ELSE		# "$(GUIBASE)" == "java"
 APP9STDLIBS = $(SALLIB) $(SOFFICELIB)
 .ENDIF		# "$(GUIBASE)" == "java"
-.IF "$(OS)" == "LINUX"
-APP9STDLIBS+= -lXext -lSM -lICE
-.ENDIF # LINUX
 
 APP9DEPN= $(APP1TARGETN) $(APP9RES) ooverinfo.rc
 APP9DEF=    $(MISCX)$/$(TARGET).def
@@ -242,15 +239,19 @@ APP9DEF=    $(MISCX)$/$(TARGET).def
 APP9RES=    $(RES)$/oodesktop.res
 APP9ICON=$(SOLARRESDIR)$/icons/ooo3_main_app.ico
 APP9VERINFO=ooverinfo.rc
-APP9LINKRES=$(MISC)$/ooffice8.res
+APP9LINKRES=$(MISC)$/ooffice5.res
 APP9STACK=10000000
 .ENDIF # WNT
 
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
 
+.ENDIF
+
 # --- Targets -------------------------------------------------------------
 
 .INCLUDE :  target.mk
+
+.IF "$(L10N_framework)"==""
 
 .IF "$(APP1TARGETN)"!=""
 $(APP1TARGETN) :  $(MISC)$/binso_created.flg
@@ -268,7 +269,9 @@ $(APP6TARGETN) :  $(MISC)$/binso_created.flg
 ALLTAR: $(MISC)$/$(TARGET).exe.manifest
 ALLTAR: $(MISC)$/$(TARGET).bin.manifest
 ALLTAR: $(BIN)$/$(TARGET).bin
+.IF "$(LINK_SO)"=="TRUE"
 ALLTAR: $(BIN)$/so$/$(TARGET).bin
+.ENDIF # "$(LINK_SO)"=="TRUE"
 .ENDIF # WNT
 
 .IF "$(GUI)" == "OS2"
@@ -279,23 +282,29 @@ $(BIN)$/soffice_oo$(EXECPOST) : $(APP5TARGETN)
 	$(COPY) $< $@
 
 .IF "$(GUI)" != "OS2"
+.IF "$(LINK_SO)"=="TRUE"
 $(BIN)$/so$/soffice_so$(EXECPOST) : $(APP1TARGETN)
 	$(COPY) $< $@
 
-ALLTAR : $(BIN)$/so$/soffice_so$(EXECPOST) $(BIN)$/soffice_oo$(EXECPOST)
-
+ALLTAR : $(BIN)$/so$/soffice_so$(EXECPOST)
+.ENDIF # "$(LINK_SO)"=="TRUE"
+ALLTAR : $(BIN)$/soffice_oo$(EXECPOST)
 .ENDIF
 
 .IF "$(OS)" == "MACOSX"
+.IF "$(LINK_SO)"=="TRUE"
 $(BIN)$/so$/soffice_mac$(EXECPOST) : $(APP1TARGETN)
 	$(COPY) $< $@
 	
+ALLTAR : $(BIN)$/so$/soffice_mac$(EXECPOST)
+.ENDIF # "$(LINK_SO)"=="TRUE"
+
 $(BIN)$/soffice_mac$(EXECPOST) : $(APP5TARGETN)
 	$(COPY) $< $@
 
-ALLTAR : $(BIN)$/so$/soffice_mac$(EXECPOST) $(BIN)$/soffice_mac$(EXECPOST)
+ALLTAR : $(BIN)$/soffice_mac$(EXECPOST)
 
-.ENDIF
+.ENDIF # "$(OS)" == "MACOSX"
 
 .IF "$(GUI)" == "WNT"
 
@@ -340,3 +349,5 @@ $(BIN)$/$(TARGET).bin: $(BIN)$/$(TARGET)$(EXECPOST)
 
 $(MISC)$/binso_created.flg :
 	@@-$(MKDIRHIER) $(BIN)$/so && $(TOUCH) $@
+
+.ENDIF

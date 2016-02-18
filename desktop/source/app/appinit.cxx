@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_desktop.hxx"
@@ -74,9 +77,9 @@
 #include <unotools/tempfile.hxx>
 #include <ucbhelper/contentbroker.hxx>
 #include <vcl/svapp.hxx>
-#include <svtools/startoptions.hxx>
-#include <svtools/pathoptions.hxx>
-#include <svtools/internaloptions.hxx>
+#include <unotools/startoptions.hxx>
+#include <unotools/pathoptions.hxx>
+#include <unotools/internaloptions.hxx>
 
 #ifdef USE_JAVA
 
@@ -84,6 +87,7 @@
 #include "lockfile.hxx"
 
 #endif	// USE_JAVA
+
 
 #define	DEFINE_CONST_OUSTRING(CONSTASCII)		OUString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 
@@ -136,7 +140,7 @@ static bool configureUcb(bool bServer, rtl::OUString const & rPortalConnect)
 	aArgs[4] <<= rtl::OUString::createFromAscii("PORTAL");
 	aArgs[5] <<= aPortal.makeStringAndClear();
 
-    bool ret = 
+    bool ret =
         ::ucbhelper::ContentBroker::initialize( xServiceFactory, aArgs ) != false;
 
 #ifdef GNOME_VFS_ENABLED
@@ -154,12 +158,11 @@ static bool configureUcb(bool bServer, rtl::OUString const & rPortalConnect)
                 );
                 rtl::OUString aDesktopEnvironment;
                 if ((aValue >>= aDesktopEnvironment)
-                    && (aDesktopEnvironment.equalsAscii("GNOME") ||
-						aDesktopEnvironment.equalsAscii("KDE")))
+                    && aDesktopEnvironment.equalsAscii("GNOME"))
                 {
                     Reference<XContentProviderManager> xCPM =
                         cb->getContentProviderManagerInterface();
-
+#if 0
                     try
                     {
 
@@ -180,20 +183,43 @@ static bool configureUcb(bool bServer, rtl::OUString const & rPortalConnect)
                     } catch (...)
                     {
                     }
+#else
+
+		    // Workaround for P1 #124597#.  Instanciate GNOME-VFS-UCP in the thread that initialized
+ 		    // GNOME in order to avoid a deadlock that may occure in case UCP gets initialized from
+		    // a different thread. The latter may happen when calling the Office remotely via UNO.
+		    // THIS IS NOT A FIX, JUST A WORKAROUND!
+
+                    try
+                    {
+                        Reference<XContentProvider> xCP(
+                            xServiceFactory->createInstance(
+                                rtl::OUString::createFromAscii(
+                                    "com.sun.star.ucb.GnomeVFSContentProvider")),
+                            UNO_QUERY);
+                        if(xCP.is())
+                            xCPM->registerContentProvider(
+                                xCP,
+                                rtl::OUString::createFromAscii(".*"),
+                                false);
+                    } catch (...)
+                    {
+                    }
                 }
+#endif
             }
         } catch (RuntimeException e) {
         }
-    }    
+    }
 #endif // GNOME_VFS_ENABLED
-    
+
     return ret;;
 }
 
 Reference< XMultiServiceFactory > Desktop::CreateApplicationServiceManager()
 {
 	RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::createApplicationServiceManager" );
-	
+
 	try
 	{
 		Reference<XComponentContext> xComponentContext = ::cppu::defaultBootstrap_InitialComponentContext();
@@ -253,7 +279,11 @@ void Desktop::RegisterServices( Reference< XMultiServiceFactory >& xSMgr )
 	    if ( bHeadlessMode )
 		    Application::EnableHeadlessMode();
 
-	    if ( conDcp.getLength() > 0 )
+	    // ConversionMode
+	    if ( pCmdLine->IsConversionMode() )
+		    Application::EnableConversionMode();
+
+        if ( conDcp.getLength() > 0 )
 	    {
 		    // accept incoming connections (scripting and one rvp)
 		    RTL_LOGFILE_CONTEXT( aLog, "desktop (lo119109) desktop::Desktop::createAcceptor()" );
@@ -297,7 +327,6 @@ void Desktop::RegisterServices( Reference< XMultiServiceFactory >& xSMgr )
 namespace
 {
     struct acceptorMap : public rtl::Static< AcceptorMap, acceptorMap > {};
-    struct mtxAccMap : public rtl::Static< osl::Mutex, mtxAccMap > {};
     struct CurrentTempURL : public rtl::Static< String, CurrentTempURL > {};
 }
 
@@ -305,8 +334,6 @@ static sal_Bool bAccept = sal_False;
 
 void Desktop::createAcceptor(const OUString& aAcceptString)
 {
-	// make sure nobody adds an acceptor whle we create one...
-	osl::MutexGuard aGuard(mtxAccMap::get());
 	// check whether the requested acceptor already exists
 	AcceptorMap &rMap = acceptorMap::get();
 	AcceptorMap::const_iterator pIter = rMap.find(aAcceptString);
@@ -315,7 +342,7 @@ void Desktop::createAcceptor(const OUString& aAcceptString)
 		Sequence< Any > aSeq( 2 );
 		aSeq[0] <<= aAcceptString;
 		aSeq[1] <<= bAccept;
-		Reference<XInitialization> rAcceptor( 
+		Reference<XInitialization> rAcceptor(
 			::comphelper::getProcessServiceFactory()->createInstance(
 			OUString::createFromAscii( "com.sun.star.office.Acceptor" )), UNO_QUERY );
 		if ( rAcceptor.is() ) {
@@ -349,11 +376,10 @@ class enable
 		}
 	}
 };
-			
+
 void Desktop::enableAcceptors()
 {
 	RTL_LOGFILE_CONTEXT(aLog, "desktop (lo119109) Desktop::enableAcceptors");
-	osl::MutexGuard aGuard(mtxAccMap::get());
 	if (!bAccept)
 	{
 		// from now on, all new acceptors are enabled
@@ -367,19 +393,18 @@ void Desktop::enableAcceptors()
 
 void Desktop::destroyAcceptor(const OUString& aAcceptString)
 {
-	osl::MutexGuard aGuard(mtxAccMap::get());
 	// special case stop all acceptors
 	AcceptorMap &rMap = acceptorMap::get();
 	if (aAcceptString.compareToAscii("all") == 0) {
 		rMap.clear();
-	
+
 	} else {
 		// try to remove acceptor from map
 		AcceptorMap::const_iterator pIter = rMap.find(aAcceptString);
 		if (pIter != rMap.end() ) {
 			// remove reference from map
 			// this is the last reference and the acceptor will be destructed
-			rMap.erase(aAcceptString);		
+			rMap.erase(aAcceptString);
 		} else {
 			OSL_ENSURE(sal_False, "Found no acceptor to remove");
 		}
@@ -390,7 +415,7 @@ void Desktop::destroyAcceptor(const OUString& aAcceptString)
 void Desktop::DeregisterServices()
 {
 	// stop all acceptors by clearing the map
-	acceptorMap::get().clear();	
+	acceptorMap::get().clear();
 }
 
 void Desktop::CreateTemporaryDirectory()
@@ -417,7 +442,7 @@ void Desktop::CreateTemporaryDirectory()
         e.Message = aMsg + e.Message;
         throw e;
     }
-    
+
     // remove possible old directory and base directory
 	SvtInternalOptions	aInternalOpt;
 
