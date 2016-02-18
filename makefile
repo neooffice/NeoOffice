@@ -299,7 +299,6 @@ build.neo_patches:
 	build.neo_cppuhelper_patch \
 	build.neo_dbaccess_patch \
 	build.neo_desktop_patch \
-	build.neo_dictionaries_patch \
 	build.neo_drawinglayer_patch \
 	build.neo_dtrans_patch \
 	build.neo_filter_patch \
