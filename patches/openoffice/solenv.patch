@@ -4,10 +4,45 @@
  CDEFS+=-DQUARTZ 
  EXTRA_CDEFS*=-isysroot /Developer/SDKs/MacOSX10.4u.sdk
  
-+.IF "$(GUIBASE)"=="java"
++.IF "$(PRODUCT_BUILD_TYPE)"=="java"
 +CDEFS+=-DUSE_JAVA
 +.ENDIF
 +
  # Name of library where static data members are initialized
  # STATICLIBNAME=static$(DLLPOSTFIX)
  # STATICLIB=-l$(STATICLIBNAME)
+--- gbuild/Deliver.mk	2014-02-25 00:33:30.000000000 -0800
++++ gbuild/Deliver.mk	2016-02-19 15:33:35.000000000 -0800
+@@ -39,6 +39,11 @@
+ 
+ endef
+ 
++ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
++define gb_Deliver_deliver
++echo The deliver command has been disabled
++endef
++else
+ ifeq ($(strip $(gb_Deliver_GNUCOPY)),)
+ define gb_Deliver_deliver
+ mkdir -p $(dir $(2)) && $(if $(gb_Deliver_CLEARONDELIVER),rm -f $(2) &&) cp -f $(1) $(2) && touch -r $(1) $(2)
+@@ -48,6 +53,7 @@
+ mkdir -p $(dir $(2)) && $(gb_Deliver_GNUCOPY) $(if $(gb_Deliver_CLEARONDELIVER),--remove-destination) --force --preserve=timestamps $(1) $(2)
+ endef
+ endif
++endif
+ 
+ 
+ # We are currently only creating a deliver.log, if only one module gets build.
+--- gbuild/gbuild.mk	2014-02-25 00:33:29.000000000 -0800
++++ gbuild/gbuild.mk	2016-02-19 15:38:27.000000000 -0800
+@@ -201,6 +201,10 @@
+ gb_GLOBALDEFS += -DENABLE_GRAPHITE
+ endif
+ 
++ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
++gb_GLOBALDEFS += -DUSE_JAVA
++endif
++
+ gb_GLOBALDEFS := $(sort $(gb_GLOBALDEFS))
+ 
+ include $(GBUILDDIR)/Deliver.mk
