@@ -193,7 +193,7 @@ APP5DEPN= $(APP1TARGETN) $(APP5RES) ooverinfo.rc
 APP5DEF=    $(MISCX)$/$(TARGET).def
 .ENDIF # WNT
 
-.IF "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
 
 APP8TARGET=soffice2
 APP8NOSAL=TRUE
@@ -243,7 +243,7 @@ APP9LINKRES=$(MISC)$/ooffice5.res
 APP9STACK=10000000
 .ENDIF # WNT
 
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUI)" == "WNT"
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
 
 .ENDIF
 
