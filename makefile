@@ -301,7 +301,6 @@ build.neo_patches:
 	build.neo_desktop_patch \
 	build.neo_drawinglayer_patch \
 	build.neo_filter_patch \
-	build.neo_formula_patch \
 	build.neo_fpicker_patch \
 	build.neo_framework_patch \
 	build.neo_goodies_patch \
