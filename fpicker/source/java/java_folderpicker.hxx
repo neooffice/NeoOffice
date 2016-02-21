@@ -73,6 +73,7 @@ public:
 	virtual sal_Bool			SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void				SAL_CALL cancel() throw( ::com::sun::star::uno::RuntimeException );
+	using cppu::WeakComponentImplHelperBase::disposing;
 	virtual void				SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw( ::com::sun::star::uno::RuntimeException );
 };
 

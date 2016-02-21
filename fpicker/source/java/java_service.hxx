@@ -37,15 +37,11 @@
 #define _JAVA_SERVICE_HXX_
 
 // Service names
-#define FILE_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.SystemFilePicker"
-#define FOLDER_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.SystemFolderPicker"
+#define FILE_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.AquaFilePicker"
+#define FOLDER_PICKER_SERVICE_NAME "com.sun.star.ui.dialogs.AquaFolderPicker"
 
 // Implementation names		
 #define FILE_PICKER_IMPL_NAME "com.sun.star.ui.dialogs.JavaFilePicker"
 #define FOLDER_PICKER_IMPL_NAME "com.sun.star.ui.dialogs.JavaFolderPicker"
-
-// The registry key names
-#define FILE_PICKER_REGKEY_NAME "/com.sun.star.ui.dialogs.JavaFilePicker/UNO/SERVICES/com.sun.star.ui.dialogs.SystemFilePicker"
-#define FOLDER_PICKER_REGKEY_NAME  "/com.sun.star.ui.dialogs.JavaFolderPicker/UNO/SERVICES/com.sun.star.ui.dialogs.SystemFolderPicker"
 
 #endif	// _JAVA_SERVICE_HXX_

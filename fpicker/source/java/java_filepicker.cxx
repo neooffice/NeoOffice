@@ -267,7 +267,7 @@ void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( Run
 {
 	implInit();
 
-	NSFileDialog_setMultiSelectionMode( mpDialog, bMode ? TRUE : FALSE );
+	NSFileDialog_setMultiSelectionMode( mpDialog, bMode ? sal_True : sal_False );
 }
 
 // ------------------------------------------------------------------------
@@ -478,7 +478,7 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 		case COCOA_CONTROL_TYPE_CHECKBOX:
 			sal_Bool bChecked;
 			aValue >>= bChecked;
-			NSFileDialog_setChecked( mpDialog, nCocoaControlId, bChecked ? TRUE : FALSE );
+			NSFileDialog_setChecked( mpDialog, nCocoaControlId, bChecked ? sal_True : sal_False );
 			break;
 		case COCOA_CONTROL_TYPE_POPUP:
 			switch ( nControlAction )
@@ -759,16 +759,16 @@ void JavaFilePicker::implInit() throw( Exception )
 	if ( !mpResMgr )
 		throw NullPointerException();
 
-	BOOL bUseFileOpenDialog = TRUE;
-	BOOL bShowAutoExtension = FALSE;
-	BOOL bShowFilterOptions = FALSE;
-	BOOL bShowImageTemplate = FALSE;
-	BOOL bShowLink = FALSE;
-	BOOL bShowPassword = FALSE;
-	BOOL bShowReadOnly = FALSE;
-	BOOL bShowSelection = FALSE;
-	BOOL bShowTemplate = FALSE;
-	BOOL bShowVersion = FALSE;
+	sal_Bool bUseFileOpenDialog = sal_True;
+	sal_Bool bShowAutoExtension = sal_False;
+	sal_Bool bShowFilterOptions = sal_False;
+	sal_Bool bShowImageTemplate = sal_False;
+	sal_Bool bShowLink = sal_False;
+	sal_Bool bShowPassword = sal_False;
+	sal_Bool bShowReadOnly = sal_False;
+	sal_Bool bShowSelection = sal_False;
+	sal_Bool bShowTemplate = sal_False;
+	sal_Bool bShowVersion = sal_False;
 
 	// Determine which native Cocoa controls to show. Note that we do not
 	// do anything if the preview or play settings are set as the Mac OS X
@@ -778,51 +778,51 @@ void JavaFilePicker::implInit() throw( Exception )
 		case TemplateDescription::FILEOPEN_SIMPLE:
 			break;
 		case TemplateDescription::FILESAVE_SIMPLE:
-			bUseFileOpenDialog = FALSE;
+			bUseFileOpenDialog = sal_False;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD:
-			bUseFileOpenDialog = FALSE;
-			bShowAutoExtension = TRUE;
-			bShowPassword = TRUE;
+			bUseFileOpenDialog = sal_False;
+			bShowAutoExtension = sal_True;
+			bShowPassword = sal_True;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD_FILTEROPTIONS:
-			bUseFileOpenDialog = FALSE;
-			bShowAutoExtension = TRUE;
-			bShowFilterOptions = TRUE;
-			bShowPassword = TRUE;
+			bUseFileOpenDialog = sal_False;
+			bShowAutoExtension = sal_True;
+			bShowFilterOptions = sal_True;
+			bShowPassword = sal_True;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION_SELECTION:
-			bUseFileOpenDialog = FALSE;
-			bShowAutoExtension = TRUE;
-			bShowSelection = TRUE;
+			bUseFileOpenDialog = sal_False;
+			bShowAutoExtension = sal_True;
+			bShowSelection = sal_True;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION_TEMPLATE:
-			bUseFileOpenDialog = FALSE;
-			bShowAutoExtension = TRUE;
-			bShowTemplate = TRUE;
+			bUseFileOpenDialog = sal_False;
+			bShowAutoExtension = sal_True;
+			bShowTemplate = sal_True;
 			break;
 		case TemplateDescription::FILEOPEN_LINK_PREVIEW_IMAGE_TEMPLATE:
-			bShowLink = TRUE;
-			bShowImageTemplate = TRUE;
+			bShowLink = sal_True;
+			bShowImageTemplate = sal_True;
 			break;
 		case TemplateDescription::FILEOPEN_PLAY:		
 			break;
 		case TemplateDescription::FILEOPEN_READONLY_VERSION:
-			bShowReadOnly = TRUE;
-			bShowVersion = TRUE;
+			bShowReadOnly = sal_True;
+			bShowVersion = sal_True;
 			break;
 		case TemplateDescription::FILEOPEN_LINK_PREVIEW:
-			bShowLink = TRUE;
+			bShowLink = sal_True;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION:
-			bUseFileOpenDialog = FALSE;
-			bShowAutoExtension = TRUE;
+			bUseFileOpenDialog = sal_False;
+			bShowAutoExtension = sal_True;
 			break;
 		default:
 			throw IllegalArgumentException( OUString::createFromAscii( "Unknown template" ), static_cast< XFilePicker* >( this ), 1 );
 	}
 
-	mpDialog = NSFileDialog_create( this, bUseFileOpenDialog, TRUE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
+	mpDialog = NSFileDialog_create( this, bUseFileOpenDialog, sal_True, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
 	if ( !mpDialog )
 		throw NullPointerException();
 

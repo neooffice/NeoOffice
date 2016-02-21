@@ -79,3 +79,11 @@ SHL1STDLIBS=\
 # --- Targets ------------------------------------------------------
 
 .INCLUDE :	target.mk
+
+ALLTAR : $(MISC)/fps_java.component
+
+$(MISC)/fps_java.component .ERRREMOVE : $(SOLARENV)/bin/createcomponent.xslt \
+        fps_java.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt fps_java.component

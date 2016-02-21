@@ -133,36 +133,36 @@ using namespace vos;
 
 @end
 
-@interface ShowFileDialog : NSObject
+@interface ShowFileDialog : NSObject <NSOpenSavePanelDelegate>
 {
 	NSWindow*				mpAttachedSheet;
-	MacOSBOOL				mbCancelled;
-	MacOSBOOL				mbChooseFiles;
+	BOOL					mbCancelled;
+	BOOL					mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSString*				mpDefaultName;
 	NSURL*					mpDirectoryURL;
-	MacOSBOOL				mbExtensionHidden;
+	BOOL					mbExtensionHidden;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
-	MacOSBOOL				mbFinished;
-	MacOSBOOL				mbInControlChange;
-	MacOSBOOL				mbMultiSelectionMode;
+	BOOL					mbFinished;
+	BOOL					mbInControlChange;
+	BOOL					mbMultiSelectionMode;
 	void*					mpPicker;
 	short					mnResult;
 	NSString*				mpSelectedFilter;
-	MacOSBOOL				mbShowAutoExtension;
-	MacOSBOOL				mbShowFilterOptions;
-	MacOSBOOL				mbShowImageTemplate;
-	MacOSBOOL				mbShowLink;
-	MacOSBOOL				mbShowPassword;
-	MacOSBOOL				mbShowReadOnly;
-	MacOSBOOL				mbShowSelection;
-	MacOSBOOL				mbShowTemplate;
-	MacOSBOOL				mbShowVersion;
+	BOOL					mbShowAutoExtension;
+	BOOL					mbShowFilterOptions;
+	BOOL					mbShowImageTemplate;
+	BOOL					mbShowLink;
+	BOOL					mbShowPassword;
+	BOOL					mbShowReadOnly;
+	BOOL					mbShowSelection;
+	BOOL					mbShowTemplate;
+	BOOL					mbShowVersion;
 	NSMutableDictionary*	mpTextFields;
 	NSArray*				mpURLs;
-	MacOSBOOL				mbUseFileOpenDialog;
-	MacOSBOOL				mbValidated;
+	BOOL					mbUseFileOpenDialog;
+	BOOL					mbValidated;
 	NSWindow*				mpWindow;
 }
 - (void)addFilter:(ShowFileDialogArgs *)pArgs;
@@ -174,19 +174,19 @@ using namespace vos;
 - (void)destroy:(id)pObject;
 - (void)dismissFileTypePopUp:(id)pObject;
 - (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
-- (MacOSBOOL)finished;
+- (BOOL)finished;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
-- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(MacOSBOOL)bUseFileOpenDialog chooseFiles:(MacOSBOOL)bChooseFiles showAutoExtension:(MacOSBOOL)bShowAutoExtension showFilterOptions:(MacOSBOOL)bShowFilterOptions showImageTemplate:(MacOSBOOL)bShowImageTemplate showLink:(MacOSBOOL)bShowLink showPassword:(MacOSBOOL)bShowPassword showReadOnly:(MacOSBOOL)bShowReadOnly showSelection:(MacOSBOOL)bShowSelection showTemplate:(MacOSBOOL)bShowTemplate showVersion:(MacOSBOOL)bShowVersion;
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (void)initialize:(id)pObject;
-- (MacOSBOOL)isChecked:(ShowFileDialogArgs *)pArgs;
+- (BOOL)isChecked:(ShowFileDialogArgs *)pArgs;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
+- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
-- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding;
+- (BOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError;
+- (void)panel:(id)pObject willExpand:(BOOL)bExpanding;
 - (short)result;
 - (NSString *)selectedItem:(ShowFileDialogArgs *)pArgs;
 - (NSInteger)selectedItemIndex:(ShowFileDialogArgs *)pArgs;
@@ -231,7 +231,7 @@ using namespace vos;
 		if ( pArray )
 		{
 			NSUInteger nCount = [pArray count];
-			MacOSBOOL bAllowAll = NO;
+			BOOL bAllowAll = NO;
 			NSUInteger i = 0;
 			for ( ; i < nCount; i++ )
 			{
@@ -463,7 +463,7 @@ using namespace vos;
 {
 	if ( mpFilePanel && mpPicker && !mbCancelled && !mbFinished )
 	{
-		MacOSBOOL bOldInControlChange = mbInControlChange;
+		BOOL bOldInControlChange = mbInControlChange;
 		mbInControlChange = YES;
 
 		@try
@@ -500,7 +500,7 @@ using namespace vos;
 	return mpDirectoryURL;
 }
 
-- (MacOSBOOL)finished
+- (BOOL)finished
 {
 	return ( mbCancelled || mbFinished );
 }
@@ -553,7 +553,7 @@ using namespace vos;
 	return pRet;
 }
 
-- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(MacOSBOOL)bUseFileOpenDialog chooseFiles:(MacOSBOOL)bChooseFiles showAutoExtension:(MacOSBOOL)bShowAutoExtension showFilterOptions:(MacOSBOOL)bShowFilterOptions showImageTemplate:(MacOSBOOL)bShowImageTemplate showLink:(MacOSBOOL)bShowLink showPassword:(MacOSBOOL)bShowPassword showReadOnly:(MacOSBOOL)bShowReadOnly showSelection:(MacOSBOOL)bShowSelection showTemplate:(MacOSBOOL)bShowTemplate showVersion:(MacOSBOOL)bShowVersion
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
@@ -800,9 +800,9 @@ using namespace vos;
 	}
 }
 
-- (MacOSBOOL)isChecked:(ShowFileDialogArgs *)pArgs
+- (BOOL)isChecked:(ShowFileDialogArgs *)pArgs
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 1 )
@@ -918,9 +918,9 @@ using namespace vos;
 
 #ifdef USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
-- (MacOSBOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
+- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	// Fix bug 1622 by checking for nil argument
 	if ( !pURL )
@@ -936,7 +936,7 @@ using namespace vos;
 			pURL = nil;
 			if ( pData )
 			{
-				MacOSBOOL bStale = NO;
+				BOOL bStale = NO;
 				NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 				if ( !bStale && pResolvedURL )
 					pURL = pResolvedURL;
@@ -1000,7 +1000,7 @@ using namespace vos;
 
 #endif	// USE_SHOULDENABLEURL_DELEGATE_SELECTOR
 
-- (MacOSBOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
+- (BOOL)panel:(id)pSender validateURL:(NSURL *)pURL error:(NSError **)ppError
 {
 	if ( ppError )
 		*ppError = nil;
@@ -1009,7 +1009,7 @@ using namespace vos;
 	return mbValidated;
 }
 
-- (void)panel:(id)pObject willExpand:(MacOSBOOL)bExpanding
+- (void)panel:(id)pObject willExpand:(BOOL)bExpanding
 {
 	// Stop exceptions from being logged on Mac OS X 10.9
 }
@@ -1570,7 +1570,7 @@ using namespace vos;
 		{
 			// When running in the sandbox, native file dialog calls may
 			// throw exceptions if the PowerBox daemon process is killed
-			MacOSBOOL bOpenPanelFromDocController = NO;
+			BOOL bOpenPanelFromDocController = NO;
 			if ( mbUseFileOpenDialog )
 			{
 				if ( mbChooseFiles )
@@ -2230,7 +2230,7 @@ short NSFileDialog_showFileDialog( id pDialog )
 		{
 			// Don't lock mutex as we expect callbacks to this object from
 			// a different thread while the dialog is showing
-			ULONG nCount = Application::ReleaseSolarMutex();
+			sal_uLong nCount = Application::ReleaseSolarMutex();
 
 			// Ignore any AWT events while the open dialog is
 			// showing to emulate a modal dialog
