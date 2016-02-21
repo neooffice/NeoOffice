@@ -115,6 +115,17 @@ SHL1VERSIONMAP=$(SOLARENV)/src/component.map
 
 .ENDIF
 
+.IF "$(GUIBASE)" == "java"
+
+ALLTAR : $(MISC)/$(TARGET).component
+
+$(MISC)/$(TARGET).component .ERRREMOVE : \
+        $(SOLARENV)/bin/createcomponent.xslt $(TARGET).component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt $(TARGET).component
+.ELSE		# "$(GUIBASE)" == "java"
+
 ALLTAR : $(MISC)/avmediaQuickTime.component
 
 $(MISC)/avmediaQuickTime.component .ERRREMOVE : \
@@ -123,3 +134,4 @@ $(MISC)/avmediaQuickTime.component .ERRREMOVE : \
         '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
         $(SOLARENV)/bin/createcomponent.xslt avmediaQuickTime.component
 
+.ENDIF		# "$(GUIBASE)" == "java"
