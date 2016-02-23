@@ -110,10 +110,6 @@
 #define SERVICENAME "org.neooffice.RemoteControl"
 #define IMPLNAME	"org.neooffice.XRemoteControl"
 
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
- 
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
  
@@ -246,9 +242,7 @@ Reference< XInterface > SAL_CALL MacOSXRemoteControlImpl_create(
 	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
 	if ( !pShowOnlyMenusForWindow )
 	{
-		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		::rtl::OUString aLibName( RTL_CONSTASCII_USTRINGPARAM( "libvcl.dylib" ) );
 		if ( aModule.load( aLibName ) )
 			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
 	}
