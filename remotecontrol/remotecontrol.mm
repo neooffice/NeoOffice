@@ -110,9 +110,6 @@
 #define SERVICENAME "org.neooffice.RemoteControl"
 #define IMPLNAME	"org.neooffice.XRemoteControl"
 
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
- 
 typedef void GetSystemUIMode_Type( SystemUIMode *nMode, SystemUIOptions *nOptions );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
