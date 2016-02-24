@@ -46,3 +46,17 @@
  gb_GLOBALDEFS := $(sort $(gb_GLOBALDEFS))
  
  include $(GBUILDDIR)/Deliver.mk
+--- gbuild/AllLangResTarget.mk.bak	2014-02-25 00:33:29.000000000 -0800
++++ gbuild/AllLangResTarget.mk	2016-02-24 12:55:50.000000000 -0800
+@@ -196,7 +196,11 @@
+ 
+ gb_ResTarget_RSCTARGET := $(gb_SrsPartTarget_RSCTARGET)
+ gb_ResTarget_RSCCOMMAND := $(gb_SrsPartTarget_RSCCOMMAND)
++ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
++gb_ResTarget_DEFIMAGESLOCATION := $(SRC_ROOT)/default_images/
++else
+ gb_ResTarget_DEFIMAGESLOCATION := $(SRCDIR)/default_images/
++endif
+ 
+ $(call gb_ResTarget_get_clean_target,%) :
+ 	$(call gb_Output_announce,$*,$(false),RES,2)
