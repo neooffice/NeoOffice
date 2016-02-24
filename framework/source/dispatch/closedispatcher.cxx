@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_framework.hxx"
@@ -36,7 +39,7 @@
 #include <pattern/frame.hxx>
 #include <threadhelp/readguard.hxx>
 #include <threadhelp/writeguard.hxx>
-#include <classes/framelistanalyzer.hxx>
+#include <framework/framelistanalyzer.hxx>
 #include <services.h>
 #include <general.h>
 
@@ -45,11 +48,9 @@
 #include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/frame/CommandGroup.hpp>
-
-#ifndef __COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
+#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/awt/XTopWindow.hpp>
-#endif
-
+#include <com/sun/star/document/XActionLockable.hpp>
 #include "com/sun/star/beans/XFastPropertySet.hpp"
 #include <toolkit/helper/vclunohelper.hxx>
 
@@ -59,7 +60,7 @@
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
-#include <svtools/moduleoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 
 //_______________________________________________
 // namespace
@@ -173,7 +174,7 @@ void SAL_CALL CloseDispatcher::removeStatusListener(const css::uno::Reference< c
 
 //-----------------------------------------------
 void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&                                             aURL      ,
-                                                        const css::uno::Sequence< css::beans::PropertyValue >&            /*lArguments*/,
+                                                        const css::uno::Sequence< css::beans::PropertyValue >&            lArguments,
                                                         const css::uno::Reference< css::frame::XDispatchResultListener >& xListener )
     throw(css::uno::RuntimeException)
 {
@@ -238,7 +239,20 @@ void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&   
     aWriteLock.unlock();
     // <- SAFE ----------------------------------
 
-    m_aAsyncCallback.Post(0);
+	sal_Bool bIsSynchron = sal_False;
+	for (sal_Int32 nArgs=0; nArgs<lArguments.getLength(); nArgs++ )
+	{
+		if ( lArguments[nArgs].Name.equalsAscii("SynchronMode") )
+		{
+			lArguments[nArgs].Value >>= bIsSynchron;
+			break;
+		}
+	}
+
+	if ( bIsSynchron )
+		impl_asyncCallback(0);
+	else
+		m_aAsyncCallback.Post(0);
 }
 
 //-----------------------------------------------
@@ -400,7 +414,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
         // on mac close down, quickstarter keeps the process alive
         // however if someone has shut down the quickstarter
         // behave as any other platform
-        
+
         bool bQuickstarterRunning = false;
         // get quickstart service
         try
@@ -435,7 +449,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
         if (xController.is())
             xController->suspend(sal_False);
     }
-    
+
     // inform listener
     sal_Int16 nState = css::frame::DispatchResultState::FAILURE;
     if (bSuccess)
@@ -475,7 +489,7 @@ sal_Bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Referenc
     // Frame already dead ... so this view is closed ... is closed ... is ... .-)
     if (! xFrame.is())
         return sal_True;
-    
+
     // Close all views to the same document ... if forced to do so.
     // But dont touch our own frame here!
     // We must do so ... because the may be following controller->suspend()
@@ -487,7 +501,7 @@ sal_Bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Referenc
         css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR  = m_xSMGR;
         aReadLock.unlock();
         // <- SAFE ----------------------------------
-    
+
         css::uno::Reference< css::frame::XFramesSupplier > xDesktop(xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY_THROW);
         FrameListAnalyzer aCheck(xDesktop, xFrame, FrameListAnalyzer::E_ALL);
 
@@ -560,6 +574,10 @@ sal_Bool CloseDispatcher::implts_establishBackingMode()
     if (!xFrame.is())
         return sal_False;
 
+	css::uno::Reference < css::document::XActionLockable > xLock( xFrame, css::uno::UNO_QUERY );
+	if ( xLock.is() && xLock->isActionLocked() )
+		return sal_False;
+
     css::uno::Reference< css::awt::XWindow > xContainerWindow = xFrame->getContainerWindow();
     css::uno::Sequence< css::uno::Any > lArgs(1);
     lArgs[0] <<= xContainerWindow;
@@ -616,14 +634,14 @@ css::uno::Reference< css::frame::XFrame > CloseDispatcher::static_impl_searchRig
         return xFrame;
 
     OSL_ENSURE((sTarget.getLength() < 1), "CloseDispatch used for unexpected target. Magic things will happen now .-)");
-        
+
     css::uno::Reference< css::frame::XFrame > xTarget = xFrame;
     while(sal_True)
     {
         // a) top frames wil be closed
         if (xTarget->isTop())
             return xTarget;
-                
+
         // b) even child frame containing top level windows (e.g. query designer of database) will be closed
         css::uno::Reference< css::awt::XWindow >    xWindow        = xTarget->getContainerWindow();
         css::uno::Reference< css::awt::XTopWindow > xTopWindowCheck(xWindow, css::uno::UNO_QUERY);
@@ -642,14 +660,14 @@ css::uno::Reference< css::frame::XFrame > CloseDispatcher::static_impl_searchRig
                )
                 return xTarget;
         }
-            
+
         // c) try to find better results on parent frame
         //    If no parent frame exists (because this frame is used outside the desktop tree)
         //    the given frame must be used directly.
         css::uno::Reference< css::frame::XFrame > xParent(xTarget->getCreator(), css::uno::UNO_QUERY);
         if ( ! xParent.is())
             return xTarget;
-        
+
         // c1) check parent frame inside next loop ...
         xTarget = xParent;
     }

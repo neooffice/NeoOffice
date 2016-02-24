@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_framework.hxx"
@@ -36,11 +39,11 @@
 
 #include <limits.h>
 
-#include "classes/bmkmenu.hxx"
+#include "framework/bmkmenu.hxx"
 #include <general.h>
 #include <macros/debug/assertion.hxx>
-#include <helper/imageproducer.hxx>
-#include <classes/menuconfiguration.hxx>
+#include <framework/imageproducer.hxx>
+#include <framework/menuconfiguration.hxx>
 
 //_________________________________________________________________________________________________________________
 //	interface includes
@@ -60,7 +63,7 @@
 //_________________________________________________________________________________________________________________
 #include <tools/config.hxx>
 #include <vcl/svapp.hxx>
-#include <svtools/dynamicmenuoptions.hxx>
+#include <unotools/dynamicmenuoptions.hxx>
 #include <svtools/menuoptions.hxx>
 #include <rtl/logfile.hxx>
 
@@ -88,30 +91,30 @@ void GetMenuEntry(
 class BmkMenu_Impl
 {
 	private:
-		static USHORT		 m_nMID;
+		static sal_uInt16		 m_nMID;
 
 	public:
 		BmkMenu*			 m_pRoot;
-		BOOL                 m_bInitialized;
+		sal_Bool                 m_bInitialized;
 
 		BmkMenu_Impl( BmkMenu* pRoot );
 		BmkMenu_Impl();
 		~BmkMenu_Impl();
 
-		static USHORT		GetMID();
+		static sal_uInt16		GetMID();
 };
 
-USHORT BmkMenu_Impl::m_nMID = BMKMENU_ITEMID_START;
+sal_uInt16 BmkMenu_Impl::m_nMID = BMKMENU_ITEMID_START;
 
 BmkMenu_Impl::BmkMenu_Impl( BmkMenu* pRoot ) :
 	m_pRoot(pRoot),
-	m_bInitialized(FALSE)
+	m_bInitialized(sal_False)
 {
 }
 
 BmkMenu_Impl::BmkMenu_Impl() :
 	m_pRoot(0),
-	m_bInitialized(FALSE)
+	m_bInitialized(sal_False)
 {
 }
 
@@ -119,7 +122,7 @@ BmkMenu_Impl::~BmkMenu_Impl()
 {
 }
 
-USHORT BmkMenu_Impl::GetMID()
+sal_uInt16 BmkMenu_Impl::GetMID()
 {
 	m_nMID++;
 	if( !m_nMID )
@@ -129,15 +132,17 @@ USHORT BmkMenu_Impl::GetMID()
 
 // ------------------------------------------------------------------------
 
-BmkMenu::BmkMenu( com::sun::star::uno::Reference< XFrame >& xFrame, BmkMenu::BmkMenuType nType, BmkMenu* pRoot ) :
-    m_nType( nType ), m_xFrame( xFrame )
+BmkMenu::BmkMenu( com::sun::star::uno::Reference< XFrame >& xFrame, BmkMenu::BmkMenuType nType, BmkMenu* pRoot )
+    :AddonMenu(xFrame)
+    ,m_nType( nType )
 {
     _pImp = new BmkMenu_Impl( pRoot );
     Initialize();
 }
 
-BmkMenu::BmkMenu( Reference< XFrame >& xFrame, BmkMenu::BmkMenuType nType ) :
-    m_nType( nType ), m_xFrame( xFrame )
+BmkMenu::BmkMenu( Reference< XFrame >& xFrame, BmkMenu::BmkMenuType nType )
+    :AddonMenu(xFrame)
+    ,m_nType( nType )
 {
     _pImp = new BmkMenu_Impl();
     Initialize();
@@ -146,17 +151,6 @@ BmkMenu::BmkMenu( Reference< XFrame >& xFrame, BmkMenu::BmkMenuType nType ) :
 BmkMenu::~BmkMenu()
 {
 	delete _pImp;
-
-	for ( USHORT i = 0; i < GetItemCount(); i++ )
-	{
-		if ( GetItemType( i ) != MENUITEM_SEPARATOR )
-		{
-			// delete user attributes created with new!
-			USHORT nId = GetItemId( i );
-			MenuConfiguration::Attributes* pUserAttributes = (MenuConfiguration::Attributes*)GetUserValue( nId );
-			delete pUserAttributes;
-		}
-	}
 }
 
 void BmkMenu::Initialize()
@@ -166,7 +160,7 @@ void BmkMenu::Initialize()
     if( _pImp->m_bInitialized )
 		return;
 
-    _pImp->m_bInitialized = TRUE;
+    _pImp->m_bInitialized = sal_True;
 
 	Sequence< Sequence< PropertyValue > > aDynamicMenuEntries;
 
@@ -174,17 +168,18 @@ void BmkMenu::Initialize()
 		aDynamicMenuEntries = SvtDynamicMenuOptions().GetMenu( E_NEWMENU );
 	else if ( m_nType == BmkMenu::BMK_WIZARDMENU )
 		aDynamicMenuEntries = SvtDynamicMenuOptions().GetMenu( E_WIZARDMENU );
-	BOOL bShowMenuImages = SvtMenuOptions().IsMenuIconsEnabled();
+
+	const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
+	sal_Bool bShowMenuImages = rSettings.GetUseImagesInMenus();
 
 	::rtl::OUString aTitle;
 	::rtl::OUString aURL;
 	::rtl::OUString aTargetFrame;
 	::rtl::OUString aImageId;
 
-	const StyleSettings& rSettings = Application::GetSettings().GetStyleSettings();
-	BOOL bIsHiContrastMode = rSettings.GetMenuColor().IsDark();
+	sal_Bool bIsHiContrastMode = rSettings.GetHighContrastMode();
 
-	UINT32 i, nCount = aDynamicMenuEntries.getLength();
+	sal_uInt32 i, nCount = aDynamicMenuEntries.getLength();
 	for ( i = 0; i < nCount; ++i )
 	{
 		GetMenuEntry( aDynamicMenuEntries[i], aTitle, aURL, aTargetFrame, aImageId );
@@ -197,13 +192,13 @@ void BmkMenu::Initialize()
 		else
 		{
 			sal_Bool	bImageSet = sal_False;
-			USHORT		nId = CreateMenuId();
+			sal_uInt16		nId = CreateMenuId();
 
 			if ( bShowMenuImages )
 			{
 				if ( aImageId.getLength() > 0 )
 				{
-					Image aImage = GetImageFromURL( m_xFrame, aImageId, FALSE, bIsHiContrastMode );
+					Image aImage = GetImageFromURL( m_xFrame, aImageId, sal_False, bIsHiContrastMode );
 					if ( !!aImage )
 					{
 						bImageSet = sal_True;
@@ -213,7 +208,7 @@ void BmkMenu::Initialize()
 
 				if ( !bImageSet )
 				{
-					Image aImage = GetImageFromURL( m_xFrame, aURL, FALSE, bIsHiContrastMode );
+					Image aImage = GetImageFromURL( m_xFrame, aURL, sal_False, bIsHiContrastMode );
 					if ( !aImage )
 						InsertItem( nId, aTitle );
 					else
@@ -226,7 +221,7 @@ void BmkMenu::Initialize()
 			// Store values from configuration to the New and Wizard menu entries to enable
 			// sfx2 based code to support high contrast mode correctly!
 			MenuConfiguration::Attributes* pUserAttributes = new MenuConfiguration::Attributes( aTargetFrame, aImageId );
-			SetUserValue( nId, (ULONG)pUserAttributes );
+			SetUserValue( nId, (sal_uIntPtr)pUserAttributes );
 
 			SetItemCommand( nId, aURL );
 		}
@@ -239,7 +234,7 @@ void BmkMenu::Initialize()
 #endif	USE_JAVA
 }
 
-USHORT BmkMenu::CreateMenuId()
+sal_uInt16 BmkMenu::CreateMenuId()
 {
     return BmkMenu_Impl::GetMID();
 }

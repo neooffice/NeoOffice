@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_framework.hxx"
@@ -44,11 +47,11 @@
 #include <loadenv/loadenv.hxx>
 #include <helper/oframes.hxx>
 #include <helper/statusindicatorfactory.hxx>
-#include <helper/titlehelper.hxx>
+#include <framework/titlehelper.hxx>
 #include <classes/droptargetlistener.hxx>
 #include <classes/taskcreator.hxx>
 #include <loadenv/targethelper.hxx>
-#include <classes/framelistanalyzer.hxx>
+#include <framework/framelistanalyzer.hxx>
 #include <helper/dockingareadefaultacceptor.hxx>
 #include <dispatch/dispatchinformationprovider.hxx>
 #include <threadhelp/transactionguard.hxx>
@@ -60,6 +63,7 @@
 //	interface includes
 //_________________________________________________________________________________________________________________
 #include <com/sun/star/lang/XInitialization.hpp>
+#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/task/XJobExecutor.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
@@ -103,7 +107,8 @@
 #endif
 #include <toolkit/awt/vclxwindow.hxx>
 #include <comphelper/processfactory.hxx>
-#include <svtools/moduleoptions.hxx>
+#include <unotools/moduleoptions.hxx>
+#include <tools/diagnose_ex.h>
 
 #ifdef ENABLE_ASSERTIONS
 	#ifndef _RTL_STRBUF_HXX_
@@ -115,20 +120,9 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef __FRAMEWORK_SERVICES_BACKINGCOMP_HXX_
-#include <services/backingcomp.hxx>
-#endif
-
-#ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
-#endif
 
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
+#include "services/backingcomp.hxx"
 
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
 
@@ -306,7 +300,7 @@ Frame::Frame( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFac
         ,   PropertySetHelper           ( xFactory,
                                           &m_aLock,
                                           &m_aTransactionManager,
-                                          sal_False) // FALSE => dont release shared mutex on calling us!
+                                          sal_False) // sal_False => dont release shared mutex on calling us!
         ,   ::cppu::OWeakObject         (                                                   )
 		//	init member
         ,   m_xFactory                  ( xFactory                                          )
@@ -323,6 +317,7 @@ Frame::Frame( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFac
         ,   m_bSelfClose                ( sal_False                                         ) // Important!
         ,   m_bIsHidden                 ( sal_True                                          )
         ,   m_xTitleHelper              (                                                   )
+	     ,   mp_WindowCommandDispatch    ( NULL                                              )
         ,   m_aChildFrameContainer      (                                                   )
 {
     // Check incoming parameter to avoid against wrong initialization.
@@ -345,6 +340,10 @@ Frame::Frame( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFac
 Frame::~Frame()
 {
     LOG_ASSERT2( m_aTransactionManager.getWorkingMode()!=E_CLOSE, "Frame::~Frame()", "Who forgot to dispose this service?" )
+	 if (mp_WindowCommandDispatch != NULL)
+	 {
+		  delete ((WindowCommandDispatch *)mp_WindowCommandDispatch);  // memory leak #i120079#
+	 }
 }
 
 /*-************************************************************************************************************//**
@@ -373,6 +372,15 @@ css::uno::Reference< css::lang::XComponent > SAL_CALL Frame::loadComponentFromUR
                                                                                                                                                                    css::lang::IllegalArgumentException ,
                                                                                                                                                                    css::uno::RuntimeException          )
 {
+    {
+        // If the frame is closed the call might lead to crash even with target "_blank",
+        // so the DisposedException should be thrown in this case
+        // It still looks to be too dangerous to set the transaction for the whole loading process
+        // so the guard is used in scopes to let the standard check be used
+
+        TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+    }
+
     ReadGuard aReadLock(m_aLock);
     css::uno::Reference< css::frame::XComponentLoader > xThis(static_cast< css::frame::XComponentLoader* >(this), css::uno::UNO_QUERY);
     css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR = m_xFactory;
@@ -643,9 +651,9 @@ void SAL_CALL Frame::initialize( const css::uno::Reference< css::awt::XWindow >&
     implts_startWindowListening();
 
     impl_enablePropertySet();
-    
+
     // create WindowCommandDispatch; it is supposed to release itself at frame destruction
-    (void)new WindowCommandDispatch(xSMGR, this);
+    mp_WindowCommandDispatch = new WindowCommandDispatch(xSMGR, this);  // memory leak #i120079#
 
     // Initialize title functionality
     TitleHelper* pTitleHelper = new TitleHelper(xSMGR);
@@ -1005,10 +1013,9 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Frame::findFrame( const ::rtl
                         sal_Int32 nCount = xContainer->getCount();
                         for( sal_Int32 i=0; i<nCount; ++i )
                         {
-                            css::uno::Any aItem = xContainer->getByIndex(i);
                             css::uno::Reference< css::frame::XFrame > xSibling;
                             if (
-                                ( !(aItem>>=xSibling)                                 ) ||  // control unpacking
+                                ( !(xContainer->getByIndex(i)>>=xSibling)                                 ) ||  // control unpacking
                                 ( ! xSibling.is()                                     ) ||  // check for valid items
                                 ( xSibling==static_cast< ::cppu::OWeakObject* >(this) )     // ignore ourself! (We are a part of this container too - but search on our children was already done.)
                             )
@@ -1488,15 +1495,13 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     // Local libvcl and invoke the ShowOnlyMenusForWindow function
     if ( !pShowOnlyMenusForWindow )
     {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+        ::rtl::OUString aLibName( RTL_CONSTASCII_USTRINGPARAM( "libvcl.dylib" ) );
         if ( aModule.load( aLibName ) )
             pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
     }
 
-	// Prevent flashing of backing window on clase without causing bug 2903 to
-	// reappear by only changing window state if this task is connected
+    // Prevent flashing of backing window on clase without causing bug 2903 to
+    // reappear by only changing window state if this task is connected
     if ( bIsConnected && pOwnWindow && pShowOnlyMenusForWindow )
     {
         // Notify vcl internals whether or not this window is a backing window.
@@ -1604,8 +1609,9 @@ css::uno::Reference< css::awt::XWindow > SAL_CALL Frame::getComponentWindow() th
 css::uno::Reference< css::frame::XController > SAL_CALL Frame::getController() throw( css::uno::RuntimeException )
 {
 	/* UNSAFE AREA --------------------------------------------------------------------------------------------- */
+    // It seems to be unavoidable that disposed frames allow to ask for a Controller (#111452)
     // Register transaction and reject wrong calls.
-    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+    // TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
 
 	/* SAFE AREA ----------------------------------------------------------------------------------------------- */
     ReadGuard aReadLock( m_aLock );
@@ -2346,7 +2352,7 @@ aEvent
     // Look for rejected calls.
     // Sometimes called during dispose() => soft exceptions
     TransactionGuard aTransaction( m_aTransactionManager, E_SOFTEXCEPTIONS );
-	
+
 	/* SAFE AREA ----------------------------------------------------------------------------------------------- */
     ReadGuard aReadLock( m_aLock );
 
@@ -2701,7 +2707,7 @@ void SAL_CALL Frame::impl_setPropertyValue(const ::rtl::OUString& /*sProperty*/,
                     css::uno::Reference< css::frame::XLayoutManager > xOldLayoutManager = m_xLayoutManager;
                     css::uno::Reference< css::frame::XLayoutManager > xNewLayoutManager;
                     aValue >>= xNewLayoutManager;
-                
+
                     if (xOldLayoutManager != xNewLayoutManager)
                     {
                         m_xLayoutManager = xNewLayoutManager;
@@ -2754,21 +2760,7 @@ css::uno::Any SAL_CALL Frame::impl_getPropertyValue(const ::rtl::OUString& /*sPr
                 break;
 
         case FRAME_PROPHANDLE_ISHIDDEN :
-//                aValue <<= m_bIsHidden;
-                {
-                    sal_Bool bLoadedHidden = m_bIsHidden;
-                    css::uno::Reference< css::frame::XModel > xModel;
-                    if (m_xController.is())
-                        xModel = m_xController->getModel();
-                    if (xModel.is())
-                    {
-                        ::comphelper::MediaDescriptor lDesc(xModel->getArgs());
-                        bLoadedHidden = lDesc.getUnpackedValueOrDefault(
-                                                    ::comphelper::MediaDescriptor::PROP_HIDDEN(),
-                                                    (sal_Bool)sal_False);
-                    }
-                    aValue <<= bLoadedHidden;
-                }
+                aValue <<= m_bIsHidden;
                 break;
 
         case FRAME_PROPHANDLE_LAYOUTMANAGER :
@@ -2948,14 +2940,13 @@ void Frame::implts_setIconOnWindow()
         {
             try
             {
-                css::uno::Any aID = xSet->getPropertyValue( DECLARE_ASCII("IconId") );
-                if( aID.hasValue() == sal_True )
-                {
-                    aID >>= nIcon;
-                }
+                css::uno::Reference< css::beans::XPropertySetInfo > const xPSI( xSet->getPropertySetInfo(), css::uno::UNO_SET_THROW );
+                if ( xPSI->hasPropertyByName( CONTROLLER_PROPNAME_ICONID ) )
+                    xSet->getPropertyValue( CONTROLLER_PROPNAME_ICONID ) >>= nIcon;
             }
-            catch( css::beans::UnknownPropertyException& )
+            catch( css::uno::Exception& )
             {
+                DBG_UNHANDLED_EXCEPTION();
             }
         }
 
@@ -3292,50 +3283,6 @@ sal_Bool Frame::implcp_setActiveFrame( const css::uno::Reference< css::frame::XF
 	return	(
                 ( &xFrame                                                                                   ==  NULL        )   ||
                 ( css::uno::Reference< css::frame::XDesktop >( xFrame, css::uno::UNO_QUERY ).is()           ==  sal_True    )
-			);
-}
-
-//*****************************************************************************************************************
-// We don't accept null pointer ... but NULL-References are allowed!
-sal_Bool Frame::implcp_initialize( const css::uno::Reference< css::awt::XWindow >& xWindow )
-{
-    return( &xWindow == NULL );
-}
-
-//*****************************************************************************************************************
-// We don't accept null pointer or references!
-sal_Bool Frame::implcp_setCreator( const css::uno::Reference< css::frame::XFramesSupplier >& xCreator )
-{
-	return	(
-				( &xCreator		==	NULL		)	||
-				( xCreator.is()	==	sal_False	)
-			);
-}
-
-//*****************************************************************************************************************
-// We don't accept null pointer or references!
-sal_Bool Frame::implcp_setName( const ::rtl::OUString& sName )
-{
-	return( &sName == NULL );
-}
-
-//*****************************************************************************************************************
-// We don't accept null pointer or references!
-// An empty target name is allowed => is the same like "_self"
-sal_Bool Frame::implcp_findFrame(  const   ::rtl::OUString& sTargetFrameName,
-                                            sal_Int32        /*nSearchFlags*/    )
-{
-	return( &sTargetFrameName == NULL );
-}
-
-//*****************************************************************************************************************
-// We don't accept null pointer!
-sal_Bool Frame::implcp_setComponent(   const   css::uno::Reference< css::awt::XWindow >&       xComponentWindow    ,
-                                        const   css::uno::Reference< css::frame::XController >& xController         )
-{
-	return	(
-				( &xComponentWindow	==	NULL	)	||
-				( &xController		==	NULL	)
 			);
 }
 

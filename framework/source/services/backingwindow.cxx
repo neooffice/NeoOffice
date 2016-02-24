@@ -1,38 +1,43 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // autogen include statement, do not remove
 #include "precompiled_framework.hxx"
 
 #include "backingwindow.hxx"
+#include "classes/resource.hrc"
 #include "framework.hrc"
 #include "classes/fwkresid.hxx"
+#include <services.h>
 
 #include "vcl/metric.hxx"
 #include "vcl/mnemonic.hxx"
@@ -41,28 +46,38 @@
 
 #include "tools/urlobj.hxx"
 
-#include "svtools/dynamicmenuoptions.hxx"
+#include "unotools/dynamicmenuoptions.hxx"
+#include "unotools/historyoptions.hxx"
 #include "svtools/imagemgr.hxx"
 #include "svtools/svtools.hrc"
 
 #include "comphelper/processfactory.hxx"
 #include "comphelper/sequenceashashmap.hxx"
+#include "comphelper/configurationhelper.hxx"
+
+#include <toolkit/awt/vclxmenu.hxx>
+
+#include "cppuhelper/implbase1.hxx"
 
 #include "rtl/strbuf.hxx"
 #include "rtl/ustrbuf.hxx"
+#include "osl/file.h"
 
 #include "com/sun/star/lang/XMultiServiceFactory.hpp"
 #include "com/sun/star/container/XNameAccess.hpp"
-#include "com/sun/star/system/XSystemShellExecute.hpp"
+#include "com/sun/star/system/SystemShellExecute.hpp"
 #include "com/sun/star/system/SystemShellExecuteFlags.hpp"
 #include "com/sun/star/task/XJobExecutor.hpp"
-
+#include "com/sun/star/util/XStringWidth.hpp"
+#include <com/sun/star/frame/PopupMenuControllerFactory.hpp>
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star;
 using namespace framework;
+
+#define RECENT_FILE_LIST    ".uno:RecentFileList"
 
 #define WRITER_URL      "private:factory/swriter"
 #define CALC_URL        "private:factory/scalc"
@@ -77,7 +92,7 @@ DecoToolBox::DecoToolBox( Window* pParent, WinBits nStyle ) :
     ToolBox( pParent, nStyle )
 {
         SetBackground();
-        SetPaintTransparent( TRUE );
+        SetPaintTransparent( sal_True );
 }
 
 void DecoToolBox::DataChanged( const DataChangedEvent& rDCEvt )
@@ -88,21 +103,21 @@ void DecoToolBox::DataChanged( const DataChangedEvent& rDCEvt )
     {
         calcMinSize();
         SetBackground();
-        SetPaintTransparent( TRUE );
+        SetPaintTransparent( sal_True );
     }
 }
 
 void DecoToolBox::calcMinSize()
 {
     ToolBox aTbx( GetParent() );
-    USHORT nItems = GetItemCount();
-    for( USHORT i = 0; i < nItems; i++ )
+    sal_uInt16 nItems = GetItemCount();
+    for( sal_uInt16 i = 0; i < nItems; i++ )
     {
-        USHORT nId = GetItemId( i );
+        sal_uInt16 nId = GetItemId( i );
         aTbx.InsertItem( nId, GetItemImage( nId ) );
     }
     aTbx.SetOutStyle( TOOLBOX_STYLE_FLAT );
-    maMinSize = aTbx.CalcWindowSizePixel(); 
+    maMinSize = aTbx.CalcWindowSizePixel();
 }
 
 Size DecoToolBox::getMinSize()
@@ -110,86 +125,127 @@ Size DecoToolBox::getMinSize()
     return maMinSize;
 }
 
+class RecentFilesStringLength : public ::cppu::WeakImplHelper1< ::com::sun::star::util::XStringWidth >
+{
+	public:
+		RecentFilesStringLength() {}
+		virtual ~RecentFilesStringLength() {}
+
+		// XStringWidth
+		sal_Int32 SAL_CALL queryStringWidth( const ::rtl::OUString& aString )
+			throw (::com::sun::star::uno::RuntimeException)
+		{
+			return aString.getLength();
+		}
+};
+
+#define STC_BUTTON_STYLE  (WB_LEFT | WB_VCENTER | WB_FLATBUTTON | WB_BEVELBUTTON)
 
 BackingWindow::BackingWindow( Window* i_pParent ) :
     Window( i_pParent, FwkResId( DLG_BACKING ) ),
     maWelcome( this, WB_LEFT ),
     maProduct( this, WB_LEFT ),
-    maCreateText( this, WB_LEFT ),
-    maWriterText( this, WB_WORDBREAK | WB_VCENTER ),
-    maWriterButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maCalcText( this, WB_WORDBREAK | WB_VCENTER ),
-    maCalcButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maImpressText( this, WB_WORDBREAK | WB_VCENTER ),
-    maImpressButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maDrawText( this, WB_WORDBREAK | WB_VCENTER ),
-    maDrawButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maDBText( this, WB_WORDBREAK | WB_VCENTER ),
-    maDBButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maMathText( this, WB_WORDBREAK | WB_VCENTER ),
-    maMathButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maTemplateText( this, WB_WORDBREAK | WB_VCENTER ),
-    maTemplateButton( this, WB_CENTER | WB_BEVELBUTTON ),
-    maOpenText( this, WB_WORDBREAK | WB_VCENTER ),
-    maOpenButton( this, WB_CENTER | WB_BEVELBUTTON ),
+    maWriterButton( this, STC_BUTTON_STYLE ),
+    maCalcButton( this, STC_BUTTON_STYLE ),
+    maImpressButton( this, STC_BUTTON_STYLE ),
+    maOpenButton( this, STC_BUTTON_STYLE ),
+    maDrawButton( this, STC_BUTTON_STYLE ),
+    maDBButton( this, STC_BUTTON_STYLE ),
+    maMathButton( this, STC_BUTTON_STYLE ),
+    maTemplateButton( this, STC_BUTTON_STYLE ),
     maToolbox( this, WB_DIALOGCONTROL ),
     maWelcomeString( FwkResId( STR_BACKING_WELCOME ) ),
     maProductString( FwkResId( STR_BACKING_WELCOMEPRODUCT ) ),
-    maCreateString( FwkResId( STR_BACKING_CREATE ) ),
     maOpenString( FwkResId( STR_BACKING_FILE ) ),
     maTemplateString( FwkResId( STR_BACKING_TEMPLATE ) ),
     maButtonImageSize( 10, 10 ),
     mbInitControls( false ),
-    mpAccExec( NULL )
+    mnLayoutStyle( 0 ),
+    mpAccExec( NULL ),
+    mnBtnPos( 120 ),
+    mnBtnTop( 150 )
 {
     mnColumnWidth[0] = mnColumnWidth[1] = 0;
-    
+    mnTextColumnWidth[0] = mnTextColumnWidth[1] = 0;
+
 #ifndef USE_JAVA
-    // get icon images from vcl resource and set them on the appropriate buttons
-    loadImage( FwkResId( BMP_BACKING_WRITER ), maWriterButton );
-    loadImage( FwkResId( BMP_BACKING_CALC ), maCalcButton );
-    loadImage( FwkResId( BMP_BACKING_IMPRESS ), maImpressButton );
-    loadImage( FwkResId( BMP_BACKING_DRAW ), maDrawButton );
-    loadImage( FwkResId( BMP_BACKING_DATABASE ), maDBButton );
-    loadImage( FwkResId( BMP_BACKING_FORMULA ), maMathButton );
-    loadImage( FwkResId( BMP_BACKING_OPENFILE ), maOpenButton );
-    loadImage( FwkResId( BMP_BACKING_OPENTEMPLATE ), maTemplateButton );
-    
-    BitmapEx aExtImage( FwkResId( BMP_BACKING_EXT ) );
+    try
+    {
+        mxContext.set( ::comphelper::getProcessComponentContext(), uno::UNO_SET_THROW );
+
+        Reference<lang::XMultiServiceFactory> xConfig(
+            mxContext->getServiceManager()->createInstanceWithContext(
+                SERVICENAME_CFGPROVIDER, mxContext), UNO_QUERY);
+        if( xConfig.is() )
+        {
+            Sequence<Any> args(1);
+            PropertyValue val(
+                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("nodepath") ),
+                0,
+                Any(rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("/org.openoffice.Office.Common/Help/StartCenter"))),
+                PropertyState_DIRECT_VALUE);
+            args.getArray()[0] <<= val;
+            Reference<container::XNameAccess> xNameAccess(xConfig->createInstanceWithArguments(SERVICENAME_CFGREADACCESS,args), UNO_QUERY);
+            if( xNameAccess.is() )
+            {
+                //throws css::container::NoSuchElementException, css::lang::WrappedTargetException
+                Any value( xNameAccess->getByName(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("StartCenterLayoutStyle"))) );
+                mnLayoutStyle = value.get<sal_Int32>();
+            }
+        }
+
+        mxPopupMenuFactory.set(
+            frame::PopupMenuControllerFactory::create( mxContext ) );
+        // TODO If there is no PopupMenuController, the button should be a nomral one not a MenuButton
+        if ( mxPopupMenuFactory->hasController(
+            DECLARE_ASCII( RECENT_FILE_LIST ) , SERVICENAME_STARTMODULE ) )
+        {
+            mxPopupMenu.set( mxContext->getServiceManager()->createInstanceWithContext(
+                DECLARE_ASCII( "com.sun.star.awt.PopupMenu" ), mxContext ), uno::UNO_QUERY_THROW );
+        }
+    }
+    catch (const Exception& e)
+    {
+        OSL_TRACE( "BackingWindow - caught an exception! %s",
+                   rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr() );
+        (void) e;
+    }
+
     String aExtHelpText( FwkResId( STR_BACKING_EXTHELP ) );
-    BitmapEx aInfoImage( FwkResId( BMP_BACKING_INFO ) );
+    String aRegHelpText( FwkResId( STR_BACKING_REGHELP ) );
     String aInfoHelpText( FwkResId( STR_BACKING_INFOHELP ) );
-    BitmapEx aTplRepImage( FwkResId( BMP_BACKING_TPLREP ) );
     String aTplRepHelpText( FwkResId( STR_BACKING_TPLREP ) );
 #endif	// !USE_JAVA
-    
+
     // clean up resource stack
     FreeResource();
-    
-    SetStyle( GetStyle() | WB_DIALOGCONTROL );
-    
+
 #ifndef USE_JAVA
-    // add some breathing space for the images
-    maButtonImageSize.Width() += 12;
-    maButtonImageSize.Height() += 12;
-    
+    maWelcome.SetPaintTransparent( sal_True );
+    maProduct.SetPaintTransparent( sal_True );
+    EnableChildTransparentMode();
+#endif	// !USE_JAVA
+
+    SetStyle( GetStyle() | WB_DIALOGCONTROL );
+
+#ifndef USE_JAVA
     // force tab cycling in toolbox
     maToolbox.SetStyle( maToolbox.GetStyle() | WB_FORCETABCYCLE );
 
     // insert toolbox items
-    maToolbox.InsertItem( nItemId_TplRep, Image( aTplRepImage ) );
+    maToolbox.InsertItem( nItemId_TplRep, Image() );
     maToolbox.SetItemText( nItemId_TplRep, aTplRepHelpText );
     maToolbox.SetQuickHelpText( nItemId_TplRep, aTplRepHelpText );
     maToolbox.SetItemCommand( nItemId_TplRep, String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:TemplateRepository" ) ) );
     maToolbox.ShowItem( nItemId_TplRep );
 
-    maToolbox.InsertItem( nItemId_Extensions, Image( aExtImage ) );
+    maToolbox.InsertItem( nItemId_Extensions, Image() );
     maToolbox.SetQuickHelpText( nItemId_Extensions, aExtHelpText );
     maToolbox.SetItemText( nItemId_Extensions, aExtHelpText );
     maToolbox.SetItemCommand( nItemId_Extensions, String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:Extensions" ) ) );
     maToolbox.ShowItem( nItemId_Extensions );
-    
-    maToolbox.InsertItem( nItemId_Info, Image( aInfoImage ) );
+
+    maToolbox.InsertItem( nItemId_Info, Image() );
     maToolbox.SetItemText( nItemId_Info, aInfoHelpText );
     maToolbox.SetQuickHelpText( nItemId_Info, aInfoHelpText );
     maToolbox.SetItemCommand( nItemId_Info, String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:Info" ) ) );
@@ -197,32 +253,59 @@ BackingWindow::BackingWindow( Window* i_pParent ) :
 #endif	// !USE_JAVA
 
     // get dispatch provider
-    mxDesktop = Reference<XDesktop>( comphelper::getProcessServiceFactory()->createInstance(
-                                        rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
-                                        UNO_QUERY );
+    mxDesktop = Reference<XDesktop>( comphelper::getProcessServiceFactory()->createInstance(SERVICENAME_DESKTOP ),UNO_QUERY );
     if( mxDesktop.is() )
         mxDesktopDispatchProvider = Reference< XDispatchProvider >( mxDesktop, UNO_QUERY );
-    
+
 #ifndef USE_JAVA
-    maWriterButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:WriterButton" ) ) ) );
-    maCalcButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:CalcButton" ) ) ) );
-    maImpressButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:ImpressButton" ) ) ) );
-    maDrawButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:DrawButton" ) ) ) );
-    maDBButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:DBButton" ) ) ) );
-    maMathButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:MathButton" ) ) ) );
-    maTemplateButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:TemplateButton" ) ) ) );
-    maOpenButton.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:OpenButton" ) ) ) );
-    maToolbox.SetSmartHelpId( SmartId( String( RTL_CONSTASCII_USTRINGPARAM( ".HelpId:StartCenter:Toolbox" ) ) ) );
+    maWriterButton.SetHelpId( ".HelpId:StartCenter:WriterButton" );
+    maCalcButton.SetHelpId( ".HelpId:StartCenter:CalcButton" );
+    maImpressButton.SetHelpId( ".HelpId:StartCenter:ImpressButton" );
+    maDrawButton.SetHelpId( ".HelpId:StartCenter:DrawButton" );
+    maDBButton.SetHelpId( ".HelpId:StartCenter:DBButton" );
+    maMathButton.SetHelpId( ".HelpId:StartCenter:MathButton" );
+    maTemplateButton.SetHelpId( ".HelpId:StartCenter:TemplateButton" );
+    maOpenButton.SetHelpId( ".HelpId:StartCenter:OpenButton" );
+    maToolbox.SetHelpId( ".HelpId:StartCenter:Toolbox" );
 #endif	// !USE_JAVA
-    
+
     // init background
     initBackground();
+
+    // add some breathing space for the images
+    maButtonImageSize.Width() += 12;
+    maButtonImageSize.Height() += 12;
+    
 }
 
 
 BackingWindow::~BackingWindow()
 {
     delete mpAccExec;
+
+    if( mxPopupMenuController.is() )
+    {
+        Reference< lang::XComponent > xComponent( mxPopupMenuController, UNO_QUERY );
+        if( xComponent.is() )
+        {
+            try
+            {
+                xComponent->dispose();
+            }
+            catch (...)
+            {}
+        }
+        mxPopupMenuController.clear();
+    }
+    mxPopupMenuFactory.clear();
+    mxPopupMenu.clear();
+}
+
+void BackingWindow::GetFocus()
+{
+    if( IsVisible() )
+        maWriterButton.GrabFocus();
+    Window::GetFocus();
 }
 
 class ImageContainerRes : public Resource
@@ -239,18 +322,63 @@ void BackingWindow::DataChanged( const DataChangedEvent& rDCEvt )
     if ( rDCEvt.GetFlags() & SETTINGS_STYLE )
     {
         initBackground();
+        Invalidate();
+    }
+}
+
+void BackingWindow::prepareRecentFileMenu()
+{
+    if( ! mxPopupMenu.is() )
+        return;
+
+    if ( !mxPopupMenuController.is() )
+    {
+        uno::Sequence< uno::Any > aArgs( 2 );
+        beans::PropertyValue aProp;
+
+        aProp.Name = DECLARE_ASCII( "Frame" );
+        aProp.Value <<= mxFrame;
+        aArgs[0] <<= aProp;
+
+        aProp.Name = DECLARE_ASCII( "ModuleIdentifier" );
+        aProp.Value <<= SERVICENAME_STARTMODULE;
+        aArgs[1] <<= aProp;
+        try
+        {
+            mxPopupMenuController.set(
+                mxPopupMenuFactory->createInstanceWithArgumentsAndContext(
+                    DECLARE_ASCII( RECENT_FILE_LIST ), aArgs, mxContext),
+                        uno::UNO_QUERY_THROW );
+            mxPopupMenuController->setPopupMenu( mxPopupMenu );
+        }
+        catch ( const Exception &e )
+        {
+            OSL_TRACE( "BackingWindow - caught an exception! %s",
+                       rtl::OUStringToOString( e.Message, RTL_TEXTENCODING_UTF8 ).getStr() );
+            (void) e;
+        }
+
+        PopupMenu *pRecentMenu = NULL;
+        VCLXMenu* pTKMenu = VCLXMenu::GetImplementation( mxPopupMenu );
+        if ( pTKMenu )
+            pRecentMenu = dynamic_cast< PopupMenu * >( pTKMenu->GetMenu() );
+        maOpenButton.SetPopupMenu( pRecentMenu );
     }
 }
 
 void BackingWindow::initBackground()
 {
-#ifdef USE_JAVA
-    SetBackground( GetSettings().GetStyleSettings().GetWorkspaceColor() );
-#else	// USE_JAVA
-    SetBackground( GetSettings().GetStyleSettings().GetWorkspaceGradient() );
+    SetBackground();
+
+#ifndef USE_JAVA
+    bool bDark = GetSettings().GetStyleSettings().GetHighContrastMode();
+    if( bDark )
+        maWelcomeTextColor = maLabelTextColor = Color( COL_WHITE );
+    else if( mnLayoutStyle == 1 )
+        maWelcomeTextColor = maLabelTextColor = Color( COL_BLACK );
+    else 
+        maWelcomeTextColor = maLabelTextColor = Color( 0x26, 0x35, 0x42 );
     
-    bool bDark = GetSettings().GetStyleSettings().GetWindowColor().IsDark();
-    maWelcomeTextColor = maLabelTextColor =  bDark ? Color( COL_WHITE ) : Color( 0x26, 0x35, 0x42 );
     Color aTextBGColor( bDark ? COL_BLACK : COL_WHITE );
 
     // select image set
@@ -265,7 +393,7 @@ void BackingWindow::initBackground()
     // and scale it to previous size
     if( aMiddleSize.Width() && aMiddleSize.Height() )
         maBackgroundMiddle.Scale( aMiddleSize );
-    
+
     if( GetSettings().GetLayoutRTL() )
     {
         // replace images by RTL versions
@@ -277,39 +405,46 @@ void BackingWindow::initBackground()
         maBackgroundLeft = BitmapEx( FwkResId( BMP_BACKING_BACKGROUND_LEFT ) );
         maBackgroundRight = BitmapEx( FwkResId( BMP_BACKING_BACKGROUND_RIGHT ) );
     }
+    maToolbox.SetItemImage( nItemId_Extensions, BitmapEx( FwkResId( BMP_BACKING_EXT ) ) );
+//###    maToolbox.SetItemImage( nItemId_Reg, BitmapEx( FwkResId( BMP_BACKING_REG ) ) );
+    maToolbox.SetItemImage( nItemId_Info, BitmapEx( FwkResId( BMP_BACKING_INFO ) ) );
+    maToolbox.SetItemImage( nItemId_TplRep, BitmapEx( FwkResId( BMP_BACKING_TPLREP ) ) );
 
     maWelcome.SetControlForeground( maWelcomeTextColor );
-    maWelcome.SetControlBackground( aTextBGColor );
+    maWelcome.SetBackground();
     maProduct.SetControlForeground( maWelcomeTextColor );
-    maProduct.SetControlBackground( aTextBGColor );
-    maCreateText.SetControlForeground( maLabelTextColor );
-    maCreateText.SetControlBackground( aTextBGColor );
-    maWriterText.SetControlForeground( maLabelTextColor );
-    maWriterText.SetControlBackground( aTextBGColor );
-    maCalcText.SetControlForeground( maLabelTextColor );
-    maCalcText.SetControlBackground( aTextBGColor );
-    maImpressText.SetControlForeground( maLabelTextColor );
-    maImpressText.SetControlBackground( aTextBGColor );
-    maDrawText.SetControlForeground( maLabelTextColor );
-    maDrawText.SetControlBackground( aTextBGColor );
-    maDBText.SetControlForeground( maLabelTextColor );
-    maDBText.SetControlBackground( aTextBGColor );
-    maMathText.SetControlForeground( maLabelTextColor );
-    maMathText.SetControlBackground( aTextBGColor );
-    maTemplateText.SetControlForeground( maLabelTextColor );
-    maTemplateText.SetControlBackground( aTextBGColor );
-    maOpenText.SetControlForeground( maLabelTextColor );
-    maOpenText.SetControlBackground( aTextBGColor );
-#endif	// USE_JAVA
+    maProduct.SetBackground();
+
+    if( mnLayoutStyle == 1 )
+    {
+        if( Application::GetSettings().GetLayoutRTL() )
+            mnBtnPos = maBackgroundRight.GetSizePixel().Width() + 40;
+        else
+            mnBtnPos = maBackgroundLeft.GetSizePixel().Width() + 40;
+    }
+
+    // get icon images from fwk resource and set them on the appropriate buttons
+    loadImage( FwkResId( BMP_BACKING_WRITER ), maWriterButton );
+    loadImage( FwkResId( BMP_BACKING_CALC ), maCalcButton );
+    loadImage( FwkResId( BMP_BACKING_IMPRESS ), maImpressButton );
+    loadImage( FwkResId( BMP_BACKING_DRAW ), maDrawButton );
+    loadImage( FwkResId( BMP_BACKING_DATABASE ), maDBButton );
+    loadImage( FwkResId( BMP_BACKING_FORMULA ), maMathButton );
+    loadImage( FwkResId( BMP_BACKING_OPENFILE ), maOpenButton );
+    loadImage( FwkResId( BMP_BACKING_OPENTEMPLATE ), maTemplateButton );
+    
+    maOpenButton.SetMenuMode( MENUBUTTON_MENUMODE_TIMED );
+    maOpenButton.SetActivateHdl( LINK( this, BackingWindow, ActivateHdl ) );
+#endif	// !USE_JAVA
 }
 
 void BackingWindow::initControls()
 {
     if( mbInitControls )
         return;
-    
+
     mbInitControls = true;
-    
+
 #ifndef USE_JAVA
     // calculate dialog size
     // begin with background bitmap
@@ -318,7 +453,7 @@ void BackingWindow::initControls()
     maControlRect.Right() -= nShadowRight;
     maControlRect.Top() += nShadowTop;
     maControlRect.Bottom() -= nShadowBottom;
-    
+
     long nYPos = 0;
     // set bigger welcome string
     maWelcome.SetText( maWelcomeString );
@@ -334,16 +469,14 @@ void BackingWindow::initControls()
     maWelcome.SetControlFont( maTextFont );
     maWelcomeSize = Size( maWelcome.GetTextWidth( maWelcomeString ), maWelcome.GetTextHeight() );
     maWelcomeSize.Width() = (maWelcomeSize.Width() * 20)/19;
-    
-    nYPos += (maWelcomeSize.Height()*3)/2;
-    
-    if( maControlRect.GetWidth() < nBtnPos + maWelcomeSize.Width() + 20 )
-        maControlRect.Right() = maControlRect.Left() + maWelcomeSize.Width() + nBtnPos + 20;
 
-    maWelcome.Show();
-    
+    nYPos += (maWelcomeSize.Height()*3)/2;
+
+    if( maControlRect.GetWidth() < mnBtnPos + maWelcomeSize.Width() + 20 )
+        maControlRect.Right() = maControlRect.Left() + maWelcomeSize.Width() + mnBtnPos + 20;
+
     nYPos += maWelcomeSize.Height();
-    
+
     // set product string
     maTextFont.SetSize( Size( 0, 30 ) );
     maProduct.SetFont( maTextFont );
@@ -357,25 +490,21 @@ void BackingWindow::initControls()
     maProduct.SetText( maProductString );
     maProductSize = Size( maProduct.GetTextWidth( maProductString ), maProduct.GetTextHeight() );
     maProductSize.Width() = (maProductSize.Width() * 20)/19;
-    
-    if( maControlRect.GetWidth() < maProductSize.Width() + nBtnPos + 10 )
-        maControlRect.Right() = maControlRect.Left() + maProductSize.Width() + nBtnPos + 10;
 
-    maProduct.Show();
-    
+    if( maControlRect.GetWidth() < maProductSize.Width() + mnBtnPos + 10 )
+        maControlRect.Right() = maControlRect.Left() + maProductSize.Width() + mnBtnPos + 10;
+
+    if( mnLayoutStyle == 1 )
+    {
+        maWelcome.Show();        
+        maProduct.Show();
+    }
+
     nYPos += (maProductSize.Height()*3)/2;
-    
+
     // set a slighly larger font than normal labels on the texts
     maTextFont.SetSize( Size( 0, 11 ) );
     maTextFont.SetWeight( WEIGHT_NORMAL );
-    
-    maCreateText.SetText( maCreateString );
-    maCreateText.SetFont( maTextFont );
-    maCreateText.SetControlFont( maTextFont );
-    maCreateSize = Size( maCreateText.GetTextWidth( maCreateString ), maCreateText.GetTextHeight() );
-    maCreateText.Show();
-    
-    nYPos += (maCreateSize.Height()*3)/2;
 #endif	// !USE_JAVA
 
     // collect the URLs of the entries in the File/New menu
@@ -394,73 +523,94 @@ void BackingWindow::initControls()
         if ( sURL.getLength() )
             aFileNewAppsAvailable.insert( sURL );
     }
-    
+
     // create mnemonics on the fly, preregister the mnemonics of the menu
     MnemonicGenerator aMnemns;
     maTemplateString = MnemonicGenerator::EraseAllMnemonicChars( maTemplateString );
     maOpenString = MnemonicGenerator::EraseAllMnemonicChars( maOpenString );
-    
+
     SystemWindow* pSysWin = GetSystemWindow();
     if( pSysWin )
     {
         MenuBar* pMBar = pSysWin->GetMenuBar();
         if( pMBar )
         {
-            for( USHORT i = 0; i < pMBar->GetItemCount(); i++ )
+            for( sal_uInt16 i = 0; i < pMBar->GetItemCount(); i++ )
             {
-                USHORT nItemId = pMBar->GetItemId( i );
+                sal_uInt16 nItemId = pMBar->GetItemId( i );
                 String aItemText( pMBar->GetItemText( nItemId ) );
                 if( aItemText.Len() )
                     aMnemns.RegisterMnemonic( aItemText );
             }
         }
     }
-    
+
 #ifndef USE_JAVA
     // layout the buttons
-    layoutButtonAndText( WRITER_URL, 0, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SWRITER,
-                         maWriterButton, maWriterText, aMnemns );
-    layoutButtonAndText( CALC_URL, 1, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SCALC,
-                         maCalcButton, maCalcText, aMnemns );
+    layoutButton( WRITER_URL, 0, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SWRITER,
+                  maWriterButton, aMnemns );
+    layoutButton( DRAW_URL, 1, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SDRAW,
+                  maDrawButton, aMnemns );
     nYPos += maButtonImageSize.Height() + 10;
-    layoutButtonAndText( IMPRESS_WIZARD_URL, 0, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SIMPRESS,
-                         maImpressButton, maImpressText, aMnemns );
-    layoutButtonAndText( DRAW_URL, 1, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SDRAW,
-                         maDrawButton, maDrawText, aMnemns );
+    layoutButton( CALC_URL, 0, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SCALC,
+                  maCalcButton, aMnemns );
+    layoutButton( BASE_URL, 1, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SDATABASE,
+                  maDBButton, aMnemns );
     nYPos += maButtonImageSize.Height() + 10;
-    layoutButtonAndText( BASE_URL, 0, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SDATABASE,
-                         maDBButton, maDBText, aMnemns );
-    layoutButtonAndText( MATH_URL, 1, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SMATH,
-                         maMathButton, maMathText, aMnemns );
-    
-    nYPos += 3*maButtonImageSize.Height() / 2;
-    layoutButtonAndText( NULL, -1, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SWRITER,
-                         maTemplateButton, maTemplateText, aMnemns, maTemplateString );
+    layoutButton( IMPRESS_WIZARD_URL, 0, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SIMPRESS,
+                  maImpressButton, aMnemns );
+    layoutButton( MATH_URL, 1, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SMATH,
+                  maMathButton, aMnemns );
 
-    nYPos += 10;
-    layoutButtonAndText( NULL, -1, aFileNewAppsAvailable,
-                         aModuleOptions, SvtModuleOptions::E_SWRITER,
-                         maOpenButton, maOpenText, aMnemns, maOpenString );
-    nYPos += 10;
+    nYPos += 3*maButtonImageSize.Height() / 2;
     
+    layoutButton( NULL, 0, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SWRITER,
+                  maOpenButton, aMnemns, maOpenString );
+    layoutButton( NULL, 1, aFileNewAppsAvailable,
+                  aModuleOptions, SvtModuleOptions::E_SWRITER,
+                  maTemplateButton, aMnemns, maTemplateString );    
+    nYPos += 10;
+
     DBG_ASSERT( nYPos < maControlRect.GetHeight(), "misformatting !" );
-    if( mnColumnWidth[0] + mnColumnWidth[1] + nBtnPos + 20 > maControlRect.GetWidth() )
-        maControlRect.Right() = maControlRect.Left() + mnColumnWidth[0] + mnColumnWidth[1] + nBtnPos + 20;
+    if( mnColumnWidth[0] + mnColumnWidth[1] + mnBtnPos + 20 > maControlRect.GetWidth() )
+        maControlRect.Right() = maControlRect.Left() + mnColumnWidth[0] + mnColumnWidth[1] + mnBtnPos + 20;
     
+    mnTextColumnWidth[0] = mnColumnWidth[0];
+    mnTextColumnWidth[1] = mnColumnWidth[1];
+
+    if( mnTextColumnWidth[1] > mnTextColumnWidth[0] )
+    {
+        mnColumnWidth[0]     = mnColumnWidth[1];
+        mnTextColumnWidth[0] = mnTextColumnWidth[1];
+    }
+    else
+    {
+        mnColumnWidth[1]     = mnColumnWidth[0];
+        mnTextColumnWidth[1] = mnTextColumnWidth[0];
+    }
+    if( maControlRect.GetWidth() < maControlRect.GetHeight() * 3 / 2 )
+    {
+        maControlRect.Right() = maControlRect.Left() + maControlRect.GetHeight() * 3 / 2;
+        long nDelta = (maControlRect.GetWidth() - mnBtnPos - mnColumnWidth[1] - mnColumnWidth[0] - 20);
+        mnColumnWidth[0] += nDelta/2;
+        mnColumnWidth[1] += nDelta/2;
+    }
+
     maToolbox.SetSelectHdl( LINK( this, BackingWindow, ToolboxHdl ) );
-    maToolbox.Show();
-    
+    if( mnLayoutStyle == 0 )
+        maToolbox.Show();
+
     // scale middle map to formatted width
     Size aMiddleSegmentSize( maControlRect.GetSize().Width() + nShadowLeft + nShadowRight,
                              maBackgroundMiddle.GetSizePixel().Height() );
-    
+
     long nLW = maBackgroundLeft.GetSizePixel().Width();
     long nRW = maBackgroundRight.GetSizePixel().Width();
     if( aMiddleSegmentSize.Width() > nLW + nRW )
@@ -472,11 +622,13 @@ void BackingWindow::initControls()
     else
         maBackgroundMiddle = BitmapEx();
 #endif	// !USE_JAVA
-    
+
     Resize();
+    
+    maWriterButton.GrabFocus();
 }
 
-void BackingWindow::loadImage( const ResId& i_rId, ImageButton& i_rButton )
+void BackingWindow::loadImage( const ResId& i_rId, PushButton& i_rButton )
 {
     BitmapEx aBmp( i_rId );
     Size aImgSize( aBmp.GetSizePixel() );
@@ -487,86 +639,88 @@ void BackingWindow::loadImage( const ResId& i_rId, ImageButton& i_rButton )
     i_rButton.SetModeImage( aBmp );
 }
 
-void BackingWindow::layoutButtonAndText(
+void BackingWindow::layoutButton(
                           const char* i_pURL, int nColumn,
                           const std::set<rtl::OUString>& i_rURLS,
                           SvtModuleOptions& i_rOpt, SvtModuleOptions::EModule i_eMod,
-                          ImageButton& i_rBtn, FixedText& i_rText,
+                          PushButton& i_rBtn,
                           MnemonicGenerator& i_rMnemns,
                           const String& i_rStr
                           )
 {
     rtl::OUString aURL( rtl::OUString::createFromAscii( i_pURL ? i_pURL : "" ) );
     // setup button
-    i_rBtn.SetPaintTransparent( TRUE );
+    i_rBtn.SetPaintTransparent( sal_True );
     i_rBtn.SetClickHdl( LINK( this, BackingWindow, ClickHdl ) );
     if( i_pURL && (! i_rOpt.IsModuleInstalled( i_eMod ) || i_rURLS.find( aURL ) == i_rURLS.end()) )
     {
-        i_rBtn.Enable( FALSE );
+        i_rBtn.Enable( sal_False );
     }
-    
+
     // setup text
-    i_rText.SetFont( maTextFont );
-    i_rText.SetControlFont( maTextFont );
+    i_rBtn.SetFont( maTextFont );
+    i_rBtn.SetControlFont( maTextFont );
     String aText( i_rStr.Len() ? i_rStr : SvFileInformationManager::GetDescription( INetURLObject( aURL ) ) );
     i_rMnemns.CreateMnemonic( aText );
-    i_rText.SetText( aText );
+    i_rBtn.SetText( aText );
+    
+    long nTextWidth = i_rBtn.GetTextWidth( i_rBtn.GetText() );
 
-    long nTextWidth = i_rText.GetTextWidth( i_rText.GetText() );
-    i_rText.SetPaintTransparent( TRUE );
-
-    nTextWidth += maButtonImageSize.Width() + 30;
+    nTextWidth += maButtonImageSize.Width() + 8; // add some fuzz to be on the safe side
     if( nColumn >= 0 && nColumn < static_cast<int>(sizeof(mnColumnWidth)/sizeof(mnColumnWidth[0])) )
     {
         if( nTextWidth > mnColumnWidth[nColumn] )
             mnColumnWidth[nColumn] = nTextWidth;
     }
-    
+
+    i_rBtn.SetImageAlign( IMAGEALIGN_LEFT );
     // show the controls
     i_rBtn.Show();
-    i_rText.Show();
 }
 
 void BackingWindow::Paint( const Rectangle& )
 {
-    bool bDark = GetSettings().GetStyleSettings().GetWindowColor().IsDark();
-    
-    Color aBackColor( bDark ? COL_BLACK : COL_WHITE );
+	Resize();
 
-    // fill control rect
-    SetLineColor();
-    SetFillColor( aBackColor );
-    DrawRect( maControlRect );
+#ifdef USE_JAVA	
+    Wallpaper aBack( GetSettings().GetStyleSettings().GetWorkspaceColor() );
+#else	// USE_JAVA	
+    Wallpaper aBack( GetSettings().GetStyleSettings().GetWorkspaceGradient() );
+#endif	// USE_JAVA	
+    Region aClip( Rectangle( Point( 0, 0 ), GetOutputSizePixel() ) );
+    Rectangle aBmpRect(maControlRect);
+    aBmpRect.Left()   -= nShadowLeft;
+    aBmpRect.Top()    -= nShadowTop;
+    aBmpRect.Right()  += nShadowRight;
+    aBmpRect.Bottom() += nShadowBottom;
+    aClip.Exclude( aBmpRect );
+    Push( PUSH_CLIPREGION );
+    IntersectClipRegion( aClip );
+    DrawWallpaper( Rectangle( Point( 0, 0 ), GetOutputSizePixel() ), aBack );
+    Pop();
     
+#ifndef USE_JAVA	
+    VirtualDevice aDev( *this );
+    aDev.EnableRTL( IsRTLEnabled() );
+    aDev.SetOutputSizePixel( aBmpRect.GetSize() );
+    Point aOffset( Point( 0, 0 ) - aBmpRect.TopLeft() );
+    aDev.DrawWallpaper( Rectangle( aOffset, GetOutputSizePixel() ), aBack );
+
     // draw bitmap
-    if( GetSettings().GetLayoutRTL() )
+    Point aTL( 0, 0 );
+    aDev.DrawBitmapEx( aTL, maBackgroundLeft );
+    aTL.X() += maBackgroundLeft.GetSizePixel().Width();
+    if( !!maBackgroundMiddle )
     {
-        Point aTL( maControlRect.TopLeft() );
-        aTL.X() -= nShadowRight;
-        aTL.Y() -= nShadowTop;
-        DrawBitmapEx( aTL, maBackgroundLeft );
-        aTL.X() += maBackgroundLeft.GetSizePixel().Width();
-        if( !!maBackgroundMiddle )
-        {
-            DrawBitmapEx( aTL, maBackgroundMiddle );
-            aTL.X() += maBackgroundMiddle.GetSizePixel().Width();
-        }
-        DrawBitmapEx( aTL, maBackgroundRight );
+        aDev.DrawBitmapEx( aTL, maBackgroundMiddle );
+        aTL.X() += maBackgroundMiddle.GetSizePixel().Width();
     }
-    else
-    {
-        Point aTL( maControlRect.TopLeft() );
-        aTL.X() -= nShadowLeft;
-        aTL.Y() -= nShadowTop;
-        DrawBitmapEx( aTL, maBackgroundLeft );
-        aTL.X() += maBackgroundLeft.GetSizePixel().Width();
-        if( !!maBackgroundMiddle )
-        {
-            DrawBitmapEx( aTL, maBackgroundMiddle );
-            aTL.X() += maBackgroundMiddle.GetSizePixel().Width();
-        }
-        DrawBitmapEx( aTL, maBackgroundRight );
-    }
+    aDev.DrawBitmapEx( aTL, maBackgroundRight );
+    
+    DrawOutDev( aBmpRect.TopLeft(), aBmpRect.GetSize(),
+                Point( 0, 0 ), aBmpRect.GetSize(),
+                aDev );
+#endif	// !USE_JAVA	
 }
 
 long BackingWindow::Notify( NotifyEvent& rNEvt )
@@ -578,10 +732,75 @@ long BackingWindow::Notify( NotifyEvent& rNEvt )
             mpAccExec = svt::AcceleratorExecute::createAcceleratorHelper();
             mpAccExec->init( comphelper::getProcessServiceFactory(), mxFrame);
         }
-        
+
         const KeyEvent* pEvt = rNEvt.GetKeyEvent();
-        if( pEvt && mpAccExec->execute(pEvt->GetKeyCode()) )
+        const KeyCode& rKeyCode(pEvt->GetKeyCode());
+        if( pEvt && mpAccExec->execute(rKeyCode) )
             return 1;
+        // #i110344# extrawurst: specialized arrow key control
+        if( rKeyCode.GetModifier() == 0 )
+        {
+            if( rKeyCode.GetCode() == KEY_RIGHT )
+            {
+                if( maWriterButton.HasFocus() )
+                    maDrawButton.GrabFocus();
+                else if( maCalcButton.HasFocus() )
+                    maDBButton.GrabFocus();
+                else if( maImpressButton.HasFocus() )
+                    maMathButton.GrabFocus();
+                else if( maOpenButton.HasFocus() )
+                    maTemplateButton.GrabFocus();
+                return 1;
+            }
+            else if( rKeyCode.GetCode() == KEY_LEFT )
+            {
+                if( maDrawButton.HasFocus() )
+                    maWriterButton.GrabFocus();
+                else if( maDBButton.HasFocus() )
+                    maCalcButton.GrabFocus();
+                else if( maMathButton.HasFocus() )
+                    maImpressButton.GrabFocus();
+                else if( maTemplateButton.HasFocus() )
+                    maOpenButton.GrabFocus();
+                return 1;
+            }
+            else if( rKeyCode.GetCode() == KEY_UP )
+            {
+                // first column
+                if( maOpenButton.HasFocus() )
+                    maImpressButton.GrabFocus();
+                else if( maImpressButton.HasFocus() )
+                    maCalcButton.GrabFocus();
+                else if( maCalcButton.HasFocus() )
+                    maWriterButton.GrabFocus();
+                // second column
+                else if( maTemplateButton.HasFocus() )
+                    maMathButton.GrabFocus();
+                else if( maMathButton.HasFocus() )
+                    maDBButton.GrabFocus();
+                else if( maDBButton.HasFocus() )
+                    maDrawButton.GrabFocus();
+                return 1;
+            }
+            else if( rKeyCode.GetCode() == KEY_DOWN )
+            {
+                // first column
+                if( maWriterButton.HasFocus() )
+                    maCalcButton.GrabFocus();
+                else if( maCalcButton.HasFocus() )
+                    maImpressButton.GrabFocus();
+                else if( maImpressButton.HasFocus() )
+                    maOpenButton.GrabFocus();
+                // second column
+                else if( maDrawButton.HasFocus() )
+                    maDBButton.GrabFocus();
+                else if( maDBButton.HasFocus() )
+                    maMathButton.GrabFocus();
+                else if( maMathButton.HasFocus() )
+                    maTemplateButton.GrabFocus();                
+                return 1;
+            }
+        }
     }
     return Window::Notify( rNEvt );
 }
@@ -600,11 +819,13 @@ void BackingWindow::Resize()
     maControlRect = Rectangle( Point( (aWindowSize.Width() - aControlSize.Width()) / 2,
                                       (aWindowSize.Height() - aControlSize.Height()) / 2 ),
                                aControlSize );
-    
+
     maToolbox.calcMinSize();
     Size aTBSize( maToolbox.getMinSize() );
-    Point aTBPos( maControlRect.Right() - aTBSize.Width() - 10,
+    Point aTBPos( maControlRect.Left() + mnBtnPos,
                   maControlRect.Bottom() - aTBSize.Height() - 10 );
+    if( Application::GetSettings().GetLayoutRTL() )
+        aTBPos.X() = maControlRect.Right() - aTBSize.Width() - mnBtnPos;
     maToolbox.SetPosSizePixel( aTBPos, aTBSize );
 
     // #i93631# squeeze controls so they fit into the box
@@ -613,7 +834,6 @@ void BackingWindow::Resize()
     const long nWDelta    = maWelcomeSize.Height();
     const long nW2Delta   = (maWelcomeSize.Height()*3)/2;
     const long nPDelta    = (maProductSize.Height()*3)/2;
-    const long nCDelta    = (maCreateSize.Height()*3)/2;
     const long nBDelta    = maButtonImageSize.Height() + 10;
     const long nB2Delta   = 3*maButtonImageSize.Height()/2;
     const long nLastDelta = maButtonImageSize.Height();
@@ -622,7 +842,6 @@ void BackingWindow::Resize()
                  (nWDelta - nDiff) +
                  (nW2Delta- nDiff) +
                  (nPDelta - nDiff) +
-                 (nCDelta - nDiff) +
              3 * (nBDelta - nDiff) +
                  (nB2Delta- nDiff) +
                  nLastDelta
@@ -630,81 +849,47 @@ void BackingWindow::Resize()
     {
         nDiff++;
     }
-    
+
     long nYPos = maControlRect.Top();
     nYPos += nW2Delta - nDiff;
-    maWelcome.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ),
-                                Size( maControlRect.GetWidth() - nBtnPos - 5, (maWelcomeSize.Height()*20)/19 ) );
-    nYPos += nWDelta - nDiff;    
-    maProduct.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), Size( maControlRect.GetWidth() - nBtnPos - 5, (maProductSize.Height()*20)/19 ) );
+    maWelcome.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ),
+                                Size( maControlRect.GetWidth() - mnBtnPos - 5, (maWelcomeSize.Height()*20)/19 ) );
+    nYPos += nWDelta - nDiff;
+    maProduct.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ), Size( maControlRect.GetWidth() - mnBtnPos - 5, (maProductSize.Height()*20)/19 ) );
     nYPos += nPDelta - nDiff;
-    
-    maCreateText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ),
-                                  Size( maControlRect.GetWidth() - nBtnPos - 5, maCreateSize.Height() ) );
-    
-    nYPos += nCDelta - nDiff;
 
-    maWriterButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), maButtonImageSize );
-    maWriterText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10, nYPos ),
-                                  Size( mnColumnWidth[0] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
-    maCalcButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + mnColumnWidth[0], nYPos ), maButtonImageSize );
-    maCalcText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10 + mnColumnWidth[0], nYPos ),
-                                  Size( mnColumnWidth[1] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
+    nYPos += nWDelta/2 - nDiff;
+    
+    if( mnLayoutStyle != 1 )
+        nYPos = maControlRect.Top() + mnBtnTop;
+
+    maWriterButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ), Size( mnTextColumnWidth[0], maButtonImageSize.Height() ) );
+    maDrawButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos + mnColumnWidth[0], nYPos ), Size( mnTextColumnWidth[1], maButtonImageSize.Height() ) );
     nYPos += nBDelta - nDiff;
-    maImpressButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), maButtonImageSize );
-    maImpressText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10, nYPos ),
-                                  Size( mnColumnWidth[0] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
-    maDrawButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + mnColumnWidth[0], nYPos ), maButtonImageSize );
-    maDrawText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10 + mnColumnWidth[0], nYPos ),
-                                  Size( mnColumnWidth[1] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
+    maCalcButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ), Size( mnTextColumnWidth[0], maButtonImageSize.Height() ) );
+    maDBButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos + mnColumnWidth[0], nYPos ), Size( mnTextColumnWidth[1], maButtonImageSize.Height() ) );
     nYPos += nBDelta - nDiff;
-    maDBButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), maButtonImageSize );
-    maDBText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10, nYPos ),
-                                  Size( mnColumnWidth[0] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
-    maMathButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + mnColumnWidth[0], nYPos ), maButtonImageSize );
-    maMathText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10 + mnColumnWidth[0], nYPos ),
-                                    Size( mnColumnWidth[1] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
+    maImpressButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ), Size( mnTextColumnWidth[0], maButtonImageSize.Height() ) );
+    maMathButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos + mnColumnWidth[0], nYPos ), Size( mnTextColumnWidth[1], maButtonImageSize.Height() ) );
 
     nYPos += nB2Delta - nDiff;
-    maTemplateButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), maButtonImageSize );
-    maTemplateText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10, nYPos ),
-                                Size( mnColumnWidth[0]+mnColumnWidth[1] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
-    nYPos += nBDelta - nDiff;
-    maOpenButton.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos, nYPos ), maButtonImageSize );
-    maOpenText.SetPosSizePixel( Point( maControlRect.Left() + nBtnPos + maButtonImageSize.Width() + 10, nYPos ),
-                                Size( mnColumnWidth[0]+mnColumnWidth[1] - maButtonImageSize.Width() - 10, maButtonImageSize.Height() ) );
-    nYPos += nBDelta - nDiff;
+    maOpenButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos, nYPos ), Size( mnTextColumnWidth[0], maButtonImageSize.Height() ) );
+    maTemplateButton.SetPosSizePixel( Point( maControlRect.Left() + mnBtnPos + mnColumnWidth[0], nYPos ), Size( mnTextColumnWidth[1], maButtonImageSize.Height() ) );
+
+	if( !IsInPaint())
+		Invalidate();
 }
 
 IMPL_LINK( BackingWindow, ToolboxHdl, void*, EMPTYARG )
 {
     const char* pNodePath = NULL;
     const char* pNode = NULL;
-    
+
     switch( maToolbox.GetCurItemId() )
     {
     case nItemId_Extensions:
         pNodePath = "/org.openoffice.Office.Common/Help/StartCenter";
         pNode = "AddFeatureURL";
-        break;
-    case nItemId_Reg:
-        try
-        {
-            // create the Desktop component which can load components
-            Reference < lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
-            if( xFactory.is() )
-            {
-                Reference< task::XJobExecutor > xProductRegistration(
-                    xFactory->createInstance( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.setup.ProductRegistration" ) ) ),
-                    UNO_QUERY_THROW );
-
-                 // tell it that the user wants to register
-                 xProductRegistration->trigger( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "RegistrationRequired" ) ) );
-            }
-        }
-        catch( const Exception& )
-        {
-        }
         break;
     case nItemId_Info:
         pNodePath = "/org.openoffice.Office.Common/Help/StartCenter";
@@ -721,9 +906,7 @@ IMPL_LINK( BackingWindow, ToolboxHdl, void*, EMPTYARG )
     {
         try
         {
-            Reference<lang::XMultiServiceFactory> xConfig( comphelper::getProcessServiceFactory()->createInstance(
-                rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.ConfigurationProvider"))),
-                UNO_QUERY);
+            Reference<lang::XMultiServiceFactory> xConfig( comphelper::getProcessServiceFactory()->createInstance(SERVICENAME_CFGPROVIDER),UNO_QUERY);
             if( xConfig.is() )
             {
                 Sequence<Any> args(1);
@@ -733,9 +916,7 @@ IMPL_LINK( BackingWindow, ToolboxHdl, void*, EMPTYARG )
                     Any(rtl::OUString::createFromAscii(pNodePath)),
                     PropertyState_DIRECT_VALUE);
                 args.getArray()[0] <<= val;
-                Reference<container::XNameAccess> xNameAccess(
-                    xConfig->createInstanceWithArguments(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.ConfigurationAccess")),
-                        args), UNO_QUERY);
+                Reference<container::XNameAccess> xNameAccess(xConfig->createInstanceWithArguments(SERVICENAME_CFGREADACCESS,args), UNO_QUERY);
                 if( xNameAccess.is() )
                 {
                     rtl::OUString sURL;
@@ -743,10 +924,44 @@ IMPL_LINK( BackingWindow, ToolboxHdl, void*, EMPTYARG )
                     Any value( xNameAccess->getByName(rtl::OUString::createFromAscii(pNode)) );
                     sURL = value.get<rtl::OUString> ();
                     
+                    // extend the URLs with Office locale argument
+                    INetURLObject aURLObj( sURL );
+
+                    rtl::OUString sParam = aURLObj.GetParam();
+                    rtl::OUStringBuffer aURLBuf( sParam );
+                    if ( sParam.getLength() > 0 )
+                        aURLBuf.appendAscii( "&" );
+                    aURLBuf.appendAscii( "lang=" );
+
+                    // read locale from configuration
+                    ::rtl::OUString sLocale;
+                    ::rtl::OUString sPackage = ::rtl::OUString::createFromAscii("org.openoffice.Setup");
+                    ::rtl::OUString sRelPath = ::rtl::OUString::createFromAscii("L10N");
+                    ::rtl::OUString sKey     = ::rtl::OUString::createFromAscii("ooLocale");
+                    
+                    try
+                    {
+                        ::comphelper::ConfigurationHelper::readDirectKey(comphelper::getProcessServiceFactory(),
+                                                                         sPackage,
+                                                                         sRelPath,
+                                                                         sKey,
+                                                                         ::comphelper::ConfigurationHelper::E_READONLY) >>= sLocale;
+                    }
+                    catch(const com::sun::star::uno::RuntimeException& exRun)
+                        { throw exRun; }
+                    catch(const com::sun::star::uno::Exception&)
+                    { sLocale = ::rtl::OUString::createFromAscii("en-US"); }
+
+                    aURLBuf.append(sLocale);
+
+                    sParam = aURLBuf.makeStringAndClear();
+                    
+                    aURLObj.SetParam( sParam );
+                    sURL = aURLObj.GetMainURL( INetURLObject::NO_DECODE );
+
                     Reference< com::sun::star::system::XSystemShellExecute > xSystemShellExecute(
-                        comphelper::getProcessServiceFactory()->createInstance(
-                            rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.system.SystemShellExecute" ) ) ),
-                        UNO_QUERY_THROW);
+                        com::sun::star::system::SystemShellExecute::create(
+                            ::comphelper::getProcessComponentContext() ) );
                     //throws css::lang::IllegalArgumentException, css::system::SystemShellExecuteException
                     xSystemShellExecute->execute( sURL, rtl::OUString(), com::sun::star::system::SystemShellExecuteFlags::DEFAULTS);
                 }
@@ -756,7 +971,7 @@ IMPL_LINK( BackingWindow, ToolboxHdl, void*, EMPTYARG )
         {
         }
     }
-                    
+
     return 0;
 }
 
@@ -778,7 +993,7 @@ IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
     else if( pButton == &maOpenButton )
     {
         Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
-        
+
         Sequence< com::sun::star::beans::PropertyValue > aArgs(1);
         PropertyValue* pArg = aArgs.getArray();
         pArg[0].Name = rtl::OUString::createFromAscii("Referer");
@@ -789,7 +1004,7 @@ IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
     else if( pButton == &maTemplateButton )
     {
         Reference< XDispatchProvider > xFrame( mxFrame, UNO_QUERY );
-        
+
         Sequence< com::sun::star::beans::PropertyValue > aArgs(1);
         PropertyValue* pArg = aArgs.getArray();
         pArg[0].Name = rtl::OUString::createFromAscii("Referer");
@@ -800,52 +1015,12 @@ IMPL_LINK( BackingWindow, ClickHdl, Button*, pButton )
     return 0;
 }
 
-Window* BackingWindow::GetParentLabelFor( const Window* pLabel ) const
-{
-    const Window* pRet = NULL;
-    
-    if( pLabel == &maWriterText )
-        pRet = &maWriterButton;
-    else if( pLabel == &maCalcText )
-        pRet = &maCalcButton;
-    else if( pLabel == &maImpressText )
-        pRet = &maImpressButton;
-    else if( pLabel == &maDrawText )
-        pRet = &maDrawButton;
-    else if( pLabel == &maDBText )
-        pRet = &maDBButton;
-    else if( pLabel == &maMathText )
-        pRet = &maMathButton;
-    else if( pLabel == &maTemplateText )
-        pRet = &maTemplateButton;
-    else if( pLabel == &maOpenText )
-        pRet = &maOpenButton;
-    
-    return const_cast<Window*>(pRet);
-}
 
-Window* BackingWindow::GetParentLabeledBy( const Window* pLabeled ) const
+IMPL_LINK( BackingWindow, ActivateHdl, Button*, pButton )
 {
-    const Window *pRet = NULL;
-    
-    if( pLabeled == &maWriterButton )
-        pRet = &maWriterText;
-    else if( pLabeled == &maCalcButton )
-        pRet = &maCalcText;
-    else if( pLabeled == &maImpressButton )
-        pRet = &maImpressText;
-    else if( pLabeled == &maDrawButton )
-        pRet = &maDrawText;
-    else if( pLabeled == &maDBButton )
-        pRet = &maDBText;
-    else if( pLabeled == &maMathButton )
-        pRet = &maMathText;
-    else if( pLabeled == &maTemplateButton )
-        pRet = &maTemplateText;
-    else if( pLabeled == &maOpenButton )
-        pRet = &maOpenText;
-    
-    return const_cast<Window*>(pRet);
+    if( pButton == &maOpenButton )
+        prepareRecentFileMenu();
+    return 0;
 }
 
 struct ImplDelayedDispatch
@@ -853,7 +1028,7 @@ struct ImplDelayedDispatch
     Reference< XDispatch >      xDispatch;
     com::sun::star::util::URL   aDispatchURL;
     Sequence< PropertyValue >   aArgs;
-    
+
     ImplDelayedDispatch( const Reference< XDispatch >& i_xDispatch,
                          const com::sun::star::util::URL& i_rURL,
                          const Sequence< PropertyValue >& i_rArgs )
@@ -875,10 +1050,10 @@ static long implDispatchDelayed( void*, void* pArg )
     catch( Exception )
     {
     }
-    
+
     // clean up
     delete pDispatch;
-    
+
     return 0;
 }
 
@@ -893,7 +1068,7 @@ void BackingWindow::dispatchURL( const rtl::OUString& i_rURL,
     // check for dispatch provider
     if( !xProvider.is())
         return;
-    
+
     // get an URL transformer to clean up the URL
     com::sun::star::util::URL aDispatchURL;
     aDispatchURL.Complete = i_rURL;
@@ -915,7 +1090,7 @@ void BackingWindow::dispatchURL( const rtl::OUString& i_rURL,
             if ( xDispatch.is() )
             {
                 ImplDelayedDispatch* pDisp = new ImplDelayedDispatch( xDispatch, aDispatchURL, i_rArgs );
-                ULONG nEventId = 0;
+                sal_uLong nEventId = 0;
                 if( ! Application::PostUserEvent( nEventId, Link( NULL, implDispatchDelayed ), pDisp ) )
                     delete pDisp; // event could not be posted for unknown reason, at least don't leak
             }

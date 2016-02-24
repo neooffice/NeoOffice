@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified April 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_framework.hxx"
@@ -36,12 +39,7 @@
 #ifndef __FRAMEWORK_LOADENV_TARGETHELPER_HXX_
 #include <loadenv/targethelper.hxx>
 #endif
-#include <classes/framelistanalyzer.hxx>
-
-#ifndef __FRAMEWORK_CONSTANT_FILTER_HXX_
-#include <constant/filter.hxx>
-#endif
-#include <dispatch/interaction.hxx>
+#include <framework/framelistanalyzer.hxx>
 
 #ifndef __FRAMEWORK_CONSTANT_FRAMELOADER_HXX_
 #include <constant/frameloader.hxx>
@@ -54,14 +52,15 @@
 #ifndef __FRAMEWORK_CONSTANT_CONTAINERQUERY_HXX_
 #include <constant/containerquery.hxx>
 #endif
-#include <interaction/stillinteraction.hxx>
+#include <interaction/quietinteraction.hxx>
 #include <threadhelp/writeguard.hxx>
 #include <threadhelp/readguard.hxx>
 #include <threadhelp/resetableguard.hxx>
 #include <properties.h>
 #include <protocols.h>
 #include <services.h>
-#include <dispatch/interaction.hxx>
+#include <comphelper/interaction.hxx>
+#include <framework/interaction.hxx>
 
 //_______________________________________________
 // includes of uno interface
@@ -74,6 +73,7 @@
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/awt/XWindow2.hpp>
 #include <com/sun/star/awt/XTopWindow.hpp>
@@ -104,9 +104,10 @@
 #ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
 #endif
-#include <svtools/moduleoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 #include <svtools/sfxecode.hxx>
 #include <unotools/processfactory.hxx>
+#include <unotools/ucbhelper.hxx>
 #include <comphelper/configurationhelper.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <vcl/svapp.hxx>
@@ -170,6 +171,7 @@ LoadEnv::LoadEnv(const css::uno::Reference< css::lang::XMultiServiceFactory >& x
     : ThreadHelpBase(     )
     , m_xSMGR       (xSMGR)
     , m_pCheck      (this )
+	, m_pQuietInteraction( 0 )
 {
 }
 
@@ -194,6 +196,9 @@ css::uno::Reference< css::lang::XComponent > LoadEnv::loadComponentFromURL(const
           css::io::IOException               ,
           css::uno::RuntimeException         )
 {
+#ifdef WNT	
+	CEnableAccessInterface e;
+#endif
     css::uno::Reference< css::lang::XComponent > xComponent;
 
     try
@@ -249,7 +254,7 @@ css::uno::Reference< css::lang::XComponent > LoadEnv::loadComponentFromURL(const
 		if ( pIt != lModelDescriptor.end() )
 			lDescriptor[::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()] = pIt->second;
     }
-    
+
     return lDescriptor;
 }
 
@@ -321,22 +326,41 @@ void LoadEnv::initializeLoading(const ::rtl::OUString&                          
 
     /*TODO progress is bound to a frame ... How can we set it here? */
 
+    // UI mode
+    const bool bUIMode =
+        ( ( m_eFeature & E_WORK_WITH_UI )                                                                          == E_WORK_WITH_UI ) &&
+        ( m_lMediaDescriptor.getUnpackedValueOrDefault( ::comphelper::MediaDescriptor::PROP_HIDDEN() , sal_False ) == sal_False      ) &&
+        ( m_lMediaDescriptor.getUnpackedValueOrDefault( ::comphelper::MediaDescriptor::PROP_PREVIEW(), sal_False ) == sal_False      );
+
+    initializeUIDefaults(
+        m_xSMGR,
+        m_lMediaDescriptor,
+        bUIMode,
+        &m_pQuietInteraction
+    );
+
+    aWriteLock.unlock();
+    // <- SAFE ----------------------------------
+}
+
+/*-----------------------------------------------
+    22.01.2010
+-----------------------------------------------*/
+void LoadEnv::initializeUIDefaults( const css::uno::Reference< css::lang::XMultiServiceFactory >& i_rSMGR,
+                                    ::comphelper::MediaDescriptor& io_lMediaDescriptor, const bool i_bUIMode,
+                                    QuietInteraction** o_ppQuietInteraction )
+{
     css::uno::Reference< css::task::XInteractionHandler > xInteractionHandler;
     sal_Int16                                             nMacroMode         ;
     sal_Int16                                             nUpdateMode        ;
 
-    // UI mode
-    if (
-        ((m_eFeature & E_WORK_WITH_UI)                                                                          == E_WORK_WITH_UI) &&
-        (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN() , sal_False) == sal_False     ) &&
-        (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_PREVIEW(), sal_False) == sal_False     )
-       )
+    if ( i_bUIMode )
     {
         nMacroMode  = css::document::MacroExecMode::USE_CONFIG;
         nUpdateMode = css::document::UpdateDocMode::ACCORDING_TO_CONFIG;
         try
         {
-            xInteractionHandler = css::uno::Reference< css::task::XInteractionHandler >(m_xSMGR->createInstance(IMPLEMENTATIONNAME_UIINTERACTIONHANDLER), css::uno::UNO_QUERY);
+            xInteractionHandler = css::uno::Reference< css::task::XInteractionHandler >(i_rSMGR->createInstance(IMPLEMENTATIONNAME_UIINTERACTIONHANDLER), css::uno::UNO_QUERY);
         }
         catch(const css::uno::RuntimeException&) {throw;}
         catch(const css::uno::Exception&       ) {      }
@@ -346,26 +370,29 @@ void LoadEnv::initializeLoading(const ::rtl::OUString&                          
     {
         nMacroMode  = css::document::MacroExecMode::NEVER_EXECUTE;
         nUpdateMode = css::document::UpdateDocMode::NO_UPDATE;
-        StillInteraction* pInteraction = new StillInteraction();
-        xInteractionHandler = css::uno::Reference< css::task::XInteractionHandler >(static_cast< css::task::XInteractionHandler* >(pInteraction), css::uno::UNO_QUERY);
+        QuietInteraction* pQuietInteraction = new QuietInteraction();
+        xInteractionHandler = css::uno::Reference< css::task::XInteractionHandler >(static_cast< css::task::XInteractionHandler* >(pQuietInteraction), css::uno::UNO_QUERY);
+        if ( o_ppQuietInteraction != NULL )
+        {
+            *o_ppQuietInteraction = pQuietInteraction;
+            (*o_ppQuietInteraction)->acquire();
+        }
     }
 
     if (
-        (xInteractionHandler.is()                                                                                            ) &&
-        (m_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_INTERACTIONHANDLER()) == m_lMediaDescriptor.end())
+        (xInteractionHandler.is()                                                                                       ) &&
+        (io_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_INTERACTIONHANDLER()) == io_lMediaDescriptor.end())
        )
     {
-        m_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_INTERACTIONHANDLER()] <<= xInteractionHandler;
+        io_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_INTERACTIONHANDLER()] <<= xInteractionHandler;
+        io_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_AUTHENTICATIONHANDLER()] <<= xInteractionHandler;
     }
 
-    if (m_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()) == m_lMediaDescriptor.end())
-        m_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()] <<= nMacroMode;
+    if (io_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()) == io_lMediaDescriptor.end())
+        io_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()] <<= nMacroMode;
 
-    if (m_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_UPDATEDOCMODE()) == m_lMediaDescriptor.end())
-        m_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_UPDATEDOCMODE()] <<= nUpdateMode;
-
-    aWriteLock.unlock();
-    // <- SAFE ----------------------------------
+    if (io_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_UPDATEDOCMODE()) == io_lMediaDescriptor.end())
+        io_lMediaDescriptor[::comphelper::MediaDescriptor::PROP_UPDATEDOCMODE()] <<= nUpdateMode;
 }
 
 /*-----------------------------------------------
@@ -798,7 +825,6 @@ LoadEnv::EContentType LoadEnv::classifyContent(const ::rtl::OUString&           
     //        But it seems to be better, to break all
     //        further requests for this URL. Otherwhise
     //        we can run into some trouble.
-    LOG_WARNING("LoadEnv::classifyContent()", "realy an unsupported content?")
     return E_UNSUPPORTED_CONTENT;
 }
 
@@ -817,7 +843,7 @@ void LoadEnv::impl_detectTypeAndFilter()
 
     // Attention: Because our stl media descriptor is a copy of an uno sequence
     // we cant use as an in/out parameter here. Copy it before and dont forget to
-    // actualize structure afterwards again!
+    // update structure afterwards again!
     css::uno::Sequence< css::beans::PropertyValue >        lDescriptor = m_lMediaDescriptor.getAsConstPropertyValueList();
     css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR       = m_xSMGR;
 
@@ -999,7 +1025,7 @@ sal_Bool LoadEnv::impl_furtherDocsAllowed()
                                 ::comphelper::ConfigurationHelper::E_READONLY);
 
         // NIL means: count of allowed documents = infinite !
-        //     => return TRUE
+        //     => return sal_True
         if ( ! aVal.hasValue())
             bAllowed = sal_True;
         else
@@ -1039,8 +1065,8 @@ sal_Bool LoadEnv::impl_furtherDocsAllowed()
             css::uno::Any                                                                    aInteraction;
             css::uno::Sequence< css::uno::Reference< css::task::XInteractionContinuation > > lContinuations(2);
 
-            ContinuationAbort*   pAbort   = new ContinuationAbort();
-            ContinuationApprove* pApprove = new ContinuationApprove();
+            comphelper::OInteractionAbort*   pAbort   = new comphelper::OInteractionAbort();
+            comphelper::OInteractionApprove* pApprove = new comphelper::OInteractionApprove();
 
             lContinuations[0] = css::uno::Reference< css::task::XInteractionContinuation >(
                                     static_cast< css::task::XInteractionContinuation* >(pAbort),
@@ -1052,13 +1078,7 @@ sal_Bool LoadEnv::impl_furtherDocsAllowed()
             css::task::ErrorCodeRequest aErrorCode;
             aErrorCode.ErrCode = ERRCODE_SFX_NOMOREDOCUMENTSALLOWED;
             aInteraction <<= aErrorCode;
-
-            InteractionRequest* pRequest = new InteractionRequest(aInteraction, lContinuations);
-            css::uno::Reference< css::task::XInteractionRequest > xRequest(
-                static_cast< css::task::XInteractionRequest* >(pRequest),
-                css::uno::UNO_QUERY_THROW);
-
-            xInteraction->handle(xRequest);
+            xInteraction->handle( InteractionRequest::CreateRequest(aInteraction, lContinuations) );
         }
     }
 
@@ -1359,7 +1379,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
     // frame we referr to any hidden frame also (but as fallback only).
     css::uno::Reference< css::frame::XFrame > xHiddenTask;
     css::uno::Reference< css::frame::XFrame > xTask;
-    
+
     sal_Int32 count = xTaskList->getCount();
     for (sal_Int32 i=0; i<count; ++i)
     {
@@ -1389,7 +1409,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
             // don't check the complete URL here.
             // use its main part - ignore optional jumpmarks!
 			const ::rtl::OUString sURL = xModel->getURL();
-            if (!m_aURL.Main.equals(sURL))
+            if (!::utl::UCBContentHelper::EqualURLs( m_aURL.Main, sURL ))
 			{
 				xTask.clear ();
                 continue;
@@ -1406,7 +1426,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
 				xTask.clear ();
                 continue;
 			}
-            
+
             // Hidden frames are special.
             // They will be used as "last chance" if there is no visible frame pointing to the same model.
             // Safe the result but continue with current loop might be looking for other visible frames.
@@ -1420,7 +1440,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
                 xTask.clear ();
                 continue;
             }
-            
+
             // We found a visible task pointing to the right model ...
             // Break search.
             break;
@@ -1437,7 +1457,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
     else
     if (xHiddenTask.is())
         xResult = xHiddenTask;
-    
+
     if (xResult.is())
     {
         // Now we are shure, that this task includes the searched document.
@@ -1445,11 +1465,11 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
         // if an optional jumpmark is given too.
         if (m_aURL.Mark.getLength())
             impl_jumpToMark(xResult, m_aURL);
-    
+
         // bring it to front and make sure it's visible...
         impl_makeFrameWindowVisible(xResult->getContainerWindow(), sal_True);
     }
-    
+
     aReadLock.unlock();
     // <- SAFE
 
@@ -1501,7 +1521,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
             return aTasksAnalyzer.m_xBackingComponent;
         }
     }
-#endif	// !USE_JAVA && !MACOSX
+#endif	// !USE_JAVA || !MACOSX
 
     // These states indicates the wishing for creation of a new view in general.
     if (
@@ -1602,7 +1622,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
     m_bReactivateControllerOnError = bReactivateOldControllerOnError;
     aWriteLock.unlock();
     // <- SAFE ..................................
-    
+
     // bring it to front ...
     impl_makeFrameWindowVisible(xTask->getContainerWindow(), sal_True);
 
@@ -1627,7 +1647,6 @@ void LoadEnv::impl_reactForLoadingState()
         // We dont hide already visible frames here ...
         css::uno::Reference< css::awt::XWindow > xWindow      = m_xTargetFrame->getContainerWindow();
         sal_Bool                                 bHidden      = m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN(), sal_False);
-        sal_Bool                                 bRecovered   = (m_lMediaDescriptor.find(::comphelper::MediaDescriptor::PROP_SALVAGEDFILE()) != m_lMediaDescriptor.end());
         sal_Bool                                 bMinimized = m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_MINIMIZED(), sal_False);
 
         if (bMinimized)
@@ -1639,7 +1658,7 @@ void LoadEnv::impl_reactForLoadingState()
                 ((WorkWindow*)pWindow)->Minimize();
         }
         else
-        if (!bHidden && !bRecovered)
+        if (!bHidden)
         {
             // show frame ... if it's not still visible ...
             // But do nothing if it's already visible!
@@ -1660,47 +1679,45 @@ void LoadEnv::impl_reactForLoadingState()
                 m_xTargetFrame->setName(sFrameName);
         }
     }
-    else
-    if (m_bReactivateControllerOnError)
-    {
-        // Try to reactivate the old document (if any exists!)
-        css::uno::Reference< css::frame::XController > xOldDoc = m_xTargetFrame->getController();
-        // clear does not depend from reactivation state of a might existing old document!
-        // We must make shure, that a might following getTargetComponent() call does not return
-        // the old document!
-        m_xTargetFrame.clear();
-        if (xOldDoc.is())
-        {
-            sal_Bool bReactivated = xOldDoc->suspend(sal_False);
-            if (!bReactivated)
-                throw LoadEnvException(LoadEnvException::ID_COULD_NOT_REACTIVATE_CONTROLLER);
-            m_bReactivateControllerOnError = sal_False;
-        }
-    }
-    else
-    if (m_bCloseFrameOnError)
-    {
-        // close empty frames
-        css::uno::Reference< css::util::XCloseable > xCloseable (m_xTargetFrame, css::uno::UNO_QUERY);
-        css::uno::Reference< css::lang::XComponent > xDisposable(m_xTargetFrame, css::uno::UNO_QUERY);
+    else if (m_bReactivateControllerOnError)
+	{
+		// Try to reactivate the old document (if any exists!)
+		css::uno::Reference< css::frame::XController > xOldDoc = m_xTargetFrame->getController();
+		// clear does not depend from reactivation state of a might existing old document!
+		// We must make shure, that a might following getTargetComponent() call does not return
+		// the old document!
+		m_xTargetFrame.clear();
+		if (xOldDoc.is())
+		{
+			sal_Bool bReactivated = xOldDoc->suspend(sal_False);
+			if (!bReactivated)
+				throw LoadEnvException(LoadEnvException::ID_COULD_NOT_REACTIVATE_CONTROLLER);
+			m_bReactivateControllerOnError = sal_False;
+		}
+	}
+	else if (m_bCloseFrameOnError)
+	{
+		// close empty frames
+		css::uno::Reference< css::util::XCloseable > xCloseable (m_xTargetFrame, css::uno::UNO_QUERY);
+		css::uno::Reference< css::lang::XComponent > xDisposable(m_xTargetFrame, css::uno::UNO_QUERY);
 
-        try
-        {
-            if (xCloseable.is())
-                xCloseable->close(sal_True);
-            else
-            if (xDisposable.is())
-                xDisposable->dispose();
-        }
-        catch(const css::util::CloseVetoException&)
-        {}
-        catch(const css::lang::DisposedException&)
-        {}
-        m_xTargetFrame.clear();
-    }
+		try
+		{
+			if (xCloseable.is())
+				xCloseable->close(sal_True);
+			else
+			if (xDisposable.is())
+				xDisposable->dispose();
+		}
+		catch(const css::util::CloseVetoException&)
+		{}
+		catch(const css::lang::DisposedException&)
+		{}
+		m_xTargetFrame.clear();
+	}
 
     // This max force an implicit closing of our target frame ...
-    // e.g. in case close(TRUE) was called before and the frame
+    // e.g. in case close(sal_True) was called before and the frame
     // kill itself if our external use-lock is released here!
     // Thats why we releas this lock AFTER ALL OPERATIONS on this frame
     // are finished. The frame itslef must handle then
@@ -1712,7 +1729,24 @@ void LoadEnv::impl_reactForLoadingState()
     // Otherwhise it hold a might existing stream open!
     m_lMediaDescriptor.clear();
 
+	css::uno::Any aRequest;
+	bool bThrow = false;
+	if ( !m_bLoaded && m_pQuietInteraction && m_pQuietInteraction->wasUsed() )
+	{
+		aRequest = m_pQuietInteraction->getRequest();
+		m_pQuietInteraction->release();
+		m_pQuietInteraction = 0;
+		bThrow = true;
+	}
+
     aReadLock.unlock();
+
+	if (bThrow)
+	{
+        if  ( aRequest.isExtractableTo( ::cppu::UnoType< css::uno::Exception >::get() ) )
+			throw LoadEnvException( LoadEnvException::ID_GENERAL_ERROR, aRequest );
+	}
+
     // <- SAFE ----------------------------------
 }
 
@@ -1720,16 +1754,33 @@ void LoadEnv::impl_reactForLoadingState()
     16.01.2005 13:04
 -----------------------------------------------*/
 void LoadEnv::impl_makeFrameWindowVisible(const css::uno::Reference< css::awt::XWindow >& xWindow      ,
-                                                sal_Bool bForceToFront)            
+                                                sal_Bool bForceToFront)
 {
-    css::uno::Reference< css::awt::XTopWindow > xTopWindow(xWindow, css::uno::UNO_QUERY);
+    // SAFE -> ----------------------------------
+    ReadGuard aReadLock(m_aLock);
+    css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR( m_xSMGR.get(), css::uno::UNO_QUERY );
+    aReadLock.unlock();
+    // <- SAFE ----------------------------------
 
-    if (xWindow.is())
-        xWindow->setVisible(sal_True);
+    ::vos::OClearableGuard aSolarGuard(Application::GetSolarMutex());
+    Window* pWindow = VCLUnoHelper::GetWindow(xWindow);
+    if ( pWindow )
+    {
+        bool bForceFrontAndFocus(false);
+        css::uno::Any a = ::comphelper::ConfigurationHelper::readDirectKey(
+            xSMGR,
+            ::rtl::OUString::createFromAscii("org.openoffice.Office.Common/View"),
+            ::rtl::OUString::createFromAscii("NewDocumentHandling"),
+            ::rtl::OUString::createFromAscii("ForceFocusAndToFront"),
+            ::comphelper::ConfigurationHelper::E_READONLY);
+        a >>= bForceFrontAndFocus;
 
-    if (xTopWindow.is() && bForceToFront)
-        xTopWindow->toFront();
-
+        if( pWindow->IsVisible() && (bForceFrontAndFocus || bForceToFront) )
+            pWindow->ToTop();
+        else
+            pWindow->Show(sal_True, (bForceFrontAndFocus || bForceToFront) ? SHOW_FOREGROUNDTASK : 0 );
+    }
+    
 /* #i19976#
     We tried to prevent a toFront() call in case the user putted the
     loading document into the background ..
@@ -1830,9 +1881,8 @@ void LoadEnv::impl_applyPersistentWindowState(const css::uno::Reference< css::aw
         // read window state from the configuration
         // and apply it on the window.
         // Do nothing, if no configuration entry exists!
-        css::uno::Any   aWindowState = ::comphelper::ConfigurationHelper::readRelativeKey(xModuleCfg, sModule, OFFICEFACTORY_PROPNAME_WINDOWATTRIBUTES);
         ::rtl::OUString sWindowState ;
-        aWindowState >>= sWindowState;
+        ::comphelper::ConfigurationHelper::readRelativeKey(xModuleCfg, sModule, OFFICEFACTORY_PROPNAME_WINDOWATTRIBUTES) >>= sWindowState;
         if (sWindowState.getLength())
         {
             // SOLAR SAFE ->
