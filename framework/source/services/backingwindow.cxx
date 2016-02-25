@@ -681,7 +681,7 @@ void BackingWindow::layoutButton(
 void BackingWindow::Paint( const Rectangle& )
 {
 	Resize();
-
+	
 #ifdef USE_JAVA	
     Wallpaper aBack( GetSettings().GetStyleSettings().GetWorkspaceColor() );
 #else	// USE_JAVA	

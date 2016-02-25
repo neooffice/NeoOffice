@@ -72,7 +72,6 @@ $(eval $(call gb_Library_add_linked_libs,fwk,\
 ))
 endif
 
-
 $(eval $(call gb_Library_add_exception_objects,fwk,\
 	framework/source/accelerators/acceleratorcache \
 	framework/source/accelerators/acceleratorconfiguration \
