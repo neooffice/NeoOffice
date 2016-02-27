@@ -65,7 +65,7 @@ SHL1OBJS=       $(SLOFILES)
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
-SHL1STDLIBS += $(UNOTOOLSLIB) -framework ApplicationServices
+SHL1STDLIBS += -framework ApplicationServices
 .ENDIF
 
 SHL1VERSIONMAP=exports.map
