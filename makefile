@@ -303,9 +303,7 @@ build.neo_patches:
 	build.neo_filter_patch \
 	build.neo_fpicker_patch \
 	build.neo_framework_patch \
-	build.neo_goodies_patch \
 	build.neo_hsqldb_patch \
-	build.neo_hwpfilter_patch \
 	build.neo_i18npool_patch \
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
