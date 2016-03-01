@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_jvmfwk.hxx"
@@ -67,6 +70,7 @@ using namespace rtl;
 using namespace osl;
 using namespace std;
 
+#define CHAR_POINTER(oustr) ::rtl::OUStringToOString(oustr,RTL_TEXTENCODING_UTF8).pData->buffer
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 #ifdef WNT
 #define HKEY_SUN_JRE L"Software\\JavaSoft\\Java Runtime Environment"
@@ -106,8 +110,8 @@ char const *g_arCollectDirs[] = {
 char const *g_arSearchPaths[] = {
 #ifdef MACOSX
     "",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/"
+    "Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
 #else
     "",
     "usr/",
@@ -131,7 +135,7 @@ extern VendorSupportMapEntry gVendorMap[];
 
 bool getSDKInfoFromRegistry(vector<OUString> & vecHome);
 bool getJREInfoFromRegistry(vector<OUString>& vecJavaHome);
-rtl::OUString decodeOutput(const rtl::OString& s);
+bool decodeOutput(const rtl::OString& s, rtl::OUString* out);
 
 
 
@@ -246,9 +250,9 @@ FileHandleReader::readLine(rtl::OString * pLine)
     {
         if (m_nIndex == m_nSize)
         {
-            sal_uInt64 nRead;
+            sal_uInt64 nRead = 0;
             switch (osl_readFile(
-                        m_aGuard.getHandle(), m_aBuffer, BUFFER_SIZE, &nRead))
+                        m_aGuard.getHandle(), m_aBuffer, sizeof(m_aBuffer), &nRead))
             {
             case osl_File_E_PIPE: //HACK! for windows
                 nRead = 0;
@@ -261,8 +265,8 @@ FileHandleReader::readLine(rtl::OString * pLine)
                 m_nIndex = 0;
                 m_nSize = static_cast< int >(nRead);
                 break;
-		case osl_File_E_INTR:
-			continue;
+            case osl_File_E_INTR:
+                continue;
 
             default:
                 return RESULT_ERROR;
@@ -304,13 +308,14 @@ class AsynchReader: public Thread
 public:
 
     AsynchReader(oslFileHandle & rHandle);
-
+#if OSL_DEBUG_LEVEL >= 2
     /** only call this function after this thread has finished.
 
         That is, call join on this instance and then call getData.
         
      */
     OString getData();
+#endif
 };
 
 AsynchReader::AsynchReader(oslFileHandle & rHandle):
@@ -318,11 +323,13 @@ AsynchReader::AsynchReader(oslFileHandle & rHandle):
 {
 }
 
+#if OSL_DEBUG_LEVEL >= 2
 OString AsynchReader::getData()
 {
     OSL_ASSERT(isRunning() == sal_False );
     return OString(m_arData.get(), m_nDataSize);
 }
+#endif
 
 void AsynchReader::run()
 {
@@ -459,7 +466,13 @@ bool getJavaProps(const OUString & exePath,
         rs = stdoutReader.readLine( & aLine);
         if (rs != FileHandleReader::RESULT_OK)
             break;
-        OUString sLine = decodeOutput(aLine);
+//         JFW_TRACE2(OString("[Java framework] line:\" ")
+//                + aLine + OString(" \".\n"));
+        OUString sLine;
+        if (!decodeOutput(aLine, &sLine))
+            continue;
+        JFW_TRACE2(OString("[Java framework]:\" ")
+               + OString( CHAR_POINTER(sLine)) + OString(" \".\n"));
         sLine = sLine.trim();
         if (sLine.getLength() == 0)
             continue;
@@ -491,21 +504,29 @@ bool getJavaProps(const OUString & exePath,
     readable strings. The strings are encoded as integer values separated
     by spaces.
  */
-rtl::OUString decodeOutput(const rtl::OString& s)
+bool decodeOutput(const rtl::OString& s, rtl::OUString* out)
 {
-    OUString sEncoded = OStringToOUString(s, RTL_TEXTENCODING_ASCII_US);
+    OSL_ASSERT(out != 0);
     OUStringBuffer buff(512);
     sal_Int32 nIndex = 0;
     do
     {
-        OUString aToken = sEncoded.getToken( 0, ' ', nIndex );
+        OString aToken = s.getToken( 0, ' ', nIndex );
         if (aToken.getLength())
         {
-            sal_Unicode value = (sal_Unicode) aToken.toInt32();
+            for (sal_Int32 i = 0; i < aToken.getLength(); ++i)
+            {
+                if (aToken[i] < '0' || aToken[i] > '9')
+                    return false;
+            }
+            sal_Unicode value = (sal_Unicode)(aToken.toInt32());
             buff.append(value);
         }
     } while (nIndex >= 0);
-   return buff.makeStringAndClear();
+
+    *out = buff.makeStringAndClear();
+//    JFW_TRACE2(*out);
+    return true;
 }
 
 
@@ -796,8 +817,9 @@ OUString resolveDirPath(const OUString & path)
 {
     OUString ret;
     OUString sResolved;
+    //getAbsoluteFileURL also resolves links
     if (File::getAbsoluteFileURL(
-        rtl::OUString(), path, sResolved) != File::E_None)
+            OUSTR("file:///"), path, sResolved) != File::E_None)
         return OUString();
 
     //check if this is a valid path and if it is a directory
@@ -827,7 +849,7 @@ OUString resolveFilePath(const OUString & path)
     OUString sResolved;
 
     if (File::getAbsoluteFileURL(
-        rtl::OUString(), path, sResolved) != File::E_None)
+            OUSTR("file:///"), path, sResolved) != File::E_None)
         return OUString();
 
     //check if this is a valid path to a file or and if it is a link
@@ -876,7 +898,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
                            SameOrSubDirJREMap(sResolvedDir));
     if (entry2 != mapJREs.end())
     {
-        JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
+        JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin" SAL_DLLEXTENSION ": ")
                    + OUSTR("JRE found again (detected before): ") + sResolvedDir 
                    + OUSTR(".\n"));
         return entry2->second;
@@ -927,7 +949,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
             MapIt entry =  mapJREs.find(sFilePath);
             if (entry != mapJREs.end())
             {
-                JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
+                JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin" SAL_DLLEXTENSION ": ")
                    + OUSTR("JRE found again (detected before): ") + sFilePath 
                    + OUSTR(".\n"));
 
@@ -1015,7 +1037,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
         vecBadPaths.push_back(sFilePath);
     else
     {
-        JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
+        JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin" SAL_DLLEXTENSION ": ")
                    + OUSTR("Found JRE: ") + sResolvedDir 
                    + OUSTR(" \n at: ") + path + OUSTR(".\n"));
  

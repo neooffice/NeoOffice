@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified February 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_jvmfwk.hxx"
@@ -188,7 +191,7 @@ rtl::OUString getRuntimeLib(const rtl::ByteSequence & data)
 jmp_buf jmp_jvm_abort;
 sig_atomic_t g_bInGetJavaVM = 0;
 
-void abort_handler()
+extern "C" void JNICALL abort_handler()
 {
     // If we are within JNI_CreateJavaVM then we jump back into getJavaVM
     if( g_bInGetJavaVM != 0 )
@@ -284,7 +287,7 @@ javaPluginError jfw_plugin_getAllJavaInfos(
             }
         }
         
-        if (arExcludeList > 0)
+        if( arExcludeList != NULL)
         {
             bool bExclude = false;
             for (int j = 0; j < nLenList; j++)
@@ -414,7 +417,7 @@ javaPluginError jfw_plugin_getJavaInfoByPath(
             return JFW_PLUGIN_E_FAILED_VERSION;
     }
     
-    if (arExcludeList > 0)
+    if( arExcludeList != NULL)
     {
         for (int i = 0; i < nLenList; i++)
         {
@@ -492,10 +495,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
      {
          JFW_ENSURE(0, OUSTR("[Java framework]sunjavaplugin" SAL_DLLEXTENSION
                              " could not load Java runtime library: \n")
-                    + sRuntimeLib + OUSTR("."));
+                    + sRuntimeLib + OUSTR("\n"));
          JFW_TRACE0(OUSTR("[Java framework]sunjavaplugin" SAL_DLLEXTENSION
                              " could not load Java runtime library: \n")
-                    + sRuntimeLib +  OUSTR("."));
+                    + sRuntimeLib +  OUSTR("\n"));
          return JFW_PLUGIN_E_VM_CREATION_FAILED;
      }
 
@@ -508,7 +511,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OString osJavaHome = rtl::OUStringToOString(
         javaHome, osl_getThreadTextEncoding());
     putenv(strdup(osJavaHome.getStr()));
-#endif
+#endif	// UNX || USE_JAVA
 
     typedef jint JNICALL JNI_InitArgs_Type(void *);
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
@@ -539,25 +542,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             sRuntimeLib, osl_getThreadTextEncoding());
         rtl::OString sSymbol = rtl::OUStringToOString(
             sSymbolCreateJava, osl_getThreadTextEncoding());
-        fprintf(stderr,"[Java framework]sunjavaplugin"SAL_DLLEXTENSION
+        fprintf(stderr,"[Java framework]sunjavaplugin" SAL_DLLEXTENSION
                 "Java runtime library: %s does not export symbol %s !\n",
                 sLib.getStr(), sSymbol.getStr());
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
     }
-
-    // The office sets a signal handler at startup. That causes a crash
-    // with java 1.3 under Solaris. To make it work, we set back the
-    // handler
-#ifdef UNX
-    struct sigaction act;
-    act.sa_handler=SIG_DFL;
-    act.sa_flags= 0;
-    sigaction( SIGSEGV, &act, NULL);
-    sigaction( SIGPIPE, &act, NULL);
-    sigaction( SIGBUS, &act, NULL);
-    sigaction( SIGILL, &act, NULL);
-    sigaction( SIGFPE, &act, NULL);
-#endif
 
     // Some testing with Java 1.4 showed that JavaVMOption.optionString has to
     // be encoded with the system encoding (i.e., osl_getThreadTextEncoding):
@@ -744,9 +733,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA
 #if defined MACOSX || defined USE_JAVA
     vm_args.version= JNI_VERSION_1_4; // issue 88987
-#else
+#else	// MACOSX || USE_JAVA
     vm_args.version= JNI_VERSION_1_2;
-#endif
+#endif	// MACOSX || USE_JAVA
     vm_args.options= options;
 #ifdef USE_JAVA
 #ifdef MACOSX
@@ -788,13 +777,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         rtl::OUString message;
         if( err < 0)
         {
-            fprintf(stderr,"[Java framework] sunjavaplugin"SAL_DLLEXTENSION
+            fprintf( stderr,"[Java framework] sunjavaplugin" SAL_DLLEXTENSION
                     "Can not create Java Virtual Machine\n");
             errcode = JFW_PLUGIN_E_VM_CREATION_FAILED;
         }
         else if( err > 0)
         {
-            fprintf(stderr,"[Java framework] sunjavaplugin"SAL_DLLEXTENSION
+            fprintf( stderr,"[Java framework] sunjavaplugin" SAL_DLLEXTENSION
                     "Can not create JavaVirtualMachine, abort handler was called.\n");
             errcode = JFW_PLUGIN_E_VM_CREATION_FAILED;
         }
@@ -802,12 +791,70 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     else
     {
         *ppVm = pJavaVM;
-        JFW_TRACE2("[Java framework] sunjavaplugin"SAL_DLLEXTENSION " has created a VM.\n");
+        JFW_TRACE2( "[Java framework] sunjavaplugin" SAL_DLLEXTENSION " has created a VM.\n");
     }
         
         
    return errcode;
 }
 
+extern "C"
+javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, sal_Bool *exist)
+{
+    javaPluginError ret = JFW_PLUGIN_E_NONE;
+    if (!pInfo || !exist)
+        return JFW_PLUGIN_E_INVALID_ARG;
+    ::rtl::OUString sLocation(pInfo->sLocation);
+
+    if (sLocation.getLength() == 0)
+        return JFW_PLUGIN_E_INVALID_ARG;
+    ::osl::DirectoryItem item;
+    ::osl::File::RC rc_item = ::osl::DirectoryItem::get(sLocation, item);
+    if (::osl::File::E_None == rc_item)
+    {
+        *exist = sal_True;
+    }
+    else if (::osl::File::E_NOENT == rc_item)
+    {
+        *exist = sal_False;
+    }
+    else
+    {
+        ret = JFW_PLUGIN_E_ERROR;
+    }
+#ifdef MACOSX
+    //We can have the situation that the JavaVM runtime library is not
+    //contained within JAVA_HOME. Then the check for JAVA_HOME would return
+    //true although the runtime library may not be loadable.
+    if (ret == JFW_PLUGIN_E_NONE && *exist == sal_True)
+    {
+        rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
+        JFW_TRACE2(OUSTR("[Java framework] Checking existence of Java runtime library.\n"));
+	 
+        ::osl::DirectoryItem itemRt;
+        ::osl::File::RC rc_itemRt = ::osl::DirectoryItem::get(sRuntimeLib, itemRt);
+        if (::osl::File::E_None == rc_itemRt)
+        {
+            *exist = sal_True;
+            JFW_TRACE2(OUSTR("[Java framework] Java runtime library exist: ")
+              + sRuntimeLib + OUSTR("\n"));
+
+        }
+        else if (::osl::File::E_NOENT == rc_itemRt)
+        {
+            *exist = sal_False;
+            JFW_TRACE2(OUSTR("[Java framework] Java runtime library does not exist: ")
+                       + sRuntimeLib + OUSTR("\n"));
+        }
+        else
+        {
+            ret = JFW_PLUGIN_E_ERROR;
+            JFW_TRACE2(OUSTR("[Java framework] Error while looking for Java runtime library: ")
+                       + sRuntimeLib + OUSTR(" \n"));
+        }
+    }
+#endif
+    return ret;
+}
 
 
