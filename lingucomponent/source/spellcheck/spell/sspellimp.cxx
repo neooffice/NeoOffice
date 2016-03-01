@@ -1027,11 +1027,11 @@ OUString SAL_CALL SpellChecker::getServiceDisplayName( const Locale& /*rLocale*/
 		throw(RuntimeException)
 {
 	MutexGuard	aGuard( GetLinguMutex() );
-#ifdef PRODUCT_NAME
+#if defined USE_JAVA && defined MACOSX && defined PRODUCT_NAME
 	return A2OU( PRODUCT_NAME " OS X Spellchecker + Grammarchecker" );
-#else	// PRODUCT_NAME
+#else	// USE_JAVA && MACOSX && PRODUCT_NAME
 	return A2OU( "Hunspell SpellChecker" );
-#endif	// PRODUCT_NAME
+#endif	// USE_JAVA && MACOSX && PRODUCT_NAME
 }
 
 
