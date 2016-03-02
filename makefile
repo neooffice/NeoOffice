@@ -308,7 +308,6 @@ build.neo_patches:
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
 	build.neo_linguistic_patch \
-	build.neo_moz_patch \
 	build.neo_oox_patch \
 	build.neo_package_patch \
 	build.neo_pyuno_patch \
