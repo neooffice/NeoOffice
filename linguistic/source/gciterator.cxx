@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified July 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 #include "precompiled_linguistic.hxx"
 
 #include <com/sun/star/container/XContentEnumerationAccess.hpp>
@@ -60,23 +63,23 @@
 #include <cppuhelper/implbase4.hxx>
 #include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/interfacecontainer.h>
-#include <cppuhelper/extract.hxx>
 #include <cppuhelper/factory.hxx>
-#include <vcl/unohelp.hxx>
 #include <i18npool/mslangid.hxx>
 #include <unotools/processfactory.hxx>
+#include <comphelper/extract.hxx>
 
 #include <deque>
 #include <map>
 #include <vector>
 
-#include "misc.hxx"
+#include "linguistic/misc.hxx"
 #include "defs.hxx"
 #include "lngopt.hxx"
 
 #include "gciterator.hxx"
 
 #ifdef USE_JAVA
+#include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
 #endif	// USE_JAVA
 
@@ -367,7 +370,7 @@ void GrammarCheckingIterator::AddEntry(
         m_aFPEntriesQueue.push_back( aNewFPEntry );
 
 #ifdef USE_JAVA
-        if ( !m_aDequeueAndCheckTimer.IsActive() );
+        if ( !m_aDequeueAndCheckTimer.IsActive() )
             m_aDequeueAndCheckTimer.Start();
 #else	// USE_JAVA
         // wake up the thread in order to do grammar checking
@@ -607,7 +610,8 @@ void GrammarCheckingIterator::DequeueAndCheck()
 
                     sal_Int32 nStartPos = aFPEntryItem.m_nStartIndex;
                     sal_Int32 nSuggestedEnd = GetSuggestedEndOfSentence( aCurTxt, nStartPos, aCurLocale );
-                    DBG_ASSERT( nSuggestedEnd > nStartPos, "nSuggestedEndOfSentencePos calculation failed?" );
+                    DBG_ASSERT( (nSuggestedEnd == 0 && aCurTxt.getLength() == 0) || nSuggestedEnd > nStartPos, 
+                            "nSuggestedEndOfSentencePos calculation failed?" );
 
                     linguistic2::ProofreadingResult aRes;
 
@@ -673,7 +677,7 @@ void GrammarCheckingIterator::DequeueAndCheck()
                 if (m_aFPEntriesQueue.empty())
 #ifdef USE_JAVA
                 {
-                    if ( m_aDequeueAndCheckTimer.IsActive() );
+                    if ( m_aDequeueAndCheckTimer.IsActive() )
                         m_aDequeueAndCheckTimer.Stop();
                 }
 #else	// USE_JAVA
@@ -701,7 +705,7 @@ void GrammarCheckingIterator::DequeueAndCheck()
     }
 
 #ifdef USE_JAVA
-	return bEnd;
+    return bEnd;
 #else	// USE_JAVA
     //!! This one must be the very last statement to call in this function !!
     m_aRequestEndThread.set();
@@ -831,7 +835,10 @@ sal_Int32 GrammarCheckingIterator::GetSuggestedEndOfSentence(
     uno::Reference< i18n::XBreakIterator > xBreakIterator;
     if (!m_xBreakIterator.is())
 	{
-        m_xBreakIterator = vcl::unohelper::CreateBreakIterator();
+		uno::Reference< lang::XMultiServiceFactory > xMSF = ::comphelper::getProcessServiceFactory();
+		if ( xMSF.is() )
+			xBreakIterator = uno::Reference < i18n::XBreakIterator >( xMSF->createInstance( 
+				::rtl::OUString::createFromAscii("com.sun.star.i18n.BreakIterator") ), uno::UNO_QUERY );
 	}
 	sal_Int32 nTextLen = rText.getLength();
     sal_Int32 nEndPosition = nTextLen;
@@ -978,7 +985,7 @@ throw (uno::RuntimeException)
     m_aEventListeners.disposeAndClear( aEvt );
 
 #ifdef USE_JAVA
-    if ( m_aDequeueAndCheckTimer.IsActive() );
+    if ( m_aDequeueAndCheckTimer.IsActive() )
         m_aDequeueAndCheckTimer.Stop();
 #else	// USE_JAVA
     //
@@ -1268,10 +1275,10 @@ throw(uno::RuntimeException)
 {
 	uno::Sequence< OUString > aSNL = getSupportedServiceNames();
 	const OUString * pArray = aSNL.getConstArray();
-	for( INT32 i = 0; i < aSNL.getLength(); ++i )
+	for( sal_Int32 i = 0; i < aSNL.getLength(); ++i )
         if( pArray[i] == rServiceName )
-			return TRUE;
-	return FALSE;
+			return sal_True;
+	return sal_False;
 }
 
 
@@ -1381,27 +1388,3 @@ void * SAL_CALL GrammarCheckingIterator_getFactory(
     }
     return pRet;
 }
-
-
-sal_Bool SAL_CALL GrammarCheckingIterator_writeInfo(
-    void * /*pServiceManager*/,
-    registry::XRegistryKey * pRegistryKey )
-{
-    try
-    {
-        OUString aImpl( '/' );
-        aImpl += GrammarCheckingIterator_getImplementationName().getStr();
-        aImpl += A2OU( "/UNO/SERVICES" );
-        uno::Reference< registry::XRegistryKey > xNewKey = pRegistryKey->createKey( aImpl );
-        uno::Sequence< OUString > aServices = GrammarCheckingIterator_getSupportedServiceNames();
-        for( sal_Int32 i = 0; i < aServices.getLength(); i++ )
-            xNewKey->createKey( aServices.getConstArray()[i] );
-
-        return sal_True;
-    }
-    catch (uno::Exception &)
-    {
-        return sal_False;
-    }
-}
-
