@@ -401,14 +401,13 @@ Reference< XShape > Shape::createAndInsert(
 	    try
 	    {
 #endif	// USE_JAVA
- 	    rxShapes->add( mxShape );
+	    rxShapes->add( mxShape );
 #ifdef USE_JAVA
 	    }
 	    catch ( ... )
 	    {
 	    }
 #endif	// USE_JAVA
-	    rxShapes->add( mxShape );
 
 		if ( mbHidden )
 		{
