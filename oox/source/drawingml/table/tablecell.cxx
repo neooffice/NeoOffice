@@ -1,38 +1,40 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #include "oox/drawingml/table/tablecell.hxx"
 #include "oox/drawingml/table/tableproperties.hxx"
+#include "oox/drawingml/shapepropertymap.hxx"
 #include "oox/drawingml/textbody.hxx"
-#include "oox/core/namespaces.hxx"
 #include "oox/core/xmlfilterbase.hxx"
-#include "tokens.hxx"
 #include "oox/helper/propertyset.hxx"
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
@@ -43,6 +45,7 @@
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <com/sun/star/drawing/TextHorizontalAdjust.hpp>
 #include <com/sun/star/text/XText.hpp>
+#include <com/sun/star/text/WritingMode.hpp>
 
 using rtl::OUString;
 using namespace ::oox::core;
@@ -79,21 +82,21 @@ TableCell::~TableCell()
 }
 
 void applyLineAttributes( const ::oox::core::XmlFilterBase& rFilterBase,
-	Reference< XPropertySet >& rxPropSet, oox::drawingml::LineProperties& rLineProperties,
-		const rtl::OUString& sPropertyName )
+        Reference< XPropertySet >& rxPropSet, oox::drawingml::LineProperties& rLineProperties,
+        sal_Int32 nPropId )
 {
     BorderLine aBorderLine( 0, 0, 0, 0 );
     if( rLineProperties.maLineFill.moFillType.differsFrom( XML_noFill ) )
     {
         Color aColor = rLineProperties.maLineFill.getBestSolidColor();
-        aBorderLine.Color = aColor.getColor( rFilterBase );
-        aBorderLine.OuterLineWidth = static_cast< sal_Int16 >( GetCoordinate( rLineProperties.moLineWidth.get( 0 ) ) );
-        aBorderLine.InnerLineWidth = 0;
+        aBorderLine.Color = aColor.getColor( rFilterBase.getGraphicHelper() );
+        aBorderLine.OuterLineWidth = static_cast< sal_Int16 >( GetCoordinate( rLineProperties.moLineWidth.get( 0 ) ) / 4 );
+        aBorderLine.InnerLineWidth = static_cast< sal_Int16 >( GetCoordinate( rLineProperties.moLineWidth.get( 0 ) ) / 4 );
         aBorderLine.LineDistance = 0;
     }
 
     PropertySet aPropSet( rxPropSet );
-    aPropSet.setProperty( sPropertyName, aBorderLine );
+    aPropSet.setProperty( nPropId, aBorderLine );
 }
 
 void applyBorder( TableStylePart& rTableStylePart, sal_Int32 nLineType, oox::drawingml::LineProperties& rLineProperties )
@@ -148,7 +151,7 @@ void applyTableCellProperties( const Reference < ::com::sun::star::table::XCell 
 	xPropSet->setPropertyValue( sRightBorder, Any( static_cast< sal_Int32 >( rTableCell.getRightMargin() / 360 ) ) );
 	xPropSet->setPropertyValue( sLeftBorder, Any( static_cast< sal_Int32 >( rTableCell.getLeftMargin() / 360 ) ) );
 	xPropSet->setPropertyValue( sBottomBorder, Any( static_cast< sal_Int32 >( rTableCell.getBottomMargin() / 360 ) ) );
-	
+
 	drawing::TextVerticalAdjust eVA;
 	switch( rTableCell.getAnchorToken() )
 	{
@@ -162,6 +165,15 @@ void applyTableCellProperties( const Reference < ::com::sun::star::table::XCell 
 	xPropSet->setPropertyValue( sVerticalAdjust, Any( eVA ) );
 }
 
+// save char color from tblstyle for combination later
+void lcl_getCharPropFromTblStylePart(TextCharacterProperties& rDstCharProp, const TableStylePart& rSrcTblStyle)
+{
+    const Color& clr = const_cast<TableStylePart&>(rSrcTblStyle).getTextColor();
+    if (clr.isUsed())
+        rDstCharProp.maCharColor = clr;
+    // TODO: there may be other similar properties from tblstyle which need combination later
+}
+
 void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oox::drawingml::TextListStylePtr pMasterTextListStyle,
 	const ::com::sun::star::uno::Reference < ::com::sun::star::table::XCell >& rxCell, const TableProperties& rTableProperties,
 		const TableStyle& rTableStyle, sal_Int32 nColumn, sal_Int32 nMaxColumn, sal_Int32 nRow, sal_Int32 nMaxRow )
@@ -173,16 +185,8 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 	Reference< text::XTextCursor > xAt = xText->createTextCursor();
 
 	applyTableCellProperties( rxCell, *this );
-    TextCharacterProperties aTextStyleProps;
-	getTextBody()->insertAt( rFilterBase, xText, xAt, aTextStyleProps, pMasterTextListStyle );
 
 	Reference< XPropertySet > xPropSet( rxCell, UNO_QUERY_THROW );
-	static const rtl::OUString sLeftBorder( RTL_CONSTASCII_USTRINGPARAM( "LeftBorder" ) );
-	static const rtl::OUString sRightBorder( RTL_CONSTASCII_USTRINGPARAM( "RightBorder" ) );	
-	static const rtl::OUString sTopBorder( RTL_CONSTASCII_USTRINGPARAM( "TopBorder" ) );
-	static const rtl::OUString sBottomBorder( RTL_CONSTASCII_USTRINGPARAM( "BottomBorder" ) );
-	static const rtl::OUString sDiagonalTLBR( RTL_CONSTASCII_USTRINGPARAM ( "DiagonalTLBR" ) );
-	static const rtl::OUString sDiagonalBLTR( RTL_CONSTASCII_USTRINGPARAM ( "DiagonalBLTR" ) );
 	oox::drawingml::FillProperties aFillProperties;
 	oox::drawingml::LineProperties aLinePropertiesLeft;
 	oox::drawingml::LineProperties aLinePropertiesRight;
@@ -190,7 +194,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 	oox::drawingml::LineProperties aLinePropertiesBottom;
 	oox::drawingml::LineProperties aLinePropertiesTopLeftToBottomRight;
 	oox::drawingml::LineProperties aLinePropertiesBottomLeftToTopRight;
-	
+
 	boost::shared_ptr< ::oox::drawingml::FillProperties >& rBackgroundFillPropertiesPtr( rTable.getBackgroundFillProperties() );
 	if ( rBackgroundFillPropertiesPtr.get() )
 		aFillProperties.assignUsed( *rBackgroundFillPropertiesPtr );
@@ -204,6 +208,10 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 		aLinePropertiesBottomLeftToTopRight,
 		rTable.getWholeTbl() );
 
+	// get char color from tblstyle for combination later
+	TextCharacterProperties aTextCharProps;
+	lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getWholeTbl());
+
 	if ( rProperties.isFirstRow() && ( nRow == 0 ) )
 	{
 		applyTableStylePart( rFilterBase, rxCell, aFillProperties,
@@ -214,6 +222,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getFirstRow() );
+       lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getFirstRow());
 	}
 	if ( rProperties.isLastRow() && ( nRow == nMaxRow ) )
 	{
@@ -225,6 +234,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getLastRow() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getLastRow());
 	}
 	if ( rProperties.isFirstCol() && ( nColumn == 0 ) )
 	{
@@ -236,6 +246,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getFirstCol() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getFirstCol());
 	}
 	if ( rProperties.isLastCol() && ( nColumn == nMaxColumn ) )
 	{
@@ -247,10 +258,11 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getLastCol() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getLastCol());
 	}
 	if ( rProperties.isBandRow() )
 	{
-		if ( ( !rProperties.isFirstRow() || ( nRow != 0 ) ) && 
+		if ( ( !rProperties.isFirstRow() || ( nRow != 0 ) ) &&
 			( !rProperties.isLastRow() || ( nRow != nMaxRow ) ) )
 		{
 			sal_Int32 nBand = nRow;
@@ -266,6 +278,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 					aLinePropertiesTopLeftToBottomRight,
 					aLinePropertiesBottomLeftToTopRight,
 					rTable.getBand2H() );
+				lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getBand2H());
 			}
 			else
 			{
@@ -277,6 +290,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 					aLinePropertiesTopLeftToBottomRight,
 					aLinePropertiesBottomLeftToTopRight,
 					rTable.getBand1H() );
+				lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getBand1H());
 			}
 		}
 	}
@@ -290,6 +304,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getNwCell() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getNwCell());
 	}
 	if ( ( nRow == nMaxRow ) && ( nColumn == 0 ) )
 	{
@@ -301,6 +316,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getSwCell() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getSwCell());
 	}
 	if ( ( nRow == 0 ) && ( nColumn == nMaxColumn ) )
 	{
@@ -312,6 +328,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getNeCell() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getNeCell());
 	}
 	if ( ( nRow == nMaxColumn ) && ( nColumn == nMaxColumn ) )
 	{
@@ -323,10 +340,11 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 			aLinePropertiesTopLeftToBottomRight,
 			aLinePropertiesBottomLeftToTopRight,
 			rTable.getSeCell() );
+		lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getSeCell());
 	}
 	if ( rProperties.isBandCol() )
 	{
-		if ( ( !rProperties.isFirstCol() || ( nColumn != 0 ) ) && 
+		if ( ( !rProperties.isFirstCol() || ( nColumn != 0 ) ) &&
 			( !rProperties.isLastCol() || ( nColumn != nMaxColumn ) ) )
 		{
 			sal_Int32 nBand = nColumn;
@@ -342,6 +360,7 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 					aLinePropertiesTopLeftToBottomRight,
 					aLinePropertiesBottomLeftToTopRight,
 					rTable.getBand2V() );
+				lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getBand2V());
 			}
 			else
 			{
@@ -353,27 +372,36 @@ void TableCell::pushToXCell( const ::oox::core::XmlFilterBase& rFilterBase, ::oo
 					aLinePropertiesTopLeftToBottomRight,
 					aLinePropertiesBottomLeftToTopRight,
 					rTable.getBand1V() );
+				lcl_getCharPropFromTblStylePart(aTextCharProps, rTable.getBand1V());
 			}
 		}
 	}
+
+	getTextBody()->insertAt( rFilterBase, xText, xAt, aTextCharProps, pMasterTextListStyle );
+
 	aLinePropertiesLeft.assignUsed( maLinePropertiesLeft );
-	aLinePropertiesLeft.assignUsed( maLinePropertiesRight );
-	aLinePropertiesLeft.assignUsed( maLinePropertiesTop );
-	aLinePropertiesLeft.assignUsed( maLinePropertiesBottom );
-	aLinePropertiesLeft.assignUsed( maLinePropertiesTopLeftToBottomRight );
-	aLinePropertiesLeft.assignUsed( maLinePropertiesBottomLeftToTopRight );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesLeft, sLeftBorder );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesRight, sRightBorder );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesTop, sTopBorder );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesBottom, sBottomBorder );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesTopLeftToBottomRight, sDiagonalTLBR );
-	applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesBottomLeftToTopRight, sDiagonalBLTR );
+    aLinePropertiesRight.assignUsed( maLinePropertiesRight );
+    aLinePropertiesTop.assignUsed( maLinePropertiesTop );
+    aLinePropertiesBottom.assignUsed( maLinePropertiesBottom );
+    aLinePropertiesTopLeftToBottomRight.assignUsed( maLinePropertiesTopLeftToBottomRight );
+    aLinePropertiesBottomLeftToTopRight.assignUsed( maLinePropertiesBottomLeftToTopRight );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesLeft, PROP_LeftBorder );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesRight, PROP_RightBorder );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesTop, PROP_TopBorder );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesBottom, PROP_BottomBorder );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesTopLeftToBottomRight, PROP_DiagonalTLBR );
+    applyLineAttributes( rFilterBase, xPropSet, aLinePropertiesBottomLeftToTopRight, PROP_DiagonalBLTR );
 
 	aFillProperties.assignUsed( maFillProperties );
-    PropertySet aPropSet( xPropSet );
+    ShapePropertyMap aPropMap( rFilterBase.getModelObjectHelper() );
     // TODO: phClr?
-    aFillProperties.pushToPropSet( aPropSet, FillProperties::DEFAULTNAMES, 
-        rFilterBase, rFilterBase.getModelObjectContainer(), 0, -1 );
+    aFillProperties.pushToPropMap( aPropMap, rFilterBase.getGraphicHelper() );
+    PropertySet( xPropSet ).setProperties( aPropMap );
+
+    if ( getVertToken() == XML_eaVert )
+    {
+        xPropSet->setPropertyValue(::rtl::OUString::createFromAscii( "TextWritingMode" ) , Any(com::sun::star::text::WritingMode_TB_RL) );
+    }
 }
 
 } } }

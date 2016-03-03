@@ -1,56 +1,65 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified June 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #include "oox/drawingml/shape.hxx"
 #include "oox/drawingml/customshapeproperties.hxx"
 #include "oox/drawingml/theme.hxx"
 #include "oox/drawingml/fillproperties.hxx"
 #include "oox/drawingml/lineproperties.hxx"
+#include "oox/drawingml/shapepropertymap.hxx"
 #include "oox/drawingml/textbody.hxx"
 #include "oox/drawingml/table/tableproperties.hxx"
-#include "oox/core/namespaces.hxx"
+#include "oox/drawingml/chart/chartconverter.hxx"
+#include "oox/drawingml/chart/chartspacefragment.hxx"
+#include "oox/drawingml/chart/chartspacemodel.hxx"
+#include "oox/vml/vmldrawing.hxx"
+#include "oox/vml/vmlshape.hxx"
+#include "oox/vml/vmlshapecontainer.hxx"
 #include "oox/core/xmlfilterbase.hxx"
+#include "oox/helper/graphichelper.hxx"
 #include "oox/helper/propertyset.hxx"
-#include "tokens.hxx"
 
 #include <tools/solar.h>        // for the F_PI180 define
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/container/XNamed.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/xml/AttributeData.hpp>
 #include <com/sun/star/drawing/HomogenMatrix3.hpp>
 #include <com/sun/star/text/XText.hpp>
+#include <com/sun/star/chart2/XChartDocument.hpp>
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
+#include <com/sun/star/document/XActionLockable.hpp>
 
 using rtl::OUString;
 using namespace ::oox::core;
@@ -66,51 +75,24 @@ namespace oox { namespace drawingml {
 
 // ============================================================================
 
-CreateShapeCallback::~CreateShapeCallback()
-{
-}
-
-// ============================================================================
-
 Shape::Shape( const sal_Char* pServiceName )
 : mpLinePropertiesPtr( new LineProperties )
 , mpFillPropertiesPtr( new FillProperties )
-, mpGraphicPropertiesPtr( new FillProperties )
+, mpGraphicPropertiesPtr( new GraphicProperties )
 , mpCustomShapePropertiesPtr( new CustomShapeProperties )
 , mpMasterTextListStyle( new TextListStyle )
 , mnSubType( 0 )
-, mnIndex( 0 )
+, mnSubTypeIndex( -1 )
+, meFrameType( FRAMETYPE_GENERIC )
 , mnRotation( 0 )
 , mbFlipH( false )
 , mbFlipV( false )
+, mbHidden( false )
 {
     if ( pServiceName )
         msServiceName = OUString::createFromAscii( pServiceName );
     setDefaults();
 }
-
-Shape::Shape( const ShapePtr& pSourceShape )
-: maChildren()
-, mpTextBody(pSourceShape->mpTextBody)
-, mpLinePropertiesPtr( pSourceShape->mpLinePropertiesPtr )
-, mpFillPropertiesPtr( pSourceShape->mpFillPropertiesPtr )
-, mpGraphicPropertiesPtr( pSourceShape->mpGraphicPropertiesPtr )
-, mpCustomShapePropertiesPtr( pSourceShape->mpCustomShapePropertiesPtr )
-, maShapeProperties( pSourceShape->maShapeProperties )
-, mpMasterTextListStyle( pSourceShape->mpMasterTextListStyle )
-, mxShape()
-, msServiceName( pSourceShape->msServiceName )
-, msName( pSourceShape->msName )
-, msId( pSourceShape->msId )
-, mnSubType( pSourceShape->mnSubType )
-, mnIndex( pSourceShape->mnIndex )
-, maSize( pSourceShape->maSize )
-, maPosition( pSourceShape->maPosition )
-, mxCreateCallback( pSourceShape->mxCreateCallback )
-, mnRotation( pSourceShape->mnRotation )
-, mbFlipH( pSourceShape->mbFlipH )
-, mbFlipV( pSourceShape->mbFlipV )
-{}
 
 Shape::~Shape()
 {
@@ -125,20 +107,46 @@ table::TablePropertiesPtr Shape::getTableProperties()
 
 void Shape::setDefaults()
 {
-	const OUString sTextAutoGrowHeight( RTL_CONSTASCII_USTRINGPARAM( "TextAutoGrowHeight" ) );
-	const OUString sTextWordWrap( RTL_CONSTASCII_USTRINGPARAM( "TextWordWrap" ) );
-	const OUString sTextLeftDistance( RTL_CONSTASCII_USTRINGPARAM( "TextLeftDistance" ) );
-	const OUString sTextUpperDistance( RTL_CONSTASCII_USTRINGPARAM( "TextUpperDistance" ) );
-	const OUString sTextRightDistance( RTL_CONSTASCII_USTRINGPARAM( "TextRightDistance" ) );
-	const OUString sTextLowerDistance( RTL_CONSTASCII_USTRINGPARAM( "TextLowerDistance" ) );
-	const OUString sCharHeight( RTL_CONSTASCII_USTRINGPARAM( "CharHeight" ) );
-	maShapeProperties[ sTextAutoGrowHeight ] <<= false;
-	maShapeProperties[ sTextWordWrap ] <<= true;
-	maShapeProperties[ sTextLeftDistance ]  <<= static_cast< sal_Int32 >( 250 );
-	maShapeProperties[ sTextUpperDistance ] <<= static_cast< sal_Int32 >( 125 );
-	maShapeProperties[ sTextRightDistance ] <<= static_cast< sal_Int32 >( 250 );
-	maShapeProperties[ sTextLowerDistance ] <<= static_cast< sal_Int32 >( 125 );
-	maShapeProperties[ sCharHeight ] <<= static_cast< float >( 18.0 );
+    maShapeProperties[ PROP_TextAutoGrowHeight ] <<= false;
+    maShapeProperties[ PROP_TextWordWrap ] <<= true;
+    maShapeProperties[ PROP_TextLeftDistance ]  <<= static_cast< sal_Int32 >( 250 );
+    maShapeProperties[ PROP_TextUpperDistance ] <<= static_cast< sal_Int32 >( 125 );
+    maShapeProperties[ PROP_TextRightDistance ] <<= static_cast< sal_Int32 >( 250 );
+    maShapeProperties[ PROP_TextLowerDistance ] <<= static_cast< sal_Int32 >( 125 );
+    maShapeProperties[ PROP_CharHeight ] <<= static_cast< float >( 18.0 );
+}
+
+::oox::vml::OleObjectInfo& Shape::setOleObjectType()
+{
+    OSL_ENSURE( meFrameType == FRAMETYPE_GENERIC, "Shape::setOleObjectType - multiple frame types" );
+    meFrameType = FRAMETYPE_OLEOBJECT;
+    mxOleObjectInfo.reset( new ::oox::vml::OleObjectInfo( true ) );
+    return *mxOleObjectInfo;
+}
+
+ChartShapeInfo& Shape::setChartType( bool bEmbedShapes )
+{
+    OSL_ENSURE( meFrameType == FRAMETYPE_GENERIC, "Shape::setChartType - multiple frame types" );
+    meFrameType = FRAMETYPE_CHART;
+	msServiceName = CREATE_OUSTRING( "com.sun.star.drawing.OLE2Shape" );
+    mxChartShapeInfo.reset( new ChartShapeInfo( bEmbedShapes ) );
+    return *mxChartShapeInfo;
+}
+
+void Shape::setDiagramType()
+{
+    OSL_ENSURE( meFrameType == FRAMETYPE_GENERIC, "Shape::setDiagramType - multiple frame types" );
+    meFrameType = FRAMETYPE_DIAGRAM;
+	msServiceName = CREATE_OUSTRING( "com.sun.star.drawing.GroupShape" );
+	mnSubType = 0;
+}
+
+void Shape::setTableType()
+{
+    OSL_ENSURE( meFrameType == FRAMETYPE_GENERIC, "Shape::setTableType - multiple frame types" );
+    meFrameType = FRAMETYPE_TABLE;
+	msServiceName = CREATE_OUSTRING( "com.sun.star.drawing.TableShape" );
+	mnSubType = 0;
 }
 
 void Shape::setServiceName( const sal_Char* pServiceName )
@@ -155,8 +163,8 @@ const ShapeStyleRef* Shape::getShapeStyleRef( sal_Int32 nRefType ) const
 }
 
 void Shape::addShape(
-        const ::oox::core::XmlFilterBase& rFilterBase,
-        const ThemePtr& rxTheme,
+        ::oox::core::XmlFilterBase& rFilterBase,
+        const Theme* pTheme,
         const Reference< XShapes >& rxShapes,
         const awt::Rectangle* pShapeRect,
         ShapeIdMap* pShapeMap )
@@ -166,7 +174,7 @@ void Shape::addShape(
         rtl::OUString sServiceName( msServiceName );
         if( sServiceName.getLength() )
         {
-            Reference< XShape > xShape( createAndInsert( rFilterBase, sServiceName, rxTheme, rxShapes, pShapeRect ) );
+            Reference< XShape > xShape( createAndInsert( rFilterBase, sServiceName, pTheme, rxShapes, pShapeRect, sal_False ) );
 
             if( pShapeMap && msId.getLength() )
             {
@@ -176,7 +184,7 @@ void Shape::addShape(
             // if this is a group shape, we have to add also each child shape
             Reference< XShapes > xShapes( xShape, UNO_QUERY );
             if ( xShapes.is() )
-                addChildren( rFilterBase, *this, rxTheme, xShapes, pShapeRect ? *pShapeRect : awt::Rectangle( maPosition.X, maPosition.Y, maSize.Width, maSize.Height ), pShapeMap );
+                addChildren( rFilterBase, *this, pTheme, xShapes, pShapeRect ? *pShapeRect : awt::Rectangle( maPosition.X, maPosition.Y, maSize.Width, maSize.Height ), pShapeMap );
         }
     }
     catch( const Exception&  )
@@ -186,7 +194,8 @@ void Shape::addShape(
 
 void Shape::applyShapeReference( const Shape& rReferencedShape )
 {
-    mpTextBody = TextBodyPtr( new TextBody( *rReferencedShape.mpTextBody.get() ) );
+	if ( rReferencedShape.mpTextBody.get() )
+		mpTextBody = TextBodyPtr( new TextBody( *rReferencedShape.mpTextBody.get() ) );
     maShapeProperties = rReferencedShape.maShapeProperties;
     mpLinePropertiesPtr = LinePropertiesPtr( new LineProperties( *rReferencedShape.mpLinePropertiesPtr.get() ) );
     mpFillPropertiesPtr = FillPropertiesPtr( new FillProperties( *rReferencedShape.mpFillPropertiesPtr.get() ) );
@@ -199,26 +208,14 @@ void Shape::applyShapeReference( const Shape& rReferencedShape )
     mnRotation = rReferencedShape.mnRotation;
     mbFlipH = rReferencedShape.mbFlipH;
     mbFlipV = rReferencedShape.mbFlipV;
-}
-
-void Shape::addChildren( const ::oox::core::XmlFilterBase& rFilterBase,
-                         const ThemePtr& rxTheme,
-                         const Reference< XShapes >& rxShapes,
-                         const awt::Rectangle* pShapeRect,
-                         ShapeIdMap* pShapeMap )
-{
-    addChildren(rFilterBase, *this, rxTheme, rxShapes, 
-                pShapeRect ? 
-                 *pShapeRect : 
-                 awt::Rectangle( maPosition.X, maPosition.Y, maSize.Width, maSize.Height ), 
-                pShapeMap);
+	mbHidden = rReferencedShape.mbHidden;
 }
 
 // for group shapes, the following method is also adding each child
 void Shape::addChildren(
-        const ::oox::core::XmlFilterBase& rFilterBase,
+        XmlFilterBase& rFilterBase,
         Shape& rMaster,
-        const ThemePtr& rxTheme,
+        const Theme* pTheme,
         const Reference< XShapes >& rxShapes,
         const awt::Rectangle& rClientRect,
         ShapeIdMap* pShapeMap )
@@ -269,21 +266,26 @@ void Shape::addChildren(
                 pShapeRect = &aShapeRect;
             }
         }
-        (*aIter++)->addShape( rFilterBase, rxTheme, rxShapes, pShapeRect, pShapeMap );
+        (*aIter++)->addShape( rFilterBase, pTheme, rxShapes, pShapeRect, pShapeMap );
     }
 }
 
 Reference< XShape > Shape::createAndInsert(
-        const ::oox::core::XmlFilterBase& rFilterBase,
+        ::oox::core::XmlFilterBase& rFilterBase,
         const rtl::OUString& rServiceName,
-        const ThemePtr& rxTheme,
+        const Theme* pTheme,
         const ::com::sun::star::uno::Reference< ::com::sun::star::drawing::XShapes >& rxShapes,
-        const awt::Rectangle* pShapeRect )
+        const awt::Rectangle* pShapeRect,
+		sal_Bool bClearText )
 {
-    basegfx::B2DHomMatrix aTransformation;
-
     awt::Size aSize( pShapeRect ? awt::Size( pShapeRect->Width, pShapeRect->Height ) : maSize );
     awt::Point aPosition( pShapeRect ? awt::Point( pShapeRect->X, pShapeRect->Y ) : maPosition );
+    awt::Rectangle aShapeRectHmm( aPosition.X / 360, aPosition.Y / 360, aSize.Width / 360, aSize.Height / 360 );
+
+    OUString aServiceName = finalizeServiceName( rFilterBase, rServiceName, aShapeRectHmm );
+	sal_Bool bIsCustomShape = aServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "com.sun.star.drawing.CustomShape" ) );
+
+    basegfx::B2DHomMatrix aTransformation;
     if( aSize.Width != 1 || aSize.Height != 1)
     {
         // take care there are no zeros used by error
@@ -301,7 +303,7 @@ Reference< XShape > Shape::createAndInsert(
         // center object at origin
         aTransformation.translate( -aCenter.getX(), -aCenter.getY() );
 
-        if( mbFlipH || mbFlipV)
+        if( !bIsCustomShape && ( mbFlipH || mbFlipV ) )
         {
             // mirror around object's center
             aTransformation.scale( mbFlipH ? -1.0 : 1.0, mbFlipV ? -1.0 : 1.0 );
@@ -323,38 +325,8 @@ Reference< XShape > Shape::createAndInsert(
         aTransformation.translate( aPosition.X / 360.0, aPosition.Y / 360.0 );
     }
 
-    if ( mpCustomShapePropertiesPtr && mpCustomShapePropertiesPtr->getPolygon().count() )
-    {
-	::basegfx::B2DPolyPolygon& rPolyPoly = mpCustomShapePropertiesPtr->getPolygon();
-
-	if( rPolyPoly.count() > 0 ) {
-	    if( rPolyPoly.areControlPointsUsed() ) {
-		// TODO Beziers
-	    } else {
-		uno::Sequence< uno::Sequence< awt::Point > > aPolyPolySequence( rPolyPoly.count() );
-
-		for (sal_uInt32 j = 0; j < rPolyPoly.count(); j++ ) {
-		    ::basegfx::B2DPolygon aPoly = rPolyPoly.getB2DPolygon( j );
-
-		    // now creating the corresponding PolyPolygon
-		    sal_Int32 i, nNumPoints = aPoly.count();
-		    uno::Sequence< awt::Point > aPointSequence( nNumPoints );
-		    awt::Point* pPoints = aPointSequence.getArray();
-		    for( i = 0; i < nNumPoints; ++i )
-		    {
-			const ::basegfx::B2DPoint aPoint( aPoly.getB2DPoint( i ) );
-			pPoints[ i ] = awt::Point( static_cast< sal_Int32 >( aPoint.getX() ), static_cast< sal_Int32 >( aPoint.getY() ) );
-		    }
-		    aPolyPolySequence.getArray()[ j ] = aPointSequence;
-		}
-		static const OUString sPolyPolygon(RTL_CONSTASCII_USTRINGPARAM("PolyPolygon"));
-		maShapeProperties[ sPolyPolygon ] <<= aPolyPolySequence;
-	    }
-	}
-    }
-
     // special for lineshape
-    if ( rServiceName == OUString::createFromAscii( "com.sun.star.drawing.LineShape" ) )
+    if ( aServiceName == OUString::createFromAscii( "com.sun.star.drawing.LineShape" ) )
     {
         ::basegfx::B2DPolygon aPoly;
         aPoly.insert( 0, ::basegfx::B2DPoint( 0, 0 ) );
@@ -373,10 +345,9 @@ Reference< XShape > Shape::createAndInsert(
         uno::Sequence< uno::Sequence< awt::Point > > aPolyPolySequence( 1 );
         aPolyPolySequence.getArray()[ 0 ] = aPointSequence;
 
-        static const OUString sPolyPolygon(RTL_CONSTASCII_USTRINGPARAM("PolyPolygon"));
-        maShapeProperties[ sPolyPolygon ] <<= aPolyPolySequence;
+        maShapeProperties[ PROP_PolyPolygon ] <<= aPolyPolySequence;
     }
-    else if ( rServiceName == OUString::createFromAscii( "com.sun.star.drawing.ConnectorShape" ) )
+    else if ( aServiceName == OUString::createFromAscii( "com.sun.star.drawing.ConnectorShape" ) )
     {
         ::basegfx::B2DPolygon aPoly;
         aPoly.insert( 0, ::basegfx::B2DPoint( 0, 0 ) );
@@ -388,10 +359,8 @@ Reference< XShape > Shape::createAndInsert(
         awt::Point aAWTStartPosition( static_cast< sal_Int32 >( aStartPosition.getX() ), static_cast< sal_Int32 >( aStartPosition.getY() ) );
         awt::Point aAWTEndPosition( static_cast< sal_Int32 >( aEndPosition.getX() ), static_cast< sal_Int32 >( aEndPosition.getY() ) );
 
-        static const OUString sStartPosition(RTL_CONSTASCII_USTRINGPARAM("StartPosition"));
-        maShapeProperties[ sStartPosition ] <<= aAWTStartPosition;
-        static const OUString sEndPosition(RTL_CONSTASCII_USTRINGPARAM("EndPosition"));
-        maShapeProperties[ sEndPosition ] <<= aAWTEndPosition;
+        maShapeProperties[ PROP_StartPosition ] <<= aAWTStartPosition;
+        maShapeProperties[ PROP_EndPosition ] <<= aAWTEndPosition;
     }
     else
     {
@@ -410,12 +379,11 @@ Reference< XShape > Shape::createAndInsert(
         aMatrix.Line3.Column2 = aTransformation.get(2,1);
         aMatrix.Line3.Column3 = aTransformation.get(2,2);
 
-        static const OUString sTransformation(RTL_CONSTASCII_USTRINGPARAM("Transformation"));
-        maShapeProperties[ sTransformation ] <<= aMatrix;
+        maShapeProperties[ PROP_Transformation ] <<= aMatrix;
     }
     Reference< lang::XMultiServiceFactory > xServiceFact( rFilterBase.getModel(), UNO_QUERY_THROW );
 	if ( !mxShape.is() )
-		mxShape = Reference< drawing::XShape >( xServiceFact->createInstance( rServiceName ), UNO_QUERY_THROW );
+        mxShape = Reference< drawing::XShape >( xServiceFact->createInstance( aServiceName ), UNO_QUERY_THROW );
 
     Reference< XPropertySet > xSet( mxShape, UNO_QUERY );
     if( mxShape.is() && xSet.is() )
@@ -428,85 +396,123 @@ Reference< XShape > Shape::createAndInsert(
         }
 #ifdef USE_JAVA
 	    // Fix bug reported in the following forum post by catching any
-        // exceptions thrown when adding a duplicate shape:
-        // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62849#62849
+	    // exceptions thrown when adding a duplicate shape:
+	    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62849#62849
 	    try
 	    {
 #endif	// USE_JAVA
-	    rxShapes->add( mxShape );
+ 	    rxShapes->add( mxShape );
 #ifdef USE_JAVA
 	    }
 	    catch ( ... )
 	    {
 	    }
 #endif	// USE_JAVA
+	    rxShapes->add( mxShape );
 
-        LineProperties aLineProperties;
+		if ( mbHidden )
+		{
+			const OUString sHidden( CREATE_OUSTRING( "Visible" ) );
+			xSet->setPropertyValue( sHidden, Any( !mbHidden ) );
+		}
+
+		Reference< document::XActionLockable > xLockable( mxShape, UNO_QUERY );
+		if( xLockable.is() )
+			xLockable->addActionLock();
+
+		// sj: removing default text of placeholder objects such as SlideNumberShape or HeaderShape
+		if ( bClearText )
+		{
+			uno::Reference< text::XText > xText( mxShape, uno::UNO_QUERY );
+			if ( xText.is() )
+			{
+				OUString aEmpty;
+				xText->setString( aEmpty );
+			}
+		}
+
+        const GraphicHelper& rGraphicHelper = rFilterBase.getGraphicHelper();
+        
+		LineProperties aLineProperties;
         aLineProperties.maLineFill.moFillType = XML_noFill;
         sal_Int32 nLinePhClr = -1;
         FillProperties aFillProperties;
         aFillProperties.moFillType = XML_noFill;
         sal_Int32 nFillPhClr = -1;
 
-        if( rxTheme.get() )
+        if( pTheme )
         {
             if( const ShapeStyleRef* pLineRef = getShapeStyleRef( XML_lnRef ) )
             {
-                if( const LineProperties* pLineProps = rxTheme->getLineStyle( pLineRef->mnThemedIdx ) )
+                if( const LineProperties* pLineProps = pTheme->getLineStyle( pLineRef->mnThemedIdx ) )
                     aLineProperties.assignUsed( *pLineProps );
-                nLinePhClr = pLineRef->maPhClr.getColor( rFilterBase );
+                nLinePhClr = pLineRef->maPhClr.getColor( rGraphicHelper );
             }
             if( const ShapeStyleRef* pFillRef = getShapeStyleRef( XML_fillRef ) )
             {
-                if( const FillProperties* pFillProps = rxTheme->getFillStyle( pFillRef->mnThemedIdx ) )
+                if( const FillProperties* pFillProps = pTheme->getFillStyle( pFillRef->mnThemedIdx ) )
                     aFillProperties.assignUsed( *pFillProps );
-                nFillPhClr = pFillRef->maPhClr.getColor( rFilterBase );
+                nFillPhClr = pFillRef->maPhClr.getColor( rGraphicHelper );
             }
 //            if( const ShapeStyleRef* pEffectRef = getShapeStyleRef( XML_fillRef ) )
 //            {
-//                if( const EffectProperties* pEffectProps = rxTheme->getEffectStyle( pEffectRef->mnThemedIdx ) )
+//                if( const EffectProperties* pEffectProps = pTheme->getEffectStyle( pEffectRef->mnThemedIdx ) )
 //                    aEffectProperties.assignUsed( *pEffectProps );
-//                nEffectPhClr = pEffectRef->maPhClr.getColor( rFilterBase );
+//                nEffectPhClr = pEffectRef->maPhClr.getColor( rGraphicHelper );
 //            }
         }
 
         aLineProperties.assignUsed( getLineProperties() );
         aFillProperties.assignUsed( getFillProperties() );
 
-        PropertyMap aShapeProperties;
+        ShapePropertyMap aShapeProps( rFilterBase.getModelObjectHelper() );
 
         // add properties from textbody to shape properties
-	// add them first as they have priority over shape properties
         if( mpTextBody.get() )
-            aShapeProperties.insert( mpTextBody->getTextProperties().maPropertyMap.begin(), mpTextBody->getTextProperties().maPropertyMap.end() );
-
-        aShapeProperties.insert( getShapeProperties().begin(), getShapeProperties().end() );
+            aShapeProps.assignUsed( mpTextBody->getTextProperties().maPropertyMap );
 
         // applying properties
-        PropertySet aPropSet( xSet );
-        if ( rServiceName == OUString::createFromAscii( "com.sun.star.drawing.GraphicObjectShape" ) )
-            mpGraphicPropertiesPtr->pushToPropSet( aPropSet, FillProperties::DEFAULTPICNAMES, rFilterBase, rFilterBase.getModelObjectContainer(), 0, -1 );
-	    if ( mpTablePropertiesPtr.get() && ( rServiceName == OUString::createFromAscii( "com.sun.star.drawing.TableShape" ) ) )
+        aShapeProps.assignUsed( getShapeProperties() );
+        if ( aServiceName == OUString::createFromAscii( "com.sun.star.drawing.GraphicObjectShape" ) )
+            mpGraphicPropertiesPtr->pushToPropMap( aShapeProps, rGraphicHelper );
+        if ( mpTablePropertiesPtr.get() && ( aServiceName == OUString::createFromAscii( "com.sun.star.drawing.TableShape" ) ) )
 		    mpTablePropertiesPtr->pushToPropSet( rFilterBase, xSet, mpMasterTextListStyle );
-        aFillProperties.pushToPropSet( aPropSet, FillProperties::DEFAULTNAMES, rFilterBase, rFilterBase.getModelObjectContainer(), mnRotation, nFillPhClr );
-        aLineProperties.pushToPropSet( aPropSet, LineProperties::DEFAULTNAMES, rFilterBase, rFilterBase.getModelObjectContainer(), nLinePhClr );
+        aFillProperties.pushToPropMap( aShapeProps, rGraphicHelper, mnRotation, nFillPhClr );
+        aLineProperties.pushToPropMap( aShapeProps, rGraphicHelper, nLinePhClr );
 
         // applying autogrowheight property before setting shape size, because
         // the shape size might be changed if currently autogrowheight is true
         // we must also check that the PropertySet supports the property.
         Reference< XPropertySetInfo > xSetInfo( xSet->getPropertySetInfo() );
-        static const rtl::OUString sTextAutoGrowHeight( RTL_CONSTASCII_USTRINGPARAM( "TextAutoGrowHeight" ) );
-        if( xSetInfo->hasPropertyByName( sTextAutoGrowHeight ) )
-        {
-            const Any* pAutoGrowHeight = aShapeProperties.getPropertyValue( sTextAutoGrowHeight );
-            if ( pAutoGrowHeight )
-                xSet->setPropertyValue( sTextAutoGrowHeight, Any( false ) );
-        }
+        const OUString& rPropName = PropertyMap::getPropertyName( PROP_TextAutoGrowHeight );
+        if( xSetInfo.is() && xSetInfo->hasPropertyByName( rPropName ) )
+            if( aShapeProps.hasProperty( PROP_TextAutoGrowHeight ) )
+                xSet->setPropertyValue( rPropName, Any( false ) );
 
-        aPropSet.setProperties( aShapeProperties );
+        // do not set properties at a group shape (this causes assertions from svx)
+        if( aServiceName != OUString::createFromAscii( "com.sun.star.drawing.GroupShape" ) )
+            PropertySet( xSet ).setProperties( aShapeProps );
 
-        if( rServiceName == OUString::createFromAscii( "com.sun.star.drawing.CustomShape" ) )
+        if( bIsCustomShape )
+		{
+			if ( mbFlipH )
+				mpCustomShapePropertiesPtr->setMirroredX( sal_True );
+			if ( mbFlipV )
+				mpCustomShapePropertiesPtr->setMirroredY( sal_True );
+
+            // #119920# Handle missing text rotation
+            if(getTextBody())
+            {
+                const sal_Int32 nTextRotation(getTextBody()->getTextProperties().moRotation.get(0));
+
+                if(nTextRotation)
+                {
+                    mpCustomShapePropertiesPtr->setTextRotation((nTextRotation * -1) / 60000);
+                }
+            }
+
             mpCustomShapePropertiesPtr->pushToPropSet( rFilterBase, xSet, mxShape );
+		}
 
         // in some cases, we don't have any text body.
         if( getTextBody() )
@@ -517,8 +523,8 @@ Reference< XShape > Shape::createAndInsert(
                 TextCharacterProperties aCharStyleProperties;
                 if( const ShapeStyleRef* pFontRef = getShapeStyleRef( XML_fontRef ) )
                 {
-                    if( rxTheme.get() )
-                        if( const TextCharacterProperties* pCharProps = rxTheme->getFontStyle( pFontRef->mnThemedIdx ) )
+                    if( pTheme )
+                        if( const TextCharacterProperties* pCharProps = pTheme->getFontStyle( pFontRef->mnThemedIdx ) )
                             aCharStyleProperties.assignUsed( *pCharProps );
                     aCharStyleProperties.maCharColor.assignIfUsed( pFontRef->maPhClr );
                 }
@@ -527,11 +533,12 @@ Reference< XShape > Shape::createAndInsert(
                 getTextBody()->insertAt( rFilterBase, xText, xAt, aCharStyleProperties, mpMasterTextListStyle );
             }
         }
+        if( xLockable.is() )
+			xLockable->removeActionLock();
     }
 
-    // use a callback for further processing on the XShape (e.g. charts)
-    if( mxShape.is() && mxCreateCallback.get() )
-        mxCreateCallback->onCreateXShape( mxShape );
+    if( mxShape.is() )
+        finalizeXShape( rFilterBase, rxShapes );
 
     return mxShape;
 }
@@ -564,5 +571,77 @@ void Shape::setMasterTextListStyle( const TextListStylePtr& pMasterTextListStyle
     mpMasterTextListStyle = pMasterTextListStyle;
 }
 
+OUString Shape::finalizeServiceName( XmlFilterBase& rFilter, const OUString& rServiceName, const Rectangle& rShapeRect )
+{
+    OUString aServiceName = rServiceName;
+    switch( meFrameType )
+    {
+        case FRAMETYPE_OLEOBJECT:
+        {
+            Size aOleSize( rShapeRect.Width, rShapeRect.Height );
+            if( rFilter.getOleObjectHelper().importOleObject( maShapeProperties, *mxOleObjectInfo, aOleSize ) )
+                aServiceName = CREATE_OUSTRING( "com.sun.star.drawing.OLE2Shape" );
+
+            // get the path to the representation graphic
+            OUString aGraphicPath;
+            if( mxOleObjectInfo->maShapeId.getLength() > 0 )
+                if( ::oox::vml::Drawing* pVmlDrawing = rFilter.getVmlDrawing() )
+                    if( const ::oox::vml::ShapeBase* pVmlShape = pVmlDrawing->getShapes().getShapeById( mxOleObjectInfo->maShapeId, true ) )
+                        aGraphicPath = pVmlShape->getGraphicPath();
+
+            // import and store the graphic
+            if( aGraphicPath.getLength() > 0 )
+            {
+                Reference< graphic::XGraphic > xGraphic = rFilter.getGraphicHelper().importEmbeddedGraphic( aGraphicPath );
+                if( xGraphic.is() )
+                    maShapeProperties[ PROP_Graphic ] <<= xGraphic;
+            }
+        }
+        break;
+        
+        default:;
+    }
+    return aServiceName;
+}
+
+void Shape::finalizeXShape( XmlFilterBase& rFilter, const Reference< XShapes >& rxShapes )
+{
+    switch( meFrameType )
+    {
+        case FRAMETYPE_CHART:
+        {
+            OSL_ENSURE( mxChartShapeInfo->maFragmentPath.getLength() > 0, "Shape::finalizeXShape - missing chart fragment" );
+            if( mxShape.is() && (mxChartShapeInfo->maFragmentPath.getLength() > 0) ) try
+            {
+                // set the chart2 OLE class ID at the OLE shape
+                PropertySet aShapeProp( mxShape );
+                aShapeProp.setProperty( PROP_CLSID, CREATE_OUSTRING( "12dcae26-281f-416f-a234-c3086127382e" ) );
+
+                // get the XModel interface of the embedded object from the OLE shape
+                Reference< frame::XModel > xDocModel;
+                aShapeProp.getProperty( xDocModel, PROP_Model );
+                Reference< chart2::XChartDocument > xChartDoc( xDocModel, UNO_QUERY_THROW );
+
+                // load the chart data from the XML fragment
+                chart::ChartSpaceModel aModel;
+                rFilter.importFragment( new chart::ChartSpaceFragment( rFilter, mxChartShapeInfo->maFragmentPath, aModel ) );
+
+                // convert imported chart model to chart document
+                Reference< drawing::XShapes > xExternalPage;
+                if( !mxChartShapeInfo->mbEmbedShapes )
+                    xExternalPage = rxShapes;
+                rFilter.getChartConverter().convertFromModel( rFilter, aModel, xChartDoc, xExternalPage, mxShape->getPosition(), mxShape->getSize() );
+            }
+            catch( Exception& )
+            {
+            }
+        }
+        break;
+        
+        default:;
+    }
+}
+
+// ============================================================================
 
 } }

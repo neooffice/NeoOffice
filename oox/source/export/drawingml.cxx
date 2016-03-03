@@ -1,41 +1,35 @@
-/*************************************************************************
- *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
  * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- *   Portions of this file are part of the LibreOffice project.
- *
- *   This Source Code Form is subject to the terms of the Mozilla Public
- *   License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
 
-#include "tokens.hxx"
+
+
 #include "oox/core/xmlfilterbase.hxx"
 #include "oox/export/drawingml.hxx"
 #include "oox/export/utils.hxx"
@@ -49,8 +43,6 @@
 #include <com/sun/star/awt/Gradient.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
-#include <com/sun/star/beans/Property.hpp>
-#include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/drawing/BitmapMode.hpp>
 #include <com/sun/star/drawing/EnhancedCustomShapeAdjustmentValue.hpp>
@@ -61,10 +53,7 @@
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
-#include <com/sun/star/style/LineSpacing.hpp>
-#include <com/sun/star/style/LineSpacingMode.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
-#include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/text/XTextContent.hpp>
 #include <com/sun/star/text/XTextField.hpp>
@@ -72,12 +61,12 @@
 #include <tools/stream.hxx>
 #include <tools/string.hxx>
 #include <vcl/cvtgrf.hxx>
-#include <vcl/fontcvt.hxx>
+#include <unotools/fontcvt.hxx>
 #include <vcl/graph.hxx>
-#include <goodies/grfmgr.hxx>
+#include <svtools/grfmgr.hxx>
 #include <rtl/strbuf.hxx>
 #include <sfx2/app.hxx>
-#include <svtools/languageoptions.hxx>
+#include <svl/languageoptions.hxx>
 #include <svx/escherex.hxx>
 #include <svx/svxenum.hxx>
 
@@ -87,12 +76,9 @@
 #endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
-using namespace ::com::sun::star::beans;
+using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::drawing;
 using namespace ::com::sun::star::i18n;
-using namespace ::com::sun::star::style;
-using namespace ::com::sun::star::text;
-using namespace ::com::sun::star::uno;
 using ::com::sun::star::beans::PropertyState;
 using ::com::sun::star::beans::PropertyValue;
 using ::com::sun::star::beans::XPropertySet;
@@ -101,7 +87,6 @@ using ::com::sun::star::container::XEnumeration;
 using ::com::sun::star::container::XEnumerationAccess;
 using ::com::sun::star::container::XIndexAccess;
 using ::com::sun::star::io::XOutputStream;
-using ::com::sun::star::style::LineSpacing;
 using ::com::sun::star::text::XText;
 using ::com::sun::star::text::XTextContent;
 using ::com::sun::star::text::XTextField;
@@ -126,44 +111,6 @@ namespace drawingml {
 #define GET(variable, propName) \
     if ( GETA(propName) ) \
         mAny >>= variable;
-DBG(
-void lcl_dump_pset(Reference< XPropertySet > rXPropSet)
-{
-    Reference< XPropertySetInfo > info = rXPropSet->getPropertySetInfo ();
-    Sequence< beans::Property > props = info->getProperties ();
-
-    for (int i=0; i < props.getLength (); i++) {
-        OString name = OUStringToOString( props [i].Name, RTL_TEXTENCODING_UTF8);
-        fprintf (stderr,"%30s = ", name.getStr() );
-
-	try {
-        Any value = rXPropSet->getPropertyValue( props [i].Name );
-
-        OUString strValue;
-        sal_Int32 intValue;
-        bool boolValue;
-	LineSpacing spacing;
-//         RectanglePoint pointValue;
-
-        if( value >>= strValue )
-            fprintf (stderr,"\"%s\"\n", USS( strValue ) );
-        else if( value >>= intValue )
-            fprintf (stderr,"%d            (hex: %x)\n", intValue, intValue);
-        else if( value >>= boolValue )
-            fprintf (stderr,"%d            (bool)\n", boolValue);
-	else if( value >>= spacing ) {
-	    fprintf (stderr, "mode: %d value: %d\n", spacing.Mode, spacing.Height);
-	}
-//         else if( value >>= pointValue )
-//             fprintf (stderr,"%d            (RectanglePoint)\n", pointValue);
-        else
-            fprintf (stderr,"???           <unhandled type>\n");
-	} catch(Exception e) {
-	    fprintf (stderr,"unable to get '%s' value\n", USS(props [i].Name));
-	}
-    }
-}
-);
 
 // not thread safe
 int DrawingML::mnImageCounter = 1;
@@ -493,6 +440,14 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
             sMediaType = US( "image/gif" );
             sExtension = ".gif";
             break;
+
+        // #15508# added BMP type for better exports
+        // export not yet active, so adding for reference (not checked)
+        case GFX_LINK_TYPE_NATIVE_BMP:
+            sMediaType = US( "image/bmp" );
+            sExtension = ".bmp";
+            break;
+
         case GFX_LINK_TYPE_NATIVE_JPG:
             sMediaType = US( "image/jpeg" );
             sExtension = ".jpeg";
@@ -563,16 +518,7 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
                 sExtension = ".emf";
             } else {
                 OSL_TRACE( "unhandled graphic type" );
-#if SUPD == 310
-                /*Earlier, even in case of unhandled graphic types we were
-                  proceeding to write the image, which would eventually
-                  write an empty image with a zero size, and return a valid
-                  relationID, which is incorrect.
-                  */
-                return sRelId;
-#else	// SUPD == 310
                 break;
-#endif	// SUPD == 310
             }
 #if defined USE_JAVA && defined MACOSX
             }
@@ -601,7 +547,7 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
                                                                     sMediaType );
     xOutStream->writeBytes( Sequence< sal_Int8 >( (const sal_Int8*) aData, nDataSize ) );
     xOutStream->closeOutput();
-    
+
     const char *pImagePrefix = NULL;
     switch ( meDocumentType )
     {
@@ -625,25 +571,13 @@ OUString DrawingML::WriteImage( const Graphic& rGraphic )
     return sRelId;
 }
 
-OUString DrawingML::WriteBlip( Reference< XPropertySet > rXPropSet, OUString& rURL )
+OUString DrawingML::WriteBlip( OUString& rURL )
 {
         OUString sRelId = WriteImage( rURL );
-	sal_Int16 nBright = 0;
-	sal_Int32 nContrast = 0;
 
-	GET( nBright, AdjustLuminance );
-	GET( nContrast, AdjustContrast );
-
-        mpFS->startElementNS( XML_a, XML_blip,
-			      FSNS( XML_r, XML_embed), OUStringToOString( sRelId, RTL_TEXTENCODING_UTF8 ).getStr(),
-			      FSEND );
-	if( nBright || nContrast )
-	    mpFS->singleElementNS( XML_a, XML_lum,
-				   XML_bright, nBright ? I32S( nBright*1000 ) : NULL,
-				   XML_contrast, nContrast ? I32S( nContrast*1000 ) : NULL,
-				   FSEND );
-	    
-        mpFS->endElementNS( XML_a, XML_blip );
+        mpFS->singleElementNS( XML_a, XML_blip,
+                               FSNS( XML_r, XML_embed), OUStringToOString( sRelId, RTL_TEXTENCODING_UTF8 ).getStr(),
+                               FSEND );
 
         return sRelId;
 }
@@ -683,7 +617,7 @@ void DrawingML::WriteBlipFill( Reference< XPropertySet > rXPropSet, String sURLP
 
         mpFS->startElementNS( nXmlNamespace , XML_blipFill, FSEND );
 
-        WriteBlip( rXPropSet, aURL );
+        WriteBlip( aURL );
 
         if( sURLPropName == S( "FillBitmapURL" ) )
             WriteBlipMode( rXPropSet );
@@ -731,7 +665,7 @@ void DrawingML::WriteShapeTransformation( Reference< XShape > rXShape, sal_Bool 
     WriteTransformation( Rectangle( Point( aPos.X, aPos.Y ), Size( aSize.Width, aSize.Height ) ), bFlipH, bFlipV, nRotation );
 }
 
-void DrawingML::WriteRunProperties( Reference< XTextRange > rRun, sal_Bool bIsField )
+void DrawingML::WriteRunProperties( Reference< XTextRange > rRun )
 {
     Reference< XPropertySet > rXPropSet( rRun, UNO_QUERY );
     Reference< XPropertyState > rXPropState( rRun, UNO_QUERY );
@@ -855,94 +789,51 @@ void DrawingML::WriteRunProperties( Reference< XTextRange > rRun, sal_Bool bIsFi
     }
 
     if( GETAD( CharFontName ) ) {
-#if SUPD != 310
         const char* typeface = NULL;
-#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
-#if SUPD == 310
-        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
-#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
-#endif	// SUPD == 310
 
 
 
         mpFS->singleElementNS( XML_a, XML_latin,
-#if SUPD == 310
-                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
-#else	// SUPD == 310
                                XML_typeface, typeface,
-#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
     }
 
     if( ( bComplex && GETAD( CharFontNameComplex ) ) || ( !bComplex && GETAD( CharFontNameAsian ) ) ) {
-#if SUPD != 310
         const char* typeface = NULL;
-#endif	// SUPD != 310
         const char* pitch = NULL;
         const char* charset = NULL;
         OUString usTypeface, usPitch, usCharset;
 
         mAny >>= usTypeface;
-#if SUPD == 310
-        OUString aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
-#else	// SUPD == 310
         String aSubstName( GetSubsFontName( usTypeface, SUBSFONT_ONLYONE | SUBSFONT_MS ) );
         if( aSubstName.Len() )
             typeface = ST( aSubstName );
         else
             typeface = USS( usTypeface );
-#endif	// SUPD == 310
 
         mpFS->singleElementNS( XML_a, bComplex ? XML_cs : XML_ea,
-#if SUPD == 310
-                               XML_typeface, USS(aSubstName.getLength() ? aSubstName : usTypeface),
-#else	// SUPD == 310
                                XML_typeface, typeface,
-#endif	// SUPD == 310
                                XML_pitchFamily, pitch,
                                XML_charset, charset,
                                FSEND );
     }
 
-    if( bIsField ) {
-        Reference< XTextField > rXTextField;
-        GET( rXTextField, TextField );
-        if( rXTextField.is() )
-            rXPropSet.set( rXTextField, UNO_QUERY );
-    }
-
-    // field properties starts here
-    if( GETA( URL ) ) {
-	OUString sURL;
-
-	mAny >>= sURL;
-	if( sURL.getLength() ) {
-	    OUString sRelId = mpFB->addRelation( mpFS->getOutputStream(),
-							  US( "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" ),
-							  sURL, US( "External" ) );
-
-	    mpFS->singleElementNS( XML_a, XML_hlinkClick,
-				   FSNS( XML_r,XML_id ), USS( sRelId ),
-				   FSEND );
-	}
-    }
-
     mpFS->endElementNS( XML_a, XML_rPr );
 }
 
-const char* DrawingML::GetFieldType( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > rRun, sal_Bool& bIsField )
+const char* DrawingML::GetFieldType( ::com::sun::star::uno::Reference< ::com::sun::star::text::XTextRange > rRun )
 {
     const char* sType = NULL;
     Reference< XPropertySet > rXPropSet( rRun, UNO_QUERY );
@@ -957,7 +848,6 @@ const char* DrawingML::GetFieldType( ::com::sun::star::uno::Reference< ::com::su
         Reference< XTextField > rXTextField;
         GET( rXTextField, TextField );
         if( rXTextField.is() ) {
-	    bIsField = sal_True;
             rXPropSet.set( rXTextField, UNO_QUERY );
             if( rXPropSet.is() ) {
                 String aFieldKind( rXTextField->getPresentation( TRUE ) );
@@ -965,10 +855,6 @@ const char* DrawingML::GetFieldType( ::com::sun::star::uno::Reference< ::com::su
                 if( aFieldKind == S( "Page" ) ) {
                     return "slidenum";
                 }
-		// else if( aFieldKind == S( "URL" ) ) {
-		// do not return here
-		// and make URL field text run with hyperlink property later
-		// }
             }
         }
     }
@@ -1014,13 +900,13 @@ void DrawingML::GetUUID( OStringBuffer& rBuffer )
 void DrawingML::WriteRun( Reference< XTextRange > rRun )
 {
     const char* sFieldType;
-    sal_Bool bIsField = sal_False;
+    bool bIsField = false;
     OUString sText = rRun->getString();
 
     if( sText.getLength() < 1)
         return;
 
-    if( ( sFieldType = GetFieldType( rRun, bIsField ) ) ) {
+    if( ( sFieldType = GetFieldType( rRun ) ) ) {
         OStringBuffer sUUID(39);
 
         GetUUID( sUUID );
@@ -1028,16 +914,17 @@ void DrawingML::WriteRun( Reference< XTextRange > rRun )
                               XML_id, sUUID.getStr(),
                               XML_type, sFieldType,
                               FSEND );
+        bIsField = true;
     } else
         mpFS->startElementNS( XML_a, XML_r, FSEND );
 
-    WriteRunProperties( rRun, bIsField );
+    WriteRunProperties( rRun );
 
     mpFS->startElementNS( XML_a, XML_t, FSEND );
     mpFS->writeEscaped( sText );
     mpFS->endElementNS( XML_a, XML_t );
 
-    if( sFieldType )
+    if( bIsField )
         mpFS->endElementNS( XML_a, XML_fld );
     else
         mpFS->endElementNS( XML_a, XML_r );
@@ -1080,7 +967,7 @@ inline static const char* GetAutoNumType( sal_Int16 nNumberingType, bool bSDot, 
         default:
             break;
         }
-    
+
     return pAutoNumType;
 }
 
@@ -1096,7 +983,7 @@ void DrawingML::WriteParagraphNumbering( Reference< XPropertySet > rXPropSet, sa
 
             Sequence< PropertyValue > aPropertySequence;
             rXIndexAccess->getByIndex( nLevel ) >>= aPropertySequence;
-           
+
 
             const PropertyValue* pPropValue = aPropertySequence.getArray();
 
@@ -1153,7 +1040,7 @@ void DrawingML::WriteParagraphNumbering( Reference< XPropertySet > rXPropSet, sa
                             DBG(printf ("graphic url: %s\n", OUStringToOString( aGraphicURL, RTL_TEXTENCODING_UTF8 ).getStr()));
                         } else if ( aPropName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "GraphicSize" ) ) )
                         {
-                            if ( pPropValue[ i ].Value.getValueType() == ::getCppuType( (awt::Size*)0) ) 
+                            if ( pPropValue[ i ].Value.getValueType() == ::getCppuType( (awt::Size*)0) )
                             {
                                 // don't cast awt::Size to Size as on 64-bits they are not the same.
                                 ::com::sun::star::awt::Size aSize;
@@ -1219,29 +1106,13 @@ const char* DrawingML::GetAlignment( sal_Int32 nAlignment )
     return sAlignment;
 }
 
-void DrawingML::WriteLinespacing( LineSpacing& rSpacing )
-{
-    if( rSpacing.Mode == LineSpacingMode::PROP )
-        mpFS->singleElementNS( XML_a, XML_spcPct,
-			       XML_val, I32S( ((sal_Int32)rSpacing.Height)*1000 ),
-			       FSEND );
-    else
-        mpFS->singleElementNS( XML_a, XML_spcPts,
-			       XML_val, I32S( rSpacing.Height ),
-			       FSEND );
-}
-
 void DrawingML::WriteParagraphProperties( Reference< XTextContent > rParagraph )
 {
     Reference< XPropertySet > rXPropSet( rParagraph, UNO_QUERY );
     Reference< XPropertyState > rXPropState( rParagraph, UNO_QUERY );
-    PropertyState eState;
 
     if( !rXPropSet.is() || !rXPropState.is() )
         return;
-
-    //OSL_TRACE("write paragraph properties pset");
-    //DBG(lcl_dump_pset(rXPropSet));
 
     sal_Int16 nLevel = -1;
     GET( nLevel, NumberingLevel );
@@ -1253,26 +1124,14 @@ void DrawingML::WriteParagraphProperties( Reference< XTextContent > rParagraph )
     sal_Int16 nAlignment( style::ParagraphAdjust_LEFT );
     GET( nAlignment, ParaAdjust );
 
-    sal_Bool bHasLinespacing = sal_False;
-    LineSpacing aLineSpacing;
-    if( GETAD( ParaLineSpacing ) )
-	bHasLinespacing = ( mAny >>= aLineSpacing );
-
     if( nLevel != -1
-	|| nLeftMargin > 0
-	|| nAlignment != style::ParagraphAdjust_LEFT
-	|| bHasLinespacing ) {
+            || nLeftMargin > 0
+            || nAlignment != style::ParagraphAdjust_LEFT ) {
         mpFS->startElementNS( XML_a, XML_pPr,
                               XML_lvl, nLevel > 0 ? I32S( nLevel ) : NULL,
                               XML_marL, nLeftMargin > 0 ? IS( nLeftMargin ) : NULL,
                               XML_algn, GetAlignment( nAlignment ),
                               FSEND );
-
-	if( bHasLinespacing ) {
-	    mpFS->startElementNS( XML_a, XML_lnSpc, FSEND );
-	    WriteLinespacing( aLineSpacing );
-	    mpFS->endElementNS( XML_a, XML_lnSpc );
-	}
 
         WriteParagraphNumbering( rXPropSet, nLevel );
 
@@ -1346,24 +1205,11 @@ void DrawingML::WriteText( Reference< XShape > rXShape  )
             ;
     }
 
-    const char* sWritingMode = NULL;
-    sal_Bool bVertical = sal_False;
-    if( GETA( TextWritingMode ) ) {
-	WritingMode eMode;
-
-	if( ( mAny >>= eMode ) && eMode == WritingMode_TB_RL ) {
-	    sWritingMode = "vert";
-	    bVertical = sal_True;
-	}
-    }
-
     TextHorizontalAdjust eHorizontalAlignment( TextHorizontalAdjust_CENTER );
     bool bHorizontalCenter = false;
     GET( eHorizontalAlignment, TextHorizontalAdjust );
     if( eHorizontalAlignment == TextHorizontalAdjust_CENTER )
         bHorizontalCenter = true;
-    else if( bVertical && eHorizontalAlignment == TextHorizontalAdjust_LEFT )
-	sVerticalAlignment = "b";
 
     sal_Bool bHasWrap = FALSE;
     sal_Bool bWrap = FALSE;
@@ -1381,7 +1227,6 @@ void DrawingML::WriteText( Reference< XShape > rXShape  )
                            XML_bIns, (nBottom != DEFTBINS) ? IS( MM100toEMU( nBottom ) ) : NULL,
                            XML_anchor, sVerticalAlignment,
                            XML_anchorCtr, bHorizontalCenter ? "1" : NULL,
-			   XML_vert, sWritingMode,
                            FSEND );
 
     Reference< XEnumerationAccess > access( xXText, UNO_QUERY );
@@ -1419,10 +1264,7 @@ void DrawingML::WritePresetShape( const char* pShape, MSO_SPT eShapeType, sal_Bo
     mpFS->startElementNS( XML_a, XML_avLst, FSEND );
 
     Sequence< drawing::EnhancedCustomShapeAdjustmentValue > aAdjustmentSeq;
-    if ( ( rProp.Value >>= aAdjustmentSeq )
-	 && eShapeType != mso_sptActionButtonForwardNext  // we have adjustments values for these type of shape, but MSO doesn't like them
-	 && eShapeType != mso_sptActionButtonBackPrevious // so they are now disabled
-	) {
+    if ( rProp.Value >>= aAdjustmentSeq ) {
         DBG(printf("adj seq len: %d\n", int( aAdjustmentSeq.getLength() )));
         if ( bPredefinedHandlesUsed )
             EscherPropertyContainer::LookForPolarHandles( eShapeType, nAdjustmentsWhichNeedsToBeConverted );
@@ -1506,7 +1348,7 @@ void DrawingML::WritePolyPolygon( const PolyPolygon& rPolyPolygon )
                 mpFS->endElementNS( XML_a, XML_lnTo );
             else if( bBezier && ( j % 3 ) == 0 )
             {
-                // //a:cubicBezTo can only contain 3 //a:pt elements, so we 
+                // //a:cubicBezTo can only contain 3 //a:pt elements, so we
                 // need to break things up...
                 mpFS->endElementNS( XML_a, XML_cubicBezTo );
                 mpFS->startElementNS( XML_a, XML_cubicBezTo, FSEND );
@@ -1538,30 +1380,23 @@ void DrawingML::WritePolyPolygon( const PolyPolygon& rPolyPolygon )
 
 void DrawingML::WriteConnectorConnections( EscherConnectorListEntry& rConnectorEntry, sal_Int32 nStartID, sal_Int32 nEndID )
 {
-    if( nStartID != -1 )
-        mpFS->singleElementNS( XML_a, XML_stCxn,
-                               XML_id, I32S( nStartID ),
-                               XML_idx, I64S( rConnectorEntry.GetConnectorRule( TRUE ) ),
-                               FSEND );
-    if( nEndID != -1 )
-        mpFS->singleElementNS( XML_a, XML_endCxn,
-                               XML_id, I32S( nEndID ),
-                               XML_idx, I64S( rConnectorEntry.GetConnectorRule( FALSE ) ),
-                               FSEND );
+    mpFS->singleElementNS( XML_a, XML_stCxn,
+                           XML_id, I32S( nStartID ),
+                           XML_idx, I64S( rConnectorEntry.GetConnectorRule( TRUE ) ),
+                           FSEND );
+    mpFS->singleElementNS( XML_a, XML_endCxn,
+                           XML_id, I32S( nEndID ),
+                           XML_idx, I64S( rConnectorEntry.GetConnectorRule( FALSE ) ),
+                           FSEND );
 }
 
 // from sw/source/filter/ww8/wrtw8num.cxx for default bullets to export to MS intact
 static void lcl_SubstituteBullet(String& rNumStr, rtl_TextEncoding& rChrSet, String& rFontName)
 {
-    StarSymbolToMSMultiFont *pConvert = 0;
-    FontFamily eFamily = FAMILY_DECORATIVE;
-
-    if (!pConvert)
-    {
-        pConvert = CreateStarSymbolToMSMultiFont();
-    }    
     sal_Unicode cChar = rNumStr.GetChar(0);
+    StarSymbolToMSMultiFont *pConvert = CreateStarSymbolToMSMultiFont();
     String sFont = pConvert->ConvertChar(cChar);
+    delete pConvert;
     if (sFont.Len())
     {
         rNumStr = static_cast< sal_Unicode >(cChar | 0xF000);
@@ -1577,7 +1412,6 @@ static void lcl_SubstituteBullet(String& rNumStr, rtl_TextEncoding& rChrSet, Str
            let words own font substitution kick in
            */
         rChrSet = RTL_TEXTENCODING_UNICODE;
-        eFamily = FAMILY_SWISS;
         rFontName = ::GetFontToken(rFontName, 0);
     }
     else
@@ -1589,8 +1423,7 @@ static void lcl_SubstituteBullet(String& rNumStr, rtl_TextEncoding& rChrSet, Str
            */
         rFontName.AssignAscii(RTL_CONSTASCII_STRINGPARAM("Wingdings"));
         rNumStr = static_cast< sal_Unicode >(0x6C);
-    }      
-    delete pConvert;
+    }
 }
 
 sal_Unicode DrawingML::SubstituteBullet( sal_Unicode cBulletId, ::com::sun::star::awt::FontDescriptor& rFontDesc )
