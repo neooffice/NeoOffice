@@ -1,33 +1,34 @@
-#*************************************************************************
-#
-# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
 # 
-# Copyright 2008 by Sun Microsystems, Inc.
+#    Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# OpenOffice.org - a multi-platform office productivity suite
-#
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of OpenOffice.org.
-#
-# OpenOffice.org is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# OpenOffice.org is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenOffice.org.  If not, see
-# <http://www.openoffice.org/license.html>
-# for a copy of the LGPLv3 License.
-#
-#*************************************************************************
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
+
+
 PRJ=..$/..
 
 PRJNAME=pyuno
@@ -39,9 +40,10 @@ LINKFLAGSDEFS = # do not fail with missing symbols
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
+.IF "$(L10N_framework)"==""
 #-------------------------------------------------------------------
 
-.IF "$(OS)$(CPU)$(COMEX)" == "SOLARISS4"
+.IF "$(OS)$(COMEX)" == "SOLARIS4"
 # no -Bdirect for SunWS CC
 DIRECT = $(LINKFLAGSDEFS)
 .ENDIF
@@ -56,6 +58,9 @@ EXTRA_FRAMEWORK_FLAG=-framework Python
 # pyuno.so even on Mac OS X, because it is a python module
 PYUNO_MODULE=$(DLLDEST)$/pyuno.so
 PYUNORC=pyunorc
+.ELIF "$(GUI)" == "OS2"
+#.INCLUDE :  pyversion.mk
+PYUNORC=pyuno.ini
 .ELSE
 .INCLUDE :  pyversion.mk
 PYUNORC=pyuno.ini
@@ -96,9 +101,9 @@ SHL1STDLIBS= \
 		$(PYTHONLIB) 		\
 		$(EXTRA_FRAMEWORK_FLAG) 
 
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-SHL1STDLIBS+= $(VCLLIB)
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
+SHL1STDLIBS += $(VCLLIB)
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
 
 SHL1DEPN=
 SHL1LIBS=$(SLB)$/$(TARGET).lib
@@ -129,10 +134,11 @@ ALLTAR : \
 	$(DLLDEST)$/unohelper.py	\
 	$(PYUNO_MODULE)			\
 	$(MISC)$/$(PYUNORC)		
+.ENDIF 
 .ENDIF
 
 .INCLUDE :  target.mk
-
+.IF "$(L10N_framework)"==""
 $(DLLDEST)$/%.py: %.py
 	cp $? $@
 
@@ -164,4 +170,5 @@ $(MISC)$/$(PYUNORC) : pyuno
 $(MISC)$/pyuno.flt : pyuno.flt
 	-rm -f $@
 	cat $? > $@
+.ENDIF # L10N_framework
 

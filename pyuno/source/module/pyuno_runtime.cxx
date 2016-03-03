@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #include "pyuno_impl.hxx"
 
@@ -40,6 +43,8 @@
 #include <typelib/typedescription.hxx>
 
 #include <com/sun/star/beans/XMaterialHolder.hpp>
+
+#include <vector>
 
 #ifdef USE_JAVA
 #include <vcl/svapp.hxx>
@@ -76,8 +81,7 @@ namespace pyuno
 
 static PyTypeObject RuntimeImpl_Type =
 {
-    PyObject_HEAD_INIT (&PyType_Type)
-    0,
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
     const_cast< char * >("pyuno_runtime"),
     sizeof (RuntimeImpl),
     0,
@@ -85,7 +89,11 @@ static PyTypeObject RuntimeImpl_Type =
     (printfunc) 0,
     (getattrfunc) 0,
     (setattrfunc) 0,
+#if PY_MAJOR_VERSION >= 3
+    0, 
+#else
     (cmpfunc) 0,
+#endif
     (reprfunc) 0,
     0,
     0,
@@ -166,8 +174,9 @@ static PyRef importUnoModule( ) throw ( RuntimeException )
         OUStringBuffer buf;
         buf.appendAscii( "python object raised an unknown exception (" );
         PyRef valueRep( PyObject_Repr( excValue.get() ), SAL_NO_ACQUIRE );
-        buf.appendAscii( PyString_AsString( valueRep.get())).appendAscii( ", traceback follows\n" );
-        buf.appendAscii( PyString_AsString( str.get() ) );
+        
+        buf.append( pyString2ustring( valueRep.get() ) ).appendAscii( ", traceback follows\n" );
+        buf.append( pyString2ustring( str.get() ) );
         throw RuntimeException( buf.makeStringAndClear(), Reference< XInterface > () );
     }
     PyRef dict( PyModule_GetDict( module.get() ) );
@@ -449,35 +458,39 @@ PyRef Runtime::any2PyObject (const Any &a ) const
 	{
         sal_Int32 l = 0;
         a >>= l;
+#if PY_MAJOR_VERSION >= 3
+        return PyRef( PyLong_FromLong (l), SAL_NO_ACQUIRE );
+#else
         return PyRef( PyInt_FromLong (l), SAL_NO_ACQUIRE );
+#endif
 	}
     case typelib_TypeClass_UNSIGNED_LONG:
 	{
-        sal_uInt32 l;
+        sal_uInt32 l = 0;
         a >>= l;
         return PyRef( PyLong_FromUnsignedLong (l), SAL_NO_ACQUIRE );
 	}
     case typelib_TypeClass_HYPER:
 	{
-        sal_Int64 l;
+        sal_Int64 l = 0;
         a >>= l;
         return PyRef( PyLong_FromLongLong (l), SAL_NO_ACQUIRE);
 	}
     case typelib_TypeClass_UNSIGNED_HYPER:
 	{
-        sal_uInt64 l;
+        sal_uInt64 l = 0;
         a >>= l;
         return PyRef( PyLong_FromUnsignedLongLong (l), SAL_NO_ACQUIRE);
 	}
     case typelib_TypeClass_FLOAT:
 	{
-        float f;
+        float f = 0.0;
         a >>= f;
         return PyRef(PyFloat_FromDouble (f), SAL_NO_ACQUIRE);
 	}
     case typelib_TypeClass_DOUBLE:
 	{
-        double d;
+        double d = 0.0;
         a >>= d;
         return PyRef( PyFloat_FromDouble (d), SAL_NO_ACQUIRE);
 	}
@@ -552,7 +565,7 @@ PyRef Runtime::any2PyObject (const Any &a ) const
             // assuming that the Message is always the first member, wuuuu
             void *pData = (void*)a.getValue();
             OUString message = *(OUString * )pData;
-            PyRef pymsg = ustring2PyString( message );
+            PyRef pymsg = USTR_TO_PYSTR( message );
             PyTuple_SetItem( args.get(), 0 , pymsg.getAcquired() );
             // the exception base functions want to have an "args" tuple,
             // which contains the message
@@ -670,6 +683,21 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
     {
 
     }
+#if PY_MAJOR_VERSION >= 3	// Python 3 has no PyInt
+    else if (PyBool_Check(o))
+    {
+        if( o == Py_True )
+        {
+            sal_Bool b = sal_True;
+            a = Any( &b, getBooleanCppuType() );
+        }
+        else
+        {
+            sal_Bool b = sal_False;
+            a = Any( &b, getBooleanCppuType() );
+        }
+    }
+#else
     else if (PyInt_Check (o))
     {
         if( o == Py_True )
@@ -701,6 +729,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
             }
         }
     }
+#endif				// Python 3 has no PyInt
     else if (PyLong_Check (o))
     {
         sal_Int64 l = (sal_Int64)PyLong_AsLong (o);
@@ -730,8 +759,10 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         double d = PyFloat_AsDouble (o);
         a <<= d;
     }
-    else if (PyString_Check (o))
+#if PY_MAJOR_VERSION < 3
+    else if (PyBytes_Check (o))
 	a <<= pyString2ustring(o);
+#endif
     else if( PyUnicode_Check( o ) )
 	a <<= pyString2ustring(o);
     else if (PyTuple_Check (o))
@@ -751,11 +782,18 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         {
             PyRef str(PyObject_GetAttrString( o , const_cast< char * >("value") ),SAL_NO_ACQUIRE);
             Sequence< sal_Int8 > seq;
-            if( PyString_Check( str.get() ) )
+            if( PyBytes_Check( str.get() ) )
             {
                 seq = Sequence<sal_Int8 > (
-                    (sal_Int8*) PyString_AsString(str.get()), PyString_Size(str.get()));
+                    (sal_Int8*) PyBytes_AsString(str.get()), PyBytes_Size(str.get()));
             }
+#if PY_MAJOR_VERSION >= 3
+            else if ( PyByteArray_Check( str.get() ) )
+            {
+                seq = Sequence< sal_Int8 >(
+                    (sal_Int8 *) PyByteArray_AS_STRING(str.get()), PyByteArray_GET_SIZE(str.get()));
+            }
+#endif
             a <<= seq;                                                          
         }
         else
@@ -782,7 +820,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
                     Reference< XInterface > () );
             }
         }
-        else if( PyObject_IsInstance( o, getPyUnoClass( runtime ).get() ) )
+        else if( PyObject_IsInstance( o, getPyUnoClass().get() ) )
         {
             PyUNO* o_pi;
             o_pi = (PyUNO*) o;
@@ -887,7 +925,7 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
                 OUStringBuffer buf;
                 buf.appendAscii( "Couldn't convert " );
                 PyRef reprString( PyObject_Str( o ) , SAL_NO_ACQUIRE );
-                buf.appendAscii( PyString_AsString( reprString.get() ) );
+                buf.append( pyString2ustring( reprString.get() ) );
                 buf.appendAscii( " to a UNO type" );
                 throw RuntimeException( buf.makeStringAndClear(), Reference< XInterface > () );
             }
@@ -917,14 +955,14 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
             else
             {
                 str = PyRef(
-                    PyString_FromString( "Couldn't find uno._uno_extract_printable_stacktrace" ),
+                    PyBytes_FromString( "Couldn't find uno._uno_extract_printable_stacktrace" ),
                     SAL_NO_ACQUIRE );
             }
         }
         else
         {
             str = PyRef(
-                PyString_FromString( "Couldn't find uno.py, no stacktrace available" ),
+                PyBytes_FromString( "Couldn't find uno.py, no stacktrace available" ),
                 SAL_NO_ACQUIRE );
         }
 
@@ -932,7 +970,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
     else
     {
         // it may occur, that no traceback is given (e.g. only native code below)
-        str = PyRef( PyString_FromString( "no traceback available" ), SAL_NO_ACQUIRE);
+        str = PyRef( PyBytes_FromString( "no traceback available" ), SAL_NO_ACQUIRE);
     }
     
     if( isInstanceOfStructOrException( excValue.get() ) )
@@ -945,7 +983,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef typeName( PyObject_Str( excType.get() ), SAL_NO_ACQUIRE );
         if( typeName.is() )
         {
-            buf.appendAscii( PyString_AsString( typeName.get() ) );
+            buf.append( pyString2ustring( typeName.get() ) );
         }
         else
         {
@@ -955,7 +993,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef valueRep( PyObject_Str( excValue.get() ), SAL_NO_ACQUIRE );
         if( valueRep.is() )
         {
-            buf.appendAscii( PyString_AsString( valueRep.get()));
+            buf.append( pyString2ustring( valueRep.get()));
         }
         else
         {
@@ -964,7 +1002,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         buf.appendAscii( ", traceback follows\n" );
         if( str.is() )
         {
-            buf.appendAscii( PyString_AsString( str.get() ) );
+            buf.append( pyString2ustring( str.get() ) );
         }
         else
         {
