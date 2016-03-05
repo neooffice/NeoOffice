@@ -326,6 +326,9 @@ _ZNK4cppu16UnoUrlDescriptor7getNameEv;
 _ZNK4cppu6UnoUrl11getProtocolEv;
 _ZNK4cppu6UnoUrl13getConnectionEv;
 _ZNK4cppu6UnoUrl13getObjectNameEv;
+#if SUPD == 412
+_ZN4cppu15supportsServiceEPN3com3sun4star4lang12XServiceInfoERKN3rtl8OUStringE;
+#endif	// SUPD == 412
 
 	local:
 		*;
@@ -415,8 +418,5 @@ UDK_3.6 { # OOo 3.3
 UDK_3.7 { # OOo 3.4
     global:
         _ZN4cppu18OPropertySetHelper29setDependentFastPropertyValueE?RKN3com3sun4star3uno3AnyE;
-#if SUPD == 412
-        _ZN4cppu15supportsServiceEPN3com3sun4star4lang12XServiceInfoERKN3rtl8OUStringE;
-#endif	// SUPD == 412
 } UDK_3.6;
 
