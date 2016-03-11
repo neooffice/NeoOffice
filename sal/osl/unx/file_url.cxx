@@ -1,73 +1,62 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2007 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sal.hxx"
+
+#include "file_url.h"
+
 #include "system.h"
 
-#ifndef _LIMITS_H
 #include <limits.h>
-#endif
-
-#ifndef _ERRNO_H
 #include <errno.h>
-#endif
-
-#ifndef _STRINGS_H
 #include <strings.h>
-#endif
-
-#ifndef _UNISTD_H
 #include <unistd.h>
-#endif
-#include <osl/file.h>
+
+#include "osl/file.hxx"
 #include <osl/security.h>
-#include <rtl/uri.h>
 #include <osl/diagnose.h>
+#include <osl/thread.h>
+#include <osl/process.h>
+
+#include <rtl/uri.h>
 #include <rtl/ustring.hxx>
 #include <rtl/ustrbuf.h>
+#include "rtl/textcvt.h"
 
-#ifndef _OSL_TREAD_H_
-#include <osl/thread.h>
-#endif
-#include <osl/file.hxx>
-#include <osl/process.h>
 #include "file_error_transl.h"
-
-#ifndef _FILE_URL_H_
-#include "file_url.h"
-#endif
 #include "file_path_helper.hxx"
  
-#ifndef _OSL_UUNXAPI_HXX_
 #include "uunxapi.hxx"
-#endif
  
 /***************************************************
  
@@ -83,16 +72,14 @@
  so this code should be consolidated.
  
  **************************************************/
+/************************************************************************
+ *   ToDo
+ *
+ *   Fix osl_getCanonicalName
+ *
+ ***********************************************************************/
  
  
- 
-/***************************************************
- * forward
- **************************************************/
- 
-extern "C" int UnicodeToText(char *, size_t, const sal_Unicode *, sal_Int32);
-extern "C" int TextToUnicode(const char* text, size_t text_buffer_size, sal_Unicode* unic_text, sal_Int32 unic_text_buffer_size);
-
 /***************************************************
  * namespace directives
  **************************************************/
@@ -148,6 +135,18 @@ static sal_Bool findWrongUsage( const sal_Unicode *path, sal_Int32 len )
     return bRet;
 }
 */
+
+/****************************************************************************/
+/*	osl_getCanonicalName */
+/****************************************************************************/
+
+oslFileError SAL_CALL osl_getCanonicalName( rtl_uString* ustrFileURL, rtl_uString** pustrValidURL )
+{
+	OSL_ENSURE(0, "osl_getCanonicalName not implemented");
+
+	rtl_uString_newFromString(pustrValidURL, ustrFileURL);
+	return osl_File_E_None;
+}
 
 /****************************************************************************/
 /*	osl_getSystemPathFromFileURL */
@@ -477,39 +476,6 @@ namespace /* private */
 	/*********************************************
 
 	 ********************************************/
-	sal_Unicode* ustrcpy(const sal_Unicode* s, sal_Unicode* d)
-	{
-		const sal_Unicode* sc = s;
-		sal_Unicode*       dc = d;
-		
-		while ((*dc++ = *sc++))
-			/**/;
-			
-		return d;
-	}
-	
-	/*********************************************
-
-	 ********************************************/
-	 
-	sal_Unicode* ustrncpy(const sal_Unicode* s, sal_Unicode* d, unsigned int n)
-	{
-		const sal_Unicode* sc = s;
-		sal_Unicode*       dc = d;
-		unsigned int       i  = n;		
-		
-		while (i--)	
-			*dc++ = *sc++;
-		
-		if (n)
-			*dc = 0;
-			
-		return d;
-	}
-	
-	/*********************************************
-
-	 ********************************************/
 	 
 	sal_Unicode* ustrchrcat(const sal_Unicode chr, sal_Unicode* d)
 	{
@@ -518,17 +484,6 @@ namespace /* private */
 		*p   = 0;		
 		return d;	
 	}
-
-	/*********************************************
-
-	 ********************************************/
-	 
-	sal_Unicode* ustrcat(const sal_Unicode* s, sal_Unicode* d)
-	{
-		sal_Unicode* dc = ustrtoend(d);					
-		ustrcpy(s, dc);		
-		return d;
-	}	
 
 	/******************************************************
 	 *
@@ -541,18 +496,6 @@ namespace /* private */
        		p--;
 	   	return (*p == Chr);  
 	}
-
-	/******************************************************
-	 * Ensure that the given string has the specified last 
-	 * character if necessary append it
-	 ******************************************************/
- 
-	sal_Unicode* _strensurelast(sal_Unicode* pStr, sal_Unicode Chr)
-	{
-    	if (!_islastchr(pStr, Chr))
-        	ustrchrcat(Chr, pStr);
-	    return pStr;
-	}	
 
 	/******************************************************
 	 * Remove the last part of a path, a path that has 
@@ -770,7 +713,6 @@ oslFileError osl_getAbsoluteFileURL(rtl_uString*  ustrBaseDirURL, rtl_uString* u
 {
 	FileBase::RC  rc;
     rtl::OUString unresolved_path;    
-    static char *allow_symlinks = getenv( "SAL_ALLOW_LINKOO_SYMLINKS" );
     
     rc = FileBase::getSystemPathFromFileURL(rtl::OUString(ustrRelativeURL), unresolved_path);
     
@@ -791,33 +733,8 @@ oslFileError osl_getAbsoluteFileURL(rtl_uString*  ustrBaseDirURL, rtl_uString* u
         unresolved_path = abs_path;        
     }
 
-    rtl::OUString resolved_path;
-
-    if (!allow_symlinks)
-    {
-        rc = (FileBase::RC) osl_getAbsoluteFileURL_impl_(unresolved_path, resolved_path);
-    }
-    else
-    {
-        // SAL_ALLOW_LINKOO_SYMLINKS environment variable:
-        // for linkoo to work, we need to let the symlinks to the libraries untouched
-        rtl::OUString base;
-        sal_Int32 last_slash = unresolved_path.lastIndexOf( UNICHAR_SLASH );
-
-        if (last_slash >= 0 && last_slash + 1 < unresolved_path.getLength())
-        {
-            base = unresolved_path.copy(last_slash+1);
-            unresolved_path = unresolved_path.copy(0, last_slash);
-        }
-
-        rc = (FileBase::RC) osl_getAbsoluteFileURL_impl_(unresolved_path, resolved_path);
-        
-        if (base.getLength() > 0)
-        {
-            resolved_path += rtl::OUString( UNICHAR_SLASH );
-            resolved_path += base;
-        }
-    }
+	rtl::OUString resolved_path;	  
+    rc = (FileBase::RC) osl_getAbsoluteFileURL_impl_(unresolved_path, resolved_path);
         
 	if (FileBase::E_None == rc)
     {
@@ -946,4 +863,124 @@ oslFileError FileURLToPath(char * buffer, size_t bufLen, rtl_uString* ustrFileUR
     rtl_uString_release(ustrSystemPath);
 	
     return osl_error;
+}
+
+/*****************************************************************************
+ * UnicodeToText
+ ****************************************************************************/
+
+namespace /* private */
+{
+    class UnicodeToTextConverter_Impl
+    {
+        rtl_UnicodeToTextConverter m_converter;
+
+        UnicodeToTextConverter_Impl()
+            : m_converter (rtl_createUnicodeToTextConverter (osl_getThreadTextEncoding()))
+        {}
+
+        ~UnicodeToTextConverter_Impl()
+        {
+            rtl_destroyUnicodeToTextConverter (m_converter);
+        }
+    public:
+        static UnicodeToTextConverter_Impl & getInstance()
+        {
+            static UnicodeToTextConverter_Impl g_theConverter;
+            return g_theConverter;
+        }
+
+        sal_Size convert(
+            sal_Unicode const * pSrcBuf, sal_Size nSrcChars, sal_Char * pDstBuf, sal_Size nDstBytes,
+            sal_uInt32 nFlags, sal_uInt32 * pInfo, sal_Size * pSrcCvtChars)
+        {
+            OSL_ASSERT(m_converter != 0);
+            return rtl_convertUnicodeToText (
+                m_converter, 0, pSrcBuf, nSrcChars, pDstBuf, nDstBytes, nFlags, pInfo, pSrcCvtChars);
+        }
+    };
+} // end namespace private
+
+int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sal_Int32 uniTextLen )
+{
+    sal_uInt32   nInfo = 0;
+    sal_Size     nSrcChars = 0;
+
+    sal_Size nDestBytes = UnicodeToTextConverter_Impl::getInstance().convert (
+        uniText, uniTextLen, buffer, bufLen,
+        OUSTRING_TO_OSTRING_CVTFLAGS | RTL_UNICODETOTEXT_FLAGS_FLUSH, &nInfo, &nSrcChars);
+
+    if( nInfo & RTL_UNICODETOTEXT_INFO_DESTBUFFERTOSMALL )
+    {
+        errno = EOVERFLOW;
+        return 0;
+    }
+
+    /* ensure trailing '\0' */
+    buffer[nDestBytes] = '\0';
+#ifdef USE_JAVA
+    macxp_decomposeString( buffer, bufLen );
+#endif	// USE_JAVA
+    return nDestBytes;
+}
+
+/*****************************************************************************
+ * TextToUnicode
+ ****************************************************************************/
+
+namespace /* private */
+{
+    class TextToUnicodeConverter_Impl
+    {
+        rtl_TextToUnicodeConverter m_converter;
+
+        TextToUnicodeConverter_Impl()
+            : m_converter (rtl_createTextToUnicodeConverter (osl_getThreadTextEncoding()))
+        {}
+
+        ~TextToUnicodeConverter_Impl()
+        {
+            rtl_destroyTextToUnicodeConverter (m_converter);
+        }
+
+    public:
+        static TextToUnicodeConverter_Impl & getInstance()
+        {
+            static TextToUnicodeConverter_Impl g_theConverter;
+            return g_theConverter;
+        }
+
+        sal_Size convert(
+            sal_Char const * pSrcBuf, sal_Size nSrcBytes, sal_Unicode * pDstBuf, sal_Size nDstChars,
+            sal_uInt32 nFlags, sal_uInt32 * pInfo, sal_Size * pSrcCvtBytes)
+        {
+            OSL_ASSERT(m_converter != 0);
+            return rtl_convertTextToUnicode (
+                m_converter, 0, pSrcBuf, nSrcBytes, pDstBuf, nDstChars, nFlags, pInfo, pSrcCvtBytes);
+        }
+    };
+} // end namespace private
+
+int TextToUnicode(
+	const char*  text,
+	size_t       text_buffer_size,
+	sal_Unicode* unic_text,
+	sal_Int32    unic_text_buffer_size)
+{
+    sal_uInt32 nInfo = 0;
+    sal_Size   nSrcChars = 0;
+
+    sal_Size nDestBytes = TextToUnicodeConverter_Impl::getInstance().convert(
+        text,  text_buffer_size, unic_text, unic_text_buffer_size,
+        OSTRING_TO_OUSTRING_CVTFLAGS | RTL_TEXTTOUNICODE_FLAGS_FLUSH, &nInfo, &nSrcChars);
+
+    if (nInfo & RTL_TEXTTOUNICODE_INFO_DESTBUFFERTOSMALL)
+    {
+        errno = EOVERFLOW;
+        return 0;
+    }
+
+    /* ensure trailing '\0' */
+    unic_text[nDestBytes] = '\0';
+    return nDestBytes;
 }

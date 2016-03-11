@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 
 /*
@@ -48,7 +51,7 @@
 #endif
 
 #include "system.h"
-#if defined(SOLARIS) || defined(IRIX)
+#if defined(SOLARIS)
 # include <sys/procfs.h>
 #endif
 #include <osl/diagnose.h>
@@ -268,7 +271,7 @@ static sal_Bool sendFdPipe(int PipeFD, int SocketFD)
     cmptr->cmsg_level = SOL_SOCKET;
     cmptr->cmsg_type = SCM_RIGHTS;
     cmptr->cmsg_len = CONTROLLEN;
-    *(int*)CMSG_DATA(cmptr) = SocketFD;
+    memcpy(CMSG_DATA(cmptr), &SocketFD, sizeof(int));
 
 #endif
     
@@ -359,7 +362,7 @@ static oslSocket receiveFdPipe(int PipeFD)
          ( msghdr.msg_controllen == CONTROLLEN ) )
     {
         OSL_TRACE("receiveFdPipe : received '%i' bytes\n",nRead);
-        newfd = *(int*)CMSG_DATA(cmptr);        
+        memcpy(&newfd, CMSG_DATA(cmptr), sizeof(int));
     }
 #endif
     else
@@ -430,10 +433,8 @@ oslSocket osl_receiveResourcePipe(oslPipe pPipe)
 
 static void ChildStatusProc(void *pData)
 {
-    int   i;
-/*	int   first = 0;*/
-	pid_t pid;
-/*	int   status;*/
+	pid_t pid = -1;
+	int   status = 0;
 	int   channel[2];
 	ProcessData  data;
 	ProcessData *pdata;
@@ -446,26 +447,32 @@ static void ChildStatusProc(void *pData)
 	   in our child process */
 	memcpy(&data, pData, sizeof(data));
 
-    socketpair(AF_UNIX, SOCK_STREAM, 0, channel);
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, channel) == -1)
+        status = errno;
 
     fcntl(channel[0], F_SETFD, FD_CLOEXEC);
     fcntl(channel[1], F_SETFD, FD_CLOEXEC);
 
 	/* Create redirected IO pipes */
+	if ( status == 0 && data.m_pInputWrite )
+		if (pipe( stdInput ) == -1)
+		    status = errno;
 
-	if ( data.m_pInputWrite )
-		pipe( stdInput );
+	if ( status == 0 && data.m_pOutputRead )
+		if (pipe( stdOutput ) == -1)
+		    status = errno;
 
-	if ( data.m_pOutputRead )
-		pipe( stdOutput );
+	if ( status == 0 && data.m_pErrorRead )
+		if (pipe( stdError ) == -1)
+		    status = errno;
 
-	if ( data.m_pErrorRead )
-		pipe( stdError );
-
-    if ((pid = fork()) == 0)
+    if ( (status == 0) && ((pid = fork()) == 0) )
     {
 		/* Child */
-	    close(channel[0]);
+        int chstatus = 0;
+        sal_Int32 nWrote;
+
+	    if (channel[0] != -1) close(channel[0]);
 
 		if ((data.m_uid != (uid_t)-1) && ((data.m_uid != getuid()) || (data.m_gid != getgid())))
 		{
@@ -480,51 +487,55 @@ static void ChildStatusProc(void *pData)
 #endif
 		}
 
-   	    if ((data.m_uid == (uid_t)-1) || ((data.m_uid == getuid()) && (data.m_gid == getgid())))
+  		if (data.m_pszDir)
+  			chstatus = chdir(data.m_pszDir);
 
+   	    if (chstatus == 0 && ((data.m_uid == (uid_t)-1) || ((data.m_uid == getuid()) && (data.m_gid == getgid()))))
 		{
-  			if (data.m_pszDir)
-  				chdir(data.m_pszDir);
-
+            int i;
 			for (i = 0; data.m_pszEnv[i] != NULL; i++)
-	     		putenv(data.m_pszEnv[i]);
+            {
+                if (strchr(data.m_pszEnv[i], '=') == NULL)
+                {
+                    unsetenv(data.m_pszEnv[i]); /*TODO: check error return*/
+                }
+                else
+                {
+                    putenv(data.m_pszEnv[i]); /*TODO: check error return*/
+                }
+            }
 
-#if defined(LINUX) && !defined(NPTL)
-            /* mfe: linux likes to have just one thread when the exec family is called */
-            /*      this np function has this purpose ...                              */
-            pthread_kill_other_threads_np();
-#endif
             OSL_TRACE("ChildStatusProc : starting '%s'",data.m_pszArgs[0]);
      
 			/* Connect std IO to pipe ends */
 
 			/* Write end of stdInput not used in child process */
-			close( stdInput[1] );
+			if (stdInput[1] != -1) close( stdInput[1] );
 
 			/* Read end of stdOutput not used in child process */
-			close( stdOutput[0] );
+			if (stdOutput[0] != -1) close( stdOutput[0] );
 
 			/* Read end of stdError not used in child process */
-			close( stdError[0] );
+			if (stdError[0] != -1) close( stdError[0] );
 
 			/* Redirect pipe ends to std IO */
 
 			if ( stdInput[0] != STDIN_FILENO )
 			{
 				dup2( stdInput[0], STDIN_FILENO );
-				close( stdInput[0] );
+				if (stdInput[0] != -1) close( stdInput[0] );
 			}
 
 			if ( stdOutput[1] != STDOUT_FILENO )
 			{
 				dup2( stdOutput[1], STDOUT_FILENO );
-				close( stdOutput[1] );
+				if (stdOutput[1] != -1) close( stdOutput[1] );
 			}
 
 			if ( stdError[1] != STDERR_FILENO )
 			{
 				dup2( stdError[1], STDERR_FILENO );
-				close( stdError[1] );
+				if (stdError[1] != -1) close( stdError[1] );
 			}
 
 	    	pid=execv(data.m_pszArgs[0], (sal_Char **)data.m_pszArgs);
@@ -536,31 +547,34 @@ static void ChildStatusProc(void *pData)
         OSL_TRACE("ChildStatusProc : starting '%s' failed",data.m_pszArgs[0]);
         
 		/* if we reach here, something went wrong */
-		write(channel[1], &errno, sizeof(errno));
+        nWrote = write(channel[1], &errno, sizeof(errno));
+		if (nWrote != sizeof(errno))
+            OSL_TRACE("sendFdPipe : sending failed (%s)",strerror(errno));
 
-	    close(channel[1]);
+	    if (channel[1] != -1) close(channel[1]);
 
 		_exit(255);
     }
     else
     {   /* Parent  */
-		int   status;
-
-		close(channel[1]);
+        int i = -1;
+		if (channel[1] != -1) close(channel[1]);
 
 		/* Close unused pipe ends */
-		close( stdInput[0] );
-		close( stdOutput[1] );
-		close( stdError[1] );
+		if (stdInput[0] != -1) close( stdInput[0] );
+		if (stdOutput[1] != -1) close( stdOutput[1] );
+		if (stdError[1] != -1) close( stdError[1] );
 
-		while (((i = read(channel[0], &status, sizeof(status))) < 0))
+		if (pid > 0)
 		{
-			if (errno != EINTR)
-				break;
+			while (((i = read(channel[0], &status, sizeof(status))) < 0))
+			{
+				if (errno != EINTR)
+					break;
+			}
 		}
 
-		close(channel[0]);
-
+		if (channel[0] != -1) close(channel[0]);
 
 		if ((pid > 0) && (i == 0))
 		{
@@ -645,9 +659,21 @@ static void ChildStatusProc(void *pData)
 			if ( pdata->m_pErrorRead )
 				*pdata->m_pErrorRead = NULL;
 
-			close( stdInput[1] );
-			close( stdOutput[0] );
-			close( stdError[0] );
+			if (stdInput[1] != -1) close( stdInput[1] );
+			if (stdOutput[0] != -1) close( stdOutput[0] );
+			if (stdError[0] != -1) close( stdError[0] );
+
+            //if pid > 0 then a process was created, even if it later failed
+            //e.g. bash searching for a command to execute, and we still
+            //need to clean it up to avoid "defunct" processes
+            if (pid > 0)
+            {
+                pid_t child_pid;
+                do
+                {
+                    child_pid = waitpid(pid, &status, 0);
+                } while ( 0 > child_pid && EINTR == errno );
+            }
 
 			/* notify (and unblock) parent thread */
 			osl_setCondition(pdata->m_started);
@@ -857,7 +883,7 @@ oslProcessError SAL_CALL osl_psz_executeProcess(sal_Char *pszImageName,
 	// exec() will fail
 	if (access(pszImageName, R_OK | X_OK))
 		return osl_Process_E_NotFound;
-#endif  /* USE_JAVA */
+#endif	/* USE_JAVA */
 
 	Data.m_pszArgs[0] = strdup(pszImageName);
 	Data.m_pszArgs[1] = 0;
@@ -1119,15 +1145,6 @@ struct osl_procStat
 	unsigned long nswap;      /* ? */
 	unsigned long cnswap;     /* ? */
 
-	/* from 'statm' */
-	long size;                /* numbers of pages in memory */
-	long resident;            /* number of resident pages */
-	long share;               /* number of shared pages */
-	long trs;                 /* text resident size */
-	long lrs;                 /* library resident size */
-	long drs;                 /* data resident size */
-	long dt;                  /* ditry pages */
-
 	/* from 'status' */
 	int ruid;                 /* real uid */
 	int euid;                 /* effective uid */
@@ -1150,9 +1167,10 @@ struct osl_procStat
  osl_getProcStat
  *********************************************/
  
-void osl_getProcStat(pid_t pid, struct osl_procStat* procstat)
+sal_Bool osl_getProcStat(pid_t pid, struct osl_procStat* procstat)
 {
 	int fd = 0;
+	sal_Bool bRet = sal_False;
 	char name[PATH_MAX + 1];
 	snprintf(name, sizeof(name), "/proc/%u/stat", pid);
 
@@ -1161,11 +1179,13 @@ void osl_getProcStat(pid_t pid, struct osl_procStat* procstat)
 		char* tmp=0;
 		char prstatbuf[512];
 		memset(prstatbuf,0,512);
-		read(fd,prstatbuf,511);
+		bRet = read(fd,prstatbuf,511) == 511;
 
 		close(fd);
 		/*printf("%s\n\n",prstatbuf);*/
 
+		if (!bRet)
+		    return sal_False;
 
 		tmp = strrchr(prstatbuf, ')');
 		*tmp = '\0';
@@ -1193,56 +1213,34 @@ void osl_getProcStat(pid_t pid, struct osl_procStat* procstat)
 			   &procstat->wchan,     &procstat->nswap,   &procstat->cnswap
 			);
 	}
-}
-
-/**********************************************
- osl_getProcStatm
- *********************************************/
- 
-void osl_getProcStatm(pid_t pid, struct osl_procStat* procstat)
-{
-	int fd = 0;
-	char name[PATH_MAX + 1];
-	snprintf(name, sizeof(name), "/proc/%u/statm", pid);
-
-	if ((fd = open(name,O_RDONLY)) >=0 )
-	{
-		char prstatmbuf[512];
-		memset(prstatmbuf,0,512);
-		read(fd,prstatmbuf,511);
-
-		close(fd);
-
-		/*		printf("\n\n%s\n\n",prstatmbuf);*/
-
-		sscanf(prstatmbuf,"%li %li %li %li %li %li %li",
-			   &procstat->size, &procstat->resident, &procstat->share,
-			   &procstat->trs,  &procstat->lrs,      &procstat->drs,
-			   &procstat->dt
-			);
-	}
+    return bRet;
 }
 
 /**********************************************
  osl_getProcStatus
  *********************************************/
  
-void osl_getProcStatus(pid_t pid, struct osl_procStat* procstat)
+sal_Bool osl_getProcStatus(pid_t pid, struct osl_procStat* procstat)
 {
 	int fd = 0;
 	char name[PATH_MAX + 1];
 	snprintf(name, sizeof(name), "/proc/%u/status", pid);
+
+    sal_Bool bRet = sal_False;
 
 	if ((fd = open(name,O_RDONLY)) >=0 )
 	{
 		char* tmp=0;
 		char prstatusbuf[512];
 		memset(prstatusbuf,0,512);
-		read(fd,prstatusbuf,511);
+		bRet = read(fd,prstatusbuf,511) == 511;
 
 		close(fd);
 
 		/*		printf("\n\n%s\n\n",prstatusbuf);*/
+
+		if (!bRet)
+		    return sal_False;
 
 		tmp = strstr(prstatusbuf,"Uid:");
 		if(tmp)
@@ -1285,6 +1283,7 @@ void osl_getProcStatus(pid_t pid, struct osl_procStat* procstat)
 				);
 		}
 	}
+	return bRet;
 }
 
 #endif
@@ -1390,101 +1389,57 @@ oslProcessError SAL_CALL osl_getProcessInfo(oslProcess Process, oslProcessData F
 			return (pInfo->Fields == Fields) ? osl_Process_E_None : osl_Process_E_Unknown;
 		}
 
-#elif defined(IRIX)
-
-		int  fd;
-		sal_Char name[PATH_MAX + 1];
-
-		snprintf(name, sizeof(name), "/proc/%u", pid);
-
-		if ((fd = open(name, O_RDONLY)) >= 0)
-		{
-			prstatus_t prstatus;
-			prpsinfo_t prpsinfo;
-
-			if (ioctl(fd, PIOCSTATUS, &prstatus) >= 0 &&
-				ioctl(fd, PIOCPSINFO, &prpsinfo) >= 0)
-			{
-				if (Fields & osl_Process_CPUTIMES)
-				{
-					pInfo->UserTime.Seconds   = prstatus.pr_utime.tv_sec;
-					pInfo->UserTime.Nanosec   = prstatus.pr_utime.tv_nsec;
-					pInfo->SystemTime.Seconds = prstatus.pr_stime.tv_sec;
-					pInfo->SystemTime.Nanosec = prstatus.pr_stime.tv_nsec;
-
-					pInfo->Fields |= osl_Process_CPUTIMES;
-				}
-
-				if (Fields & osl_Process_HEAPUSAGE)
-				{
-					int pagesize = getpagesize();
-
-					pInfo->HeapUsage = prpsinfo.pr_size*pagesize;
-
-					pInfo->Fields |= osl_Process_HEAPUSAGE;
-				}
-
-				close(fd);
-
-				return (pInfo->Fields == Fields) ? osl_Process_E_None : osl_Process_E_Unknown;
-			}
-			else
-				close(fd);
-		}
-
 #elif defined(LINUX)
 
-/*		int fd = 0;*/
-		struct osl_procStat procstat;
-		memset(&procstat,0,sizeof(procstat));
-
-		osl_getProcStat(pid, &procstat);
-		osl_getProcStatm(pid, &procstat);
-		osl_getProcStatus(pid, &procstat);
-
-		if ( Fields & osl_Process_CPUTIMES)
+		if ( (Fields & osl_Process_CPUTIMES) || (Fields & osl_Process_HEAPUSAGE) )
 		{
-			/*
-			 *  mfe:
-			 *  We calculate only time of the process proper.
-			 *  Threads are processes, we do not consider their time here!
-			 *  (For this, cutime and cstime should be used, it seems not
-			 *   to work in 2.0.36)
-			 */
+    		struct osl_procStat procstat;
+    		memset(&procstat,0,sizeof(procstat));
 
-            long clktck;
-            unsigned long hz;
-            unsigned long userseconds;
-            unsigned long systemseconds;
+    		if ( (Fields & osl_Process_CPUTIMES) && osl_getProcStat(pid, &procstat) )
+    		{
+    			/*
+    			 *  mfe:
+    			 *  We calculate only time of the process proper.
+    			 *  Threads are processes, we do not consider their time here!
+    			 *  (For this, cutime and cstime should be used, it seems not
+    			 *   to work in 2.0.36)
+    			 */
 
-            clktck = sysconf(_SC_CLK_TCK);
-            if (clktck < 0) {
-                return osl_Process_E_Unknown;
-            }
-            hz = (unsigned long) clktck;
+                long clktck;
+                unsigned long hz;
+                unsigned long userseconds;
+                unsigned long systemseconds;
 
-            userseconds = procstat.utime/hz;
-            systemseconds = procstat.stime/hz;
+                clktck = sysconf(_SC_CLK_TCK);
+                if (clktck < 0) {
+                    return osl_Process_E_Unknown;
+                }
+                hz = (unsigned long) clktck;
 
-			pInfo->UserTime.Seconds   = userseconds;
-			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * hz);
-			pInfo->SystemTime.Seconds = systemseconds;
-			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * hz);
+                userseconds = procstat.utime/hz;
+                systemseconds = procstat.stime/hz;
 
-			pInfo->Fields |= osl_Process_CPUTIMES;
-		}
+     			pInfo->UserTime.Seconds   = userseconds;
+    			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * hz);
+    			pInfo->SystemTime.Seconds = systemseconds;
+    			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * hz);
+    
+    			pInfo->Fields |= osl_Process_CPUTIMES;
+    		}
 
-		if (Fields & osl_Process_HEAPUSAGE)
-		{
-			/*
-			 *  mfe:
-			 *  vm_data (found in status) shows the size of the data segment
-			 *  it a rough approximation of the core heap size
-			 */
-			pInfo->HeapUsage = procstat.vm_data*1024;
+    		if ( (Fields & osl_Process_HEAPUSAGE) && osl_getProcStatus(pid, &procstat) )
+    		{
+    			/*
+    			 *  mfe:
+    			 *  vm_data (found in status) shows the size of the data segment
+    			 *  it a rough approximation of the core heap size
+    			 */
+    			pInfo->HeapUsage = procstat.vm_data*1024;
 
-			pInfo->Fields |= osl_Process_HEAPUSAGE;
-		}
+    			pInfo->Fields |= osl_Process_HEAPUSAGE;
+    		}
+    	}
 
 		return (pInfo->Fields == Fields) ? osl_Process_E_None : osl_Process_E_Unknown;
 #endif

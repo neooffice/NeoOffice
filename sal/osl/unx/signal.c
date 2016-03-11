@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 
 /* system headers */
@@ -45,6 +48,7 @@
 
 #ifdef LINUX
 #include <execinfo.h>
+#include <link.h>
 #define INCLUDE_BACKTRACE
 #define STACKTYPE "Linux"
 #endif
@@ -75,10 +79,14 @@
 #include "file_path_helper.h"
 
 #define ACT_IGNORE	1
-#define ACT_ABORT	2
-#define ACT_EXIT	3
-#define ACT_SYSTEM	4
-#define ACT_HIDE	5
+#define ACT_EXIT	2
+#define ACT_SYSTEM	3
+#define ACT_HIDE	4
+#ifdef SAL_ENABLE_CRASH_REPORT
+#    define ACT_ABORT	5
+#else
+#    define ACT_ABORT   ACT_SYSTEM
+#endif
 
 #define MAX_PATH_LEN	2048
 
@@ -204,6 +212,7 @@ static sal_Bool InitSignal()
 	int i;
 	struct sigaction act;
 	struct sigaction oact;
+    sigset_t unset;
 
 	if (is_soffice_Impl())
 	{
@@ -284,6 +293,16 @@ static sal_Bool InitSignal()
 			}
 		}
 	}
+
+    /* Clear signal mask inherited from parent process (on Mac OS X, upon a
+       crash soffice re-execs itself from within the signal handler, so the
+       second soffice would have the guilty signal blocked and would freeze upon
+       encountering a similar crash again): */
+    if (sigemptyset(&unset) < 0 ||
+        pthread_sigmask(SIG_SETMASK, &unset, NULL) < 0)
+    {
+        OSL_TRACE("sigemptyset or pthread_sigmask failed");
+    }
 
 	return sal_True;
 }
@@ -395,6 +414,88 @@ static int fputs_xml( const char *string, FILE *stream )
 
 #define REPORTENV_PARAM		"-crashreportenv:"
 
+#if defined SAL_ENABLE_CRASH_REPORT && defined INCLUDE_BACKTRACE && \
+    defined LINUX
+
+typedef struct
+{
+    const char *name;
+    ElfW(Off) offset;
+} dynamic_entry;
+
+static int
+callback(struct dl_phdr_info *info, size_t size, void *data)
+{
+    const ElfW(Phdr) *pDynamic = NULL;
+
+    if (size == sizeof(struct dl_phdr_info))
+    {
+        int i;
+        for (i = 0; i < info->dlpi_phnum; ++i)
+        {
+            if (info->dlpi_phdr[i].p_type == PT_DYNAMIC)
+            {
+                pDynamic = &(info->dlpi_phdr[i]);
+                break;
+            }
+        }
+    }
+
+    if (pDynamic)
+    {
+        char buffer[100];
+        int len;
+        char exe[PATH_MAX];
+        const char *dsoname = info->dlpi_name;
+
+        dynamic_entry* entry = (dynamic_entry*)data;
+
+        if (strcmp(dsoname, "") == 0)
+        { 
+            snprintf(buffer, sizeof(buffer), "/proc/%d/exe", getpid());
+            if ((len = readlink(buffer, exe, PATH_MAX)) != -1)
+            {
+                exe[len] = '\0';
+                dsoname = exe;
+            }
+        }
+
+        if (strcmp(dsoname, entry->name) == 0)
+        {
+            entry->offset = pDynamic->p_offset;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Get the location of the .dynamic section offset for the given elf file.
+ * i.e. same as the "Offset" value shown for DYNAMIC from readelf -l foo 
+ *
+ * We want to know this value so that if the binaries have been modifed
+ * by prelink then we can still process the call stack on server side 
+ * by comparing this value to that of an "un-prelinked but known to be
+ * otherwise equivalent" version of those binaries and adjust the call 
+ * stack addresses by the differences between .dynamic addresses so as 
+ * to be able to map the prelinked addresses back to the unprelinked 
+ * addresses
+ *
+ * cmc@openoffice.org
+ */
+static ElfW(Off)
+dynamic_section_offset(const char *name)
+{
+    dynamic_entry entry;
+
+    entry.name = name;
+    entry.offset = 0;
+
+    dl_iterate_phdr(callback, &entry);
+
+    return entry.offset;
+}
+#endif
+
 static int ReportCrash( int Signal )
 {
 #ifdef SAL_ENABLE_CRASH_REPORT
@@ -468,7 +569,7 @@ static int ReportCrash( int Signal )
 			if (Signals[i].Signal == Signal && Signals[i].Action == ACT_ABORT )
 			{
 				int  ret;
-				char szShellCmd[512];
+				char szShellCmd[512] = { '\0' };
 				char *pXMLTempName = NULL;
 				char *pStackTempName = NULL;
 				char *pChecksumTempName = NULL;
@@ -575,6 +676,11 @@ static int ReportCrash( int Signal )
 
 							if ( dl_info.dli_fbase && dl_info.dli_fname )
 							{
+#ifdef LINUX
+								ElfW(Off) dynamic_offset = dynamic_section_offset(dl_info.dli_fname);
+								fprintf( stackout, " 0x%" SAL_PRI_SIZET "x:", dynamic_offset);
+#endif
+
 								fprintf( stackout, " %s + 0x%" SAL_PRI_PTRDIFFT "x",
 									dl_info.dli_fname,
 									(char*)stackframes[iFrame] - (char*)dl_info.dli_fbase
@@ -586,6 +692,10 @@ static int ReportCrash( int Signal )
 
 								if ( dli_fdir )
 									fprintf( xmlout, " path=\"%s\"", dli_fdir );
+
+#ifdef LINUX
+								fprintf( xmlout, " dynamicoffset=\"0x%" SAL_PRI_SIZET "x\"", dynamic_offset );
+#endif
 							}
 							else
 								fprintf( stackout, " ????????" );
@@ -631,68 +741,57 @@ static int ReportCrash( int Signal )
 				if ( checksumout )
 					fclose( checksumout );
 
-#if defined( LINUX )
-				if ( pXMLTempName && pChecksumTempName && pStackTempName )
+                if ( pXMLTempName && pChecksumTempName && pStackTempName )
+#endif /* INCLUDE_BACKTRACE */
+                {
+                    rtl_uString * crashrep_url = NULL;
+                    rtl_uString * crashrep_path = NULL;
+                    rtl_String  * crashrep_path_system = NULL;
+                    rtl_string2UString(
+                        &crashrep_url,
+                        RTL_CONSTASCII_USTRINGPARAM(
+                            "$OOO_BASE_DIR/program/crashrep"),
+                        OSTRING_TO_OUSTRING_CVTFLAGS);
+                    rtl_bootstrap_expandMacros(&crashrep_url);
+                    osl_getSystemPathFromFileURL(crashrep_url, &crashrep_path);
+                    rtl_uString2String(
+                        &crashrep_path_system,
+                        rtl_uString_getStr(crashrep_path),
+                        rtl_uString_getLength(crashrep_path),
+                        osl_getThreadTextEncoding(),
+                        (RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR
+                         | RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR));
+                    rtl_uString_release(crashrep_url);
+                    rtl_uString_release(crashrep_path);
+#if defined INCLUDE_BACKTRACE && (defined LINUX || defined MACOSX)
 					snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
-						"crash_report -p %d -s %d -xml %s -chksum %s -stack %s%s", 
+                        "%s -p %d -s %d -xml %s -chksum %s -stack %s -noui%s",
+                        rtl_string_getStr(crashrep_path_system),
 						getpid(), 
 						Signal, 
 						pXMLTempName, 
 						pChecksumTempName, 
 						pStackTempName,
-						bAutoCrashReport ? " -noui -send" : " -noui" );
-#elif defined( MACOSX )
-				if ( pXMLTempName && pChecksumTempName && pStackTempName )
-				{
-					rtl_uString	*crashrep_url = NULL;
-					rtl_uString *crashrep_path = NULL;
-					rtl_String  *crashrep_path_system = NULL;
-
-					rtl_string2UString( &crashrep_url, RTL_CONSTASCII_USTRINGPARAM("$BRAND_BASE_DIR/program/crash_report.bin"), OSTRING_TO_OUSTRING_CVTFLAGS );
-					rtl_bootstrap_expandMacros( &crashrep_url );
-					osl_getSystemPathFromFileURL( crashrep_url, &crashrep_path );
-					rtl_uString2String( 
-						&crashrep_path_system, 
-						rtl_uString_getStr( crashrep_path ), 
-						rtl_uString_getLength( crashrep_path ), 
-						osl_getThreadTextEncoding(), 
-						RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR | RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR );
-
-					rtl_uString_release( crashrep_url );
-					rtl_uString_release( crashrep_path );
-
+                        bAutoCrashReport ? " -send" : "" );
+#elif defined INCLUDE_BACKTRACE && defined SOLARIS
 					snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
-						"%s -p %d -s %d -xml %s -chksum %s -stack %s%s",
-						rtl_string_getStr( crashrep_path_system ),
-						getpid(), 
-						Signal, 
-						pXMLTempName, 
-						pChecksumTempName, 
-						pStackTempName,
-						bAutoCrashReport ? " -noui -send" : " -noui" );
-
-					rtl_string_release( crashrep_path_system );
-
-					printf( "%s\n", szShellCmd );
-				}
-#elif defined ( SOLARIS )
-				if ( pXMLTempName && pChecksumTempName )
-					snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
-						"crash_report -p %d -s %d -xml %s -chksum %s%s", 
+                        "%s -p %d -s %d -xml %s -chksum %s -noui%s",
+                        rtl_string_getStr(crashrep_path_system),
 						getpid(), 
 						Signal, 
 						pXMLTempName, 
 						pChecksumTempName,
-						bAutoCrashReport ? " -noui -send" : " -noui" );
+                        bAutoCrashReport ? " -send" : "" );
+#else
+                    snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
+                        "%s -p %d -s %d -noui%s",
+                        rtl_string_getStr(crashrep_path_system),
+                        getpid(), Signal, bAutoCrashReport ? " -send" : "" );
 #endif
+                    rtl_string_release(crashrep_path_system);
+                }
 
-#else /* defined INCLUDE BACKTRACE */
-				snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
-				"crash_report -p %d -s %d%s", getpid(), Signal, bAutoCrashReport ? " -noui -send" : " -noui" );
-#endif /* defined INCLUDE BACKTRACE */
-
-
-				ret = system( szShellCmd );
+                ret = szShellCmd[0] == '\0' ? -1 : system( szShellCmd );
 
 				if ( pXMLTempName )
 					unlink( pXMLTempName );

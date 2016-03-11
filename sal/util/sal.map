@@ -1,3 +1,32 @@
+###############################################################
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+###############################################################
 UDK_3_0_0 {
     global:
         GetVersionInfo;
@@ -486,6 +515,10 @@ UDK_3_0_0 {
         rtl_tres_destroy;
 		osl_getProcessLocale;
 		osl_setProcessLocale;
+#ifdef USE_JAVA
+		osl_getOpenFilePath;
+		osl_setLockedFilesLock;
+#endif	// USE_JAVA
     local:
         *;
 };
@@ -573,18 +606,43 @@ UDK_3.8 { # OOo 3.0
         rtl_bootstrap_encode;
         rtl_convertStringToUString;
         rtl_math_approxValue;
-        #ifdef USE_JAVA
-        osl_getOpenFilePath;
-        osl_setLockedFilesLock;
-        #endif	// USE_JAVA
 } UDK_3.7;
 
 UDK_3.9 { # OOo 3.1
     global:
+        osl_mapFile;
+        osl_unmapFile;
+
+        osl_readFileAt;
+        osl_writeFileAt;
+
         rtl_math_expm1;
         rtl_math_log1p;
         rtl_math_atanh;
 } UDK_3.8;
+
+UDK_3.10 { # OOo 3.2
+    global:
+        rtl_logfile_hasLogFile;
+        rtl_math_erf;
+        rtl_math_erfc;
+        rtl_math_asinh;
+        rtl_math_acosh;
+} UDK_3.9;
+
+
+UDK_3.11 { # AOO 3.4
+    global:
+        osl_setEnvironment;
+        osl_clearEnvironment;
+        osl_setThreadName;
+} UDK_3.10;
+
+UDK_3.12 { # AOO 3.5
+    global:
+        osl_loadAsciiModule;
+        osl_loadAsciiModuleRelative;
+} UDK_3.11;
 
 PRIVATE_1.0 {
     global:

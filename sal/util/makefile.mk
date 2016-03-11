@@ -1,32 +1,34 @@
-#*************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2008 by Sun Microsystems, Inc.
-#
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified February 2006 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-#*************************************************************************
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
+
+
 
 PRJ=..
 
@@ -112,6 +114,10 @@ SHL1STDLIBS=	\
 				$(COMDLG32LIB)\
 				$(USER32LIB)\
 				$(OLE32LIB)
+.IF "$(COM)"=="GCC"
+MINGWSSTDOBJ=
+MINGWSSTDENDOBJ=
+.ENDIF
 .ENDIF # WNT
 
 .IF "$(GUI)"=="UNX"
@@ -122,28 +128,11 @@ SHL1STDLIBS= -Bdynamic -ldl -lpthread -lposix4 -lsocket -lnsl
 SHL1STDLIBS+= -z allextract -staticlib=Crun -z defaultextract
 .ENDIF # C50
 .ENDIF # SOLARIS
-.IF "$(OS)"=="IRIX"
-SHL1STDLIBS= -lexc
-.ENDIF
 .ENDIF # UNX
 
 .IF "$(GUI)"=="OS2"
-SHL1STDLIBS=pthread.lib
+SHL1STDLIBS=-lmmap -lpthread
 .ENDIF # OS2
-
-# If we compile sal with STLport checking iterators
-# we need to link against the STLport
-.IF "$(USE_STLP_DEBUG)" != ""
-SHL1STDLIBS+=$(LIBSTLPORT)
-.ENDIF
-
-#The irony that using the system STL instead of
-#stlport requires that we link libsal with the
-#LIBSTLPORT alias which is not required when using
-#stlport is not lost on me
-.IF "$(USE_SYSTEM_STL)"=="YES"
-SHL1STDLIBS+=$(LIBSTLPORT)
-.ENDIF
 
 .IF "$(OS)"=="MACOSX"
 .IF "$(GUIBASE)"=="java"
@@ -161,6 +150,12 @@ SHL1STDLIBS+=-lpam
 SHL1STDLIBS+=-lcrypt
 .ENDIF
 .ENDIF
+
+# #i105898# required for LD_PRELOAD libsalalloc_malloc.so
+#           if sal is linked with -Bsymbolic-functions
+.IF "$(HAVE_LD_BSYMBOLIC_FUNCTIONS)" == "TRUE"
+SHL1LINKFLAGS+=-Wl,--dynamic-list=salalloc.list
+.ENDIF # .IF "$(HAVE_LD_BSYMBOLIC_FUNCTIONS)" == "TRUE"
 
 SHL1LIBS+=$(SLB)$/$(TARGET).lib
 
@@ -230,8 +225,6 @@ SHL1STDLIBS+=-lgcc
 $(SHL1TARGETN) : $(OUT)$/inc$/udkversion.h
 .ENDIF # "$(SHL1TARGETN)" != ""
 
-.IF "$(GUI)"=="UNX" || "$(USE_SHELL)"!="4nt"
-
 $(OUT)$/inc$/udkversion.h: 
 	echo '#ifndef _SAL_UDKVERSION_H_'           >  $@
 	echo '#define _SAL_UDKVERSION_H_'           >> $@
@@ -241,17 +234,3 @@ $(OUT)$/inc$/udkversion.h:
 	echo '#define SAL_UDK_MICRO "$(UDK_MICRO)"' >> $@
 	echo ''                                     >> $@
 	echo '#endif'                               >> $@
-
-.ELSE
-
-$(OUT)$/inc$/udkversion.h: 
-	echo #ifndef _SAL_UDKVERSION_H_           >  $@
-	echo #define _SAL_UDKVERSION_H_           >> $@
-	echo.                                     >> $@
-	echo #define SAL_UDK_MAJOR "$(UDK_MAJOR)" >> $@
-	echo #define SAL_UDK_MINOR "$(UDK_MINOR)" >> $@
-	echo #define SAL_UDK_MICRO "$(UDK_MICRO)" >> $@
-	echo.                                     >> $@
-	echo #endif                               >> $@
-
-.ENDIF

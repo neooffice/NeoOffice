@@ -42,14 +42,14 @@
 // Redefine Cocoa YES and NO defines types for convenience
 #ifdef YES
 #undef YES
-#define YES (MacOSBOOL)1
+#define YES (BOOL)1
 #endif
 #ifdef NO
 #undef NO
-#define NO (MacOSBOOL)0
+#define NO (BOOL)0
 #endif
 
-static NSURL *macxp_resolveAliasImpl(const NSURL *url )
+static NSURL *macxp_resolveAliasImpl( NSURL *url )
 {
 	NSURL *pRet = nil;
 
@@ -58,7 +58,7 @@ static NSURL *macxp_resolveAliasImpl(const NSURL *url )
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:url error:nil];
 		if ( pData )
 		{
-			MacOSBOOL bStale = NO;
+			BOOL bStale = NO;
 			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
 			if ( !bStale && pURL )
 			{
