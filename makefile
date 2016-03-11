@@ -313,7 +313,6 @@ build.neo_patches:
 	build.neo_pyuno_patch \
 	build.neo_reportdesign_patch \
 	build.neo_sal_patch \
-	build.neo_salhelper_patch \
 	build.neo_sax_patch \
 	build.neo_sd_patch \
 	build.neo_sdext_patch \
