@@ -23,7 +23,7 @@ Sindsdien hebben de NeoOffice ingenieurs voortdurend verbeteringen toegevoegd aa
 
 
 What's New in this Version:
-Download of installatie problemen? Klikt op de "NeoOffice Ondersteuning" link en lees de installatienotities.
+Voordat u koopt NeoOffice, alsjeblieft klik op de "NeoOffice Ondersteuning" link en lees de installatienotities.
 
 This version of NeoOffice fixes the following bugs:
 • When pressing and holding a vowel key, NeoOffice would repeatedly enter the unaccented character even after OS X displayed a list of accented characters
