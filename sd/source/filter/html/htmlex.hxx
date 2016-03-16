@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _SD_HTMLEX_HXX
 #define _SD_HTMLEX_HXX
@@ -33,7 +36,7 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/ucb/XSimpleFileAccess.hpp>
 #include <vcl/gdimtf.hxx>
-#include <svtools/itemset.hxx>
+#include <svl/itemset.hxx>
 #include "resltn.hxx"       // enum PublishingResolution
 #include <svtools/colrdlg.hxx>
 #include <svtools/ehdl.hxx>
@@ -61,8 +64,6 @@
 #define PUB_HIGHRES_WIDTH	1024
 #define PUB_HIGHRES_HEIGHT	768
 
-#define HtmlButtonThemaStr = "private://gallery/hidden/HtmlExportButtons";
-
 class List;
 class SfxProgress;
 class SdrOutliner;
@@ -80,7 +81,7 @@ class View;
 class HtmlErrorContext : public ErrorContext
 {
 private:
-	USHORT	mnResId;
+	sal_uInt16	mnResId;
 	String	maURL1;
 	String	maURL2;
 
@@ -88,11 +89,10 @@ public:
 					HtmlErrorContext(Window *pWin=0);
 					~HtmlErrorContext() {};
 
-	virtual BOOL	GetString( ULONG nErrId, String& rCtxStr );
+	virtual sal_Bool	GetString( sal_uLong nErrId, String& rCtxStr );
 
-	void			SetContext( USHORT nResId );
-	void			SetContext( USHORT nResId, const String& rURL );
-	void			SetContext( USHORT nResId, const String& rURL1, const String& rURL2 );
+	void			SetContext( sal_uInt16 nResId, const String& rURL );
+	void			SetContext( sal_uInt16 nResId, const String& rURL1, const String& rURL2 );
 };
 
 // =====================================================================
@@ -113,12 +113,12 @@ class HtmlExport
 	HtmlPublishMode meMode;
 	SfxProgress* mpProgress;
 	bool mbImpress;
-	USHORT mnSdPageCount;
-	USHORT mnPagesWritten;
+	sal_uInt16 mnSdPageCount;
+	sal_uInt16 mnPagesWritten;
 	bool mbContentsPage;
-	INT16 mnButtonThema;
-	UINT16 mnWidthPixel;
-	UINT16 mnHeightPixel;
+	sal_Int16 mnButtonThema;
+	sal_uInt16 mnWidthPixel;
+	sal_uInt16 mnHeightPixel;
 	PublishingFormat meFormat;
 	bool mbHeader;
 	bool mbNotes;
@@ -129,14 +129,14 @@ class HtmlExport
 	String maAuthor;
 	String maHomePage;
 	String maInfo;
-	INT16 mnCompression;
+	sal_Int16 mnCompression;
 	String maDocFileName;
 	String maFramePage;
 	String mDocTitle;
 	bool mbDownload;
 
 	bool mbAutoSlide;
-	UINT32	mnSlideDuration;
+	sal_uInt32	mnSlideDuration;
 	bool mbSlideSound;
     bool mbHiddenSlides;
 	bool mbEndless;
@@ -194,24 +194,24 @@ class HtmlExport
 
 	String	CreateLink( const String& aLink, const String& aText,
 						const String& aTarget = String()) const;
-	String	CreateImage( const String& aImage, const String& aAltText, INT16 nWidth = -1, INT16 nHeight = -1 ) const;
-	String	CreateNavBar( USHORT nSdPage, bool bIsText ) const;
+	String	CreateImage( const String& aImage, const String& aAltText, sal_Int16 nWidth = -1, sal_Int16 nHeight = -1 ) const;
+	String	CreateNavBar( sal_uInt16 nSdPage, bool bIsText ) const;
 	String	CreateBodyTag() const;
 
-	String	ParagraphToHTMLString( SdrOutliner* pOutliner, ULONG nPara, const Color& rBackgroundColor );
+	String	ParagraphToHTMLString( SdrOutliner* pOutliner, sal_uLong nPara, const Color& rBackgroundColor );
 	String	TextAttribToHTMLString( SfxItemSet* pSet, HtmlState* pState, const Color& rBackgroundColor );
 
 	String	CreateTextForTitle( SdrOutliner* pOutliner, SdPage* pPage, const Color& rBackgroundColor );
 	String	CreateTextForPage( SdrOutliner* pOutliner, SdPage* pPage, bool bHeadLine, const Color& rBackgroundColor );
 	String	CreateTextForNotesPage( SdrOutliner* pOutliner, SdPage* pPage, bool bHeadLine, const Color& rBackgroundColor );
 
-	String	CreateHTMLCircleArea( ULONG nRadius, ULONG nCenterX,
-								  ULONG nCenterY, const String& rHRef ) const;
+	String	CreateHTMLCircleArea( sal_uLong nRadius, sal_uLong nCenterX,
+								  sal_uLong nCenterY, const String& rHRef ) const;
 	String	CreateHTMLPolygonArea( const ::basegfx::B2DPolyPolygon& rPolyPoly, Size aShift, double fFactor, const String& rHRef ) const;
 	String	CreateHTMLRectArea( const Rectangle& rRect,
 								const String& rHRef ) const;
 
-	String	CreatePageURL( USHORT nPgNum );
+	String	CreatePageURL( sal_uInt16 nPgNum );
 	
 	String InsertSound( const String& rSoundFile );
 	bool CopyFile( const String& rSourceFile, const String& rDestPath );
@@ -221,7 +221,7 @@ class HtmlExport
 	bool CopyScript( const String& rPath, const String& rSource, const String& rDest, bool bUnix = false );
 #endif	// USE_JAVA
 
-	void InitProgress( USHORT nProgrCount );
+	void InitProgress( sal_uInt16 nProgrCount );
 	void ResetProgress();
 
 	String WriteMetaCharset() const;
