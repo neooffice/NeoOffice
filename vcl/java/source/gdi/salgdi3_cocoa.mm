@@ -39,7 +39,7 @@
 
 #include "salgdi3_cocoa.h"
 
-NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic )
+NSFont *NSFont_findPlainFont( NSFont *pNSFont )
 {
 	NSFont *pRet = nil;
 
@@ -50,27 +50,12 @@ NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic )
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			int nWeight = [pFontManager weightOfFont:pNSFont];
-			NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ( NSItalicFontMask | NSBoldFontMask | NSExpandedFontMask | NSCondensedFontMask | NSCompressedFontMask );
-			if ( bBold || bItalic )
+			// Find matching unbolded, unitalicized, medium weight font
+			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:( NSUnboldFontMask | NSUnitalicFontMask ) weight:5 size:[pNSFont pointSize]];
+			if ( pNewNSFont && pNewNSFont != pNSFont )
 			{
-				if ( bBold )
-				{
-					nTraits |= NSBoldFontMask;
-	
-					// Fix bug 1128 by ensuring that the weight is at least 9
-					if ( nWeight < 9 )
-						nWeight = 9;
-				}
-				if ( bItalic )
-					nTraits |= NSItalicFontMask;
-
-				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
-				if ( pNewNSFont && pNewNSFont != pNSFont )
-				{
-					[pNewNSFont retain];
-					pRet = pNewNSFont;
-				}
+				[pNewNSFont retain];
+				pRet = pNewNSFont;
 			}
 		}
 	}
@@ -160,9 +145,9 @@ BOOL NSFontManager_isItalic( NSFont *pNSFont )
 	return bRet;
 }
 
-int NSFontManager_widthOfFont( NSFont *pNSFont )
+FontWidth NSFontManager_widthOfFont( NSFont *pNSFont )
 {
-	int nRet = 0;
+	FontWidth nRet = WIDTH_DONTKNOW;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -173,15 +158,15 @@ int NSFontManager_widthOfFont( NSFont *pNSFont )
 		{
 			NSFontTraitMask nTraits = [pFontManager traitsOfFont:(NSFont *)pNSFont];
 			if ( nTraits & NSCompressedFontMask )
-				nRet = 1;
+				nRet = WIDTH_ULTRA_CONDENSED;
 			else if ( nTraits & NSCondensedFontMask )
-				nRet = 3;
+				nRet = WIDTH_CONDENSED;
 			else if ( nTraits & NSNarrowFontMask )
-				nRet = 4;
+				nRet = WIDTH_SEMI_CONDENSED;
 			else if ( nTraits & NSExpandedFontMask )
-				nRet = 7;
+				nRet = WIDTH_EXPANDED;
 			else
-				nRet = 5;
+				nRet = WIDTH_NORMAL;
 		}
 	}
 
@@ -190,9 +175,9 @@ int NSFontManager_widthOfFont( NSFont *pNSFont )
 	return nRet;
 }
 
-int NSFontManager_weightOfFont( NSFont *pNSFont )
+FontWeight NSFontManager_weightOfFont( NSFont *pNSFont )
 {
-	int nRet = 0;
+	FontWeight nRet = WEIGHT_DONTKNOW;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -205,17 +190,17 @@ int NSFontManager_weightOfFont( NSFont *pNSFont )
 
 			// Convert from NSFont weights to FontWeight values
 			if ( nWeight <= 1 )
-				nRet = 1;
+				nRet = WEIGHT_THIN;
 			else if ( nWeight <= 6 )
-				nRet = nWeight;
+				nRet = (FontWeight)nWeight;
 			else if ( nWeight <= 8 )
-				nRet = 7;
+				nRet = WEIGHT_SEMIBOLD;
 			else if ( nWeight <= 9 )
-				nRet = 8;
+				nRet = WEIGHT_BOLD;
 			else if ( nWeight <= 12 )
-				nRet = 9;
+				nRet = WEIGHT_ULTRABOLD;
 			else
-				nRet = 10;
+				nRet = WEIGHT_BLACK;
 		}
 	}
 
