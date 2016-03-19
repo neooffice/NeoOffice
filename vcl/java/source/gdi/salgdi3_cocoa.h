@@ -38,7 +38,7 @@
 
 #include <salgdi.h>
 
-SAL_DLLPRIVATE NSFont *NSFont_findPlainFont( NSFont *pNSFont, sal_Bool bPreserveFace );
+SAL_DLLPRIVATE NSFont *NSFont_findPlainFont( NSFont *pNSFont );
 SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
 SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
 SAL_DLLPRIVATE BOOL NSFontManager_isItalic( NSFont *pNSFont );

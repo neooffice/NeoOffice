@@ -39,7 +39,7 @@
 
 #include "salgdi3_cocoa.h"
 
-NSFont *NSFont_findPlainFont( NSFont *pNSFont, sal_Bool bPreserveFace )
+NSFont *NSFont_findPlainFont( NSFont *pNSFont )
 {
 	NSFont *pRet = nil;
 
@@ -51,12 +51,7 @@ NSFont *NSFont_findPlainFont( NSFont *pNSFont, sal_Bool bPreserveFace )
 		if ( pFontManager )
 		{
 			// Find matching unbolded, unitalicized, medium weight font
-			NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ~( NSBoldFontMask | NSItalicFontMask ) | NSUnboldFontMask | NSUnitalicFontMask;
-			NSFont *pNewNSFont;
-			if ( bPreserveFace )
-				pNewNSFont = [pFontManager convertFont:pNSFont toNotHaveTrait:NSBoldFontMask | NSItalicFontMask];
-			else
-				pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:5 size:[pNSFont pointSize]];
+			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:( NSUnboldFontMask | NSUnitalicFontMask ) weight:5 size:[pNSFont pointSize]];
 			if ( pNewNSFont && pNewNSFont != pNSFont )
 			{
 				[pNewNSFont retain];
