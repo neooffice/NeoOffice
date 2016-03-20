@@ -488,13 +488,31 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 	{
 		::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >::const_iterator nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
 		if ( nfit != pSalData->maItalicNativeFontMapping.end() )
+		{
 			pFontVariants = &nfit->second;
+		}
+		else
+		{
+			// Fix bug 1813 by using unitalic variant if this variant is NULL
+			nfit = pSalData->maUnitalicNativeFontMapping.find( pFontData->GetFontId() );
+			if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
+				pFontVariants = &nfit->second;
+		}
 	}
 	else
 	{
 		::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >::const_iterator nfit = pSalData->maUnitalicNativeFontMapping.find( pFontData->GetFontId() );
 		if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
+		{
 			pFontVariants = &nfit->second;
+		}
+		else
+		{
+			// Fix bug 1813 by using italic variant if this variant is NULL
+			nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
+			if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
+				pFontVariants = &nfit->second;
+		}
 	}
 
 	if ( pFontVariants )
@@ -800,42 +818,29 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	}
 
 	const JavaImplFontData *pOldFontData = pFontData;
-	if ( !nFallbackLevel )
+	bool bAddBold = ( nSetWeight > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
+	bool bAddItalic = ( bSetItalic && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
+	if ( nFallbackLevel || bAddBold || bAddItalic )
 	{
-		pFontData = ImplGetFontVariant( pFontData, nSetWeight, bSetItalic );
-
-		// If the OOo code is requesting a bold or italic variant and none is
-		// font for this font, search for bold or italic variants in the font
-		// family
-		bool bAddBold = ( nSetWeight > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
-		bool bAddItalic = ( bSetItalic && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
+		// If we are forcing the font to a bold or italic variant but not both,
+		// do not allow the other variant to change
 		if ( bAddBold || bAddItalic )
 		{
-			// If we only are searching for bold or italic but not both, do not
-			// allow the other variant to change
 			if ( !bAddBold )
-				nSetWeight = pFontData->GetWeight();
+				nSetWeight = ( nFallbackLevel ? mnFontWeight : pFontData->GetWeight() );
 			if ( !bAddItalic )
-				bSetItalic = ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
-
-			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainFamilyNativeFontMapping.find( pFontData->GetFontId() );
-			if ( pfit != pSalData->maPlainFamilyNativeFontMapping.end() && pfit->second != pFontData )
-{
-				pFontData = ImplGetFontVariant( pfit->second, nSetWeight, bSetItalic );
-}
+				bSetItalic = ( nFallbackLevel ? mbFontItalic : ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL ) );
 		}
-	}
-	else
-	{
+
 		// Remove any bold or italic variants so that we don't get drifting to
 		// bold or italic in fallback levels where none was requested by
 		// matching bold or italic variants within the same font family
 		::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainFamilyNativeFontMapping.find( pFontData->GetFontId() );
 		if ( pfit != pSalData->maPlainFamilyNativeFontMapping.end() )
 			pFontData = pfit->second;
-
-		pFontData = ImplGetFontVariant( pFontData, nSetWeight, bSetItalic );
 	}
+
+	pFontData = ImplGetFontVariant( pFontData, nSetWeight, bSetItalic );
 
 	int nNativeFont = pFontData->GetFontId();
 	if ( nNativeFont != pOldFontData->GetFontId() )
