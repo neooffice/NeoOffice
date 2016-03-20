@@ -811,10 +811,13 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		bool bAddItalic = ( bSetItalic && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
 		if ( bAddBold || bAddItalic )
 		{
-			// If we only are searching for an italic variant, don't allow the
-			// weight to change
+			// If we only are searching for bold or italic but not both, do not
+			// allow the other variant to change
 			if ( !bAddBold )
 				nSetWeight = pFontData->GetWeight();
+			if ( !bAddItalic )
+				bSetItalic = ( pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
+
 			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainFamilyNativeFontMapping.find( pFontData->GetFontId() );
 			if ( pfit != pSalData->maPlainFamilyNativeFontMapping.end() && pfit->second != pFontData )
 {
