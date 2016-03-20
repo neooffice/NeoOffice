@@ -69,10 +69,9 @@ public:
 	::std::hash_map< ::rtl::OUString, JavaImplFontData*, ::rtl::OUStringHash >	maJavaFontNameMapping;
 	::std::hash_map< OUString, sal_IntPtr, OUStringHash >	maJavaNativeFontMapping;
 	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maPlainNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maBoldNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maItalicNativeFontMapping;
-	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maBoldItalicNativeFontMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maPlainFamilyNativeFontMapping;
+	::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >	maItalicNativeFontMapping;
+	::std::hash_map< sal_IntPtr, ::std::hash_map< sal_IntPtr, JavaImplFontData* > >	maUnitalicNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;

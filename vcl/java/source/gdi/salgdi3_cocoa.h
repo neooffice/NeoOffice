@@ -38,11 +38,11 @@
 
 #include <salgdi.h>
 
-SAL_DLLPRIVATE NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic );
+SAL_DLLPRIVATE NSFont *NSFont_findPlainFont( NSFont *pNSFont );
 SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
 SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
 SAL_DLLPRIVATE BOOL NSFontManager_isItalic( NSFont *pNSFont );
-SAL_DLLPRIVATE int NSFontManager_widthOfFont( NSFont *pNSFont );
-SAL_DLLPRIVATE int NSFontManager_weightOfFont( NSFont *pNSFont );
+SAL_DLLPRIVATE FontWidth NSFontManager_widthOfFont( NSFont *pNSFont );
+SAL_DLLPRIVATE FontWeight NSFontManager_weightOfFont( NSFont *pNSFont );
 
 #endif
