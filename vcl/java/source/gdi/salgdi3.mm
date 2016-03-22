@@ -512,7 +512,7 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 		{
 			// Fix bug 1813 by using italic variant if this variant is NULL
 			nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
-			if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
+			if ( nfit != pSalData->maItalicNativeFontMapping.end() )
 				pFontVariants = &nfit->second;
 		}
 	}
@@ -520,26 +520,31 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 	if ( pFontVariants )
 	{
 		const JavaImplFontData *pBestFontData = pFontData;
+		bool bBestItalic = ( pBestFontData->GetSlant() == ITALIC_OBLIQUE || pBestFontData->GetSlant() == ITALIC_NORMAL );
 		int nBestAbsWeightDiff = abs( pBestFontData->GetWeight() - nWeight );
 		int nBestAbsWidthTypeDiff = ( pBestFontData->GetWidthType() - nWidthType );
 
 		const JavaImplFontData *pBestWidthFontData = ( pFontData->GetWidthType() == nWidthType ? pFontData : NULL );
+		bool bBestWidthItalic = ( pBestWidthFontData ? ( pBestWidthFontData->GetSlant() == ITALIC_OBLIQUE || pBestWidthFontData->GetSlant() == ITALIC_NORMAL ) : bItalic );
 		int nBestWidthAbsWeightDiff = ( pBestWidthFontData ? abs( pBestWidthFontData->GetWeight() - nWeight ) : FontWeight_FORCE_EQUAL_SIZE );
 
 		for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator fvit = pFontVariants->begin(); fvit != pFontVariants->end(); ++fvit )
 		{
+			bool bCurrentItalic = ( fvit->second->GetSlant() == ITALIC_OBLIQUE || fvit->second->GetSlant() == ITALIC_NORMAL );
 			int nCurrentAbsWeightDiff = abs( fvit->second->GetWeight() - nWeight );
 			int nCurrentAbsWidthTypeDiff = abs( fvit->second->GetWidthType() - nWidthType );
-			if ( nBestAbsWeightDiff > nCurrentAbsWeightDiff || ( nBestAbsWeightDiff == nCurrentAbsWeightDiff && nBestAbsWidthTypeDiff > nCurrentAbsWidthTypeDiff ) )
+			if ( ( bBestItalic != bItalic && bCurrentItalic == bItalic ) || nBestAbsWeightDiff > nCurrentAbsWeightDiff || ( nBestAbsWeightDiff == nCurrentAbsWeightDiff && nBestAbsWidthTypeDiff > nCurrentAbsWidthTypeDiff ) )
 			{
 				pBestFontData = fvit->second;
+				bBestItalic = bCurrentItalic;
 				nBestAbsWeightDiff = nCurrentAbsWeightDiff;
 				nBestAbsWidthTypeDiff = nCurrentAbsWidthTypeDiff;
 			}
 
-			if ( !nCurrentAbsWidthTypeDiff && nBestWidthAbsWeightDiff > nCurrentAbsWeightDiff )
+			if ( !nCurrentAbsWidthTypeDiff && ( ( pBestWidthFontData && bBestWidthItalic != bItalic && bCurrentItalic == bItalic ) || nBestWidthAbsWeightDiff > nCurrentAbsWeightDiff ) )
 			{
 				pBestWidthFontData = fvit->second;
+				bBestWidthItalic = bCurrentItalic;
 				nBestWidthAbsWeightDiff = nCurrentAbsWeightDiff;
 			}
 		}
