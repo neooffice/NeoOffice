@@ -196,14 +196,6 @@ static void ImplFontListChanged()
 				NSArray *pFonts = NSFontManager_getAllFonts();
 				if ( pFonts )
 				{
-					const OUString aCalibriPS( OUString::createFromAscii( "Calibri" ) );
-					const OUString aCalibriBoldPS( OUString::createFromAscii( "Calibri-Bold" ) );
-					const OUString aCalibriBoldItalicPS( OUString::createFromAscii( "Calibri-BoldItalic" ) );
-					const OUString aCalibriItalicPS( OUString::createFromAscii( "Calibri-Italic" ) );
-					const OUString aCambriaPS( OUString::createFromAscii( "Cambria" ) );
-					const OUString aCambriaBoldPS( OUString::createFromAscii( "Cambria-Bold" ) );
-					const OUString aCambriaBoldItalicPS( OUString::createFromAscii( "Cambria-BoldItalic" ) );
-					const OUString aCambriaItalicPS( OUString::createFromAscii( "Cambria-Italic" ) );
 					const OUString aCourier( OUString::createFromAscii( "Courier" ) );
 					const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
 					const OUString aGillSansPS( OUString::createFromAscii( "GillSans" ) );
@@ -219,7 +211,6 @@ static void ImplFontListChanged()
 					const OUString aSerif( OUString::createFromAscii( "Serif" ) );
 					const OUString aSong( OUString::createFromAscii( "Song" ) );
 					const OUString aSung( OUString::createFromAscii( "Sung" ) );
-					const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
 					const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
 					const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
 					const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
@@ -319,7 +310,7 @@ static void ImplFontListChanged()
 						else if ( aDisplayName == aNeo3Symbol )
 						{
 							aDisplayName = OUString( aOpenSymbol );
-							aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeo3Symbol;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Symbol" ) + aFontSeparator + aNeo3Symbol;
 						}
 						else if ( aDisplayName == aLastResort )
 						{
@@ -339,35 +330,35 @@ static void ImplFontListChanged()
 						}
 						else if ( aPSName == aGillSansPS )
 						{
-							aMapName += aFontSeparator + aCalibriPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri" );
 						}
 						else if ( aPSName == aGillSansBoldPS )
 						{
-							aMapName += aFontSeparator + aCalibriBoldPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Bold" ) + aFontSeparator + OUString::createFromAscii( "Calibri-Bold" );
 						}
 						else if ( aPSName == aGillSansBoldItalicPS )
 						{
-							aMapName += aFontSeparator + aCalibriBoldItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Bold Italic" ) + aFontSeparator + OUString::createFromAscii( "Calibri-BoldItalic" );
 						}
 						else if ( aPSName == aGillSansItalicPS )
 						{
-							aMapName += aFontSeparator + aCalibriItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Italic" ) + aFontSeparator + OUString::createFromAscii( "Calibri-Italic" );
 						}
 						else if ( aPSName == aTimesNewRomanPS )
 						{
-							aMapName += aFontSeparator + aCambriaPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldPS )
 						{
-							aMapName += aFontSeparator + aCambriaBoldPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Bold" ) + aFontSeparator + OUString::createFromAscii( "Cambria-Bold" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldItalicPS )
 						{
-							aMapName += aFontSeparator + aCambriaBoldItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Bold Italic" ) + aFontSeparator + OUString::createFromAscii( "Cambria-BoldItalic" );
 						}
 						else if ( aPSName == aTimesNewRomanItalicPS )
 						{
-							aMapName += aFontSeparator + aCambriaItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Italic" ) + aFontSeparator + OUString::createFromAscii( "Cambria-Italic" );
 						}
 
 						String aXubMapName( aMapName );
