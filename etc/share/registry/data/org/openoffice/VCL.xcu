@@ -4585,6 +4585,29 @@
           <value>Default,Standard,Normal,SansSerif</value>
         </prop>
       </node>
+      <node oor:name="liberationsansnarrow" oor:op="replace">
+        <prop oor:name="SubstFonts">
+          <value>arialnarrow;nimbussanslcondensed;helveticanarrow;helveticacondensed;helmetcondensed;nimbussanscondensed</value>
+        </prop>
+        <prop oor:name="SubstFontsMS">
+          <value>Arial Narrow</value>
+        </prop>
+        <prop oor:name="SubstFontsPS">
+          <value>Helvetica</value>
+        </prop>
+        <prop oor:name="SubstFontsHTML">
+          <value>sans-serif</value>
+        </prop>
+        <prop oor:name="FontWeight">
+          <value>Normal</value>
+        </prop>
+        <prop oor:name="FontWidth">
+          <value>Condensed</value>
+        </prop>
+        <prop oor:name="FontType">
+          <value>Default,Standard,Normal,SansSerif</value>
+        </prop>
+      </node>
       <node oor:name="liberationserif" oor:op="replace">
         <prop oor:name="SubstFonts">
           <value>thorndaleamt;thorndale;timesnewroman;nimbusromanno9l;times;timesroman;newyork;timmons;lucidaserif;lucidabright;roman;nimbusromanno9;bookman;itcbookman;garamond;garamondmt;palatino</value>

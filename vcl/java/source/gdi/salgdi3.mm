@@ -196,14 +196,6 @@ static void ImplFontListChanged()
 				NSArray *pFonts = NSFontManager_getAllFonts();
 				if ( pFonts )
 				{
-					const OUString aCalibriPS( OUString::createFromAscii( "Calibri" ) );
-					const OUString aCalibriBoldPS( OUString::createFromAscii( "Calibri-Bold" ) );
-					const OUString aCalibriBoldItalicPS( OUString::createFromAscii( "Calibri-BoldItalic" ) );
-					const OUString aCalibriItalicPS( OUString::createFromAscii( "Calibri-Italic" ) );
-					const OUString aCambriaPS( OUString::createFromAscii( "Cambria" ) );
-					const OUString aCambriaBoldPS( OUString::createFromAscii( "Cambria-Bold" ) );
-					const OUString aCambriaBoldItalicPS( OUString::createFromAscii( "Cambria-BoldItalic" ) );
-					const OUString aCambriaItalicPS( OUString::createFromAscii( "Cambria-Italic" ) );
 					const OUString aCourier( OUString::createFromAscii( "Courier" ) );
 					const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
 					const OUString aGillSansPS( OUString::createFromAscii( "GillSans" ) );
@@ -219,7 +211,6 @@ static void ImplFontListChanged()
 					const OUString aSerif( OUString::createFromAscii( "Serif" ) );
 					const OUString aSong( OUString::createFromAscii( "Song" ) );
 					const OUString aSung( OUString::createFromAscii( "Sung" ) );
-					const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
 					const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
 					const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
 					const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
@@ -319,7 +310,7 @@ static void ImplFontListChanged()
 						else if ( aDisplayName == aNeo3Symbol )
 						{
 							aDisplayName = OUString( aOpenSymbol );
-							aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeo3Symbol;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Symbol" ) + aFontSeparator + aNeo3Symbol;
 						}
 						else if ( aDisplayName == aLastResort )
 						{
@@ -339,35 +330,35 @@ static void ImplFontListChanged()
 						}
 						else if ( aPSName == aGillSansPS )
 						{
-							aMapName += aFontSeparator + aCalibriPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri" );
 						}
 						else if ( aPSName == aGillSansBoldPS )
 						{
-							aMapName += aFontSeparator + aCalibriBoldPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Bold" ) + aFontSeparator + OUString::createFromAscii( "Calibri-Bold" );
 						}
 						else if ( aPSName == aGillSansBoldItalicPS )
 						{
-							aMapName += aFontSeparator + aCalibriBoldItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Bold Italic" ) + aFontSeparator + OUString::createFromAscii( "Calibri-BoldItalic" );
 						}
 						else if ( aPSName == aGillSansItalicPS )
 						{
-							aMapName += aFontSeparator + aCalibriItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Calibri Italic" ) + aFontSeparator + OUString::createFromAscii( "Calibri-Italic" );
 						}
 						else if ( aPSName == aTimesNewRomanPS )
 						{
-							aMapName += aFontSeparator + aCambriaPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldPS )
 						{
-							aMapName += aFontSeparator + aCambriaBoldPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Bold" ) + aFontSeparator + OUString::createFromAscii( "Cambria-Bold" );
 						}
 						else if ( aPSName == aTimesNewRomanBoldItalicPS )
 						{
-							aMapName += aFontSeparator + aCambriaBoldItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Bold Italic" ) + aFontSeparator + OUString::createFromAscii( "Cambria-BoldItalic" );
 						}
 						else if ( aPSName == aTimesNewRomanItalicPS )
 						{
-							aMapName += aFontSeparator + aCambriaItalicPS;
+							aMapName += aFontSeparator + OUString::createFromAscii( "Cambria Italic" ) + aFontSeparator + OUString::createFromAscii( "Cambria-Italic" );
 						}
 
 						String aXubMapName( aMapName );
@@ -512,7 +503,7 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 		{
 			// Fix bug 1813 by using italic variant if this variant is NULL
 			nfit = pSalData->maItalicNativeFontMapping.find( pFontData->GetFontId() );
-			if ( nfit != pSalData->maUnitalicNativeFontMapping.end() )
+			if ( nfit != pSalData->maItalicNativeFontMapping.end() )
 				pFontVariants = &nfit->second;
 		}
 	}
@@ -520,26 +511,31 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 	if ( pFontVariants )
 	{
 		const JavaImplFontData *pBestFontData = pFontData;
+		bool bBestItalic = ( pBestFontData->GetSlant() == ITALIC_OBLIQUE || pBestFontData->GetSlant() == ITALIC_NORMAL );
 		int nBestAbsWeightDiff = abs( pBestFontData->GetWeight() - nWeight );
 		int nBestAbsWidthTypeDiff = ( pBestFontData->GetWidthType() - nWidthType );
 
 		const JavaImplFontData *pBestWidthFontData = ( pFontData->GetWidthType() == nWidthType ? pFontData : NULL );
+		bool bBestWidthItalic = ( pBestWidthFontData ? ( pBestWidthFontData->GetSlant() == ITALIC_OBLIQUE || pBestWidthFontData->GetSlant() == ITALIC_NORMAL ) : bItalic );
 		int nBestWidthAbsWeightDiff = ( pBestWidthFontData ? abs( pBestWidthFontData->GetWeight() - nWeight ) : FontWeight_FORCE_EQUAL_SIZE );
 
 		for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator fvit = pFontVariants->begin(); fvit != pFontVariants->end(); ++fvit )
 		{
+			bool bCurrentItalic = ( fvit->second->GetSlant() == ITALIC_OBLIQUE || fvit->second->GetSlant() == ITALIC_NORMAL );
 			int nCurrentAbsWeightDiff = abs( fvit->second->GetWeight() - nWeight );
 			int nCurrentAbsWidthTypeDiff = abs( fvit->second->GetWidthType() - nWidthType );
-			if ( nBestAbsWeightDiff > nCurrentAbsWeightDiff || ( nBestAbsWeightDiff == nCurrentAbsWeightDiff && nBestAbsWidthTypeDiff > nCurrentAbsWidthTypeDiff ) )
+			if ( ( bBestItalic != bItalic && bCurrentItalic == bItalic ) || nBestAbsWeightDiff > nCurrentAbsWeightDiff || ( nBestAbsWeightDiff == nCurrentAbsWeightDiff && nBestAbsWidthTypeDiff > nCurrentAbsWidthTypeDiff ) )
 			{
 				pBestFontData = fvit->second;
+				bBestItalic = bCurrentItalic;
 				nBestAbsWeightDiff = nCurrentAbsWeightDiff;
 				nBestAbsWidthTypeDiff = nCurrentAbsWidthTypeDiff;
 			}
 
-			if ( !nCurrentAbsWidthTypeDiff && nBestWidthAbsWeightDiff > nCurrentAbsWeightDiff )
+			if ( !nCurrentAbsWidthTypeDiff && ( ( pBestWidthFontData && bBestWidthItalic != bItalic && bCurrentItalic == bItalic ) || nBestWidthAbsWeightDiff > nCurrentAbsWeightDiff ) )
 			{
 				pBestWidthFontData = fvit->second;
+				bBestWidthItalic = bCurrentItalic;
 				nBestWidthAbsWeightDiff = nCurrentAbsWeightDiff;
 			}
 		}
