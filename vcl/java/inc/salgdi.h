@@ -225,6 +225,7 @@ public:
 	FontWeight				mnFontWeight;
 	bool					mbFontItalic;
 	FontPitch				mnFontPitch;
+	FontWidth				mnFontWidthType;
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 	CGPathRef				maFrameClipPath;
