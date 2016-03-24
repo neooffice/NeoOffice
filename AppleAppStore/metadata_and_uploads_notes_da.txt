@@ -25,12 +25,8 @@ Since then, the NeoOffice engineers have continually added improvements to NeoOf
 What's New in this Version:
 Before you buy NeoOffice, please click on the »Support til NeoOffice« link and read the installation notes.
 
-This version of NeoOffice fixes the following bugs:
-• When pressing and holding a vowel key, NeoOffice would repeatedly enter the unaccented character even after OS X displayed a list of accented characters
-• NeoOffice would draw native progress bars significantly slower on OS X El Capitan than on older OS X versions
-• NeoOffice would display the Find dialog with a larger than normal height
-• NeoOffice would hang when opening an .odb file from an icon in the OS X Dock
-• When printing envelopes, NeoOffice would incorrectly rotate the envelope 90 degrees
+This version of NeoOffice fixes the following bug:
+• When opening OpenOffice or LibreOffice documents, NeoOffice would display the wrong fonts for light and semi-bold text. For light text, NeoOffice would use the correct font but with the font's regular variant. For semi-bold text, NeoOffice would also use the correct font but with the font's bold variant.
 
 
 Keywords:
