@@ -192,7 +192,7 @@ checkForUpdates(
     ::rtl::OUString aInstallSetID;
     
     if( ! ( getBootstrapData(aRepositoryList, aBuildID, aInstallSetID) && (aRepositoryList.getLength() > 0) ) )
-    	return false;
+        return false;
 
 #if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
     // If there is a local admin group and the user is not in it, do not run
