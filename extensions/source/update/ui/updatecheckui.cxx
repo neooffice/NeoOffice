@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2007 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
@@ -54,7 +57,7 @@
 #include <vcl/outdev.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/lineinfo.hxx>
-#include <vcl/imagebtn.hxx>
+#include <vcl/button.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <sfx2/sfx.hrc>
@@ -63,20 +66,10 @@
 #include "updatecheckui.hrc"
 
 #ifdef USE_JAVA
-
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
 #include <com/sun/star/container/XNameAccess.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HPP_
 #include <com/sun/star/frame/XDesktop.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HPP_
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
 #include <com/sun/star/util/XURLTransformer.hpp>
-#endif
-
 #endif	// USE_JAVA
 
 #define UNISTRING(s) rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(s))
@@ -142,7 +135,7 @@ public:
     virtual void    MouseButtonDown( const MouseEvent& rMEvt );
     virtual void    Paint( const Rectangle& rRect );
     void            Resize();
-    void            Show( BOOL bVisible = TRUE, USHORT nFlags = SHOW_NOACTIVATE );
+    void            Show( sal_Bool bVisible = sal_True, sal_uInt16 nFlags = SHOW_NOACTIVATE );
     void            SetTipPosPixel( const Point& rTipPos ) { maTipPos = rTipPos; }
     void            SetTitleAndText( const XubString& rTitle, const XubString& rText,
                                      const Image& rImage );
@@ -170,10 +163,10 @@ class UpdateCheckUI : public ::cppu::WeakImplHelper3
     bool                mbShowBubble;
     bool                mbShowMenuIcon;
     bool                mbBubbleChanged;
-    USHORT              mnIconID;
+    sal_uInt16              mnIconID;
 
 private:
-				    DECL_LINK( ClickHdl, USHORT* );
+				    DECL_LINK( ClickHdl, sal_uInt16* );
 				    DECL_LINK( HighlightHdl, MenuBar::MenuBarButtonCallbackArg* );
                     DECL_LINK( WaitTimeOutHdl, Timer* );
                     DECL_LINK( TimeOutHdl, Timer* );
@@ -438,7 +431,7 @@ void UpdateCheckUI::AddMenuBarIcon( SystemWindow *pSysWin, bool bAddEventHdl )
         mpBubbleWin = GetBubbleWindow();
         if ( mpBubbleWin )
         {
-            mpBubbleWin->Show( TRUE );
+            mpBubbleWin->Show( sal_True );
             maTimeoutTimer.Start();
         }
         mbShowBubble = false;
@@ -508,7 +501,7 @@ void UpdateCheckUI::setPropertyValue(const rtl::OUString& rPropertyName,
 		if ( mbShowBubble )
             Application::PostUserEvent( LINK( this, UpdateCheckUI, UserEventHdl ) );
         else if ( mpBubbleWin )
-            mpBubbleWin->Show( FALSE );
+            mpBubbleWin->Show( sal_False );
     }
     else if( rPropertyName.compareToAscii( PROPERTY_CLICK_HDL ) == 0 ) {
         uno::Reference< task::XJob > aJob;
@@ -534,7 +527,7 @@ void UpdateCheckUI::setPropertyValue(const rtl::OUString& rPropertyName,
         throw beans::UnknownPropertyException();
 
     if ( mbBubbleChanged && mpBubbleWin )
-        mpBubbleWin->Show( FALSE );
+        mpBubbleWin->Show( sal_False );
 }
 
 //------------------------------------------------------------------------------
@@ -669,13 +662,13 @@ void UpdateCheckUI::RemoveBubbleWindow( bool bRemoveIcon )
 }
 
 // -----------------------------------------------------------------------
-IMPL_LINK( UpdateCheckUI, ClickHdl, USHORT*, EMPTYARG )
+IMPL_LINK( UpdateCheckUI, ClickHdl, sal_uInt16*, EMPTYARG )
 {
     vos::OGuard aGuard( Application::GetSolarMutex() );
 
     maWaitTimer.Stop();
     if ( mpBubbleWin )
-        mpBubbleWin->Show( FALSE );
+        mpBubbleWin->Show( sal_False );
 
     if ( mrJob.is() )
     {
@@ -732,7 +725,7 @@ IMPL_LINK( UpdateCheckUI, UserEventHdl, UpdateCheckUI*, EMPTYARG )
 
 #ifdef USE_JAVA
     // Note: the following code should be an exact copy of the code in the
-	// CheckNowHdl_Impl callback in the svx/source/dialog/optupdt.cxx file
+    // CheckNowHdl_Impl callback in the cui/source/dialog/optupdt.cxx file
     uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
 
     try
@@ -760,11 +753,11 @@ IMPL_LINK( UpdateCheckUI, UserEventHdl, UpdateCheckUI*, EMPTYARG )
 
             // Prevent deadlocking when the dispatch method tries to grab the
             // application mutex on a separate thread
-            ULONG nCount = Application::ReleaseSolarMutex();
+            sal_uLong nCount = Application::ReleaseSolarMutex();
             try
             {
                 if( xDispatch.is() )
-                    xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
+                   xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
             }
             catch( ... )
             {
@@ -808,7 +801,7 @@ IMPL_LINK( UpdateCheckUI, UserEventHdl, UpdateCheckUI*, EMPTYARG )
 // -----------------------------------------------------------------------
 IMPL_LINK( UpdateCheckUI, WindowEventHdl, VclWindowEvent*, pEvent )
 {
-    ULONG nEventID = pEvent->GetId();
+    sal_uLong nEventID = pEvent->GetId();
 
     if ( VCLEVENT_OBJECT_DYING == nEventID )
     {
@@ -1001,11 +994,11 @@ void BubbleWindow::Paint( const Rectangle& )
 //------------------------------------------------------------------------------
 void BubbleWindow::MouseButtonDown( const MouseEvent& )
 {
-    Show( FALSE );
+    Show( sal_False );
 }
 
 //------------------------------------------------------------------------------
-void BubbleWindow::Show( BOOL bVisible, USHORT nFlags )
+void BubbleWindow::Show( sal_Bool bVisible, sal_uInt16 nFlags )
 {
     vos::OGuard aGuard( Application::GetSolarMutex() );
 
@@ -1057,7 +1050,7 @@ void BubbleWindow::Show( BOOL bVisible, USHORT nFlags )
 void BubbleWindow::RecalcTextRects()
 {
     Size aTotalSize;
-    BOOL bFinished = FALSE;
+    sal_Bool bFinished = sal_False;
 	Font aOldFont = GetFont();
 	Font aBoldFont = aOldFont;
 
@@ -1089,7 +1082,7 @@ void BubbleWindow::RecalcTextRects()
             maMaxTextSize.Height() = maMaxTextSize.Height() * 3 / 2;
         }
         else
-            bFinished = TRUE;
+            bFinished = sal_True;
     }
     maTitleRect.Move( 2*BUBBLE_BORDER, BUBBLE_BORDER + TIP_HEIGHT );
 	maTextRect.Move( 2*BUBBLE_BORDER, BUBBLE_BORDER + TIP_HEIGHT + maTitleRect.GetHeight() + aBoldFont.GetHeight() * 3 / 4 );
@@ -1129,18 +1122,6 @@ extern "C" void SAL_CALL
 component_getImplementationEnvironment( const sal_Char **aEnvTypeName, uno_Environment **)
 {
     *aEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME ;
-}
-
-//------------------------------------------------------------------------------
-
-extern "C" sal_Bool SAL_CALL
-component_writeInfo(void *pServiceManager, void *pRegistryKey)
-{
-    return cppu::component_writeInfoHelper(
-        pServiceManager,
-        pRegistryKey,
-        kImplementations_entries
-    );
 }
 
 //------------------------------------------------------------------------------

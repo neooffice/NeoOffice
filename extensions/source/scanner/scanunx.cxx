@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
@@ -33,6 +36,7 @@
 #include <sanedlg.hxx>
 #include <vos/thread.hxx>
 #include <tools/list.hxx>
+#include <boost/shared_ptr.hpp>
 
 #if OSL_DEBUG_LEVEL > 1
 #include <stdio.h>
@@ -41,22 +45,11 @@
 #ifdef USE_JAVA
 
 #include <comphelper/processfactory.hxx>
-
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HPP_
 #include <com/sun/star/beans/PropertyValue.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HPP_
 #include <com/sun/star/frame/XDesktop.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HPP_
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XFRAME_HPP_
 #include <com/sun/star/frame/XFrame.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
 #include <com/sun/star/util/XURLTransformer.hpp>
-#endif
 
 using namespace ::com::sun::star;
 
@@ -139,12 +132,41 @@ struct SaneHolder
 	vos::OMutex			m_aProtector;
 	ScanError			m_nError;
     bool				m_bBusy;
+
+    SaneHolder() : m_nError(ScanError_ScanErrorNone), m_bBusy(false) {}
 };
 
-DECLARE_LIST( SaneHolderList, SaneHolder* )
+namespace
+{
+    typedef std::vector< boost::shared_ptr<SaneHolder> > sanevec;
+    class allSanes
+    {
+    private:
+        int mnRefCount;
+    public:
+        sanevec m_aSanes;
+        allSanes() : mnRefCount(0) {}
+        void acquire();
+        void release();
+    };
 
-static SaneHolderList	allSanes;
-static vos::OMutex		aSaneProtector;
+    void allSanes::acquire()
+    {
+        ++mnRefCount;
+    }
+
+    void allSanes::release()
+    {
+        // was unused, now because of i99835: "Scanning interface not SANE API
+        // compliant" destroy all SaneHolder to get Sane Dtor called
+        --mnRefCount;
+        if (!mnRefCount)
+            m_aSanes.clear();
+    }
+
+    struct theSaneProtector : public rtl::Static<vos::OMutex, theSaneProtector> {}; 
+    struct theSanes : public rtl::Static<allSanes, theSanes> {}; 
+}
 
 // -----------------
 // - ScannerThread -
@@ -152,7 +174,7 @@ static vos::OMutex		aSaneProtector;
 
 class ScannerThread : public vos::OThread
 {
-	SaneHolder*									m_pHolder;
+	boost::shared_ptr<SaneHolder>				m_pHolder;
 	REF( com::sun::star::lang::XEventListener )	m_xListener;
 	ScannerManager*								m_pManager; // just for the disposing call
 
@@ -160,7 +182,7 @@ public:
 	virtual void run();
 	virtual void onTerminated() { delete this; }
 public:
-	ScannerThread( SaneHolder* pHolder,
+	ScannerThread( boost::shared_ptr<SaneHolder> pHolder,
 				   const REF( com::sun::star::lang::XEventListener )& listener,
 				   ScannerManager* pManager );
 	virtual ~ScannerThread();
@@ -169,7 +191,7 @@ public:
 // -----------------------------------------------------------------------------
 
 ScannerThread::ScannerThread(
-                             SaneHolder* pHolder,
+                             boost::shared_ptr<SaneHolder> pHolder,
                              const REF( com::sun::star::lang::XEventListener )& listener,
                              ScannerManager* pManager )
         : m_pHolder( pHolder ), m_xListener( listener ), m_pManager( pManager )
@@ -199,7 +221,7 @@ void ScannerThread::run()
 	{
 		int nOption = m_pHolder->m_aSane.GetOptionByName( "preview" );
 		if( nOption != -1 )
-			m_pHolder->m_aSane.SetOptionValue( nOption, (BOOL)FALSE );
+			m_pHolder->m_aSane.SetOptionValue( nOption, (sal_Bool)sal_False );
 
 		m_pHolder->m_nError =
 			m_pHolder->m_aSane.Start( *pTransporter ) ?
@@ -218,9 +240,16 @@ void ScannerThread::run()
 // - ScannerManager -
 // ------------------
 
-void ScannerManager::DestroyData()
+void ScannerManager::AcquireData()
 {
-	// unused
+    vos::OGuard aGuard( theSaneProtector::get() );
+    theSanes::get().acquire();
+}
+
+void ScannerManager::ReleaseData()
+{
+    vos::OGuard aGuard( theSaneProtector::get() );
+    theSanes::get().release();
 }
 
 // -----------------------------------------------------------------------------
@@ -249,17 +278,14 @@ SEQ( ScannerContext ) ScannerManager::getAvailableScanners() throw()
 	aRet.getArray()[0].InternalData = 0;
 	return aRet;
 #else	// USE_JAVA
-	vos::OGuard aGuard( aSaneProtector );
+	vos::OGuard aGuard( theSaneProtector::get() );
+	sanevec &rSanes = theSanes::get().m_aSanes;
 
-	if( ! allSanes.Count() )
+	if( rSanes.empty() )
 	{
-		SaneHolder* pSaneHolder = new SaneHolder;
-		pSaneHolder->m_nError = ScanError_ScanErrorNone;
-        pSaneHolder->m_bBusy = false;
+		boost::shared_ptr<SaneHolder> pSaneHolder(new SaneHolder);
 		if( Sane::IsSane() )
-			allSanes.Insert( pSaneHolder );
-		else
-			delete pSaneHolder;
+			rSanes.push_back( pSaneHolder );
 	}
 
 	if( Sane::IsSane() )
@@ -276,25 +302,26 @@ SEQ( ScannerContext ) ScannerManager::getAvailableScanners() throw()
 
 // -----------------------------------------------------------------------------
 
-BOOL ScannerManager::configureScanner( ScannerContext& scanner_context ) throw( ScannerException )
+sal_Bool ScannerManager::configureScanner( ScannerContext& scanner_context ) throw( ScannerException )
 {
 #ifdef USE_JAVA
-	return TRUE;
+	return sal_True;
 #else	// USE_JAVA
-	vos::OGuard aGuard( aSaneProtector );
+	vos::OGuard aGuard( theSaneProtector::get() );
+	sanevec &rSanes = theSanes::get().m_aSanes;
 
 #if OSL_DEBUG_LEVEL > 1
     fprintf( stderr, "ScannerManager::configureScanner\n" );
 #endif
 
-	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
 			ScanError_InvalidContext
 			);
 
-    SaneHolder* pHolder = allSanes.GetObject( scanner_context.InternalData );
+    boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
     if( pHolder->m_bBusy )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner is busy" ),
@@ -304,7 +331,7 @@ BOOL ScannerManager::configureScanner( ScannerContext& scanner_context ) throw( 
 
     pHolder->m_bBusy = true;
 	SaneDlg aDlg( NULL, pHolder->m_aSane );
-    BOOL bRet = (BOOL)aDlg.Execute();
+    sal_Bool bRet = (sal_Bool)aDlg.Execute();
     pHolder->m_bBusy = false;
         
 	return bRet;
@@ -339,19 +366,20 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
 	{
 	}
 #else	// USE_JAVA
-	vos::OGuard aGuard( aSaneProtector );
+	vos::OGuard aGuard( theSaneProtector::get() );
+	sanevec &rSanes = theSanes::get().m_aSanes;
 
 #if OSL_DEBUG_LEVEL > 1
     fprintf( stderr, "ScannerManager::startScan\n" );
 #endif
 
-	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
 			ScanError_InvalidContext
 			);
-	SaneHolder* pHolder = allSanes.GetObject( scanner_context.InternalData );
+	boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
     if( pHolder->m_bBusy )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner is busy" ),
@@ -369,16 +397,17 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
 
 ScanError ScannerManager::getError( const ScannerContext& scanner_context ) throw( ScannerException )
 {
-	vos::OGuard aGuard( aSaneProtector );
+	vos::OGuard aGuard( theSaneProtector::get() );
+	sanevec &rSanes = theSanes::get().m_aSanes;
 
-	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
 			ScanError_InvalidContext
 			);
 
-	SaneHolder* pHolder = allSanes.GetObject( scanner_context.InternalData );
+	boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
 
 	return pHolder->m_nError;
 }
@@ -387,15 +416,16 @@ ScanError ScannerManager::getError( const ScannerContext& scanner_context ) thro
 
 REF( AWT::XBitmap ) ScannerManager::getBitmap( const ScannerContext& scanner_context ) throw( ScannerException )
 {
-	vos::OGuard aGuard( aSaneProtector );
+	vos::OGuard aGuard( theSaneProtector::get() );
+	sanevec &rSanes = theSanes::get().m_aSanes;
 
-	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
 			ScanError_InvalidContext
 			);
-	SaneHolder* pHolder = allSanes.GetObject( scanner_context.InternalData );
+	boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
 
 	vos::OGuard aProtGuard( pHolder->m_aProtector );
 

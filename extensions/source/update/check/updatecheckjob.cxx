@@ -1,46 +1,54 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
+
+#include <memory>
 
 #include "updatecheck.hxx"
 #include "updatecheckconfig.hxx"
 #include "updatehdl.hxx"
 #include "updateprotocol.hxx"
 
-#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/implementationentry.hxx>
 
+#include "com/sun/star/frame/XDesktop.hpp"
+#include "com/sun/star/frame/XTerminateListener.hpp"
 #include <com/sun/star/task/XJob.hpp>
 
 namespace beans = com::sun::star::beans ;
+namespace frame = com::sun::star::frame ;
 namespace lang = com::sun::star::lang ;
 namespace task = com::sun::star::task ;
 namespace uno = com::sun::star::uno ;
@@ -50,8 +58,27 @@ namespace uno = com::sun::star::uno ;
 namespace 
 { 
 
+class InitUpdateCheckJobThread : public osl::Thread
+{
+public:
+    InitUpdateCheckJobThread( const uno::Reference< uno::XComponentContext > &xContext,
+                              const uno::Sequence< beans::NamedValue > &xParameters,
+                              bool bShowDialog );
+
+    virtual void SAL_CALL run();
+
+    void    setTerminating();
+
+private:
+    osl::Condition m_aCondition;
+    uno::Reference<uno::XComponentContext> m_xContext;
+    uno::Sequence<beans::NamedValue> m_xParameters;
+    bool m_bShowDialog;
+    bool m_bTerminating;
+};
+
 class UpdateCheckJob : 
-    public ::cppu::WeakImplHelper2< task::XJob, lang::XServiceInfo >
+    public ::cppu::WeakImplHelper3< task::XJob, lang::XServiceInfo, frame::XTerminateListener >
 {    
     virtual ~UpdateCheckJob();
              
@@ -78,17 +105,76 @@ public:
     virtual uno::Sequence< rtl::OUString > SAL_CALL getSupportedServiceNames() 
         throw (uno::RuntimeException);
 
+    // XEventListener
+    virtual void SAL_CALL disposing( ::com::sun::star::lang::EventObject const & evt )
+        throw (::com::sun::star::uno::RuntimeException);
+
+    // XTerminateListener
+    virtual void SAL_CALL queryTermination( lang::EventObject const & evt )
+        throw ( frame::TerminationVetoException, uno::RuntimeException );
+    virtual void SAL_CALL notifyTermination( lang::EventObject const & evt )
+        throw ( uno::RuntimeException );
+
 private:
-    uno::Reference<uno::XComponentContext> m_xContext;
+    uno::Reference<uno::XComponentContext>  m_xContext;
+    uno::Reference< frame::XDesktop >       m_xDesktop;
+    std::auto_ptr< InitUpdateCheckJobThread > m_pInitThread;
 
     void handleExtensionUpdates( const uno::Sequence< beans::NamedValue > &rListProp );
 };
 
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+InitUpdateCheckJobThread::InitUpdateCheckJobThread(
+            const uno::Reference< uno::XComponentContext > &xContext,
+            const uno::Sequence< beans::NamedValue > &xParameters,
+            bool bShowDialog ) :
+    m_xContext( xContext ),
+    m_xParameters( xParameters ),
+    m_bShowDialog( bShowDialog ),
+    m_bTerminating( false )
+{
+    create();
+}
 
-UpdateCheckJob::UpdateCheckJob(const uno::Reference<uno::XComponentContext>& xContext) : 
+//------------------------------------------------------------------------------
+void SAL_CALL InitUpdateCheckJobThread::run()
+{
+    if (!m_bShowDialog) {
+        TimeValue tv = { 25, 0 };
+        m_aCondition.wait( &tv );
+        if ( m_bTerminating )
+            return;
+    }
+
+    rtl::Reference< UpdateCheck > aController( UpdateCheck::get() );
+    aController->initialize( m_xParameters, m_xContext );
+
+    if ( m_bShowDialog )
+#ifdef USE_JAVA
+        if ( m_bTerminating )
+            aController->onCloseApp();
+        else
+#endif	// USE_JAVA
+        aController->showDialog( true );
+}
+
+void InitUpdateCheckJobThread::setTerminating() {
+    m_bTerminating = true;
+    m_aCondition.set();
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+UpdateCheckJob::UpdateCheckJob( const uno::Reference<uno::XComponentContext>& xContext ) : 
     m_xContext(xContext)
 {
+    m_xDesktop.set( xContext->getServiceManager()->createInstanceWithContext( UNISTRING("com.sun.star.frame.Desktop"), xContext ), uno::UNO_QUERY );
+    if ( m_xDesktop.is() )
+        m_xDesktop->addTerminateListener( this );
 }
 
 //------------------------------------------------------------------------------
@@ -140,12 +226,10 @@ UpdateCheckJob::execute(const uno::Sequence<beans::NamedValue>& namedValues)
             }
         }
     }
+
     uno::Sequence<beans::NamedValue> aConfig = 
         getValue< uno::Sequence<beans::NamedValue> > (namedValues, "JobConfig");
-    
-    rtl::Reference<UpdateCheck> aController(UpdateCheck::get());
-    aController->initialize(aConfig, m_xContext);
-    
+
     /* Determine the way we got invoked here - 
      * see Developers Guide Chapter "4.7.2 Jobs" to understand the magic
      */
@@ -155,15 +239,10 @@ UpdateCheckJob::execute(const uno::Sequence<beans::NamedValue>& namedValues)
     
     rtl::OUString aEventName = getValue< rtl::OUString > (aEnvironment, "EventName");
     
-    if( ! aEventName.equalsAscii("onFirstVisibleTask") )
-    {
-#ifdef USE_JAVA
-        if( aEventName.equalsAscii("OnCloseApp") )
-            aController->onCloseApp();
-        else
-#endif	// USE_JAVA
-        aController->showDialog(true);
-    }
+    m_pInitThread.reset(
+        new InitUpdateCheckJobThread(
+            m_xContext, aConfig,
+            !aEventName.equalsAscii("onFirstVisibleTask")));
     
     return uno::Any();
 }
@@ -236,6 +315,38 @@ UpdateCheckJob::supportsService( rtl::OUString const & serviceName ) throw (uno:
     return sal_False;
 }
 
+//------------------------------------------------------------------------------
+// XEventListener
+void SAL_CALL UpdateCheckJob::disposing( lang::EventObject const & rEvt )
+    throw ( uno::RuntimeException )
+{
+    bool shutDown = ( rEvt.Source == m_xDesktop );       
+
+    if ( shutDown && m_xDesktop.is() )
+    {
+        m_xDesktop->removeTerminateListener( this );
+        m_xDesktop.clear();
+    }
+}
+
+//------------------------------------------------------------------------------
+// XTerminateListener
+void SAL_CALL UpdateCheckJob::queryTermination( lang::EventObject const & )
+    throw ( frame::TerminationVetoException, uno::RuntimeException )
+{
+}
+
+//------------------------------------------------------------------------------
+void SAL_CALL UpdateCheckJob::notifyTermination( lang::EventObject const & )
+    throw ( uno::RuntimeException )
+{
+    if ( m_pInitThread.get() != 0 )
+    {
+        m_pInitThread->setTerminating();
+        m_pInitThread->join();
+    }
+}
+
 } // anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -283,18 +394,6 @@ extern "C" void SAL_CALL
 component_getImplementationEnvironment( const sal_Char **aEnvTypeName, uno_Environment **) 
 {
     *aEnvTypeName = CPPU_CURRENT_LANGUAGE_BINDING_NAME ;
-}
-
-//------------------------------------------------------------------------------
-
-extern "C" sal_Bool SAL_CALL 
-component_writeInfo(void *pServiceManager, void *pRegistryKey) 
-{
-    return cppu::component_writeInfoHelper(
-        pServiceManager,
-        pRegistryKey,
-        kImplementations_entries
-    );
 }
 
 //------------------------------------------------------------------------------

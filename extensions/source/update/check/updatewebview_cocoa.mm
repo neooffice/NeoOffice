@@ -78,12 +78,6 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
-#ifndef NSPropertyListReadOptions 
-typedef NSUInteger NSPropertyListReadOptions;
-#endif
-#ifndef typedef NSUInteger NSPropertyListWriteOptions;
-typedef NSUInteger NSPropertyListWriteOptions;
-#endif
 
 @interface NSPropertyListSerialization (UpdateWebView)
 + (NSData *)dataWithPropertyList:(id)plist format:(NSPropertyListFormat)format options:(NSPropertyListWriteOptions)opt error:(NSError **)error;
@@ -145,7 +139,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 		NSData *pResumeData = [pDownload resumeData];
 		if (pResumeData)
 		{
-			NSPropertyListFormat nFormat = 0;
+			NSPropertyListFormat nFormat;
 			NSMutableDictionary *pResumeDict = nil;
 			if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
 				pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
@@ -325,16 +319,16 @@ static NSArray *updateBaseURLEntries = nil;
 static NSString *updateServerType = nil;
 static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
-static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
+static BOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 static ::std::map< NSURLDownload*, UpdateDownloadData* > aDownloadDataMap;
 static ::std::map< NSFileHandle*, UpdateDownloadData* > aFileHandleDataMap;
 static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @implementation UpdateWebView
 
-+ (const NSString *)appendUpdateServerNameToString:(const NSString *)pString
++ (NSString *)appendUpdateServerNameToString:(NSString *)pString
 {
-	const NSString *pRet = ( pString ? pString : @"" );
+	NSString *pRet = ( pString ? pString : @"" );
 
 	[UpdateWebView updateURL];
 	if (updateServerType && [updateServerType length])
@@ -415,7 +409,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return (NSString *)[updateBaseURLEntries objectAtIndex:updateBaseURLEntry];
 }
 
-+ (MacOSBOOL)isDownloadURL:(NSURL *)url {
++ (BOOL)isDownloadURL:(NSURL *)url {
 	if (!url)
 		return(NO);
 	NSString *path = [url path];
@@ -425,7 +419,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame);
 }
 
-+ (MacOSBOOL)isUpdateURL:(NSURL *)url syncServer:(MacOSBOOL)syncServer
++ (BOOL)isUpdateURL:(NSURL *)url syncServer:(BOOL)syncServer
 {
 	// Make sure that the list of servers has been populated
 	[UpdateWebView updateURL];
@@ -458,7 +452,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return(NO);
 }
 
-+ (MacOSBOOL)incrementUpdateBaseEntry
++ (BOOL)incrementUpdateBaseEntry
 {
 	// Make sure that the list of servers has been populated
 	[UpdateWebView updateURL];
@@ -483,7 +477,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return(YES);
 }
 
-- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -613,7 +607,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 }
 
-- (void)setDownloadingIndicatorHidden:(MacOSBOOL)bHidden
+- (void)setDownloadingIndicatorHidden:(BOOL)bHidden
 {
 	if ( bHidden != [mpdownloadingIndicator isHidden] )
 	{
@@ -674,7 +668,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if ( pWebFrame )
 	{
-		MacOSBOOL bShowErrorAfterReload = NO;
+		BOOL bShowErrorAfterReload = NO;
 		WebDataSource *pDataSource = [pWebFrame provisionalDataSource];
 		if ( pDataSource )
 		{
@@ -968,9 +962,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[pAlert runModal];
 }
 
-- (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
+- (BOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if ( !pWebView )
 		return bRet;
@@ -1029,7 +1023,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
  		unsigned int i = 0;
 		for (; i < dirCount && !basePath; i++)
 		{
-			MacOSBOOL isDir = NO;
+			BOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
 			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir && [fileManager isWritableFileAtPath:downloadPath])
 			{
@@ -1046,9 +1040,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			basePath = @"/tmp";
 	}
 
-	MacOSBOOL bCompleteDownload = NO;
-	MacOSBOOL bPartialDownload = NO;
-	MacOSBOOL bOtherDownload = NO;
+	BOOL bCompleteDownload = NO;
+	BOOL bPartialDownload = NO;
+	BOOL bOtherDownload = NO;
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
 	if (fileManager && [fileManager fileExistsAtPath:filePath] && [fileManager isWritableFileAtPath:filePath])
 	{
@@ -1083,7 +1077,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	// Cancel the download if there are other downloads are running or there is
 	// no retry data
-	MacOSBOOL bCancelDownload = (bCompleteDownload || bOtherDownload);
+	BOOL bCancelDownload = (bCompleteDownload || bOtherDownload);
 	if(!bCancelDownload && bPartialDownload && (!pRetryDownloadURLs || ![pRetryDownloadURLs objectForKey:filePath]))
 		bCancelDownload = YES;
 
@@ -1232,7 +1226,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 		else if(![mpdownloadingIndicator isIndeterminate])
 		{
-			MacOSBOOL bIndeterminate = YES;
+			BOOL bIndeterminate = YES;
 			for(std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator dit = aDownloadDataMap.begin(); dit != aDownloadDataMap.end(); ++dit)
 			{
 				if([dit->second expectedContentLength] > 0)
@@ -1282,7 +1276,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (pRetryDownloadURLs)
 				[pRetryDownloadURLs removeObjectForKey:path];
 
-			MacOSBOOL bUseHdiUtil = NO;
+			BOOL bUseHdiUtil = NO;
 			if ([path length] >= [kDownloadURI length])
 			{
 				NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
@@ -1440,7 +1434,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[pRetryDownloadURLs retain];
 		}
 
-		MacOSBOOL bRetry = NO;
+		BOOL bRetry = NO;
 		NSString *pPath = [it->second path];
 		if (pPath && pRetryDownloadURLs)
 		{
@@ -1572,7 +1566,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					NSData *pData = [pUserInfo objectForKey:NSFileHandleNotificationDataItem];
 					if (pFileName && pPath && pData && [pFileName length] && [pPath length] && [pData length])
 					{
-						NSPropertyListFormat nFormat = 0;
+						NSPropertyListFormat nFormat;
 						NSMutableDictionary *pDict = nil;
 						if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
 							pDict = [NSPropertyListSerialization propertyListWithData:pData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
@@ -1657,9 +1651,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 }
 
-- (MacOSBOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
+- (BOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if (pDownload && pPath && pDescription)
 	{
@@ -1699,9 +1693,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return bRet;
 }
 
-- (MacOSBOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
+- (BOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	if (pDownload && pPath)
 	{
@@ -1729,7 +1723,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return bRet;
 }
 
-- (MacOSBOOL)requestedQuitApp
+- (BOOL)requestedQuitApp
 {
 	return mbrequestedQuitApp;
 }
@@ -1768,7 +1762,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	}
 }
 
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation
 {
 	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
 	[self setFloatingPanel:YES];
@@ -1780,9 +1774,9 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	return self;
 }
 
-- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject
+- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject
 {
-	MacOSBOOL bRet = NO;
+	BOOL bRet = NO;
 
 	// Fix bug 3525 by preventing infinite recursion
 	if ( pCurrentPanel == self )
@@ -1912,7 +1906,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 		return;
 	mbinZoom = YES;
 
-	MacOSBOOL bZoomed = YES;
+	BOOL bZoomed = YES;
 	NSRect aFrame = [self frame];
 	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
 	if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)

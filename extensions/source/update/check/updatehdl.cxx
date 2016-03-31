@@ -1,37 +1,40 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
 
 #include "updatehdl.hxx"
-#include "extensio.hrc"
+#include "update.hrc"
 
 #include "osl/diagnose.h"
 #include "osl/thread.hxx"
@@ -51,9 +54,10 @@
 #include "com/sun/star/awt/XControl.hpp"
 #include "com/sun/star/awt/XControlContainer.hpp"
 #include "com/sun/star/awt/XMessageBox.hpp"
-#include "com/sun/star/awt/XThrobber.hpp"
+#include "com/sun/star/awt/XAnimation.hpp"
 #include "com/sun/star/awt/XTopWindow.hpp"
 #include "com/sun/star/awt/XVclWindowPeer.hpp"
+#include "com/sun/star/awt/XVclContainer.hpp"
 #include "com/sun/star/awt/XWindow.hpp"
 #include "com/sun/star/awt/XWindow2.hpp"
 
@@ -70,6 +74,7 @@
 #include <com/sun/star/resource/XResourceBundleLoader.hpp>
 
 #include "updatehdl.hrc"
+#include <tools/urlobj.hxx>
 
 #ifdef USE_JAVA
 #include <unotools/bootstrap.hxx>
@@ -107,7 +112,8 @@ UpdateHandler::UpdateHandler( const uno::Reference< uno::XComponentContext > & r
     mbVisible( false ),
     mbStringsLoaded( false ),
     mbMinimized( false ),
-    mbListenerAdded(false)
+    mbListenerAdded(false),
+    mbShowsMessageBox(false)
 {
 }
 
@@ -162,7 +168,7 @@ void UpdateHandler::setDownloadBtnLabel( bool bAppendDots )
             aLabel += UNISTRING( "..." );
 
         setControlProperty( msButtonIDs[DOWNLOAD_BUTTON], UNISTRING("Label"), uno::Any( aLabel ) );
-        setControlProperty( msButtonIDs[DOWNLOAD_BUTTON], UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_DOWNLOAD2 ) ) );
+        setControlProperty( msButtonIDs[DOWNLOAD_BUTTON], UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_DOWNLOAD2 ) ) );
 
         mbDownloadBtnHasDots = bAppendDots;
     }
@@ -204,6 +210,10 @@ void UpdateHandler::setVisible( bool bVisible )
         if ( !mxUpdDlg.is() )
             createDialog();
 
+        // this should never happen, but if it happens we better return here
+        if ( !mxUpdDlg.is() )
+            return;
+
         updateState( meCurState );
 
         uno::Reference< awt::XWindow > xWindow( mxUpdDlg, uno::UNO_QUERY );
@@ -234,6 +244,11 @@ void UpdateHandler::setVisible( bool bVisible )
 //--------------------------------------------------------------------
 void UpdateHandler::setProgress( sal_Int32 nPercent )
 {
+    if ( nPercent > 100 )
+        nPercent = 100;
+    else if ( nPercent < 0 )
+        nPercent = 0;
+
     if ( nPercent != mnPercent )
     {
         osl::MutexGuard aGuard( maMutex );
@@ -494,7 +509,18 @@ void SAL_CALL UpdateHandler::handle( uno::Reference< task::XInteractionRequest >
 void SAL_CALL UpdateHandler::queryTermination( const lang::EventObject& )
     throw ( frame::TerminationVetoException, uno::RuntimeException )
 {
-    setVisible( false );
+    if ( mbShowsMessageBox )
+    {
+        uno::Reference< awt::XTopWindow > xTopWindow( mxUpdDlg, uno::UNO_QUERY );
+        if ( xTopWindow.is() )
+            xTopWindow->toFront();
+
+        throw frame::TerminationVetoException(
+            UNISTRING("The office cannot be closed while displaying a warning!"),
+            uno::Reference<XInterface>(static_cast<frame::XTerminateListener*>(this), uno::UNO_QUERY));
+    }
+    else
+        setVisible( false );
 }
 
 //------------------------------------------------------------------------------
@@ -738,6 +764,9 @@ void UpdateHandler::loadStrings()
     msInstallError  = loadString( xBundle, RID_UPDATE_STR_INSTALL_ERROR );
     msOverwriteWarning = loadString( xBundle, RID_UPDATE_STR_OVERWRITE_WARNING );
     msPercent       = loadString( xBundle, RID_UPDATE_STR_PERCENT );
+    msReloadWarning = loadString( xBundle, RID_UPDATE_STR_RELOAD_WARNING );
+    msReloadReload  = loadString( xBundle, RID_UPDATE_STR_RELOAD_RELOAD );
+    msReloadContinue = loadString( xBundle, RID_UPDATE_STR_RELOAD_CONTINUE );
 
     msStatusFL      = loadString( xBundle, RID_UPDATE_FT_STATUS );
     msDescription   = loadString( xBundle, RID_UPDATE_FT_DESCRIPTION );
@@ -768,14 +797,14 @@ void UpdateHandler::loadStrings()
 void UpdateHandler::startThrobber( bool bStart )
 {
     uno::Reference< awt::XControlContainer > xContainer( mxUpdDlg, uno::UNO_QUERY );
-    uno::Reference< awt::XThrobber > xThrobber( xContainer->getControl( CTRL_THROBBER ), uno::UNO_QUERY );
+    uno::Reference< awt::XAnimation > xThrobber( xContainer->getControl( CTRL_THROBBER ), uno::UNO_QUERY );
 
     if ( xThrobber.is() )
     {
         if ( bStart )
-            xThrobber->start();
+            xThrobber->startAnimation();
         else
-            xThrobber->stop();
+            xThrobber->stopAnimation();
     }
 
     uno::Reference< awt::XWindow > xWindow( xContainer->getControl( CTRL_THROBBER ), uno::UNO_QUERY );
@@ -985,12 +1014,14 @@ bool UpdateHandler::showWarning( const rtl::OUString &rWarningText ) const
     uno::Reference< awt::XMessageBox > xMsgBox( xToolkit->createWindow( aDescriptor ), uno::UNO_QUERY );
     if ( xMsgBox.is() )
     {
+        mbShowsMessageBox = true;
         sal_Int16 nRet;
         // xMsgBox->setCaptionText( msCancelTitle );
         xMsgBox->setMessageText( rWarningText );
         nRet = xMsgBox->execute();
         if ( nRet == 2 ) // RET_YES == 2
             bRet = true;
+        mbShowsMessageBox = false;
     }
 
     uno::Reference< lang::XComponent > xComponent( xMsgBox, uno::UNO_QUERY );
@@ -998,6 +1029,86 @@ bool UpdateHandler::showWarning( const rtl::OUString &rWarningText ) const
         xComponent->dispose(); 
 
     return bRet;
+}
+
+//--------------------------------------------------------------------
+bool UpdateHandler::showWarning( const rtl::OUString &rWarningText,
+                                 const rtl::OUString &rBtnText_1,
+                                 const rtl::OUString &rBtnText_2 ) const
+{
+    bool bRet = false;
+
+    uno::Reference< awt::XControl > xControl( mxUpdDlg, uno::UNO_QUERY );
+    if ( !xControl.is() ) return bRet;
+ 
+    uno::Reference< awt::XWindowPeer > xPeer = xControl->getPeer();
+    if ( !xPeer.is() ) return bRet;
+
+    uno::Reference< awt::XToolkit > xToolkit = xPeer->getToolkit();
+    if ( !xToolkit.is() ) return bRet;
+
+    awt::WindowDescriptor aDescriptor;
+
+    sal_Int32 nWindowAttributes = awt::WindowAttribute::BORDER | awt::WindowAttribute::MOVEABLE | awt::WindowAttribute::CLOSEABLE;
+    nWindowAttributes |= awt::VclWindowPeerAttribute::YES_NO;
+    nWindowAttributes |= awt::VclWindowPeerAttribute::DEF_NO;
+
+    aDescriptor.Type              = awt::WindowClass_MODALTOP;
+    aDescriptor.WindowServiceName = UNISTRING( "warningbox" );
+    aDescriptor.ParentIndex       = -1;
+    aDescriptor.Parent            = xPeer;
+    aDescriptor.Bounds            = awt::Rectangle( 10, 10, 250, 150 );
+    aDescriptor.WindowAttributes  = nWindowAttributes;
+
+    uno::Reference< awt::XMessageBox > xMsgBox( xToolkit->createWindow( aDescriptor ), uno::UNO_QUERY );
+    if ( xMsgBox.is() )
+    {
+        uno::Reference< awt::XVclContainer > xMsgBoxCtrls( xMsgBox, uno::UNO_QUERY );
+        if ( xMsgBoxCtrls.is() )
+        {
+            uno::Sequence< uno::Reference< awt::XWindow > > xChildren = xMsgBoxCtrls->getWindows();
+
+            for ( long i=0; i < xChildren.getLength(); i++ )
+            {
+                uno::Reference< awt::XVclWindowPeer > xMsgBoxCtrl( xChildren[i], uno::UNO_QUERY );
+                if ( xMsgBoxCtrl.is() )
+                {
+                    bool bIsDefault = true;
+                    uno::Any aValue = xMsgBoxCtrl->getProperty( UNISTRING("DefaultButton") );
+                    aValue >>= bIsDefault;
+                    if ( bIsDefault )
+                        xMsgBoxCtrl->setProperty( UNISTRING("Text"), uno::Any( rBtnText_1 ) );
+                    else
+                        xMsgBoxCtrl->setProperty( UNISTRING("Text"), uno::Any( rBtnText_2 ) );
+                }
+            }
+        }
+
+        sal_Int16 nRet;
+        // xMsgBox->setCaptionText( msCancelTitle );
+        mbShowsMessageBox = true;
+        xMsgBox->setMessageText( rWarningText );
+        nRet = xMsgBox->execute();
+        if ( nRet == 2 ) // RET_YES == 2
+            bRet = true;
+
+        mbShowsMessageBox = false;
+    }
+
+    uno::Reference< lang::XComponent > xComponent( xMsgBox, uno::UNO_QUERY );
+    if ( xComponent.is() )
+        xComponent->dispose(); 
+
+    return bRet;
+}
+
+//--------------------------------------------------------------------
+bool UpdateHandler::showOverwriteWarning( const rtl::OUString& rFileName ) const
+{
+    rtl::OUString aMsg( msReloadWarning );
+    searchAndReplaceAll( aMsg, UNISTRING( "%FILENAME" ), rFileName );
+    searchAndReplaceAll( aMsg, UNISTRING( "%DOWNLOAD_PATH" ), msDownloadPath );
+    return showWarning( aMsg, msReloadContinue, msReloadReload );
 }
 
 //--------------------------------------------------------------------
@@ -1022,8 +1133,8 @@ bool UpdateHandler::showOverwriteWarning() const
 #define EDIT_WIDTH          ( DIALOG_WIDTH - 2 * DIALOG_BORDER )
 #define BOX1_BTN_X          ( DIALOG_BORDER + EDIT_WIDTH - BUTTON_WIDTH - INNER_BORDER )
 #define BOX1_BTN_Y          ( DIALOG_BORDER + LABEL_HEIGHT + INNER_BORDER)
-#define THROBBER_WIDTH      14
-#define THROBBER_HEIGHT     14
+#define THROBBER_WIDTH      16
+#define THROBBER_HEIGHT     16
 #define THROBBER_X_POS      ( DIALOG_BORDER + 8 )
 #define THROBBER_Y_POS      ( DIALOG_BORDER + 23 )
 #define BUTTON_BAR_HEIGHT   24
@@ -1081,6 +1192,12 @@ void UpdateHandler::showControls( short nControls )
 //--------------------------------------------------------------------
 void UpdateHandler::createDialog()
 {
+    if ( !mxContext.is() )
+    {
+        OSL_ASSERT( false );
+        return;
+    }
+
     uno::Reference< lang::XMultiComponentFactory > xServiceManager( mxContext->getServiceManager() );
     
     if( xServiceManager.is() )
@@ -1117,7 +1234,7 @@ void UpdateHandler::createDialog()
         xPropSet->setPropertyValue( UNISTRING("PositionY"), uno::Any(sal_Int32( 100 )) );
         xPropSet->setPropertyValue( UNISTRING("Width"), uno::Any(sal_Int32( DIALOG_WIDTH )) );
         xPropSet->setPropertyValue( UNISTRING("Height"), uno::Any(sal_Int32( DIALOG_HEIGHT )) );
-        xPropSet->setPropertyValue( UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_DLG ) ) );
+        xPropSet->setPropertyValue( UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_DLG ) ) );
     }
     {   // Label (fixed text) <status>
         uno::Sequence< beans::NamedValue > aProps(1);
@@ -1144,7 +1261,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 3, UNISTRING("MultiLine"), uno::Any( true ) );
         setProperty( aProps, 4, UNISTRING("ReadOnly"), uno::Any( true ) );
         setProperty( aProps, 5, UNISTRING("AutoVScroll"), uno::Any( true ) );
-        setProperty( aProps, 6, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_STATUS ) ) );
+        setProperty( aProps, 6, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_STATUS ) ) );
 
         insertControlModel( xControlModel, EDIT_FIELD_MODEL, TEXT_STATUS,
                             awt::Rectangle( DIALOG_BORDER + TEXT_OFFSET,
@@ -1175,7 +1292,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 1, UNISTRING("Enabled"), uno::Any( true ) );
         setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_STANDARD) ) );
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msPauseBtn ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_PAUSE ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_PAUSE ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[PAUSE_BUTTON],
                              awt::Rectangle( BOX1_BTN_X, BOX1_BTN_Y, BUTTON_WIDTH, BUTTON_HEIGHT ),
@@ -1188,7 +1305,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 1, UNISTRING("Enabled"), uno::Any( true ) );
         setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_STANDARD) ) );
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msResumeBtn ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_RESUME ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_RESUME ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[RESUME_BUTTON],
                              awt::Rectangle( BOX1_BTN_X,
@@ -1204,7 +1321,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 1, UNISTRING("Enabled"), uno::Any( true ) );
         setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_STANDARD) ) );
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msCancelBtn ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_CANCEL ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_CANCEL ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[CANCEL_BUTTON],
                              awt::Rectangle( BOX1_BTN_X,
@@ -1238,7 +1355,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 3, UNISTRING("MultiLine"), uno::Any( true ) );
         setProperty( aProps, 4, UNISTRING("ReadOnly"), uno::Any( true ) );
         setProperty( aProps, 5, UNISTRING("AutoVScroll"), uno::Any( true ) );
-        setProperty( aProps, 6, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_DESCRIPTION ) ) );
+        setProperty( aProps, 6, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_DESCRIPTION ) ) );
 
         insertControlModel( xControlModel, EDIT_FIELD_MODEL, TEXT_DESCRIPTION,
                             awt::Rectangle( DIALOG_BORDER + TEXT_OFFSET,
@@ -1268,7 +1385,7 @@ void UpdateHandler::createDialog()
         // setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_CANCEL) ) );
         // [property] string Label // only if PushButtonType_STANDARD
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msClose ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_CLOSE ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_CLOSE ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[ CLOSE_BUTTON ],
                              awt::Rectangle( CLOSE_BTN_X, BUTTON_Y_POS, BUTTON_WIDTH, BUTTON_HEIGHT ),
@@ -1282,7 +1399,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 1, UNISTRING("Enabled"), uno::Any( true ) );
         setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_STANDARD) ) );
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msInstall ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_INSTALL ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_INSTALL ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[INSTALL_BUTTON],
                              awt::Rectangle( INSTALL_BTN_X, BUTTON_Y_POS, BUTTON_WIDTH, BUTTON_HEIGHT ),
@@ -1296,7 +1413,7 @@ void UpdateHandler::createDialog()
         setProperty( aProps, 1, UNISTRING("Enabled"), uno::Any( true ) );
         setProperty( aProps, 2, UNISTRING("PushButtonType"), uno::Any( sal_Int16(awt::PushButtonType_STANDARD) ) );
         setProperty( aProps, 3, UNISTRING("Label"), uno::Any( msDownload ) );
-        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( "HID:" ) + rtl::OUString::valueOf( (sal_Int32) HID_CHECK_FOR_UPD_DOWNLOAD ) ) );
+        setProperty( aProps, 4, UNISTRING("HelpURL"), uno::Any( UNISTRING( INET_HID_SCHEME ) + rtl::OUString::createFromAscii( HID_CHECK_FOR_UPD_DOWNLOAD ) ) );
 
         insertControlModel ( xControlModel, BUTTON_MODEL, msButtonIDs[DOWNLOAD_BUTTON],
                              awt::Rectangle( DOWNLOAD_BTN_X, BUTTON_Y_POS, BUTTON_WIDTH, BUTTON_HEIGHT ),
@@ -1316,7 +1433,7 @@ void UpdateHandler::createDialog()
     {   // @see awt/UnoControlThrobberModel.idl
         uno::Sequence< beans::NamedValue > aProps;
 
-        insertControlModel( xControlModel, UNISTRING("com.sun.star.awt.UnoThrobberControlModel"), CTRL_THROBBER,
+        insertControlModel( xControlModel, UNISTRING("com.sun.star.awt.SpinningProgressControlModel"), CTRL_THROBBER,
                             awt::Rectangle( THROBBER_X_POS, THROBBER_Y_POS, THROBBER_WIDTH, THROBBER_HEIGHT),
                             aProps );
     }

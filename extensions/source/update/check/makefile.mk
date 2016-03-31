@@ -1,38 +1,45 @@
-#*************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2008 by Sun Microsystems, Inc.
-#
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified January 2009 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-#*************************************************************************
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
+
+
 PRJ=..$/..$/..
 
 PRJNAME=extensions
 TARGET=updchk
-TARGETTYPE=CUI
 PACKAGE=org.openoffice.Office
+
+
+.IF "$(ENABLE_ONLINE_UPDATE)" != "YES"
+@all:
+	@echo "Online Update disabled."
+.ELSE
 
 LIBTARGET=NO
 ENABLE_EXCEPTIONS=TRUE
@@ -56,10 +63,10 @@ DLLPRE =
 
 # --- Files ---
 
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
 APP1TARGET=$(TARGET)runinstallers
 APP1OBJS=$(OBJ)$/updateruninstallers.obj
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
 
 SRS2NAME=$(TARGET)
 SRC2FILES=\
@@ -77,18 +84,23 @@ SLOFILES=\
 	$(SLO)$/updateprotocol.obj \
 	$(SLO)$/updatehdl.obj
         
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
 SLOFILES += $(SLO)$/update_java.obj
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
+
 .IF "$(GUIBASE)" == "java"
 SLOFILES += \
 	$(SLO)$/update_cocoa.obj \
 	$(SLO)$/updatei18n_cocoa.obj \
 	$(SLO)$/updatewebview_cocoa.obj
 .ENDIF		# "$(GUIBASE)" == "java"
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
 SHL1NOCHECK=TRUE
+.IF "$(GUI)" == "OS2"
+SHL1TARGET=updchkun
+.ELSE
 SHL1TARGET=$(TARGET).uno   
+.ENDIF
 SHL1OBJS=$(SLOFILES)
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 
@@ -100,20 +112,21 @@ SHL1STDLIBS=    \
         $(SALLIB) \
         $(SHELL32LIB) \
         $(OLE32LIB)
-
-.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+        
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
 SHL1STDLIBS += \
-	$(UNOTOOLSLIB) \
-	$(VCLLIB)
+        $(UNOTOOLSLIB) \
+        $(VCLLIB)
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
+
 .IF "$(GUIBASE)" == "java"
 SHL1STDLIBS += \
-	$(SFXLIB) \
-	$(TOOLSLIB)
+        $(SFXLIB) \
+        $(TOOLSLIB)
 SHL1STDLIBS += -framework Cocoa -framework WebKit
 .ENDIF		# "$(GUIBASE)" == "java"
-.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-        
-SHL1VERSIONMAP=..$/exports.map
+
+SHL1VERSIONMAP=$(SOLARENV)/src/component.map
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 
@@ -163,3 +176,13 @@ $(SPOOLDIR)$/$(PACKAGEDIR)$/Jobs$/Jobs-onlineupdate.xcu : $(XCU_SOURCEDIR)$/Jobs
 	@$(COPY) $< $@
 #	@$(PERL) transform.pl < $< > $@
 
+
+ALLTAR : $(MISC)/updchk.uno.component
+
+$(MISC)/updchk.uno.component .ERRREMOVE : $(SOLARENV)/bin/createcomponent.xslt \
+        updchk.uno.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt updchk.uno.component
+
+.ENDIF # "$(ENABLE_ONLINE_UPDATE)" == "YES"

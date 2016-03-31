@@ -43,13 +43,13 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
-extern const NSString *kUpdateLastURLPref;
-extern const NSString *kUpdateXPosPref;
-extern const NSString *kUpdateYPosPref;
-extern const NSString *kUpdateWidthPref;
-extern const NSString *kUpdateHeightPref;
-extern const NSString *kUpdateVisiblePref;
-extern const NSString *kUpdateServerTypePref;
+extern NSString *kUpdateLastURLPref;
+extern NSString *kUpdateXPosPref;
+extern NSString *kUpdateYPosPref;
+extern NSString *kUpdateWidthPref;
+extern NSString *kUpdateHeightPref;
+extern NSString *kUpdateVisiblePref;
+extern NSString *kUpdateServerTypePref;
 
 SAL_DLLPRIVATE ::rtl::OUString UpdateNSStringToOUString( NSString *pString );
 

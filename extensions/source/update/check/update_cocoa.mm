@@ -40,26 +40,26 @@ using namespace rtl;
 
 //========================================================================
 
-const NSString *kUpdateLastURLPref = @"updateLastURL";
-const NSString *kUpdateXPosPref = @"updateXPos";
-const NSString *kUpdateYPosPref = @"updateYPos";
-const NSString *kUpdateWidthPref = @"updateWidth";
-const NSString *kUpdateHeightPref = @"updateHeight";
-const NSString *kUpdateVisiblePref = @"updateVisible";
-const NSString *kUpdateServerTypePref = @"updateServerType";
+NSString *kUpdateLastURLPref = @"updateLastURL";
+NSString *kUpdateXPosPref = @"updateXPos";
+NSString *kUpdateYPosPref = @"updateYPos";
+NSString *kUpdateWidthPref = @"updateWidth";
+NSString *kUpdateHeightPref = @"updateHeight";
+NSString *kUpdateVisiblePref = @"updateVisible";
+NSString *kUpdateServerTypePref = @"updateServerType";
 
 static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 @interface UpdateCreateWebViewImpl : NSObject
 {
-	const NSString*				mpTitle;
-	const NSString*				mpURL;
-	const NSString*				mpUserAgent;
-	MacOSBOOL					mbWebViewShowing;
+	NSString*					mpTitle;
+	NSString*					mpURL;
+	NSString*					mpUserAgent;
+	BOOL						mbWebViewShowing;
 }
 + (id)createWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
 - (id)initWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
-- (MacOSBOOL)isWebViewShowing;
+- (BOOL)isWebViewShowing;
 - (void)showWebView:(id)obj;
 @end
 
@@ -72,7 +72,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	return pRet;
 }
 
-- (id)initWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle
+- (id)initWithURL:(NSString *)pURL userAgent:(NSString *)pUserAgent title:(NSString *)pTitle
 {
 	self = [super init];
 
@@ -84,7 +84,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	return(self);
 }
 
-- (MacOSBOOL)isWebViewShowing
+- (BOOL)isWebViewShowing
 {
 	return mbWebViewShowing;
 }
@@ -162,12 +162,12 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 @interface UpdateQuitWebViewImpl : NSObject
 {
-	MacOSBOOL					mbWebViewRequestedQuitApp;
+	BOOL						mbWebViewRequestedQuitApp;
 }
 + (id)create;
 - (id)init;
 - (void)quitWebView:(id)obj;
-- (MacOSBOOL)webViewRequestedQuitApp;
+- (BOOL)webViewRequestedQuitApp;
 @end
 
 @implementation UpdateQuitWebViewImpl
@@ -213,7 +213,7 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	}
 }
 
-- (MacOSBOOL)webViewRequestedQuitApp
+- (BOOL)webViewRequestedQuitApp
 {
 	return mbWebViewRequestedQuitApp;
 }

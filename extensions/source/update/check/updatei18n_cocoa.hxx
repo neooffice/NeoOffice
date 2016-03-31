@@ -42,7 +42,7 @@
 #include <sal/types.h>
 
 #include "updatehdl.hrc"
-#include "../../../../vcl/inc/vcl/svids.hrc"
+#include "../../../../vcl/inc/svids.hrc"
 
 #define UPDATEBACK "back"
 #define UPDATEDOWNLOADCANCELED "download.canceled"

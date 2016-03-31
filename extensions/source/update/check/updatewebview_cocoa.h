@@ -41,7 +41,7 @@
 
 @class UpdateNonRecursiveResponderWebPanel;
 
-@interface UpdateWebView : WebView
+@interface UpdateWebView : WebView <NSURLDownloadDelegate>
 {
 	NSObject*				mpDelegate;
 	UpdateNonRecursiveResponderWebPanel*	mpPanel;
@@ -51,19 +51,19 @@
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSURL*					mpstartingURL;
-	MacOSBOOL				mbrequestedQuitApp;
+	BOOL					mbrequestedQuitApp;
 	NSString*				mpuserAgent;
 }
-+ (const NSString *)appendUpdateServerNameToString:(const NSString *)pString;
++ (NSString *)appendUpdateServerNameToString:(NSString *)pString;
 + (NSString *)updateURL;
-+ (MacOSBOOL)isDownloadURL:(NSURL *)url;
-+ (MacOSBOOL)isUpdateURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
-+ (MacOSBOOL)incrementUpdateBaseEntry;
++ (BOOL)isDownloadURL:(NSURL *)url;
++ (BOOL)isUpdateURL:(NSURL *)pURL syncServer:(BOOL)syncServer;
++ (BOOL)incrementUpdateBaseEntry;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(NSString *)pUserAgent;
 - (void)loadStartingURL:(NSURL *)pStartingURL;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
-- (void)setDownloadingIndicatorHidden:(MacOSBOOL)bHidden;
+- (void)setDownloadingIndicatorHidden:(BOOL)bHidden;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
@@ -72,7 +72,7 @@
 - (void)download: (NSURLDownload *)download willResumeWithResponse:(NSURLResponse *) response fromByte:(long long)startingByte;
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource;
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame;
-- (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
+- (BOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
 - (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename;
 - (void)download: (NSURLDownload *)download didReceiveResponse:(NSURLResponse *) response;
 - (void)downloadDidBegin: (NSURLDownload *)download;
@@ -84,20 +84,20 @@
 - (IBAction)backButtonPressed;
 - (IBAction)cancelButtonPressed;
 - (void)readToEndOfHdiUtilTaskOutput:(NSNotification *)pNotification;
-- (MacOSBOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription;
-- (MacOSBOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
-- (MacOSBOOL)requestedQuitApp;
+- (BOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription;
+- (BOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
+- (BOOL)requestedQuitApp;
 
 @end
 
-@interface UpdateNonRecursiveResponderPanel : NSPanel
+@interface UpdateNonRecursiveResponderPanel : NSPanel <NSWindowDelegate>
 {
-	MacOSBOOL				mbinZoom;
+	BOOL					mbinZoom;
 }
 - (void)adjustBottomOfControlToTextHeight:(NSControl *)pControl;
 - (void)centerTextInTextView:(NSText *)pTextView;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
-- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (void)windowDidMove:(NSNotification *)notification;
 - (void)windowDidResize:(NSNotification *)notification;
 - (void)windowWillClose:(NSNotification *)notification;

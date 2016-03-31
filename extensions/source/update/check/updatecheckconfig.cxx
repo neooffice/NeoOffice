@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified July 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
@@ -34,10 +37,8 @@
 #include "updatecheckconfig.hxx"
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
-
-#ifndef _COM_SUN_STAR_CONTAINER_CHANGESEVENT_HPP_
-#include <com/sun/star/beans/XPropertyState.hpp>
-#endif
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/lang/XSingleServiceFactory.hpp>
 
 #include <osl/security.hxx>
 #include <osl/time.h>
@@ -79,6 +80,8 @@ namespace uno = com::sun::star::uno ;
 #define DOWNLOAD_DESTINATION    "DownloadDestination"
 #define RELEASE_NOTE            "ReleaseNote"
 #define EXTENSION_PREFIX        "Extension_"
+
+#define PROPERTY_VERSION        UNISTRING("Version")
 
 static const sal_Char * const aUpdateEntryProperties[] = { 
     UPDATE_VERSION, 
@@ -189,7 +192,7 @@ UpdateCheckROModel::getUpdateEntry(UpdateInfo& rInfo) const
     rtl::OString aStr(RELEASE_NOTE);
     for(sal_Int32 n=1; n < 6; ++n )
     {
-        rtl::OUString aUStr = getStringValue(aStr + rtl::OString::valueOf(n));
+        rtl::OUString aUStr = getStringValue( (aStr + rtl::OString::valueOf(n)).getStr());
         if( aUStr.getLength() > 0 )
             rInfo.ReleaseNotes.push_back(ReleaseNote((sal_Int8) n, aUStr));
     }
@@ -212,8 +215,14 @@ rtl::OUString UpdateCheckConfig::getDesktopDirectory()
     }
 #else
     // This should become a desktop specific setting in some system backend ..
-    osl::Security().getHomeDir(aRet);
-    aRet += rtl::OUString::createFromAscii("/Desktop");
+    rtl::OUString aHomeDir;
+    osl::Security().getHomeDir( aHomeDir );
+    aRet = aHomeDir + rtl::OUString::createFromAscii("/Desktop");
+
+    // Set path to home directory when there is no /Desktop directory
+    osl::Directory aDocumentsDir( aRet );
+    if( osl::FileBase::E_None != aDocumentsDir.open() )
+        aRet = aHomeDir;
 #endif
     
     return aRet;
@@ -242,25 +251,28 @@ rtl::OUString UpdateCheckConfig::getAllUsersDirectory()
 }
 
 //------------------------------------------------------------------------------
-
-UpdateCheckConfig::UpdateCheckConfig(
-    const uno::Reference<container::XNameContainer>& xContainer,
-    const ::rtl::Reference< UpdateCheckConfigListener >& rListener
-) : m_xContainer(xContainer), m_rListener(rListener)
-{
+UpdateCheckConfig::UpdateCheckConfig( const uno::Reference<container::XNameContainer>& xContainer,
+                                      const uno::Reference<container::XNameContainer>& xAvailableUpdates,
+                                      const uno::Reference<container::XNameContainer>& xIgnoredUpdates,
+                                      const ::rtl::Reference< UpdateCheckConfigListener >& rListener ) :
+    m_xContainer( xContainer ),
+    m_xAvailableUpdates( xAvailableUpdates ),
+    m_xIgnoredUpdates( xIgnoredUpdates ),
+    m_rListener( rListener )
 #ifdef USE_JAVA
+{
     // Fix bug 3503 by clearing out any saved update info so that the
     // automatic update check only uses the last check time to determine if
     // the update check dialog should be displayed
     clearUpdateFound();
-#endif	// USE_JAVA
 }
+#else	// USE_JAVA
+{}
+#endif	// USE_JAVA
 
 //------------------------------------------------------------------------------
-
 UpdateCheckConfig::~UpdateCheckConfig()
-{
-}
+{}
 
 //------------------------------------------------------------------------------
 
@@ -297,7 +309,15 @@ UpdateCheckConfig::get(
             UNISTRING("com.sun.star.configuration.ConfigurationUpdateAccess"), aArgumentList ),
         uno::UNO_QUERY_THROW );
     
-    return new UpdateCheckConfig( xContainer, rListener );
+    aProperty.Value = uno::makeAny( UNISTRING("/org.openoffice.Office.ExtensionManager/ExtensionUpdateData/IgnoredUpdates") );
+    aArgumentList[0] = uno::makeAny( aProperty );
+    uno::Reference< container::XNameContainer > xIgnoredExt( xConfigProvider->createInstanceWithArguments( UNISTRING("com.sun.star.configuration.ConfigurationUpdateAccess"), aArgumentList ), uno::UNO_QUERY_THROW );
+
+    aProperty.Value = uno::makeAny( UNISTRING("/org.openoffice.Office.ExtensionManager/ExtensionUpdateData/AvailableUpdates") );
+    aArgumentList[0] = uno::makeAny( aProperty );
+    uno::Reference< container::XNameContainer > xUpdateAvail( xConfigProvider->createInstanceWithArguments( UNISTRING("com.sun.star.configuration.ConfigurationUpdateAccess"), aArgumentList ), uno::UNO_QUERY_THROW );
+
+    return new UpdateCheckConfig( xContainer, xUpdateAvail, xIgnoredExt, rListener );
 }
 
 //------------------------------------------------------------------------------
@@ -400,7 +420,7 @@ UpdateCheckConfig::storeLocalFileName(const rtl::OUString& rLocalFileName, sal_I
         if( m_xContainer->hasByName(aNameList[i]) )
             m_xContainer->replaceByName(aNameList[i], aValueList[i]);
         else
-            m_xContainer->insertByName(aNameList[i],aValueList[i]);
+            m_xContainer->insertByName(aNameList[i], aValueList[i]);
     }
     
     commitChanges();
@@ -629,6 +649,19 @@ UpdateCheckConfig::commitChanges()
             }
         }
     }
+
+    xChangesBatch = uno::Reference< util::XChangesBatch > ( m_xAvailableUpdates, uno::UNO_QUERY );
+    if( xChangesBatch.is() && xChangesBatch->hasPendingChanges() )
+    {
+        util::ChangesSet aChangesSet = xChangesBatch->getPendingChanges();
+        xChangesBatch->commitChanges();
+    }
+    xChangesBatch = uno::Reference< util::XChangesBatch > ( m_xIgnoredUpdates, uno::UNO_QUERY );
+    if( xChangesBatch.is() && xChangesBatch->hasPendingChanges() )
+    {
+        util::ChangesSet aChangesSet = xChangesBatch->getPendingChanges();
+        xChangesBatch->commitChanges();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -656,40 +689,66 @@ UpdateCheckConfig::getPendingChanges(  ) throw (uno::RuntimeException)
 }
 
 //------------------------------------------------------------------------------
-void UpdateCheckConfig::storeExtensionVersion( const rtl::OUString& rExtensionName,
+bool UpdateCheckConfig::storeExtensionVersion( const rtl::OUString& rExtensionName,
                                                const rtl::OUString& rVersion )
 {
-    const rtl::OUString aExtName = UNISTRING( EXTENSION_PREFIX ) + rExtensionName;
-    const uno::Any aValue = uno::makeAny( rVersion );
-    
-    if( m_xContainer->hasByName( aExtName ) )
-        m_xContainer->replaceByName( aExtName, aValue );
+    bool bNotify = true;
+
+    if ( m_xAvailableUpdates->hasByName( rExtensionName ) )
+        uno::Reference< beans::XPropertySet >( m_xAvailableUpdates->getByName( rExtensionName ), uno::UNO_QUERY_THROW )->setPropertyValue( PROPERTY_VERSION, uno::Any( rVersion ) );
     else
-        m_xContainer->insertByName( aExtName, aValue );
+    {
+        uno::Reference< beans::XPropertySet > elem( uno::Reference< lang::XSingleServiceFactory >( m_xAvailableUpdates, uno::UNO_QUERY_THROW )->createInstance(), uno::UNO_QUERY_THROW );
+        elem->setPropertyValue( PROPERTY_VERSION, uno::Any( rVersion ) );
+        m_xAvailableUpdates->insertByName( rExtensionName, uno::Any( elem ) );
+    }
+
+    if ( m_xIgnoredUpdates->hasByName( rExtensionName ) )
+    {
+        ::rtl::OUString aIgnoredVersion;
+        uno::Any aValue( uno::Reference< beans::XPropertySet >( m_xIgnoredUpdates->getByName( rExtensionName ), uno::UNO_QUERY_THROW )->getPropertyValue( PROPERTY_VERSION ) );
+        aValue >>= aIgnoredVersion;
+        if ( aIgnoredVersion.getLength() == 0 ) // no version means ignore all updates
+            bNotify = false;
+        else if ( aIgnoredVersion == rVersion ) // the user wanted to ignore this update
+            bNotify = false;
+    }
 
     commitChanges();
+
+    return bNotify;
 }
 
 //------------------------------------------------------------------------------
 bool UpdateCheckConfig::checkExtensionVersion( const rtl::OUString& rExtensionName,
                                                const rtl::OUString& rVersion )
 {
-    const rtl::OUString aExtName = UNISTRING( EXTENSION_PREFIX ) + rExtensionName;
-
-    if( m_xContainer->hasByName( aExtName ) )
+    if ( m_xAvailableUpdates->hasByName( rExtensionName ) )
     {
-        uno::Any aValue = m_xContainer->getByName( aExtName );
-        rtl::OUString aStoredVersion;
+        ::rtl::OUString aStoredVersion;
+        uno::Any aValue( uno::Reference< beans::XPropertySet >( m_xAvailableUpdates->getByName( rExtensionName ), uno::UNO_QUERY_THROW )->getPropertyValue( PROPERTY_VERSION ) );
         aValue >>= aStoredVersion;
 
+        if ( m_xIgnoredUpdates->hasByName( rExtensionName ) )
+        {
+            ::rtl::OUString aIgnoredVersion;
+            uno::Any aValue2( uno::Reference< beans::XPropertySet >( m_xIgnoredUpdates->getByName( rExtensionName ), uno::UNO_QUERY_THROW )->getPropertyValue( PROPERTY_VERSION ) );
+            aValue2 >>= aIgnoredVersion;
+            if ( aIgnoredVersion.getLength() == 0 ) // no version means ignore all updates
+                return false;
+            else if ( aIgnoredVersion == aStoredVersion ) // the user wanted to ignore this update
+                return false;
+            // TODO: else delete ignored entry?
+        }
         if ( isVersionGreater( rVersion, aStoredVersion ) )
             return true;
         else
         {
-            m_xContainer->removeByName( aExtName );
+            m_xAvailableUpdates->removeByName( rExtensionName );
             commitChanges();
         }
     }
+
     return false;
 }
 

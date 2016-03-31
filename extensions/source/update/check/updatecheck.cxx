@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
@@ -39,7 +42,7 @@
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/frame/DispatchResultEvent.hpp>
 #include <com/sun/star/frame/DispatchResultState.hpp>
-#include <com/sun/star/system/XSystemShellExecute.hpp>
+#include <com/sun/star/system/SystemShellExecute.hpp>
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 #include <com/sun/star/task/XJob.hpp>
 #include <com/sun/star/task/XJobExecutor.hpp>
@@ -143,7 +146,7 @@ static inline rtl::OUString getBuildId()
 //------------------------------------------------------------------------------
 static inline rtl::OUString getBaseInstallation()
 {
-	rtl::OUString aPathVal(UNISTRING("${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("bootstrap") ":BaseInstallation}"));
+	rtl::OUString aPathVal(UNISTRING("${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("bootstrap") ":BaseInstallation}"));
 	rtl::Bootstrap::expandMacros(aPathVal);
 	return aPathVal;
 }
@@ -281,7 +284,7 @@ protected:
     virtual void SAL_CALL onTerminated();
 
     /* Wrapper around checkForUpdates */
-    bool runCheck();
+    bool runCheck( bool & rbExtensionsChecked );
 
 private:
 
@@ -470,14 +473,14 @@ UpdateCheckThread::cancel()
 //------------------------------------------------------------------------------
 
 bool 
-UpdateCheckThread::runCheck()
+UpdateCheckThread::runCheck( bool & rbExtensionsChecked )
 {
     bool ret = false;
     UpdateState eUIState = UPDATESTATE_NO_UPDATE_AVAIL;
 
     UpdateInfo aInfo;
     rtl::Reference< UpdateCheck > aController(UpdateCheck::get());
-    
+
     if( checkForUpdates(aInfo, m_xContext, aController->getInteractionHandler(), createProvider()) )
     {
         aController->setUpdateInfo(aInfo);
@@ -491,12 +494,14 @@ UpdateCheckThread::runCheck()
     // and when there was no office update found
     if ( ( eUIState != UPDATESTATE_UPDATE_AVAIL ) &&
          ( eUIState != UPDATESTATE_UPDATE_NO_DOWNLOAD ) &&
-         !aController->isDialogShowing() )
+         !aController->isDialogShowing() &&
+         !rbExtensionsChecked )
     {
         bool bHasExtensionUpdates = checkForExtensionUpdates( m_xContext );
         aController->setHasExtensionUpdates( bHasExtensionUpdates );
         if ( bHasExtensionUpdates )
             aController->setUIState( UPDATESTATE_EXT_UPD_AVAIL );
+        rbExtensionsChecked = true;
     }
 
     // joining with this thread is safe again
@@ -517,6 +522,11 @@ UpdateCheckThread::onTerminated()
 void SAL_CALL
 UpdateCheckThread::run()
 {
+    bool bExtensionsChecked = false;
+    TimeValue systime;
+    TimeValue nExtCheckTime;
+    osl_getSystemTime( &nExtCheckTime );
+
     osl::Condition::Result aResult = osl::Condition::result_timeout;
     TimeValue tv = { 10, 0 };
     
@@ -583,7 +593,6 @@ UpdateCheckThread::run()
             
             if( ! checkNow ) 
             {
-                TimeValue systime;
                 osl_getSystemTime(&systime);
                 
                 // Go back to sleep until time has elapsed
@@ -599,19 +608,28 @@ UpdateCheckThread::run()
 
             static sal_uInt8 n = 0;
             
-            if( ! hasInternetConnection() || ! runCheck() )
+            if( ! hasInternetConnection() || ! runCheck( bExtensionsChecked ) )
             {
-                // Increase next by 1, 5, 15, 60, .. minutes
-                static const sal_Int16 nRetryInterval[] = { 60, 300, 900, 3600 };
+                // the extension update check should be independent from the office update check
+                // 
+                osl_getSystemTime( &systime );
+                if ( nExtCheckTime.Seconds + offset < systime.Seconds )
+                    bExtensionsChecked = false;
+
+                // Increase next by 15, 60, .. minutes
+                static const sal_Int32 nRetryInterval[] = { 900, 3600, 14400, 86400 };
                 
-                if( n < sizeof(nRetryInterval) / sizeof(sal_Int16) )
+                if( n < sizeof(nRetryInterval) / sizeof(sal_Int32) )
                     ++n;
                 
                 tv.Seconds = nRetryInterval[n-1];
                 aResult = m_aCondition.wait(&tv);
             }
             else // reset retry counter
-                n = 0;            
+            {
+                n = 0;
+                bExtensionsChecked = false;
+            }
         }
     }
     
@@ -627,8 +645,10 @@ UpdateCheckThread::run()
 void SAL_CALL
 ManualUpdateCheckThread::run()
 {
+    bool bExtensionsChecked = false;
+
     try {
-        runCheck();
+        runCheck( bExtensionsChecked );
         m_aCondition.reset();
     }
     catch(const uno::Exception& e) {
@@ -695,7 +715,7 @@ DownloadThread::run()
         
         rtl::OUString aLocalFile = rModel->getLocalFileName();
         rtl::OUString aDownloadDest = rModel->getDownloadDestination();
-        
+
         // release config class for now
         rModel.clear();
             
@@ -826,6 +846,8 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
         aModel.getUpdateEntry(m_aUpdateInfo);
         
         bool obsoleteUpdateInfo = isObsoleteUpdateInfo(aUpdateEntryVersion);
+        bool bContinueDownload = false;
+        bool bDownloadAvailable = false;
 
         m_bHasExtensionUpdate = checkForPendingUpdates( xContext );
         m_bShowExtUpdDlg = false;
@@ -834,11 +856,8 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
         
         if( aLocalFileName.getLength() > 0 )
         {
-            bool downloadPaused = aModel.isDownloadPaused();
-            
-            enableDownload(true, downloadPaused);
-            setUIState(downloadPaused ? UPDATESTATE_DOWNLOAD_PAUSED : UPDATESTATE_DOWNLOADING);
-            
+            bContinueDownload = true;
+
             // Try to get the number of bytes already on disk
             osl::DirectoryItem aDirectoryItem;
             if( osl::DirectoryItem::E_None == osl::DirectoryItem::get(aLocalFileName, aDirectoryItem) )
@@ -846,16 +865,36 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
                 osl::FileStatus aFileStatus(FileStatusMask_FileSize);
                 if( osl::DirectoryItem::E_None == aDirectoryItem.getFileStatus(aFileStatus) )
                 {
-                    // Calculate initial percent value.
-                    if( aModel.getDownloadSize() > 0 )
+                    sal_Int64 nDownloadSize = aModel.getDownloadSize();
+                    sal_Int64 nFileSize = aFileStatus.getFileSize();
+
+                    if( nDownloadSize > 0 )
                     {
-                        sal_Int32 nPercent = (sal_Int32) (100 * aFileStatus.getFileSize() / aModel.getDownloadSize());
-                        getUpdateHandler()->setProgress(nPercent);
+                        if ( nDownloadSize <= nFileSize ) // we have already downloaded everthing
+                        {
+                            bContinueDownload = false;
+                            bDownloadAvailable = true;
+                            m_aImageName = getImageFromFileName( aLocalFileName );
+                        }
+                        else // Calculate initial percent value.
+                        {
+                            sal_Int32 nPercent = (sal_Int32) (100 * nFileSize / nDownloadSize);
+                            getUpdateHandler()->setProgress( nPercent );
+                        }
                     }
                 }
             }
+
+            if ( bContinueDownload )
+            {
+                bool downloadPaused = aModel.isDownloadPaused();
+
+                enableDownload(true, downloadPaused);
+                setUIState(downloadPaused ? UPDATESTATE_DOWNLOAD_PAUSED : UPDATESTATE_DOWNLOADING);
+            }
+            
         }
-        else
+        if ( !bContinueDownload )
         {
             // We do this intentionally only if no download is in progress ..
             if( obsoleteUpdateInfo ) 
@@ -868,13 +907,21 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
                 // Data is outdated, probably due to installed update 
                 rtl::Reference< UpdateCheckConfig > aConfig = UpdateCheckConfig::get( xContext, *this );
                 aConfig->clearUpdateFound();
+                aConfig->clearLocalFileName();
+    
                 
                 m_aUpdateInfo = UpdateInfo();
+                // Remove outdated release notes
+                storeReleaseNote( 1, rtl::OUString() );
+                storeReleaseNote( 2, rtl::OUString() );
             }
             else
             {
                 enableAutoCheck(aModel.isAutoCheckEnabled());
-                setUIState(getUIState(m_aUpdateInfo));
+                if ( bDownloadAvailable )
+                    setUIState( UPDATESTATE_DOWNLOAD_AVAIL );
+                else
+                    setUIState(getUIState(m_aUpdateInfo));
             }
         }
     }
@@ -935,8 +982,7 @@ UpdateCheck::install()
     osl::MutexGuard aGuard(m_aMutex);
     
     const uno::Reference< c3s::XSystemShellExecute > xShellExecute(
-        createService( UNISTRING( "com.sun.star.system.SystemShellExecute" ), m_xContext ),
-        uno::UNO_QUERY );
+        c3s::SystemShellExecute::create( m_xContext ) );
     
     try {
         // Construct install command ??
@@ -963,6 +1009,10 @@ UpdateCheck::install()
             
             aParameter += UNISTRING(" &");
 #endif            
+
+            rtl::Reference< UpdateCheckConfig > rModel = UpdateCheckConfig::get( m_xContext );
+            rModel->clearLocalFileName();
+
             xShellExecute->execute(aInstallImage, aParameter, nFlags);
             ShutdownThread *pShutdownThread = new ShutdownThread( m_xContext );
             (void) pShutdownThread;
@@ -1128,6 +1178,23 @@ UpdateCheck::downloadTargetExists(const rtl::OUString& rFileName)
 }
 
 //------------------------------------------------------------------------------
+bool UpdateCheck::checkDownloadDestination( const rtl::OUString& rFileName )
+{
+    osl::ClearableMutexGuard aGuard(m_aMutex);
+    
+    rtl::Reference< UpdateHandler > aUpdateHandler( getUpdateHandler() );
+    
+    bool bReload = false;
+    
+    if( aUpdateHandler->isVisible() )
+    {
+        bReload = aUpdateHandler->showOverwriteWarning( rFileName );
+    }
+    
+    return bReload;
+}
+
+//------------------------------------------------------------------------------
 
 void 
 UpdateCheck::downloadStalled(const rtl::OUString& rErrorMessage)
@@ -1158,15 +1225,18 @@ UpdateCheck::downloadProgressAt(sal_Int8 nPercent)
 void 
 UpdateCheck::downloadStarted(const rtl::OUString& rLocalFileName, sal_Int64 nFileSize)
 {
-    osl::MutexGuard aGuard(m_aMutex);
-    
-    rtl::Reference< UpdateCheckConfig > aModel(UpdateCheckConfig::get(m_xContext));
-    aModel->storeLocalFileName(rLocalFileName, nFileSize);
-    
-    // Bring-up release note for position 1 ..
-    const rtl::OUString aURL(getReleaseNote(m_aUpdateInfo, 1, aModel->isAutoDownloadEnabled()));
-    if( aURL.getLength() > 0 )
-        showReleaseNote(aURL);   
+    if ( nFileSize > 0 )
+    {
+        osl::MutexGuard aGuard(m_aMutex);
+
+        rtl::Reference< UpdateCheckConfig > aModel(UpdateCheckConfig::get(m_xContext));
+        aModel->storeLocalFileName(rLocalFileName, nFileSize);
+
+        // Bring-up release note for position 1 ..
+        const rtl::OUString aURL(getReleaseNote(m_aUpdateInfo, 1, aModel->isAutoDownloadEnabled()));
+        if( aURL.getLength() > 0 )
+            showReleaseNote(aURL);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -1179,9 +1249,6 @@ UpdateCheck::downloadFinished(const rtl::OUString& rLocalFileName)
     // no more retries
     m_pThread->terminate();
     
-    rtl::Reference< UpdateCheckConfig > rModel = UpdateCheckConfig::get(m_xContext);
-    rModel->clearLocalFileName();
-    
     m_aImageName = getImageFromFileName(rLocalFileName);
     UpdateInfo aUpdateInfo(m_aUpdateInfo);
     
@@ -1189,6 +1256,7 @@ UpdateCheck::downloadFinished(const rtl::OUString& rLocalFileName)
     setUIState(UPDATESTATE_DOWNLOAD_AVAIL);
     
     // Bring-up release note for position 2 ..
+    rtl::Reference< UpdateCheckConfig > rModel = UpdateCheckConfig::get( m_xContext );
     const rtl::OUString aURL(getReleaseNote(aUpdateInfo, 2, rModel->isAutoDownloadEnabled()));
     if( aURL.getLength() > 0 )
         showReleaseNote(aURL);
@@ -1543,11 +1611,7 @@ UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
             if ( aProductKey.getLength() )
             {
 #ifdef MACOSX
-#ifdef POWERPC
-                aProductKey += UNISTRING( " (PPC" );
-#else   // POWERPC
                 aProductKey += UNISTRING( " (Intel" );
-#endif  // POWERPC
                 aProductKey += UNISTRING( " Mac OS X)" );
 #endif  // MACOSX
             aUserAgent = aProductKey;
@@ -1649,6 +1713,8 @@ void UpdateCheck::showExtensionDialog()
 rtl::Reference<UpdateHandler>
 UpdateCheck::getUpdateHandler()
 {
+    osl::MutexGuard aGuard(m_aMutex);
+
     if( ! m_aUpdateHandler.is() )
         m_aUpdateHandler = new UpdateHandler(m_xContext, this);
 
@@ -1661,12 +1727,12 @@ uno::Reference< task::XInteractionHandler >
 UpdateCheck::getInteractionHandler() const
 {
     osl::MutexGuard aGuard(m_aMutex);
-    
+
     uno::Reference< task::XInteractionHandler > xHandler;
-    
+
     if( m_aUpdateHandler.is() && m_aUpdateHandler->isVisible() )
         xHandler = m_aUpdateHandler.get();
-    
+
     return xHandler;
 }
 
