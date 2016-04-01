@@ -42,28 +42,18 @@
 #import "shellexec.hxx"
 #import "shellexec_cocoa.h"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
-
 using namespace com::sun::star::uno;
 
 @interface ShellExecOpenURL : NSObject
 {
-	MacOSBOOL			mbResult;
+	BOOL				mbResult;
 	NSURL*				mpURL;
 }
 + (id)createWithURL:(NSURL *)pURL;
 - (void)dealloc;
 - (id)initWithURL:(NSURL *)pURL;
 - (void)openURL:(id)pSender;
-- (MacOSBOOL)result;
+- (BOOL)result;
 @end
 
 @implementation ShellExecOpenURL
@@ -119,7 +109,7 @@ using namespace com::sun::star::uno;
 	}
 }
 
-- (MacOSBOOL)result
+- (BOOL)result
 {
 	return mbResult;
 }

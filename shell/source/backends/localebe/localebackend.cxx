@@ -1,44 +1,45 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_shell.hxx"
 
 #include "localebackend.hxx"
-#include "localelayer.hxx"
-#include <com/sun/star/configuration/backend/ComponentChangeEvent.hpp>
-#include <uno/current_context.hxx>
+#include <com/sun/star/beans/Optional.hpp>
 #include <osl/time.h>
 
 #include <stdio.h>
 
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
+#if defined(LINUX) || defined(SOLARIS) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
 
 #include <rtl/ustrbuf.hxx>
 #include <locale.h>
@@ -269,11 +270,7 @@ rtl::OUString ImplGetLocale(LCID lcid)
 
 // -------------------------------------------------------------------------------
 
-LocaleBackend::LocaleBackend(const uno::Reference<uno::XComponentContext>& xContext)
-    throw (backend::BackendAccessException) :
-    ::cppu::WeakImplHelper2 < backend::XSingleLayerStratum, lang::XServiceInfo > (),
-    m_xContext(xContext)
-
+LocaleBackend::LocaleBackend()
 {
 }
 
@@ -285,18 +282,16 @@ LocaleBackend::~LocaleBackend(void)
 
 //------------------------------------------------------------------------------
 
-LocaleBackend* LocaleBackend::createInstance(
-    const uno::Reference<uno::XComponentContext>& xContext
-)
+LocaleBackend* LocaleBackend::createInstance()
 {
-    return new LocaleBackend(xContext);
+    return new LocaleBackend;
 }
 
 // ---------------------------------------------------------------------------------------
 
 rtl::OUString LocaleBackend::getLocale(void)
 {
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
+#if defined(LINUX) || defined(SOLARIS) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
     return ImplGetLocale(LC_CTYPE);
 #elif defined (MACOSX)
 	return ImplGetLocale("AppleLocale");
@@ -309,7 +304,7 @@ rtl::OUString LocaleBackend::getLocale(void)
 
 rtl::OUString LocaleBackend::getUILocale(void)
 {
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
+#if defined(LINUX) || defined(SOLARIS) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
     return ImplGetLocale(LC_MESSAGES);
 #elif defined(MACOSX)
 	return ImplGetLocale("AppleLanguages");
@@ -331,61 +326,45 @@ rtl::OUString LocaleBackend::getSystemLocale(void)
 }
 //------------------------------------------------------------------------------
 
-rtl::OUString LocaleBackend::createTimeStamp()
+void LocaleBackend::setPropertyValue(
+    rtl::OUString const &, css::uno::Any const &)
+    throw (
+        css::beans::UnknownPropertyException, css::beans::PropertyVetoException,
+        css::lang::IllegalArgumentException, css::lang::WrappedTargetException,
+        css::uno::RuntimeException)
 {
-    // the time stamp is free text, so just returning the values here.
-    return getLocale() + getUILocale() + getSystemLocale();
+    throw css::lang::IllegalArgumentException(
+        rtl::OUString(
+            RTL_CONSTASCII_USTRINGPARAM("setPropertyValue not supported")),
+        static_cast< cppu::OWeakObject * >(this), -1);
 }
 
-//------------------------------------------------------------------------------
-
-uno::Reference<backend::XLayer> SAL_CALL LocaleBackend::getLayer(
-        const rtl::OUString& aComponent, const rtl::OUString& /*aTimestamp*/)
-    throw (backend::BackendAccessException, lang::IllegalArgumentException)
+css::uno::Any LocaleBackend::getPropertyValue(
+    rtl::OUString const & PropertyName)
+    throw (
+        css::beans::UnknownPropertyException, css::lang::WrappedTargetException,
+        css::uno::RuntimeException)
 {
-
-    uno::Sequence<rtl::OUString> aComps( getSupportedComponents() );
-    if( aComponent.equals( aComps[0]) )
+    if (PropertyName.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("Locale"))) {
+        return css::uno::makeAny(
+            css::beans::Optional< css::uno::Any >(
+                true, css::uno::makeAny(getLocale())));
+    } else if (PropertyName.equalsAsciiL(
+                   RTL_CONSTASCII_STRINGPARAM("SystemLocale")))
     {
-        if( ! m_xSystemLayer.is() )
-        {
-            uno::Sequence<backend::PropertyInfo> aPropInfoList(3);
-            
-            aPropInfoList[0].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "org.openoffice.System/L10N/UILocale") );
-            aPropInfoList[0].Type = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "string" ) );
-            aPropInfoList[0].Protected = sal_False;
-            aPropInfoList[0].Value = uno::makeAny( getUILocale() );
-
-            aPropInfoList[1].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("org.openoffice.System/L10N/Locale") );
-            aPropInfoList[1].Type = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "string" ));
-            aPropInfoList[1].Protected = sal_False;
-            aPropInfoList[1].Value = uno::makeAny( getLocale() );
-
-            aPropInfoList[2].Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("org.openoffice.System/L10N/SystemLocale") );
-            aPropInfoList[2].Type = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "string" ));
-            aPropInfoList[2].Protected = sal_False;
-            aPropInfoList[2].Value = uno::makeAny( getSystemLocale() );
-
-            m_xSystemLayer = new LocaleLayer(aPropInfoList, createTimeStamp(), m_xContext);           
-        }
-        
-        return m_xSystemLayer;
+        return css::uno::makeAny(
+            css::beans::Optional< css::uno::Any >(
+                true, css::uno::makeAny(getSystemLocale())));
+    } else if (PropertyName.equalsAsciiL(
+                   RTL_CONSTASCII_STRINGPARAM("UILocale")))
+    {
+        return css::uno::makeAny(
+            css::beans::Optional< css::uno::Any >(
+                true, css::uno::makeAny(getUILocale())));
+    } else {
+        throw css::beans::UnknownPropertyException(
+            PropertyName, static_cast< cppu::OWeakObject * >(this));
     }
-    
-    return uno::Reference<backend::XLayer>();
-}	
-
-//------------------------------------------------------------------------------
-
-uno::Reference<backend::XUpdatableLayer> SAL_CALL
-LocaleBackend::getUpdatableLayer(const rtl::OUString& /*aComponent*/) 
-    throw (backend::BackendAccessException,lang::NoSupportException,	   
-		   lang::IllegalArgumentException)
-{
-    throw lang::NoSupportException(
-        rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(
-            "LocaleBackend: No Update Operation allowed, Read Only access") ),
-        *this) ; 
 }
 
 //------------------------------------------------------------------------------
@@ -406,10 +385,8 @@ rtl::OUString SAL_CALL LocaleBackend::getImplementationName(void)
 
 uno::Sequence<rtl::OUString> SAL_CALL LocaleBackend::getBackendServiceNames(void) 
 {
-    uno::Sequence<rtl::OUString> aServiceNameList(2);
+    uno::Sequence<rtl::OUString> aServiceNameList(1);
     aServiceNameList[0] = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.backend.LocaleBackend")) ;
-    aServiceNameList[1] = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.backend.PlatformBackend")) ;
-            
     return aServiceNameList ;
 }
 
@@ -434,16 +411,3 @@ uno::Sequence<rtl::OUString> SAL_CALL LocaleBackend::getSupportedServiceNames(vo
 {
     return getBackendServiceNames() ;
 }
-
-// ---------------------------------------------------------------------------------------
-
-uno::Sequence<rtl::OUString> SAL_CALL LocaleBackend::getSupportedComponents(void) 
-{
-    uno::Sequence<rtl::OUString> aSupportedComponentList(1);
-    aSupportedComponentList[0] = rtl::OUString( 
-        RTL_CONSTASCII_USTRINGPARAM( "org.openoffice.System" ) 
-    );
-    
-    return aSupportedComponentList;
-}
-

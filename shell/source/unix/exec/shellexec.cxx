@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified March 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_shell.hxx"
@@ -50,6 +53,9 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#ifdef OS2
+#include <process.h>
+#endif
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -111,8 +117,10 @@ void escapeForShell( rtl::OStringBuffer & rBuffer, const rtl::OString & rURL)
     {
         // escape every non alpha numeric characters (excluding a few "known good") by prepending a '\'
         sal_Char c = rURL[n];
+#ifndef OS2 // YD shell does not support escaped chars
         if( ( c < 'A' || c > 'Z' ) && ( c < 'a' || c > 'z' ) && ( c < '0' || c > '9' )  && c != '/' && c != '.' )
             rBuffer.append( '\\' );
+#endif
         
         rBuffer.append( c );
     }
@@ -177,35 +185,6 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                  + aCommand),
                 static_cast< cppu::OWeakObject * >(this));
         }
-        
-#ifdef USE_JAVA
-        // Replace ".go-oo.org" with ".services.openoffice.org" since go-oo.org
-        // is now dead and the Go-oo code merely redirected to matching
-        // services.openoffice.org URLs
-        static const OUString aGoOOExtensions( RTL_CONSTASCII_USTRINGPARAM( "http://extensions.go-oo.org" ) );
-        static const OUString aOOoExtensions( RTL_CONSTASCII_USTRINGPARAM( "http://extensions.services.openoffice.org" ) );
-        static const OUString aGoOOTemplates( RTL_CONSTASCII_USTRINGPARAM( "http://templates.go-oo.org" ) );
-        static const OUString aOOoTemplates( RTL_CONSTASCII_USTRINGPARAM( "http://templates.services.openoffice.org" ) );
-        static const OUString aGoOOWWW( RTL_CONSTASCII_USTRINGPARAM( "http://www.go-oo.org" ) );
-        static const OUString aOOoWWW( RTL_CONSTASCII_USTRINGPARAM( "http://www.openoffice.org" ) );
-
-        if ( aURL.indexOf( aGoOOExtensions ) == 0 )
-            aURL = aURL.replaceAt( 0, aGoOOExtensions.getLength(), aOOoExtensions );
-        else if ( aURL.indexOf( aGoOOTemplates ) == 0 )
-            aURL = aURL.replaceAt( 0, aGoOOTemplates.getLength(), aOOoTemplates );
-        else if ( aURL.indexOf( aGoOOWWW ) == 0 )
-            aURL = aURL.replaceAt( 0, aGoOOWWW.getLength(), aOOoWWW );
-
-        if ( aURL.getLength() == 0 && aCommand.getLength() != 0 )
-        {
-            throw RuntimeException(
-                (OUString(
-                    RTL_CONSTASCII_USTRINGPARAM(
-                        "Cannot replace Go-oo domain with OOo domain in URL: "))
-                 + aCommand),
-                static_cast< cppu::OWeakObject * >(this));
-        }
-#endif	// USE_JAVA
 
 #if defined USE_JAVA && defined MACOSX
         // Fix failure to open file URL hyperlinks by obtaining a security
@@ -268,6 +247,19 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 OUString(RTL_CONSTASCII_USTRINGPARAM("Cound not convert executable path")), 
                 static_cast < XSystemShellExecute * > (this), ENOENT );
         }
+
+#ifdef OS2
+        OStringBuffer aProg = OUStringToOString(aProgram, osl_getThreadTextEncoding());
+        aProg.append("open-url.exe");
+        OString aUrl = OUStringToOString(aURL, osl_getThreadTextEncoding());
+        if ( -1 == spawnl(P_NOWAIT, aProg.getStr(), aProg.getStr(), aUrl.getStr() , NULL) )
+        {
+            int nerr = errno;
+            throw SystemShellExecuteException(OUString::createFromAscii( strerror( nerr ) ), 
+                static_cast < XSystemShellExecute * > (this), nerr );
+        }
+        return;
+#endif
         
         OString aTmp = OUStringToOString(aProgram, osl_getThreadTextEncoding());
         escapeForShell(aBuffer, aTmp);

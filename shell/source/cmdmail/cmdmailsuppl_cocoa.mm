@@ -39,32 +39,22 @@
 
 #include <osl/file.hxx>
 
-#import "cmdmailsuppl.hxx"
+#import "syscmdmail.hxx"
 #import "cmdmailsuppl_cocoa.h"
-
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
 
 using namespace com::sun::star::uno;
 
 @interface CmdMailSupplOpenURLs : NSObject
 {
 	NSString*			mpAppID;
-	MacOSBOOL			mbResult;
+	BOOL				mbResult;
 	NSArray*			mpURLs;
 }
 + (id)createWithURLs:(NSArray *)pURLs appID:(NSString *)pAppID;
 - (void)dealloc;
 - (id)initWithURLs:(NSArray *)pURLs appID:(NSString *)pAppID;
 - (void)openURLs:(id)pSender;
-- (MacOSBOOL)result;
+- (BOOL)result;
 @end
 
 @implementation CmdMailSupplOpenURLs
@@ -131,7 +121,7 @@ using namespace com::sun::star::uno;
 	}
 }
 
-- (MacOSBOOL)result
+- (BOOL)result
 {
 	return mbResult;
 }
