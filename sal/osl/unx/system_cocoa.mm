@@ -39,16 +39,6 @@
 
 #include "system.h"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (BOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (BOOL)0
-#endif
-
 static NSURL *macxp_resolveAliasImpl( NSURL *url )
 {
 	NSURL *pRet = nil;
