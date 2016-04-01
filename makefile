@@ -469,7 +469,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "basis-link/program/resource/deploymentgui"*.res ; cp -f "$(PWD)/desktop/$(UOUTPUTDIR)/bin/deploymentgui"*.res "basis-link/program/resource"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in editpic.pl poll.pl savepic.pl show.pl ; do rm -f "basis-link/share/config/webcast/$$i" ; cp -f "$(PWD)/sd/res/webview/$$i" "basis-link/share/config/webcast/$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -f "basis-link/share/config/webcast/webcast.pl" ; cp -f "$(PWD)/sd/res/webview/webview.pl" "basis-link/share/config/webcast/webcast.pl"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/shell/$(UOUTPUTDIR)/bin/senddoc" "basis-link/program/senddoc" ; chmod a+x "basis-link/program/senddoc"
 ifdef PRODUCT_BUILD2
 # Set build version by appending zero instead of date so that it will always be
 # less than the Mac App Store version's build version
