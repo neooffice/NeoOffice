@@ -52,6 +52,7 @@ DEBUG_ARGUMENT=
 .IF "$(PRODUCT_BUILD_TYPE)" == "java"
 
 SOLARSRC := $(shell cd $(PRJ)$/.. && pwd)
+WORKDIR := $(shell cd $(PRJ) && pwd)$/$(INPATH)
 gb_REPOS := $(SOLARSRC) 
 
 all:
