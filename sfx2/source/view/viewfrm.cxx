@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
@@ -36,25 +39,22 @@
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/frame/XLoadable.hpp>
 #include <com/sun/star/frame/XLayoutManager.hpp>
+#include <com/sun/star/frame/XComponentLoader.hpp>
 
-#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
-#endif
-#ifndef _SPLITWIN_HXX //autogen
 #include <vcl/splitwin.hxx>
-#endif
-#include <svtools/moduleoptions.hxx>
-#include <svtools/intitem.hxx>
-#include <svtools/stritem.hxx>
-#include <svtools/eitem.hxx>
-#include <svtools/slstitm.hxx>
-#include <svtools/whiter.hxx>
-#include <svtools/undo.hxx>
-#ifndef _MSGBOX_HXX //autogen
+#include <unotools/moduleoptions.hxx>
+#include <svl/intitem.hxx>
+#include <svl/visitem.hxx>
+#include <svl/stritem.hxx>
+#include <svl/eitem.hxx>
+#include <svl/slstitm.hxx>
+#include <svl/whiter.hxx>
+#include <svl/undo.hxx>
 #include <vcl/msgbox.hxx>
-#endif
 #include <svtools/sfxecode.hxx>
 #include <svtools/ehdl.hxx>
+#include <tools/diagnose_ex.h>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
@@ -63,8 +63,9 @@
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/frame/XController.hpp>
-#include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/frame/XModel2.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
+#include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/frame/XDispatchRecorderSupplier.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
@@ -73,11 +74,18 @@
 #include <com/sun/star/uri/XVndSunStarScriptUrl.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <com/sun/star/embed/EmbedStates.hpp>
+#include <com/sun/star/document/XViewDataSupplier.hpp>
+#include <com/sun/star/container/XIndexContainer.hpp>
 #include <rtl/ustrbuf.hxx>
 
 #include <unotools/localfilehelper.hxx>
+#include <unotools/ucbhelper.hxx>
 #include <comphelper/processfactory.hxx>
+#include <comphelper/componentcontext.hxx>
+#include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/configurationhelper.hxx>
+#include <comphelper/docpasswordrequest.hxx>
+#include <comphelper/docpasswordhelper.hxx>
 
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/ucb/XContent.hpp>
@@ -88,20 +96,49 @@
 #include <basic/sbx.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <svtools/asynclink.hxx>
-#include <svtools/sharecontrolfile.hxx>
+#include <svl/sharecontrolfile.hxx>
+#include <svtools/svtools.hrc>
+#include <svtools/svtdata.hxx>
+#include <framework/framelistanalyzer.hxx>
+
+#include <boost/optional.hpp>
+
+#if defined USE_JAVA && defined MACOSX
+
+#include <list>
+
+#include <comphelper/mediadescriptor.hxx>
+#include <unotools/tempfile.hxx>
+
+#include "topfrm_cocoa.h"
+
+struct SAL_DLLPRIVATE SfxPendingDuplicateURL
+{
+    String              maURL;
+    sal_Bool            mbSetModified;
+
+                        SfxPendingDuplicateURL( String &rURL, sal_Bool bSetModified ) : maURL( rURL ), mbSetModified( bSetModified ) {}
+    virtual             ~SfxPendingDuplicateURL() {}
+};
+
+static ::std::list< SfxPendingDuplicateURL* > aPendingDuplicateURLsList;
+
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::lang;
+using ::com::sun::star::awt::XWindow;
+using ::com::sun::star::beans::PropertyValue;
+using ::com::sun::star::document::XViewDataSupplier;
+using ::com::sun::star::container::XIndexContainer;
 namespace css = ::com::sun::star;
-
-#ifndef GCC
-#endif
 
 // wg. ViewFrame::Current
 #include "appdata.hxx"
+#include <sfx2/taskpane.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/objface.hxx>
 #include "openflag.hxx"
@@ -115,16 +152,16 @@ namespace css = ::com::sun::star;
 #include <sfx2/request.hxx>
 #include <sfx2/docfac.hxx>
 #include <sfx2/ipclient.hxx>
-#include "sfxresid.hxx"
+#include "sfx2/sfxresid.hxx"
 #include "appbas.hxx"
 #include <sfx2/objitem.hxx>
-#include "viewfac.hxx"
+#include "sfx2/viewfac.hxx"
 #include <sfx2/event.hxx>
 #include "fltfnc.hxx"
 #include <sfx2/docfile.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/msgpool.hxx>
-#include <sfx2/topfrm.hxx>
+#include <sfx2/viewfrm.hxx>
 #include "viewimp.hxx"
 #include <sfx2/sfxbasecontroller.hxx>
 #include <sfx2/sfx.hrc>
@@ -135,13 +172,16 @@ namespace css = ::com::sun::star;
 #include "workwin.hxx"
 #include "helper.hxx"
 #include "macro.hxx"
-#include "minfitem.hxx"
+#include "sfx2/minfitem.hxx"
 #include "../appl/app.hrc"
+#include "impviewframe.hxx"
+
 //-------------------------------------------------------------------------
 DBG_NAME(SfxViewFrame)
 
 #define SfxViewFrame
 #include "sfxslots.hxx"
+#undef SfxViewFrame
 
 //-------------------------------------------------------------------------
 
@@ -159,53 +199,194 @@ TYPEINIT1(SfxViewFrameItem, SfxPoolItem);
 
 //=========================================================================
 
-struct SfxViewFrame_Impl
+//-------------------------------------------------------------------------
+namespace
 {
-    SvBorder            aBorder;
-    Size                aMargin;
-    Size                aSize;
-    String              aViewData;
-    String              aFrameTitle;
-    TypeId              aLastType;
-	String				aActualURL;
-	String				aActualPresentationURL;
-    SfxFrame*           pFrame;
-    SfxCancelManager*   pCancelMgr;
-    svtools::AsynchronLink* pReloader;
-	//SfxInPlaceFrame*	pIPFrame;
-	Window*				pWindow;
-    SfxViewFrame*       pActiveChild;
-    SfxViewFrame*       pParentViewFrame;
-    SfxObjectShell*     pImportShell;
-    Window*             pFocusWin;
-    SfxMacro*           pMacro;
-    sal_uInt16          nDocViewNo;
-    sal_uInt16          nCurViewId;
-    sal_Bool            bResizeInToOut:1;
-    sal_Bool            bDontOverwriteResizeInToOut:1;
-    sal_Bool            bObjLocked:1;
-    sal_Bool            bRestoreView:1;
-    sal_Bool            bSetViewFrameLocked:1;
-    sal_Bool            bReloading:1;
-    sal_Bool            bIsDowning:1;
-    sal_Bool            bInCtor:1;
-    sal_Bool            bModal:1;
-    sal_Bool            bEnabled:1;
-	sal_Bool			bEventFlag:1;
-    sal_Bool            bWindowWasEnabled:1;
+    bool moduleHasToolPanels( SfxViewFrame_Impl& i_rViewFrameImpl )
+    {
+        if ( !i_rViewFrameImpl.aHasToolPanels )
+        {
+            i_rViewFrameImpl.aHasToolPanels.reset( ::sfx2::ModuleTaskPane::ModuleHasToolPanels(
+                i_rViewFrameImpl.rFrame.GetFrameInterface() ) );
+        }
+        return *i_rViewFrameImpl.aHasToolPanels;
+    }
+}
 
-                        SfxViewFrame_Impl()
-                        : pReloader(0 )
-                        , pMacro( 0 )
-                        , bWindowWasEnabled(sal_True)
-                        {}
+#if defined USE_JAVA && defined MACOSX
 
-                        ~SfxViewFrame_Impl()
-                        {
-                            delete pReloader;
-                            delete pCancelMgr;
-                        }
-};
+void SFXDocument_documentHasBeenDeleted( SfxViewFrame *pFrame )
+{
+    if ( pFrame )
+    {
+        SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+        if ( pObjShell )
+        {
+            pObjShell->SetModified( sal_True );
+            pObjShell->Get_Impl()->SetIsDeleted();
+        }
+    }
+}
+
+void SFXDocument_documentHasBeenModified( SfxViewFrame *pFrame )
+{
+    if ( pFrame )
+    {
+        SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+        if ( pObjShell )
+            pObjShell->SetModified( sal_True );
+    }
+}
+
+void SFXDocument_documentHasMoved( SfxViewFrame *pFrame, ::rtl::OUString aNewURL )
+{
+    if ( pFrame )
+    {
+        SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+        if ( pObjShell )
+        {
+            SfxMedium *pMedium = pObjShell->GetMedium();
+            if ( pMedium )
+                pMedium->CheckForMovedFile( pObjShell, aNewURL );
+
+            // Reset modified state as it will be unset on OS X 10.10
+            SFXDocument_setDocumentModified( pFrame, pObjShell->IsModified() );
+        }
+    }
+}
+
+void SFXDocument_duplicate( SfxViewFrame *pFrame, sal_Bool bWaitForRevertCall, sal_Bool bSetModified )
+{
+    if ( pFrame )
+    {
+        SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+        if ( pObjShell )
+        {
+            String aTempURL = String( ::utl::TempFile().GetURL() );
+            if ( aTempURL.Len() )
+            {
+                SfxMedium *pMedium = new SfxMedium( aTempURL, ( STREAM_STD_WRITE | STREAM_SHARE_DENYALL ) );
+                if ( pMedium )
+                {
+                    if ( pObjShell->DoSaveAs( *pMedium ) )
+                    {
+                        SfxPendingDuplicateURL *pPendingDuplicateURL = new SfxPendingDuplicateURL( aTempURL, bSetModified );
+                        aPendingDuplicateURLsList.push_back( pPendingDuplicateURL );
+                    }
+                    delete pMedium;
+
+                    if ( !bWaitForRevertCall )
+                        SFXDocument_openPendingDuplicateURLs();
+                }
+                else
+                {
+                    sal_uInt32 lErr = pObjShell->GetErrorCode();
+                    if ( lErr )
+                        ErrorHandler::HandleError( lErr );
+                }
+            }
+        }
+    }
+}
+
+void SFXDocument_openPendingDuplicateURLs()
+{
+    // Fix highlighting bug in duplicated documents reported in the following
+    // NeoOffice forum post by not opening the duplicate documents until after
+    // the original document has finished reloading:
+    // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=62810#62810
+    while ( aPendingDuplicateURLsList.size() )
+    {
+        try
+        {
+            Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
+            aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
+            aSeq[0].Value <<= sal_True;
+            Reference< XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+            if ( xLoader.is() )
+            {
+                Reference< XModel > xModel( xLoader->loadComponentFromURL( aPendingDuplicateURLsList.front()->maURL, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq ), UNO_QUERY );
+                if ( xModel.is() && aPendingDuplicateURLsList.front()->mbSetModified )
+                {
+                    for ( SfxObjectShell *pObjShell = SfxObjectShell::GetFirst(); pObjShell; pObjShell = SfxObjectShell::GetNext(*pObjShell ) )
+                    {
+                        if ( pObjShell->GetModel() == xModel.get() )
+                            pObjShell->SetModified( sal_True );
+                    }
+                }
+            }
+        }
+        catch ( ... )
+        {
+        }
+
+        delete aPendingDuplicateURLsList.front();
+        aPendingDuplicateURLsList.pop_front();
+    }
+}
+
+void SFXDocument_reload( SfxViewFrame *pFrame, sal_Bool bSilent )
+{
+    if ( pFrame )
+    {
+        SfxRequest aReloadReq( pFrame, SID_RELOAD );
+        aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, bSilent ) );
+        pFrame->ExecReload_Impl( aReloadReq, sal_True );
+    }
+
+    SFXDocument_openPendingDuplicateURLs();
+}
+
+#endif	// USE_JAVA && MACOSX
+
+//-------------------------------------------------------------------------
+static sal_Bool AskPasswordToModify_Impl( const uno::Reference< task::XInteractionHandler >& xHandler, const ::rtl::OUString& aPath, const SfxFilter* pFilter, sal_uInt32 nPasswordHash, const uno::Sequence< beans::PropertyValue > aInfo )
+{
+    // TODO/LATER: In future the info should replace the direct hash completely
+    sal_Bool bResult = ( !nPasswordHash && !aInfo.getLength() );
+
+    OSL_ENSURE( pFilter && ( pFilter->GetFilterFlags() & SFX_FILTER_PASSWORDTOMODIFY ), "PasswordToModify feature is active for a filter that does not support it!" );
+
+    if ( pFilter && xHandler.is() )
+    {
+        sal_Bool bCancel = sal_False;
+        sal_Bool bFirstTime = sal_True;
+
+        while ( !bResult && !bCancel )
+        {
+            sal_Bool bMSType = !pFilter->IsOwnFormat();
+
+            ::rtl::Reference< ::comphelper::DocPasswordRequest > pPasswordRequest(
+                 new ::comphelper::DocPasswordRequest(
+                 bMSType ? ::comphelper::DocPasswordRequestType_MS : ::comphelper::DocPasswordRequestType_STANDARD,
+                 bFirstTime ? ::com::sun::star::task::PasswordRequestMode_PASSWORD_ENTER : ::com::sun::star::task::PasswordRequestMode_PASSWORD_REENTER,
+                 aPath,
+                 sal_True ) );
+
+            uno::Reference< com::sun::star::task::XInteractionRequest > rRequest( pPasswordRequest.get() );
+            xHandler->handle( rRequest );
+
+            if ( pPasswordRequest->isPassword() )
+            {
+                if ( aInfo.getLength() )
+                {
+                    bResult = ::comphelper::DocPasswordHelper::IsModifyPasswordCorrect( pPasswordRequest->getPasswordToModify(), aInfo );
+                }
+                else
+                {
+                    // the binary format
+                    bResult = ( SfxMedium::CreatePasswordToModifyHash( pPasswordRequest->getPasswordToModify(), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.text.TextDocument" ) ).equals( pFilter->GetServiceName() ) ) == nPasswordHash );
+                }
+            }
+            else
+                bCancel = sal_True;
+
+            bFirstTime = sal_False;
+        }
+    }
+
+    return bResult;
+}
 
 //-------------------------------------------------------------------------
 void SfxViewFrame::SetDowning_Impl()
@@ -220,31 +401,7 @@ sal_Bool SfxViewFrame::IsDowning_Impl() const
 }
 
 
-//-------------------------------------------------------------------------
-void SfxViewFrame::SetSetViewFrameAllowed_Impl( sal_Bool bSet )
-{
-    pImp->bSetViewFrameLocked = !bSet;
-};
-
-//-------------------------------------------------------------------------
-sal_Bool SfxViewFrame::IsSetViewFrameAllowed_Impl() const
-{
-    return !pImp->bSetViewFrameLocked;
-}
-
-//-------------------------------------------------------------------------
-void SfxViewFrame::SetImportingObjectShell_Impl( SfxObjectShell* pSh )
-{
-    pImp->pImportShell = pSh;
-}
-
 //--------------------------------------------------------------------
-SfxObjectShell* SfxViewFrame::GetImportingObjectShell_Impl() const
-{
-    return pImp->pImportShell;
-}
-
-
 class SfxViewNotificatedFrameList_Impl :
     public SfxListener, public SfxViewFrameArr_Impl
 {
@@ -300,10 +457,10 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq, sal_Bool bAsync )
 
 void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 {
-    SfxFrame *pParent = GetFrame()->GetParentFrame();
+    SfxFrame *pParent = GetFrame().GetParentFrame();
 	if ( rReq.GetSlot() == SID_RELOAD )
 	{
-        // Bei CTRL-Reload den aktiven Frame reloaden
+        // With CTRL-Reload reload the active frame
         SfxViewFrame* pActFrame = this;
         while ( pActFrame )
             pActFrame = pActFrame->GetActiveChildFrame_Impl();
@@ -318,13 +475,13 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
             }
         }
 
-		// Wenn nur ein Reload der Graphiken eines oder mehrerer ChildFrames
-		// gemacht werden soll
-		SfxFrame *pFrame = GetFrame();
-		if ( pParent == pFrame && pFrame->GetChildFrameCount() )
+        // If only reloading of the graphs or more child frames
+        // is needed
+		SfxFrame& rFrame = GetFrame();
+		if ( pParent == &rFrame && rFrame.GetChildFrameCount() )
 		{
 			sal_Bool bReloadAvailable = sal_False;
-			SfxFrameIterator aIter( *pFrame, sal_False );
+			SfxFrameIterator aIter( rFrame, sal_False );
 			SfxFrame *pChild = aIter.FirstFrame();
 			while ( pChild )
 			{
@@ -338,16 +495,16 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 				pChild = pNext;
 			}
 
-			// Der TopLevel-Frame selbst het keine Graphiken!
+			// The TopLevel frame itself had no graphics
 			if ( bReloadAvailable )
 				return;
 		}
     }
     else
     {
-        // Bei CTRL-Edit den TopFrame bearbeiten
+        // With CTRL-Edit edit the top frame
         sal_uInt16 nModifier = rReq.GetModifier();
-
+        //KEY_MOD1 is the Ctrl modifier key
         if ( ( nModifier & KEY_MOD1 ) && pParent )
         {
             SfxViewFrame *pTop = GetTopViewFrame();
@@ -357,25 +514,23 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
     }
 
     SfxObjectShell* pSh = GetObjectShell();
-	sal_Bool bWasReadonly = pSh->IsReadOnly();
-
     switch ( rReq.GetSlot() )
     {
         case SID_EDITDOC:
         {
-			if ( GetFrame()->HasComponent() )
+			if ( GetFrame().HasComponent() )
 				break;
 
-            // Wg. Doppeltbelegung in Toolboxen (mit/ohne Ctrl) ist es auch
-            // m"oglich, da\s der Slot zwar enabled ist, aber Ctrl-Click
-            // trotzdem nicht geht!
+            // Because of double functioning of the toolbox button (with/without Ctrl)
+            // it's possible that the slot is enabled, but Ctrl-click is not.
             if( !pSh || !pSh->HasName() || !(pSh->Get_Impl()->nLoadedFlags & SFX_LOADED_MAINDOCUMENT ))
                 break;
+
+            SfxMedium* pMed = pSh->GetMedium();
 
             SFX_ITEMSET_ARG( pSh->GetMedium()->GetItemSet(), pItem, SfxBoolItem, SID_VIEWONLY, sal_False );
         	if ( pItem && pItem->GetValue() )
 			{
-                SfxMedium* pMed = pSh->GetMedium();
 				SfxApplication* pApp = SFX_APP();
 				SfxAllItemSet aSet( pApp->GetPool() );
 				aSet.Put( SfxStringItem( SID_FILE_NAME, pMed->GetURLObject().GetMainURL(INetURLObject::NO_DECODE) ) );
@@ -407,171 +562,180 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
                 // Speichern und Readonly Reloaden
                 if( pSh->IsModified() )
                 {
-                    if ( !pSh->PrepareClose() )
+                    if ( pSh->PrepareClose() )
+                    {
+                        // the storing could let the medium be changed
+                        pMed = pSh->GetMedium();
+                        bNeedsReload = sal_True;
+                    }
+                    else
                     {
                         rReq.SetReturnValue( SfxBoolItem( rReq.GetSlot(), sal_False ) );
                         return;
                     }
-                    else bNeedsReload = sal_True;
                 }
                 nOpenMode = SFX_STREAM_READONLY;
             }
             else
 			{
-                nOpenMode = SFX_STREAM_READWRITE;
-				pSh->SetReadOnlyUI( sal_False );
+                if ( pSh->IsReadOnlyMedium()
+                  && ( pSh->GetModifyPasswordHash() || pSh->GetModifyPasswordInfo().getLength() )
+                  && !pSh->IsModifyPasswordEntered() )
+                {
+                    ::rtl::OUString aDocumentName = INetURLObject( pMed->GetOrigURL() ).GetMainURL( INetURLObject::DECODE_WITH_CHARSET );
+                    if( !AskPasswordToModify_Impl( pMed->GetInteractionHandler(), aDocumentName, pMed->GetOrigFilter(), pSh->GetModifyPasswordHash(), pSh->GetModifyPasswordInfo() ) )
+                    {
+                        // this is a read-only document, if it has "Password to modify"
+                        // the user should enter password before he can edit the document
+                        rReq.SetReturnValue( SfxBoolItem( rReq.GetSlot(), sal_False ) );
+                        return;
+                    }
 
-				// if only the view was in the readonly mode then there is no need to do the reload
-				if ( !pSh->IsReadOnly() )
-					return;
+                    pSh->SetModifyPasswordEntered();
+                }
+
+                nOpenMode = SFX_STREAM_READWRITE;
+                pSh->SetReadOnlyUI( sal_False );
+
+                // if only the view was in the readonly mode then there is no need to do the reload
+                if ( !pSh->IsReadOnly() )
+                    return;
 			}
 
-			// Parameter auswerten
+			// Evaluate parameters
             // sal_Bool bReload = sal_True;
 			if ( rReq.IsAPI() )
 			{
-				// per API steuern ob r/w oder r/o
+				// Control through API if r/w or r/o
             	SFX_REQUEST_ARG(rReq, pEditItem, SfxBoolItem, SID_EDITDOC, sal_False);
 				if ( pEditItem )
 					nOpenMode = pEditItem->GetValue() ? SFX_STREAM_READWRITE : SFX_STREAM_READONLY;
 			}
 
 			// doing
-            if( pSh  )
+
+            String aTemp;
+            utl::LocalFileHelper::ConvertPhysicalNameToURL( pMed->GetPhysicalName(), aTemp );
+            INetURLObject aPhysObj( aTemp );
+            SFX_ITEMSET_ARG( pSh->GetMedium()->GetItemSet(),
+                             pVersionItem, SfxInt16Item, SID_VERSION, sal_False );
+
+            INetURLObject aMedObj( pMed->GetName() );
+
+            // -> i126305
+            // the logic below is following:
+            // if the document seems not to need to be reloaded
+            //     and the physical name is different to the logical one,
+            // then on file system it can be checked that the copy is still newer than the original and no document reload is required.
+            // some semplification to enhance readability of the 'if' expression
+            // 
+            // on the 'http/https' protocol case, the bool bPhysObjIsYounger relies upon the getlastmodified Property of a WebDAV resource.
+            // Said property should be implemented, but sometimes it's not. This happens on some small webdav servers, where it's not
+            // implemented. On this case the reload will not work properly.
+            // Details at this link: http://tools.ietf.org/html/rfc4918#section-15, section 15.7
+            // TODO: add an indication to the user? Difficult to implement I think.
+            sal_Bool bPhysObjIsYounger = ::utl::UCBContentHelper::IsYounger( aMedObj.GetMainURL( INetURLObject::NO_DECODE ), aPhysObj.GetMainURL( INetURLObject::NO_DECODE ) );
+            sal_Bool bIsHttpOrHttps = (aMedObj.GetProtocol() == INET_PROT_HTTP || aMedObj.GetProtocol() == INET_PROT_HTTPS);
+            if ( ( !bNeedsReload && ( ( aMedObj.GetProtocol() == INET_PROT_FILE &&
+                                        aMedObj.getFSysPath(INetURLObject::FSYS_DETECT) != aPhysObj.getFSysPath(INetURLObject::FSYS_DETECT) &&
+                                        !bPhysObjIsYounger )
+                                      || ( bIsHttpOrHttps && !bPhysObjIsYounger )
+                                      || ( pMed->IsRemote() && !bIsHttpOrHttps ) ) )
+                 || pVersionItem )
+            // <- i126305
             {
-                SfxMedium* pMed = pSh->GetMedium();
-                String aTemp;
-                utl::LocalFileHelper::ConvertPhysicalNameToURL( pMed->GetPhysicalName(), aTemp );
-                INetURLObject aPhysObj( aTemp );
-		        SFX_ITEMSET_ARG( pSh->GetMedium()->GetItemSet(),
-								 pVersionItem, SfxInt16Item, SID_VERSION, sal_False );
-
-				INetURLObject aMedObj( pMed->GetName() );
-
-				// the logic below is following, if the document seems not to need to be reloaded and the physical name is different
-				// to the logical one, then on file system it can be checked that the copy is still newer than the original and no document reload is required
-                if ( ( !bNeedsReload && ( aMedObj.GetProtocol() == INET_PROT_FILE &&
-                        aMedObj.getFSysPath(INetURLObject::FSYS_DETECT) != aPhysObj.getFSysPath(INetURLObject::FSYS_DETECT) &&
-                        SfxContentHelper::IsYounger( aPhysObj.GetMainURL( INetURLObject::NO_DECODE ), aMedObj.GetMainURL( INetURLObject::NO_DECODE ) )
-                      || pMed->IsRemote() ) )
-                   || pVersionItem )
+                sal_Bool bOK = sal_False;
+                if ( !pVersionItem )
                 {
-                    sal_Bool bOK = sal_False;
-                    if ( !pVersionItem )
+                    sal_Bool bHasStorage = pMed->HasStorage_Impl();
+                    // switching edit mode could be possible without reload
+                    if ( bHasStorage && pMed->GetStorage() == pSh->GetStorage() )
                     {
-                        sal_Bool bHasStorage = pMed->HasStorage_Impl();
-                        // switching edit mode could be possible without reload
-                        if ( bHasStorage && pMed->GetStorage() == pSh->GetStorage() )
-                        {
-                            // TODO/LATER: faster creation of copy
-                            if ( !pSh->ConnectTmpStorage_Impl( pMed->GetStorage(), pMed ) )
-                                return;
-                        }
-
-                        pMed->CloseAndRelease();
-                        pMed->GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, !( nOpenMode & STREAM_WRITE ) ) );
-                        pMed->SetOpenMode( nOpenMode, pMed->IsDirect() );
-
-                        pMed->CompleteReOpen();
-                        if ( nOpenMode & STREAM_WRITE )
-                            pMed->LockOrigFileOnDemand( sal_False, sal_True );
-
-                        // LockOrigFileOnDemand might set the readonly flag itself, it should be set back
-                        pMed->GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, !( nOpenMode & STREAM_WRITE ) ) );
-
-                        if ( !pMed->GetErrorCode() )
-                            bOK = sal_True;
+                        // TODO/LATER: faster creation of copy
+                        if ( !pSh->ConnectTmpStorage_Impl( pMed->GetStorage(), pMed ) )
+                            return;
                     }
 
-                    if( !bOK )
-                    {
-                        ErrCode nErr = pMed->GetErrorCode();
-						if ( pVersionItem )
-							nErr = ERRCODE_IO_ACCESSDENIED;
-						else
-						{
-                        	pMed->ResetError();
-                        	pMed->SetOpenMode( SFX_STREAM_READONLY, pMed->IsDirect() );
-                        	pMed->ReOpen();
-                        	pSh->DoSaveCompleted( pMed );
-						}
+                    pMed->CloseAndRelease();
+                    pMed->GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, !( nOpenMode & STREAM_WRITE ) ) );
+                    pMed->SetOpenMode( nOpenMode, pMed->IsDirect() );
 
-                        // r/o-Doc kann nicht in Editmode geschaltet werden?
-                        rReq.Done( sal_False );
+                    pMed->CompleteReOpen();
+                    if ( nOpenMode & STREAM_WRITE )
+                        pMed->LockOrigFileOnDemand( sal_False, sal_True );
 
-			            SFX_REQUEST_ARG( rReq, pFSetItem, SfxBoolItem, SID_EDIT_FRAMESET, sal_False);
-                        if ( nOpenMode == SFX_STREAM_READWRITE && !rReq.IsAPI() )
-                        {
-                            // dem ::com::sun::star::sdbcx::User anbieten, als Vorlage zu oeffnen
-                            QueryBox aBox( &GetWindow(), SfxResId(MSG_QUERY_OPENASTEMPLATE) );
-                            if ( !pFSetItem && RET_YES == aBox.Execute() )
-                            {
-								SfxApplication* pApp = SFX_APP();
-								SfxAllItemSet aSet( pApp->GetPool() );
-								aSet.Put( SfxStringItem( SID_FILE_NAME, pMed->GetName() ) );
-                                SFX_ITEMSET_ARG( pMed->GetItemSet(), pReferer, SfxStringItem, SID_REFERER, sal_False );
-								if ( pReferer )
-									aSet.Put( *pReferer );
-								aSet.Put( SfxBoolItem( SID_TEMPLATE, sal_True ) );
-								if ( pVersionItem )
-									aSet.Put( *pVersionItem );
+                    // LockOrigFileOnDemand might set the readonly flag itself, it should be set back
+                    pMed->GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, !( nOpenMode & STREAM_WRITE ) ) );
 
-								if( pMed->GetFilter() )
-								{
-                                    aSet.Put( SfxStringItem( SID_FILTER_NAME, pMed->GetFilter()->GetFilterName() ) );
-			            			SFX_ITEMSET_ARG( pMed->GetItemSet(), pOptions,
-													 SfxStringItem, SID_FILE_FILTEROPTIONS, sal_False );
-									if ( pOptions )
-										aSet.Put( *pOptions );
-								}
-
-                                GetDispatcher()->Execute( SID_OPENDOC, SFX_CALLMODE_ASYNCHRON, aSet );
-                                return;
-                            }
-                            else
-								nErr = 0;
-                        }
-
-                        ErrorHandler::HandleError( nErr );
-                        rReq.SetReturnValue(
-                            SfxBoolItem( rReq.GetSlot(), sal_False ) );
-                        return;
-                    }
-                    else
-                    {
-                        pSh->DoSaveCompleted( pMed );
-                        pSh->Broadcast( SfxSimpleHint(SFX_HINT_MODECHANGED) );
-                        rReq.SetReturnValue( SfxBoolItem( rReq.GetSlot(), sal_True ) );
-                        rReq.Done( sal_True );
-                        // if( nOpenMode == SFX_STREAM_READONLY )
-                        //    pMed->Close();
-
-						// ReloadForEdit bei Framesets schaltet auch FramesetEditmode
-						sal_Bool bIsReadonly = GetObjectShell()->IsReadOnly();
-			            if ( bIsReadonly != bWasReadonly && !GetFrame()->GetParentFrame() )
-						{
-							SfxBoolItem aItem( SID_EDIT_FRAMESET, !bIsReadonly );
-			                GetDispatcher()->Execute( SID_EDIT_FRAMESET,
-									SFX_CALLMODE_RECORD, &aItem, 0L );
-                            pSh->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
-						}
-                        return;
-                    }
+                    if ( !pMed->GetErrorCode() )
+                        bOK = sal_True;
                 }
 
-				/*
-                if ( !bReload )
+                if( !bOK )
                 {
-                    // Es soll nicht reloaded werden
-                    SfxErrorContext aEc( ERRCODE_SFX_NODOCRELOAD );
-                    ErrorHandler::HandleError( ERRCODE_SFX_NODOCRELOAD );
+                    ErrCode nErr = pMed->GetErrorCode();
+                    if ( pVersionItem )
+                        nErr = ERRCODE_IO_ACCESSDENIED;
+                    else
+                    {
+                        pMed->ResetError();
+                        pMed->SetOpenMode( SFX_STREAM_READONLY, pMed->IsDirect() );
+                        pMed->ReOpen();
+                        pSh->DoSaveCompleted( pMed );
+                    }
+
+                    // r/o-Doc can not be switched to edit mode?
+                    rReq.Done( sal_False );
+
+                    if ( nOpenMode == SFX_STREAM_READWRITE && !rReq.IsAPI() )
+                    {
+                        // ::com::sun::star::sdbcx::User ask to open as template (a copy of the document)
+                        QueryBox aBox( &GetWindow(), SfxResId(MSG_QUERY_OPENASTEMPLATE) );
+                        // this is the querybox that is opened when the file is asked to move from r/o to edit using the button
+                        // on the toolbar
+                        if ( RET_YES == aBox.Execute() )
+                        {
+                            SfxApplication* pApp = SFX_APP();
+                            SfxAllItemSet aSet( pApp->GetPool() );
+                            aSet.Put( SfxStringItem( SID_FILE_NAME, pMed->GetName() ) );
+                            SFX_ITEMSET_ARG( pMed->GetItemSet(), pReferer, SfxStringItem, SID_REFERER, sal_False );
+                            if ( pReferer )
+                                aSet.Put( *pReferer );
+                            aSet.Put( SfxBoolItem( SID_TEMPLATE, sal_True ) );
+                            if ( pVersionItem )
+                                aSet.Put( *pVersionItem );
+
+                            if( pMed->GetFilter() )
+                            {
+                                aSet.Put( SfxStringItem( SID_FILTER_NAME, pMed->GetFilter()->GetFilterName() ) );
+                                SFX_ITEMSET_ARG( pMed->GetItemSet(), pOptions,
+                                                 SfxStringItem, SID_FILE_FILTEROPTIONS, sal_False );
+                                if ( pOptions )
+                                    aSet.Put( *pOptions );
+                            }
+
+                            GetDispatcher()->Execute( SID_OPENDOC, SFX_CALLMODE_ASYNCHRON, aSet );
+                            return;
+                        }
+                        else
+                            nErr = 0;
+                    }
+
+                    ErrorHandler::HandleError( nErr );
                     rReq.SetReturnValue(
                         SfxBoolItem( rReq.GetSlot(), sal_False ) );
                     return;
                 }
-				*/
-                // Ansonsten ( lokal und arbeiten auf Kopie ) muss gereloaded
-                // werden.
+                else
+                {
+                    pSh->DoSaveCompleted( pMed );
+                    pSh->Broadcast( SfxSimpleHint(SFX_HINT_MODECHANGED) );
+                    rReq.SetReturnValue( SfxBoolItem( rReq.GetSlot(), sal_True ) );
+                    rReq.Done( sal_True );
+                    // if( nOpenMode == SFX_STREAM_READONLY )
+                    //    pMed->Close();
+                    return;
+                }
             }
 
             rReq.AppendItem( SfxBoolItem( SID_FORCERELOAD, sal_True) );
@@ -580,9 +744,8 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 
         case SID_RELOAD:
         {
-            // Wg. Doppeltbelegung in Toolboxen (mit/ohne Ctrl) ist es auch
-            // m"oglich, da\s der Slot zwar enabled ist, aber Ctrl-Click
-            // trotzdem nicht geht!
+            // Because of double functioning of the toolbox button (with/without Ctrl)
+            // it's possible that the slot is enabled, but Ctrl-click is not.
             if ( !pSh || !pSh->CanReload_Impl() )
                 break;
             SfxApplication* pApp = SFX_APP();
@@ -597,22 +760,22 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
             // AutoLoad ist ggf. verboten
             SFX_REQUEST_ARG(rReq, pAutoLoadItem, SfxBoolItem, SID_AUTOLOAD, sal_False);
             if ( pAutoLoadItem && pAutoLoadItem->GetValue() &&
-                 GetFrame()->IsAutoLoadLocked_Impl() )
+                 GetFrame().IsAutoLoadLocked_Impl() )
                 return;
 
             SfxObjectShellLock xOldObj( pSh );
             pImp->bReloading = sal_True;
             SFX_REQUEST_ARG(rReq, pURLItem, SfxStringItem,
                             SID_FILE_NAME, sal_False);
-            // editierbar "offnen?
+            // open to edit?
             sal_Bool bForEdit = !pSh->IsReadOnly();
             if ( rReq.GetSlot() == SID_EDITDOC )
                 bForEdit = !bForEdit;
 
-            // ggf. beim User nachfragen
-            sal_Bool bDo = ( GetViewShell()->PrepareClose() != FALSE );
+            // if necessary ask the user
+            sal_Bool bDo = ( GetViewShell()->PrepareClose() != sal_False );
             SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, sal_False);
-            if ( bDo && GetFrame()->DocIsModified_Impl() &&
+            if ( bDo && GetFrame().DocIsModified_Impl() &&
 				 !rReq.IsAPI() && ( !pSilentItem || !pSilentItem->GetValue() ) )
             {
                 QueryBox aBox( &GetWindow(), SfxResId(MSG_QUERY_LASTVERSION) );
@@ -623,39 +786,30 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
             {
                 SfxMedium *pMedium = xOldObj->GetMedium();
 
-				// Frameset abziehen, bevor FramesetView evtl. verschwindet
+				//Pull frameset before FramesetView possibly disappear
 				String aURL = pURLItem ? pURLItem->GetValue() :
 								pMedium->GetName();
 
                 sal_Bool bHandsOff =
                     ( pMedium->GetURLObject().GetProtocol() == INET_PROT_FILE && !xOldObj->IsDocShared() );
 
-                // we must do the same for the contents that support active
-                // streaming
-                if ( !bHandsOff && pMedium && pMedium->SupportsActiveStreaming( aURL ) )
-                    bHandsOff = sal_True;
-
-                // bestehende SfxMDIFrames f"ur dieses Doc leeren
-                // eigenes Format oder R/O jetzt editierbar "offnen?
-                SfxViewNotificatedFrameList_Impl aFrames;
+                // empty existing SfxMDIFrames of this Doc
+                // own format or R/O is now open editable?
                 SfxObjectShellLock xNewObj;
-                sal_Bool bRestoreView = ( pURLItem == NULL );
-                TypeId aOldType = xOldObj->Type();
 
-                SfxViewFrame *pView = GetFirst(xOldObj);
-				while(pView)
+                // collect the views of the document
+                // TODO: when UNO ViewFactories are available for SFX-based documents, the below code should
+                // be UNOized, too
+                typedef ::std::pair< Reference< XFrame >, sal_uInt16 >  ViewDescriptor;
+                ::std::list< ViewDescriptor > aViewFrames;
+                SfxViewFrame *pView = GetFirst( xOldObj );
+				while ( pView )
 				{
-					if( bHandsOff )
-						pView->GetDispatcher()->LockUI_Impl(sal_True);
-					aFrames.InsertViewFrame( pView );
-					pView->GetBindings().ENTERREGISTRATIONS();
+                    Reference< XFrame > xFrame( pView->GetFrame().GetFrameInterface() );
+                    OSL_ENSURE( xFrame.is(), "SfxViewFrame::ExecReload_Impl: no XFrame?!" );
+					aViewFrames.push_back( ViewDescriptor( xFrame, pView->GetCurViewId() ) );
 
-					// RestoreView nur wenn keine neue Datei geladen
-					// (Client-Pull-Reloading)
-                    pView = /*bHandsOff ? (SfxTopViewFrame*) GetFirst(
-                        xOldObj, TYPE(SfxTopViewFrame) ) :*/
-						(SfxTopViewFrame*)GetNext( *pView, xOldObj,
-											   TYPE( SfxTopViewFrame ) );
+                    pView = GetNext( *pView, xOldObj );
 				}
 
                 DELETEZ( xOldObj->Get_Impl()->pReloadTimer );
@@ -668,7 +822,7 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 					pNewSet->Put( *pURLItem );
 
 					// Filter Detection
-					SfxMedium aMedium( pURLItem->GetValue(), SFX_STREAM_READWRITE ); 
+					SfxMedium aMedium( pURLItem->GetValue(), SFX_STREAM_READWRITE );
 					SfxFilterMatcher().GuessFilter( aMedium, &pFilter );
 					if ( pFilter )
 	                    pNewSet->Put( SfxStringItem( SID_FILTER_NAME, pFilter->GetName() ) );
@@ -678,7 +832,6 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 				{
 					pNewSet = new SfxAllItemSet( *pMedium->GetItemSet() );
 					pNewSet->ClearItem( SID_VIEW_ID );
-					pNewSet->ClearItem( SID_USER_DATA );
 					pNewSet->ClearItem( SID_STREAM );
 					pNewSet->ClearItem( SID_INPUTSTREAM );
                     pNewSet->Put( SfxStringItem( SID_FILTER_NAME, pMedium->GetFilter()->GetName() ) );
@@ -701,7 +854,11 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 				if( pSalvageItem )
 				{
 					aURL = pSalvageItem->GetValue();
-					pNewSet->ClearItem( SID_DOC_SALVAGE );
+                    if (pNewSet)
+                    {
+                        pNewSet->ClearItem( SID_ORIGURL );
+					    pNewSet->ClearItem( SID_DOC_SALVAGE );
+                    }
 				}
 
                 // TODO/LATER: Temporary solution, the SfxMedium must know the original URL as aLogicName
@@ -718,13 +875,15 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 
                 xOldObj->CancelTransfers();
 
-                // eigentliches Reload
+                //actual reload
                 //pNewSet->Put( SfxFrameItem ( SID_DOCFRAME, GetFrame() ) );
-                //pNewSet->Put( SfxBoolItem( SID_SILENT, sal_True ) );
 
-		        SFX_ITEMSET_ARG(pNewSet, pInteractionItem, SfxUnoAnyItem, SID_INTERACTIONHANDLER, FALSE);
-		        SFX_ITEMSET_ARG(pNewSet, pMacroExecItem  , SfxUInt16Item, SID_MACROEXECMODE     , FALSE);
-		        SFX_ITEMSET_ARG(pNewSet, pDocTemplateItem, SfxUInt16Item, SID_UPDATEDOCMODE     , FALSE);
+                if ( pSilentItem && pSilentItem->GetValue() )
+                    pNewSet->Put( SfxBoolItem( SID_SILENT, sal_True ) );
+
+		        SFX_ITEMSET_ARG(pNewSet, pInteractionItem, SfxUnoAnyItem, SID_INTERACTIONHANDLER, sal_False);
+		        SFX_ITEMSET_ARG(pNewSet, pMacroExecItem  , SfxUInt16Item, SID_MACROEXECMODE     , sal_False);
+		        SFX_ITEMSET_ARG(pNewSet, pDocTemplateItem, SfxUInt16Item, SID_UPDATEDOCMODE     , sal_False);
 
 		        if (!pInteractionItem)
 		        {
@@ -739,14 +898,10 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 		            pNewSet->Put( SfxUInt16Item(SID_UPDATEDOCMODE,::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG) );
 
 				xOldObj->SetModified( sal_False );
-                // Altes Dok nicht cachen! Gilt nicht, wenn anderes
-				// Doc geladen wird.
+                // Old Doc not cached! Does not apply if another Doc is loaded.
 
                 SFX_ITEMSET_ARG( pMedium->GetItemSet(), pSavedOptions, SfxStringItem, SID_FILE_FILTEROPTIONS, sal_False);
                 SFX_ITEMSET_ARG( pMedium->GetItemSet(), pSavedReferer, SfxStringItem, SID_REFERER, sal_False);
-
-                if( !pURLItem || pURLItem->GetValue() == xOldObj->GetMedium()->GetName() )
-					xOldObj->Get_Impl()->bForbidCaching = sal_True;
 
                 sal_Bool bHasStorage = pMedium->HasStorage_Impl();
                 if( bHandsOff )
@@ -762,15 +917,39 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
                 }
 
                 xNewObj = SfxObjectShell::CreateObject( pFilter->GetServiceName(), SFX_CREATE_MODE_STANDARD );
+
+                if ( xOldObj->IsModifyPasswordEntered() )
+                    xNewObj->SetModifyPasswordEntered();
+
+                uno::Sequence < beans::PropertyValue > aLoadArgs;
+                TransformItems( SID_OPENDOC, *pNewSet, aLoadArgs );
                 try
                 {
-                    uno::Sequence < beans::PropertyValue > aProps;
-                    TransformItems( SID_OPENDOC, *pNewSet, aProps );
                     uno::Reference < frame::XLoadable > xLoad( xNewObj->GetModel(), uno::UNO_QUERY );
-                    xLoad->load( aProps );
+                    xLoad->load( aLoadArgs );
                 }
                 catch ( uno::Exception& )
                 {
+                    //->i126305 OBSERVATION
+                    // When this exception is thrown the r/o refresh of a file locked by another user
+                    // is not completed.
+                    // Code flow arrives here with a 'com.sun.star.task.ErrorCodeIOException'.
+                    // It's thrown at around line 1970 of main/sfx2/source/doc/sfxbasemodel.cxx,
+                    // in method 'SfxBaseModel::load'.
+                    // Because of this exception, the document is not reloaded when it should be.
+                    // The error generating the exception is 1287, or ERRCODE_IO_ACCESSDENIED.
+                    // It seems that the reason for this is the way the property PROP_READONLY seems used
+                    // in MediaDescriptor: both as property of the media and a request from GUI.
+                    // See main/comphelper/source/misc/mediadescriptor.cxx around line 755, where the behavior
+                    // leading to the error originates in the code flow.
+                    // This problem doesn't arise in WebDAV, since the stream is monodirectional (read or write) in UCB implementation.
+                    //<-i126305
+                    //->i126305 WORKAROUND
+                    // Code flow needs to reset the reloading, since it will no longer take part in the following code.
+                    // This specific flag, if not reset, will break the code flow on the next call of this method,
+                    // when it appears that the toolbar button stops functioning.
+                    pImp->bReloading = sal_False;
+                    //<-i126305
                     xNewObj->DoClose();
                     xNewObj = 0;
                 }
@@ -817,72 +996,65 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
                 }
                 else
                 {
+                    if ( xNewObj->GetModifyPasswordHash() && xNewObj->GetModifyPasswordHash() != xOldObj->GetModifyPasswordHash() )
+                    {
+                        xNewObj->SetModifyPasswordEntered( sal_False );
+                        xNewObj->SetReadOnly();
+                    }
+                    else if ( rReq.GetSlot() == SID_EDITDOC && bForEdit && !xNewObj->IsReadOnlyMedium() )
+                    {
+                        // the filter might request setting of the document to readonly state
+                        // but in case of SID_EDITDOC it should not happen if the document
+                        // can be opened for editing
+                        xNewObj->SetReadOnlyUI( sal_False );
+                    }
+
                     if ( xNewObj->IsDocShared() )
                     {
-                        // the file is shared but the closing can chang the sharing control file
+                        // the file is shared but the closing can change the sharing control file
                         xOldObj->DoNotCleanShareControlFile();
                     }
 
+                    // the Reload and Silent items were only temporary, remove them
 					xNewObj->GetMedium()->GetItemSet()->ClearItem( SID_RELOAD );
+					xNewObj->GetMedium()->GetItemSet()->ClearItem( SID_SILENT );
+                    TransformItems( SID_OPENDOC, *xNewObj->GetMedium()->GetItemSet(), aLoadArgs );
+
 					UpdateDocument_Impl();
-                }
 
-                SfxViewFrame* pThis = (SfxViewFrame*)this;
-                sal_Bool bDeleted = aFrames.C40_GETPOS( SfxViewFrame, pThis ) == USHRT_MAX;
-
-                if( !bDeleted )
-                {
-                    GetBindings().Invalidate( SID_RELOAD );
-                    pImp->bReloading = sal_False;
-                }
-
-                // neues Doc in die bestehenden SfxMDIFrames einsetzen; wenn
-                // das Reload geklappt hat, mu\s in diesem Frame kein Dokument
-                // eingesetzt werden, weil das schon vom LoadEnvironment
-                // gemacht wurde
-				if ( xNewObj.Is() && xNewObj->Type() != aOldType )
-                	// RestoreView nur, wenn gleicher Dokumenttyp
-					bRestoreView = sal_False;
-
-                const sal_uInt16 nCount = aFrames.Count();
-                for(sal_uInt16 i = 0; i < nCount; ++i)
-                {
-                    SfxViewFrame *pCurrView = aFrames.GetObject( i );
-                    if ( xNewObj.Is() )
+                    try
                     {
-                        //if( /*!bHandsOff &&*/ this != pView   )
-                        pCurrView->ReleaseObjectShell_Impl( bRestoreView );
-                        pCurrView->SetRestoreView_Impl( bRestoreView );
-                        //if( pView != this || !xNewObj.Is() )
+                        while ( !aViewFrames.empty() )
                         {
-                            SfxFrame *pFrame = pCurrView->GetFrame();
-                            pFrame->InsertDocument(xNewObj.Is() ? xNewObj : xOldObj );
+                            LoadViewIntoFrame_Impl( *xNewObj, aViewFrames.front().first, aLoadArgs, aViewFrames.front().second, false );
+                            aViewFrames.pop_front();
+                        }
+                    }
+                    catch( const Exception& )
+                    {
+                        // close the remaining frames
+                        // Don't catch exceptions herein, if this fails, then we're left in an indetermined state, and
+                        // crashing is better than trying to proceed
+                        while ( !aViewFrames.empty() )
+                        {
+                            Reference< util::XCloseable > xClose( aViewFrames.front().first, UNO_QUERY_THROW );
+                            xClose->close( sal_True );
+                            aViewFrames.pop_front();
                         }
                     }
 
-					pCurrView->GetBindings().LEAVEREGISTRATIONS();
-                    pCurrView->GetDispatcher()->LockUI_Impl( sal_False );
-                }
-
-                if ( xNewObj.Is() )
-                {
                     // Propagate document closure.
-                    SFX_APP()->NotifyEvent( SfxEventHint( SFX_EVENT_CLOSEDOC, xOldObj ) );
+                    SFX_APP()->NotifyEvent( SfxEventHint( SFX_EVENT_CLOSEDOC, GlobalEventConfig::GetEventName( STR_EVENT_CLOSEDOC ), xOldObj ) );
                 }
 
-                // als erledigt recorden
+                // register as done
                 rReq.Done( sal_True );
                 rReq.SetReturnValue(SfxBoolItem(rReq.GetSlot(), sal_True));
-                if( !bDeleted )
-                {
-					Notify( *GetObjectShell(), SfxSimpleHint(
-                        SFX_HINT_TITLECHANGED ));
-				}
                 return;
             }
             else
             {
-                // als nicht erledigt recorden
+                // register as not done
                 rReq.Done();
                 rReq.SetReturnValue(SfxBoolItem(rReq.GetSlot(), sal_False));
                 pImp->bReloading = sal_False;
@@ -900,11 +1072,11 @@ void SfxViewFrame::StateReload_Impl( SfxItemSet& rSet )
 		// Ich bin gerade am Reloaden und Yielde so vor mich hin ...
 		return;
 
-    GetFrame()->GetParentFrame();
+    GetFrame().GetParentFrame();
     SfxWhichIter aIter( rSet );
     for ( sal_uInt16 nWhich = aIter.FirstWhich(); nWhich; nWhich = aIter.NextWhich() )
     {
-		if ( GetFrame()->HasComponent() )
+		if ( GetFrame().HasComponent() )
 		{
 			// Wenn die Komponente es nicht selbst dispatched, dann
 			// macht es auch keinen Sinn!
@@ -932,16 +1104,7 @@ void SfxViewFrame::StateReload_Impl( SfxItemSet& rSet )
 
             case SID_RELOAD:
             {
-				SfxFrame* pFrame = GetTopFrame();
-				SfxViewFrame *pView = pFrame->GetCurrentViewFrame();
-				if ( pView && pView->GetViewShell() &&
-					pView->GetViewShell()->IsImplementedAsFrameset_Impl() &&
-					pView->GetViewShell()->GetInterface()->GetSlot( nWhich ) )
-				{
-					// Hack f"ur Explorer: Reload wird an der ViewShell ausgef"uhrt
-					pView->GetViewShell()->GetSlotState( nWhich, 0, &rSet );
-					break;
-				}
+				SfxFrame* pFrame = &GetTopFrame();
 
                 if ( !pSh || !pSh->CanReload_Impl() || pSh->GetCreateMode() == SFX_CREATE_MODE_EMBEDDED )
                     rSet.DisableItem(nWhich);
@@ -980,7 +1143,7 @@ void SfxViewFrame::ExecHistory_Impl( SfxRequest &rReq )
 {
     // gibt es an der obersten Shell einen Undo-Manager?
     SfxShell *pSh = GetDispatcher()->GetShell(0);
-    SfxUndoManager* pShUndoMgr = pSh->GetUndoManager();
+    ::svl::IUndoManager* pShUndoMgr = pSh->GetUndoManager();
     sal_Bool bOK = sal_False;
     if ( pShUndoMgr )
     {
@@ -992,27 +1155,27 @@ void SfxViewFrame::ExecHistory_Impl( SfxRequest &rReq )
                 break;
 
             case SID_UNDO:
-                pShUndoMgr->Undo(0);
+                pShUndoMgr->Undo();
                 GetBindings().InvalidateAll(sal_False);
                 bOK = sal_True;
                 break;
 
             case SID_REDO:
-                pShUndoMgr->Redo(0);
+                pShUndoMgr->Redo();
                 GetBindings().InvalidateAll(sal_False);
                 bOK = sal_True;
                 break;
 
             case SID_REPEAT:
                 if ( pSh->GetRepeatTarget() )
-                    pShUndoMgr->Repeat( *pSh->GetRepeatTarget(), 0);
+                    pShUndoMgr->Repeat( *pSh->GetRepeatTarget() );
                 bOK = sal_True;
                 break;
         }
     }
     else if ( GetViewShell() )
     {
-        // der SW hat eigenes Undo an der ::com::sun::star::sdbcx::View
+        // der SW hat eigenes Undo an der View
         const SfxPoolItem *pRet = GetViewShell()->ExecuteSlot( rReq );
         if ( pRet )
             bOK = ((SfxBoolItem*)pRet)->GetValue();
@@ -1031,10 +1194,10 @@ void SfxViewFrame::StateHistory_Impl( SfxItemSet &rSet )
 		// Ich bin gerade am Reloaden und Yielde so vor mich hin ...
 		return;
 
-    SfxUndoManager *pShUndoMgr = pSh->GetUndoManager();
+    ::svl::IUndoManager *pShUndoMgr = pSh->GetUndoManager();
     if ( !pShUndoMgr )
     {
-        // der SW hat eigenes Undo an der ::com::sun::star::sdbcx::View
+        // der SW hat eigenes Undo an der View
         SfxWhichIter aIter( rSet );
         SfxViewShell *pViewSh = GetViewShell();
         if( !pViewSh ) return;
@@ -1050,8 +1213,8 @@ void SfxViewFrame::StateHistory_Impl( SfxItemSet &rSet )
 
     if ( pShUndoMgr && pShUndoMgr->GetUndoActionCount() )
 	{
-        String aTmp( SfxResId( STR_UNDO ) );
-		aTmp += pShUndoMgr->GetUndoActionComment(0);
+        String aTmp( SvtResId( STR_UNDO ) );
+		aTmp+= pShUndoMgr->GetUndoActionComment(0);
 		rSet.Put( SfxStringItem( SID_UNDO, aTmp ) );
 	}
     else
@@ -1059,18 +1222,18 @@ void SfxViewFrame::StateHistory_Impl( SfxItemSet &rSet )
 
     if ( pShUndoMgr && pShUndoMgr->GetRedoActionCount() )
 	{
-        String aTmp( SfxResId(STR_REDO) );
+        String aTmp( SvtResId(STR_REDO) );
 		aTmp += pShUndoMgr->GetRedoActionComment(0);
-		rSet.Put( SfxStringItem( SID_REDO, aTmp ) );
+	    rSet.Put( SfxStringItem( SID_REDO, aTmp ) );
 	}
     else
         rSet.DisableItem( SID_REDO );
     SfxRepeatTarget *pTarget = pSh->GetRepeatTarget();
     if ( pShUndoMgr && pTarget && pShUndoMgr->GetRepeatActionCount() &&
-         pShUndoMgr->CanRepeat(*pTarget, 0) )
+         pShUndoMgr->CanRepeat(*pTarget) )
 	{
-        String aTmp( SfxResId(STR_REPEAT) );
-		aTmp += pShUndoMgr->GetRepeatActionComment(*pTarget, 0);
+        String aTmp( SvtResId(STR_REPEAT) );
+		aTmp += pShUndoMgr->GetRepeatActionComment(*pTarget);
 		rSet.Put( SfxStringItem( SID_REPEAT, aTmp ) );
 	}
     else
@@ -1078,86 +1241,30 @@ void SfxViewFrame::StateHistory_Impl( SfxItemSet &rSet )
 }
 
 //--------------------------------------------------------------------
-void SfxViewFrame::SetObjectShell_Impl
-(
-    SfxObjectShell& rObjSh, // eine initialisierte SfxObjectShell,
-    FASTBOOL        bDefaultView    // sal_True: nicht restaurieren
-)
-
-/*  [Beschreibung]
-
-    Diese Methode setzt eine <SfxObjectShell> in den SfxViewFrame ein.
-
-    Zuvor mu\s die vorherige SfxObjectShell, insofern schein eine gesetzt
-    wurde, mit der Methode ReleaseObjectShell() entfernt worden sein. Somit
-    kann durch Aufruf von ReleaseObjectShell() und SetObjectShell() die
-    SfxObjectShell ausgetauscht werden.
-
-
-    [Querverweise]
-
-    <SfxViewFrame::ReleaseObjectShell()>
-*/
-
+void SfxViewFrame::PopShellAndSubShells_Impl( SfxViewShell& i_rViewShell )
 {
-    DBG_CHKTHIS(SfxViewFrame, 0);
-    DBG_ASSERT( !xObjSh.Is(), "old feature used: only one Object per View!" );
+    i_rViewShell.PopSubShells_Impl();
+    sal_uInt16 nLevel = pDispatcher->GetShellLevel( i_rViewShell );
+    if ( nLevel != USHRT_MAX )
+    {
+        if ( nLevel )
+        {
+            // more sub shells on the stack, which were not affected by PopSubShells_Impl
+            SfxShell *pSubShell = pDispatcher->GetShell( nLevel-1 );
+            if ( pSubShell == i_rViewShell.GetSubShell() )
+                // "real" sub shells will be deleted elsewhere
+                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL );
+            else
+                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL | SFX_SHELL_POP_DELETE );
+        }
+        pDispatcher->Pop( i_rViewShell );
+        pDispatcher->Flush();
+    }
 
-    GetFrame()->ReleasingComponent_Impl( sal_False );
-
-    // Doc einsetzen
-    xObjSh = &rObjSh;
-	if ( xObjSh.Is() && xObjSh->IsPreview() )
-		SetQuietMode_Impl( sal_True );
-
-    GetFrame()->SetFrameType_Impl( GetFrameType() & ~SFXFRAME_FRAMESET );
-
-    // Modulshell einf"ugen
-    SfxModule* pModule = xObjSh->GetModule();
-    if( pModule )
-        pDispatcher->InsertShell_Impl( *pModule, 1 );
-
-    pDispatcher->Push( rObjSh );
-    pDispatcher->Flush();
-    StartListening( rObjSh );
-
-    rObjSh.ViewAssigned();
-    pDispatcher->SetReadOnly_Impl( rObjSh.IsReadOnly() );
-
-	const SfxMedium *pMedium = GetObjectShell()->GetMedium();
-	SFX_ITEMSET_ARG(
-		pMedium->GetItemSet(), pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
-	if ( !pHiddenItem || !pHiddenItem->GetValue() )
-	{
-        LockObjectShell_Impl(sal_True);
-		GetDocNumber_Impl();
-	}
-
-    // ::com::sun::star::sdbcx::View erzeugen
-    if ( bDefaultView )
-        SetRestoreView_Impl( sal_False );
-
-// So darf man es nicht machen, da LaodWindows hierueber laeuft. Kann meiner Meinung nach
-// auch nur beim Reload mit Dokumenttypwechsel passieren.
-/*    if ( xObjSh->Type() != pImp->aLastType )
-        SetRestoreView_Impl( sal_False ); */
-
-    SwitchToViewShell_Impl( !IsRestoreView_Impl() ? (sal_uInt16) 0 : GetCurViewId() );
-    rObjSh.PostActivateEvent_Impl( this );
-    if ( Current() == this )
-        SFX_APP()->NotifyEvent(SfxEventHint(SFX_EVENT_ACTIVATEDOC, &rObjSh ) );
-
-    Notify( rObjSh, SfxSimpleHint(SFX_HINT_TITLECHANGED) );
-    Notify( rObjSh, SfxSimpleHint(SFX_HINT_DOCCHANGED) );
-
-	// Zur Sicherheit, aber eigentlich sollte jetzt nichts mehr passieren
-	// ( kein erzwungenes Update )
-	if ( SfxViewFrame::Current() == this )
-		GetDispatcher()->Update_Impl();
 }
 
 //--------------------------------------------------------------------
-void SfxViewFrame::ReleaseObjectShell_Impl( sal_Bool bStoreView )
+void SfxViewFrame::ReleaseObjectShell_Impl()
 
 /*  [Beschreibung]
 
@@ -1169,7 +1276,7 @@ void SfxViewFrame::ReleaseObjectShell_Impl( sal_Bool bStoreView )
     die SfxObjectShell ausgetauscht werden.
 
     Zwischen RealeaseObjectShell() und SetObjectShell() darf die Kontrolle
-    nicht an das ::com::sun::star::chaos::System abgegeben werden.
+    nicht an das System abgegeben werden.
 
 
     [Querverweise]
@@ -1180,7 +1287,7 @@ void SfxViewFrame::ReleaseObjectShell_Impl( sal_Bool bStoreView )
     DBG_CHKTHIS(SfxViewFrame, 0);
     DBG_ASSERT( xObjSh.Is(), "no SfxObjectShell to release!" );
 
-	GetFrame()->ReleasingComponent_Impl( sal_True );
+	GetFrame().ReleasingComponent_Impl( sal_True );
 	if ( GetWindow().HasChildPathFocus( sal_True ) )
 	{
 		DBG_ASSERT( !GetActiveChildFrame_Impl(), "Wrong active child frame!" );
@@ -1190,25 +1297,7 @@ void SfxViewFrame::ReleaseObjectShell_Impl( sal_Bool bStoreView )
 	SfxViewShell *pDyingViewSh = GetViewShell();
     if ( pDyingViewSh )
     {
-        SetRestoreView_Impl( bStoreView );
-        if ( bStoreView )
-            pDyingViewSh->WriteUserData( GetViewData_Impl(), sal_True );
-
-        // Jetzt alle SubShells wechhauen
-		pDyingViewSh->PushSubShells_Impl( sal_False );
-        sal_uInt16 nLevel = pDispatcher->GetShellLevel( *pDyingViewSh );
-        if ( nLevel && nLevel != USHRT_MAX )
-        {
-            // Es gibt immer nocht SubShells
-            SfxShell *pSubShell = pDispatcher->GetShell( nLevel-1 );
-            if ( pSubShell == pDyingViewSh->GetSubShell() )
-                //"Echte" Subshells nicht deleten
-                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL );
-            else
-                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL | SFX_SHELL_POP_DELETE );
-        }
-        pDispatcher->Pop( *pDyingViewSh );
-        pDispatcher->Flush();
+        PopShellAndSubShells_Impl( *pDyingViewSh );
         pDyingViewSh->DisconnectAllClients();
         SetViewShell_Impl(0);
         delete pDyingViewSh;
@@ -1247,118 +1336,28 @@ void SfxViewFrame::ReleaseObjectShell_Impl( sal_Bool bStoreView )
 	GetDispatcher()->SetDisableFlags( 0 );
 }
 
-//-------------------------------------------------------------------------
-
-String SfxViewFrame::UpdateTitle()
-
-/*  [Beschreibung]
-
-    Mit dieser Methode kann der SfxMDIFrame gezwungen werden, sich sofort
-    den neuen Titel vom der <SfxObjectShell> zu besorgen.
-
-    [Anmerkung]
-
-    Dies ist z.B. dann notwendig, wenn man der SfxObjectShell als SfxListener
-    zuh"ort und dort auf den <SfxSimpleHint> SFX_HINT_TITLECHANGED reagieren
-    m"ochte, um dann die Titel seiner Views abzufragen. Diese Views (SfxMDIFrames)
-    jedoch sind ebenfalls SfxListener und da die Reihenfolge der Benachrichtigung
-    nicht feststeht, mu\s deren Titel-Update vorab erzwungen werden.
-
-
-    [Beispiel]
-
-    void SwDocShell::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
-    {
-        if ( rHint.IsA(TYPE(SfxSimpleHint)) )
-        {
-            switch( ( (SfxSimpleHint&) rHint ).GetId() )
-            {
-                case SFX_HINT_TITLECHANGED:
-                    for ( SfxMDIFrame *pMDI = (SfxMDIFrame*)
-                                SfxViewFrame::GetFirst(this, TYPE(SfxMDIFrame));
-                          pMDI;
-                          pMDI = (SfxMDIFrame*)
-                                SfxViewFrame::GetNext(this, TYPE(SfxMDIFrame));
-                    {
-                        pMDI->UpdateTitle();
-                        ... pMDI->GetName() ...
-                    }
-                    break;
-                ...
-            }
-        }
-    }
-*/
-
-{
-    SfxObjectShell *pObjSh = GetObjectShell();
-	if ( !pObjSh )
-        return String();
-
-//    if  ( pObjSh->GetCreateMode() == SFX_CREATE_MODE_EMBEDDED )
-//        // kein UpdateTitle mit Embedded-ObjectShell
-//        return String();
-
-    const SfxMedium *pMedium = pObjSh->GetMedium();
-	String aURL;
-	GetFrame();  // -Wall required??
-    if ( pObjSh->HasName() )
-	{
-		INetURLObject aTmp( pMedium->GetName() );
-        aURL = aTmp.getName( INetURLObject::LAST_SEGMENT, true, INetURLObject::DECODE_WITH_CHARSET );
-	}
-
-	if ( aURL != pImp->aActualURL )
-        // URL hat sich ge"andert
-		pImp->aActualURL = aURL;
-
-    // gibt es noch eine weitere View?
-    sal_uInt16 nViews=0;
-    for ( SfxViewFrame *pView= GetFirst(pObjSh);
-          pView && nViews<2;
-          pView = GetNext(*pView,pObjSh) )
-        if ( ( pView->GetFrameType() & SFXFRAME_HASTITLE ) &&
-             !IsDowning_Impl())
-            nViews++;
-
-    // Titel des Fensters
-    String aTitle;
-    if ( nViews == 2 || pImp->nDocViewNo > 1 )
-        // dann die Nummer dranh"angen
-        aTitle = pObjSh->UpdateTitle( NULL, pImp->nDocViewNo );
-    else
-        aTitle = pObjSh->UpdateTitle();
-
-    // Name des SbxObjects
-    String aSbxName = pObjSh->SfxShell::GetName();
-    if ( IsVisible_Impl() )
-    {
-        aSbxName += ':';
-        aSbxName += String::CreateFromInt32(pImp->nDocViewNo);
-    }
-
-    SetName( aSbxName );
-    pImp->aFrameTitle = aTitle;
-    GetBindings().Invalidate( SID_FRAMETITLE );
-    GetBindings().Invalidate( SID_CURRENT_URL );
-    return aTitle;
-}
-
-
 //--------------------------------------------------------------------
 sal_Bool SfxViewFrame::Close()
 {
     DBG_CHKTHIS(SfxViewFrame, 0);
 
-    DBG_ASSERT( GetFrame()->IsClosing_Impl() || !GetFrame()->GetFrameInterface().is(), "ViewFrame closed too early!" );
+    DBG_ASSERT( GetFrame().IsClosing_Impl() || !GetFrame().GetFrameInterface().is(), "ViewFrame closed too early!" );
 
 	// Wenn bis jetzt noch nicht gespeichert wurde, sollen eingebettete Objekte
 	// auch nicht mehr automatisch gespeichert werden!
 	if ( GetViewShell() )
 		GetViewShell()->DiscardClients_Impl();
-	Broadcast( SfxSimpleHint(SFX_HINT_DYING) );
+	Broadcast( SfxSimpleHint( SFX_HINT_DYING ) );
 
-    return sal_True;
+    if (SfxViewFrame::Current() == this)
+        SfxViewFrame::SetViewFrame( NULL );
+
+	// Da der Dispatcher leer ger"aumt wird, kann man ihn auch nicht mehr
+	// vern"unftig verwenden - also besser still legen
+	GetDispatcher()->Lock(sal_True);
+	delete this;
+
+	return sal_True;
 }
 
 //--------------------------------------------------------------------
@@ -1367,10 +1366,6 @@ void SfxViewFrame::DoActivate( sal_Bool bUI, SfxViewFrame* pOldFrame )
 {
     DBG_CHKTHIS(SfxViewFrame, 0);
     SFX_APP();
-
-#ifdef WIN
-    pSfxApp->TestFreeResources_Impl();
-#endif
 
     pDispatcher->DoActivate_Impl( bUI, pOldFrame );
 
@@ -1397,11 +1392,23 @@ void SfxViewFrame::DoActivate( sal_Bool bUI, SfxViewFrame* pOldFrame )
         SfxViewFrame *pFrame = GetParentViewFrame();
         while ( pFrame )
         {
-            if ( !pOldFrame || !pOldFrame->GetFrame()->IsParent( pFrame->GetFrame() ) )
+            if ( !pOldFrame || !pOldFrame->GetFrame().IsParent( &pFrame->GetFrame() ) )
                 pFrame->pDispatcher->DoParentActivate_Impl();
             pFrame = pFrame->GetParentViewFrame();
         }
     }
+
+#if defined USE_JAVA && defined MACOSX
+    SfxObjectShell *pDoc = GetObjectShell();
+    if ( pDoc )
+    {
+        SfxMedium *pMedium = pDoc->GetMedium();
+        if ( pMedium )
+            pMedium->CheckForMovedFile( pDoc );
+    }
+
+    pImp->aTimer.Start();
+#endif	// USE_JAVA && MACOSX
 }
 
 //--------------------------------------------------------------------
@@ -1415,8 +1422,8 @@ void SfxViewFrame::DoDeactivate(sal_Bool bUI, SfxViewFrame* pNewFrame )
     // ViewFrames, erh"alt er ein ParentDeactivate
     if ( bUI )
     {
-//        if ( GetFrame()->GetWorkWindow_Impl() )
-//            GetFrame()->GetWorkWindow_Impl()->SaveStatus_Impl();
+//        if ( GetFrame().GetWorkWindow_Impl() )
+//            GetFrame().GetWorkWindow_Impl()->SaveStatus_Impl();
 /*
 		SfxMedium* pMed = GetObjectShell() ? GetObjectShell()->GetMedium() : NULL;
 		if( pMed )
@@ -1431,14 +1438,23 @@ void SfxViewFrame::DoDeactivate(sal_Bool bUI, SfxViewFrame* pNewFrame )
         SfxViewFrame *pFrame = GetParentViewFrame();
         while ( pFrame )
         {
-            if ( !pNewFrame || !pNewFrame->GetFrame()->IsParent( pFrame->GetFrame() ) )
+            if ( !pNewFrame || !pNewFrame->GetFrame().IsParent( &pFrame->GetFrame() ) )
                 pFrame->pDispatcher->DoParentDeactivate_Impl();
             pFrame = pFrame->GetParentViewFrame();
         }
     }
-#ifdef WIN
-    pSfxApp->TestFreeResources_Impl();
-#endif
+
+#if defined USE_JAVA && defined MACOSX
+    SfxObjectShell *pDoc = GetObjectShell();
+    if ( pDoc )
+    {
+        SfxMedium *pMedium = pDoc->GetMedium();
+        if ( pMedium )
+            pMedium->CheckForMovedFile( pDoc );
+    }
+
+    pImp->aTimer.Stop();
+#endif	// USE_JAVA && MACOSX
 }
 
 //------------------------------------------------------------------------
@@ -1448,7 +1464,7 @@ void SfxViewFrame::InvalidateBorderImpl( const SfxViewShell* pSh )
     {
         if ( GetViewShell() && GetWindow().IsVisible() )
         {
-            if ( GetFrame()->IsInPlace() )
+            if ( GetFrame().IsInPlace() )
             {
                 /*
                 Size aSize( GetViewShell()->GetWindow()->GetSizePixel() );
@@ -1460,24 +1476,8 @@ void SfxViewFrame::InvalidateBorderImpl( const SfxViewShell* pSh )
                 return;
             }
 
-            if ( GetViewShell()->UseObjectSize() )
-            {
-                // Zun"achst die Gr"o\se des MDI-Fensters berechnen
-
-                DoAdjustPosSizePixel( GetViewShell(), Point(),
-                                GetViewShell()->GetWindow()->GetSizePixel() );
-
-                // Da nach einem InnerResize die Position des EditFensters und
-                // damit auch der Tools nocht stimmt, mu\s nun noch einmal von
-                // au\sen resized werden !
-
-                ForceOuterResize_Impl(sal_True);
-            }
-
             DoAdjustPosSizePixel( (SfxViewShell *) GetViewShell(), Point(),
                                             GetWindow().GetOutputSizePixel() );
-            if ( GetViewShell()->UseObjectSize() )
-                ForceOuterResize_Impl(sal_False);
         }
     }
 }
@@ -1485,13 +1485,44 @@ void SfxViewFrame::InvalidateBorderImpl( const SfxViewShell* pSh )
 //------------------------------------------------------------------------
 sal_Bool SfxViewFrame::SetBorderPixelImpl
 (
-    const SfxViewShell* /*pSh*/,
+    const SfxViewShell* pVSh,
     const SvBorder&     rBorder
 )
 
 {
     pImp->aBorder = rBorder;
-    return sal_True;
+
+    if ( IsResizeInToOut_Impl() && !GetFrame().IsInPlace() )
+	{
+		Size aSize = pVSh->GetWindow()->GetOutputSizePixel();
+		if ( aSize.Width() && aSize.Height() )
+		{
+			aSize.Width() += rBorder.Left() + rBorder.Right();
+			aSize.Height() += rBorder.Top() + rBorder.Bottom();
+
+			Size aOldSize = GetWindow().GetOutputSizePixel();
+			GetWindow().SetOutputSizePixel( aSize );
+			Window* pParent = &GetWindow();
+			while ( pParent->GetParent() )
+				pParent = pParent->GetParent();
+			Size aOuterSize = pParent->GetOutputSizePixel();
+			aOuterSize.Width() += ( aSize.Width() - aOldSize.Width() );
+			aOuterSize.Height() += ( aSize.Height() - aOldSize.Height() );
+			pParent->SetOutputSizePixel( aOuterSize );
+		}
+	}
+	else
+	{
+		Point aPoint;
+		Rectangle aEditArea( aPoint, GetWindow().GetOutputSizePixel() );
+		aEditArea.Left() += rBorder.Left();
+		aEditArea.Right() -= rBorder.Right();
+		aEditArea.Top() += rBorder.Top();
+		aEditArea.Bottom() -= rBorder.Bottom();
+		pVSh->GetWindow()->SetPosSizePixel( aEditArea.TopLeft(), aEditArea.GetSize() );
+	}
+
+	return sal_True;
 }
 
 //------------------------------------------------------------------------
@@ -1508,16 +1539,25 @@ const SvBorder& SfxViewFrame::GetBorderPixelImpl
 void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
 {
     {DBG_CHKTHIS(SfxViewFrame, 0);}
-    if ( !xObjSh.Is() )
+
+    if( IsDowning_Impl())
         return;
 
+    // we know only SimpleHints
     if ( rHint.IsA(TYPE(SfxSimpleHint)) )
     {
         switch( ( (SfxSimpleHint&) rHint ).GetId() )
         {
             case SFX_HINT_MODECHANGED:
             {
+                UpdateTitle();
+
+                if ( !xObjSh.Is() )
+                    break;
+
                 // r/o Umschaltung?
+                SfxBindings& rBind = GetBindings();
+                rBind.Invalidate( SID_RELOAD );
                 SfxDispatcher *pDispat = GetDispatcher();
                 sal_Bool bWasReadOnly = pDispat->GetReadOnly_Impl();
                 sal_Bool bIsReadOnly = xObjSh->IsReadOnly();
@@ -1525,8 +1565,9 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
             	{
 					// Dann auch TITLE_CHANGED
 					UpdateTitle();
-	                GetBindings().Invalidate( SID_FILE_NAME );
-	                GetBindings().Invalidate( SID_DOCINFO_TITLE );
+	                rBind.Invalidate( SID_FILE_NAME );
+	                rBind.Invalidate( SID_DOCINFO_TITLE );
+					rBind.Invalidate( SID_EDITDOC );
 
                     pDispat->GetBindings()->InvalidateAll(sal_True);
                     pDispat->SetReadOnly_Impl( bIsReadOnly );
@@ -1547,18 +1588,23 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
             case SFX_HINT_TITLECHANGED:
             {
 				UpdateTitle();
-                GetBindings().Invalidate( SID_FILE_NAME );
-                GetBindings().Invalidate( SID_DOCINFO_TITLE );
+                SfxBindings& rBind = GetBindings();
+                rBind.Invalidate( SID_FILE_NAME );
+                rBind.Invalidate( SID_DOCINFO_TITLE );
+				rBind.Invalidate( SID_EDITDOC );
+				rBind.Invalidate( SID_RELOAD );
                 break;
             }
 
-            case SFX_HINT_DYING:
             case SFX_HINT_DEINITIALIZING:
+                GetFrame().DoClose();
+                break;
+            case SFX_HINT_DYING:
                 // when the Object is being deleted, destroy the view too
                 if ( xObjSh.Is() )
                     ReleaseObjectShell_Impl();
                 else
-                    GetFrame()->DoClose();
+                    GetFrame().DoClose();
                 break;
 
         }
@@ -1576,12 +1622,19 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                 rBind.Invalidate( SID_DOC_MODIFIED );
                 rBind.Invalidate( SID_SAVEDOC );
                 rBind.Invalidate( SID_RELOAD );
+                rBind.Invalidate( SID_EDITDOC );
                 break;
             }
 
             case SFX_EVENT_OPENDOC:
             case SFX_EVENT_CREATEDOC:
             {
+                if ( !xObjSh.Is() )
+                    break;
+
+                SfxBindings& rBind = GetBindings();
+                rBind.Invalidate( SID_RELOAD );
+                rBind.Invalidate( SID_EDITDOC );
                 if ( !xObjSh->IsReadOnly() )
                 {
                     // Im Gegensatz zu oben (TITLE_CHANGED) mu\s das UI nicht
@@ -1602,7 +1655,7 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
 
             case SFX_EVENT_TOGGLEFULLSCREENMODE:
             {
-                if ( GetFrame()->OwnsBindings_Impl() )
+                if ( GetFrame().OwnsBindings_Impl() )
                     GetBindings().GetDispatcher_Impl()->Update_Impl( sal_True );
                 break;
             }
@@ -1613,26 +1666,18 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
 //------------------------------------------------------------------------
 void SfxViewFrame::Construct_Impl( SfxObjectShell *pObjSh )
 {
-    pImp->pFrame->DocumentInserted( pObjSh );
-    pImp->bInCtor = sal_True;
-    pImp->pParentViewFrame = 0;
     pImp->bResizeInToOut = sal_True;
     pImp->bDontOverwriteResizeInToOut = sal_False;
-    pImp->pImportShell = 0;
     pImp->bObjLocked = sal_False;
-    pImp->bEventFlag = sal_True;
     pImp->pFocusWin = 0;
     pImp->pActiveChild = NULL;
-    pImp->bRestoreView = sal_False;
     pImp->nCurViewId = 0;
-    pImp->bSetViewFrameLocked = sal_False;
     pImp->bReloading = sal_False;
     pImp->bIsDowning = sal_False;
     pImp->bModal = sal_False;
     pImp->bEnabled = sal_True;
     pImp->nDocViewNo = 0;
     pImp->aMargin = Size( -1, -1 );
-    pImp->pCancelMgr = 0;
 	pImp->pWindow = 0;
 
 	SetPool( &SFX_APP()->GetPool() );
@@ -1644,7 +1689,6 @@ void SfxViewFrame::Construct_Impl( SfxObjectShell *pObjSh )
 	if ( xObjSh.Is() && xObjSh->IsPreview() )
 		SetQuietMode_Impl( sal_True );
 
-    GetFrame()->SetFrameType_Impl( GetFrameType() & ~SFXFRAME_FRAMESET );
     if ( pObjSh )
     {
         pDispatcher->Push( *SFX_APP() );
@@ -1670,56 +1714,41 @@ void SfxViewFrame::Construct_Impl( SfxObjectShell *pObjSh )
     SfxViewFrame *pThis = this; // wegen der kranken Array-Syntax
     SfxViewFrameArr_Impl &rViewArr = SFX_APP()->GetViewFrames_Impl();
     rViewArr.C40_INSERT(SfxViewFrame, pThis, rViewArr.Count() );
-    pImp->bInCtor = sal_False;
 }
 
-//------------------------------------------------------------------------
-SfxViewFrame::SfxViewFrame( SfxObjectShell &rObjShell, SfxBindings &rBindings,
-							SfxFrame* pParent, sal_uInt32 nType )
-:
-    pImp( new SfxViewFrame_Impl ),
-    pDispatcher(0),
-    pBindings(&rBindings),
-    nAdjustPosPixelLock( 0 )
-{
-    DBG_CTOR(SfxViewFrame, 0);
+SfxViewFrame::SfxViewFrame
+(
+	SfxFrame&           rFrame,
+	SfxObjectShell*     pObjShell
+)
 
-    SetFrame_Impl( pParent );
-    pImp->pFrame->SetCurrentViewFrame_Impl( this );
-    GetFrame()->SetFrameType_Impl( GetFrameType() | nType );
-    Construct_Impl( &rObjShell );
-}
+/*	[Beschreibung]
 
-//------------------------------------------------------------------------
-SfxViewFrame::SfxViewFrame(const SfxViewFrame &rCopy, SfxBindings &rBindings,
-    SfxFrame *pFrame )
-:
-    pImp( new SfxViewFrame_Impl ),
-    pDispatcher(0),
-    pBindings(&rBindings),
-    nAdjustPosPixelLock( 0 )
-{
-    DBG_CTOR(SfxViewFrame, 0);
+	Ctor des SfxViewFrame f"ur eine <SfxObjectShell> aus der Ressource.
+	Die 'nViewId' der zu erzeugenden <SfxViewShell> kann angegeben werden
+	(default ist die zuerst registrierte SfxViewShell-Subklasse).
+*/
 
-    SetFrame_Impl( pFrame );
-    pImp->pFrame->SetCurrentViewFrame_Impl( this );
-    GetFrame()->SetFrameType_Impl( rCopy.GetFrameType() );
-    Construct_Impl( rCopy.GetObjectShell() );
-}
-
-SfxViewFrame::SfxViewFrame( SfxBindings& rBindings, SfxFrame *pFrame,
-        SfxObjectShell *pDoc, sal_uInt32 nType )
-    : pImp( new SfxViewFrame_Impl )
+    : pImp( new SfxViewFrame_Impl( rFrame ) )
     , pDispatcher(0)
-    , pBindings(&rBindings)
+    , pBindings( new SfxBindings )
     , nAdjustPosPixelLock( 0 )
 {
-    DBG_CTOR(SfxViewFrame, 0);
+    DBG_CTOR( SfxViewFrame, NULL );
 
-    SetFrame_Impl( pFrame );
-    pImp->pFrame->SetCurrentViewFrame_Impl( this );
-    GetFrame()->SetFrameType_Impl( GetFrameType() | nType );
-    Construct_Impl( pDoc);
+#if defined USE_JAVA && defined MACOSX
+    pImp->aTimer.SetTimeoutHdl( LINK( this, SfxViewFrame, CheckForMovedFile ) );
+    pImp->aTimer.SetTimeout( 15000 );
+#endif	// USE_JAVA && MACOSX
+
+    rFrame.SetCurrentViewFrame_Impl( this );
+    rFrame.SetFrameType_Impl( GetFrameType() | SFXFRAME_HASTITLE );
+    Construct_Impl( pObjShell );
+
+    pImp->pWindow = new SfxFrameViewWindow_Impl( this, rFrame.GetWindow() );
+    pImp->pWindow->SetSizePixel( rFrame.GetWindow().GetOutputSizePixel() );
+	rFrame.SetOwnsBindings_Impl( sal_True );
+    rFrame.CreateWorkWindow_Impl();
 }
 
 //------------------------------------------------------------------------
@@ -1727,12 +1756,25 @@ SfxViewFrame::~SfxViewFrame()
 {
     DBG_DTOR(SfxViewFrame, 0);
 
-    if ( GetFrame() && GetFrame()->GetCurrentViewFrame() == this )
-        GetFrame()->SetCurrentViewFrame_Impl( NULL );
+#if defined USE_JAVA && defined MACOSX
+    SFXDocument_releaseDocument( this );
+#endif	// USE_JAVA && MACOSX
 
-    SfxObjectShell* pSh = pImp->pImportShell;
-    if( pSh )
-        pSh->AbortImport();
+	SetDowning_Impl();
+
+    if ( SfxViewFrame::Current() == this )
+        SfxViewFrame::SetViewFrame( NULL );
+
+	ReleaseObjectShell_Impl();
+
+    if ( GetFrame().OwnsBindings_Impl() )
+		// Die Bindings l"oscht der Frame!
+		KillDispatcher_Impl();
+
+    delete pImp->pWindow;
+
+    if ( GetFrame().GetCurrentViewFrame() == this )
+        GetFrame().SetCurrentViewFrame_Impl( NULL );
 
     // von Frame-Liste abmelden
     SfxApplication *pSfxApp = SFX_APP();
@@ -1770,16 +1812,15 @@ void SfxViewFrame::KillDispatcher_Impl()
 //------------------------------------------------------------------------
 SfxViewFrame* SfxViewFrame::Current()
 {
-    return SfxApplication::Is_Impl() ? SFX_APP()->Get_Impl()->pViewFrame : NULL;
+    return SfxApplication::Get() ? SFX_APP()->Get_Impl()->pViewFrame : NULL;
 }
 
 //--------------------------------------------------------------------
-sal_uInt16 SfxViewFrame::Count(TypeId aType)
+sal_uInt16 SfxViewFrame::Count()
 
 /*  [Beschreibung]
 
-    Liefert die Anzahl der sichtbaren <SfxViewFrame>-Instanzen vom Typ
-    'aType' bzw. aller sichtbaren, falls 'aType==0' (default).
+    Liefert die Anzahl der sichtbaren <SfxViewFrame>-Instanzen.
 */
 
 {
@@ -1790,8 +1831,7 @@ sal_uInt16 SfxViewFrame::Count(TypeId aType)
     for ( sal_uInt16 i = 0; i < nCount; ++i )
     {
         SfxViewFrame *pFrame = rFrames[i];
-        if ( ( !aType || pFrame->IsA(aType) ) &&
-             pFrame->IsVisible_Impl() )
+        if ( pFrame->IsVisible() )
             ++nFound;
     }
     return nFound;
@@ -1802,7 +1842,6 @@ sal_uInt16 SfxViewFrame::Count(TypeId aType)
 SfxViewFrame* SfxViewFrame::GetFirst
 (
     const SfxObjectShell*   pDoc,
-    TypeId                  aType,
     sal_Bool                    bOnlyIfVisible
 )
 {
@@ -1813,9 +1852,9 @@ SfxViewFrame* SfxViewFrame::GetFirst
     for ( sal_uInt16 nPos = 0; nPos < rFrames.Count(); ++nPos )
     {
         SfxViewFrame *pFrame = rFrames.GetObject(nPos);
-        if ( ( !pDoc || pDoc == pFrame->GetObjectShell() ) &&
-             ( !aType || pFrame->IsA(aType) ) &&
-             ( !bOnlyIfVisible || pFrame->IsVisible_Impl()) )
+        if  (   ( !pDoc || pDoc == pFrame->GetObjectShell() )
+            &&  ( !bOnlyIfVisible || pFrame->IsVisible() )
+            )
             return pFrame;
     }
 
@@ -1828,7 +1867,6 @@ SfxViewFrame* SfxViewFrame::GetNext
 (
     const SfxViewFrame&     rPrev,
     const SfxObjectShell*   pDoc,
-    TypeId                  aType,
     sal_Bool                    bOnlyIfVisible
 )
 {
@@ -1845,9 +1883,9 @@ SfxViewFrame* SfxViewFrame::GetNext
     for ( ++nPos; nPos < rFrames.Count(); ++nPos )
     {
         SfxViewFrame *pFrame = rFrames.GetObject(nPos);
-        if ( ( !pDoc || pDoc == pFrame->GetObjectShell() ) &&
-             ( !aType || pFrame->IsA(aType) ) &&
-             ( !bOnlyIfVisible || pFrame->IsVisible_Impl()) )
+        if  (   ( !pDoc || pDoc == pFrame->GetObjectShell() )
+            &&  ( !bOnlyIfVisible || pFrame->IsVisible() )
+            )
             return pFrame;
     }
     return 0;
@@ -1860,7 +1898,7 @@ void SfxViewFrame::CloseHiddenFrames_Impl()
     for ( sal_uInt16 nPos=0; nPos<rFrames.Count(); )
     {
         SfxViewFrame *pFrame = rFrames.GetObject(nPos);
-        if ( !pFrame->IsVisible_Impl() )
+        if ( !pFrame->IsVisible() )
 			pFrame->DoClose();
 		else
 			nPos++;
@@ -1880,7 +1918,7 @@ void SfxViewFrame::ShowStatusText( const String& /*rText*/)
 /* OBSOLETE: If this is used, framework/uielement/progressbarwrapper.[h|c]xx &
              framework/uielement/statusindicatorinterfacewrapper.[h|c]xx must be
              extended to support a new interface to support ShowStatusText/HideStatusText
-    SfxWorkWindow* pWorkWin = GetFrame()->GetWorkWindow_Impl();
+    SfxWorkWindow* pWorkWin = GetFrame().GetWorkWindow_Impl();
     SfxStatusBarManager *pMgr = pWorkWin->GetStatusBarManager_Impl();
 	if ( pMgr )
 	{
@@ -1896,7 +1934,7 @@ void SfxViewFrame::HideStatusText()
 /* OBSOLETE: If this is used, framework/uielement/progressbarwrapper.[h|c]xx &
              framework/uielement/statusindicatorinterfacewrapper.[h|c]xx must be
              extended to support a new interface to support ShowStatusText/HideStatusText
-    SfxWorkWindow* pWorkWin = GetFrame()->GetWorkWindow_Impl();
+    SfxWorkWindow* pWorkWin = GetFrame().GetWorkWindow_Impl();
     SfxStatusBarManager *pMgr = pWorkWin->GetStatusBarManager_Impl();
 	if ( pMgr )
 		pMgr->GetStatusBar()->ShowItems();
@@ -1971,19 +2009,8 @@ void SfxViewFrame::SetViewShell_Impl( SfxViewShell *pVSh )
     SfxShell::SetViewShell_Impl( pVSh );
 
     // Hack: InPlaceMode
-    if ( pVSh && !pVSh->UseObjectSize() )
+    if ( pVSh )
         pImp->bResizeInToOut = sal_False;
-}
-
-//--------------------------------------------------------------------
-/*
-    Beschreibung:
-    Der ParentViewFrame ist der ViewFrame des Containers bei internem InPlace
-*/
-
-void SfxViewFrame::SetParentViewFrame_Impl(SfxViewFrame *pFrame)
-{
-    pImp->pParentViewFrame = pFrame;
 }
 
 //--------------------------------------------------------------------
@@ -1995,7 +2022,7 @@ void SfxViewFrame::SetParentViewFrame_Impl(SfxViewFrame *pFrame)
 //TODO/LATER: is it still necessary? is there a replacement for GetParentViewFrame_Impl?
 SfxViewFrame* SfxViewFrame::GetParentViewFrame_Impl() const
 {
-    return pImp->pParentViewFrame;
+    return NULL;
 }
 
 //--------------------------------------------------------------------
@@ -2020,7 +2047,7 @@ void SfxViewFrame::DoAdjustPosSize( SfxViewShell *pSh,
                                 const Point rPos, const Size &rSize )
 {
     DBG_CHKTHIS(SfxViewFrame, 0);
-    if( pSh && !nAdjustPosPixelLock && pSh->UseObjectSize())
+    if( pSh && !nAdjustPosPixelLock )
     {
         Window *pWindow = pSh->GetWindow();
         Point aPos = pWindow->LogicToPixel(rPos);
@@ -2053,11 +2080,11 @@ void SfxViewFrame::Enable( sal_Bool bEnable )
         }
         else
         {
-            Window *pWindow = &GetFrame()->GetTopFrame()->GetWindow();
+            Window *pWindow = &GetFrame().GetTopFrame().GetWindow();
             if ( !bEnable )
                 pImp->bWindowWasEnabled = pWindow->IsInputEnabled();
             if ( !bEnable || pImp->bWindowWasEnabled )
-                pWindow->EnableInput( bEnable, TRUE );
+                pWindow->EnableInput( bEnable, sal_True );
         }
 
         // cursor and focus
@@ -2103,7 +2130,7 @@ void SfxViewFrame::Show()
             LockObjectShell_Impl( sal_True );
 
         // Doc-Shell Titel-Nummer anpassen, get unique view-no
-        if ( 0 == pImp->nDocViewNo && !(GetFrameType() & SFXFRAME_PLUGIN ) )
+        if ( 0 == pImp->nDocViewNo  )
         {
             GetDocNumber_Impl();
             UpdateTitle();
@@ -2114,28 +2141,26 @@ void SfxViewFrame::Show()
 
     // Frame-Window anzeigen, aber nur wenn der ViewFrame kein eigenes Window
 	// hat oder wenn er keine Component enth"alt
-	if ( &GetWindow() == &GetFrame()->GetWindow() || !GetFrame()->HasComponent() )
+	if ( &GetWindow() == &GetFrame().GetWindow() || !GetFrame().HasComponent() )
     	GetWindow().Show();
-    GetFrame()->GetWindow().Show();
+    GetFrame().GetWindow().Show();
 
 /*    SfxViewFrame* pCurrent = SfxViewFrame::Current();
-	if ( GetFrame()->GetFrameInterface()->isActive() &&
+	if ( GetFrame().GetFrameInterface()->isActive() &&
 			pCurrent != this &&
 			( !pCurrent || pCurrent->GetParentViewFrame_Impl() != this ) &&
 			!GetActiveChildFrame_Impl() )
-        MakeActive_Impl( FALSE );*/
+        MakeActive_Impl( sal_False );*/
     if ( xObjSh.Is() && xObjSh->Get_Impl()->bHiddenLockedByAPI )
     {
-        xObjSh->Get_Impl()->bHiddenLockedByAPI = FALSE;
-        xObjSh->OwnerLock(FALSE);
+        xObjSh->Get_Impl()->bHiddenLockedByAPI = sal_False;
+        xObjSh->OwnerLock(sal_False);
     }
 }
 
 //--------------------------------------------------------------------
-sal_Bool SfxViewFrame::IsVisible_Impl() const
+sal_Bool SfxViewFrame::IsVisible() const
 {
-    //Window *pWin = pImp->bInCtor ? 0 : &GetWindow();
-    //return GetFrame()->HasComponent() || pImp->bObjLocked || ( pWin && pWin->IsVisible() );
     return pImp->bObjLocked;
 }
 
@@ -2158,18 +2183,18 @@ void SfxViewFrame::LockObjectShell_Impl( sal_Bool bLock )
 }
 
 //--------------------------------------------------------------------
-void SfxViewFrame::MakeActive_Impl( BOOL bGrabFocus )
+void SfxViewFrame::MakeActive_Impl( sal_Bool bGrabFocus )
 {
-	if ( GetViewShell() && !GetFrame()->IsClosing_Impl() )
+	if ( GetViewShell() && !GetFrame().IsClosing_Impl() )
 	{
-        if ( IsVisible_Impl() )
+        if ( IsVisible() )
         {
             if ( GetViewShell() )
             {
-                BOOL bPreview = FALSE;
+                sal_Bool bPreview = sal_False;
                 if ( GetObjectShell()->IsPreview() )
                 {
-                    bPreview = TRUE;
+                    bPreview = sal_True;
                 }
                 else
                 {
@@ -2179,7 +2204,7 @@ void SfxViewFrame::MakeActive_Impl( BOOL bGrabFocus )
                 }
 
                 SfxViewFrame* pCurrent = SfxViewFrame::Current();
-                css::uno::Reference< css::frame::XFrame > xFrame = GetFrame()->GetFrameInterface();
+                css::uno::Reference< css::frame::XFrame > xFrame = GetFrame().GetFrameInterface();
                 if ( !bPreview )
                 {
                     SetViewFrame( this );
@@ -2195,101 +2220,18 @@ void SfxViewFrame::MakeActive_Impl( BOOL bGrabFocus )
                         SfxInPlaceClient *pCli = GetViewShell()->GetUIActiveClient();
                         if ( ( !pCli || !pCli->IsObjectUIActive() ) &&
                             ( !pCurrent || pCurrent->GetParentViewFrame_Impl() != this ) )
-                                GetFrame()->GrabFocusOnComponent_Impl();
+                                GetFrame().GrabFocusOnComponent_Impl();
                     }
                 }
                 else
                 {
                     GetBindings().SetDispatcher( GetDispatcher() );
                     GetBindings().SetActiveFrame( ::com::sun::star::uno::Reference< ::com::sun::star::frame::XFrame > () );
-                    GetDispatcher()->Update_Impl( FALSE );
+                    GetDispatcher()->Update_Impl( sal_False );
                 }
             }
         }
 	}
-}
-
-//--------------------------------------------------------------------
-
-SfxViewShell* SfxViewFrame::CreateView_Impl( sal_uInt16 nViewId )
-
-/*  [Beschreibung]
-
-    Erzeugt eine SfxViewShell f"ur diesen SfxViewFrame. Wird auch aus
-    <SfxObjectShell::LoadWindows_Impl()>
-    gerufen.
-*/
-
-{
-    DBG_ASSERT( GetObjectShell(), "Kein Dokument!" );
-
-    LockAdjustPosSizePixel();
-
-    // passende ::com::sun::star::sdbcx::View-Factory suchen
-    SfxObjectFactory &rDocFact = GetObjectShell()->GetFactory();
-    sal_uInt16 nNewNo = nViewId ? USHRT_MAX : 0;
-    for ( sal_uInt16 nNo = 0;
-          nNo < rDocFact.GetViewFactoryCount();
-          ++nNo )
-    {
-        sal_uInt16 nFoundId = rDocFact.GetViewFactory(nNo).GetOrdinal();
-        if ( nNewNo == USHRT_MAX )
-        {
-            if ( nViewId == nFoundId )
-                nNewNo = nNo;
-        }
-    }
-
-    // per Factory erzeugen
-	GetBindings().ENTERREGISTRATIONS();
-    SfxViewFactory &rViewFactory = rDocFact.GetViewFactory( nNewNo );
-    SfxViewShell *pViewShell = rViewFactory.CreateInstance(this, 0);
-    SetViewShell_Impl(pViewShell);
-    UnlockAdjustPosSizePixel();
-
-	if ( GetWindow().IsReallyVisible() )
-    	DoAdjustPosSizePixel(pViewShell, Point(), GetWindow().GetOutputSizePixel());
-
-    // erste jetzt anzeigen (ausser wenn MTs BASIC-IDE mal wieder keins hat)
-    Window *pViewWin = pViewShell->GetWindow();
-    if ( pViewWin && pViewShell->IsShowView_Impl() )
-        pViewWin->Show();
-
-    // Dispatcher
-    GetDispatcher()->Push( *pViewShell );
-    if ( pViewShell->GetSubShell() )
-        GetDispatcher()->Push( *pViewShell->GetSubShell() );
-	pViewShell->PushSubShells_Impl();
-
-#if defined SFX_HINT_VIEWCREATED
-	GetObjectShell()->Broadcast( SfxSimpleHint( SFX_HINT_VIEWCREATED ) );
-#endif
-
-	GetBindings().LEAVEREGISTRATIONS();
-
-    DBG_ASSERT( SFX_APP()->GetViewFrames_Impl().Count() == SFX_APP()->GetViewShells_Impl().Count(), "Inconsistent view arrays!" );
-    return pViewShell;
-}
-
-//-------------------------------------------------------------------------
-SfxViewFrame* SfxViewFrame::SearchViewFrame( SfxViewFrame *pViewFrame,
-    const String& rName )
-{
-    if ( !pViewFrame )
-        pViewFrame = SfxViewFrame::Current();
-    if ( !pViewFrame )
-        return NULL;
-    SfxFrame *pFrame = pViewFrame->GetFrame()->SearchFrame( rName );
-    if ( !pFrame )
-        return NULL;
-
-    // Der Frame ist selbst ein ViewFrame oder enth"alt einen
-/*
-    pViewFrame = PTR_CAST( SfxViewFrame, pFrame );
-    if ( !pViewFrame && pFrame->GetChildFrameCount() )
-        pViewFrame = PTR_CAST( SfxViewFrame, pFrame->GetChildFrame(0) );
-*/
-    return pFrame->GetCurrentViewFrame();
 }
 
 //-------------------------------------------------------------------------
@@ -2306,11 +2248,6 @@ SfxObjectShell* SfxViewFrame::GetObjectShell()
     return xObjSh;
 }
 
-void SfxViewFrame::SetMargin_Impl( const Size& rMargin )
-{
-    pImp->aMargin = rMargin;
-}
-
 const Size& SfxViewFrame::GetMargin_Impl() const
 {
     return pImp->aMargin;
@@ -2325,10 +2262,10 @@ void SfxViewFrame::SetActiveChildFrame_Impl( SfxViewFrame *pViewFrame )
 
 	    pImp->pActiveChild = pViewFrame;
 
-		Reference< XFramesSupplier > xFrame( GetFrame()->GetFrameInterface(), UNO_QUERY );
+		Reference< XFramesSupplier > xFrame( GetFrame().GetFrameInterface(), UNO_QUERY );
 		Reference< XFrame >  xActive;
 		if ( pViewFrame )
-			xActive = pViewFrame->GetFrame()->GetFrameInterface();
+			xActive = pViewFrame->GetFrame().GetFrameInterface();
 
 		if ( xFrame.is() )	// PB: #74432# xFrame cann be NULL
 			xFrame->setActiveFrame( xActive );
@@ -2357,20 +2294,265 @@ SfxViewFrame* SfxViewFrame::GetActiveChildFrame_Impl() const
 }
 
 //--------------------------------------------------------------------
+SfxViewFrame* SfxViewFrame::LoadViewIntoFrame_Impl_NoThrow( const SfxObjectShell& i_rDoc, const Reference< XFrame >& i_rFrame,
+                                                   const sal_uInt16 i_nViewId, const bool i_bHidden )
+{
+    Reference< XFrame > xFrame( i_rFrame );
+    bool bOwnFrame = false;
+    SfxViewShell* pSuccessView = NULL;
+    try
+    {
+        if ( !xFrame.is() )
+        {
+            ::comphelper::ComponentContext aContext( ::comphelper::getProcessServiceFactory() );
+            Reference < XFrame > xDesktop( aContext.createComponent( "com.sun.star.frame.Desktop" ), UNO_QUERY_THROW );
+
+            if ( !i_bHidden )
+            {
+                try
+                {
+                    // if there is a backing component, use it
+                    Reference< XFramesSupplier > xTaskSupplier( xDesktop , css::uno::UNO_QUERY_THROW );
+                    ::framework::FrameListAnalyzer aAnalyzer( xTaskSupplier, Reference< XFrame >(), ::framework::FrameListAnalyzer::E_BACKINGCOMPONENT );
+
+                    if ( aAnalyzer.m_xBackingComponent.is() )
+                        xFrame = aAnalyzer.m_xBackingComponent;
+                }
+                catch( uno::Exception& )
+                {}
+            }
+
+            if ( !xFrame.is() )
+                xFrame.set( xDesktop->findFrame( DEFINE_CONST_UNICODE("_blank"), 0 ), UNO_SET_THROW );
+
+            bOwnFrame = true;
+        }
+
+        pSuccessView = LoadViewIntoFrame_Impl(
+            i_rDoc,
+            xFrame,
+            Sequence< PropertyValue >(),    // means "reuse existing model's args"
+            i_nViewId,
+            i_bHidden
+        );
+
+        if ( bOwnFrame && !i_bHidden )
+        {
+            // ensure the frame/window is visible
+            Reference< XWindow > xContainerWindow( xFrame->getContainerWindow(), UNO_SET_THROW );
+            xContainerWindow->setVisible( sal_True );
+        }
+    }
+    catch( const Exception& )
+    {
+    	DBG_UNHANDLED_EXCEPTION();
+    }
+
+    if ( pSuccessView )
+        return pSuccessView->GetViewFrame();
+
+    if ( bOwnFrame )
+    {
+        try
+        {
+            xFrame->dispose();
+        }
+        catch( const Exception& )
+        {
+        	DBG_UNHANDLED_EXCEPTION();
+        }
+    }
+
+    return NULL;
+}
+
+//--------------------------------------------------------------------
+SfxViewShell* SfxViewFrame::LoadViewIntoFrame_Impl( const SfxObjectShell& i_rDoc, const Reference< XFrame >& i_rFrame,
+                                           const Sequence< PropertyValue >& i_rLoadArgs, const sal_uInt16 i_nViewId,
+                                           const bool i_bHidden )
+{
+    Reference< XModel > xDocument( i_rDoc.GetModel(), UNO_SET_THROW );
+
+    ::comphelper::NamedValueCollection aTransformLoadArgs( i_rLoadArgs.getLength() ? i_rLoadArgs : xDocument->getArgs() );
+    aTransformLoadArgs.put( "Model", xDocument );
+    if ( i_nViewId )
+        aTransformLoadArgs.put( "ViewId", sal_Int16( i_nViewId ) );
+    if ( i_bHidden )
+        aTransformLoadArgs.put( "Hidden", i_bHidden );
+    else
+        aTransformLoadArgs.remove( "Hidden" );
+
+    ::rtl::OUString sURL( RTL_CONSTASCII_USTRINGPARAM( "private:object" ) );
+    if ( !sURL.getLength() )
+        sURL = i_rDoc.GetFactory().GetFactoryURL();
+
+    Reference< XComponentLoader > xLoader( i_rFrame, UNO_QUERY_THROW );
+    xLoader->loadComponentFromURL( sURL, ::rtl::OUString::createFromAscii( "_self" ), 0,
+        aTransformLoadArgs.getPropertyValues() );
+
+    SfxViewShell* pViewShell = SfxViewShell::Get( i_rFrame->getController() );
+    ENSURE_OR_THROW( pViewShell,
+        "SfxViewFrame::LoadViewIntoFrame_Impl: loading an SFX doc into a frame resulted in a non-SFX view - quite impossible" );
+    return pViewShell;
+}
+
+//--------------------------------------------------------------------
+
+SfxViewFrame* SfxViewFrame::LoadHiddenDocument( SfxObjectShell& i_rDoc, const sal_uInt16 i_nViewId )
+{
+    return LoadViewIntoFrame_Impl_NoThrow( i_rDoc, Reference< XFrame >(), i_nViewId, true );
+}
+
+//--------------------------------------------------------------------
+
+SfxViewFrame* SfxViewFrame::LoadDocument( SfxObjectShell& i_rDoc, const sal_uInt16 i_nViewId )
+{
+    return LoadViewIntoFrame_Impl_NoThrow( i_rDoc, Reference< XFrame >(), i_nViewId, false );
+}
+
+//--------------------------------------------------------------------
+
+SfxViewFrame* SfxViewFrame::LoadDocumentIntoFrame( SfxObjectShell& i_rDoc, const Reference< XFrame >& i_rTargetFrame, const sal_uInt16 i_nViewId )
+{
+    return LoadViewIntoFrame_Impl_NoThrow( i_rDoc, i_rTargetFrame, i_nViewId, false );
+}
+
+//--------------------------------------------------------------------
+
+SfxViewFrame* SfxViewFrame::LoadDocumentIntoFrame( SfxObjectShell& i_rDoc, const SfxFrameItem* i_pFrameItem, const sal_uInt16 i_nViewId )
+{
+    return LoadViewIntoFrame_Impl_NoThrow( i_rDoc, i_pFrameItem && i_pFrameItem->GetFrame() ? i_pFrameItem->GetFrame()->GetFrameInterface() : NULL, i_nViewId, false );
+}
+
+//--------------------------------------------------------------------
+SfxViewFrame* SfxViewFrame::DisplayNewDocument( SfxObjectShell& i_rDoc, const SfxRequest& i_rCreateDocRequest, const sal_uInt16 i_nViewId )
+{
+    SFX_REQUEST_ARG( i_rCreateDocRequest, pFrameItem, SfxUnoFrameItem, SID_FILLFRAME, sal_False );
+    SFX_REQUEST_ARG( i_rCreateDocRequest, pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
+
+    return LoadViewIntoFrame_Impl_NoThrow(
+        i_rDoc,
+        pFrameItem ? pFrameItem->GetFrame() : NULL,
+        i_nViewId,
+        pHiddenItem ? pHiddenItem->GetValue() : false
+    );
+}
+
+//--------------------------------------------------------------------
+
+SfxViewFrame* SfxViewFrame::Get( const Reference< XController>& i_rController, const SfxObjectShell* i_pDoc )
+{
+    if ( !i_rController.is() )
+        return NULL;
+
+    const SfxObjectShell* pDoc = i_pDoc;
+    if ( !pDoc )
+    {
+        Reference< XModel > xDocument( i_rController->getModel() );
+        for (   pDoc = SfxObjectShell::GetFirst( 0, false );
+                pDoc;
+                pDoc = SfxObjectShell::GetNext( *pDoc, 0, false )
+            )
+        {
+            if ( pDoc->GetModel() == xDocument )
+                break;
+        }
+    }
+
+    SfxViewFrame* pViewFrame = NULL;
+    for (   pViewFrame = SfxViewFrame::GetFirst( pDoc, sal_False );
+            pViewFrame;
+            pViewFrame = SfxViewFrame::GetNext( *pViewFrame, pDoc, sal_False )
+        )
+    {
+        if ( pViewFrame->GetViewShell()->GetController() == i_rController )
+            break;
+    }
+
+    return pViewFrame;
+}
+
+//--------------------------------------------------------------------
+
+void SfxViewFrame::SaveCurrentViewData_Impl( const sal_uInt16 i_nNewViewId )
+{
+    SfxViewShell* pCurrentShell = GetViewShell();
+    ENSURE_OR_RETURN_VOID( pCurrentShell != NULL, "SfxViewFrame::SaveCurrentViewData_Impl: no current view shell -> no current view data!" );
+
+    // determine the logical (API) view name
+    const SfxObjectFactory& rDocFactory( pCurrentShell->GetObjectShell()->GetFactory() );
+    const sal_uInt16 nCurViewNo = rDocFactory.GetViewNo_Impl( GetCurViewId(), 0 );
+    const String sCurrentViewName = rDocFactory.GetViewFactory( nCurViewNo ).GetAPIViewName();
+    const sal_uInt16 nNewViewNo = rDocFactory.GetViewNo_Impl( i_nNewViewId, 0 );
+    const String sNewViewName = rDocFactory.GetViewFactory( nNewViewNo ).GetAPIViewName();
+    if ( ( sCurrentViewName.Len() == 0 ) || ( sNewViewName.Len() == 0 ) )
+    {
+        // can't say anything about the view, the respective application did not yet migrate its code to
+        // named view factories => bail out
+        OSL_ENSURE( false, "SfxViewFrame::SaveCurrentViewData_Impl: views without API names? Shouldn't happen anymore?" );
+        return;
+    }
+    OSL_ENSURE( !sNewViewName.Equals( sCurrentViewName ), "SfxViewFrame::SaveCurrentViewData_Impl: suspicious: new and old view name are identical!" );
+
+    // save the view data only when we're moving from a non-print-preview to the print-preview view
+    if ( !sNewViewName.EqualsAscii( "PrintPreview" ) )
+        return;
+
+    // retrieve the view data from the view
+    Sequence< PropertyValue > aViewData;
+    pCurrentShell->WriteUserDataSequence( aViewData );
+
+    try
+    {
+        // retrieve view data (for *all* views) from the model
+        const Reference< XController > xController( pCurrentShell->GetController(), UNO_SET_THROW );
+        const Reference< XViewDataSupplier > xViewDataSupplier( xController->getModel(), UNO_QUERY_THROW );
+        const Reference< XIndexContainer > xViewData( xViewDataSupplier->getViewData(), UNO_QUERY_THROW );
+
+        // look up the one view data item which corresponds to our current view, and remove it
+        const sal_Int32 nCount = xViewData->getCount();
+        for ( sal_Int32 i=0; i<nCount; ++i )
+        {
+            const ::comphelper::NamedValueCollection aCurViewData( xViewData->getByIndex(i) );
+            ::rtl::OUString sViewId( aCurViewData.getOrDefault( "ViewId", ::rtl::OUString() ) );
+            if ( sViewId.getLength() == 0 )
+                continue;
+
+            const SfxViewFactory* pViewFactory = rDocFactory.GetViewFactoryByViewName( sViewId );
+            if ( pViewFactory == NULL )
+                continue;
+
+            if ( pViewFactory->GetOrdinal() == GetCurViewId() )
+            {
+                xViewData->removeByIndex(i);
+                break;
+            }
+        }
+
+        // then replace it with the most recent view data we just obtained
+        xViewData->insertByIndex( 0, makeAny( aViewData ) );
+    }
+    catch( const Exception& )
+    {
+    	DBG_UNHANDLED_EXCEPTION();
+    }
+}
+
+//--------------------------------------------------------------------
 
 sal_Bool SfxViewFrame::SwitchToViewShell_Impl
 (
-    sal_uInt16  nViewId,        /*  > 0
-                                Registrierungs-Id der ::com::sun::star::sdbcx::View, auf die umge-
+    sal_uInt16  nViewIdOrNo,    /*  > 0
+                                Registrierungs-Id der View, auf die umge-
                                 schaltet werden soll, bzw. die erstmalig
                                 erzeugt werden soll.
 
                                 == 0
-                                Es soll die Default-::com::sun::star::sdbcx::View verwendet werden. */
+                                Es soll die Default-View verwendet werden. */
 
     sal_Bool    bIsIndex        /*  sal_True
-                                'nViewId' ist keine Registrations-Id sondern
-                                ein ::com::sun::star::sdbcx::Index in die f"ur die in diesem
+                                'nViewIdOrNo' ist keine Registrations-Id sondern
+                                ein Index in die f"ur die in diesem
                                 <SfxViewFrame> dargestellte <SfxObjectShell>.
                                 */
 )
@@ -2396,174 +2578,67 @@ sal_Bool SfxViewFrame::SwitchToViewShell_Impl
 */
 
 {
-    try{
-    DBG_ASSERT( GetObjectShell(), "Kein Dokument!" );
-
-    SfxObjectFactory &rDocFact = GetObjectShell()->GetFactory();
-
-    // find index of old and new ViewShell
-    sal_uInt16 nOldNo = USHRT_MAX, nNewNo = USHRT_MAX;
-    bIsIndex |= 0 == nViewId;
-    for ( sal_uInt16 nNo = 0; nNo < rDocFact.GetViewFactoryCount(); ++nNo )
+    try
     {
-        sal_uInt16 nFoundId = rDocFact.GetViewFactory(nNo).GetOrdinal();
-        if ( nNewNo == USHRT_MAX )
+        ENSURE_OR_THROW( GetObjectShell() != NULL, "not possible without a document" );
+
+        // if we already have a view shell, remove it
+        SfxViewShell* pOldSh = GetViewShell();
+        OSL_PRECOND( pOldSh, "SfxViewFrame::SwitchToViewShell_Impl: that's called *switch* (not for *initial-load*) for a reason" );
+        if ( pOldSh )
         {
-            if ( bIsIndex && nViewId == nNo )
-            {
-                nNewNo = nNo;
-                nViewId = nFoundId; // for nViewId == 0
-            }
-            else if ( !bIsIndex && nViewId == nFoundId )
-               nNewNo = nNo;
-        }
-        if ( pImp->nCurViewId == nFoundId )
-            nOldNo = nNo;
-    }
+            // ask wether it can be closed
+            if ( !pOldSh->PrepareClose( sal_True ) )
+                return sal_False;
 
-    if ( nNewNo == USHRT_MAX )
-	{
-        // unknown ID -> fall back to default
-        sal_uInt16 nFoundId = rDocFact.GetViewFactory(0).GetOrdinal();
-		nNewNo = 0;
-		nViewId = nFoundId;
-        if ( pImp->nCurViewId == nFoundId )
-            nOldNo = 0;
-	}
-
-    SfxViewShell *pSh = GetViewShell();
-
-    DBG_ASSERT( !pSh || nOldNo != USHRT_MAX, "old shell id not found" );
-
-    // does a ViewShell exist already?
-    SfxViewShell *pOldSh = pSh;
-    if ( pOldSh )
-    {
-        // ask wether it can be closed
-        if ( !pOldSh->PrepareClose() )
-            return sal_False;
-
-        // remove SubShells from Dispatcher before switching to new ViewShell
-		pOldSh->PushSubShells_Impl( sal_False );
-        sal_uInt16 nLevel = pDispatcher->GetShellLevel( *pOldSh );
-        if ( nLevel )
-        {
-            SfxShell *pSubShell = pDispatcher->GetShell( nLevel-1 );
-            if ( pSubShell == pOldSh->GetSubShell() )
-                //"real" SubShells are not deleted
-                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL );
-            else
-                // SubShells only known to Dispatcher must be deleted
-                pDispatcher->Pop( *pSubShell, SFX_SHELL_POP_UNTIL | SFX_SHELL_POP_DELETE );
+            // remove sub shells from Dispatcher before switching to new ViewShell
+            PopShellAndSubShells_Impl( *pOldSh );
         }
 
-        pDispatcher->Pop( *pOldSh );
-        GetBindings().Invalidate( nOldNo + SID_VIEWSHELL0 );
+        GetBindings().ENTERREGISTRATIONS();
+        LockAdjustPosSizePixel();
+
+        // ID of the new view
+        SfxObjectFactory& rDocFact = GetObjectShell()->GetFactory();
+        const sal_uInt16 nViewId = ( bIsIndex || !nViewIdOrNo ) ? rDocFact.GetViewFactory( nViewIdOrNo ).GetOrdinal() : nViewIdOrNo;
+
+        // save the view data of the old view, so it can be restored later on (when needed)
+        SaveCurrentViewData_Impl( nViewId );
+
+        // create and load new ViewShell
+        SfxViewShell* pNewSh = LoadViewIntoFrame_Impl(
+            *GetObjectShell(), 
+            GetFrame().GetFrameInterface(),
+            Sequence< PropertyValue >(),    // means "reuse existing model's args"
+            nViewId,
+            false
+        );
+
+        // allow resize events to be processed
+        UnlockAdjustPosSizePixel();
+
+        if ( GetWindow().IsReallyVisible() )
+            DoAdjustPosSizePixel( pNewSh, Point(), GetWindow().GetOutputSizePixel() );
+
+	    GetBindings().LEAVEREGISTRATIONS();
+        delete pOldSh;
     }
-
-    // remember ViewID
-    pImp->nCurViewId = nViewId;
-    GetBindings().Invalidate( nNewNo + SID_VIEWSHELL0 );
-
-    // create new ViewShell
-    SfxViewFactory &rViewFactory = rDocFact.GetViewFactory( nNewNo );
-    LockAdjustPosSizePixel();
-
-    GetBindings().ENTERREGISTRATIONS();
-    pSh = rViewFactory.CreateInstance(this, pOldSh);
-
-    Window *pEditWin = pSh->GetWindow();
-    DBG_ASSERT( !pEditWin || !pEditWin->IsReallyVisible(), "don`t show your ViewShell`s Window by yourself!" );
-
-    // by setting the ViewShell it is prevented that disposing the Controller will destroy this ViewFrame also
-    GetDispatcher()->SetDisableFlags( 0 );
-    SetViewShell_Impl(pSh);
-
-    Reference < ::com::sun::star::awt::XWindow > xWindow(
-        GetFrame()->GetWindow().GetComponentInterface(), UNO_QUERY );
-    Reference < XFrame > xFrame( GetFrame()->GetFrameInterface() );
-    if ( !pSh->GetController().is() )
-        pSh->SetController( new SfxBaseController( pSh ) );
-    Reference < XController > xController( pSh->GetController() );
-    xFrame->setComponent( xWindow, xController );
-
-    xController->attachFrame( xFrame );
-    Reference < XModel > xModel( GetObjectShell()->GetModel() );
-    if ( xModel.is() )
-    {
-        xController->attachModel( xModel );
-        xModel->connectController( xController );
-        xModel->setCurrentController( xController );
-    }
-
-    GetDispatcher()->Push( *pSh );
-    if ( pSh->GetSubShell() )
-        GetDispatcher()->Push( *pSh->GetSubShell() );
-	pSh->PushSubShells_Impl();
-    GetDispatcher()->Flush();
-
-    if ( pImp->bRestoreView && pImp->aViewData.Len() )
-    {
-        // restore view data if required
-        pSh->ReadUserData( pImp->aViewData, sal_True );
-        pImp->bRestoreView = sal_False;
-    }
-
-    // create UI elements before size is set
-    if ( SfxViewFrame::Current() == this )
-        GetDispatcher()->Update_Impl( sal_True );
-
-    // allow resize events to be processed
-    UnlockAdjustPosSizePixel();
-
-	Window* pFrameWin = &GetWindow();
-    if ( pFrameWin != &GetFrame()->GetWindow() )
-		pFrameWin->Show();
-
-    if ( GetWindow().IsReallyVisible() )
-        DoAdjustPosSizePixel( pSh, Point(), GetWindow().GetOutputSizePixel() );
-
-    if ( pEditWin && pSh->IsShowView_Impl() )
-        pEditWin->Show();
-
-	GetBindings().LEAVEREGISTRATIONS();
-    delete pOldSh;
-    }
-    catch ( com::sun::star::uno::Exception& )
+    catch ( const com::sun::star::uno::Exception& )
     {
         // the SfxCode is not able to cope with exceptions thrown while creating views
         // the code will crash in the stack unwinding procedure, so we shouldn't let exceptions go through here
-        DBG_ERROR("Exception in SwitchToViewShell_Impl - urgent issue. Please contact development!");
+        DBG_UNHANDLED_EXCEPTION();
+        return sal_False;
     }
 
     DBG_ASSERT( SFX_APP()->GetViewFrames_Impl().Count() == SFX_APP()->GetViewShells_Impl().Count(), "Inconsistent view arrays!" );
     return sal_True;
 }
-//--------------------------------------------------------------------
-
-void SfxViewFrame::SetViewData_Impl( sal_uInt16 nViewId, const String &rViewData )
-{
-    pImp->bRestoreView = sal_True;
-    pImp->nCurViewId = nViewId;
-    pImp->aViewData = rViewData;
-}
 
 //-------------------------------------------------------------------------
-String& SfxViewFrame::GetViewData_Impl()
+void SfxViewFrame::SetCurViewId_Impl( const sal_uInt16 i_nID )
 {
-    return pImp->aViewData;
-}
-
-//-------------------------------------------------------------------------
-sal_Bool SfxViewFrame::IsRestoreView_Impl() const
-{
-    return pImp->bRestoreView;
-}
-
-//-------------------------------------------------------------------------
-void SfxViewFrame::SetRestoreView_Impl( sal_Bool bOn )
-{
-    pImp->bRestoreView = bOn;
+    pImp->nCurViewId = i_nID;
 }
 
 //-------------------------------------------------------------------------
@@ -2601,58 +2676,17 @@ void SfxViewFrame::ExecView_Impl
             break;
         }
 
-        case SID_FILLFRAME:
-        {
-            // Bei Mail etc. k"onnen die Frames nicht angesprochen werden
-            SfxFrame *pParent = GetFrame()->GetParentFrame();
-            if ( pParent && pParent->GetCurrentViewFrame()->
-                    GetViewShell()->IsImplementedAsFrameset_Impl() )
-                break;
-
-            SfxViewFrame *pRet = NULL;
-            SFX_REQUEST_ARG(
-                rReq, pItem, SfxStringItem, SID_FILLFRAME, sal_False );
-            if ( pItem )
-            {
-                String aName( pItem->GetValue() );
-                sal_uInt16 nFrame = (sal_uInt16) aName.ToInt32();
-				if ( nFrame == 0 )
-					nFrame = USHRT_MAX;
-
-                SfxFrameIterator aIter( *GetFrame(), sal_False );
-                SfxFrame *pFrame = aIter.FirstFrame();
-                sal_uInt16 nActFrame = 1;
-                while ( pFrame )
-                {
-                    SfxViewFrame *pView = pFrame->GetCurrentViewFrame();
-                    if (
-                        nActFrame == nFrame ||
-                        (
-                         pView &&
-						 aName.CompareIgnoreCaseToAscii( pView->SfxShell::GetName() ) == COMPARE_EQUAL
-                        )
-                       )
-                    {
-                        pRet = pView;
-                        break;
-                    }
-
-                    pFrame = aIter.NextFrame( *pFrame );
-                    nActFrame++;
-                }
-            }
-
-            rReq.SetReturnValue( SfxObjectItem( SID_DOCFRAME, pRet ) );
-            break;
-        }
-
         case SID_VIEWSHELL:
         {
             const SfxPoolItem *pItem = 0;
-            if ( rReq.GetArgs() &&
-                SFX_ITEM_SET == rReq.GetArgs()->GetItemState( SID_VIEWSHELL, sal_False, &pItem ) )
-                rReq.SetReturnValue( SfxBoolItem(0, SwitchToViewShell_Impl(
-                    (sal_uInt16)((const SfxUInt16Item*) pItem)->GetValue()) ));
+            if  (   rReq.GetArgs()
+                &&  SFX_ITEM_SET == rReq.GetArgs()->GetItemState( SID_VIEWSHELL, sal_False, &pItem )
+                )
+            {
+                const sal_uInt16 nViewId = static_cast< const SfxUInt16Item* >( pItem )->GetValue();
+                sal_Bool bSuccess = SwitchToViewShell_Impl( nViewId );
+                rReq.SetReturnValue( SfxBoolItem( 0, bSuccess ) );
+            }
             break;
         }
 
@@ -2662,85 +2696,39 @@ void SfxViewFrame::ExecView_Impl
         case SID_VIEWSHELL3:
         case SID_VIEWSHELL4:
         {
-            rReq.SetReturnValue( SfxBoolItem(0,
-                SwitchToViewShell_Impl( rReq.GetSlot() - SID_VIEWSHELL0, sal_True ) ) );
+            const sal_uInt16 nViewNo = rReq.GetSlot() - SID_VIEWSHELL0;
+            sal_Bool bSuccess = SwitchToViewShell_Impl( nViewNo, sal_True );
+            rReq.SetReturnValue( SfxBoolItem( 0, bSuccess ) );
             break;
         }
 
         case SID_NEWWINDOW:
         {
             // Hack. demnaechst virtuelle Funktion
-            if ( !GetViewShell()->NewWindowAllowed() && !GetObjectShell()->HasName() )
+            if ( !GetViewShell()->NewWindowAllowed() )
+            {
+                OSL_ENSURE( false, "You should have disabled the 'Window/New Window' slot!" );
                 return;
+            }
 
 			// ViewData bei FrameSets rekursiv holen
-			GetFrame()->GetViewData_Impl();
-			SfxMedium *pMed = GetObjectShell()->GetMedium();
-			String aUserData;
-			GetViewShell()->WriteUserData( aUserData, sal_True );
-			if ( !GetViewShell()->NewWindowAllowed() )
-			{
-                SFX_REQUEST_ARG( rReq, pFrameItem, SfxUnoAnyItem, SID_FILLFRAME, sal_False );
-                SfxFrame *pFrame = NULL;
-                Reference < XFrame > xFrame;
-                if ( pFrameItem )
-                {
-                    pFrameItem->GetValue() >>= xFrame;
-                    pFrame = SfxTopFrame::Create( xFrame );
-                }
-                else
-                    pFrame = SfxTopFrame::Create();
+			GetFrame().GetViewData_Impl();
+			SfxMedium* pMed = GetObjectShell()->GetMedium();
 
-                SfxAllItemSet aSet( SFX_APP()->GetPool() );
-                SFX_REQUEST_ARG( rReq, pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
-                if ( pHiddenItem )
-                    aSet.Put( *pHiddenItem );
+            // do not open the new window hidden
+			pMed->GetItemSet()->ClearItem( SID_HIDDEN );
 
-				SFX_ITEMSET_ARG( pMed->GetItemSet(), pRefererItem, SfxStringItem, SID_REFERER, sal_False );
-				SfxStringItem aReferer( SID_REFERER, DEFINE_CONST_UNICODE( "private:user" ) );
-				if ( !pRefererItem )
-					pRefererItem = &aReferer;
+            // the view ID (optional arg. TODO: this is currently not supported in the slot definition ...)
+            SFX_REQUEST_ARG( rReq, pViewIdItem, SfxUInt16Item, SID_VIEW_ID, sal_False );
+            const sal_uInt16 nViewId = pViewIdItem ? pViewIdItem->GetValue() : GetCurViewId();
 
-				aSet.Put( SfxStringItem( SID_FILE_NAME, pMed->GetName() ) );
-				aSet.Put( SfxStringItem( SID_USER_DATA, aUserData ) );
-				aSet.Put( SfxUInt16Item( SID_VIEW_ID, GetCurViewId() ) );
-				aSet.Put( *pRefererItem );
-				if( pMed->GetFilter() )
-                    aSet.Put( SfxStringItem( SID_FILTER_NAME, pMed->GetFilter()->GetFilterName()) );
-				aSet.Put( SfxFrameItem ( SID_DOCFRAME, pFrame ) );
-                if ( xFrame.is() )
-                    GetDispatcher()->Execute( SID_OPENDOC, SFX_CALLMODE_SYNCHRON, aSet );
-                else
-                    GetDispatcher()->Execute( SID_OPENDOC, SFX_CALLMODE_ASYNCHRON, aSet );
-			}
-			else
-			{
-				pMed->GetItemSet()->Put( SfxStringItem( SID_USER_DATA, aUserData ) );
+        	Reference < XFrame > xFrame;
+            // the frame (optional arg. TODO: this is currently not supported in the slot definition ...)
+            SFX_REQUEST_ARG( rReq, pFrameItem, SfxUnoFrameItem, SID_FILLFRAME, sal_False );
+            if ( pFrameItem )
+                xFrame = pFrameItem->GetFrame();
 
-                BOOL bHidden = FALSE;
-                SFX_REQUEST_ARG( rReq, pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
-                if ( pHiddenItem )
-                    bHidden = pHiddenItem->GetValue();
-                SFX_REQUEST_ARG( rReq, pFrameItem, SfxUnoAnyItem, SID_FILLFRAME, sal_False );
-                if ( pFrameItem )
-                {
-                	Reference < XFrame > xFrame;
-                    pFrameItem->GetValue() >>= xFrame;
-                    SfxFrame* pFrame = SfxTopFrame::Create( xFrame );
-					pMed->GetItemSet()->ClearItem( SID_HIDDEN );
-					pFrame->InsertDocument( GetObjectShell() );
-                    if ( !bHidden )
-                        xFrame->getContainerWindow()->setVisible( sal_True );
-                }
-                else
-				{
-					SfxAllItemSet aSet( GetPool() );
-					aSet.Put( SfxBoolItem( SID_OPEN_NEW_VIEW, TRUE ) );
-                	SfxFrame* pFrame = SfxTopFrame::Create( GetObjectShell(), GetCurViewId(), bHidden, &aSet );
-                	if ( bHidden )
-                    	pFrame->GetCurrentViewFrame()->LockObjectShell_Impl( TRUE );
-				}
-			}
+            LoadViewIntoFrame_Impl_NoThrow( *GetObjectShell(), xFrame, nViewId, false );
 
 			rReq.Done();
             break;
@@ -2905,13 +2893,10 @@ void SfxViewFrame::StateView_Impl
 
 		        case SID_NEWWINDOW:
 		        {
-                    if ( !GetViewShell()->NewWindowAllowed() /* && !pDocSh->HasName() */ )
-							rSet.DisableItem( nWhich );
-                    else
-                    {
-                        if (impl_maxOpenDocCountReached())
-							rSet.DisableItem( nWhich );
-                    }
+                    if  (   !GetViewShell()->NewWindowAllowed()
+                        ||  impl_maxOpenDocCountReached()
+                        )
+                        rSet.DisableItem( nWhich );
 					break;
 				}
             }
@@ -2920,22 +2905,9 @@ void SfxViewFrame::StateView_Impl
 }
 
 //-------------------------------------------------------------------------
-void SfxViewFrame::GetState_Impl( SfxItemSet &rSet )
-{
-    if ( GetViewShell() && GetViewShell()->GetVerbs().getLength() && !GetObjectShell()->IsInPlaceActive() )
-	{
-		uno::Any aAny;
-		aAny <<= GetViewShell()->GetVerbs();
-        rSet.Put( SfxUnoAnyItem( USHORT( SID_OBJECT ), aAny ) );
-	}
-    else
-        rSet.DisableItem( SID_OBJECT );
-}
-
-//-------------------------------------------------------------------------
 void SfxViewFrame::ToTop()
 {
-    GetFrame()->Appear();
+    GetFrame().Appear();
 }
 
 //-------------------------------------------------------------------------
@@ -2945,66 +2917,41 @@ SfxViewFrame* SfxViewFrame::GetParentViewFrame() const
     Der ParentViewFrame ist der ViewFrame des ParentFrames
 */
 {
-    SfxFrame *pFrame = GetFrame()->GetParentFrame();
+    SfxFrame *pFrame = GetFrame().GetParentFrame();
     return pFrame ? pFrame->GetCurrentViewFrame() : NULL;
 }
 
 //-------------------------------------------------------------------------
-SfxFrame* SfxViewFrame::GetFrame() const
+SfxFrame& SfxViewFrame::GetFrame() const
 /*
     Beschreibung:
     GetFrame liefert den Frame, in dem sich der ViewFrame befindet
 */
 {
-    return pImp->pFrame;
-}
-
-//-------------------------------------------------------------------------
-void SfxViewFrame::SetFrame_Impl( SfxFrame *pFrame )
-{
-    pImp->pFrame = pFrame;
+    return pImp->rFrame;
 }
 
 //-------------------------------------------------------------------------
 SfxViewFrame* SfxViewFrame::GetTopViewFrame() const
 {
-    return GetFrame()->GetTopFrame()->GetCurrentViewFrame();
-}
-
-//-------------------------------------------------------------------------
-
-SfxCancelManager *SfxViewFrame::GetCancelManager() const
-
-/*  <H3>Description</H3>
-
-    Returns a pointer to the <SfxCancelManager> of the top-view-frame of
-    this view-frame.
-*/
-
-{
-	return GetTopViewFrame()->GetFrame()->GetCancelManager();
-}
-
-void SfxViewFrame::SetWindow_Impl( Window *pWin )
-{
-	pImp->pWindow = pWin;
+    return GetFrame().GetTopFrame().GetCurrentViewFrame();
 }
 
 Window& SfxViewFrame::GetWindow() const
 {
-	return pImp->pWindow ? *pImp->pWindow : GetFrame()->GetWindow();
+	return pImp->pWindow ? *pImp->pWindow : GetFrame().GetWindow();
 }
 
 sal_Bool SfxViewFrame::DoClose()
 {
-	return GetFrame()->DoClose();
+	return GetFrame().DoClose();
 }
 
 String SfxViewFrame::GetActualPresentationURL_Impl() const
 {
 	if ( xObjSh.Is() )
 		return xObjSh->GetMedium()->GetName();
-	return pImp->aActualPresentationURL;
+	return String();
 }
 
 void SfxViewFrame::SetModalMode( sal_Bool bModal )
@@ -3019,12 +2966,12 @@ void SfxViewFrame::SetModalMode( sal_Bool bModal )
     }
 }
 
-BOOL SfxViewFrame::IsInModalMode() const
+sal_Bool SfxViewFrame::IsInModalMode() const
 {
-    return pImp->bModal || GetFrame()->GetWindow().IsInModalMode();
+    return pImp->bModal || GetFrame().GetWindow().IsInModalMode();
 }
 
-void SfxViewFrame::Resize( BOOL bForce )
+void SfxViewFrame::Resize( sal_Bool bForce )
 {
     Size aSize = GetWindow().GetOutputSizePixel();
     if ( bForce || aSize != pImp->aSize )
@@ -3033,18 +2980,14 @@ void SfxViewFrame::Resize( BOOL bForce )
         SfxViewShell *pShell = GetViewShell();
         if ( pShell )
         {
-            if ( GetFrame()->IsInPlace() )
+            if ( GetFrame().IsInPlace() )
             {
                 Point aPoint = GetWindow().GetPosPixel();
                 DoAdjustPosSizePixel( pShell, aPoint, aSize );
             }
             else
             {
-                if ( pShell->UseObjectSize() )
-                    ForceOuterResize_Impl(TRUE);
                 DoAdjustPosSizePixel( pShell, Point(), aSize );
-                if ( pShell->UseObjectSize() )
-                    ForceOuterResize_Impl(FALSE);
             }
         }
     }
@@ -3052,7 +2995,7 @@ void SfxViewFrame::Resize( BOOL bForce )
 
 #define LINE_SEP 0x0A
 
-void CutLines( ::rtl::OUString& rStr, sal_Int32 nStartLine, sal_Int32 nLines, BOOL bEraseTrailingEmptyLines )
+void CutLines( ::rtl::OUString& rStr, sal_Int32 nStartLine, sal_Int32 nLines, sal_Bool bEraseTrailingEmptyLines )
 {
 	sal_Int32 nStartPos = 0;
 	sal_Int32 nEndPos = 0;
@@ -3119,7 +3062,7 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
 
     SfxApplication* pSfxApp = SFX_APP();
     SfxRequest aReq( SID_BASICCHOOSER, SFX_CALLMODE_SYNCHRON, pSfxApp->GetPool() );
-    aReq.AppendItem( SfxBoolItem(SID_RECORDMACRO,TRUE) );
+    aReq.AppendItem( SfxBoolItem(SID_RECORDMACRO,sal_True) );
     const SfxPoolItem* pRet = SFX_APP()->ExecuteSlot( aReq );
     String aScriptURL;
     if ( pRet )
@@ -3156,8 +3099,6 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
             }
         }
 
-		pSfxApp->EnterBasicCall();
-
 		BasicManager* pBasMgr = 0;
         if ( aLocation.EqualsIgnoreCaseAscii( "application" ) )
         {
@@ -3180,11 +3121,11 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
 				{
                     SbMethod* pMethod = (SbMethod*)pModule->GetMethods()->Find( aMacroName, SbxCLASS_METHOD );
                     aOUSource = pModule->GetSource32();
-                    USHORT nStart, nEnd;
+                    sal_uInt16 nStart, nEnd;
                     pMethod->GetLineRange( nStart, nEnd );
-                    ULONG nlStart = nStart;
-                    ULONG nlEnd = nEnd;
-                    CutLines( aOUSource, nlStart-1, nlEnd-nlStart+1, TRUE );
+                    sal_uIntPtr nlStart = nStart;
+                    sal_uIntPtr nlEnd = nEnd;
+                    CutLines( aOUSource, nlStart-1, nlEnd-nlStart+1, sal_True );
 				}
 			}
 		}
@@ -3232,7 +3173,7 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
         ::rtl::OUString sCode;
         ::rtl::OUStringBuffer sRoutine(10000);
         ::rtl::OUString sMacroName( aMacroName );
-        BOOL bReplace = FALSE;
+        sal_Bool bReplace = sal_False;
 
         // get module
         ::rtl::OUString sModule( aModuleName );
@@ -3249,7 +3190,7 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
                 sRoutine.append( sCode );
             }
 
-            bReplace = TRUE;
+            bReplace = sal_True;
         }
 
         // append new method
@@ -3290,25 +3231,16 @@ void SfxViewFrame::AddDispatchMacroToBasic_Impl( const ::rtl::OUString& sMacro )
                 }
             }
         }
-
-        pSfxApp->LeaveBasicCall();
     }
     else
     {
         // add code for "session only" macro
     }
-
-    /*
-    FILE* pFile = fopen( "macro.bas", "a" );
-    fprintf( pFile, "%s", ::rtl::OUStringToOString(sBuffer.makeStringAndClear(),RTL_TEXTENCODING_UTF8).getStr() );
-    fclose ( pFile );
-    */
 }
 
 void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
 {
 	DBG_MEMTEST();
-	FASTBOOL bDone = FALSE;
 	switch ( rReq.GetSlot() )
 	{
         case SID_STOP_RECORDING :
@@ -3317,7 +3249,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
             // try to find any active recorder on this frame
             ::rtl::OUString sProperty = rtl::OUString::createFromAscii("DispatchRecorderSupplier");
             com::sun::star::uno::Reference< com::sun::star::frame::XFrame > xFrame(
-                    GetFrame()->GetFrameInterface(),
+                    GetFrame().GetFrameInterface(),
                     com::sun::star::uno::UNO_QUERY);
 
             com::sun::star::uno::Reference< com::sun::star::beans::XPropertySet > xSet(xFrame,com::sun::star::uno::UNO_QUERY);
@@ -3328,7 +3260,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
             if (xSupplier.is())
                 xRecorder = xSupplier->getDispatchRecorder();
 
-            BOOL bIsRecording = xRecorder.is();
+            sal_Bool bIsRecording = xRecorder.is();
             SFX_REQUEST_ARG( rReq, pItem, SfxBoolItem, SID_RECORDMACRO, sal_False);
             if ( pItem && pItem->GetValue() == bIsRecording )
                 return;
@@ -3348,7 +3280,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
                 xRecorder = NULL;
 				GetBindings().SetRecorder_Impl( xRecorder );
 
-                SetChildWindow( SID_RECORDING_FLOATWINDOW, FALSE );
+                SetChildWindow( SID_RECORDING_FLOATWINDOW, sal_False );
                 if ( rReq.GetSlot() != SID_RECORDMACRO )
                     GetBindings().Invalidate( SID_RECORDMACRO );
             }
@@ -3372,7 +3304,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
                 aProp <<= xSupplier;
                 xSet->setPropertyValue(sProperty,aProp);
 				GetBindings().SetRecorder_Impl( xRecorder );
-                SetChildWindow( SID_RECORDING_FLOATWINDOW, TRUE );
+                SetChildWindow( SID_RECORDING_FLOATWINDOW, sal_True );
             }
 
             rReq.Done();
@@ -3382,7 +3314,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
 		case SID_TOGGLESTATUSBAR:
 		{
             com::sun::star::uno::Reference< com::sun::star::frame::XFrame > xFrame(
-                    GetFrame()->GetFrameInterface(),
+                    GetFrame().GetFrameInterface(),
                     com::sun::star::uno::UNO_QUERY);
 
 	        Reference< com::sun::star::beans::XPropertySet > xPropSet( xFrame, UNO_QUERY );
@@ -3403,8 +3335,8 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
             {
                 rtl::OUString aStatusbarResString( RTL_CONSTASCII_USTRINGPARAM( "private:resource/statusbar/statusbar" ));
                 // Parameter auswerten
-			    SFX_REQUEST_ARG(rReq, pShowItem, SfxBoolItem, rReq.GetSlot(), FALSE);
-                BOOL bShow( TRUE );
+			    SFX_REQUEST_ARG(rReq, pShowItem, SfxBoolItem, rReq.GetSlot(), sal_False);
+                sal_Bool bShow( sal_True );
                 if ( !pShowItem )
                     bShow = xLayoutManager->isElementVisible( aStatusbarResString );
                 else
@@ -3428,15 +3360,15 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
 		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		case SID_WIN_FULLSCREEN:
 		{
-            SFX_REQUEST_ARG(rReq, pItem, SfxBoolItem, rReq.GetSlot(), FALSE);
-            SfxTopViewFrame *pTop= PTR_CAST( SfxTopViewFrame, GetTopViewFrame() );
+            SFX_REQUEST_ARG(rReq, pItem, SfxBoolItem, rReq.GetSlot(), sal_False);
+            SfxViewFrame *pTop = GetTopViewFrame();
             if ( pTop )
             {
-                WorkWindow* pWork = (WorkWindow*) pTop->GetTopFrame_Impl()->GetTopWindow_Impl();
+                WorkWindow* pWork = (WorkWindow*) pTop->GetFrame().GetTopWindow_Impl();
                 if ( pWork )
                 {
                     com::sun::star::uno::Reference< com::sun::star::frame::XFrame > xFrame(
-                            GetFrame()->GetFrameInterface(),
+                            GetFrame().GetFrameInterface(),
                             com::sun::star::uno::UNO_QUERY);
 
                     Reference< ::com::sun::star::beans::XPropertySet > xPropSet( xFrame, UNO_QUERY );
@@ -3453,7 +3385,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
                         }
                     }
 
-                    BOOL bNewFullScreenMode = pItem ? pItem->GetValue() : !pWork->IsFullScreenMode();
+                    sal_Bool bNewFullScreenMode = pItem ? pItem->GetValue() : !pWork->IsFullScreenMode();
 					if ( bNewFullScreenMode != pWork->IsFullScreenMode() )
 					{
 #if defined USE_JAVA && defined MACOSX
@@ -3468,8 +3400,8 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
                         {
                             try
                             {
-                                xLMPropSet->setPropertyValue( 
-                                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "HideCurrentUI" )), 
+                                xLMPropSet->setPropertyValue(
+                                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "HideCurrentUI" )),
                                     makeAny( bNewFullScreenMode ));
                             }
                             catch ( ::com::sun::star::beans::UnknownPropertyException& )
@@ -3478,7 +3410,7 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
                         }
 	                    pWork->ShowFullScreenMode( bNewFullScreenMode );
 	                    pWork->SetMenuBarMode( bNewFullScreenMode ? MENUBAR_MODE_HIDE : MENUBAR_MODE_NORMAL );
-	                    GetFrame()->GetWorkWindow_Impl()->SetFullScreen_Impl( bNewFullScreenMode );
+	                    GetFrame().GetWorkWindow_Impl()->SetFullScreen_Impl( bNewFullScreenMode );
 #endif	// USE_JAVA && MACOSX
 	                    if ( !pItem )
 	                        rReq.AppendItem( SfxBoolItem( SID_WIN_FULLSCREEN, bNewFullScreenMode ) );
@@ -3491,24 +3423,21 @@ void SfxViewFrame::MiscExec_Impl( SfxRequest& rReq )
             else
                 rReq.Ignore();
 
-            GetDispatcher()->Update_Impl( TRUE );
+            GetDispatcher()->Update_Impl( sal_True );
 			break;
 		}
 	}
-
-	if ( bDone )
-		rReq.Done();
 }
 
 void SfxViewFrame::MiscState_Impl(SfxItemSet &rSet)
 {
 	DBG_MEMTEST();
 
-	const USHORT *pRanges = rSet.GetRanges();
+	const sal_uInt16 *pRanges = rSet.GetRanges();
 	DBG_ASSERT(pRanges && *pRanges, "Set ohne Bereich");
 	while ( *pRanges )
 	{
-		for(USHORT nWhich = *pRanges++; nWhich <= *pRanges; ++nWhich)
+		for(sal_uInt16 nWhich = *pRanges++; nWhich <= *pRanges; ++nWhich)
 		{
 			switch(nWhich)
 			{
@@ -3533,7 +3462,7 @@ void SfxViewFrame::MiscState_Impl(SfxItemSet &rSet)
 
                     ::rtl::OUString sProperty = rtl::OUString::createFromAscii("DispatchRecorderSupplier");
                     com::sun::star::uno::Reference< com::sun::star::beans::XPropertySet > xSet(
-                            GetFrame()->GetFrameInterface(),
+                            GetFrame().GetFrameInterface(),
                             com::sun::star::uno::UNO_QUERY);
 
                     com::sun::star::uno::Any aProp = xSet->getPropertyValue(sProperty);
@@ -3556,7 +3485,7 @@ void SfxViewFrame::MiscState_Impl(SfxItemSet &rSet)
 
                     ::rtl::OUString sProperty = rtl::OUString::createFromAscii("DispatchRecorderSupplier");
                     com::sun::star::uno::Reference< com::sun::star::beans::XPropertySet > xSet(
-                            GetFrame()->GetFrameInterface(),
+                            GetFrame().GetFrameInterface(),
                             com::sun::star::uno::UNO_QUERY);
 
                     com::sun::star::uno::Any aProp = xSet->getPropertyValue(sProperty);
@@ -3570,17 +3499,17 @@ void SfxViewFrame::MiscState_Impl(SfxItemSet &rSet)
 				{
                     com::sun::star::uno::Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
                     com::sun::star::uno::Reference< com::sun::star::beans::XPropertySet > xSet(
-                            GetFrame()->GetFrameInterface(),
+                            GetFrame().GetFrameInterface(),
                             com::sun::star::uno::UNO_QUERY);
                     com::sun::star::uno::Any aProp = xSet->getPropertyValue(
                         rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "LayoutManager" )) );
 
 			        if ( !( aProp >>= xLayoutManager ))
-                        rSet.Put( SfxBoolItem( nWhich, FALSE ));
+                        rSet.Put( SfxBoolItem( nWhich, sal_False ));
                     else
                     {
                         rtl::OUString aStatusbarResString( RTL_CONSTASCII_USTRINGPARAM( "private:resource/statusbar/statusbar" ));
-                        BOOL bShow = xLayoutManager->isElementVisible( aStatusbarResString );
+                        sal_Bool bShow = xLayoutManager->isElementVisible( aStatusbarResString );
                         rSet.Put( SfxBoolItem( nWhich, bShow ));
                     }
 					break;
@@ -3588,10 +3517,10 @@ void SfxViewFrame::MiscState_Impl(SfxItemSet &rSet)
 
 				case SID_WIN_FULLSCREEN:
                 {
-                    SfxTopViewFrame *pTop= PTR_CAST( SfxTopViewFrame, GetTopViewFrame() );
+                    SfxViewFrame* pTop = GetTopViewFrame();
                     if ( pTop )
                     {
-                        WorkWindow* pWork = (WorkWindow*) pTop->GetTopFrame_Impl()->GetTopWindow_Impl();
+                        WorkWindow* pWork = (WorkWindow*) pTop->GetFrame().GetTopWindow_Impl();
                         if ( pWork )
                         {
                             rSet.Put( SfxBoolItem( nWhich, pWork->IsFullScreenMode() ) );
@@ -3633,17 +3562,17 @@ void SfxViewFrame::ChildWindowExecute( SfxRequest &rReq )
 
 {
 	// Parameter auswerten
-	USHORT nSID = rReq.GetSlot();
+	sal_uInt16 nSID = rReq.GetSlot();
 
-	SFX_REQUEST_ARG(rReq, pShowItem, SfxBoolItem, nSID, FALSE);
+	SFX_REQUEST_ARG(rReq, pShowItem, SfxBoolItem, nSID, sal_False);
     if ( nSID == SID_VIEW_DATA_SOURCE_BROWSER )
     {
         if (!SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SDATABASE))
             return;
-        Reference < XFrame > xFrame = GetFrame()->GetTopFrame()->GetFrameInterface();
+        Reference < XFrame > xFrame = GetFrame().GetTopFrame().GetFrameInterface();
         Reference < XFrame > xBeamer( xFrame->findFrame( DEFINE_CONST_UNICODE("_beamer"), FrameSearchFlag::CHILDREN ) );
-        BOOL bShow = FALSE;
-        BOOL bHasChild = xBeamer.is();
+        sal_Bool bShow = sal_False;
+        sal_Bool bHasChild = xBeamer.is();
         bShow = pShowItem ? pShowItem->GetValue() : !bHasChild;
         if ( pShowItem )
         {
@@ -3655,7 +3584,7 @@ void SfxViewFrame::ChildWindowExecute( SfxRequest &rReq )
 
         if ( !bShow )
         {
-            SetChildWindow( SID_BROWSER, FALSE );
+            SetChildWindow( SID_BROWSER, sal_False );
         }
         else
         {
@@ -3682,16 +3611,16 @@ void SfxViewFrame::ChildWindowExecute( SfxRequest &rReq )
         return;
     }
 
-	BOOL bShow = FALSE;
-	BOOL bHasChild = HasChildWindow(nSID);
+	sal_Bool bShow = sal_False;
+	sal_Bool bHasChild = HasChildWindow(nSID);
 	bShow = pShowItem ? pShowItem->GetValue() : !bHasChild;
+    GetDispatcher()->Update_Impl( sal_True );
 
 	// ausf"uhren
 	if ( !pShowItem || bShow != bHasChild )
 		ToggleChildWindow( nSID );
 
 	GetBindings().Invalidate( nSID );
-    GetDispatcher()->Update_Impl( TRUE );
 
 	// ggf. recorden
     if ( nSID == SID_HYPERLINK_DIALOG || nSID == SID_SEARCH_DLG )
@@ -3719,7 +3648,7 @@ void SfxViewFrame::ChildWindowState( SfxItemSet& rState )
 
 {
 	SfxWhichIter aIter( rState );
-	for ( USHORT nSID = aIter.FirstWhich(); nSID; nSID = aIter.NextWhich() )
+	for ( sal_uInt16 nSID = aIter.FirstWhich(); nSID; nSID = aIter.NextWhich() )
 	{
         if ( nSID == SID_VIEW_DATA_SOURCE_BROWSER )
         {
@@ -3741,13 +3670,41 @@ void SfxViewFrame::ChildWindowState( SfxItemSet& rState )
 		}
         else if ( nSID == SID_BROWSER )
 		{
-			Reference < XFrame > xFrame = GetFrame()->GetTopFrame()->GetFrameInterface()->
+			Reference < XFrame > xFrame = GetFrame().GetTopFrame().GetFrameInterface()->
 							findFrame( DEFINE_CONST_UNICODE("_beamer"), FrameSearchFlag::CHILDREN );
 			if ( !xFrame.is() )
 				rState.DisableItem( nSID );
 			else if ( KnowsChildWindow(nSID) )
 				rState.Put( SfxBoolItem( nSID, HasChildWindow(nSID) ) );
 		}
+        else if ( nSID == SID_TASKPANE )
+        {
+            if  ( !KnowsChildWindow( nSID ) )
+            {
+                OSL_ENSURE( false, "SID_TASKPANE state requested, but no task pane child window exists for this ID!" );
+			    rState.DisableItem( nSID );
+            }
+            else if ( !moduleHasToolPanels( *pImp ) )
+            {
+                rState.Put( SfxVisibilityItem( nSID, sal_False ) );
+            }
+            else
+            {
+			    rState.Put( SfxBoolItem( nSID, HasChildWindow( nSID ) ) );
+            }
+        }
+        else if ( nSID == SID_SIDEBAR )
+        {
+            if  ( !KnowsChildWindow( nSID ) )
+            {
+                OSL_ENSURE( false, "SID_TASKPANE state requested, but no task pane child window exists for this ID!" );
+			    rState.DisableItem( nSID );
+            }
+            else
+            {
+			    rState.Put( SfxBoolItem( nSID, HasChildWindow( nSID ) ) );
+            }
+        }
 		else if ( KnowsChildWindow(nSID) )
 			rState.Put( SfxBoolItem( nSID, HasChildWindow(nSID) ) );
 		else
@@ -3756,20 +3713,20 @@ void SfxViewFrame::ChildWindowState( SfxItemSet& rState )
 }
 
 //--------------------------------------------------------------------
-SfxWorkWindow* SfxViewFrame::GetWorkWindow_Impl( USHORT /*nId*/ )
+SfxWorkWindow* SfxViewFrame::GetWorkWindow_Impl( sal_uInt16 /*nId*/ )
 {
     SfxWorkWindow* pWork = 0;
-    pWork = GetFrame()->GetWorkWindow_Impl();
+    pWork = GetFrame().GetWorkWindow_Impl();
     return pWork;
 }
 
 /*
-void SfxViewFrame::SetChildWindow(USHORT nId, BOOL bOn)
+void SfxViewFrame::SetChildWindow(sal_uInt16 nId, sal_Bool bOn)
 {
-    SetChildWindow( nId, bOn, TRUE );
+    SetChildWindow( nId, bOn, sal_True );
 }*/
 
-void SfxViewFrame::SetChildWindow(USHORT nId, BOOL bOn, BOOL bSetFocus )
+void SfxViewFrame::SetChildWindow(sal_uInt16 nId, sal_Bool bOn, sal_Bool bSetFocus )
 {
     SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
     if ( pWork )
@@ -3778,52 +3735,47 @@ void SfxViewFrame::SetChildWindow(USHORT nId, BOOL bOn, BOOL bSetFocus )
 
 //--------------------------------------------------------------------
 
-void SfxViewFrame::ToggleChildWindow(USHORT nId)
+void SfxViewFrame::ToggleChildWindow(sal_uInt16 nId)
 {
     SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
     if ( pWork )
-        pWork->ToggleChildWindow_Impl( nId, TRUE );
+        pWork->ToggleChildWindow_Impl( nId, sal_True );
 }
 
 //--------------------------------------------------------------------
 
-BOOL SfxViewFrame::HasChildWindow( USHORT nId )
+sal_Bool SfxViewFrame::HasChildWindow( sal_uInt16 nId )
 {
 	SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
-	return pWork ? pWork->HasChildWindow_Impl(nId) : FALSE;
+	return pWork ? pWork->HasChildWindow_Impl(nId) : sal_False;
 }
 
 //--------------------------------------------------------------------
 
-BOOL SfxViewFrame::KnowsChildWindow( USHORT nId )
+sal_Bool SfxViewFrame::KnowsChildWindow( sal_uInt16 nId )
 {
     SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
-	return pWork ? pWork->KnowsChildWindow_Impl(nId) : FALSE;
+	return pWork ? pWork->KnowsChildWindow_Impl(nId) : sal_False;
 }
 
 //--------------------------------------------------------------------
 
-void SfxViewFrame::ShowChildWindow( USHORT nId, BOOL bVisible )
+void SfxViewFrame::ShowChildWindow( sal_uInt16 nId, sal_Bool bVisible )
 {
     SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
     if ( pWork )
     {
         GetDispatcher()->Update_Impl(sal_True);
-        pWork->ShowChildWindow_Impl(nId, bVisible, TRUE );
+        pWork->ShowChildWindow_Impl(nId, bVisible, sal_True );
     }
 }
 
 //--------------------------------------------------------------------
 
-SfxChildWindow* SfxViewFrame::GetChildWindow(USHORT nId)
+SfxChildWindow* SfxViewFrame::GetChildWindow(sal_uInt16 nId)
 {
     SfxWorkWindow* pWork = GetWorkWindow_Impl( nId );
 	return pWork ? pWork->GetChildWindow_Impl(nId) : NULL;
-}
-
-SfxMacro* SfxViewFrame::GetRecordingMacro_Impl()
-{
-    return pImp->pMacro;
 }
 
 void SfxViewFrame::UpdateDocument_Impl()
@@ -3836,30 +3788,72 @@ void SfxViewFrame::UpdateDocument_Impl()
     pDoc->UpdateFromTemplate_Impl();
 }
 
-BOOL SfxViewFrame::ClearEventFlag_Impl()
-{
-	if ( pImp->bEventFlag )
-	{
-		pImp->bEventFlag = FALSE;
-		return TRUE;
-	}
-	else
-		return FALSE;
-}
-
-SfxViewFrame* SfxViewFrame::CreateViewFrame( SfxObjectShell& rDoc, sal_uInt16 nViewId, sal_Bool bHidden )
-{
-	SfxItemSet *pSet = rDoc.GetMedium()->GetItemSet();
-	if ( nViewId )
-		pSet->Put( SfxUInt16Item( SID_VIEW_ID, nViewId ) );
-    if ( bHidden )
-		pSet->Put( SfxBoolItem( SID_HIDDEN, sal_True ) );
-
-    SfxFrame *pFrame = SfxTopFrame::Create( &rDoc, 0, bHidden );
-	return pFrame->GetCurrentViewFrame();
-}
-
 void SfxViewFrame::SetViewFrame( SfxViewFrame* pFrame )
 {
     SFX_APP()->SetViewFrame_Impl( pFrame );
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+void SfxViewFrame::ActivateToolPanel( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XFrame >& i_rFrame, const ::rtl::OUString& i_rPanelURL )
+{
+	::vos::OGuard aGuard( Application::GetSolarMutex() );
+
+    // look up the SfxFrame for the given XFrame
+    SfxFrame* pFrame = NULL;
+    for ( pFrame = SfxFrame::GetFirst(); pFrame; pFrame = SfxFrame::GetNext( *pFrame ) )
+    {
+        if ( pFrame->GetFrameInterface() == i_rFrame )
+            break;
+    }
+    SfxViewFrame* pViewFrame = pFrame ? pFrame->GetCurrentViewFrame() : NULL;
+    ENSURE_OR_RETURN_VOID( pViewFrame != NULL, "SfxViewFrame::ActivateToolPanel: did not find an SfxFrame for the given XFrame!" );
+
+    pViewFrame->ActivateToolPanel_Impl( i_rPanelURL );
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+void SfxViewFrame::ActivateToolPanel_Impl( const ::rtl::OUString& i_rPanelURL )
+{
+    // ensure the task pane is visible
+    ENSURE_OR_RETURN_VOID( KnowsChildWindow( SID_TASKPANE ), "SfxViewFrame::ActivateToolPanel: this frame/module does not allow for a task pane!" );
+    if ( !HasChildWindow( SID_TASKPANE ) )
+        ToggleChildWindow( SID_TASKPANE );
+
+    SfxChildWindow* pTaskPaneChildWindow = GetChildWindow( SID_TASKPANE );
+    ENSURE_OR_RETURN_VOID( pTaskPaneChildWindow, "SfxViewFrame::ActivateToolPanel_Impl: just switched it on, but it is not there!" );
+
+    ::sfx2::ITaskPaneToolPanelAccess* pPanelAccess = dynamic_cast< ::sfx2::ITaskPaneToolPanelAccess* >( pTaskPaneChildWindow );
+    ENSURE_OR_RETURN_VOID( pPanelAccess, "SfxViewFrame::ActivateToolPanel_Impl: task pane child window does not implement a required interface!" );
+    pPanelAccess->ActivateToolPanel( i_rPanelURL );
+}
+
+#if defined USE_JAVA && defined MACOSX
+
+sal_Bool SfxViewFrame::IsNeedsUpdateTitle_Impl() const
+{
+    return pImp->bNeedsUpdateTitle;
+}
+
+IMPL_LINK( SfxViewFrame, CheckForMovedFile, void*, EMPTYARG )
+{
+    if ( IsActive() )
+    {
+        SfxObjectShell *pDoc = GetObjectShell();
+        if ( pDoc )
+        {
+            SfxMedium *pMedium = pDoc->GetMedium();
+            if ( pMedium )
+                pMedium->CheckForMovedFile( pDoc );
+        }
+
+        pImp->aTimer.Start();
+    }
+    else
+    {
+        pImp->aTimer.Stop();
+    }
+
+    return 0;
+}
+
+#endif	// USE_JAVA && MACOSX

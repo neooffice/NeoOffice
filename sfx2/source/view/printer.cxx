@@ -1,39 +1,41 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
 #include <vcl/virdev.hxx>
 #include <vcl/metric.hxx>
 #include <vcl/msgbox.hxx>
-#include <svtools/printdlg.hxx>
-#include <svtools/printwarningoptions.hxx>
+#include <unotools/printwarningoptions.hxx>
 #include <svtools/printoptions.hxx>
 #include <vector>
 
@@ -46,160 +48,44 @@
 #include <sfx2/prnmon.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/tabdlg.hxx>
-#include "sfxresid.hxx"
+#include "sfx2/sfxresid.hxx"
 #include "view.hrc"
 
 #if defined USE_JAVA && defined MACOSX
 #include <svtools/prnsetup.hxx>
 #endif	// USE_JAVA && MACOSX
 
-#ifdef MSC
-// der ist buggy
-#define NEW_OBJECTS(Class, nCount) ((Class*) new char[ sizeof(Class) * (nCount) ])
-#else
-#define NEW_OBJECTS(Class, nCount) (new Class[nCount])
-#endif
-
-
-USHORT SfxFontSizeInfo::pStaticSizes[] =
-{
-	60,
-	80,
-	100,
-	120,
-	140,
-	180,
-	240,
-	360,
-	480,
-	600,
-	720
-};
-
-//--------------------------------------------------------------------
-
-SV_DECL_PTRARR_DEL(SfxFontArr_Impl,SfxFont*,10,5)
-
 // struct SfxPrinter_Impl ------------------------------------------------
 
 struct SfxPrinter_Impl
 {
-	SfxFontArr_Impl*	mpFonts;
-	BOOL				mbAll;
-	BOOL				mbSelection;
-	BOOL				mbFromTo;
-	BOOL				mbRange;
+	sal_Bool			mbAll;
+	sal_Bool			mbSelection;
+	sal_Bool			mbFromTo;
+	sal_Bool			mbRange;
 
 	SfxPrinter_Impl() :
-		mpFonts		( NULL ),
-		mbAll		( TRUE ),
-		mbSelection ( TRUE ),
-		mbFromTo	( TRUE ),
-		mbRange 	( TRUE ) {}
-	~SfxPrinter_Impl() { delete mpFonts; }
+		mbAll		( sal_True ),
+		mbSelection ( sal_True ),
+		mbFromTo	( sal_True ),
+		mbRange 	( sal_True ) {}
+	~SfxPrinter_Impl() {}
 };
-
-#define FONTS()	pImpl->mpFonts
 
 struct SfxPrintOptDlg_Impl
 {
 	sal_Bool		mbHelpDisabled;
+#if defined USE_JAVA && defined MACOSX
+	sal_Bool		mbShowPrintSetupDialog;
+#endif	// USE_JAVA && MACOSX
 
 	SfxPrintOptDlg_Impl() :
+#if defined USE_JAVA && defined MACOSX
+		mbHelpDisabled	( sal_False ), mbShowPrintSetupDialog( sal_True ) {}
+#else	// USE_JAVA && MACOSX
 		mbHelpDisabled	( sal_False ) {}
+#endif	// USE_JAVA && MACOSX
 };
-
-//--------------------------------------------------------------------
-
-SfxFontSizeInfo::SfxFontSizeInfo( const SfxFont &rFont,
-								  const OutputDevice &rDevice ) :
-
-	pSizes(0),
-	nSizes(0),
-	bScalable(TRUE)
-
-{
-	if ( 0 == rDevice.GetDevFontCount() )
-		bScalable = FALSE;
-	else
-	{
-		OutputDevice &rDev = (OutputDevice&) rDevice;
-		Font aFont(rFont.GetName(), Size(0,12));
-		aFont.SetFamily(rFont.GetFamily());
-		aFont.SetPitch(rFont.GetPitch());
-		aFont.SetCharSet(rFont.GetCharSet());
-
-		// verfuegbare Groessen in die Liste eintragen, Groesse in 10tel Punkt
-		int nSizeCount = rDev.GetDevFontSizeCount(aFont);
-		pSizes = NEW_OBJECTS(Size, nSizeCount);
-		const MapMode aOldMapMode = rDev.GetMapMode();
-		MapMode aMap(aOldMapMode);
-		aMap.SetMapUnit(MAP_POINT);
-		const Fraction aTen(1, 10);
-		aMap.SetScaleX(aTen);
-		aMap.SetScaleY(aTen);
-		rDev.SetMapMode(aMap);
-
-		// Es gibt Fonts mit Bitmaps und skalierbaren Groessen
-		// In diesem Fall wird der Fonts als skalierbar behandelt.
-		BOOL bFoundScalable = FALSE;
-		for ( int i = 0; i < nSizeCount; ++i )
-		{
-			const Size aSize( rDev.GetDevFontSize(aFont, i) );
-			if ( aSize.Height() != 0 )
-				pSizes[nSizes++] = aSize;
-			else
-				bFoundScalable |= TRUE;
-		}
-		if( !bFoundScalable )
-			bScalable = FALSE;
-		else
-		{
-			// statische Font-Sizes verwenden
-			delete [] pSizes;
-			nSizes = 0;
-		}
-		rDev.SetMapMode(aOldMapMode);
-	}
-
-	if ( 0 == nSizes )
-	{
-		nSizes = sizeof(pStaticSizes) / sizeof(USHORT);
-		pSizes = NEW_OBJECTS(Size, nSizes);
-		for ( USHORT nPos = 0; nPos <nSizes; ++nPos )
-		   pSizes[nPos] = Size( 0, pStaticSizes[nPos] );
-	}
-}
-
-//--------------------------------------------------------------------
-
-SfxFontSizeInfo::~SfxFontSizeInfo()
-{
-	delete [] pSizes;
-}
-
-//--------------------------------------------------------------------
-
-BOOL SfxFontSizeInfo::HasSize(const Size &rSize) const
-{
-	if ( bScalable )
-		return TRUE;
-	for ( USHORT i = 0; i < nSizes; ++i)
-		if ( pSizes[i] == rSize )
-			return TRUE;
-	return FALSE;
-}
-
-//--------------------------------------------------------------------
-
-SfxFont::SfxFont( const FontFamily eFontFamily, const String& aFontName,
-				  const FontPitch eFontPitch, const CharSet eFontCharSet ):
-	aName( aFontName ),
-	eFamily( eFontFamily ),
-		ePitch( eFontPitch ),
-	eCharSet( eFontCharSet )
-{
-}
 
 // class SfxPrinter ------------------------------------------------------
 
@@ -341,194 +227,6 @@ void SfxPrinter::SetOptions( const SfxItemSet &rNewOptions )
 
 //--------------------------------------------------------------------
 
-void SfxPrinter::EnableRange( USHORT nRange )
-{
-	PrintDialogRange eRange	= (PrintDialogRange)nRange;
-
-	if ( eRange == PRINTDIALOG_ALL )
-		pImpl->mbAll = TRUE;
-	else if ( eRange == PRINTDIALOG_SELECTION )
-		pImpl->mbSelection = TRUE;
-	else if ( eRange == PRINTDIALOG_FROMTO )
-		pImpl->mbFromTo = TRUE;
-	else if ( eRange == PRINTDIALOG_RANGE )
-		pImpl->mbRange = TRUE;
-}
-
-//--------------------------------------------------------------------
-
-void SfxPrinter::DisableRange( USHORT nRange )
-{
-	PrintDialogRange eRange	= (PrintDialogRange)nRange;
-
-	if ( eRange == PRINTDIALOG_ALL )
-		pImpl->mbAll = FALSE;
-	else if ( eRange == PRINTDIALOG_SELECTION )
-		pImpl->mbSelection = FALSE;
-	else if ( eRange == PRINTDIALOG_FROMTO )
-		pImpl->mbFromTo = FALSE;
-	else if ( eRange == PRINTDIALOG_RANGE )
-		pImpl->mbRange = FALSE;
-}
-
-//--------------------------------------------------------------------
-
-BOOL SfxPrinter::IsRangeEnabled( USHORT nRange ) const
-{
-	PrintDialogRange eRange	= (PrintDialogRange)nRange;
-	BOOL bRet = FALSE;
-
-	if ( eRange == PRINTDIALOG_ALL )
-		bRet = pImpl->mbAll;
-	else if ( eRange == PRINTDIALOG_SELECTION )
-		bRet = pImpl->mbSelection;
-	else if ( eRange == PRINTDIALOG_FROMTO )
-		bRet = pImpl->mbFromTo;
-	else if ( eRange == PRINTDIALOG_RANGE )
-		bRet = pImpl->mbRange;
-
-	return bRet;
-}
-
-//--------------------------------------------------------------------
-
-SV_IMPL_PTRARR(SfxFontArr_Impl,SfxFont*)
-
-//--------------------------------------------------------------------
-
-const SfxFont* SfxFindFont_Impl( const SfxFontArr_Impl& rArr,
-								 const String& rName )
-{
-	const USHORT nCount = rArr.Count();
-	for ( USHORT i = 0; i < nCount; ++i )
-	{
-		const SfxFont *pFont = rArr[i];
-		if ( pFont->GetName() == rName )
-			return pFont;
-	}
-	return NULL;
-}
-
-//--------------------------------------------------------------------
-
-void SfxPrinter::UpdateFonts_Impl()
-{
-	VirtualDevice *pVirDev = 0;
-	const OutputDevice *pOut = this;
-
-		// falls kein Drucker gefunden werden konnte, ein
-		// temp. Device erzeugen fuer das Erfragen der Fonts
-	if( !IsValid() )
-		pOut = pVirDev = new VirtualDevice;
-
-	int nCount = pOut->GetDevFontCount();
-	FONTS() =  new SfxFontArr_Impl((BYTE)nCount);
-
-	std::vector< Font > aNonRegularFonts;
-	for(int i = 0;i < nCount;++i)
-	{
-		Font aFont(pOut->GetDevFont(i));
-		if ( (aFont.GetItalic() != ITALIC_NONE) ||
-		     (aFont.GetWeight() != WEIGHT_MEDIUM) )
-		{
-	        // First: Don't add non-regular fonts. The font name is not unique so we have
-	        // to filter the device font list.
-		    aNonRegularFonts.push_back( aFont );
-		}
-		else if ( FONTS()->Count() == 0 ||
-			 (*FONTS())[FONTS()->Count()-1]->GetName() != aFont.GetName() )
-		{
-			DBG_ASSERT(0 == SfxFindFont_Impl(*FONTS(), aFont.GetName()), "Doppelte Fonts vom SV-Device!");
-			SfxFont* pTmp = new SfxFont( aFont.GetFamily(), aFont.GetName(),
-										 aFont.GetPitch(), aFont.GetCharSet() );
-			FONTS()->C40_INSERT(SfxFont, pTmp, FONTS()->Count());
-		}
-	}
-	delete pVirDev;
-
-	// Try to add all non-regular fonts. It could be that there was no regular font
-	// with the same name added.
-	std::vector< Font >::const_iterator pIter;
-	for ( pIter = aNonRegularFonts.begin(); pIter != aNonRegularFonts.end(); pIter++ )
-	{
-	    if ( SfxFindFont_Impl( *FONTS(), pIter->GetName() ) == 0 )
-	    {
-	        SfxFont* pTmp = new SfxFont( pIter->GetFamily(), pIter->GetName(),
-	                                     pIter->GetPitch(), pIter->GetCharSet() );
-	        FONTS()->C40_INSERT( SfxFont, pTmp, FONTS()->Count() );
-        }
-	}
-}
-
-//--------------------------------------------------------------------
-
-USHORT SfxPrinter::GetFontCount()
-{
-	if ( !FONTS() )
-		UpdateFonts_Impl();
-	return FONTS()->Count();
-}
-
-//--------------------------------------------------------------------
-
-const SfxFont* SfxPrinter::GetFont( USHORT nNo ) const
-{
-	DBG_ASSERT( FONTS(), "bitte erst GetFontCount() abfragen!" );
-	return (*FONTS())[ nNo ];
-}
-
-//--------------------------------------------------------------------
-
-const SfxFont* SfxPrinter::GetFontByName( const String &rFontName )
-{
-	if ( !FONTS() )
-		UpdateFonts_Impl();
-	return SfxFindFont_Impl(*FONTS(), rFontName);
-}
-
-//--------------------------------------------------------------------
-
-BOOL SfxPrinter::InitJob( Window* pUIParent, BOOL bAskAboutTransparentObjects )
-{
-    const SvtPrinterOptions     aPrinterOpt;
-    const SvtPrintFileOptions   aPrintFileOpt;
-    const SvtBasePrintOptions*  pPrinterOpt = &aPrinterOpt;
-    const SvtBasePrintOptions*  pPrintFileOpt = &aPrintFileOpt;
-    PrinterOptions              aNewPrinterOptions;
-    BOOL                        bRet = TRUE;
-
-    ( ( IsPrintFileEnabled() && GetPrintFile().Len() ) ? pPrintFileOpt : pPrinterOpt )->GetPrinterOptions( aNewPrinterOptions );
-
-    if( bAskAboutTransparentObjects && !aNewPrinterOptions.IsReduceTransparency() )
-	{
-		if ( !Application::IsHeadlessModeEnabled() )
-		{
-			SvtPrintWarningOptions aWarnOpt;
-
-			if( aWarnOpt.IsTransparency() )
-			{
-				TransparencyPrintWarningBox	aWarnBox( pUIParent );
-				const USHORT				nRet = aWarnBox.Execute();
-
-				if( nRet == RET_CANCEL )
-					bRet = FALSE;
-				else
-				{
-					aNewPrinterOptions.SetReduceTransparency( nRet != RET_NO );
-					aWarnOpt.SetTransparency( !aWarnBox.IsNoWarningChecked() );
-				}
-			}
-		}
-	}
-
-    if( bRet )
-        SetPrinterOptions( aNewPrinterOptions );
-
-	return bRet;
-}
-
-//--------------------------------------------------------------------
-
 SfxPrintOptionsDialog::SfxPrintOptionsDialog( Window *pParent,
 											  SfxViewShell *pViewShell,
 											  const SfxItemSet *pSet ) :
@@ -542,9 +240,6 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog( Window *pParent,
 	pViewSh		( pViewShell ),
 	pOptions	( pSet->Clone() ),
 	pPage		( NULL )
-#ifdef MACOSX
-	, bShowPrintSetupDialog	( true )
-#endif	// MACOSX
 
 {
 	SetText( SfxResId( STR_PRINT_OPTIONS_TITLE ) );
@@ -552,14 +247,17 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog( Window *pParent,
 	// TabPage einh"angen
 	pPage = pViewSh->CreatePrintOptionsPage( this, *pOptions );
 	DBG_ASSERT( pPage, "CreatePrintOptions != SFX_VIEW_HAS_PRINTOPTIONS" );
-	pPage->Reset( *pOptions );
-	SetHelpId( pPage->GetHelpId() );
-	pPage->Show();
+    if( pPage )
+    {
+        pPage->Reset( *pOptions );
+        SetHelpId( pPage->GetHelpId() );
+        pPage->Show();
+    }
 
 	// Dialoggr"o\se bestimmen
     Size a6Sz = LogicToPixel( Size( 6, 6 ), MAP_APPFONT );
 	Size aBtnSz = LogicToPixel( Size( 50, 14 ), MAP_APPFONT );
-    Size aOutSz( pPage->GetSizePixel() );
+    Size aOutSz( pPage ? pPage->GetSizePixel() : Size() );
 	aOutSz.Height() += 6;
     long nWidth = aBtnSz.Width();
     nWidth += a6Sz.Width();
@@ -595,11 +293,14 @@ SfxPrintOptionsDialog::~SfxPrintOptionsDialog()
 
 short SfxPrintOptionsDialog::Execute()
 {
+    if( ! pPage )
+        return RET_CANCEL;
+    
 	short nRet = ModalDialog::Execute();
 	if ( nRet == RET_OK )
-		pPage->FillItemSet( *pOptions );
+        pPage->FillItemSet( *pOptions );
 	else
-		pPage->Reset( *pOptions );
+        pPage->Reset( *pOptions );
 	return nRet;
 }
 
@@ -613,7 +314,7 @@ long SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
 			return 1; // help disabled -> <F1> does nothing
 	}
 #if defined USE_JAVA && defined MACOSX
-	else if ( bShowPrintSetupDialog && rNEvt.GetType() == EVENT_GETFOCUS )
+	else if ( pDlgImpl->mbShowPrintSetupDialog && rNEvt.GetType() == EVENT_GETFOCUS )
 	{
 		PrinterSetupDialog *pSetupDlg = dynamic_cast< PrinterSetupDialog* >( GetParent() );
 		if ( pSetupDlg )
@@ -624,7 +325,7 @@ long SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
 				Printer *pTempPrinter = new Printer( pPrinter->GetJobSetup() );
 				if ( pTempPrinter )
 				{
-					bShowPrintSetupDialog = false;
+					pDlgImpl->mbShowPrintSetupDialog = false;
 
 					// If the user presses the native page setup dialog's OK
 					// button, signal that action to the code in the

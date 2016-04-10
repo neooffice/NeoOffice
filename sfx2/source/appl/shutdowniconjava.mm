@@ -37,10 +37,10 @@
 
 #include <comphelper/sequenceashashmap.hxx>
 #include <sfx2/app.hxx>
-#include <svtools/dynamicmenuoptions.hxx>
-#include <svtools/moduleoptions.hxx>
+#include <sfx2/sfxresid.hxx>
 #include <tools/link.hxx>
-#include <tools/rcid.h>
+#include <unotools/dynamicmenuoptions.hxx>
+#include <unotools/moduleoptions.hxx>
 #include <vcl/svapp.hxx>
 
 #define USE_APP_SHORTCUTS
@@ -78,28 +78,54 @@ static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
-static ResMgr *pJavaResMgr = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
 using namespace rtl;
 
-static XubString GetJavaResString( int nId )
-{
-    if ( !pJavaResMgr )
-    {
-        pJavaResMgr = SfxApplication::CreateResManager( "shutdowniconjava" );
-        if ( !pJavaResMgr )
-            return XubString();
-    }
+@interface NSObject (ShutdownIconDelegate)
+- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
+- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
+- (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
+- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+@end
 
-    ResId aResId( nId, *pJavaResMgr );
-    aResId.SetRT( RSC_STRING );
-    if ( !pJavaResMgr->IsAvailable( aResId ) )
-        return XubString();
- 
-    return XubString( ResId( nId, *pJavaResMgr ) );
+/*
+ * Create a class that is a facade for the application delegate set by the JVM.
+ * Note that this class only implement the delegate methods in the JVM's
+ * ApplicationDelegate and AWTApplicationDelegate classes.
+ */
+@interface ShutdownIconDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
+{
+	id					mpDelegate;
 }
+- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
+- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
+- (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
+- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (void)dealloc;
+- (id)init;
+- (void)handleCalcCommand:(id)pObject;
+- (void)handleDrawCommand:(id)pObject;
+- (void)handleFileOpenCommand:(id)pObject;
+- (void)handleFromTemplateCommand:(id)pObject;
+- (void)handleImpressCommand:(id)pObject;
+- (void)handleMathCommand:(id)pObject;
+- (void)handlePreferenceChangeCommand:(id)pObject;
+- (void)handleWriterCommand:(id)pObject;
+- (void)setDelegate:(id)pDelegate;
+- (void)menuNeedsUpdate:(NSMenu *)pMenu;
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
+@end
+
 
 class QuickstartMenuItemDescriptor
 {
@@ -114,10 +140,10 @@ public:
 								QuickstartMenuItemDescriptor( SEL aSelector, XubString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = FALSE ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
 								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, XubString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( FALSE ) {}
 								~QuickstartMenuItemDescriptor() {};
-	NSMenuItem*					CreateMenuItem( const NSObject *pDelegate ) const;
+	NSMenuItem*					CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const;
 };
 
-NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMenuItem( const NSObject *pDelegate ) const
+NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMenuItem( const ShutdownIconDelegate *pDelegate ) const
 {
 	NSMenuItem *pRet = nil;
 
@@ -143,7 +169,7 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 						for ( ::std::vector< QuickstartMenuItemDescriptor >::const_iterator it = maItems.begin(); it != maItems.end(); ++it )
 						{
 							NSMenuItem *pSubmenuItem = it->CreateMenuItem( pDelegate );
-							if ( pSubmenuItem );
+							if ( pSubmenuItem )
 								[pMenu addItem:pSubmenuItem];
 
 						}
@@ -153,7 +179,7 @@ NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMe
 				}
 				else if ( maPrefName && maCheckedPrefValue )
 				{
-					NSObject *pPrefKey = nil;
+					const NSString *pPrefKey = nil;
 					NSObject *pPrefValue = nil;
 					if ( CFGetTypeID( maCheckedPrefValue ) == CFBooleanGetTypeID() )
 					{
@@ -193,6 +219,8 @@ public:
 
 IMPL_LINK( ShutdownIconEvent, DispatchEvent, void*, pData )
 {
+	(void)pData;
+
 	switch ( mnCommand )
 	{
 		case WRITER_COMMAND_ID:
@@ -254,49 +282,6 @@ void ProcessShutdownIconCommand( int nCommand )
 		}
 	}
 }
-
-@interface NSObject (ShutdownIconDelegate)
-- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
-- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
-- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
-- (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
-- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
-- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
-- (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-@end
-
-/*
- * Create a class that is a facade for the application delegate set by the JVM.
- * Note that this class only implement the delegate methods in the JVM's
- * ApplicationDelegate and AWTApplicationDelegate classes.
- */
-@interface ShutdownIconDelegate : NSObject
-{
-	id					mpDelegate;
-}
-- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
-- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
-- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
-- (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
-- (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
-- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
-- (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-- (void)dealloc;
-- (id)init;
-- (void)handleCalcCommand:(id)pObject;
-- (void)handleDrawCommand:(id)pObject;
-- (void)handleFileOpenCommand:(id)pObject;
-- (void)handleFromTemplateCommand:(id)pObject;
-- (void)handleImpressCommand:(id)pObject;
-- (void)handleMathCommand:(id)pObject;
-- (void)handlePreferenceChangeCommand:(id)pObject;
-- (void)handleWriterCommand:(id)pObject;
-- (void)setDelegate:(id)pDelegate;
-- (void)menuNeedsUpdate:(NSMenu *)pMenu;
-- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
-@end
 
 @implementation ShutdownIconDelegate
 
@@ -377,31 +362,43 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (void)handleCalcCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( CALC_COMMAND_ID );
 }
 
 - (void)handleDrawCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( DRAW_COMMAND_ID );
 }
 
 - (void)handleFileOpenCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( FILEOPEN_COMMAND_ID );
 }
 
 - (void)handleFromTemplateCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( FROMTEMPLATE_COMMAND_ID );
 }
 
 - (void)handleImpressCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( IMPRESS_COMMAND_ID );
 }
 
 - (void)handleMathCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( MATH_COMMAND_ID );
 }
 
@@ -438,11 +435,15 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (void)handleWriterCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( WRITER_COMMAND_ID );
 }
 
 - (void)handleBaseCommand:(id)pObject
 {
+	(void)pObject;
+
 	ProcessShutdownIconCommand( BASE_COMMAND_ID );
 }
 
@@ -562,12 +563,12 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (void)addMenuItems:(id)pObject
 {
+	(void)pObject;
+
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp && mpItems && mpItems->size() )
 	{
 		NSMenu *pAppMenu = nil;
-		NSMenu *pDockMenu = nil;
-
 		NSMenu *pMainMenu = [pApp mainMenu];
 		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
 		{
@@ -576,7 +577,7 @@ void ProcessShutdownIconCommand( int nCommand )
 				pAppMenu = [pItem submenu];
 		}
 
-		NSObject *pDelegate = [pApp delegate];
+		id pDelegate = [pApp delegate];
 		if ( !pDelegate || ![pDelegate isKindOfClass:[ShutdownIconDelegate class]] )
 		{
 			// Do not retain as invoking alloc disables autorelease
@@ -588,26 +589,27 @@ void ProcessShutdownIconCommand( int nCommand )
 			pDelegate = pNewDelegate;
 		}
 
-		if ( pDelegate && [pDelegate isKindOfClass:[ShutdownIconDelegate class]] )
-			pDockMenu = [(ShutdownIconDelegate *)pDelegate applicationDockMenu:pApp];
-
-		if ( pAppMenu && pDockMenu )
+		if ( pAppMenu && pDelegate && [pDelegate isKindOfClass:[ShutdownIconDelegate class]] )
 		{
-			// Insert a separator menu item (only in the application menu)
-			[pAppMenu insertItem:[NSMenuItem separatorItem] atIndex:2];
-
-			// Work the list of menu items is reverse order
-			for ( ::std::vector< QuickstartMenuItemDescriptor >::const_reverse_iterator it = mpItems->rbegin(); it != mpItems->rend(); ++it )
+			NSMenu *pDockMenu = [(ShutdownIconDelegate *)pDelegate applicationDockMenu:pApp];
+			if ( pDockMenu )
 			{
-				NSMenuItem *pAppMenuItem = it->CreateMenuItem( pDelegate );
-				NSMenuItem *pDockMenuItem = it->CreateMenuItem( pDelegate );
-				if ( pAppMenuItem )
-					[pAppMenu insertItem:pAppMenuItem atIndex:2];
-				if ( pDockMenuItem )
-					[pDockMenu insertItem:pDockMenuItem atIndex:0];
-			}
+				// Insert a separator menu item (only in the application menu)
+				[pAppMenu insertItem:[NSMenuItem separatorItem] atIndex:2];
+	
+				// Work the list of menu items is reverse order
+				for ( ::std::vector< QuickstartMenuItemDescriptor >::const_reverse_iterator it = mpItems->rbegin(); it != mpItems->rend(); ++it )
+				{
+					NSMenuItem *pAppMenuItem = it->CreateMenuItem( (ShutdownIconDelegate *)pDelegate );
+					NSMenuItem *pDockMenuItem = it->CreateMenuItem( (ShutdownIconDelegate *)pDelegate );
+					if ( pAppMenuItem )
+						[pAppMenu insertItem:pAppMenuItem atIndex:2];
+					if ( pDockMenuItem )
+						[pDockMenu insertItem:pDockMenuItem atIndex:0];
+				}
 
-			mpItems = nil;
+				mpItems = nil;
+			}
 		}
 	}
 }
@@ -678,7 +680,7 @@ extern "C" void java_init_systray()
 	::std::vector< QuickstartMenuItemDescriptor > aOpenAtLaunchSubmenuItems;
 
 	// None menu item is only used in default launch submenu
-	aDesc = XubString( pShutdownIcon->GetResString( STR_NONE ) );
+	aDesc = pShutdownIcon->GetResString( STR_NONE );
 	aDesc.EraseAllChars( '~' );
 	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "-nodefault" ), FALSE ) );
 
@@ -697,7 +699,7 @@ extern "C" void java_init_systray()
 		if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
 			continue;
 
-		aDesc = XubString( pShutdownIcon->GetUrlDescription( sURL ) );
+		aDesc = pShutdownIcon->GetUrlDescription( sURL );
 		aDesc.EraseAllChars( '~' );
 		// Fix bug 2206 by putting in some default text if the
 		// description is an empty string
@@ -709,83 +711,84 @@ extern "C" void java_init_systray()
 		aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( aMenuItems[i].aNewSelector, aDesc ) );
 
 		// Add module name to open at launch submenu
-		aDesc = XubString( aModuleOptions.GetModuleName( aMenuItems[i].eModuleIdentifier ) );
+		aDesc = aModuleOptions.GetModuleName( aMenuItems[i].eModuleIdentifier );
 		aDesc.EraseAllChars( '~' );
 		if ( aDesc.Len() )
 			aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), aMenuItems[i].aCheckedPrefValue, aMenuItems[i].bValueIsDefaultForPref ) );
 	}
 
 	// Open template menu item is only used in new document submenu
-	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
+	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE );
 	aDesc.EraseAllChars( '~' );
 	aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFromTemplateCommand:), aDesc ) );
 
-	// Insert the new document submenu
-	aDesc = XubString( pShutdownIcon->GetResString( STR_NEW ) );
+	// Insert the new document submenu. TODO: get localized "New" string by
+	// loading the label for uno:AddDirect in main.xcd.
+	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aNewSubmenuItems, aDesc ) );
 
 	// Insert the open document menu item into the application menu
-	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN ) );
+	aDesc = pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFileOpenCommand:), aDesc ) );
 
 	// Insert the open at launch submenu
-	aDesc = GetJavaResString( STR_OPENATLAUNCH );
+	aDesc = SfxResId( STR_OPENATLAUNCH );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aOpenAtLaunchSubmenuItems, aDesc ) );
 
 	// Insert the Mac OS X submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aMacOSXSubmenuItems;
 
-	aDesc = GetJavaResString( STR_IGNORETRACKPADGESTURES );
+	aDesc = SfxResId( STR_IGNORETRACKPADGESTURES );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = GetJavaResString( STR_DISABLEMACOSXSERVICESMENU );
+	aDesc = SfxResId( STR_DISABLEMACOSXSERVICESMENU );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = GetJavaResString( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
+	aDesc = SfxResId( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseNativeHighlightColor" ), kCFBooleanFalse, FALSE ) );
 
 	// Insert the Quick Look submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aQuickLookSubmenuItems;
 
-	aDesc = GetJavaResString( STR_QUICKLOOKDISABLED );
+	aDesc = SfxResId( STR_QUICKLOOKDISABLED );
 	aDesc.EraseAllChars( '~' );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = GetJavaResString( STR_QUICKLOOKFIRSTPAGEONLY );
+	aDesc = SfxResId( STR_QUICKLOOKFIRSTPAGEONLY );
 	aDesc.EraseAllChars( '~' );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanFalse, TRUE ) );
 
-	aDesc = GetJavaResString( STR_QUICKLOOKALLPAGES );
+	aDesc = SfxResId( STR_QUICKLOOKALLPAGES );
 	aDesc.EraseAllChars( '~' );
 	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), CFSTR( "All" ), TRUE ) );
 
-	aDesc = GetJavaResString( STR_QUICKLOOKSUPPORT );
+	aDesc = SfxResId( STR_QUICKLOOKSUPPORT );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( aQuickLookSubmenuItems, aDesc ) );
 
 	if ( NSDocument_versionsSupported() )
 	{
-		aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
+		aDesc = SfxResId( STR_DISABLEVERSIONSSUPPORT );
 		aDesc.EraseAllChars( '~' );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
 
-		aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
+		aDesc = SfxResId( STR_DISABLERESUMESUPPORT );
 		aDesc.EraseAllChars( '~' );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
 	}
 
 	// Insert the Mac OS X submenu
-	aDesc = GetJavaResString( STR_MACOSXOPTIONS );
+	aDesc = SfxResId( STR_MACOSXOPTIONS );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aMacOSXSubmenuItems, aDesc ) );
 
-	ULONG nCount = Application::ReleaseSolarMutex();
+	sal_uLong nCount = Application::ReleaseSolarMutex();
 
 	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItemDescriptors:&aAppMenuItems];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

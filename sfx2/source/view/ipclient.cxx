@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified June 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
@@ -59,7 +62,7 @@
 #include <sfx2/dispatch.hxx>
 #include "workwin.hxx"
 #include "guisaveas.hxx"
-#include <sfx2/topfrm.hxx>
+#include <sfx2/viewfrm.hxx>
 #include <cppuhelper/implbase5.hxx>
 #include <vcl/salbtype.hxx>
 #include <svtools/ehdl.hxx>
@@ -71,7 +74,7 @@
 #include <toolkit/helper/convert.hxx>
 #include <tools/fract.hxx>
 #include <tools/gen.hxx>
-#include <svtools/rectitem.hxx>
+#include <svl/rectitem.hxx>
 #include <svtools/soerr.hxx>
 #include <comphelper/processfactory.hxx>
 
@@ -137,6 +140,8 @@ public:
 	, m_bResizeNoScale( sal_False )
 	{}
 
+	~SfxInPlaceClient_Impl();
+
 	void SizeHasChanged();
     DECL_LINK           (TimerHdl, Timer*);
     uno::Reference < frame::XFrame > GetFrame() const;
@@ -174,6 +179,10 @@ public:
     virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::RuntimeException);
 };
 
+SfxInPlaceClient_Impl::~SfxInPlaceClient_Impl()
+{
+}
+
 void SAL_CALL SfxInPlaceClient_Impl::changingState(
     const ::com::sun::star::lang::EventObject& /*aEvent*/,
     ::sal_Int32 /*nOldState*/,
@@ -207,7 +216,7 @@ throw (::com::sun::star::uno::RuntimeException)
             // currently needs SFX code
             SfxObjectShell* pDoc = reinterpret_cast< SfxObjectShell* >( sal::static_int_cast< sal_IntPtr >( nHandle ));
             SfxViewFrame* pFrame = SfxViewFrame::GetFirst( pDoc );
-            SfxWorkWindow *pWorkWin = pFrame->GetFrame()->GetWorkWindow_Impl();
+            SfxWorkWindow *pWorkWin = pFrame->GetFrame().GetWorkWindow_Impl();
             pWorkWin->UpdateObjectBars_Impl();
         }
 */
@@ -220,6 +229,7 @@ void SAL_CALL SfxInPlaceClient_Impl::notifyEvent( const document::EventObject& a
 
     if ( m_pClient && aEvent.EventName.equalsAscii("OnVisAreaChanged") && m_nAspect != embed::Aspects::MSOLE_ICON )
     {
+        m_pClient->FormatChanged(); // for Writer when format of the object is changed with the area
         m_pClient->ViewChanged();
         m_pClient->Invalidate();
     }
@@ -237,7 +247,7 @@ uno::Reference < frame::XFrame > SfxInPlaceClient_Impl::GetFrame() const
 {
 	if ( !m_pClient )
 		throw uno::RuntimeException();
-    return m_pClient->GetViewShell()->GetViewFrame()->GetFrame()->GetFrameInterface();
+    return m_pClient->GetViewShell()->GetViewFrame()->GetFrame().GetFrameInterface();
 }
 
 void SAL_CALL SfxInPlaceClient_Impl::saveObject()
@@ -398,7 +408,7 @@ void SAL_CALL SfxInPlaceClient_Impl::activatingUI()
 		throw uno::RuntimeException();
 
     m_pClient->GetViewShell()->ResetAllClients_Impl(m_pClient);
-    m_bUIActive = TRUE;
+    m_bUIActive = sal_True;
     m_pClient->GetViewShell()->UIActivating( m_pClient );
 }
 
@@ -422,7 +432,7 @@ void SAL_CALL SfxInPlaceClient_Impl::deactivatedUI()
 		throw uno::RuntimeException();
 
     m_pClient->GetViewShell()->UIDeactivated( m_pClient );
-    m_bUIActive = FALSE;
+    m_bUIActive = sal_False;
 }
 
 //--------------------------------------------------------------------
@@ -651,6 +661,7 @@ SfxInPlaceClient::SfxInPlaceClient( SfxViewShell* pViewShell, Window *pDraw, sal
     m_pViewSh( pViewShell ),
     m_pEditWin( pDraw )
 {
+	m_pImp->acquire();
     m_pImp->m_pClient = this;
     m_pImp->m_nAspect = nAspect;
     m_pImp->m_aScaleWidth = m_pImp->m_aScaleHeight = Fraction(1,1);
@@ -674,6 +685,7 @@ SfxInPlaceClient::~SfxInPlaceClient()
 
     // the next call will destroy m_pImp if no other reference to it exists
     m_pImp->m_xClient = uno::Reference < embed::XEmbeddedClient >();
+	m_pImp->release();
 
 	// TODO/LATER:
 	// the class is not intended to be used in multithreaded environment;
@@ -739,7 +751,7 @@ void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject 
         }
     }
 
-    if ( !m_pViewSh || m_pViewSh->GetViewFrame()->GetFrame()->IsClosing_Impl() )
+    if ( !m_pViewSh || m_pViewSh->GetViewFrame()->GetFrame().IsClosing_Impl() )
         // sometimes applications reconnect clients on shutting down because it happens in their Paint methods
         return;
 
@@ -768,7 +780,7 @@ void SfxInPlaceClient::SetObject( const uno::Reference < embed::XEmbeddedObject 
 }
 
 //--------------------------------------------------------------------
-BOOL SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
+sal_Bool SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
 {
     if( rArea != m_pImp->m_aObjArea )
     {
@@ -776,10 +788,10 @@ BOOL SfxInPlaceClient::SetObjArea( const Rectangle& rArea )
 		m_pImp->SizeHasChanged();
 
         Invalidate();
-        return TRUE;
+        return sal_True;
     }
 
-    return FALSE;
+    return sal_False;
 }
 
 //--------------------------------------------------------------------
@@ -996,7 +1008,7 @@ ErrCode SfxInPlaceClient::DoVerb( long nVerb )
 			{
 
                 if ( m_pViewSh )
-                    ((SfxTopFrame*)m_pViewSh->GetViewFrame()->GetTopFrame())->LockResize_Impl(TRUE);
+                    m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(sal_True);
         		try
         		{
         			m_pImp->m_xObject->setClientSite( m_pImp->m_xClient );
@@ -1046,8 +1058,8 @@ ErrCode SfxInPlaceClient::DoVerb( long nVerb )
                 if ( m_pViewSh )
                 {
                     SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
-                    ((SfxTopFrame*)pFrame->GetTopFrame())->LockResize_Impl(FALSE);
-                    pFrame->GetTopFrame()->Resize();
+                    pFrame->GetTopFrame().LockResize_Impl(sal_False);
+                    pFrame->GetTopFrame().Resize();
                 }
             }
 		}
@@ -1087,14 +1099,19 @@ void SfxInPlaceClient::MakeVisible()
 	// dummy implementation
 }
 
+void SfxInPlaceClient::FormatChanged()
+{
+    // dummy implementation
+}
+
 void SfxInPlaceClient::DeactivateObject()
 {
     if ( GetObject().is() )
     {
         try
         {
-            m_pImp->m_bUIActive = FALSE;
-            BOOL bHasFocus = FALSE;
+            m_pImp->m_bUIActive = sal_False;
+            sal_Bool bHasFocus = sal_False;
             uno::Reference< frame::XModel > xModel( m_pImp->m_xObject->getComponent(), uno::UNO_QUERY );
             if ( xModel.is() )
             {
@@ -1102,12 +1119,12 @@ void SfxInPlaceClient::DeactivateObject()
                 if ( xController.is() )
                 {
                     Window* pWindow = VCLUnoHelper::GetWindow( xController->getFrame()->getContainerWindow() );
-                    bHasFocus = pWindow->HasChildPathFocus( TRUE );
+                    bHasFocus = pWindow->HasChildPathFocus( sal_True );
                 }
             }
 
             if ( m_pViewSh )
-                ((SfxTopFrame*)m_pViewSh->GetViewFrame()->GetTopFrame())->LockResize_Impl(TRUE);
+                m_pViewSh->GetViewFrame()->GetTopFrame().LockResize_Impl(sal_True);
 
             if ( m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE )
             {
@@ -1129,8 +1146,8 @@ void SfxInPlaceClient::DeactivateObject()
             {
                 SfxViewFrame* pFrame = m_pViewSh->GetViewFrame();
                 SfxViewFrame::SetViewFrame( pFrame );
-                ((SfxTopFrame*)pFrame->GetTopFrame())->LockResize_Impl(FALSE);
-                pFrame->GetTopFrame()->Resize();
+                pFrame->GetTopFrame().LockResize_Impl(sal_False);
+                pFrame->GetTopFrame().Resize();
             }
         }
         catch (com::sun::star::uno::Exception& )
@@ -1144,7 +1161,7 @@ void SfxInPlaceClient::ResetObject()
     {
         try
         {
-            m_pImp->m_bUIActive = FALSE;
+            m_pImp->m_bUIActive = sal_False;
             if ( m_pImp->m_xObject->getStatus( m_pImp->m_nAspect ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE )
                 m_pImp->m_xObject->changeState( embed::EmbedStates::INPLACE_ACTIVE );
             else
@@ -1162,7 +1179,7 @@ void SfxInPlaceClient::ResetObject()
     }
 }
 
-BOOL SfxInPlaceClient::IsUIActive()
+sal_Bool SfxInPlaceClient::IsUIActive()
 {
     return m_pImp->m_bUIActive;
 }

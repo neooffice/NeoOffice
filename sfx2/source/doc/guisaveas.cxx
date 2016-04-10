@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
@@ -61,30 +64,36 @@
 
 #include "guisaveas.hxx"
 
-#include <svtools/pathoptions.hxx>
-#include <svtools/pathoptions.hxx>
-#include <svtools/itemset.hxx>
-#include <svtools/adrparse.hxx>
-#include <svtools/useroptions.hxx>
-#include <svtools/saveopt.hxx>
+#include <unotools/pathoptions.hxx>
+#include <unotools/pathoptions.hxx>
+#include <svl/itemset.hxx>
+#include <svl/eitem.hxx>
+#include <svl/stritem.hxx>
+#include <svl/intitem.hxx>
+#include <unotools/useroptions.hxx>
+#include <unotools/saveopt.hxx>
 #include <tools/debug.hxx>
 #include <tools/urlobj.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/configurationhelper.hxx>
+#include <comphelper/mimeconfighelper.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/window.hxx>
 #include <toolkit/awt/vclxwindow.hxx>
 
 #include <sfx2/sfxsids.hrc>
 #include <doc.hrc>
-#include <sfxresid.hxx>
+#include <sfx2/sfxresid.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/dinfdlg.hxx>
+#include <sfx2/request.hxx>
 #include <sfxtypes.hxx>
 #include "alienwarn.hxx"
+
+#include "../appl/app.hrc"
 
 #ifdef USE_JAVA
 #include <sfx2/fcontnr.hxx>
@@ -113,6 +122,7 @@ const ::rtl::OUString aFilterFlagsString   = ::rtl::OUString::createFromAscii( "
 
 using namespace ::com::sun::star;
 
+namespace {
 //-------------------------------------------------------------------------
 static sal_uInt16 getSlotIDFromMode( sal_Int8 nStoreMode )
 {
@@ -173,6 +183,69 @@ static sal_Int32 getDontFlags( sal_Int8 nStoreMode )
 }
 
 //=========================================================================
+// class DocumentSettingsGuard
+//=========================================================================
+
+class DocumentSettingsGuard
+{
+    uno::Reference< beans::XPropertySet > m_xDocumentSettings;
+    sal_Bool m_bPreserveReadOnly;
+    sal_Bool m_bReadOnlySupported;
+
+    sal_Bool m_bRestoreSettings;
+public:
+    DocumentSettingsGuard( const uno::Reference< frame::XModel >& xModel, sal_Bool bReadOnly, sal_Bool bRestore )
+    : m_bPreserveReadOnly( sal_False )
+    , m_bReadOnlySupported( sal_False )
+    , m_bRestoreSettings( bRestore )
+    {
+        try
+        {
+            uno::Reference< lang::XMultiServiceFactory > xDocSettingsSupplier( xModel, uno::UNO_QUERY_THROW );
+            m_xDocumentSettings.set( 
+                xDocSettingsSupplier->createInstance(
+                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.Settings" ) ) ),
+                uno::UNO_QUERY_THROW );
+
+            ::rtl::OUString aLoadReadonlyString( RTL_CONSTASCII_USTRINGPARAM( "LoadReadonly" ) );
+
+            try
+            {
+                m_xDocumentSettings->getPropertyValue( aLoadReadonlyString ) >>= m_bPreserveReadOnly;
+                m_xDocumentSettings->setPropertyValue( aLoadReadonlyString, uno::makeAny( bReadOnly ) );
+                m_bReadOnlySupported = sal_True;
+            }
+            catch( uno::Exception& )
+            {}
+        }
+        catch( uno::Exception& )
+        {}
+
+        if ( ( bReadOnly && !m_bReadOnlySupported ) )
+            throw uno::RuntimeException(); // the user could provide the data, so it must be stored
+    }
+
+    ~DocumentSettingsGuard()
+    {
+        if ( m_bRestoreSettings )
+        {
+            ::rtl::OUString aLoadReadonlyString( RTL_CONSTASCII_USTRINGPARAM( "LoadReadonly" ) );
+
+            try
+            {
+                if ( m_bReadOnlySupported )
+                    m_xDocumentSettings->setPropertyValue( aLoadReadonlyString, uno::makeAny( m_bPreserveReadOnly ) );
+            }
+            catch( uno::Exception& )
+            {
+                OSL_ASSERT( "Unexpected exception!" );
+            }
+        }
+    }
+};
+} // anonymous namespace
+
+//=========================================================================
 // class ModelData_Impl
 //=========================================================================
 class ModelData_Impl
@@ -189,6 +262,8 @@ class ModelData_Impl
 
 	::comphelper::SequenceAsHashMap m_aMediaDescrHM;
 
+    sal_Bool m_bRecommendReadOnly;
+
 public:
 	ModelData_Impl( SfxStoringHelper& aOwner,
 					const uno::Reference< frame::XModel >& xModel,
@@ -204,6 +279,8 @@ public:
 	uno::Reference< util::XModifiable > GetModifiable();
 
 	::comphelper::SequenceAsHashMap& GetMediaDescr() { return m_aMediaDescrHM; }
+
+    sal_Bool IsRecommendReadOnly() { return m_bRecommendReadOnly; }
 
 	const ::comphelper::SequenceAsHashMap& GetDocProps();
 
@@ -257,6 +334,7 @@ ModelData_Impl::ModelData_Impl( SfxStoringHelper& aOwner,
 , m_pDocumentPropsHM( NULL )
 , m_pModulePropsHM( NULL )
 , m_aMediaDescrHM( aMediaDescr )
+, m_bRecommendReadOnly( sal_False )
 {
 	CheckInteractionHandler();
 }
@@ -439,7 +517,7 @@ uno::Sequence< beans::PropertyValue > ModelData_Impl::GetDocServiceAnyFilter( sa
 	aSearchRequest[0].Name = ::rtl::OUString::createFromAscii( "DocumentService" );
 	aSearchRequest[0].Value <<= GetDocServiceName();
 
-	return SfxStoringHelper::SearchForFilter( m_pOwner->GetFilterQuery(), aSearchRequest, nMust, nDont );
+	return ::comphelper::MimeConfigurationHelper::SearchForFilter( m_pOwner->GetFilterQuery(), aSearchRequest, nMust, nDont );
 }
 
 //-------------------------------------------------------------------------
@@ -459,7 +537,7 @@ uno::Sequence< beans::PropertyValue > ModelData_Impl::GetPreselectedFilter_Impl(
 		aSearchRequest[1].Name = ::rtl::OUString::createFromAscii( "DocumentService" );
 		aSearchRequest[1].Value <<= GetDocServiceName();
 
-		aFilterProps = SfxStoringHelper::SearchForFilter( m_pOwner->GetFilterQuery(), aSearchRequest, nMust, nDont );
+		aFilterProps = ::comphelper::MimeConfigurationHelper::SearchForFilter( m_pOwner->GetFilterQuery(), aSearchRequest, nMust, nDont );
 	}
 	else
 	{
@@ -601,6 +679,10 @@ sal_Int8 ModelData_Impl::CheckSaveAcceptable( sal_Int8 nCurStatus )
 //-------------------------------------------------------------------------
 sal_Int8 ModelData_Impl::CheckStateForSave()
 {
+    // if the document is readonly or a new one a SaveAs operation must be used
+    if ( !GetStorable()->hasLocation() || GetStorable()->isReadonly() )
+		return STATUS_SAVEAS;
+
 	// check acceptable entries for media descriptor
 	sal_Bool bVersInfoNeedsStore = sal_False;
 	::comphelper::SequenceAsHashMap aAcceptedArgs;
@@ -609,6 +691,7 @@ sal_Int8 ModelData_Impl::CheckStateForSave()
 	::rtl::OUString aAuthorString = ::rtl::OUString::createFromAscii( "Author" );
 	::rtl::OUString aInteractionHandlerString = ::rtl::OUString::createFromAscii( "InteractionHandler" );
 	::rtl::OUString aStatusIndicatorString = ::rtl::OUString::createFromAscii( "StatusIndicator" );
+	::rtl::OUString aFailOnWarningString = ::rtl::OUString::createFromAscii( "FailOnWarning" );
 
 	if ( GetMediaDescr().find( aVersionCommentString ) != GetMediaDescr().end() )
 	{
@@ -621,6 +704,8 @@ sal_Int8 ModelData_Impl::CheckStateForSave()
 		aAcceptedArgs[ aInteractionHandlerString ] = GetMediaDescr()[ aInteractionHandlerString ];
 	if ( GetMediaDescr().find( aStatusIndicatorString ) != GetMediaDescr().end() )
 		aAcceptedArgs[ aStatusIndicatorString ] = GetMediaDescr()[ aStatusIndicatorString ];
+	if ( GetMediaDescr().find( aFailOnWarningString ) != GetMediaDescr().end() )
+		aAcceptedArgs[ aFailOnWarningString ] = GetMediaDescr()[ aFailOnWarningString ];
 
 	// remove unacceptable entry if there is any
 	DBG_ASSERT( GetMediaDescr().size() == aAcceptedArgs.size(),
@@ -631,10 +716,6 @@ sal_Int8 ModelData_Impl::CheckStateForSave()
     // the document must be modified
     if ( !GetModifiable()->isModified() && !bVersInfoNeedsStore )
 		return STATUS_NO_ACTION;
-
-    // if the document is readonly or a new one a SaveAs operation must be used
-    if ( !GetStorable()->hasLocation() || GetStorable()->isReadonly() )
-		return STATUS_SAVEAS;
 
     // check that the old filter is acceptable
 	::rtl::OUString aOldFilterName = GetDocProps().getUnpackedValueOrDefault(
@@ -678,7 +759,7 @@ sal_Int8 ModelData_Impl::CheckFilter( const ::rtl::OUString& aFilterName )
 		return STATUS_SAVEAS_STANDARDNAME;
 	}
     else if ( ( !( nFiltFlags & SFX_FILTER_OWN ) || ( nFiltFlags & SFX_FILTER_ALIEN ) )
-           && !( nFiltFlags & SFX_FILTER_SILENTEXPORT ) && aDefFiltPropsHM.size()
+           && aDefFiltPropsHM.size()
 		   && ( nDefFiltFlags & SFX_FILTER_EXPORT ) && !( nDefFiltFlags & SFX_FILTER_INTERNAL ))
 	{
 		// the default filter is acceptable and the old filter is alian one
@@ -811,6 +892,9 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
            	eCtxt = sfx2::FileDialogHelper::SD_EXPORT;
         if( aDocServiceName.equalsAscii( "com.sun.star.presentation.PresentationDocument" ) )
            	eCtxt = sfx2::FileDialogHelper::SI_EXPORT;
+        if( aDocServiceName.equalsAscii( "com.sun.star.text.TextDocument" ) )
+            eCtxt = sfx2::FileDialogHelper::SW_EXPORT;
+
         if ( eCtxt != sfx2::FileDialogHelper::UNKNOWN_CONTEXT )
            	pFileDlg->SetContext( eCtxt );
 
@@ -824,7 +908,7 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 		{
 			::rtl::OUString aCtrlText = String( SfxResId( STR_EXPORTBUTTON ) );
 			xControlAccess->setLabel( ui::dialogs::CommonFilePickerElementIds::PUSHBUTTON_OK, aCtrlText );
-	
+
 			aCtrlText = ::rtl::OUString( String( SfxResId( STR_LABEL_FILEFORMAT ) ) );
 			xControlAccess->setLabel( ui::dialogs::CommonFilePickerElementIds::LISTBOX_FILTER_LABEL, aCtrlText );
 		}
@@ -872,8 +956,16 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 	}
 #endif	// USE_JAVA
 
-    // bSetStandardName == true means that user agreed to store document in the default (default default ;-)) format
-	if ( bSetStandardName || GetStorable()->hasLocation() )
+    if ( ( nStoreMode & EXPORT_REQUESTED ) && !( nStoreMode & WIDEEXPORT_REQUESTED ) )
+    {
+        // it is export, set the preselected filter
+        ::rtl::OUString aFilterUIName = aPreselectedFilterPropsHM.getUnpackedValueOrDefault(
+                                        ::rtl::OUString::createFromAscii( "UIName" ),
+                                        ::rtl::OUString() );
+        pFileDlg->SetCurrentFilter( aFilterUIName );
+    }
+    // it is no export, bSetStandardName == true means that user agreed to store document in the default (default default ;-)) format
+    else if ( bSetStandardName || GetStorable()->hasLocation() )
     {
         uno::Sequence< beans::PropertyValue > aOldFilterProps;
         ::rtl::OUString aOldFilterName = GetDocProps().getUnpackedValueOrDefault(
@@ -933,12 +1025,11 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 						 NULL );
 
     const SfxPoolItem* pItem = NULL;
-    if ( bPreselectPassword && aDialogParams.GetItemState( SID_PASSWORD, sal_True, &pItem ) != SFX_ITEM_SET )
+    if ( bPreselectPassword && aDialogParams.GetItemState( SID_ENCRYPTIONDATA, sal_True, &pItem ) != SFX_ITEM_SET )
     {
-        // the file dialog preselects the password checkbox if the provided mediadescriptor has password entry
-        // after dialog execution the password entry will be either removed or replaced with the password
-        // entered by the user
-        aDialogParams.Put( SfxStringItem( SID_PASSWORD, String() ) );
+        // the file dialog preselects the password checkbox if the provided mediadescriptor has encryption data entry
+        // after dialog execution the password interaction flag will be either removed or not
+        aDialogParams.Put( SfxBoolItem( SID_PASSWORDINTERACTION, sal_True ) );
     }
 
     // aStringTypeFN is a pure output parameter, pDialogParams is an in/out parameter
@@ -950,6 +1041,12 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 	}
 
     ::rtl::OUString aFilterName = aStringTypeFN;
+    
+    // the following two arguments can not be converted in MediaDescriptor,
+    // so they should be removed from the ItemSet after retrieving
+    SFX_ITEMSET_ARG( pDialogParams, pRecommendReadOnly, SfxBoolItem, SID_RECOMMENDREADONLY, sal_False );
+    m_bRecommendReadOnly = ( pRecommendReadOnly && pRecommendReadOnly->GetValue() );
+    pDialogParams->ClearItem( SID_RECOMMENDREADONLY );
 
 	uno::Sequence< beans::PropertyValue > aPropsFromDialog;
 	TransformItems( nSlotID, *pDialogParams, aPropsFromDialog, NULL );
@@ -1121,7 +1218,7 @@ sal_Bool ModelData_Impl::ShowDocumentInfoDialog()
         ::rtl::OUString aConfigSuggestion( ( aCtxt != sfx2::FileDialogHelper::UNKNOWN_CONTEXT ) ? SvtPathOptions().GetGraphicPath() : SvtPathOptions().GetWorkPath() );
         aReccomendedDir = INetURLObject( aConfigSuggestion ).GetMainURL( INetURLObject::NO_DECODE );
 	}
-    
+
     return aReccomendedDir;
 }
 
@@ -1260,7 +1357,8 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
 											const ::rtl::OUString& aSlotName,
 											uno::Sequence< beans::PropertyValue >& aArgsSequence,
                                             sal_Bool bPreselectPassword,
-		                                    ::rtl::OUString aSuggestedName )
+		                                    ::rtl::OUString aSuggestedName,
+                                            sal_uInt16 nDocumentSignatureState )
 {
 	ModelData_Impl aModelData( *this, xModel, aArgsSequence );
 
@@ -1272,74 +1370,94 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
 
 	// parse the slot name
 	sal_Int8 nStoreMode = getStoreModeFromSlotName( aSlotName );
+    sal_Int8 nStatusSave = STATUS_NO_ACTION;
 
-	// handle the special cases
-	if ( nStoreMode & SAVEAS_REQUESTED )
-	{
-		::comphelper::SequenceAsHashMap::const_iterator aSaveToIter =
-						aModelData.GetMediaDescr().find( ::rtl::OUString::createFromAscii( "SaveTo" ) );
-		if ( aSaveToIter != aModelData.GetMediaDescr().end() )
-		{
-			sal_Bool bWideExport = sal_False;
-			aSaveToIter->second >>= bWideExport;
-			if ( bWideExport )
-				nStoreMode = EXPORT_REQUESTED | WIDEEXPORT_REQUESTED;
-		}
-
-		// if saving is not acceptable the warning must be shown even in case of SaveAs operation
-		if ( ( nStoreMode & SAVEAS_REQUESTED ) && aModelData.CheckSaveAcceptable( STATUS_SAVEAS ) == STATUS_NO_ACTION )
-			throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
-	}
-    else if ( nStoreMode & SAVE_REQUESTED )
-	{
-		// if saving is not acceptable by the configuration the warning must be shown
-		sal_Int8 nStatusSave = aModelData.CheckSaveAcceptable( STATUS_SAVE );
-
-		if ( nStatusSave == STATUS_NO_ACTION )
-			throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
-		else if ( nStatusSave == STATUS_SAVE )
+    // handle the special cases
+    if ( nStoreMode & SAVEAS_REQUESTED )
+    {
+        ::comphelper::SequenceAsHashMap::const_iterator aSaveToIter =
+                        aModelData.GetMediaDescr().find( ::rtl::OUString::createFromAscii( "SaveTo" ) );
+        if ( aSaveToIter != aModelData.GetMediaDescr().end() )
         {
-			// check whether it is possible to use save operation
-        	nStatusSave = aModelData.CheckStateForSave();
+            sal_Bool bWideExport = sal_False;
+            aSaveToIter->second >>= bWideExport;
+            if ( bWideExport )
+                nStoreMode = EXPORT_REQUESTED | WIDEEXPORT_REQUESTED;
         }
 
-		if ( nStatusSave == STATUS_NO_ACTION )
-		{
-			throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
-		}
+        // if saving is not acceptable the warning must be shown even in case of SaveAs operation
+        if ( ( nStoreMode & SAVEAS_REQUESTED ) && aModelData.CheckSaveAcceptable( STATUS_SAVEAS ) == STATUS_NO_ACTION )
+            throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
+    }
+    else if ( nStoreMode & SAVE_REQUESTED )
+    {
+        // if saving is not acceptable by the configuration the warning must be shown
+        nStatusSave = aModelData.CheckSaveAcceptable( STATUS_SAVE );
+
+        if ( nStatusSave == STATUS_NO_ACTION )
+            throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
         else if ( nStatusSave == STATUS_SAVE )
-		{
-			// Document properties can contain streams that should be freed before storing
-			aModelData.FreeDocumentProps();
+        {
+            // check whether it is possible to use save operation
+            nStatusSave = aModelData.CheckStateForSave();
+        }
 
-			if ( aModelData.GetStorable2().is() )
-			{
-				try
-				{
-					aModelData.GetStorable2()->storeSelf( aModelData.GetMediaDescr().getAsConstPropertyValueList() );
-				}
-				catch( lang::IllegalArgumentException& )
-				{
-					OSL_ENSURE( sal_False, "ModelData didn't handle illegal parameters, all the parameters are ignored!\n" );
-					aModelData.GetStorable()->store();
-				}
-			}
-			else
-			{
-				OSL_ENSURE( sal_False, "XStorable2 is not supported by the model!\n" );
-				aModelData.GetStorable()->store();
-			}
+        if ( nStatusSave == STATUS_NO_ACTION )
+        {
+            throw task::ErrorCodeIOException( ::rtl::OUString(), uno::Reference< uno::XInterface >(), ERRCODE_IO_ABORT );
+        }
+        else if ( nStatusSave != STATUS_SAVE )
+        {
+            // this should be a usual SaveAs operation
+            nStoreMode = SAVEAS_REQUESTED;
+            if ( nStatusSave == STATUS_SAVEAS_STANDARDNAME )
+                bSetStandardName = sal_True;
+        }
+    }
 
-			return sal_False;
-		}
-		else
-		{
-			// this should be a usual SaveAs operation
-			nStoreMode = SAVEAS_REQUESTED;
-			if ( nStatusSave == STATUS_SAVEAS_STANDARDNAME )
-				bSetStandardName = sal_True;
-		}
-	}
+    if ( !( nStoreMode & EXPORT_REQUESTED ) )
+    {
+        // if it is no export, warn user that the signature will be removed
+        if (  SIGNATURESTATE_SIGNATURES_OK == nDocumentSignatureState
+           || SIGNATURESTATE_SIGNATURES_INVALID == nDocumentSignatureState
+           || SIGNATURESTATE_SIGNATURES_NOTVALIDATED == nDocumentSignatureState
+           || SIGNATURESTATE_SIGNATURES_PARTIAL_OK == nDocumentSignatureState)
+        {
+            if ( QueryBox( NULL, SfxResId( RID_XMLSEC_QUERY_LOSINGSIGNATURE ) ).Execute() != RET_YES )
+            {
+                // the user has decided not to store the document
+                throw task::ErrorCodeIOException( ::rtl::OUString(),
+                                                  uno::Reference< uno::XInterface >(),
+                                                  ERRCODE_IO_ABORT );
+            }
+        }
+    }
+
+    if ( nStoreMode & SAVE_REQUESTED && nStatusSave == STATUS_SAVE )
+    {
+        // Document properties can contain streams that should be freed before storing
+        aModelData.FreeDocumentProps();
+
+        if ( aModelData.GetStorable2().is() )
+        {
+            try
+            {
+                aModelData.GetStorable2()->storeSelf( aModelData.GetMediaDescr().getAsConstPropertyValueList() );
+            }
+            catch( lang::IllegalArgumentException& )
+            {
+                OSL_ENSURE( sal_False, "ModelData didn't handle illegal parameters, all the parameters are ignored!\n" );
+                aModelData.GetStorable()->store();
+            }
+        }
+        else
+        {
+            OSL_ENSURE( sal_False, "XStorable2 is not supported by the model!\n" );
+            aModelData.GetStorable()->store();
+        }
+
+        return sal_False;
+    }
 
 	// preselect a filter for the storing process
 	uno::Sequence< beans::PropertyValue > aFilterProps = aModelData.GetPreselectedFilter_Impl( nStoreMode );
@@ -1388,10 +1506,12 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
 		{
 			sal_Bool bUseSystemDialog = sal_True;
 			if ( aDlgIter->second >>= bUseSystemDialog )
+			{
 				if ( bUseSystemDialog )
 					nDialog = SFX2_IMPL_DIALOG_SYSTEM;
 				else
 					nDialog = SFX2_IMPL_DIALOG_OOO;
+			}
 		}
 
         // The Dispatch supports parameter FolderName that overwrites SuggestedSaveAsDir
@@ -1433,13 +1553,13 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
                 ::rtl::OUString aSelFilterName = aModelData.GetMediaDescr().getUnpackedValueOrDefault(
                                                                                 aFilterNameString,
                                                                                 ::rtl::OUString() );
-                sal_Int8 nStatusSave = aModelData.CheckFilter( aSelFilterName );
-                if ( nStatusSave == STATUS_SAVEAS_STANDARDNAME )
+                sal_Int8 nStatusFilterSave = aModelData.CheckFilter( aSelFilterName );
+                if ( nStatusFilterSave == STATUS_SAVEAS_STANDARDNAME )
                 {
                     // switch to best filter
                     bSetStandardName = sal_True;
                 }
-                else if ( nStatusSave == STATUS_SAVE )
+                else if ( nStatusFilterSave == STATUS_SAVE )
                 {
                     // user confirmed alien filter or "good" filter is used
                     bExit = sal_True;
@@ -1514,6 +1634,9 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
 	// store the document and handle it's docinfo
 	SvtSaveOptions aOptions;
 
+    DocumentSettingsGuard aSettingsGuard( aModelData.GetModel(), aModelData.IsRecommendReadOnly(), nStoreMode & EXPORT_REQUESTED );
+
+    OSL_ENSURE( aModelData.GetMediaDescr().find( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Password" ) ) ) == aModelData.GetMediaDescr().end(), "The Password property of MediaDescriptor should not be used here!" );
 	if ( aOptions.IsDocInfoSave()
 	  && ( !aModelData.GetStorable()->hasLocation()
 		  || INetURLObject( aModelData.GetStorable()->getLocation() ) != aURL ) )
@@ -1570,39 +1693,6 @@ sal_Bool SfxStoringHelper::GUIStoreModel( const uno::Reference< frame::XModel >&
 	}
 
 	return bDialogUsed;
-}
-
-//-------------------------------------------------------------------------
-// static
-uno::Sequence< beans::PropertyValue > SfxStoringHelper::SearchForFilter(
-														const uno::Reference< container::XContainerQuery >& xFilterQuery,
-														const uno::Sequence< beans::NamedValue >& aSearchRequest,
-														sal_Int32 nMustFlags,
-														sal_Int32 nDontFlags )
-{
-	uno::Sequence< beans::PropertyValue > aFilterProps;
-	uno::Reference< container::XEnumeration > xFilterEnum =
-											xFilterQuery->createSubSetEnumerationByProperties( aSearchRequest );
-
-	// use the first filter that is found
-	if ( xFilterEnum.is() )
-		while ( xFilterEnum->hasMoreElements() )
-		{
-			uno::Sequence< beans::PropertyValue > aProps;
-			if ( xFilterEnum->nextElement() >>= aProps )
-			{
-				::comphelper::SequenceAsHashMap aPropsHM( aProps );
-				sal_Int32 nFlags = aPropsHM.getUnpackedValueOrDefault( ::rtl::OUString::createFromAscii( "Flags" ),
-																		(sal_Int32)0 );
-				if ( ( ( nFlags & nMustFlags ) == nMustFlags ) && !( nFlags & nDontFlags ) )
-				{
-					aFilterProps = aProps;
-					break;
-				}
-			}
-		}
-
-	return aFilterProps;
 }
 
 //-------------------------------------------------------------------------

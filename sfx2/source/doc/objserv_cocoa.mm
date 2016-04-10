@@ -35,6 +35,7 @@
 
 #include <sfx2/app.hxx>
 #include <sfx2/objsh.hxx>
+#include <sfx2/sfxresid.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <tools/rcid.h>
 
@@ -52,25 +53,7 @@
 typedef sal_Bool Application_canSave_Type();
 
 static Application_canSave_Type *pApplication_canSave = NULL;
-static ResMgr *pObjServResMgr = NULL;
 static ResMgr *pUpdResMgr = NULL;
-
-static XubString GetObjServResString( int nId )
-{
-	if ( !pObjServResMgr )
-	{
-		pObjServResMgr = SfxApplication::CreateResManager( "objserv_cocoa" );
-		if ( !pObjServResMgr )
-			return XubString();
-	}
-
-	ResId aResId( nId, *pObjServResMgr );
-	aResId.SetRT( RSC_STRING );
-	if ( !pObjServResMgr->IsAvailable( aResId ) )
-		return XubString();
- 
-	return XubString( ResId( nId, *pObjServResMgr ) );
-}
 
 static XubString GetUpdResString( int nId )
 {
@@ -149,6 +132,8 @@ static NSAlert *pSaveDisabledAlert = nil;
 
 - (void)showSaveDisabledDialog:(id)pObject
 {
+	(void)pObject;
+
 	if ( pSaveDisabledAlert )
 		return;
 
@@ -210,7 +195,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 
 @end
 
-sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
+sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 {
 	sal_Bool bRet = sal_True;
 
@@ -224,11 +209,11 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID )
 
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			XubString aDesc = GetObjServResString( STR_SAVEDISABLEDCANNOTSAVE );
+			XubString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
 			aDesc.EraseAllChars( '~' );
 			NSString *pMessageText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
 
-			aDesc = GetObjServResString( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
+			aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
 			aDesc.EraseAllChars( '~' );
 			NSString *pInformativeText = [NSString stringWithCharacters:aDesc.GetBuffer() length:aDesc.Len()];
 

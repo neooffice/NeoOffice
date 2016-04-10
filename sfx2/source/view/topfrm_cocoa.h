@@ -42,7 +42,7 @@
 #include <postmac.h>
 class NSView;
 #elif defined __OBJC__
-class SfxTopViewFrame;
+class SfxViewFrame;
 #endif
 
 // Comment out the following line to disable native versions support
@@ -53,22 +53,22 @@ extern "C" {
 #endif
 SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_revertToSavedLocalizedString( Window *pWindow );
 SAL_DLLPUBLIC_EXPORT ::rtl::OUString NSDocument_saveAVersionLocalizedString( Window *pWindow );
-BOOL NSDocument_isValidMoveToPath( ::rtl::OUString aPath );
-BOOL NSDocument_versionsEnabled();
-BOOL NSDocument_versionsSupported();
-void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
-void SFXDocument_documentHasBeenDeleted( SfxTopViewFrame *pFrame );
-void SFXDocument_documentHasBeenModified( SfxTopViewFrame *pFrame );
-void SFXDocument_documentHasMoved( SfxTopViewFrame *pFrame, ::rtl::OUString aNewURL );
-BOOL SFXDocument_documentIsReliquished( SfxTopViewFrame *pFrame );
-void SFXDocument_duplicate( SfxTopViewFrame *pFrame, BOOL bWaitForRevertCall, BOOL bSetModified );
-BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
+sal_Bool NSDocument_isValidMoveToPath( ::rtl::OUString aPath );
+sal_Bool NSDocument_versionsEnabled();
+sal_Bool NSDocument_versionsSupported();
+void SFXDocument_createDocument( SfxViewFrame *pFrame, NSView *pView, CFURLRef aURL, sal_Bool bReadOnly );
+void SFXDocument_documentHasBeenDeleted( SfxViewFrame *pFrame );
+void SFXDocument_documentHasBeenModified( SfxViewFrame *pFrame );
+void SFXDocument_documentHasMoved( SfxViewFrame *pFrame, ::rtl::OUString aNewURL );
+sal_Bool SFXDocument_documentIsReliquished( SfxViewFrame *pFrame );
+void SFXDocument_duplicate( SfxViewFrame *pFrame, sal_Bool bWaitForRevertCall, sal_Bool bSetModified );
+sal_Bool SFXDocument_hasDocument( SfxViewFrame *pFrame );
 void SFXDocument_openPendingDuplicateURLs();
-void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
-void SFXDocument_reload( SfxTopViewFrame *pFrame, sal_Bool bSilent );
-void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame );
-void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame );
-BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified );
+void SFXDocument_releaseDocument( SfxViewFrame *pFrame );
+void SFXDocument_reload( SfxViewFrame *pFrame, sal_Bool bSilent );
+void SFXDocument_revertDocumentToSaved( SfxViewFrame *pFrame );
+void SFXDocument_saveVersionOfDocument( SfxViewFrame *pFrame );
+sal_Bool SFXDocument_setDocumentModified( SfxViewFrame *pFrame, sal_Bool bModified );
 #ifdef __cplusplus
 }
 #endif

@@ -73,7 +73,7 @@ void SfxFrameLoader_openDocumentOfType( ::rtl::OUString aDocType )
 				NSMutableDictionary *pDict = [NSMutableDictionary dictionaryWithCapacity:[pDocTypeLaunchOptions count]];
 				if ( pDict )
 				{
-					MacOSBOOL bSetDefaultLaunchOption = NO;
+					BOOL bSetDefaultLaunchOption = NO;
 					NSDictionary *pDocTypesOpened = [pDefaults dictionaryForKey:DEFAULT_LAUNCH_OPTIONS_DOC_TYPES_OPENED_KEY];
 					if ( pDocTypesOpened )
 						[pDict setDictionary:pDocTypesOpened];

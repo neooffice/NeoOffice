@@ -39,7 +39,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, USHORT nID );
+sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID );
 #ifdef __cplusplus
 }
 #endif

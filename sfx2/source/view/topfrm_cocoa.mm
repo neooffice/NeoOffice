@@ -39,8 +39,9 @@
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
-#include <sfx2/topfrm.hxx>
+#include <sfx2/viewfrm.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/syswin.hxx>
 #include <vos/mutex.hxx>
 
 #include <premac.h>
@@ -68,8 +69,8 @@ static BOOL HasNativeVersion( Window *pWindow )
 	SfxViewFrame *pFrame = SfxViewFrame::GetFirst();
 	while ( pFrame )
 	{
-		SfxTopViewFrame *pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
-		if ( pTopViewFrame && pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl() == pWindow )
+		SfxViewFrame *pTopViewFrame = pFrame->GetTopViewFrame();
+		if ( pTopViewFrame && pTopViewFrame->GetFrame().GetTopWindow_Impl() == pWindow )
 		{
 			SfxObjectShell *pDoc = pTopViewFrame->GetObjectShell();
 			if ( pDoc )
@@ -200,7 +201,7 @@ static OUString aSaveAVersionLocalizedString;
 
 @interface SFXDocument : NSDocument
 {
-	SfxTopViewFrame*		mpFrame;
+	SfxViewFrame*			mpFrame;
 	BOOL					mbInSetDocumentModified;
 	BOOL					mbRelinquished;
 	NSLock*					mpRelinquishedLock;
@@ -216,7 +217,7 @@ static OUString aSaveAVersionLocalizedString;
 - (void)duplicateDocument:(id)pObject;
 - (void)duplicateDocumentAndWaitForRevertCall:(BOOL)bWait;
 - (BOOL)hasUnautosavedChanges;
-- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (BOOL)isRelinquished;
 - (void)moveToURL:(NSURL *)pURL completionHandler:(void (^)(NSError *))aCompletionHandler;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -270,7 +271,7 @@ static OUString NSStringToOUString( NSString *pString )
 	return aRet;
 }
 
-static SFXDocument *GetDocumentForFrame( SfxTopViewFrame *pFrame )
+static SFXDocument *GetDocumentForFrame( SfxViewFrame *pFrame )
 {
 	SFXDocument *pRet = nil;
 
@@ -286,7 +287,7 @@ static SFXDocument *GetDocumentForFrame( SfxTopViewFrame *pFrame )
 	return pRet;
 }
 
-static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
+static void SetDocumentForFrame( SfxViewFrame *pFrame, SFXDocument *pDoc )
 {
 	if ( !pFrame )
 		return;
@@ -442,6 +443,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)duplicateDocument:(id)pObject
 {
+	(void)pObject;
+
 	// This selector gets invoked by the duplicate menu item in the titlebar's
 	// menu so don't wait for a revert call and execute immediately
 	[self duplicateDocumentAndWaitForRevertCall:NO];
@@ -469,7 +472,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	return NO;
 }
 
-- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
 	[super initWithContentsOfURL:pURL ofType:pTypeName error:ppError];
 
@@ -553,6 +556,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	(void)pURL;
+	(void)pTypeName;
+
 	if ( ppError )
 		*ppError = nil;
 
@@ -587,7 +593,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				pObjSh = mpFrame->GetObjectShell();
 				while ( pObjSh && !pObjSh->IsLoadingFinished() )
 				{
-					ULONG nCount = Application::ReleaseSolarMutex();
+					sal_uLong nCount = Application::ReleaseSolarMutex();
 					OThread::yield();
 					Application::AcquireSolarMutex( nCount );
 
@@ -675,7 +681,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				SfxObjectShell *pNewObjSh = mpFrame->GetObjectShell();
 				while ( pNewObjSh && !pNewObjSh->IsLoadingFinished() )
 				{
-					ULONG nCount = Application::ReleaseSolarMutex();
+					sal_uLong nCount = Application::ReleaseSolarMutex();
 					OThread::yield();
 					Application::AcquireSolarMutex( nCount );
 
@@ -782,11 +788,15 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)restoreStateWithCoder:(NSCoder *)pCoder
 {
+	(void)pCoder;
+
 	// Don't allow NSDocument to do the restoration
 }
 
 - (void)revertDocumentToSaved:(id)pObject
 {
+	(void)pObject;
+
 	if ( [SFXDocument isInVersionBrowser] )
 		return;
 
@@ -795,6 +805,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	(void)pURL;
+	(void)pTypeName;
+
 	if ( ppError )
 		*ppError = nil;
 
@@ -868,6 +881,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation
 {
+	(void)nSaveOperation;
+
 	if ( !pWritableTypes )
 	{
 		unsigned int nCount = sizeof( pWritableTypeEntries ) / sizeof( NSString* );
@@ -885,6 +900,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
+	(void)pURL;
+	(void)pTypeName;
+
 	if ( ppError )
 		*ppError = nil;
 
@@ -1100,7 +1118,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 @interface RunSFXDocument : NSObject
 {
 	SFXDocument*			mpDoc;
-	SfxTopViewFrame*		mpFrame;
+	SfxViewFrame*			mpFrame;
 	BOOL					mbReadOnly;
 	NSString*				mpRevertToSavedLocalizedString;
 	BOOL					mbSaved;
@@ -1109,14 +1127,14 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	NSView*					mpView;
 }
 + (id)create;
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame;
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
++ (id)createWithFrame:(SfxViewFrame *)pFrame;
++ (id)createWithFrame:(SfxViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)createDocument:(id)pObject;
 - (void)dealloc;
 - (SFXDocument *)document;
 - (BOOL)documentIsRelinquished;
 - (void)getDocument:(id)pObject;
-- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
+- (id)initWithFrame:(SfxViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)revertDocumentToSaved:(id)pObject;
 - (NSString *)revertToSavedLocalizedString;
 - (void)saveVersionOfDocument:(id)pObject;
@@ -1133,14 +1151,14 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	return pRet;
 }
 
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame
++ (id)createWithFrame:(SfxViewFrame *)pFrame
 {
 	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:nil URL:nil readOnly:YES];
 	[pRet autorelease];
 	return pRet;
 }
 
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
++ (id)createWithFrame:(SfxViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
 {
 	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:pView URL:pURL readOnly:bReadOnly];
 	[pRet autorelease];
@@ -1149,6 +1167,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)createDocument:(id)pObject
 {
+	(void)pObject;
+
 	if ( mpFrame && mpView )
 	{
 		NSWindow *pWindow = [mpView window];
@@ -1223,6 +1243,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)getDocument:(id)pObject
 {
+	(void)pObject;
+
 	if ( !mpDoc )
 	{
 		mpDoc = GetDocumentForFrame( mpFrame );
@@ -1231,7 +1253,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	}
 }
 
-- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
+- (id)initWithFrame:(SfxViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
 {
 	[super init];
 
@@ -1253,11 +1275,15 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)release:(id)pObject
 {
+	(void)pObject;
+
 	SetDocumentForFrame( mpFrame, nil );
 }
 
 - (void)revertDocumentToSaved:(id)pObject
 {
+	(void)pObject;
+
 	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 	if ( pDoc )
 		[pDoc revertDocumentToSaved:self];
@@ -1270,6 +1296,8 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 - (void)saveVersionOfDocument:(id)pObject
 {
+	(void)pObject;
+
 	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 
 	// Fix crashing bug reported in the following NeoOffice forum post by
@@ -1363,14 +1391,14 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 	return aSaveAVersionLocalizedString;
 }
 
-BOOL NSDocument_isValidMoveToPath( ::rtl::OUString aPath )
+sal_Bool NSDocument_isValidMoveToPath( ::rtl::OUString aPath )
 {
 	if ( !aPath.getLength() )
-		return NO;
+		return sal_False;
 	else if ( !NSDocument_versionsSupported() )
-		return YES;
+		return sal_True;
 
-	BOOL bRet = YES;
+	sal_Bool bRet = sal_True;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1383,9 +1411,9 @@ BOOL NSDocument_isValidMoveToPath( ::rtl::OUString aPath )
 	return bRet;
 }
 
-BOOL NSDocument_versionsEnabled()
+sal_Bool NSDocument_versionsEnabled()
 {
-	BOOL bRet = NSDocument_versionsSupported();
+	sal_Bool bRet = NSDocument_versionsSupported();
 
 	// Check if user has explicitly disabled versions
 	if ( bRet )
@@ -1394,7 +1422,7 @@ BOOL NSDocument_versionsEnabled()
 		if ( aPref )
 		{
 			if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
-				bRet = NO;
+				bRet = sal_False;
 			CFRelease( aPref );
 		}
 	}
@@ -1403,16 +1431,16 @@ BOOL NSDocument_versionsEnabled()
 
 }
 
-BOOL NSDocument_versionsSupported()
+sal_Bool NSDocument_versionsSupported()
 {
 #ifdef USE_NATIVE_VERSIONS
-	return ( class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? YES : NO );
+	return ( class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? sal_True : sal_False );
 #else	// USE_NATIVE_VERSIONS
-	return NO;
+	return sal_False;
 #endif	// USE_NATIVE_VERSIONS
 }
 
-void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly )
+void SFXDocument_createDocument( SfxViewFrame *pFrame, NSView *pView, CFURLRef aURL, sal_Bool bReadOnly )
 {
 	if ( !NSDocument_versionsSupported() )
 		return;
@@ -1429,9 +1457,9 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 	[pPool release];
 }
 
-BOOL SFXDocument_documentIsReliquished( SfxTopViewFrame *pFrame )
+sal_Bool SFXDocument_documentIsReliquished( SfxViewFrame *pFrame )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = sal_False;
 
 	if ( !NSDocument_versionsSupported() )
 		return bRet;
@@ -1451,9 +1479,9 @@ BOOL SFXDocument_documentIsReliquished( SfxTopViewFrame *pFrame )
 	return bRet;
 }
 
-BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
+sal_Bool SFXDocument_hasDocument( SfxViewFrame *pFrame )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = sal_False;
 
 	if ( !NSDocument_versionsSupported() )
 		return bRet;
@@ -1473,7 +1501,7 @@ BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
 	return bRet;
 }
 
-void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
+void SFXDocument_releaseDocument( SfxViewFrame *pFrame )
 {
 	if ( !NSDocument_versionsSupported() )
 		return;
@@ -1490,7 +1518,7 @@ void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 	[pPool release];
 }
 
-void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
+void SFXDocument_revertDocumentToSaved( SfxViewFrame *pFrame )
 {
 	if ( !NSDocument_versionsSupported() )
 		return;
@@ -1499,14 +1527,14 @@ void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-	ULONG nCount = Application::ReleaseSolarMutex();
+	sal_uLong nCount = Application::ReleaseSolarMutex();
 	[pRunSFXDocument performSelectorOnMainThread:@selector(revertDocumentToSaved:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 	Application::AcquireSolarMutex( nCount );
 
 	[pPool release];
 }
 
-void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
+void SFXDocument_saveVersionOfDocument( SfxViewFrame *pFrame )
 {
 	if ( !NSDocument_versionsSupported() )
 		return;
@@ -1520,9 +1548,9 @@ void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 	[pPool release];
 }
 
-BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
+sal_Bool SFXDocument_setDocumentModified( SfxViewFrame *pFrame, sal_Bool bModified )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = sal_False;
 
 	if ( !NSDocument_versionsSupported() )
 		return bRet;
@@ -1533,7 +1561,7 @@ BOOL SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	[pRunSFXDocument performSelectorOnMainThread:@selector(setDocumentModified:) withObject:pNumber waitUntilDone:YES modes:pModes];
-	bRet = ( [pRunSFXDocument document] ? YES : NO );
+	bRet = ( [pRunSFXDocument document] ? sal_True : sal_False );
 
 	[pPool release];
 

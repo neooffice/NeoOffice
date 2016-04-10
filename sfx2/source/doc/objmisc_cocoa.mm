@@ -64,8 +64,10 @@
 	return(self);
 }
 
-- (void)setModified:(id)ignore
+- (void)setModified:(id)pObject
 {
+	(void)pObject;
+
 	NSWindow *theWin = [theView window];
 	if (theWin )
 		[theWin setDocumentEdited: theState];

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
@@ -35,6 +38,7 @@
 #include <sfx2/app.hxx>
 #include <vos/mutex.hxx>
 #include <svtools/imagemgr.hxx>
+#include <svtools/miscopt.hxx>
 // #include <cmdlineargs.hxx>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/frame/XDispatchResultListener.hpp>
@@ -63,13 +67,15 @@
 #include <osl/security.hxx>
 #include <osl/file.hxx>
 #include <rtl/bootstrap.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <tools/link.hxx>
 #ifdef UNX // need symlink
 #include <unistd.h>
 #include <errno.h>
 #endif
+#include <vcl/timer.hxx>
 
-#include "sfxresid.hxx"
+#include "sfx2/sfxresid.hxx"
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::frame;
@@ -80,13 +86,21 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::ui::dialogs;
 using namespace ::vos;
+#ifdef WNT
+using ::rtl::OUString;
+#else
 using namespace ::rtl;
+#endif
 using namespace ::sfx2;
 
 #ifdef ENABLE_QUICKSTART_APPLET
 # if !defined(WIN32) && !defined(QUARTZ)
 extern "C" { static void SAL_CALL thisModule() {} }
 # endif
+#endif
+
+#if defined(UNX) && defined(ENABLE_SYSTRAY_GTK)
+#define PLUGIN_NAME libqstart_gtk.so
 #endif
 
 class SfxNotificationListener_Impl : public cppu::WeakImplHelper1< XDispatchResultListener >
@@ -153,7 +167,7 @@ bool ShutdownIcon::LoadModule( osl::Module **pModule,
 
 	oslGenericFunction pTmpInit = NULL;
 	oslGenericFunction pTmpDeInit = NULL;
-	if ( pPlugin->loadRelative( &thisModule, OUString (RTL_CONSTASCII_USTRINGPARAM( STRING( PLUGIN_NAME ) ) ) ) )
+	if ( pPlugin->loadRelative( &thisModule, OUString( RTL_CONSTASCII_USTRINGPARAM( STRING( PLUGIN_NAME ) ) ) ) )
 	{
 		pTmpInit = pPlugin->getFunctionSymbol(
 			OUString( RTL_CONSTASCII_USTRINGPARAM( "plugin_init_sys_tray" ) ) );
@@ -190,15 +204,39 @@ bool ShutdownIcon::LoadModule( osl::Module **pModule,
 	return true;
 }
 
+
+struct AsyncDesktopTerminationData
+{
+    Reference< XDesktop > mxDesktop;
+    AsyncDesktopTerminationData( const Reference< XDesktop > &xDesktop )
+    : mxDesktop( xDesktop ) {}
+};
+
+
+class IdleUnloader : Timer
+{
+    ::osl::Module *m_pModule;
+public:
+    IdleUnloader (::osl::Module **pModule) :
+        m_pModule (*pModule)
+    {
+        *pModule = NULL;
+        Start();
+    }
+    virtual void Timeout()
+    {
+        delete m_pModule;
+        delete this;
+    }
+};
+
 void ShutdownIcon::initSystray()
 {
 	if (m_bInitialized)
 		return;
 	m_bInitialized = true;
 
-    if (!m_pPlugin)
-	    (void) LoadModule( &m_pPlugin, &m_pInitSystray, &m_pDeInitSystray );
-
+	(void) LoadModule( &m_pPlugin, &m_pInitSystray, &m_pDeInitSystray );
 	m_bVeto = true;
 	m_pInitSystray();
 }
@@ -212,6 +250,10 @@ void ShutdownIcon::deInitSystray()
 		m_pDeInitSystray();
 
 	m_bVeto = false;
+	m_pInitSystray = 0;
+	m_pDeInitSystray = 0;
+    new IdleUnloader (&m_pPlugin);
+
     delete m_pFileDlg;
 	m_pFileDlg = NULL;
 	m_bInitialized = false;
@@ -222,6 +264,7 @@ ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 	ShutdownIconServiceBase( m_aMutex ),
 	m_bVeto ( false ),
     m_bListenForTermination ( false ),
+    m_bSystemDialogs( false ),
 	m_pResMgr( NULL ),
     m_pFileDlg( NULL ),
 	m_xServiceManager( aSMgr ),
@@ -230,16 +273,13 @@ ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 	m_pPlugin( 0 ),
 	m_bInitialized( false )
 {
+    m_bSystemDialogs = SvtMiscOptions().UseSystemFileDialog();
 }
 
 ShutdownIcon::~ShutdownIcon()
 {
 	deInitSystray();
-    //Bustage on dlclosing when: no qstarter, start writer, enable, close writer, choose disable/quit
-    //dlclose gets called and pulls .so from under hack-tower
-#ifndef UNX
-	delete m_pPlugin;
-#endif
+    new IdleUnloader (&m_pPlugin);
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +407,16 @@ void ShutdownIcon::StartFileDialog()
 {
     ::vos::OGuard aGuard( Application::GetSolarMutex() );
 
+    bool bDirty = ( m_bSystemDialogs != static_cast<bool>(SvtMiscOptions().UseSystemFileDialog()) );
+    
+    if ( m_pFileDlg && bDirty )
+    {
+        // Destroy instance as changing the system file dialog setting
+        // forces us to create a new FileDialogHelper instance!
+        delete m_pFileDlg;
+        m_pFileDlg = NULL;
+    }
+    
     if ( !m_pFileDlg )
         m_pFileDlg = new FileDialogHelper( WB_OPEN | SFXWB_MULTISELECTION, String() );
     m_pFileDlg->StartExecuteModal( STATIC_LINK( this, ShutdownIcon, DialogClosedHdl_Impl ) );
@@ -502,8 +552,18 @@ IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYAR
     }
 
 #ifdef WNT
-        LeaveModalMode();
+    // #103346 Destroy dialog to prevent problems with custom controls
+    // This fix is dependent on the dialog settings. Destroying the dialog here will
+    // crash the non-native dialog implementation! Therefore make this dependent on
+    // the settings.
+    if ( SvtMiscOptions().UseSystemFileDialog() )
+    {
+        delete pThis->m_pFileDlg;
+        pThis->m_pFileDlg = NULL;
+    }
 #endif
+
+    LeaveModalMode();
     return 0;
 }
 
@@ -539,24 +599,36 @@ void ShutdownIcon::terminateDesktop()
         return;
         
     // always remove ourselves as listener
-    xDesktop->removeTerminateListener( pInst );
     pInst->m_bListenForTermination = true;
+    xDesktop->removeTerminateListener( pInst );
 
     // terminate desktop only if no tasks exist
     Reference< XFramesSupplier > xSupplier( xDesktop, UNO_QUERY );
     if ( xSupplier.is() )
     {
         Reference< XIndexAccess > xTasks ( xSupplier->getFrames(), UNO_QUERY );
-        if( xTasks.is() )
+        if( xTasks.is() && xTasks->getCount() < 1 )
         {
-            if( xTasks->getCount() < 1 )
-                xDesktop->terminate();
+            AsyncDesktopTerminationData * pData = new AsyncDesktopTerminationData( xDesktop );
+            if ( !Application::PostUserEvent( STATIC_LINK( 0, ShutdownIcon, AsyncDesktopTermination ), pData ) )
+                delete pData;
         }
     }
 
     // remove the instance pointer
     ShutdownIcon::pShutdownIcon = 0;
 }
+
+
+IMPL_STATIC_LINK_NOINSTANCE( ShutdownIcon, AsyncDesktopTermination, AsyncDesktopTerminationData*, pData )
+{
+    if ( pData && pData->mxDesktop.is() )
+        pData->mxDesktop->terminate();
+    delete pData;
+    return 0;
+}
+
+
 
 // ---------------------------------------------------------------------------
 
@@ -711,14 +783,14 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 
 void ShutdownIcon::EnterModalMode()
 {
-	bModalMode = TRUE;
+	bModalMode = sal_True;
 }
 
 // -------------------------------
 
 void ShutdownIcon::LeaveModalMode()
 {
-	bModalMode = FALSE;
+	bModalMode = sal_False;
 }
 
 #ifdef WNT
@@ -788,8 +860,15 @@ rtl::OUString ShutdownIcon::getShortcutName()
 	aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "\\" ) );
 	aShortcut += aShortcutName;
 #else // UNX
-	OUString aShortcut = getDotAutostart();
-	aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "/qstart.desktop" ) );
+    OUStringBuffer aStrBuff( getDotAutostart() );
+    aStrBuff.appendAscii( RTL_CONSTASCII_STRINGPARAM( "/" ) );
+    if ( sal_Int32 len = aShortcutName.getLength() )
+        aStrBuff.append( aShortcutName.getStr(), len );
+    else
+        aStrBuff.appendAscii( RTL_CONSTASCII_STRINGPARAM( "qstart" ) );
+    aStrBuff.appendAscii( RTL_CONSTASCII_STRINGPARAM( ".desktop" ) );
+
+    OUString aShortcut( aStrBuff.makeStringAndClear() );
 #endif // UNX
 	return aShortcut;
 #endif // ENABLE_QUICKSTART_APPLET
@@ -831,7 +910,7 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 #else // UNX
 		getDotAutostart( true );
 
-		OUString aPath( RTL_CONSTASCII_USTRINGPARAM("${BRAND_BASE_DIR}/share/xdg/qstart.desktop" ) );
+		OUString aPath( RTL_CONSTASCII_USTRINGPARAM("${OOO_BASE_DIR}/share/xdg/qstart.desktop" ) );
 		Bootstrap::expandMacros( aPath );
 
 		OUString aDesktopFile;
@@ -841,10 +920,10 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 													 osl_getThreadTextEncoding() );
 		OString aShortcutUnx = OUStringToOString( aShortcut,
 												  osl_getThreadTextEncoding() );
-		if ((0 != symlink(aDesktopFileUnx, aShortcutUnx)) && (errno == EEXIST)) 
+		if ((0 != symlink( aDesktopFileUnx.getStr(), aShortcutUnx.getStr())) && (errno == EEXIST)) 
 		{ 
-		unlink(aShortcutUnx); 
-		symlink(aDesktopFileUnx, aShortcutUnx); 
+		unlink( aShortcutUnx.getStr()); 
+		symlink( aDesktopFileUnx.getStr(), aShortcutUnx.getStr()); 
 		}
 
 		ShutdownIcon *pIcon = ShutdownIcon::createInstance();
@@ -858,9 +937,11 @@ void ShutdownIcon::SetAutostart( bool bActivate )
         ::osl::File::getFileURLFromSystemPath( aShortcut, aShortcutUrl );
         ::osl::File::remove( aShortcutUrl );
 #ifdef UNX
-		ShutdownIcon *pIcon = getInstance();
-		if( pIcon )
+		if (pShutdownIcon)
+		{
+		    ShutdownIcon *pIcon = getInstance();
 			pIcon->deInitSystray();
+		}
 #endif
     }
 #elif defined OS2
