@@ -144,6 +144,7 @@ typedef sal_uInt32		ControlType;
 // with nodes
 #define CTRL_LISTNET            171
 
+#ifdef USE_JAVA
 
 // hierarchical tree control expand/collapse handle
 #define CTRL_DISCLOSUREBTN		230
@@ -153,6 +154,9 @@ typedef sal_uInt32		ControlType;
 
 // native frame to draw around list views.  Default is sunken Win95 well.
 #define CTRL_LISTVIEWBOX		250
+
+#endif	// USE_JAVA
+
 
 /* Control Parts:
  *
