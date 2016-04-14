@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
@@ -58,12 +61,12 @@ void ImplFillPrnDlgListBox( const Printer* pPrinter,
 	}
 
 	pBox->Enable( nCount != 0 );
-	pPropBtn->Enable( pPrinter->HasSupport( SUPPORT_SETUPDIALOG ) );
+	pPropBtn->Show( pPrinter->HasSupport( SUPPORT_SETUPDIALOG ) );
 }
 
 // -----------------------------------------------------------------------
 
-void ImplFreePrnDlgListBox( ListBox* pBox, BOOL bClear )
+void ImplFreePrnDlgListBox( ListBox* pBox, sal_Bool bClear )
 {
 	if ( bClear )
 		pBox->Clear();
@@ -151,7 +154,7 @@ static void ImplPrnDlgAddString( XubString& rStr, const XubString& rAddStr )
 
 // -----------------------------------------------------------------------
 
-static void ImplPrnDlgAddResString( XubString& rStr, USHORT nResId )
+static void ImplPrnDlgAddResString( XubString& rStr, sal_uInt16 nResId )
 {
 	SvtResId aResId( nResId );
 	XubString aAddStr( aResId );
@@ -163,7 +166,7 @@ static void ImplPrnDlgAddResString( XubString& rStr, USHORT nResId )
 XubString ImplPrnDlgGetStatusText( const QueueInfo& rInfo )
 {
 	XubString	aStr;
-	ULONG		nStatus = rInfo.GetStatus();
+	sal_uLong		nStatus = rInfo.GetStatus();
 
 	// Default-Printer
 	if ( rInfo.GetPrinterName().Len() &&
@@ -223,7 +226,7 @@ XubString ImplPrnDlgGetStatusText( const QueueInfo& rInfo )
 		ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_POWER_SAVE );
 
 	// Anzahl Jobs
-	ULONG nJobs = rInfo.GetJobs();
+	sal_uLong nJobs = rInfo.GetJobs();
 	if ( nJobs && (nJobs != QUEUE_JOBS_DONTKNOW) )
 	{
 		XubString aJobStr( SvtResId( STR_SVT_PRNDLG_JOBCOUNT ) );
@@ -275,7 +278,7 @@ PrinterSetupDialog::PrinterSetupDialog( Window* pWindow ) :
 
 PrinterSetupDialog::~PrinterSetupDialog()
 {
-	ImplFreePrnDlgListBox( &maLbName, FALSE );
+	ImplFreePrnDlgListBox( &maLbName, sal_False );
 	delete mpTempPrinter;
 }
 
@@ -380,7 +383,7 @@ short PrinterSetupDialog::Execute()
 	if ( !mpPrinter || mpPrinter->IsPrinting() || mpPrinter->IsJobActive() )
 	{
 		DBG_ERRORFILE( "PrinterSetupDialog::Execute() - No Printer or printer is printing" );
-		return FALSE;
+		return sal_False;
 	}
 
     Printer::updatePrinters();
@@ -390,10 +393,10 @@ short PrinterSetupDialog::Execute()
 	maStatusTimer.Start();
 
 #if defined USE_JAVA && defined MACOSX
-	short nRet = TRUE;
+	short nRet = sal_True;
 
 	// Display options dialog if set
-    if ( maBtnOptions.GetClickHdl().IsSet() )
+	if ( maBtnOptions.GetClickHdl().IsSet() )
 	{
 		// Copy printer properties or else certain printer options will be unset
 		Printer *pOldPrinter = mpPrinter;
@@ -419,7 +422,7 @@ short PrinterSetupDialog::Execute()
 		}
 		else
 		{
-			nRet = FALSE;
+			nRet = sal_False;
 		}
 
 		mpPrinter = pOldPrinter;
@@ -442,7 +445,7 @@ short PrinterSetupDialog::Execute()
 #endif	// USE_JAVA && MACOSX
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
-	if ( nRet == TRUE )
+	if ( nRet == sal_True )
 	{
 		if ( mpTempPrinter )
 			mpPrinter->SetPrinterProps( mpTempPrinter );

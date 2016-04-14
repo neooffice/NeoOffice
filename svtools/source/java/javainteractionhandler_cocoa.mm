@@ -39,16 +39,6 @@
 
 #import "javainteractionhandler_cocoa.h"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
-
 @interface OpenJavaDownloadURL : NSObject
 {
 }

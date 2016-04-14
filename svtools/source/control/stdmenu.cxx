@@ -1,45 +1,43 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
 
 #include <string.h>
-
-#ifndef _APP_HXX
 #include <vcl/svapp.hxx>
-#endif
-
 #include <vcl/i18nhelp.hxx>
-
-#include <ctrltool.hxx>
-#include <stdmenu.hxx>
+#include <svtools/ctrltool.hxx>
+#include <svtools/stdmenu.hxx>
 
 // ========================================================================
 
@@ -83,19 +81,19 @@ void FontNameMenu::Fill( const FontList* pList )
     const vcl::I18nHelper& rI18nHelper = Application::GetSettings().GetUILocaleI18nHelper();
 #ifdef USE_JAVA
     // Display the full font list as there is no noticeable need to limit the
-	// number of fonts in the list
-    USHORT nFontCount = pList->GetFontNameCount();
+    // number of fonts in the list
+    sal_uInt16 nFontCount = pList->GetFontNameCount();
 #else	// USE_JAVA
     // more than 100 fonts reduces the speed of opening the menu.
     // So only the first 100 fonts will be displayed.
-    USHORT nFontCount = ::std::min( pList->GetFontNameCount(), static_cast< USHORT >(100) );
+    sal_uInt16 nFontCount = ::std::min( pList->GetFontNameCount(), static_cast< sal_uInt16 >(100) );
 #endif	// USE_JAVA
-	for ( USHORT i = 0; i < nFontCount; i++ )
+	for ( sal_uInt16 i = 0; i < nFontCount; i++ )
 	{
 		const XubString& rName = pList->GetFontName( i ).GetName();
 
         // sort with the I18nHelper
-		USHORT j = GetItemCount();
+		sal_uInt16 j = GetItemCount();
 		while ( j )
 		{
 			XubString aText = GetItemText( GetItemId( j-1 ) );
@@ -116,11 +114,11 @@ void FontNameMenu::SetCurName( const XubString& rName )
 	maCurName = rName;
 
 	// Menueintrag checken
-	USHORT nChecked = 0;
-	USHORT nItemCount = GetItemCount();
-	for( USHORT i = 0; i < nItemCount; i++ )
+	sal_uInt16 nChecked = 0;
+	sal_uInt16 nItemCount = GetItemCount();
+	for( sal_uInt16 i = 0; i < nItemCount; i++ )
 	{
-		USHORT nItemId = GetItemId( i );
+		sal_uInt16 nItemId = GetItemId( i );
 
 		if ( IsItemChecked( nItemId ) )
 			nChecked = nItemId;
@@ -128,13 +126,13 @@ void FontNameMenu::SetCurName( const XubString& rName )
 		XubString aText = GetItemText( nItemId );
 		if ( aText == maCurName )
 		{
-			CheckItem( nItemId, TRUE );
+			CheckItem( nItemId, sal_True );
 			return;
 		}
 	}
 
 	if ( nChecked )
-		CheckItem( nChecked, FALSE );
+		CheckItem( nChecked, sal_False );
 }
 
 // ========================================================================
@@ -154,7 +152,7 @@ FontStyleMenu::~FontStyleMenu()
 
 void FontStyleMenu::Select()
 {
-	USHORT nCurId = GetCurItemId();
+	sal_uInt16 nCurId = GetCurItemId();
 
 	if ( (nCurId >= FONTSTYLEMENU_FIRSTID) && (nCurId <= FONTSTYLEMENU_LASTID) )
 	{
@@ -169,7 +167,7 @@ void FontStyleMenu::Select()
 
 void FontStyleMenu::Highlight()
 {
-	USHORT nCurId = GetCurItemId();
+	sal_uInt16 nCurId = GetCurItemId();
 
 	if ( (nCurId >= FONTSTYLEMENU_FIRSTID) && (nCurId <= FONTSTYLEMENU_LASTID) )
 	{
@@ -184,22 +182,22 @@ void FontStyleMenu::Highlight()
 
 // -----------------------------------------------------------------------
 
-BOOL FontStyleMenu::ImplIsAlreadyInserted( const XubString& rStyleName, USHORT nCount )
+sal_Bool FontStyleMenu::ImplIsAlreadyInserted( const XubString& rStyleName, sal_uInt16 nCount )
 {
-	for ( USHORT i = 0; i < nCount; i++ )
+	for ( sal_uInt16 i = 0; i < nCount; i++ )
 	{
 		if ( GetItemText( i+FONTSTYLEMENU_FIRSTID ) == rStyleName )
-			return TRUE;
+			return sal_True;
 	}
 
-	return FALSE;
+	return sal_False;
 }
 
 // -----------------------------------------------------------------------
 
 void FontStyleMenu::Fill( const XubString& rName, const FontList* pList )
 {
-	USHORT nItemId = GetItemId( 0 );
+	sal_uInt16 nItemId = GetItemId( 0 );
 	while ( (nItemId >= FONTSTYLEMENU_FIRSTID) &&
 			(nItemId <= FONTSTYLEMENU_LASTID) )
 	{
@@ -212,16 +210,16 @@ void FontStyleMenu::Fill( const XubString& rName, const FontList* pList )
 	if ( hFontInfo )
 	{
 		XubString	aStyleText;
-		USHORT		nPos = 0;
-		USHORT		nId = FONTSTYLEMENU_FIRSTID;
+		sal_uInt16		nPos = 0;
+		sal_uInt16		nId = FONTSTYLEMENU_FIRSTID;
 		FontWeight	eLastWeight = WEIGHT_DONTKNOW;
 		FontItalic	eLastItalic = ITALIC_NONE;
 		FontWidth	eLastWidth = WIDTH_DONTKNOW;
-		BOOL		bNormal = FALSE;
-		BOOL		bItalic = FALSE;
-		BOOL		bBold = FALSE;
-		BOOL		bBoldItalic = FALSE;
-		BOOL		bInsert = FALSE;
+		sal_Bool		bNormal = sal_False;
+		sal_Bool		bItalic = sal_False;
+		sal_Bool		bBold = sal_False;
+		sal_Bool		bBoldItalic = sal_False;
+		sal_Bool		bInsert = sal_False;
 		FontInfo	aInfo;
 		while ( hFontInfo )
 		{
@@ -246,16 +244,16 @@ void FontStyleMenu::Fill( const XubString& rName, const FontList* pList )
 				if ( eWeight <= WEIGHT_NORMAL )
 				{
 					if ( eItalic != ITALIC_NONE )
-						bItalic = TRUE;
+						bItalic = sal_True;
 					else
-						bNormal = TRUE;
+						bNormal = sal_True;
 				}
 				else
 				{
 					if ( eItalic != ITALIC_NONE )
-						bBoldItalic = TRUE;
+						bBoldItalic = sal_True;
 					else
-						bBold = TRUE;
+						bBold = sal_True;
 				}
 
 				// For wrong StyleNames we replace this with the correct once
@@ -289,11 +287,11 @@ void FontStyleMenu::Fill( const XubString& rName, const FontList* pList )
 			}
 
 			if ( !bItalic && (aStyleText == pList->GetItalicStr()) )
-				bItalic = TRUE;
+				bItalic = sal_True;
 			else if ( !bBold && (aStyleText == pList->GetBoldStr()) )
-				bBold = TRUE;
+				bBold = sal_True;
 			else if ( !bBoldItalic && (aStyleText == pList->GetBoldItalicStr()) )
-				bBoldItalic = TRUE;
+				bBoldItalic = sal_True;
 
 			hFontInfo = pList->GetNextFontInfo( hFontInfo );
 		}
@@ -358,11 +356,11 @@ void FontStyleMenu::SetCurStyle( const XubString& rStyle )
 	maCurStyle = rStyle;
 
 	// Menueintrag checken
-	USHORT nChecked = 0;
-	USHORT nItemCount = GetItemCount();
-	for( USHORT i = 0; i < nItemCount; i++ )
+	sal_uInt16 nChecked = 0;
+	sal_uInt16 nItemCount = GetItemCount();
+	for( sal_uInt16 i = 0; i < nItemCount; i++ )
 	{
-		USHORT nItemId = GetItemId( i );
+		sal_uInt16 nItemId = GetItemId( i );
 
 		if ( (nItemId < FONTSTYLEMENU_FIRSTID) ||
 			 (nItemId > FONTSTYLEMENU_LASTID) )
@@ -374,13 +372,13 @@ void FontStyleMenu::SetCurStyle( const XubString& rStyle )
 		XubString aText = GetItemText( nItemId );
 		if ( aText == maCurStyle )
 		{
-			CheckItem( nItemId, TRUE );
+			CheckItem( nItemId, sal_True );
 			return;
 		}
 	}
 
 	if ( nChecked )
-		CheckItem( nChecked, FALSE );
+		CheckItem( nChecked, sal_False );
 }
 
 // ========================================================================
@@ -404,7 +402,7 @@ FontSizeMenu::~FontSizeMenu()
 
 void FontSizeMenu::Select()
 {
-	const USHORT nCurItemId = GetCurItemId();
+	const sal_uInt16 nCurItemId = GetCurItemId();
 	mnCurHeight = mpHeightAry[ nCurItemId - 1 ];
 	maSelectHdl.Call( this );
 }
@@ -414,7 +412,7 @@ void FontSizeMenu::Select()
 void FontSizeMenu::Highlight()
 {
 	const long nTempHeight = mnCurHeight;
-	const USHORT nCurItemId = GetCurItemId();
+	const sal_uInt16 nCurItemId = GetCurItemId();
 	if ( !nCurItemId )
 		mnCurHeight = 0;
 	else
@@ -438,11 +436,11 @@ void FontSizeMenu::Fill( const FontInfo& rInfo, const FontList* pList )
 
 	const long* pTempAry;
 	const long* pAry = pList->GetSizeAry( rInfo );
-	USHORT nSizeCount = 0;
+	sal_uInt16 nSizeCount = 0;
 	while ( pAry[nSizeCount] )
 		nSizeCount++;
 
-	USHORT nPos = 0;
+	sal_uInt16 nPos = 0;
 
 	// first insert font size names (for simplified/traditional chinese)
     FontSizeNames aFontSizeNames( Application::GetSettings().GetUILanguage() );
@@ -452,8 +450,8 @@ void FontSizeMenu::Fill( const FontInfo& rInfo, const FontList* pList )
 		if ( pAry == pList->GetStdSizeAry() )
 		{
 			// for scalable fonts all font size names
-			ULONG nCount = aFontSizeNames.Count();
-			for( ULONG i = 0; i < nCount; i++ )
+			sal_uLong nCount = aFontSizeNames.Count();
+			for( sal_uLong i = 0; i < nCount; i++ )
 			{
 				String	aSizeName = aFontSizeNames.GetIndexName( i );
 				long	nSize = aFontSizeNames.GetIndexSize( i );
@@ -487,7 +485,7 @@ void FontSizeMenu::Fill( const FontInfo& rInfo, const FontList* pList )
 	{
 		mpHeightAry[nPos] = *pTempAry;
 		nPos++; // Id is nPos+1
-		InsertItem( nPos, rI18nHelper.GetNum( *pTempAry, 1, TRUE, FALSE ), MIB_RADIOCHECK | MIB_AUTOCHECK );
+		InsertItem( nPos, rI18nHelper.GetNum( *pTempAry, 1, sal_True, sal_False ), MIB_RADIOCHECK | MIB_AUTOCHECK );
 		pTempAry++;
 	}
 
@@ -501,16 +499,16 @@ void FontSizeMenu::SetCurHeight( long nHeight )
 	mnCurHeight = nHeight;
 
 	// check menue item
-	XubString	aHeight = Application::GetSettings().GetUILocaleI18nHelper().GetNum( nHeight, 1, TRUE, FALSE  );
-	USHORT		nChecked = 0;
-	USHORT		nItemCount = GetItemCount();
-	for( USHORT i = 0; i < nItemCount; i++ )
+	XubString	aHeight = Application::GetSettings().GetUILocaleI18nHelper().GetNum( nHeight, 1, sal_True, sal_False  );
+	sal_uInt16		nChecked = 0;
+	sal_uInt16		nItemCount = GetItemCount();
+	for( sal_uInt16 i = 0; i < nItemCount; i++ )
 	{
-		USHORT nItemId = GetItemId( i );
+		sal_uInt16 nItemId = GetItemId( i );
 
 		if ( mpHeightAry[i] == nHeight )
 		{
-			CheckItem( nItemId, TRUE );
+			CheckItem( nItemId, sal_True );
 			return;
 		}
 
@@ -519,5 +517,5 @@ void FontSizeMenu::SetCurHeight( long nHeight )
 	}
 
 	if ( nChecked )
-		CheckItem( nChecked, FALSE );
+		CheckItem( nChecked, sal_False );
 }

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _SV_NATIVEWIDGETS_HXX
 #define _SV_NATIVEWIDGETS_HXX
@@ -42,6 +45,9 @@
  */
 
 typedef sal_uInt32		ControlType;
+
+// for use in general purpose ImplControlValue
+#define CTRL_GENERIC            0
 
 // Normal PushButton/Command Button
 #define CTRL_PUSHBUTTON			1
@@ -96,6 +102,8 @@ typedef sal_uInt32		ControlType;
 // Normal scrollbar, including
 // all parts like slider, buttons
 #define CTRL_SCROLLBAR			60
+
+#define CTRL_SLIDER             65
 
 // Border around a group of related
 // items, perhaps also displaying
@@ -185,7 +193,10 @@ typedef sal_uInt32		ControlPart;
 #define PART_MENU_ITEM              250
 #define PART_MENU_ITEM_CHECK_MARK   251
 #define PART_MENU_ITEM_RADIO_MARK   252
-#define PART_LISTVIEWHEADER_SORT_MARK	150	// used for list view headers to indicate whether they draw an ascending/descending sort indicator or whether VCL should handle the indicator
+#define PART_MENU_SEPARATOR         253
+#ifdef USE_JAVA
+#define PART_LISTVIEWHEADER_SORT_MARK	260	// used for list view headers to indicate whether they draw an ascending/descending sort indicator or whether VCL should handle the indicator
+#endif	// USE_JAVA
 
 /*  #i77549#
     HACK: for scrollbars in case of thumb rect, page up and page down rect we
@@ -277,13 +288,50 @@ enum ButtonValue {
 	BUTTONVALUE_MIXED
 };
 
-#ifdef __cplusplus
+/* ImplControlValue:
+ *
+ *   Generic value container for all control parts.
+ */
+
+class VCL_DLLPUBLIC ImplControlValue
+{
+	friend class SalFrame;
+
+	private:
+	    ControlType     mType;
+		ButtonValue     mTristate;    // Tristate value: on, off, mixed
+		long			mNumber;      // numeric value
+    protected:
+        ImplControlValue( ControlType i_eType, ButtonValue i_eTriState, long i_nNumber )
+        : mType( i_eType )
+        , mTristate( i_eTriState )
+        , mNumber( i_nNumber )
+        {}
+
+	public:
+		explicit ImplControlValue( ButtonValue nTristate )
+			: mType( CTRL_GENERIC ), mTristate(nTristate), mNumber(0) {}
+		explicit ImplControlValue( long nNumeric )
+			: mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber( nNumeric) {}
+		inline ImplControlValue()
+			: mType( CTRL_GENERIC ), mTristate(BUTTONVALUE_DONTKNOW), mNumber(0) {}
+
+		virtual ~ImplControlValue();
+		
+		ControlType getType() const { return mType; }
+
+		inline ButtonValue		getTristateVal( void ) const { return mTristate; }
+		inline void			setTristateVal( ButtonValue nTristate ) { mTristate = nTristate; }
+
+		inline long			getNumericVal( void ) const { return mNumber; }
+		inline void			setNumericVal( long nNumeric ) { mNumber = nNumeric; }
+};
 
 /* ScrollbarValue:
  *
  *   Value container for scrollbars.
  */
-class VCL_DLLPUBLIC ScrollbarValue
+class VCL_DLLPUBLIC ScrollbarValue : public ImplControlValue 
 {
 	public:
 		long			mnMin;
@@ -300,12 +348,29 @@ class VCL_DLLPUBLIC ScrollbarValue
 		ControlState	mnPage2State;
 
 		inline ScrollbarValue()
-				{
-					mnMin = 0; mnMax = 0; mnCur = 0; mnVisibleSize = 0;
-					mnButton1State = 0; mnButton2State = 0;
-					mnThumbState = 0; mnPage1State = 0; mnPage2State = 0;
-				};
-		inline ~ScrollbarValue() {};
+		: ImplControlValue( CTRL_SCROLLBAR, BUTTONVALUE_DONTKNOW, 0 )
+        {
+            mnMin = 0; mnMax = 0; mnCur = 0; mnVisibleSize = 0;
+            mnButton1State = 0; mnButton2State = 0;
+            mnThumbState = 0; mnPage1State = 0; mnPage2State = 0;
+        };
+		virtual ~ScrollbarValue();
+};
+
+class VCL_DLLPUBLIC SliderValue : public ImplControlValue
+{
+	public:
+		long			mnMin;
+		long			mnMax;
+		long			mnCur;
+		Rectangle       maThumbRect;
+		ControlState    mnThumbState;
+		
+		SliderValue()
+		: ImplControlValue( CTRL_SLIDER, BUTTONVALUE_DONTKNOW, 0 )
+		, mnMin( 0 ), mnMax( 0 ), mnCur( 0 ), mnThumbState( 0 )
+		{}
+		virtual ~SliderValue();
 };
 
 /* TabitemValue:
@@ -320,23 +385,24 @@ class VCL_DLLPUBLIC ScrollbarValue
 #define TABITEM_FIRST_IN_GROUP 0x004   // the tabitem is the first in group of tabitems
 #define TABITEM_LAST_IN_GROUP  0x008   // the tabitem is the last in group of tabitems
 
-class VCL_DLLPUBLIC TabitemValue
+class VCL_DLLPUBLIC TabitemValue : public ImplControlValue
 {
 	public:
         unsigned int    mnAlignment;
 
 		inline TabitemValue()
-				{
-					mnAlignment = 0;
-				};
-		inline ~TabitemValue() {};
+		: ImplControlValue( CTRL_TAB_ITEM, BUTTONVALUE_DONTKNOW, 0 )
+        {
+            mnAlignment = 0;
+        };
+		virtual ~TabitemValue();
 
-        BOOL isLeftAligned()  { return (mnAlignment & TABITEM_LEFTALIGNED) != 0; }
-        BOOL isRightAligned() { return (mnAlignment & TABITEM_RIGHTALIGNED) != 0; }
-        BOOL isBothAligned()  { return isLeftAligned() && isRightAligned(); }
-        BOOL isNotAligned()   { return (mnAlignment & (TABITEM_LEFTALIGNED | TABITEM_RIGHTALIGNED)) == 0; }
-        BOOL isFirst()        { return (mnAlignment & TABITEM_FIRST_IN_GROUP) != 0; }
-        BOOL isLast()         { return (mnAlignment & TABITEM_LAST_IN_GROUP) != 0; }
+        sal_Bool isLeftAligned() const  { return (mnAlignment & TABITEM_LEFTALIGNED) != 0; }
+        sal_Bool isRightAligned() const { return (mnAlignment & TABITEM_RIGHTALIGNED) != 0; }
+        sal_Bool isBothAligned() const  { return isLeftAligned() && isRightAligned(); }
+        sal_Bool isNotAligned() const   { return (mnAlignment & (TABITEM_LEFTALIGNED | TABITEM_RIGHTALIGNED)) == 0; }
+        sal_Bool isFirst() const        { return (mnAlignment & TABITEM_FIRST_IN_GROUP) != 0; }
+        sal_Bool isLast() const         { return (mnAlignment & TABITEM_LAST_IN_GROUP) != 0; }
 };
 
 /* SpinbuttonValue:
@@ -345,7 +411,7 @@ class VCL_DLLPUBLIC TabitemValue
  *   Note: the other parameters of DrawNativeControl will have no meaning
  *         all parameters for spinbuttons are carried here
  */
-class VCL_DLLPUBLIC SpinbuttonValue
+class VCL_DLLPUBLIC SpinbuttonValue : public ImplControlValue
 {
 	public:
 		Rectangle		maUpperRect;
@@ -356,22 +422,25 @@ class VCL_DLLPUBLIC SpinbuttonValue
 		int			mnLowerPart;
 
 		inline SpinbuttonValue()
-				{
-					mnUpperState = mnLowerState = 0;
-				};
-		inline ~SpinbuttonValue() {};
+		: ImplControlValue( CTRL_SPINBUTTONS, BUTTONVALUE_DONTKNOW, 0 )
+        {
+            mnUpperState = mnLowerState = 0;
+        };
+		virtual ~SpinbuttonValue();
 };
 
 /*	Toolbarvalue:
  *
  *  Value container for toolbars detailing the grip position
  */
-class ToolbarValue
+class ToolbarValue : public ImplControlValue
 {
 public:
-    ToolbarValue()  { mbIsTopDockingArea = FALSE; }
+    ToolbarValue() : ImplControlValue( CTRL_TOOLBAR, BUTTONVALUE_DONTKNOW, 0 )
+    { mbIsTopDockingArea = sal_False; }
+    virtual ~ToolbarValue();
     Rectangle			maGripRect;
-    BOOL                mbIsTopDockingArea; // indicates that this is the top aligned dockingarea
+    sal_Bool                mbIsTopDockingArea; // indicates that this is the top aligned dockingarea
                                             // adjacent to the menubar
 };
 
@@ -379,64 +448,81 @@ public:
  *
  *  Value container for menubars specifying height of adjacent docking area
  */
-class MenubarValue
+class MenubarValue : public ImplControlValue
 {
 public:
-    MenubarValue() { maTopDockingAreaHeight=0; }
+    MenubarValue() : ImplControlValue( CTRL_MENUBAR, BUTTONVALUE_DONTKNOW, 0 )
+    { maTopDockingAreaHeight=0; }
+    virtual ~MenubarValue();
     int             maTopDockingAreaHeight;
 };
 
-/*  ProgressbarValue:
+/* MenupopupValue:
  *
- *  Value container for progressbars indicating task completion
+ * Value container for menu items; specifies the rectangle for the whole item which
+ * may be useful when drawing parts with a smaller rectangle.
  */
-class ProgressbarValue
+class MenupopupValue : public ImplControlValue
 {
-	public:
-		BOOL	mbIndeterminate;	// indcates if the progress bar is indeterminate (unknown action length) or determinate (able to determine completion)
-		double	mdPercentComplete;	// percentage in range [0.0, 100.0], only used for determinate progress bars
-		
-		ProgressbarValue()
-			{
-				mbIndeterminate = FALSE;
-				mdPercentComplete = 0;
-			};
-		
-		~ProgressbarValue() {};
+public:
+    MenupopupValue() : ImplControlValue( CTRL_MENU_POPUP, BUTTONVALUE_DONTKNOW, 0 )
+    {}
+    MenupopupValue( long i_nGutterWidth, const Rectangle& i_rItemRect )
+    : ImplControlValue( CTRL_MENU_POPUP, BUTTONVALUE_DONTKNOW, i_nGutterWidth )
+    , maItemRect( i_rItemRect )
+    {}
+    virtual ~MenupopupValue();
+    Rectangle       maItemRect;
 };
 
-#define DISCLOSUREBTN_CLOSED	0		// group for this control is currently closed, displaying the container only
-#define DISCLOSUREBTN_OPEN		1		// group for this control is currently expanded, displaying all elements within the container
+/*	PushButtonValue:
+ *
+ *  Value container for pushbuttons specifying additional drawing hints
+ */
+class PushButtonValue : public ImplControlValue
+{
+public:
+    PushButtonValue()
+    : ImplControlValue( CTRL_PUSHBUTTON, BUTTONVALUE_DONTKNOW, 0 )
+    , mbBevelButton( false ), mbSingleLine( true ) {}
+    virtual ~PushButtonValue();
+    
+    bool            mbBevelButton:1;
+    bool            mbSingleLine:1;
+};
 
-#define DISCLOSUREBTN_ALIGN_LEFT	0	// disclosure controls appear to the left of any items in the left margin of the column
-#define DISCLOSUREBTN_ALIGN_RIGHT	1	// disclosure contorls appear to the right of any items in the right margin of the column
+#ifdef USE_JAVA
 
 /*	DisclosureBtnValue:
  *
  *	Value container for disclosure buttons used for control of expanding/collapsing
  *	tree views
  */
-class DisclosureBtnValue
+class DisclosureBtnValue : public ImplControlValue
 {
 	public:
-		USHORT mnOpenCloseState;		// indicates whether the controls associated container is open or closed, DISCLOSURE_OPEN/CLOSED
-		USHORT mnAlignment;				// indicates whether the disclosure control appears to the left or right of containers
-		BOOL mbHasChildren;				// true if the node has any children, false if not
-		
-		DisclosureBtnValue()
-			{
-				mnOpenCloseState = DISCLOSUREBTN_CLOSED;
-				mnAlignment = DISCLOSUREBTN_ALIGN_LEFT;
-				mbHasChildren = 1;
-			};
-		
-		~DisclosureBtnValue() {};
+    DisclosureBtnValue()
+    : ImplControlValue( CTRL_DISCLOSUREBTN, BUTTONVALUE_DONTKNOW, 0 )
+    , mbOpen( false ), mbLeftAligned( true ), mbHasChildren( true ) {}
+    virtual ~DisclosureBtnValue() {}
+    
+    bool            mbOpen;
+    bool            mbLeftAligned;
+    bool            mbHasChildren;
 };
 
-#define LISTVIEWHEADER_SORT_DONTKNOW	0	// indicates the current sort of the column is unknown
-#define LISTVIEWHEADER_SORT_DESCENDING	1	// indicates the column is sorted in descending order
-#define LISTVIEWHEADER_SORT_ASCENDING	2	// indicates the column is sorted in ascending order
-#define LISTVIEWHEADER_SORT_UNSORTED	3	// indicates the column is not sorted
+/* ListViewHeaderSortValue:
+ *
+ *   Identifies the tri-state value options
+ *   that list view header allow
+ */
+
+enum ListViewHeaderSortValue {
+	LISTVIEWHEADER_SORT_DONTKNOW,
+	LISTVIEWHEADER_SORT_DESCENDING,
+	LISTVIEWHEADER_SORT_ASCENDING,
+	LISTVIEWHEADER_SORT_UNSORTED
+};
 
 /*	ListViewHeaderValue
  *
@@ -444,80 +530,20 @@ class DisclosureBtnValue
  *	lists.  Indicates whether the clumn is the primary sort column and
  *	any direction of the sort
  */
-class ListViewHeaderValue
+class ListViewHeaderValue : public ImplControlValue
 {
 	public:
-		BOOL mbPrimarySortColumn;		// true if the column is the primary active column on which data is sorted, false if it is a secondary informational column
-		USHORT mnSortDirection;			// sort direction for the column.
-		
-		ListViewHeaderValue()
-			{
-				mbPrimarySortColumn = FALSE;
-				mnSortDirection = LISTVIEWHEADER_SORT_DONTKNOW;
-			};
-		
-		~ListViewHeaderValue() {};
+    ListViewHeaderValue()
+    : ImplControlValue( CTRL_LISTVIEWHEADER, BUTTONVALUE_DONTKNOW, 0 )
+    , mbPrimarySortColumn( false ), mnSortDirection( LISTVIEWHEADER_SORT_DONTKNOW ) {}
+    virtual ~ListViewHeaderValue() {}
+    
+    bool            mbPrimarySortColumn;
+    ListViewHeaderSortValue mnSortDirection;
 };
 
-/*	PushButtonValue:
- *
- *  Value container for pushbuttons specifying additional drawing hints
- */
-class PushButtonValue
-{
-public:
-PushButtonValue() : mbBevelButton( false ), mbSingleLine( true ) {}
-    bool            mbBevelButton:1;
-    bool            mbSingleLine:1;
-};
+#endif	// USE_JAVA
 
-/* ImplControlValue:
- *
- *   Generic value container for all control parts.
- */
-
-class ImplControlValue
-{
-	friend class SalFrame;
-
-	private:
-		ButtonValue	mTristate;	// Tristate value: on, off, mixed
-		rtl::OUString	mString;		// string value
-		long			mNumber;		// numeric value
-		void *		mOptionalVal;	// optional control-specific value
-
-	public:
-		inline ImplControlValue( ButtonValue nTristate, rtl::OUString sString, long nNumeric, void * aOptVal ) \
-								{ mTristate = nTristate; mString = sString; mNumber = nNumeric; mOptionalVal = aOptVal; };
-		inline ImplControlValue( ButtonValue nTristate, rtl::OUString sString, long nNumeric ) \
-								{ mTristate = nTristate; mString = sString; mNumber = nNumeric; mOptionalVal = NULL; };
-		explicit ImplControlValue( ButtonValue nTristate )
-			: mTristate(nTristate), mNumber(0), mOptionalVal(NULL) {}
-		explicit ImplControlValue( rtl::OUString& rString )
-			: mTristate(BUTTONVALUE_DONTKNOW), mString(rString), mNumber(0), mOptionalVal(NULL) {}
-		explicit ImplControlValue( long nNumeric )
-			: mTristate(BUTTONVALUE_DONTKNOW), mNumber( nNumeric), mOptionalVal(NULL) {}
-		explicit ImplControlValue( void* aOptVal )
-	 		: mTristate(BUTTONVALUE_DONTKNOW), mNumber(0), mOptionalVal(aOptVal) {}
-		inline ImplControlValue()
-			: mTristate(BUTTONVALUE_DONTKNOW), mNumber(0), mOptionalVal(NULL) {}
-
-		inline ~ImplControlValue() { mOptionalVal = NULL; };
-
-		inline ButtonValue		getTristateVal( void ) const { return mTristate; }
-		inline void			setTristateVal( ButtonValue nTristate ) { mTristate = nTristate; }
-
-		inline const rtl::OUString&	getStringVal( void ) const { return mString; }
-		inline void			setStringVal( rtl::OUString sString ) { mString = sString; }
-
-		inline long			getNumericVal( void ) const { return mNumber; }
-		inline void			setNumericVal( long nNumeric ) { mNumber = nNumeric; }
-
-		inline void *			getOptionalVal( void ) const { return mOptionalVal; }
-		inline void			setOptionalVal( void * aOptVal ) { mOptionalVal = aOptVal; }
-};
-
-#endif	/* __cplusplus */
 
 #endif
 

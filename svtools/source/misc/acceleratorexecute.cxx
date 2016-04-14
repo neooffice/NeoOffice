@@ -1,35 +1,38 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
-#include "acceleratorexecute.hxx"
+#include <svtools/acceleratorexecute.hxx>
 
 //===============================================
 // includes
@@ -277,7 +280,7 @@ sal_Bool AcceleratorExecute::execute(const css::awt::KeyEvent& aAWTKey)
     css::util::URL aURL;
     aURL.Complete = sCommand;
     xParser->parseStrict(aURL);
-
+    
     // ask for dispatch object
     css::uno::Reference< css::frame::XDispatch > xDispatch = xProvider->queryDispatch(aURL, ::rtl::OUString(), 0);
     sal_Bool bRet = xDispatch.is();
@@ -320,7 +323,8 @@ css::awt::KeyEvent AcceleratorExecute::st_VCLKey2AWTKey(const KeyCode& aVCLKey)
         aAWTKey.Modifiers |= css::awt::KeyModifier::MOD1; 
 	if (aVCLKey.IsMod2())
         aAWTKey.Modifiers |= css::awt::KeyModifier::MOD2;
-    
+        if (aVCLKey.IsMod3())
+        aAWTKey.Modifiers |= css::awt::KeyModifier::MOD3; 
     return aAWTKey;    
 }
 
@@ -330,9 +334,10 @@ KeyCode AcceleratorExecute::st_AWTKey2VCLKey(const css::awt::KeyEvent& aAWTKey)
     sal_Bool bShift = ((aAWTKey.Modifiers & css::awt::KeyModifier::SHIFT) == css::awt::KeyModifier::SHIFT );
     sal_Bool bMod1  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD1 ) == css::awt::KeyModifier::MOD1  );
     sal_Bool bMod2  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD2 ) == css::awt::KeyModifier::MOD2  );
-    USHORT   nKey   = (USHORT)aAWTKey.KeyCode;
+    sal_Bool bMod3  = ((aAWTKey.Modifiers & css::awt::KeyModifier::MOD3 ) == css::awt::KeyModifier::MOD3  );
+    sal_uInt16   nKey   = (sal_uInt16)aAWTKey.KeyCode;
     
-    return KeyCode(nKey, bShift, bMod1, bMod2);
+    return KeyCode(nKey, bShift, bMod1, bMod2, bMod3);
 }
 //-----------------------------------------------
 ::rtl::OUString AcceleratorExecute::findCommand(const css::awt::KeyEvent& aKey)
@@ -508,8 +513,8 @@ css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st
     {
         sModule = xModuleDetection->identify(xFrame);
     }
-    catch(const css::uno::RuntimeException&)
-        { throw; }
+    catch(const css::uno::RuntimeException&rEx)
+    	{ (void) rEx; throw; }
     catch(const css::uno::Exception&)
         { return css::uno::Reference< css::ui::XAcceleratorConfiguration >(); }
 
@@ -517,8 +522,14 @@ css::uno::Reference< css::ui::XAcceleratorConfiguration > AcceleratorExecute::st
         xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.ui.ModuleUIConfigurationManagerSupplier")),
         css::uno::UNO_QUERY_THROW);
 
-    css::uno::Reference< css::ui::XUIConfigurationManager >   xUIManager = xUISupplier->getUIConfigurationManager(sModule);
-    css::uno::Reference< css::ui::XAcceleratorConfiguration > xAccCfg    (xUIManager->getShortCutManager(), css::uno::UNO_QUERY_THROW);
+    css::uno::Reference< css::ui::XAcceleratorConfiguration > xAccCfg;
+	try
+	{
+    	css::uno::Reference< css::ui::XUIConfigurationManager >   xUIManager = xUISupplier->getUIConfigurationManager(sModule);
+	    xAccCfg = css::uno::Reference< css::ui::XAcceleratorConfiguration >(xUIManager->getShortCutManager(), css::uno::UNO_QUERY_THROW);
+	}
+    catch(const css::container::NoSuchElementException&)
+        {}
     return xAccCfg;
 }
 
@@ -609,7 +620,7 @@ IMPL_LINK(AsyncAccelExec, impl_ts_asyncCallback, void*,)
     }
     catch(const css::lang::DisposedException&)
         {}
-    catch(const css::uno::RuntimeException&)
+    catch(const css::uno::RuntimeException& )
         { throw; }
     catch(const css::uno::Exception&)
         {}

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified July 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
@@ -70,21 +73,21 @@ namespace svt
 
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
 
-static XubString GetUpdResString( int nId )
+static String GetUpdResString( int nId )
 {
-	if ( !pUpdResMgr )
-	{
-		pUpdResMgr = ResMgr::CreateResMgr( "upd" );
-		if ( !pUpdResMgr )
-			return XubString();
-	}
+    if ( !pUpdResMgr )
+    {
+        pUpdResMgr = ResMgr::CreateResMgr( "upd" );
+        if ( !pUpdResMgr )
+            return String();
+    }
 
-	ResId aResId( nId, *pUpdResMgr );
-	aResId.SetRT( RSC_STRING );
-	if ( !pUpdResMgr->IsAvailable( aResId ) )
-		return XubString();
+    ResId aResId( nId, *pUpdResMgr );
+    aResId.SetRT( RSC_STRING );
+    if ( !pUpdResMgr->IsAvailable( aResId ) )
+        return String();
  
-	return XubString( ResId( nId, *pUpdResMgr ) );
+    return String( ResId( nId, *pUpdResMgr ) );
 }
 
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
@@ -169,7 +172,7 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
     com::sun::star::java::RestartRequiredException e5;
 	// Try to recover the Exception type in the any and
 	// react accordingly.
-	USHORT		nResult = RET_CANCEL;
+	sal_uInt16		nResult = RET_CANCEL;
     ::rtl::OUString    aParameter;
 
 	if ( anyExc >>= e1 )
@@ -179,37 +182,16 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
            // No suitable JRE found
             vos::OGuard aSolarGuard( Application::GetSolarMutex() );
             m_bJavaNotFound_Handled = true;
-            //We first try to get the patch resource svp680xxx.res
-            //If the resource is not found then svt680xxx.res is used
-            ResId idWBX = SvtResId(WARNINGBOX_JAVANOTFOUND);
-            SvpResId pidPatchWBX(WARNINGBOX_JAVANOTFOUND);
-            pidPatchWBX.SetRT(RSC_WARNINGBOX);
-            ResMgr *pMgrWB = pidPatchWBX.GetResMgr();
-            if (pMgrWB && pMgrWB->IsAvailable(pidPatchWBX))
-                idWBX = pidPatchWBX;
-            WarningBox aWarningBox( NULL, idWBX);
-
+            WarningBox aWarningBox( NULL, SvtResId( WARNINGBOX_JAVANOTFOUND ) );
+            String aTitle( SvtResId( STR_WARNING_JAVANOTFOUND ) );
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
-            QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, aWarningBox.GetMessText());
-            XubString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
-            aDownload.EraseAllChars('~');
-            if ( aDownload.Len() )
-                aQueryBox.SetButtonText(BUTTONID_OK, aDownload);
-#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-
-            String aTitle;
-            SvpResId pidString(STR_WARNING_JAVANOTFOUND);
-            pidString.SetRT(RSC_STRING);
-			ResMgr *pmgr = pidString.GetResMgr();
-            if ( pmgr && pmgr->IsAvailable(pidString))
-                aTitle = String(pidString);
-            else
-                aTitle = String( SvtResId( STR_WARNING_JAVANOTFOUND ));
-
-#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            String aDownload = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
+            aDownload.EraseAllChars( '~' );
             if ( aDownload.Len() )
             {
+                QueryBox aQueryBox( NULL, WB_OK_CANCEL | WB_DEF_OK, aWarningBox.GetMessText() );
                 aQueryBox.SetText( aTitle );
+                aQueryBox.SetButtonText( BUTTONID_OK, aDownload );
                 nResult = aQueryBox.Execute();
                 if ( nResult == RET_OK )
                     JavaInteractionHandler_downloadJava();
@@ -222,7 +204,6 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             }
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-
         }
         else
         {
@@ -236,37 +217,16 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
            // javavendors.xml was updated and Java has not been configured yet
             vos::OGuard aSolarGuard( Application::GetSolarMutex() );
             m_bInvalidSettings_Handled = true;
-            //We first try to get the patch resource svp680xxx.res
-            //If the resource is not found then svt680xxx.res is used
-            ResId idWBX = SvtResId(WARNINGBOX_INVALIDJAVASETTINGS);
-            SvpResId pidPatchWBX(WARNINGBOX_INVALIDJAVASETTINGS);
-            pidPatchWBX.SetRT(RSC_WARNINGBOX);
-            ResMgr *pMgrWB = pidPatchWBX.GetResMgr();
-            if (pMgrWB && pMgrWB->IsAvailable(pidPatchWBX))
-                idWBX = pidPatchWBX;
-            WarningBox aWarningBox( NULL, idWBX);
-
+            WarningBox aWarningBox( NULL, SvtResId( WARNINGBOX_INVALIDJAVASETTINGS ) );
+            String aTitle( SvtResId(STR_WARNING_INVALIDJAVASETTINGS));
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
-            QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, aWarningBox.GetMessText());
-            XubString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
-            aDownload.EraseAllChars('~');
-            if ( aDownload.Len() )
-                aQueryBox.SetButtonText(BUTTONID_OK, aDownload);
-#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-
-            String aTitle;
-            SvpResId pidString(STR_WARNING_INVALIDJAVASETTINGS);
-            pidString.SetRT(RSC_STRING);
-			ResMgr *pmgr = pidString.GetResMgr();
-            if ( pmgr && pmgr->IsAvailable(pidString))
-                aTitle = String(pidString);
-            else
-                aTitle = String( SvtResId(STR_WARNING_INVALIDJAVASETTINGS));
-
-#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            String aDownload = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
+            aDownload.EraseAllChars( '~' );
             if ( aDownload.Len() )
             {
+                QueryBox aQueryBox( NULL, WB_OK_CANCEL | WB_DEF_OK, aWarningBox.GetMessText() );
                 aQueryBox.SetText( aTitle );
+                aQueryBox.SetButtonText( BUTTONID_OK, aDownload );
                 nResult = aQueryBox.Execute();
                 if ( nResult == RET_OK )
                     JavaInteractionHandler_downloadJava();
@@ -292,28 +252,8 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             vos::OGuard aSolarGuard( Application::GetSolarMutex() );
             m_bJavaDisabled_Handled = true;
             // Java disabled. Give user a chance to enable Java inside Office.
-            //We first try to get the patch resource svp680xxx.res
-            //If the resource is not found then svt680xxx.res is used
-            ResId idQBX = SvtResId( QBX_JAVADISABLED );
-            SvpResId pidPatchQBX(QBX_JAVADISABLED);
-            pidPatchQBX.SetRT(RSC_QUERYBOX);
-            ResMgr *pMgrQB = pidPatchQBX.GetResMgr();
-
-            if (pMgrQB && pMgrQB->IsAvailable(pidPatchQBX))
-                idQBX = pidPatchQBX;
-
-            QueryBox aQueryBox(NULL, idQBX);
-
-            String aTitle;
-
-            SvpResId pidString(STR_QUESTION_JAVADISABLED);
-            pidString.SetRT(RSC_STRING);
-			ResMgr *pmgr = pidString.GetResMgr();
-            if ( pmgr && pmgr->IsAvailable(pidString))
-                aTitle = String(pidString);
-            else
-                aTitle = String( SvtResId( STR_QUESTION_JAVADISABLED ));
-
+            QueryBox aQueryBox( NULL, SvtResId( QBX_JAVADISABLED ) );
+            String aTitle( SvtResId( STR_QUESTION_JAVADISABLED ) );
             aQueryBox.SetText( aTitle );
             nResult = aQueryBox.Execute();
             if ( nResult == RET_YES )
@@ -336,37 +276,16 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             // Java not correctly installed, or damaged
             vos::OGuard aSolarGuard( Application::GetSolarMutex() );
             m_bVMCreationFailure_Handled = true;
-            //We first try to get the patch resource svp680xxx.res
-            //If the resource is not found then svt680xxx.res is used
-            ResId idEBX = SvtResId(ERRORBOX_JVMCREATIONFAILED);
-            SvpResId pidPatchEBX(ERRORBOX_JVMCREATIONFAILED);
-            pidPatchEBX.SetRT(RSC_ERRORBOX);
-            ResMgr *pMgrEB = pidPatchEBX.GetResMgr();
-            if (pMgrEB && pMgrEB->IsAvailable(pidPatchEBX))
-                idEBX = pidPatchEBX;
-            ErrorBox aErrorBox( NULL, idEBX);
-
+            ErrorBox aErrorBox( NULL, SvtResId( ERRORBOX_JVMCREATIONFAILED ) );
+            String aTitle( SvtResId( STR_ERROR_JVMCREATIONFAILED ) );
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
-            QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, aErrorBox.GetMessText());
-            XubString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
-            aDownload.EraseAllChars('~');
-            if ( aDownload.Len() )
-                aQueryBox.SetButtonText(BUTTONID_OK, aDownload);
-#endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-
-            String aTitle;
-            SvpResId pidString(STR_ERROR_JVMCREATIONFAILED);
-            pidString.SetRT(RSC_STRING);
-			ResMgr *pmgr = pidString.GetResMgr();
-            if ( pmgr && pmgr->IsAvailable(pidString))
-                aTitle = String(pidString);
-            else
-                aTitle = String( SvtResId(STR_ERROR_JVMCREATIONFAILED));
-
-#if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
+            String aDownload = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
+            aDownload.EraseAllChars( '~' );
             if ( aDownload.Len() )
             {
+                QueryBox aQueryBox( NULL, WB_OK_CANCEL | WB_DEF_OK, aErrorBox.GetMessText() );
                 aQueryBox.SetText( aTitle );
+                aQueryBox.SetButtonText( BUTTONID_OK, aDownload );
                 nResult = aQueryBox.Execute();
                 if ( nResult == RET_OK )
                     JavaInteractionHandler_downloadJava();
@@ -393,25 +312,8 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             //before it can be used.
             vos::OGuard aSolarGuard( Application::GetSolarMutex() );
             m_bRestartRequired_Handled = true;
-            //We first try to get the patch resource svp680xxx.res
-            //If the resource is not found then svt680xxx.res is used
-            ResId idEBX = SvtResId(ERRORBOX_RESTARTREQUIRED);
-            SvpResId pidPatchEBX(ERRORBOX_RESTARTREQUIRED);
-            pidPatchEBX.SetRT(RSC_ERRORBOX);
-            ResMgr *pMgrEB = pidPatchEBX.GetResMgr();
-            if (pMgrEB && pMgrEB->IsAvailable(pidPatchEBX))
-                idEBX = pidPatchEBX;
-            ErrorBox aErrorBox(NULL, idEBX);
-
-            String aTitle;
-            SvpResId pidString(STR_ERROR_RESTARTREQUIRED);
-            pidString.SetRT(RSC_STRING);
-			ResMgr *pmgr = pidString.GetResMgr();
-            if ( pmgr && pmgr->IsAvailable(pidString))
-                aTitle = String(pidString);
-            else
-                aTitle = String( SvtResId(STR_ERROR_RESTARTREQUIRED));
-
+            ErrorBox aErrorBox(NULL, SvtResId( ERRORBOX_RESTARTREQUIRED ) );
+            String aTitle( SvtResId( STR_ERROR_RESTARTREQUIRED ) );
             aErrorBox.SetText( aTitle );
             nResult = aErrorBox.Execute();
         }

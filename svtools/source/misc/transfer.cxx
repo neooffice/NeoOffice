@@ -1,31 +1,32 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
@@ -44,12 +45,9 @@
 #include <vos/mutex.hxx>
 #include <rtl/memory.h>
 #include <rtl/uuid.h>
-#ifndef DEBUG_HXX
+#include <rtl/uri.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef URLOBJ_HXX
 #include <tools/urlobj.hxx>
-#endif
 #include <unotools/ucbstreamhelper.hxx>
 #include <sot/exchange.hxx>
 #include <sot/storage.hxx>
@@ -66,20 +64,20 @@
 #include <comphelper/seqstream.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
 #include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XMIMECONTENTTYPEFACTORY_HPP_
 #include <com/sun/star/datatransfer/XMimeContentTypeFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XMIMECONTENTTYPE_HPP_
 #include <com/sun/star/datatransfer/XMimeContentType.hpp>
-#endif
 #include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 
-#include "urlbmk.hxx"
+#include "svl/urlbmk.hxx"
 #include "inetimg.hxx"
 #include <svtools/wmf.hxx>
 #include <svtools/imap.hxx>
 #include <svtools/transfer.hxx>
+#include <cstdio>
+#include <vcl/dibtools.hxx>
+#include <vcl/pngread.hxx>
+#include <vcl/pngwrite.hxx>
 
 // --------------
 // - Namespaces -
@@ -103,7 +101,7 @@ using namespace ::com::sun::star::datatransfer::dnd;
 SvStream& operator>>( SvStream& rIStm, TransferableObjectDescriptor& rObjDesc )
 {
 	sal_uInt32  nSize, nViewAspect, nSig1, nSig2;
-	
+
 	rIStm >> nSize;
 	rIStm >> rObjDesc.maClassName;
 	rIStm >> nViewAspect;
@@ -114,9 +112,9 @@ SvStream& operator>>( SvStream& rIStm, TransferableObjectDescriptor& rObjDesc )
 	rIStm.ReadByteString( rObjDesc.maTypeName, gsl_getSystemTextEncoding() );
 	rIStm.ReadByteString( rObjDesc.maDisplayName, gsl_getSystemTextEncoding() );
     rIStm >> nSig1 >> nSig2;
-    
+
     rObjDesc.mnViewAspect = static_cast< sal_uInt16 >( nViewAspect );
-    
+
     // don't use width/height info from external objects
     if( ( TOD_SIG1 != nSig1 ) || ( TOD_SIG2 != nSig2 ) )
     {
@@ -133,7 +131,7 @@ SvStream& operator<<( SvStream& rOStm, const TransferableObjectDescriptor& rObjD
 {
 	const sal_uInt32    nFirstPos = rOStm.Tell(), nViewAspect = rObjDesc.mnViewAspect;
 	const sal_uInt32    nSig1 = TOD_SIG1, nSig2 = TOD_SIG2;
-	
+
 	rOStm.SeekRel( 4 );
 	rOStm << rObjDesc.maClassName;
 	rOStm << nViewAspect;
@@ -152,6 +150,155 @@ SvStream& operator<<( SvStream& rOStm, const TransferableObjectDescriptor& rObjD
 	rOStm.Seek( nLastPos );
 
 	return rOStm;
+}
+
+// -----------------------------------------------------------------------------
+// the reading of the parameter is done using the special service ::com::sun::star::datatransfer::MimeContentType,
+// a similar approach should be implemented for creation of the mimetype string;
+// for now the set of acceptable characters has to be hardcoded, in future it should be part of the service that creates the mimetype
+const ::rtl::OUString aQuotedParamChars = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "()<>@,;:/[]?=!#$&'*+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz{|}~. " ) );
+
+static ::rtl::OUString ImplGetParameterString( const TransferableObjectDescriptor& rObjDesc )
+{
+    const ::rtl::OUString   aChar( ::rtl::OUString::createFromAscii( "\"" ) );
+    const ::rtl::OUString   aClassName( rObjDesc.maClassName.GetHexName() );
+    ::rtl::OUString         aParams;
+
+    if( aClassName.getLength() )
+    {
+        aParams += ::rtl::OUString::createFromAscii( ";classname=\"" );
+        aParams += aClassName;
+        aParams += aChar;
+    }
+
+    if( rObjDesc.maTypeName.Len() )
+    {
+        aParams += ::rtl::OUString::createFromAscii( ";typename=\"" );
+        aParams += rObjDesc.maTypeName;
+        aParams += aChar;
+    }
+
+    if( rObjDesc.maDisplayName.Len() )
+    {
+        // the display name might contain unacceptable characters, encode all of them
+        // this seems to be the only parameter currently that might contain such characters
+        sal_Bool pToAccept[128];
+        for ( sal_Int32 nBInd = 0; nBInd < 128; nBInd++ )
+            pToAccept[nBInd] = sal_False;
+
+        for ( sal_Int32 nInd = 0; nInd < aQuotedParamChars.getLength(); nInd++ )
+        {
+            sal_Unicode nChar = aQuotedParamChars.getStr()[nInd];
+            if ( nChar < 128 )
+                pToAccept[nChar] = sal_True;
+        }
+
+        aParams += ::rtl::OUString::createFromAscii( ";displayname=\"" );
+        aParams += ::rtl::Uri::encode( rObjDesc.maDisplayName, pToAccept, rtl_UriEncodeIgnoreEscapes, RTL_TEXTENCODING_UTF8 );
+        aParams += aChar;
+    }
+
+    aParams += ::rtl::OUString::createFromAscii( ";viewaspect=\"" );
+    aParams += ::rtl::OUString::valueOf( static_cast< sal_Int32 >( rObjDesc.mnViewAspect ) );
+    aParams += aChar;
+
+    aParams += ::rtl::OUString::createFromAscii( ";width=\"" );
+    aParams += ::rtl::OUString::valueOf( rObjDesc.maSize.Width() );
+    aParams += aChar;
+
+    aParams += ::rtl::OUString::createFromAscii( ";height=\"" );
+    aParams += ::rtl::OUString::valueOf( rObjDesc.maSize.Height() );
+    aParams += aChar;
+
+    aParams += ::rtl::OUString::createFromAscii( ";posx=\"" );
+    aParams += ::rtl::OUString::valueOf( rObjDesc.maDragStartPos.X() );
+    aParams += aChar;
+
+    aParams += ::rtl::OUString::createFromAscii( ";posy=\"" );
+    aParams += ::rtl::OUString::valueOf( rObjDesc.maDragStartPos.X() );
+    aParams += aChar;
+
+    return aParams;
+}
+
+// -----------------------------------------------------------------------------
+
+static void ImplSetParameterString( TransferableObjectDescriptor& rObjDesc, const DataFlavorEx& rFlavorEx )
+{
+    Reference< XMultiServiceFactory >       xFact( ::comphelper::getProcessServiceFactory() );
+    Reference< XMimeContentTypeFactory >    xMimeFact;
+
+    try
+    {
+        if( xFact.is() )
+        {
+            xMimeFact = Reference< XMimeContentTypeFactory >( xFact->createInstance( ::rtl::OUString::createFromAscii(
+                                                              "com.sun.star.datatransfer.MimeContentTypeFactory" ) ),
+                                                              UNO_QUERY );
+        }
+
+        if( xMimeFact.is() )
+        {
+            Reference< XMimeContentType > xMimeType( xMimeFact->createMimeContentType( rFlavorEx.MimeType ) );
+
+            if( xMimeType.is() )
+            {
+                const ::rtl::OUString aClassNameString( ::rtl::OUString::createFromAscii( "classname" ) );
+                const ::rtl::OUString aTypeNameString( ::rtl::OUString::createFromAscii( "typename" ) );
+                const ::rtl::OUString aDisplayNameString( ::rtl::OUString::createFromAscii( "displayname" ) );
+                const ::rtl::OUString aViewAspectString( ::rtl::OUString::createFromAscii( "viewaspect" ) );
+                const ::rtl::OUString aWidthString( ::rtl::OUString::createFromAscii( "width" ) );
+                const ::rtl::OUString aHeightString( ::rtl::OUString::createFromAscii( "height" ) );
+                const ::rtl::OUString aPosXString( ::rtl::OUString::createFromAscii( "posx" ) );
+                const ::rtl::OUString aPosYString( ::rtl::OUString::createFromAscii( "posy" ) );
+
+                if( xMimeType->hasParameter( aClassNameString ) )
+                {
+                    rObjDesc.maClassName.MakeId( xMimeType->getParameterValue( aClassNameString ) );
+                }
+
+                if( xMimeType->hasParameter( aTypeNameString ) )
+                {
+                    rObjDesc.maTypeName = xMimeType->getParameterValue( aTypeNameString );
+                }
+
+                if( xMimeType->hasParameter( aDisplayNameString ) )
+                {
+                    // the display name might contain unacceptable characters, in this case they should be encoded
+                    // this seems to be the only parameter currently that might contain such characters
+                    rObjDesc.maDisplayName = ::rtl::Uri::decode( xMimeType->getParameterValue( aDisplayNameString ), rtl_UriDecodeWithCharset, RTL_TEXTENCODING_UTF8 );
+                }
+
+                if( xMimeType->hasParameter( aViewAspectString ) )
+                {
+                    rObjDesc.mnViewAspect = static_cast< sal_uInt16 >( xMimeType->getParameterValue( aViewAspectString ).toInt32() );
+                }
+
+                if( xMimeType->hasParameter( aWidthString ) )
+                {
+                    rObjDesc.maSize.Width() = xMimeType->getParameterValue( aWidthString ).toInt32();
+                }
+
+                if( xMimeType->hasParameter( aHeightString ) )
+                {
+                    rObjDesc.maSize.Height() = xMimeType->getParameterValue( aHeightString ).toInt32();
+                }
+
+                if( xMimeType->hasParameter( aPosXString ) )
+                {
+                    rObjDesc.maDragStartPos.X() = xMimeType->getParameterValue( aPosXString ).toInt32();
+                }
+
+                if( xMimeType->hasParameter( aPosYString ) )
+                {
+                    rObjDesc.maDragStartPos.Y() = xMimeType->getParameterValue( aPosYString ).toInt32();
+                }
+            }
+        }
+    }
+    catch( const ::com::sun::star::uno::Exception& )
+    {
+    }
 }
 
 // -----------------------------------------
@@ -193,7 +340,8 @@ void SAL_CALL TransferableHelper::TerminateListener::notifyTermination( const Ev
 // ----------------------
 
 TransferableHelper::TransferableHelper() :
-	mpFormats( new DataFlavorExVector )
+	mpFormats( new DataFlavorExVector ),
+    mpObjDesc( NULL )
 {
 }
 
@@ -201,6 +349,7 @@ TransferableHelper::TransferableHelper() :
 
 TransferableHelper::~TransferableHelper()
 {
+    delete mpObjDesc;
 	delete mpFormats;
 }
 
@@ -231,9 +380,9 @@ Any SAL_CALL TransferableHelper::getTransferData( const DataFlavor& rFlavor ) th
 			    GetData( aSubstFlavor );
                 bDone = maAny.hasValue();
             }
-            else if( SotExchange::GetFormatDataFlavor( SOT_FORMATSTR_ID_BMP, aSubstFlavor ) &&
-                     TransferableDataHelper::IsEqual( aSubstFlavor, rFlavor ) &&
-                     SotExchange::GetFormatDataFlavor( FORMAT_BITMAP, aSubstFlavor ) )
+            else if(SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_BMP, aSubstFlavor ) 
+                && TransferableDataHelper::IsEqual( aSubstFlavor, rFlavor )
+                && SotExchange::GetFormatDataFlavor(FORMAT_BITMAP, aSubstFlavor))
             {
 			    GetData( aSubstFlavor );
                 bDone = sal_True;
@@ -289,7 +438,7 @@ Any SAL_CALL TransferableHelper::getTransferData( const DataFlavor& rFlavor ) th
 					    SvMemoryStream	aDstStm( 65535, 65535 );
 						
 						// taking wmf without file header
-						if ( ConvertGDIMetaFileToWMF( aMtf, aDstStm, NULL, FALSE ) )
+						if ( ConvertGDIMetaFileToWMF( aMtf, aDstStm, NULL, sal_False ) )
                         {
 						    maAny <<= ( aSeq = Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( aDstStm.GetData() ),
                                                                      aDstStm.Seek( STREAM_SEEK_TO_END ) ) );
@@ -306,7 +455,12 @@ Any SAL_CALL TransferableHelper::getTransferData( const DataFlavor& rFlavor ) th
             // if any is not yet filled, use standard format
             if( !maAny.hasValue() )
                 GetData( rFlavor );
-		}
+
+#ifdef DEBUG
+            if( maAny.hasValue() && ::com::sun::star::uno::TypeClass_STRING != maAny.getValueType().getTypeClass() )
+                fprintf( stderr, "TransferableHelper delivers sequence of data [ %s ]\n", ByteString( String( rFlavor.MimeType), RTL_TEXTENCODING_ASCII_US ).GetBuffer() );
+#endif
+        }
 		catch( const ::com::sun::star::uno::Exception& )
 		{
 		}
@@ -324,9 +478,6 @@ Sequence< DataFlavor > SAL_CALL TransferableHelper::getTransferDataFlavors() thr
 {
 	const ::vos::OGuard aGuard( Application::GetSolarMutex() );
 
-
-
-
 	try
 	{
 		if( !mpFormats->size() )
@@ -341,7 +492,9 @@ Sequence< DataFlavor > SAL_CALL TransferableHelper::getTransferDataFlavors() thr
 	sal_uInt32						nCurPos = 0;
 
     while( aIter != aEnd )
+    {
     	aRet[ nCurPos++ ] = *aIter++;
+    }
 
 	return aRet;
 }
@@ -512,11 +665,24 @@ void TransferableHelper::AddFormat( const DataFlavor& rFlavor )
     sal_Bool                        bAdd = sal_True;
 
 	while( aIter != aEnd )
-
 	{
-
         if( TransferableDataHelper::IsEqual( *aIter, rFlavor ) )
         {
+            // update MimeType for SOT_FORMATSTR_ID_OBJECTDESCRIPTOR in every case
+            if( ( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR == aIter->mnSotId ) && mpObjDesc )
+            {
+                DataFlavor aObjDescFlavor;
+
+                SotExchange::GetFormatDataFlavor( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR, aObjDescFlavor );
+                aIter->MimeType = aObjDescFlavor.MimeType;
+                aIter->MimeType += ::ImplGetParameterString( *mpObjDesc );
+
+#ifdef DEBUG
+                fprintf( stderr, "TransferableHelper exchanged objectdescriptor [ %s ]\n",
+                         ByteString( String( aIter->MimeType), RTL_TEXTENCODING_ASCII_US ).GetBuffer() );
+#endif
+            }
+
             aIter = aEnd;
             bAdd = sal_False;
         }
@@ -526,17 +692,22 @@ void TransferableHelper::AddFormat( const DataFlavor& rFlavor )
 
     if( bAdd )
     {
-    	DataFlavorEx aFlavorEx;
+    	DataFlavorEx   aFlavorEx;
+        DataFlavor     aObjDescFlavor;
 
 		aFlavorEx.MimeType = rFlavor.MimeType;
 		aFlavorEx.HumanPresentableName = rFlavor.HumanPresentableName;
 		aFlavorEx.DataType = rFlavor.DataType;
 		aFlavorEx.mnSotId = SotExchange::RegisterFormat( rFlavor );
 
+        if( ( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR == aFlavorEx.mnSotId ) && mpObjDesc )
+            aFlavorEx.MimeType += ::ImplGetParameterString( *mpObjDesc );
+
 		mpFormats->push_back( aFlavorEx );
 
 		if( FORMAT_BITMAP == aFlavorEx.mnSotId )
 		{
+			AddFormat( SOT_FORMATSTR_ID_PNG );
 			AddFormat( SOT_FORMATSTR_ID_BMP );
 		}
 		else if( FORMAT_GDIMETAFILE == aFlavorEx.mnSotId )
@@ -638,14 +809,39 @@ sal_Bool TransferableHelper::SetString( const ::rtl::OUString& rString, const Da
 
 // -----------------------------------------------------------------------------
 
-sal_Bool TransferableHelper::SetBitmap( const Bitmap& rBitmap, const DataFlavor& )
+sal_Bool TransferableHelper::SetBitmapEx( const BitmapEx& rBitmapEx, const DataFlavor& rFlavor )
 {
-	if( !rBitmap.IsEmpty() )
+	if( !rBitmapEx.IsEmpty() )
 	{
-		SvMemoryStream aMemStm( 65535, 65535 );
+        SvMemoryStream aMemStm( 65535, 65535 );
 
-		aMemStm << rBitmap;
-		maAny <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( aMemStm.GetData() ), aMemStm.Seek( STREAM_SEEK_TO_END ) );
+        if(rFlavor.MimeType.equalsIgnoreAsciiCase(::rtl::OUString::createFromAscii("image/png")))
+        {
+            // write a PNG
+            ::vcl::PNGWriter aPNGWriter(rBitmapEx);
+
+            aPNGWriter.Write(aMemStm);
+        }
+        else
+        {
+            const Bitmap aBitmap(rBitmapEx.GetBitmap());
+
+            // #124085# take out DIBV5 for writing to the clipboard
+            //if(rBitmapEx.IsTransparent())
+            //{
+            //    const Bitmap aMask(rBitmapEx.GetAlpha().GetBitmap());
+            //
+            //    // explicitely use Bitmap::Write with bCompressed = sal_False and bFileHeader = sal_True
+            //    WriteDIBV5(aBitmap, aMask, aMemStm);
+            //}
+            //else
+            //{
+                // explicitely use Bitmap::Write with bCompressed = sal_False and bFileHeader = sal_True
+                WriteDIB(aBitmap, aMemStm, false, true);
+            //}
+        }
+
+        maAny <<= Sequence< sal_Int8 >( reinterpret_cast< const sal_Int8* >( aMemStm.GetData() ), aMemStm.Seek( STREAM_SEEK_TO_END ) );
 	}
 
 	return( maAny.hasValue() );
@@ -701,6 +897,8 @@ sal_Bool TransferableHelper::SetImageMap( const ImageMap& rIMap, const ::com::su
 sal_Bool TransferableHelper::SetTransferableObjectDescriptor( const TransferableObjectDescriptor& rDesc,
 															  const ::com::sun::star::datatransfer::DataFlavor& )
 {
+    PrepareOLE( rDesc );
+
 	SvMemoryStream aMemStm( 1024, 1024 );
 
 	aMemStm << rDesc;
@@ -770,7 +968,7 @@ sal_Bool TransferableHelper::SetINetBookmark( const INetBookmark& rBmk,
 			rFDesc1.dwFlags = FD_LINKUI;
 
 			ByteString aStr( rBmk.GetDescription(), eSysCSet );
-			for( USHORT nChar = 0; nChar < aStr.Len(); ++nChar )
+			for( sal_uInt16 nChar = 0; nChar < aStr.Len(); ++nChar )
 				if( strchr( "\\/:*?\"<>|", aStr.GetChar( nChar ) ) )
 					aStr.Erase( nChar--, 1 );
 
@@ -822,7 +1020,8 @@ sal_Bool TransferableHelper::SetFileList( const FileList& rFileList,
     aMemStm.SetVersion( SOFFICE_FILEFORMAT_50 );
 	aMemStm << rFileList;
 
-	maAny <<= Sequence< sal_Int8 >( static_cast< const sal_Int8* >( aMemStm.GetData() ), aMemStm.Seek( STREAM_SEEK_TO_END ) );
+	maAny <<= Sequence< sal_Int8 >( static_cast< const sal_Int8* >( aMemStm.GetData() ),
+                                       aMemStm.Seek( STREAM_SEEK_TO_END ) );
 
 	return( maAny.hasValue() );
 }
@@ -885,6 +1084,17 @@ void TransferableHelper::DragFinished( sal_Int8 )
 
 void TransferableHelper::ObjectReleased()
 {
+}
+
+// -----------------------------------------------------------------------------
+
+void TransferableHelper::PrepareOLE( const TransferableObjectDescriptor& rObjDesc )
+{
+    delete mpObjDesc;
+    mpObjDesc = new TransferableObjectDescriptor( rObjDesc );
+
+    if( HasFormat( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR ) )
+        AddFormat( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR );
 }
 
 // -----------------------------------------------------------------------------
@@ -990,7 +1200,7 @@ void TransferableHelper::StartDrag( Window* pWindow, sal_Int8 nDnDSourceActions,
 		// thread
 #if !defined(QUARTZ) || defined(USE_JAVA)
 		const sal_uInt32 nRef = Application::ReleaseSolarMutex();
-#endif 
+#endif	// !QUARTZ || USE_JAVA
 
 		try
 		{
@@ -1009,7 +1219,7 @@ void TransferableHelper::StartDrag( Window* pWindow, sal_Int8 nDnDSourceActions,
 		// See above for the reason of this define
 #if !defined(QUARTZ) || defined(USE_JAVA)
 		Application::AcquireSolarMutex( nRef );
-#endif 
+#endif	// !QUARTZ || USE_JAVA
 	}
 }
 
@@ -1160,29 +1370,32 @@ struct TransferableDataHelper_Impl
 // - TransferableDataHelper -
 // --------------------------
 
-TransferableDataHelper::TransferableDataHelper()
-    :mpFormats( new DataFlavorExVector )
-    ,mpImpl( new TransferableDataHelper_Impl )
+TransferableDataHelper::TransferableDataHelper() :
+    mpFormats( new DataFlavorExVector ),
+    mpObjDesc( new TransferableObjectDescriptor ),
+    mpImpl( new TransferableDataHelper_Impl )
 {
 }
 
 // -----------------------------------------------------------------------------
 
-TransferableDataHelper::TransferableDataHelper( const Reference< ::com::sun::star::datatransfer::XTransferable >& rxTransferable )
-    :mxTransfer( rxTransferable )
-	,mpFormats( new DataFlavorExVector )
-    ,mpImpl( new TransferableDataHelper_Impl )
+TransferableDataHelper::TransferableDataHelper( const Reference< ::com::sun::star::datatransfer::XTransferable >& rxTransferable ) :
+    mxTransfer( rxTransferable ),
+    mpFormats( new DataFlavorExVector ),
+    mpObjDesc( new TransferableObjectDescriptor ),
+    mpImpl( new TransferableDataHelper_Impl )
 {
 	InitFormats();
 }
 
 // -----------------------------------------------------------------------------
 
-TransferableDataHelper::TransferableDataHelper( const TransferableDataHelper& rDataHelper )
-    :mxTransfer( rDataHelper.mxTransfer )
-	,mxClipboard( rDataHelper.mxClipboard )
-	,mpFormats( new DataFlavorExVector( *rDataHelper.mpFormats ) )
-    ,mpImpl( new TransferableDataHelper_Impl )
+TransferableDataHelper::TransferableDataHelper( const TransferableDataHelper& rDataHelper ) :
+    mxTransfer( rDataHelper.mxTransfer ),
+    mxClipboard( rDataHelper.mxClipboard ),
+	mpFormats( new DataFlavorExVector( *rDataHelper.mpFormats ) ),
+    mpObjDesc( new TransferableObjectDescriptor( *rDataHelper.mpObjDesc ) ),
+    mpImpl( new TransferableDataHelper_Impl )
 {
 }
 
@@ -1195,12 +1408,13 @@ TransferableDataHelper& TransferableDataHelper::operator=( const TransferableDat
         ::osl::MutexGuard aGuard( mpImpl->maMutex );
 
         bool bWasClipboardListening = ( NULL != mpImpl->mpClipboardListener );
+
         if ( bWasClipboardListening )
             StopClipboardListening();
 
         mxTransfer = rDataHelper.mxTransfer;
 		delete mpFormats, mpFormats = new DataFlavorExVector( *rDataHelper.mpFormats );
-
+        delete mpObjDesc, mpObjDesc = new TransferableObjectDescriptor( *rDataHelper.mpObjDesc );
 		mxClipboard = rDataHelper.mxClipboard;
 
         if ( bWasClipboardListening )
@@ -1218,6 +1432,7 @@ TransferableDataHelper::~TransferableDataHelper()
     {
         ::osl::MutexGuard aGuard( mpImpl->maMutex );
 	    delete mpFormats, mpFormats = NULL;
+        delete mpObjDesc, mpObjDesc = NULL;
     }
     delete mpImpl;
 }
@@ -1262,7 +1477,7 @@ void TransferableDataHelper::FillDataFlavorExVector( const Sequence< DataFlavor 
 		    rDataFlavorExVector.push_back( aFlavorEx );
 
             // add additional formats for special mime types
-            if( SOT_FORMATSTR_ID_BMP == aFlavorEx.mnSotId )
+            if(SOT_FORMATSTR_ID_BMP == aFlavorEx.mnSotId || SOT_FORMATSTR_ID_PNG == aFlavorEx.mnSotId)
 		    {
 			    if( SotExchange::GetFormatDataFlavor( SOT_FORMAT_BITMAP, aFlavorEx ) )
 			    {
@@ -1312,6 +1527,10 @@ void TransferableDataHelper::FillDataFlavorExVector( const Sequence< DataFlavor 
             {
                 rDataFlavorExVector[ rDataFlavorExVector.size() - 1 ].mnSotId = SOT_FORMAT_FILE_LIST;
             }
+            else if( xMimeType.is() && xMimeType->getFullMediaType().equalsIgnoreAsciiCase( ::rtl::OUString::createFromAscii( "application/x-openoffice-objectdescriptor-xml" ) ) )
+            {
+                rDataFlavorExVector[ rDataFlavorExVector.size() - 1 ].mnSotId = SOT_FORMATSTR_ID_OBJECTDESCRIPTOR;
+            }
 	    }
     }
 	catch( const ::com::sun::star::uno::Exception& )
@@ -1327,8 +1546,25 @@ void TransferableDataHelper::InitFormats()
     ::osl::MutexGuard aGuard( mpImpl->maMutex );
 
     mpFormats->clear();
+    delete mpObjDesc, mpObjDesc = new TransferableObjectDescriptor;
+
     if( mxTransfer.is() )
+    {
         TransferableDataHelper::FillDataFlavorExVector( mxTransfer->getTransferDataFlavors(), *mpFormats );
+
+        DataFlavorExVector::iterator aIter( mpFormats->begin() ), aEnd( mpFormats->end() );
+
+        while( aIter != aEnd )
+        {
+            if( SOT_FORMATSTR_ID_OBJECTDESCRIPTOR == aIter->mnSotId )
+            {
+                ImplSetParameterString( *mpObjDesc, *aIter );
+                aIter = aEnd;
+            }
+            else
+                ++aIter;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -1555,57 +1791,111 @@ sal_Bool TransferableDataHelper::GetString( const DataFlavor& rFlavor, ::rtl::OU
 
 // -----------------------------------------------------------------------------
 
-sal_Bool TransferableDataHelper::GetBitmap( SotFormatStringId nFormat, Bitmap& rBmp )
+sal_Bool TransferableDataHelper::GetBitmapEx( SotFormatStringId nFormat, BitmapEx& rBmpEx )
 {
-	DataFlavor aFlavor;
-	return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetBitmap( aFlavor, rBmp ) );
+    if(FORMAT_BITMAP == nFormat)
+    {
+        // try to get PNG first
+        DataFlavor aFlavor;
+
+        if(SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_PNG, aFlavor))
+        {
+            if(GetBitmapEx(aFlavor, rBmpEx))
+            {
+                return true;
+            }
+        }
+    }
+
+    DataFlavor aFlavor;
+    return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetBitmapEx( aFlavor, rBmpEx ) );
 }
 
 // -----------------------------------------------------------------------------
 
-sal_Bool TransferableDataHelper::GetBitmap( const DataFlavor& rFlavor, Bitmap& rBmp )
+sal_Bool TransferableDataHelper::GetBitmapEx( const DataFlavor& rFlavor, BitmapEx& rBmpEx )
 {
-	SotStorageStreamRef xStm;
-	DataFlavor			aSubstFlavor;
-	sal_Bool			bRet = GetSotStorageStream( rFlavor, xStm );
+    SotStorageStreamRef xStm;
+    DataFlavor aSubstFlavor;
+    bool bRet(GetSotStorageStream(rFlavor, xStm));
+    bool bSuppressPNG(false); // #122982# If PNG stream not accessed, but BMP one, suppress trying to load PNG
 
-	if( bRet )
-	{
-		*xStm >> rBmp;
-		bRet = ( xStm->GetError() == ERRCODE_NONE );
+    if(!bRet && HasFormat(SOT_FORMATSTR_ID_PNG) && SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_PNG, aSubstFlavor))
+    {
+        // when no direct success, try if PNG is available
+        bRet = GetSotStorageStream(aSubstFlavor, xStm);
+    }
 
-		/* SJ: #110748# At the moment we are having problems with DDB inserted as DIB. The
-		   problem is, that some graphics are inserted much too big because the nXPelsPerMeter
-		   and nYPelsPerMeter of the bitmap fileheader isn't including the correct value.
-		   Due to this reason the following code assumes that bitmaps with a logical size
-		   greater than 50 cm aren't having the correct mapmode set.
+    if(!bRet && HasFormat(SOT_FORMATSTR_ID_BMP) && SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_BMP, aSubstFlavor))
+    {
+        // when no direct success, try if BMP is available
+        bRet = GetSotStorageStream(aSubstFlavor, xStm);
+        bSuppressPNG = bRet;
+    }
 
-		   The following code should be removed if DDBs and DIBs are supported via clipboard
-		   properly.
-		*/
-		if ( bRet )
-		{
-			MapMode aMapMode = rBmp.GetPrefMapMode();
-			if ( aMapMode.GetMapUnit() != MAP_PIXEL )
-			{
-				Size aSize = OutputDevice::LogicToLogic( rBmp.GetPrefSize(), aMapMode, MAP_100TH_MM );
-				if ( ( aSize.Width() > 5000 ) || ( aSize.Height() > 5000 ) )
-					rBmp.SetPrefMapMode( MAP_PIXEL );
-			}
-		}
-	}
+    if(bRet)
+    {
+        if(!bSuppressPNG && rFlavor.MimeType.equalsIgnoreAsciiCase(::rtl::OUString::createFromAscii("image/png")))
+        {
+            // it's a PNG, import to BitmapEx
+            ::vcl::PNGReader aPNGReader(*xStm);
 
-	if( !bRet &&
-		HasFormat( SOT_FORMATSTR_ID_BMP ) &&
-		SotExchange::GetFormatDataFlavor( SOT_FORMATSTR_ID_BMP, aSubstFlavor ) &&
-		GetSotStorageStream( aSubstFlavor, xStm ) )
-	{
-	    xStm->ResetError();
-		*xStm >> rBmp;
-		bRet = ( xStm->GetError() == ERRCODE_NONE );
-	}
+            rBmpEx = aPNGReader.Read();
+        }
 
-	return bRet;
+        if(rBmpEx.IsEmpty())
+        {
+            Bitmap aBitmap;
+            Bitmap aMask;
+
+            // explicitely use Bitmap::Read with bFileHeader = sal_True
+            // #124085# keep DIBV5 for read from clipboard, but should not happen
+            ReadDIBV5(aBitmap, aMask, *xStm);
+
+            if(aMask.IsEmpty())
+            {
+                rBmpEx = aBitmap;
+            }
+            else
+            {
+                rBmpEx = BitmapEx(aBitmap, aMask);
+            }
+        }
+
+        bRet = (ERRCODE_NONE == xStm->GetError() && !rBmpEx.IsEmpty());
+
+        /* SJ: #110748# At the moment we are having problems with DDB inserted as DIB. The
+           problem is, that some graphics are inserted much too big because the nXPelsPerMeter
+           and nYPelsPerMeter of the bitmap fileheader isn't including the correct value.
+           Due to this reason the following code assumes that bitmaps with a logical size
+           greater than 50 cm aren't having the correct mapmode set.
+        
+           The following code should be removed if DDBs and DIBs are supported via clipboard
+           properly.
+        */
+        if(bRet)
+        {
+            const MapMode aMapMode(rBmpEx.GetPrefMapMode());
+
+            if(MAP_PIXEL != aMapMode.GetMapUnit())
+            {
+                const Size aSize(OutputDevice::LogicToLogic(rBmpEx.GetPrefSize(), aMapMode, MAP_100TH_MM));
+
+                // #122388# This wrongly corrects in the given case; changing from 5000 100th mm to
+                // the described 50 cm (which is 50000 100th mm)
+                if((aSize.Width() > 50000) || (aSize.Height() > 50000))
+                {
+                    rBmpEx.SetPrefMapMode(MAP_PIXEL);
+
+                    // #122388# also adapt size by applying the mew MapMode
+                    const Size aNewSize(OutputDevice::LogicToLogic(aSize, MAP_100TH_MM, MAP_PIXEL));
+                    rBmpEx.SetPrefSize(aNewSize);
+                }
+            }
+        }
+    }
+
+    return bRet;
 }
 
 // -----------------------------------------------------------------------------
@@ -1640,7 +1930,7 @@ sal_Bool TransferableDataHelper::GetGDIMetaFile( const DataFlavor& rFlavor, GDIM
 		if( GraphicConverter::Import( *xStm, aGraphic ) == ERRCODE_NONE )
 		{
 			rMtf = aGraphic.GetGDIMetaFile();
-			bRet = TRUE;
+			bRet = sal_True;
 		}
 	}
 
@@ -1654,7 +1944,7 @@ sal_Bool TransferableDataHelper::GetGDIMetaFile( const DataFlavor& rFlavor, GDIM
 		if( GraphicConverter::Import( *xStm, aGraphic ) == ERRCODE_NONE )
 		{
 			rMtf = aGraphic.GetGDIMetaFile();
-			bRet = TRUE;
+			bRet = sal_True;
 		}
 	}
 
@@ -1665,8 +1955,22 @@ sal_Bool TransferableDataHelper::GetGDIMetaFile( const DataFlavor& rFlavor, GDIM
 
 sal_Bool TransferableDataHelper::GetGraphic( SotFormatStringId nFormat, Graphic& rGraphic )
 {
-	DataFlavor aFlavor;
-	return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetGraphic( aFlavor, rGraphic ) );
+    if(FORMAT_BITMAP == nFormat)
+    {
+        // try to get PNG first
+        DataFlavor aFlavor;
+
+        if(SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_PNG, aFlavor))
+        {
+            if(GetGraphic(aFlavor, rGraphic))
+            {
+                return true;
+            }
+        }
+    }
+
+    DataFlavor aFlavor;
+    return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetGraphic( aFlavor, rGraphic ) );
 }
 
 // -----------------------------------------------------------------------------
@@ -1676,13 +1980,22 @@ sal_Bool TransferableDataHelper::GetGraphic( const ::com::sun::star::datatransfe
 	DataFlavor	aFlavor;
 	sal_Bool	bRet = sal_False;
 
-	if(	SotExchange::GetFormatDataFlavor( SOT_FORMAT_BITMAP, aFlavor ) &&
+    if(SotExchange::GetFormatDataFlavor(SOT_FORMATSTR_ID_PNG, aFlavor) && 
+        TransferableDataHelper::IsEqual(aFlavor, rFlavor))
+	{
+        // try to get PNG first
+		BitmapEx aBmpEx;
+
+		if( ( bRet = GetBitmapEx( aFlavor, aBmpEx ) ) == sal_True )
+			rGraphic = aBmpEx;
+	}
+	else if(SotExchange::GetFormatDataFlavor( SOT_FORMAT_BITMAP, aFlavor ) &&
 		TransferableDataHelper::IsEqual( aFlavor, rFlavor ) )
 	{
-		Bitmap aBmp;
+		BitmapEx aBmpEx;
 
-		if( ( bRet = GetBitmap( aFlavor, aBmp ) ) == sal_True )
-			rGraphic = aBmp;
+		if( ( bRet = GetBitmapEx( aFlavor, aBmpEx ) ) == sal_True )
+			rGraphic = aBmpEx;
 	}
 	else if( SotExchange::GetFormatDataFlavor( SOT_FORMAT_GDIMETAFILE, aFlavor ) &&
 			 TransferableDataHelper::IsEqual( aFlavor, rFlavor ) )
@@ -1740,18 +2053,10 @@ sal_Bool TransferableDataHelper::GetTransferableObjectDescriptor( SotFormatStrin
 
 // -----------------------------------------------------------------------------
 
-sal_Bool TransferableDataHelper::GetTransferableObjectDescriptor( const ::com::sun::star::datatransfer::DataFlavor& rFlavor, TransferableObjectDescriptor& rDesc )
+sal_Bool TransferableDataHelper::GetTransferableObjectDescriptor( const ::com::sun::star::datatransfer::DataFlavor&, TransferableObjectDescriptor& rDesc )
 {
-	SotStorageStreamRef xStm;
-	sal_Bool			bRet = GetSotStorageStream( rFlavor, xStm );
-
-	if( bRet )
-	{
-		*xStm >> rDesc;
-		bRet = ( xStm->GetError() == ERRCODE_NONE );
-	}
-
-	return bRet;
+    rDesc = *mpObjDesc;
+    return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -1979,7 +2284,11 @@ sal_Bool TransferableDataHelper::GetSequence( SotFormatStringId nFormat, Sequenc
 
 sal_Bool TransferableDataHelper::GetSequence( const DataFlavor& rFlavor, Sequence< sal_Int8 >& rSeq )
 {
-	const Any aAny( GetAny( rFlavor ) );
+#ifdef DEBUG
+    fprintf( stderr, "TransferableDataHelper requests sequence of data\n" );
+#endif
+
+    const Any aAny( GetAny( rFlavor ) );
 	return( aAny.hasValue() && ( aAny >>= rSeq ) );
 }
 
@@ -1987,7 +2296,7 @@ sal_Bool TransferableDataHelper::GetSequence( const DataFlavor& rFlavor, Sequenc
 
 sal_Bool TransferableDataHelper::GetSotStorageStream( SotFormatStringId nFormat, SotStorageStreamRef& rxStream )
 {
-	DataFlavor aFlavor;
+    DataFlavor aFlavor;
 	return( SotExchange::GetFormatDataFlavor( nFormat, aFlavor ) && GetSotStorageStream( aFlavor, rxStream ) );
 }
 
@@ -1999,7 +2308,6 @@ sal_Bool TransferableDataHelper::GetSotStorageStream( const DataFlavor& rFlavor,
 	sal_Bool				bRet = GetSequence( rFlavor, aSeq );
 
 	if( bRet )
-
 	{
 		rxStream = new SotStorageStream( String() );
 		rxStream->Write( aSeq.getConstArray(), aSeq.getLength() );
