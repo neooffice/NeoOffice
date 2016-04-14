@@ -317,7 +317,7 @@ build.neo_patches:
 	build.neo_sd_patch \
 	build.neo_sdext_patch \
 	build.neo_extensions_patch build.neo_shell_patch build.neo_sfx2_patch \
-	build.neo_svtools_patch build.neo_sc_patch \
+	build.neo_svl_patch build.neo_svtools_patch build.neo_sc_patch \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_tools_patch \
