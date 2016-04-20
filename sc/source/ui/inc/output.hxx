@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef SC_OUTPUT_HXX
 #define SC_OUTPUT_HXX
@@ -56,6 +59,7 @@ struct ScTableInfo;
 class ScTabViewShell;
 class ScPageBreakData;
 class FmFormView;
+class ScFieldEditEngine;
 
 // #i74769# SdrPaintWindow predefine
 class SdrPaintWindow;
@@ -79,6 +83,15 @@ class ScOutputData
 {
 friend class ScDrawStringsVars;
 private:
+    struct OutputAreaParam
+    {
+        Rectangle   maAlignRect;
+        Rectangle   maClipRect;
+        long        mnColWidth;
+        bool        mbLeftClip;
+        bool        mbRightClip;
+    };
+
 	OutputDevice* pDev;			// Device
 	OutputDevice* pRefDevice;	// printer if used for preview
 	OutputDevice* pFmtDevice;	// reference for text formatting
@@ -103,7 +116,7 @@ private:
 	ScOutputType eType;			// Bildschirm/Drucker ...
 	double nPPTX;				// Pixel per Twips
 	double nPPTY;
-//	USHORT nZoom;				// Zoom-Faktor (Prozent) - fuer GetFont
+//	sal_uInt16 nZoom;				// Zoom-Faktor (Prozent) - fuer GetFont
 	Fraction aZoomX;
 	Fraction aZoomY;
 
@@ -114,38 +127,38 @@ private:
 	// #114135#
 	FmFormView* pDrawView;		// SdrView to paint to
 
-	BOOL bEditMode;				// InPlace editierte Zelle - nicht ausgeben
+	sal_Bool bEditMode;				// InPlace editierte Zelle - nicht ausgeben
 	SCCOL nEditCol;
 	SCROW nEditRow;
 
-	BOOL bMetaFile;				// Ausgabe auf Metafile (nicht in Pixeln!)
-	BOOL bSingleGrid;			// beim Gitter bChanged auswerten
+	sal_Bool bMetaFile;				// Ausgabe auf Metafile (nicht in Pixeln!)
+	sal_Bool bSingleGrid;			// beim Gitter bChanged auswerten
 
-	BOOL bPagebreakMode;		// Seitenumbruch-Vorschau
-	BOOL bSolidBackground;		// weiss statt transparent
+	sal_Bool bPagebreakMode;		// Seitenumbruch-Vorschau
+	sal_Bool bSolidBackground;		// weiss statt transparent
 
-	BOOL bUseStyleColor;
-	BOOL bForceAutoColor;
+	sal_Bool bUseStyleColor;
+	sal_Bool bForceAutoColor;
 
-	BOOL bSyntaxMode;			// Syntax-Highlighting
+	sal_Bool bSyntaxMode;			// Syntax-Highlighting
 	Color* pValueColor;
 	Color* pTextColor;
 	Color* pFormulaColor;
 
 	Color	aGridColor;
 
-	BOOL	bShowNullValues;
-	BOOL	bShowFormulas;
-	BOOL	bShowSpellErrors;	// Spell-Errors in EditObjekten anzeigen
-	BOOL	bMarkClipped;
+	sal_Bool	bShowNullValues;
+	sal_Bool	bShowFormulas;
+	sal_Bool	bShowSpellErrors;	// Spell-Errors in EditObjekten anzeigen
+	sal_Bool	bMarkClipped;
 
-	BOOL	bSnapPixel;
+	sal_Bool	bSnapPixel;
 
-	BOOL	bAnyRotated;		// intern
-	BOOL	bAnyClipped;		// intern
-	BOOL	bTabProtected;
-	BYTE	nTabTextDirection;	// EEHorizontalTextDirection values
-	BOOL	bLayoutRTL;
+	sal_Bool	bAnyRotated;		// intern
+	sal_Bool	bAnyClipped;		// intern
+	sal_Bool	bTabProtected;
+	sal_uInt8	nTabTextDirection;	// EEHorizontalTextDirection values
+	sal_Bool	bLayoutRTL;
 
 	// #i74769# use SdrPaintWindow direct, remember it during BeginDrawLayers/EndDrawLayers
 	SdrPaintWindow*		mpTargetPaintWindow;
@@ -155,25 +168,25 @@ private:
 
 							// private methods
 
-	BOOL			GetMergeOrigin( SCCOL nX, SCROW nY, SCSIZE nArrY,
-									SCCOL& rOverX, SCROW& rOverY, BOOL bVisRowChanged );
-	BOOL			IsEmptyCellText( RowInfo* pThisRowInfo, SCCOL nX, SCROW nY );
+	sal_Bool			GetMergeOrigin( SCCOL nX, SCROW nY, SCSIZE nArrY,
+									SCCOL& rOverX, SCROW& rOverY, sal_Bool bVisRowChanged );
+	sal_Bool			IsEmptyCellText( RowInfo* pThisRowInfo, SCCOL nX, SCROW nY );
 	void			GetVisibleCell( SCCOL nCol, SCROW nRow, SCTAB nTab, ScBaseCell*& rpCell );
 
-	BOOL			IsAvailable( SCCOL nX, SCROW nY );
+	sal_Bool			IsAvailable( SCCOL nX, SCROW nY );
+
 	void			GetOutputArea( SCCOL nX, SCSIZE nArrY, long nPosX, long nPosY,
-									SCCOL nCellX, SCROW nCellY, long nNeeded,
-									const ScPatternAttr& rPattern,
-									USHORT nHorJustify, BOOL bCellIsValue,
-									BOOL bBreak, BOOL bOverwrite,
-									Rectangle& rAlignRect, Rectangle& rClipRect,
-									BOOL& rLeftClip, BOOL& rRightClip );
+                                   SCCOL nCellX, SCROW nCellY, long nNeeded,
+                                   const ScPatternAttr& rPattern,
+                                   sal_uInt16 nHorJustify, bool bCellIsValue,
+                                   bool bBreak, bool bOverwrite,
+                                   OutputAreaParam& rParam );
 
     void            ShrinkEditEngine( EditEngine& rEngine, const Rectangle& rAlignRect,
                                     long nLeftM, long nTopM, long nRightM, long nBottomM,
-                                    BOOL bWidth, USHORT nOrient, long nAttrRotate, BOOL bPixelToLogic,
+                                    sal_Bool bWidth, sal_uInt16 nOrient, long nAttrRotate, sal_Bool bPixelToLogic,
                                     long& rEngineWidth, long& rEngineHeight, long& rNeededPixel,
-                                    BOOL& rLeftClip, BOOL& rRightClip );
+                                    bool& rLeftClip, bool& rRightClip );
 
 	void			SetSyntaxColor( Font* pFont, ScBaseCell* pCell );
 	void			SetEditSyntaxColor( EditEngine& rEngine, ScBaseCell* pCell );
@@ -181,6 +194,8 @@ private:
 	double			GetStretch();
 
 	void			DrawRotatedFrame( const Color* pForceColor );		// pixel
+
+    ScFieldEditEngine* CreateOutputEditEngine();
 
 public:
 					ScOutputData( OutputDevice* pNewDev, ScOutputType eNewType,
@@ -203,39 +218,36 @@ public:
 	// #114135#
 	void	SetDrawView( FmFormView* pNew )		{ pDrawView = pNew; }
 
-	void	SetSolidBackground( BOOL bSet )		{ bSolidBackground = bSet; }
-	void	SetUseStyleColor( BOOL bSet )		{ bUseStyleColor = bSet; }
+	void	SetSolidBackground( sal_Bool bSet )		{ bSolidBackground = bSet; }
+	void	SetUseStyleColor( sal_Bool bSet )		{ bUseStyleColor = bSet; }
 
 	void	SetEditCell( SCCOL nCol, SCROW nRow );
-	void	SetSyntaxMode( BOOL bNewMode );
-	void	SetMetaFileMode( BOOL bNewMode );
-	void	SetSingleGrid( BOOL bNewMode );
+	void	SetSyntaxMode( sal_Bool bNewMode );
+	void	SetMetaFileMode( sal_Bool bNewMode );
+	void	SetSingleGrid( sal_Bool bNewMode );
 	void	SetGridColor( const Color& rColor );
-	void	SetMarkClipped( BOOL bSet );
-	void	SetShowNullValues ( BOOL bSet = TRUE );
-	void	SetShowFormulas   ( BOOL bSet = TRUE );
-	void	SetShowSpellErrors( BOOL bSet = TRUE );
+	void	SetMarkClipped( sal_Bool bSet );
+	void	SetShowNullValues ( sal_Bool bSet = sal_True );
+	void	SetShowFormulas   ( sal_Bool bSet = sal_True );
+	void	SetShowSpellErrors( sal_Bool bSet = sal_True );
 	void	SetMirrorWidth( long nNew );
 	long	GetScrW() const		{ return nScrW; }
 	long	GetScrH() const		{ return nScrH; }
 
-	void	SetSnapPixel( BOOL bSet = TRUE );
+	void	SetSnapPixel( sal_Bool bSet = sal_True );
 
-	void	DrawGrid( BOOL bGrid, BOOL bPage );
-	void	DrawStrings( BOOL bPixelToLogic = FALSE );
-#ifdef USE_sc-cellbackground-over-gridlines_PATCH
-    void    DrawDocumentBackground();
-#endif	// USE_sc-cellbackground-over-gridlines_PATCH
+	void	DrawGrid( sal_Bool bGrid, sal_Bool bPage );
+	void	DrawStrings( sal_Bool bPixelToLogic = sal_False );
 	void	DrawBackground();
 	void	DrawShadow();
-	void	DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBottom);
+	void	DrawExtraShadow(sal_Bool bLeft, sal_Bool bTop, sal_Bool bRight, sal_Bool bBottom);
 	void	DrawFrame();
 
 					// with logic MapMode set!
-	void	DrawEdit(BOOL bPixelToLogic);
+	void	DrawEdit(sal_Bool bPixelToLogic);
 
 	void	FindRotated();
-	void	DrawRotated(BOOL bPixelToLogic);		// logisch
+	void	DrawRotated(sal_Bool bPixelToLogic);		// logisch
 
 	void	DrawClear();
 
@@ -248,25 +260,27 @@ public:
 	void	DrawingSingle(const sal_uInt16 nLayer);
 	void	DrawSelectiveObjects(const sal_uInt16 nLayer);
 
-	BOOL	SetChangedClip();		// FALSE = nix
-    PolyPolygon GetChangedArea();
+	sal_Bool	SetChangedClip();		// sal_False = nix
+    Region      GetChangedAreaRegion();
 
 	void	FindChanged();
 	void	SetPagebreakMode( ScPageBreakData* pPageData );
-	void	DrawMark( Window* pWin );
+#ifdef OLD_SELECTION_PAINT
+    void    DrawMark( Window* pWin );
+#endif    
 	void	DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 						 SCCOL nRefEndX, SCROW nRefEndY,
-						 const Color& rColor, BOOL bHandle );
+						 const Color& rColor, sal_Bool bHandle );
 	void	DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 							SCCOL nRefEndX, SCROW nRefEndY,
-							const Color& rColor, USHORT nType );
+							const Color& rColor, sal_uInt16 nType );
 	void	DrawChangeTrack();
 	void	DrawClipMarks();
 
 	void	DrawNoteMarks();
     void    AddPDFNotes();
 #ifdef USE_JAVA
-	void 	SetGridWindow( ScGridWindow *pGridWindow ) { mpGridWindow = pGridWindow; }
+    void    SetGridWindow( ScGridWindow *pGridWindow ) { mpGridWindow = pGridWindow; }
 #endif	// USE_JAVA
 };
 

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2011 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef SC_BCASLOT_HXX
 #define SC_BCASLOT_HXX
@@ -33,8 +36,8 @@
 #include <set>
 #include <hash_set>
 #include <functional>
-#include <svtools/broadcast.hxx>
-#include <svtools/svarray.hxx>
+#include <svl/broadcast.hxx>
+#include <svl/svarray.hxx>
 
 #include "global.hxx"
 #include "brdcst.hxx"
@@ -43,20 +46,23 @@
 #include <list>
 #endif	// USE_JAVA
 
-/// Used in a Unique Sorted Associative Container
+/**
+    Used in a Unique Associative Container.
+ */
+
 class ScBroadcastArea
 {
 private:
 	ScBroadcastArea*	pUpdateChainNext;
     SvtBroadcaster      aBroadcaster;
     ScRange             aRange;
-	ULONG				nRefCount;
-	BOOL				bInUpdateChain;
+	sal_uLong				nRefCount;
+	sal_Bool				bInUpdateChain;
 
 public:
 			ScBroadcastArea( const ScRange& rRange )
 				: pUpdateChainNext( NULL ), aRange( rRange ),
-				nRefCount( 0 ), bInUpdateChain( FALSE ) {}
+				nRefCount( 0 ), bInUpdateChain( sal_False ) {}
     inline SvtBroadcaster&       GetBroadcaster()       { return aBroadcaster; }
     inline const SvtBroadcaster& GetBroadcaster() const { return aBroadcaster; }
 	inline void			UpdateRange( const ScRange& rNewRange )
@@ -65,32 +71,41 @@ public:
 	inline const ScAddress& GetStart() const { return aRange.aStart; }
 	inline const ScAddress& GetEnd() const { return aRange.aEnd; }
 	inline void			IncRef() { ++nRefCount; }
-	inline ULONG		DecRef() { return --nRefCount; }
+	inline sal_uLong		DecRef() { return nRefCount ? --nRefCount : 0; }
+	inline sal_uLong		GetRef() { return nRefCount; }
 	inline ScBroadcastArea* GetUpdateChainNext() const { return pUpdateChainNext; }
 	inline void			SetUpdateChainNext( ScBroadcastArea* p ) { pUpdateChainNext = p; }
-	inline BOOL			IsInUpdateChain() const { return bInUpdateChain; }
-	inline void			SetInUpdateChain( BOOL b ) { bInUpdateChain = b; }
+	inline sal_Bool			IsInUpdateChain() const { return bInUpdateChain; }
+	inline void			SetInUpdateChain( sal_Bool b ) { bInUpdateChain = b; }
 
-    /** Strict weak sorting order, upper left corner and then lower right */
-    inline  bool        operator<( const ScBroadcastArea& rArea ) const;
+    /** Equalness of this or range. */
+    inline  bool        operator==( const ScBroadcastArea & rArea ) const;
 };
 
-inline bool ScBroadcastArea::operator<( const ScBroadcastArea& rArea ) const
+inline bool ScBroadcastArea::operator==( const ScBroadcastArea & rArea ) const
 {
-    return aRange < rArea.aRange;
+    return aRange == rArea.aRange;
 }
 
 //=============================================================================
 
-struct ScBroadcastAreaSort
+struct ScBroadcastAreaHash
 {
-    bool operator()( const ScBroadcastArea* p1, const ScBroadcastArea* p2) const
+    size_t operator()( const ScBroadcastArea* p ) const
     {
-        return *p1 < *p2;
+        return p->GetRange().hashArea();
     }
 };
 
-typedef ::std::set< ScBroadcastArea*, ScBroadcastAreaSort > ScBroadcastAreas;
+struct ScBroadcastAreaEqual
+{
+    bool operator()( const ScBroadcastArea* p1, const ScBroadcastArea* p2) const
+    {
+        return *p1 == *p2;
+    }
+};
+
+typedef ::std::hash_set< ScBroadcastArea*, ScBroadcastAreaHash, ScBroadcastAreaEqual > ScBroadcastAreas;
 
 //=============================================================================
 
@@ -125,12 +140,22 @@ private:
     mutable ScBroadcastArea aTmpSeekBroadcastArea;      // for FindBroadcastArea()
 	ScDocument*			pDoc;
 	ScBroadcastAreaSlotMachine* pBASM;
-
-    ScBroadcastAreas::iterator  FindBroadcastArea( const ScRange& rRange ) const;
 #ifdef USE_JAVA
-	mutable BOOL		bInBroadcastIteration;
+	mutable sal_Bool	bInBroadcastIteration;
 	mutable ::std::list< ScBroadcastArea* >	aAreaRemovalList;
 #endif	// USE_JAVA
+
+    ScBroadcastAreas::const_iterator  FindBroadcastArea( const ScRange& rRange ) const;
+
+    /**
+        More hypothetical (memory would probably be doomed anyway) check 
+        whether there would be an overflow when adding an area, setting the 
+        proper state if so.
+
+        @return sal_True if a HardRecalcState is effective and area is not to be 
+        added.
+      */
+    bool                CheckHardRecalcStateCondition() const;
 
 public:
 						ScBroadcastAreaSlot( ScDocument* pDoc,
@@ -138,44 +163,102 @@ public:
 						~ScBroadcastAreaSlot();
 	const ScBroadcastAreas&	GetBroadcastAreas() const
 											{ return aBroadcastAreaTbl; }
-	void				StartListeningArea( const ScRange& rRange,
+
+    /**
+        Only here new ScBroadcastArea objects are created, prevention of dupes.
+
+        @param rpArea
+            If NULL, a new ScBroadcastArea is created and assigned ton the 
+            reference if a matching area wasn't found. If a matching area was 
+            found, that is assigned. In any case, the SvtListener is added to 
+            the broadcaster.
+
+            If not NULL then no listeners are startet, only the area is 
+            inserted and the reference count incremented. Effectively the same 
+            as InsertListeningArea(), so use that instead.
+
+        @return
+            sal_True if rpArea passed was NULL and ScBroadcastArea is newly 
+            created. 
+     */
+	bool				StartListeningArea( const ScRange& rRange,
 											SvtListener* pListener,
 											ScBroadcastArea*& rpArea );
+
+    /**
+        Insert a ScBroadcastArea obtained via StartListeningArea() to 
+        subsequent slots.
+     */
+    void                InsertListeningArea( ScBroadcastArea* pArea );
+
 	void				EndListeningArea( const ScRange& rRange,
 											SvtListener* pListener,
 											ScBroadcastArea*& rpArea );
-	BOOL				AreaBroadcast( const ScHint& rHint ) const;
-		// return: mindestens ein Broadcast gewesen
-    BOOL				AreaBroadcastInRange( const ScRange& rRange,
+	sal_Bool				AreaBroadcast( const ScHint& rHint ) const;
+    /// @return sal_True if at least one broadcast occurred.
+    sal_Bool				AreaBroadcastInRange( const ScRange& rRange,
                                               const ScHint& rHint ) const;
 	void				DelBroadcastAreasInRange( const ScRange& rRange );
 	void				UpdateRemove( UpdateRefMode eUpdateRefMode,
 										const ScRange& rRange,
 										SCsCOL nDx, SCsROW nDy, SCsTAB nDz );
+    void                UpdateRemoveArea( ScBroadcastArea* pArea );
 	void				UpdateInsert( ScBroadcastArea* pArea );
 };
 
 
-/*
-	BroadcastAreaSlots und deren Verwaltung, einmal je Dokument
-
-	+---+---+
-	| 0 | 2 |	Anordnung Cols/Rows
-	+---+---+
-	| 1 | 3 |
-	+---+---+
+/**
+	BroadcastAreaSlots and their management, once per document.
  */
 
 class  ScBroadcastAreaSlotMachine
 {
 private:
-    ScBroadcastAreasBulk    aBulkBroadcastAreas;
-	ScBroadcastAreaSlot**	ppSlots;
-	SvtBroadcaster*     pBCAlways;      // for the RC_ALWAYS special range
-	ScDocument*			pDoc;
-	ScBroadcastArea*	pUpdateChain;
-	ScBroadcastArea*	pEOUpdateChain;
-    ULONG               nInBulkBroadcast;
+
+    /**
+        Slot offset arrangement of columns and rows, once per sheet.
+
+        +---+---+
+        | 0 | 3 |
+        +---+---+
+        | 1 | 4 |
+        +---+---+
+        | 2 | 5 |
+        +---+---+
+     */
+
+    class TableSlots
+    {
+        public:
+                                            TableSlots();
+                                            ~TableSlots();
+            inline ScBroadcastAreaSlot**    getSlots() { return ppSlots; }
+
+            /**
+                Obtain slot pointer, no check on validity! It is assumed that 
+                all calls are made with the results of ComputeSlotOffset(), 
+                ComputeAreaPoints() and ComputeNextSlot()
+              */
+            inline ScBroadcastAreaSlot*     getAreaSlot( SCSIZE nOff ) { return *(ppSlots + nOff); }
+
+        private:
+            ScBroadcastAreaSlot**	ppSlots;
+
+            // prevent usage
+            TableSlots( const TableSlots& );
+            TableSlots& operator=( const TableSlots& );
+    };
+
+    typedef ::std::map< SCTAB, TableSlots* > TableSlotsMap;
+
+private:
+    ScBroadcastAreasBulk  aBulkBroadcastAreas;
+    TableSlotsMap         aTableSlotsMap;
+    SvtBroadcaster       *pBCAlways;             // for the RC_ALWAYS special range
+    ScDocument           *pDoc;
+    ScBroadcastArea      *pUpdateChain;
+    ScBroadcastArea      *pEOUpdateChain;
+    sal_uLong                 nInBulkBroadcast;
 
 	inline SCSIZE		ComputeSlotOffset( const ScAddress& rAddress ) const;
 	void				ComputeAreaPoints( const ScRange& rRange,
@@ -189,9 +272,9 @@ public:
 											SvtListener* pListener );
 	void				EndListeningArea( const ScRange& rRange,
 											SvtListener* pListener );
-	BOOL				AreaBroadcast( const ScHint& rHint ) const;
-		// return: mindestens ein Broadcast gewesen
-    BOOL                AreaBroadcastInRange( const ScRange& rRange, const ScHint& rHint ) const;
+	sal_Bool				AreaBroadcast( const ScHint& rHint ) const;
+        // return: at least one broadcast occurred
+    sal_Bool                AreaBroadcastInRange( const ScRange& rRange, const ScHint& rHint ) const;
 	void				DelBroadcastAreasInRange( const ScRange& rRange );
 	void				UpdateBroadcastAreas( UpdateRefMode eUpdateRefMode,
 											const ScRange& rRange,

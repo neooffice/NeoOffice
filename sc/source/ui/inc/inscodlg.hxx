@@ -1,37 +1,40 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef SC_INSCODLG_HXX
 #define SC_INSCODLG_HXX
 
 #include <vcl/dialog.hxx>
-#include <vcl/imagebtn.hxx>
+#include <vcl/button.hxx>
 #include <vcl/fixed.hxx>
 #include "global.hxx"
 
@@ -48,20 +51,20 @@ class ScInsertContentsDlg : public ModalDialog
 {
 public:
 			ScInsertContentsDlg( Window*		pParent,
-								 USHORT  		nCheckDefaults = 0,
+								 sal_uInt16  		nCheckDefaults = 0,
 								 const String*	pStrTitle = NULL );
 			~ScInsertContentsDlg();
 
-	USHORT		GetInsContentsCmdBits() const;
-	USHORT		GetFormulaCmdBits() const;
-	BOOL		IsSkipEmptyCells() const {return aBtnSkipEmptyCells.IsChecked();}
-	BOOL 		IsTranspose() const {return aBtnTranspose.IsChecked();}
-	BOOL 		IsLink() const {return aBtnLink.IsChecked();}
+	sal_uInt16		GetInsContentsCmdBits() const;
+	sal_uInt16		GetFormulaCmdBits() const;
+	sal_Bool		IsSkipEmptyCells() const {return aBtnSkipEmptyCells.IsChecked();}
+	sal_Bool 		IsTranspose() const {return aBtnTranspose.IsChecked();}
+	sal_Bool 		IsLink() const {return aBtnLink.IsChecked();}
 	InsCellCmd	GetMoveMode();
 
-	void	SetOtherDoc( BOOL bSet );
-	void	SetFillMode( BOOL bSet );
-	void	SetChangeTrack( BOOL bSet );
+	void	SetOtherDoc( sal_Bool bSet );
+	void	SetFillMode( sal_Bool bSet );
+	void	SetChangeTrack( sal_Bool bSet );
 	void	SetCellShiftDisabled( int nDisable );
 
 private:
@@ -98,22 +101,22 @@ private:
 	CancelButton	aBtnCancel;
 	HelpButton		aBtnHelp;
 
-	BOOL			bOtherDoc;
-	BOOL			bFillMode;
-	BOOL			bChangeTrack;
-	BOOL			bMoveDownDisabled;
-	BOOL			bMoveRightDisabled;
+	sal_Bool			bOtherDoc;
+	sal_Bool			bFillMode;
+	sal_Bool			bChangeTrack;
+	sal_Bool			bMoveDownDisabled;
+	sal_Bool			bMoveRightDisabled;
 
-	static BOOL		bPreviousAllCheck;
-	static USHORT	nPreviousChecks;
-	static USHORT	nPreviousChecks2;
-	static USHORT	nPreviousFormulaChecks;
-	static USHORT	nPreviousMoveMode;			// enum InsCellCmd
+	static sal_Bool		bPreviousAllCheck;
+	static sal_uInt16	nPreviousChecks;
+	static sal_uInt16	nPreviousChecks2;
+	static sal_uInt16	nPreviousFormulaChecks;
+	static sal_uInt16	nPreviousMoveMode;			// enum InsCellCmd
 #ifdef USE_JAVA
-	static BOOL		bPreviousValuesInitialized;
+	static sal_Bool		bPreviousValuesInitialized;
 #endif	// USE_JAVA
 
-	void DisableChecks( BOOL bInsAllChecked = TRUE );
+	void DisableChecks( sal_Bool bInsAllChecked = sal_True );
 	void TestModes();
 
 	// Handler

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sc.hxx"
@@ -39,7 +42,6 @@
 #include "inscodlg.hxx"
 #include "scresid.hxx"
 #include "miscdlgs.hrc"
-
 
 #ifdef USE_JAVA
 
@@ -60,23 +62,22 @@ using namespace com::sun::star::uno;
 
 #endif	// USE_JAVA
 
+
 //==================================================================
 
-BOOL   ScInsertContentsDlg::bPreviousAllCheck = TRUE;
-USHORT ScInsertContentsDlg::nPreviousChecks   = (IDF_DATETIME | IDF_STRING  |
-												 IDF_NOTE     | IDF_FORMULA |
-												 IDF_ATTRIB   | IDF_OBJECTS);
-USHORT ScInsertContentsDlg::nPreviousFormulaChecks = PASTE_NOFUNC;
-USHORT ScInsertContentsDlg::nPreviousChecks2 = 0;
-USHORT ScInsertContentsDlg::nPreviousMoveMode = INS_NONE;	// enum InsCellCmd
+sal_Bool   ScInsertContentsDlg::bPreviousAllCheck = sal_False;
+sal_uInt16 ScInsertContentsDlg::nPreviousChecks   = (IDF_VALUE | IDF_DATETIME | IDF_STRING);
+sal_uInt16 ScInsertContentsDlg::nPreviousFormulaChecks = PASTE_NOFUNC;
+sal_uInt16 ScInsertContentsDlg::nPreviousChecks2 = 0;
+sal_uInt16 ScInsertContentsDlg::nPreviousMoveMode = INS_NONE;	// enum InsCellCmd
 #ifdef USE_JAVA
-BOOL   ScInsertContentsDlg::bPreviousValuesInitialized = FALSE;
+sal_Bool   ScInsertContentsDlg::bPreviousValuesInitialized = sal_False;
 #endif	// USE_JAVA
 
 //-----------------------------------------------------------------------
 
 ScInsertContentsDlg::ScInsertContentsDlg( Window*		pParent,
-										  USHORT		nCheckDefaults,
+										  sal_uInt16		nCheckDefaults,
 										  const String* pStrTitle )
 
  :  ModalDialog     ( pParent, ScResId( RID_SCDLG_INSCONT ) ),
@@ -109,63 +110,61 @@ ScInsertContentsDlg::ScInsertContentsDlg( Window*		pParent,
 	aBtnOk          ( this, ScResId( BTN_OK ) ),
 	aBtnCancel      ( this, ScResId( BTN_CANCEL ) ),
 	aBtnHelp        ( this, ScResId( BTN_HELP ) ),
-	bOtherDoc		( FALSE ),
-	bFillMode		( FALSE ),
-	bChangeTrack	( FALSE ),
-	bMoveDownDisabled( FALSE ),
-	bMoveRightDisabled( FALSE )
+	bOtherDoc		( sal_False ),
+	bFillMode		( sal_False ),
+	bChangeTrack	( sal_False ),
+	bMoveDownDisabled( sal_False ),
+	bMoveRightDisabled( sal_False )
 {
 #ifdef USE_JAVA
 	if ( !bPreviousValuesInitialized )
 	{
-		bPreviousValuesInitialized = TRUE;
+		bPreviousValuesInitialized = sal_True;
 
-		Sequence< Any > aValues;
-		const Any *pProperties;
 		Sequence< ::rtl::OUString > aNames( 5 );
 		::rtl::OUString *pNames = aNames.getArray();
-		ScLinkConfigItem aItem( ::rtl::OUString::createFromAscii( SEP_PATH ) );
-
 		pNames[0] = ::rtl::OUString::createFromAscii( ALL_CHECK );
 		pNames[1] = ::rtl::OUString::createFromAscii( CHECKS );
 		pNames[2] = ::rtl::OUString::createFromAscii( FORMULA_CHECKS);
 		pNames[3] = ::rtl::OUString::createFromAscii( CHECKS_2 );
 		pNames[4] = ::rtl::OUString::createFromAscii( MOVE_MODE );
-		aValues = aItem.GetProperties( aNames );
-		pProperties = aValues.getConstArray();
+
+		ScLinkConfigItem aItem( ::rtl::OUString::createFromAscii( SEP_PATH ) );
+		Sequence< Any > aValues = aItem.GetProperties( aNames );
+		const Any *pProperties = aValues.getConstArray();
 		if( pProperties[0].hasValue() )
 		{
 			sal_Bool bValue = true;
 			pProperties[0] >>= bValue;
-			ScInsertContentsDlg::bPreviousAllCheck = (BOOL)bValue;
+			ScInsertContentsDlg::bPreviousAllCheck = bValue;
 		}
 		if ( pProperties[1].hasValue() )
 		{
 			sal_Int32 nValue = -1;
 			pProperties[1] >>= nValue;
 			if ( nValue >= 0 )
-				ScInsertContentsDlg::nPreviousChecks = (USHORT)nValue;
+				ScInsertContentsDlg::nPreviousChecks = nValue;
 		}
 		if ( pProperties[2].hasValue() )
 		{
 			sal_Int32 nValue = -1;
 			pProperties[2] >>= nValue;
 			if ( nValue >= 0 )
-				ScInsertContentsDlg::nPreviousFormulaChecks = (USHORT)nValue;
+				ScInsertContentsDlg::nPreviousFormulaChecks = nValue;
 		}
 		if ( pProperties[3].hasValue() )
 		{
 			sal_Int32 nValue = -1;
 			pProperties[3] >>= nValue;
 			if ( nValue >= 0 )
-				ScInsertContentsDlg::nPreviousChecks2 = (USHORT)nValue;
+				ScInsertContentsDlg::nPreviousChecks2 = nValue;
 		}
 		if ( pProperties[4].hasValue() )
 		{
 			sal_Int32 nValue = -1;
 			pProperties[4] >>= nValue;
 			if ( nValue >= 0 )
-				ScInsertContentsDlg::nPreviousMoveMode = (USHORT)nValue;
+				ScInsertContentsDlg::nPreviousMoveMode = nValue;
 		}
 	}
 #endif	// USE_JAVA
@@ -176,7 +175,7 @@ ScInsertContentsDlg::ScInsertContentsDlg( Window*		pParent,
 	if ( nCheckDefaults != 0 )
 	{
 		ScInsertContentsDlg::nPreviousChecks = nCheckDefaults;
-		ScInsertContentsDlg::bPreviousAllCheck = FALSE;
+		ScInsertContentsDlg::bPreviousAllCheck = sal_False;
 		ScInsertContentsDlg::nPreviousChecks2 = 0;
 	}
 
@@ -198,18 +197,18 @@ ScInsertContentsDlg::ScInsertContentsDlg( Window*		pParent,
 
 	switch( ScInsertContentsDlg::nPreviousFormulaChecks )
 	{
-		case PASTE_NOFUNC: aRbNoOp.Check(TRUE); break;
-		case PASTE_ADD:    aRbAdd.Check(TRUE); break;
-		case PASTE_SUB:    aRbSub.Check(TRUE); break;
-		case PASTE_MUL:    aRbMul.Check(TRUE); break;
-		case PASTE_DIV:    aRbDiv.Check(TRUE); break;
+		case PASTE_NOFUNC: aRbNoOp.Check(sal_True); break;
+		case PASTE_ADD:    aRbAdd.Check(sal_True); break;
+		case PASTE_SUB:    aRbSub.Check(sal_True); break;
+		case PASTE_MUL:    aRbMul.Check(sal_True); break;
+		case PASTE_DIV:    aRbDiv.Check(sal_True); break;
 	}
 
 	switch( ScInsertContentsDlg::nPreviousMoveMode )
 	{
-		case INS_NONE:  	 aRbMoveNone.Check(TRUE); break;
-		case INS_CELLSDOWN:	 aRbMoveDown.Check(TRUE); break;
-		case INS_CELLSRIGHT: aRbMoveRight.Check(TRUE); break;
+		case INS_NONE:  	 aRbMoveNone.Check(sal_True); break;
+		case INS_CELLSDOWN:	 aRbMoveDown.Check(sal_True); break;
+		case INS_CELLSRIGHT: aRbMoveRight.Check(sal_True); break;
 	}
 
 	aBtnSkipEmptyCells.Check( ( ScInsertContentsDlg::nPreviousChecks2 & INS_CONT_NOEMPTY ) != 0);
@@ -230,7 +229,7 @@ ScInsertContentsDlg::ScInsertContentsDlg( Window*		pParent,
 
 //------------------------------------------------------------------------
 
-USHORT ScInsertContentsDlg::GetInsContentsCmdBits() const
+sal_uInt16 ScInsertContentsDlg::GetInsContentsCmdBits() const
 {
 	ScInsertContentsDlg::nPreviousChecks = 0;
 
@@ -270,7 +269,7 @@ InsCellCmd ScInsertContentsDlg::GetMoveMode()
 
 //------------------------------------------------------------------------
 
-void ScInsertContentsDlg::DisableChecks( BOOL bInsAllChecked )
+void ScInsertContentsDlg::DisableChecks( sal_Bool bInsAllChecked )
 {
 	if ( bInsAllChecked )
 	{
@@ -321,7 +320,7 @@ void ScInsertContentsDlg::TestModes()
 
         aFlFrame.Disable();
 		aBtnInsAll.Disable();
-		DisableChecks(TRUE);
+		DisableChecks(sal_True);
 	}
 	else
 	{
@@ -345,52 +344,52 @@ void ScInsertContentsDlg::TestModes()
 	}
 }
 
-void ScInsertContentsDlg::SetOtherDoc( BOOL bSet )
+void ScInsertContentsDlg::SetOtherDoc( sal_Bool bSet )
 {
 	if ( bSet != bOtherDoc )
 	{
 		bOtherDoc = bSet;
 		TestModes();
 		if ( bSet )
-			aRbMoveNone.Check(TRUE);
+			aRbMoveNone.Check(sal_True);
 	}
 }
 
-void ScInsertContentsDlg::SetFillMode( BOOL bSet )
+void ScInsertContentsDlg::SetFillMode( sal_Bool bSet )
 {
 	if ( bSet != bFillMode )
 	{
 		bFillMode = bSet;
 		TestModes();
 		if ( bSet )
-			aRbMoveNone.Check(TRUE);
+			aRbMoveNone.Check(sal_True);
 	}
 }
 
-void ScInsertContentsDlg::SetChangeTrack( BOOL bSet )
+void ScInsertContentsDlg::SetChangeTrack( sal_Bool bSet )
 {
 	if ( bSet != bChangeTrack )
 	{
 		bChangeTrack = bSet;
 		TestModes();
 		if ( bSet )
-			aRbMoveNone.Check(TRUE);
+			aRbMoveNone.Check(sal_True);
 	}
 }
 
 void ScInsertContentsDlg::SetCellShiftDisabled( int nDisable )
 {
-	BOOL bDown = ((nDisable & SC_CELL_SHIFT_DISABLE_DOWN) != 0);
-	BOOL bRight = ((nDisable & SC_CELL_SHIFT_DISABLE_RIGHT) != 0);
+	sal_Bool bDown = ((nDisable & SC_CELL_SHIFT_DISABLE_DOWN) != 0);
+	sal_Bool bRight = ((nDisable & SC_CELL_SHIFT_DISABLE_RIGHT) != 0);
 	if ( bDown != bMoveDownDisabled || bRight != bMoveRightDisabled )
 	{
 		bMoveDownDisabled = bDown;
 		bMoveRightDisabled = bRight;
 		TestModes();
 		if ( bMoveDownDisabled && aRbMoveDown.IsChecked() )
-			aRbMoveNone.Check(TRUE);
+			aRbMoveNone.Check(sal_True);
 		if ( bMoveRightDisabled && aRbMoveRight.IsChecked() )
-			aRbMoveNone.Check(TRUE);
+			aRbMoveNone.Check(sal_True);
 	}
 }
 
@@ -432,19 +431,17 @@ __EXPORT ScInsertContentsDlg::~ScInsertContentsDlg()
 	}
 
 #ifdef USE_JAVA
-	Sequence< Any > aValues;
-	Any *pProperties;
 	Sequence< ::rtl::OUString > aNames( 5 );
 	::rtl::OUString *pNames = aNames.getArray();
-	ScLinkConfigItem aItem( ::rtl::OUString::createFromAscii( SEP_PATH ) );
-
 	pNames[0] = ::rtl::OUString::createFromAscii( ALL_CHECK );
 	pNames[1] = ::rtl::OUString::createFromAscii( CHECKS );
 	pNames[2] = ::rtl::OUString::createFromAscii( FORMULA_CHECKS);
 	pNames[3] = ::rtl::OUString::createFromAscii( CHECKS_2 );
 	pNames[4] = ::rtl::OUString::createFromAscii( MOVE_MODE );
-	aValues = aItem.GetProperties( aNames );
-    pProperties = aValues.getArray();
+
+	ScLinkConfigItem aItem( ::rtl::OUString::createFromAscii( SEP_PATH ) );
+	Sequence< Any > aValues = aItem.GetProperties( aNames );
+	Any *pProperties = aValues.getArray();
 	pProperties[0] <<= static_cast< sal_Bool >( ScInsertContentsDlg::bPreviousAllCheck );
 	pProperties[1] <<= static_cast< sal_Int32 >( ScInsertContentsDlg::nPreviousChecks );
 	pProperties[2] <<= static_cast< sal_Int32 >( ScInsertContentsDlg::nPreviousFormulaChecks );
@@ -455,7 +452,7 @@ __EXPORT ScInsertContentsDlg::~ScInsertContentsDlg()
 #endif	// USE_JAVA
 }
 
-USHORT	ScInsertContentsDlg::GetFormulaCmdBits() const
+sal_uInt16	ScInsertContentsDlg::GetFormulaCmdBits() const
 {
 	ScInsertContentsDlg::nPreviousFormulaChecks = PASTE_NOFUNC;
 	if(aRbAdd.IsChecked())

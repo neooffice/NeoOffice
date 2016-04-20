@@ -1,32 +1,34 @@
-#*************************************************************************
+#**************************************************************
+#  
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#  
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+#  
+#  This file incorporates work covered by the following license notice:
+# 
+#    Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+#    under the GNU General Public License, Version 3 as allowed by Section 4
+#    of the Apache License, Version 2.0.
 #
-# Copyright 2008 by Sun Microsystems, Inc.
-#
-# $RCSfile$
-#
-# $Revision$
-#
-# This file is part of NeoOffice.
-#
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
-#
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
-#
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
-#
-# Modified October 2009 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
-#
-#*************************************************************************
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  
+#**************************************************************
+
+
 
 PRJ=..
 
@@ -40,17 +42,14 @@ USE_DEFFILE=TRUE
 
 .INCLUDE :  settings.mk
 
-.IF "$(OS)"=="IRIX"
-LINKFLAGS+=-Wl,-LD_LAYOUT:lgot_buffer=30
-.ENDIF
-
-.IF "$(UPD)" == "310"
-PREPENDLIBS=$(PRJ)$/..$/svtools$/$(INPATH)$/lib
+.IF "$(PRODUCT_BUILD_TYPE)" == "java"
+PREPENDLIBS=$(PRJ)$/..$/unotools$/$(INPATH)$/lib
 
 # Link to modified libraries
 SOLARLIB:=-L$(PREPENDLIBS) $(SOLARLIB)
+SOLARSHAREDBIN:=$(SOLARSHAREDBIN)
 SOLARLIBDIR:=$(PREPENDLIBS) -L$(SOLARLIBDIR)
-.ENDIF		# "$(UPD)" == "310"
+.ENDIF		# "$(PRODUCT_BUILD_TYPE)" == "java"
 
 # --- Resourcen ----------------------------------------------------
 
@@ -60,13 +59,14 @@ RESLIB1LIST=\
 	$(SRS)$/ui.srs		\
 	$(SRS)$/dbgui.srs	\
 	$(SRS)$/drawfunc.srs \
+	$(SRS)$/sidebar.srs \
 	$(SRS)$/core.srs 	\
 	$(SRS)$/styleui.srs	\
 	$(SRS)$/formdlgs.srs \
 	$(SRS)$/pagedlg.srs	\
 	$(SRS)$/navipi.srs	\
 	$(SRS)$/cctrl.srs	\
-	$(SOLARCOMMONRESDIR)$/sfx.srs
+
 
 RESLIB1NAME=sc
 RESLIB1IMAGES=\
@@ -86,33 +86,35 @@ SHL1IMPLIB= sci
 
 # dynamic libraries
 SHL1STDLIBS=       \
-		$(VBAHELPERLIB) \
 	$(BASICLIB)	\
 	$(SFXLIB)		\
 	$(SVTOOLLIB)	\
 	$(SVLLIB)		\
 	$(SVXCORELIB)		\
+	$(EDITENGLIB)		\
 	$(SVXLIB)		\
-	$(GOODIESLIB)	\
     $(BASEGFXLIB) \
+	$(DRAWINGLAYERLIB) \
 	$(VCLLIB)		\
 	$(CPPULIB)		\
 	$(CPPUHELPERLIB)	\
 	$(COMPHELPERLIB)	\
 	$(UCBHELPERLIB)	\
+	$(VBAHELPERLIB)	\
 	$(TKLIB)		\
 	$(VOSLIB)		\
 	$(SALLIB)		\
 	$(TOOLSLIB)	\
-	$(I18NUTILLIB) \
 	$(I18NISOLANGLIB) \
 	$(UNOTOOLSLIB) \
 	$(SOTLIB)		\
 	$(XMLOFFLIB)	\
-	$(DBTOOLSLIB)	\
 	$(AVMEDIALIB) \
 	$(FORLIB) \
-    $(FORUILIB)
+    $(FORUILIB) \
+    $(ICUINLIB) \
+	$(ICUUCLIB) \
+	$(ICUDATALIB)
 	
 SHL1LIBS=$(LIB3TARGET) $(LIB4TARGET)
 
@@ -124,9 +126,10 @@ DEFLIB1NAME= $(LIB3TARGET:b) $(LIB4TARGET:b)
 SHL1RES=    $(RCTARGET)
 .ENDIF
 
-.IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+=-framework CoreFoundation
-.ENDIF		# "$(GUIBASE)"=="java"
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS += \
+	-framework CoreFoundation
+.ENDIF		# "$(GUIBASE)" == "java"
 
 # --- Linken der Applikation ---------------------------------------
 
@@ -144,6 +147,7 @@ LIB3FILES=	\
 	$(SLB)$/dbgui.lib \
 	$(SLB)$/pagedlg.lib \
 	$(SLB)$/drawfunc.lib \
+	$(SLB)$/sidebar.lib \
 	$(SLB)$/navipi.lib
 
 LIB3FILES+= \
@@ -159,7 +163,7 @@ LIB4FILES=	\
 
 SHL2TARGET= scd$(DLLPOSTFIX)
 SHL2IMPLIB= scdimp
-SHL2VERSIONMAP= scd.map
+SHL2VERSIONMAP=$(SOLARENV)/src/component.map
 SHL2DEF=$(MISC)$/$(SHL2TARGET).def
 DEF2NAME=		$(SHL2TARGET)
 
@@ -203,71 +207,21 @@ SHL6STDLIBS= \
 	$(SVTOOLLIB)	\
 	$(SVLLIB)		\
 	$(SVXCORELIB)		\
-	$(SVXMSFILTERLIB)		\
+	$(EDITENGLIB)		\
+	$(MSFILTERLIB)		\
 	$(SVXLIB)		\
-	$(GOODIESLIB)	\
     $(BASEGFXLIB) \
+	$(DRAWINGLAYERLIB) \
 	$(VCLLIB)		\
 	$(CPPULIB)		\
 	$(CPPUHELPERLIB)	\
 	$(COMPHELPERLIB)	\
-	$(UCBHELPERLIB)	\
 	$(TKLIB)		\
 	$(VOSLIB)		\
 	$(SALLIB)		\
 	$(TOOLSLIB)	\
-	$(I18NISOLANGLIB) \
 	$(UNOTOOLSLIB) \
 	$(SOTLIB)		\
-	$(XMLOFFLIB)	\
-	$(DBTOOLSLIB)	\
-	$(AVMEDIALIB)   \
-	$(OOXLIB)       \
-	$(SAXLIB) \
-    $(FORLIB)
-
-# xlsx filter
-LIB7TARGET = $(SLB)$/xlsx2.lib
-LIB7OBJFILES = \
-		$(SLO)$/fapihelper.obj				\
-		$(SLO)$/fprogressbar.obj			\
-		$(SLO)$/ftools.obj
-
-SHL7TARGET= xlsx$(DLLPOSTFIX)
-SHL7IMPLIB= xlsximp
-SHL7LIBS= \
-	$(LIB7TARGET) \
-	$(SLB)$/xlsx.lib
-SHL7VERSIONMAP= xlsx.map
-SHL7DEF=$(MISC)$/$(SHL7TARGET).def
-DEF7NAME= $(SHL7TARGET)
-SHL7DEPN=$(SHL1TARGETN) $(LIB7TARGETN)
-SHL7STDLIBS= \
-	$(ISCLIB) \
-	$(BASICLIB)	\
-	$(SFXLIB)		\
-	$(SVTOOLLIB)	\
-	$(SVLLIB)		\
-	$(SVXCORELIB)		\
-	$(SVXMSFILTERLIB)		\
-	$(SVXLIB)		\
-	$(GOODIESLIB)	\
-    $(BASEGFXLIB) \
-	$(VCLLIB)		\
-	$(CPPULIB)		\
-	$(CPPUHELPERLIB)	\
-	$(COMPHELPERLIB)	\
-	$(UCBHELPERLIB)	\
-	$(TKLIB)		\
-	$(VOSLIB)		\
-	$(SALLIB)		\
-	$(TOOLSLIB)	\
-	$(I18NISOLANGLIB) \
-	$(UNOTOOLSLIB) \
-	$(SOTLIB)		\
-	$(XMLOFFLIB)	\
-	$(DBTOOLSLIB)	\
-	$(AVMEDIALIB)   \
 	$(OOXLIB)       \
 	$(SAXLIB) \
     $(FORLIB)
@@ -282,6 +236,7 @@ DEF8NAME=$(SHL8TARGET)
 
 SHL8STDLIBS= \
 			$(ISCLIB) \
+        	$(EDITENGLIB)		\
             $(SVXCORELIB) \
             $(SVXLIB) \
             $(SFX2LIB) \
@@ -294,8 +249,9 @@ SHL8STDLIBS= \
             $(I18NISOLANGLIB) \
 			$(COMPHELPERLIB) \
 			$(CPPULIB) \
-            $(SALLIB)
-
+            $(SALLIB) \
+            $(FORLIB) \
+            $(FORUILIB)
 .IF "$(ENABLE_LAYOUT)" == "TRUE"
 SHL8STDLIBS+=$(TKLIB)
 .ENDIF # ENABLE_LAYOUT == TRUE
@@ -342,30 +298,23 @@ LIB8OBJFILES = \
 		$(SLO)$/filldlg.obj			\
 		$(SLO)$/delcodlg.obj		\
 		$(SLO)$/delcldlg.obj		\
-		$(SLO)$/datafdlg.obj		\
 		$(SLO)$/dapitype.obj	\
 		$(SLO)$/dapidata.obj	\
 		$(SLO)$/crdlg.obj			\
 		$(SLO)$/scuiasciiopt.obj	\
-		$(SLO)$/langchooser.obj	\
+		$(SLO)$/textimportoptions.obj	\
 		$(SLO)$/scuiautofmt.obj	\
 	    $(SLO)$/dpgroupdlg.obj	\
 		$(SLO)$/editfield.obj
-
-.IF "$(ENABLE_VBA)"=="YES"
 
 TARGET_VBA=vbaobj
 SHL9TARGET=$(TARGET_VBA)$(DLLPOSTFIX).uno
 SHL9IMPLIB=	i$(TARGET_VBA)
 
-SHL9VERSIONMAP=$(TARGET_VBA).map
+SHL9VERSIONMAP=$(SOLARENV)/src/component.map
 SHL9DEF=$(MISC)$/$(SHL9TARGET).def
 DEF9NAME=$(SHL9TARGET)
-.IF "$(VBA_EXTENSION)"=="YES"
-SHL9RPATH=OXT
-.ELSE
 SHL9RPATH=OOO
-.ENDIF
 
 SHL9STDLIBS= \
 		$(VBAHELPERLIB) \
@@ -378,13 +327,15 @@ SHL9STDLIBS= \
 		$(SALLIB)\
 		$(BASICLIB)	\
 		$(SFXLIB)	\
+    	$(EDITENGLIB)		\
 		$(SVXCORELIB)	\
 		$(SVTOOLLIB)    \
 		$(SVLLIB) \
 		$(ISCLIB) \
         $(VCLLIB) \
         $(TKLIB) \
-	    $(SVXMSFILTERLIB)		\
+	    $(MSFILTERLIB)		\
+	    $(UNOTOOLSLIB)		\
         $(FORLIB)
 
 SHL9DEPN=$(SHL1TARGETN) $(SHL8TARGETN)
@@ -396,19 +347,28 @@ SHL9LIBS=$(SLB)$/$(TARGET_VBA).lib
     LIBCOMPNAME=$(COMMONBIN)$/$(SHL9TARGET)$(DLLPOST)
 .ENDIF
 
-.ENDIF
- 
-
 # --- Targets -------------------------------------------------------------
 
 .INCLUDE :  target.mk
 
-COMP=
-.IF "$(VBA_EXTENSION)"=="YES"
-    COMP=build_extn
-.ENDIF
-
 ALLTAR:	$(MISC)$/linkinc.ls  $(COMP)
 
-build_extn : $(SHL9TARGETN)
-	$(PERL) createExtPackage.pl $(COMMONBIN)$/vbaapi.oxt  $(SOLARBINDIR)$/oovbaapi.rdb $(LIBCOMPNAME)
+ALLTAR : $(MISC)/sc.component $(MISC)/scd.component $(MISC)/vbaobj.component
+
+$(MISC)/sc.component .ERRREMOVE : $(SOLARENV)/bin/createcomponent.xslt \
+        sc.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL1TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt sc.component
+
+$(MISC)/scd.component .ERRREMOVE : $(SOLARENV)/bin/createcomponent.xslt \
+        scd.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL2TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt scd.component
+
+$(MISC)/vbaobj.component .ERRREMOVE : $(SOLARENV)/bin/createcomponent.xslt \
+        vbaobj.component
+    $(XSLTPROC) --nonet --stringparam uri \
+        '$(COMPONENTPREFIX_BASIS_NATIVE)$(SHL9TARGETN:f)' -o $@ \
+        $(SOLARENV)/bin/createcomponent.xslt vbaobj.component

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sc.hxx"
@@ -35,13 +38,13 @@
 #include <com/sun/star/embed/EmbedMisc.hpp>
 
 #include "scitems.hxx"
-#include <svx/boxitem.hxx>
-#include <svx/brshitem.hxx>
-#include <svx/editdata.hxx>
+#include <editeng/boxitem.hxx>
+#include <editeng/brshitem.hxx>
+#include <editeng/editdata.hxx>
 #include <svtools/colorcfg.hxx>
 #include <svx/rotmodit.hxx>
-#include <svx/shaditem.hxx>
-#include <svx/svxfont.hxx>
+#include <editeng/shaditem.hxx>
+#include <editeng/svxfont.hxx>
 #include <svx/svdoole2.hxx>
 #include <tools/poly.hxx>
 #include <vcl/svapp.hxx>
@@ -83,26 +86,6 @@ static ColorData nAuthorColor[ SC_AUTHORCOLORCOUNT ] = {
 					COL_GREEN,			COL_RED,			COL_BLUE,
 					COL_BROWN,			COL_MAGENTA,		COL_CYAN };
 
-//	Hilfsklasse, fuer die Farbzuordnung,
-//	um nicht mehrfach hintereinander denselben User aus der Liste zu suchen
-
-class ScActionColorChanger
-{
-private:
-	const ScAppOptions&		rOpt;
-	const ScStrCollection&	rUsers;
-	String					aLastUserName;
-	USHORT					nLastUserIndex;
-	ColorData				nColor;
-
-public:
-				ScActionColorChanger( const ScChangeTrack& rTrack );
-				~ScActionColorChanger() {}
-
-	void		Update( const ScChangeAction& rAction );
-	ColorData	GetColor() const	{ return nColor; }
-};
-
 //------------------------------------------------------------------
 
 ScActionColorChanger::ScActionColorChanger( const ScChangeTrack& rTrack ) :
@@ -143,7 +126,7 @@ void ScActionColorChanger::Update( const ScChangeAction& rAction )
 		{
 			aLastUserName = rAction.GetUser();
 			StrData aData(aLastUserName);
-			USHORT nIndex;
+			sal_uInt16 nIndex;
 			if (!rUsers.Search(&aData, nIndex))
 			{
 				// empty string is possible if a name wasn't found while saving a 5.0 file
@@ -184,25 +167,25 @@ ScOutputData::ScOutputData( OutputDevice* pNewDev, ScOutputType eNewType,
 	pEditObj( NULL ),
 	pViewShell( NULL ),
 	pDrawView( NULL ), // #114135#
-	bEditMode( FALSE ),
-	bMetaFile( FALSE ),
-	bSingleGrid( FALSE ),
-	bPagebreakMode( FALSE ),
-	bSolidBackground( FALSE ),
-	bUseStyleColor( FALSE ),
+	bEditMode( sal_False ),
+	bMetaFile( sal_False ),
+	bSingleGrid( sal_False ),
+	bPagebreakMode( sal_False ),
+	bSolidBackground( sal_False ),
+	bUseStyleColor( sal_False ),
 	bForceAutoColor( SC_MOD()->GetAccessOptions().GetIsAutomaticFontColor() ),
-	bSyntaxMode( FALSE ),
+	bSyntaxMode( sal_False ),
 	pValueColor( NULL ),
 	pTextColor( NULL ),
 	pFormulaColor( NULL ),
 	aGridColor( COL_BLACK ),
-	bShowNullValues( TRUE ),
-	bShowFormulas( FALSE ),
-	bShowSpellErrors( FALSE ),
-	bMarkClipped( FALSE ),			// FALSE fuer Drucker/Metafile etc.
-	bSnapPixel( FALSE ),
-	bAnyRotated( FALSE ),
-	bAnyClipped( FALSE ),
+	bShowNullValues( sal_True ),
+	bShowFormulas( sal_False ),
+	bShowSpellErrors( sal_False ),
+	bMarkClipped( sal_False ),			// sal_False fuer Drucker/Metafile etc.
+	bSnapPixel( sal_False ),
+	bAnyRotated( sal_False ),
+	bAnyClipped( sal_False ),
 	mpTargetPaintWindow(0) // #i74769# use SdrPaintWindow direct
 #ifdef USE_JAVA
 	, mpGridWindow( NULL )
@@ -266,27 +249,27 @@ void ScOutputData::SetGridColor( const Color& rColor )
 	aGridColor = rColor;
 }
 
-void ScOutputData::SetMarkClipped( BOOL bSet )
+void ScOutputData::SetMarkClipped( sal_Bool bSet )
 {
 	bMarkClipped = bSet;
 }
 
-void ScOutputData::SetShowNullValues( BOOL bSet )
+void ScOutputData::SetShowNullValues( sal_Bool bSet )
 {
 	bShowNullValues = bSet;
 }
 
-void ScOutputData::SetShowFormulas( BOOL bSet )
+void ScOutputData::SetShowFormulas( sal_Bool bSet )
 {
 	bShowFormulas = bSet;
 }
 
-void ScOutputData::SetShowSpellErrors( BOOL bSet )
+void ScOutputData::SetShowSpellErrors( sal_Bool bSet )
 {
 	bShowSpellErrors = bSet;
 }
 
-void ScOutputData::SetSnapPixel( BOOL bSet )
+void ScOutputData::SetSnapPixel( sal_Bool bSet )
 {
 	bSnapPixel = bSet;
 }
@@ -295,20 +278,20 @@ void ScOutputData::SetEditCell( SCCOL nCol, SCROW nRow )
 {
 	nEditCol = nCol;
 	nEditRow = nRow;
-	bEditMode = TRUE;
+	bEditMode = sal_True;
 }
 
-void ScOutputData::SetMetaFileMode( BOOL bNewMode )
+void ScOutputData::SetMetaFileMode( sal_Bool bNewMode )
 {
 	bMetaFile = bNewMode;
 }
 
-void ScOutputData::SetSingleGrid( BOOL bNewMode )
+void ScOutputData::SetSingleGrid( sal_Bool bNewMode )
 {
 	bSingleGrid = bNewMode;
 }
 
-void ScOutputData::SetSyntaxMode( BOOL bNewMode )
+void ScOutputData::SetSyntaxMode( sal_Bool bNewMode )
 {
 	bSyntaxMode = bNewMode;
 	if (bNewMode)
@@ -320,7 +303,7 @@ void ScOutputData::SetSyntaxMode( BOOL bNewMode )
 		}
 }
 
-void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
+void ScOutputData::DrawGrid( sal_Bool bGrid, sal_Bool bPage )
 {
 	SCCOL nX;
 	SCROW nY;
@@ -330,12 +313,12 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
     ScBreakType nBreak    = BREAK_NONE;
     ScBreakType nBreakOld = BREAK_NONE;
 
-	BOOL bSingle;
+	sal_Bool bSingle;
 	Color aPageColor;
 	Color aManualColor;
 
 	if (bPagebreakMode)
-		bPage = FALSE;			// keine "normalen" Umbrueche ueber volle Breite/Hoehe
+		bPage = sal_False;			// keine "normalen" Umbrueche ueber volle Breite/Hoehe
 
 	//!	um den einen Pixel sieht das Metafile (oder die Druck-Ausgabe) anders aus
 	//!	als die Bildschirmdarstellung, aber wenigstens passen Druck und Metafile zusammen
@@ -376,7 +359,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 	{
 		SCCOL nXplus1 = nX+1;
 		SCCOL nXplus2 = nX+2;
-		USHORT nWidth = pRowInfo[0].pCellInfo[nXplus1].nWidth;
+		sal_uInt16 nWidth = pRowInfo[0].pCellInfo[nXplus1].nWidth;
 		if (nWidth)
 		{
 			nPosX += nWidth * nLayoutSign;
@@ -387,7 +370,6 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 				SCCOL nCol = nXplus1;
 				while (nCol <= MAXCOL)
 				{
-					BYTE nDocFl = pDoc->GetColFlags( nCol, nTab );
                     nBreak = pDoc->HasColBreak(nCol, nTab);
                     bool bHidden = pDoc->ColHidden(nCol, nTab);
 
@@ -405,7 +387,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 				}
 			}
 
-			BOOL bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
+			sal_Bool bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
 
 			//!	Mit dieser Abfrage wird zuviel weggelassen, wenn ein automatischer
 			//!	Umbruch mitten in den Wiederholungsspalten liegt.
@@ -415,13 +397,13 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			if ( eType == OUTTYPE_PRINTER && !bMetaFile )
 			{
 				if ( nX == MAXCOL )
-					bDraw = FALSE;
+					bDraw = sal_False;
                 else if (pDoc->HasColBreak(nXplus1, nTab))
-					bDraw = FALSE;
+					bDraw = sal_False;
 			}
 #endif
 
-			USHORT nWidthXplus2 = pRowInfo[0].pCellInfo[nXplus2].nWidth;
+			sal_uInt16 nWidthXplus2 = pRowInfo[0].pCellInfo[nXplus2].nWidth;
 			bSingle = bSingleGrid;									//! in Fillinfo holen !!!!!
 			if ( nX<MAXCOL && !bSingle )
 			{
@@ -429,9 +411,9 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 				for (nArrY=1; nArrY+1<nArrCount && !bSingle; nArrY++)
 				{
 					if (pRowInfo[nArrY].pCellInfo[nXplus2].bHOverlapped)
-						bSingle = TRUE;
+						bSingle = sal_True;
 					if (pRowInfo[nArrY].pCellInfo[nXplus1].bHideGrid)
-						bSingle = TRUE;
+						bSingle = sal_True;
 				}
 			}
 
@@ -450,7 +432,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 						RowInfo* pThisRowInfo = &pRowInfo[nArrY];
 						nNextY = nPosY + pThisRowInfo->nHeight;
 
-						BOOL bHOver = pThisRowInfo->pCellInfo[nXplus1].bHideGrid;
+						sal_Bool bHOver = pThisRowInfo->pCellInfo[nXplus1].bHideGrid;
 						if (!bHOver)
 						{
 							if (nWidthXplus2)
@@ -495,6 +477,8 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 										//	Horizontale Linien
 										//
 
+    bool bHiddenRow = true;
+    SCROW nHiddenEndRow = -1;
 	nPosY = nScrY;
 	for (nArrY=1; nArrY+1<nArrCount; nArrY++)
 	{
@@ -509,9 +493,17 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			{
                 for (SCROW i = nYplus1; i <= MAXROW; ++i)
                 {
+                    if (i > nHiddenEndRow)
+                        bHiddenRow = pDoc->RowHidden(i, nTab, nHiddenEndRow);
+                    /* TODO: optimize the row break thing for large hidden 
+                     * segments where HasRowBreak() has to be called 
+                     * nevertheless for each row, as a row break is drawn also 
+                     * for hidden rows, above them. This needed to be done only 
+                     * once per hidden segment, maybe giving manual breaks 
+                     * priority. Something like GetNextRowBreak() and 
+                     * GetNextManualRowBreak(). */
                     nBreak = pDoc->HasRowBreak(i, nTab);
-                    bool bHidden = pDoc->RowHidden(i, nTab);
-                    if (nBreak || !bHidden)
+                    if (!bHiddenRow || nBreak)
                         break;
                 }
 
@@ -524,7 +516,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 				}
 			}
 
-			BOOL bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
+			sal_Bool bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
 
 			//!	Mit dieser Abfrage wird zuviel weggelassen, wenn ein automatischer
 			//!	Umbruch mitten in den Wiederholungszeilen liegt.
@@ -534,18 +526,18 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			if ( eType == OUTTYPE_PRINTER && !bMetaFile )
 			{
 				if ( nY == MAXROW )
-					bDraw = FALSE;
+					bDraw = sal_False;
                 else if (pDoc->HasRowBreak(nYplus1, nTab))
-					bDraw = FALSE;
+					bDraw = sal_False;
 			}
 #endif
 
-			BOOL bNextYisNextRow = (pRowInfo[nArrYplus1].nRowNo == nYplus1);
+			sal_Bool bNextYisNextRow = (pRowInfo[nArrYplus1].nRowNo == nYplus1);
 			bSingle = !bNextYisNextRow;				// Hidden
 			for (SCCOL i=nX1; i<=nX2 && !bSingle; i++)
 			{
 				if (pRowInfo[nArrYplus1].pCellInfo[i+1].bVOverlapped)
-					bSingle = TRUE;
+					bSingle = sal_True;
 			}
 
 			if (bDraw)
@@ -564,7 +556,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 						nNextX = nPosX + pRowInfo[0].pCellInfo[i+1].nWidth * nLayoutSign;
 						if (nNextX != nPosX)								// sichtbar
 						{
-							BOOL bVOver;
+							sal_Bool bVOver;
 							if ( bNextYisNextRow )
 								bVOver = pRowInfo[nArrYplus1].pCellInfo[i+1].bVOverlapped;
 							else
@@ -604,15 +596,15 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 
 void ScOutputData::SetPagebreakMode( ScPageBreakData* pPageData )
 {
-	bPagebreakMode = TRUE;
+	bPagebreakMode = sal_True;
 	if (!pPageData)
 		return;						// noch nicht initialisiert -> alles "nicht gedruckt"
 
 	//	gedruckten Bereich markieren
-	//	(in FillInfo ist schon alles auf FALSE initialisiert)
+	//	(in FillInfo ist schon alles auf sal_False initialisiert)
 
-    USHORT nRangeCount = sal::static_int_cast<USHORT>(pPageData->GetCount());
-	for (USHORT nPos=0; nPos<nRangeCount; nPos++)
+    sal_uInt16 nRangeCount = sal::static_int_cast<sal_uInt16>(pPageData->GetCount());
+	for (sal_uInt16 nPos=0; nPos<nRangeCount; nPos++)
 	{
 		ScRange aRange = pPageData->GetData( nPos ).GetPrintRange();
 
@@ -628,7 +620,7 @@ void ScOutputData::SetPagebreakMode( ScPageBreakData* pPageData )
 										   pThisRowInfo->nRowNo <= nEndY )
 			{
 				for (SCCOL nX=nStartX; nX<=nEndX; nX++)
-					pThisRowInfo->pCellInfo[nX+1].bPrinted = TRUE;
+					pThisRowInfo->pCellInfo[nX+1].bPrinted = sal_True;
 			}
 		}
 	}
@@ -665,11 +657,11 @@ void ScOutputData::FindRotated()
 
 				if ( pPattern )		// Spalte nicht ausgeblendet
 				{
-					BYTE nDir = pPattern->GetRotateDir( pCondSet );
+					sal_uInt8 nDir = pPattern->GetRotateDir( pCondSet );
 					if (nDir != SC_ROTDIR_NONE)
 					{
 						pInfo->nRotateDir = nDir;
-						bAnyRotated = TRUE;
+						bAnyRotated = sal_True;
 					}
 				}
 			}
@@ -679,12 +671,12 @@ void ScOutputData::FindRotated()
 
 //	----------------------------------------------------------------------------
 
-USHORT lcl_GetRotateDir( ScDocument* pDoc, SCCOL nCol, SCROW nRow, SCTAB nTab )
+sal_uInt16 lcl_GetRotateDir( ScDocument* pDoc, SCCOL nCol, SCROW nRow, SCTAB nTab )
 {
 	const ScPatternAttr* pPattern = pDoc->GetPattern( nCol, nRow, nTab );
 	const SfxItemSet* pCondSet = pDoc->GetCondResult( nCol, nRow, nTab );
 
-	USHORT nRet = SC_ROTDIR_NONE;
+	sal_uInt16 nRet = SC_ROTDIR_NONE;
 
 	long nAttrRotate = pPattern->GetRotateVal( pCondSet );
 	if ( nAttrRotate )
@@ -719,7 +711,7 @@ const SvxBrushItem* lcl_FindBackground( ScDocument* pDoc, SCCOL nCol, SCROW nRow
 	const SvxBrushItem* pBackground = (const SvxBrushItem*)
 							&pPattern->GetItem( ATTR_BACKGROUND, pCondSet );
 
-	USHORT nDir = lcl_GetRotateDir( pDoc, nCol, nRow, nTab );
+	sal_uInt16 nDir = lcl_GetRotateDir( pDoc, nCol, nRow, nTab );
 
 	//	CENTER wird wie RIGHT behandelt...
 	if ( nDir == SC_ROTDIR_RIGHT || nDir == SC_ROTDIR_CENTER )
@@ -752,12 +744,12 @@ const SvxBrushItem* lcl_FindBackground( ScDocument* pDoc, SCCOL nCol, SCROW nRow
 
 //	----------------------------------------------------------------------------
 
-BOOL lcl_EqualBack( const RowInfo& rFirst, const RowInfo& rOther,
-					SCCOL nX1, SCCOL nX2, BOOL bShowProt, BOOL bPagebreakMode )
+sal_Bool lcl_EqualBack( const RowInfo& rFirst, const RowInfo& rOther,
+					SCCOL nX1, SCCOL nX2, sal_Bool bShowProt, sal_Bool bPagebreakMode )
 {
 	if ( rFirst.bChanged   != rOther.bChanged ||
 		 rFirst.bEmptyBack != rOther.bEmptyBack )
-		return FALSE;
+		return sal_False;
 
 	SCCOL nX;
 	if ( bShowProt )
@@ -768,59 +760,41 @@ BOOL lcl_EqualBack( const RowInfo& rFirst, const RowInfo& rOther,
 			const ScPatternAttr* pPat2 = rOther.pCellInfo[nX+1].pPatternAttr;
 			if ( !pPat1 || !pPat2 ||
 					&pPat1->GetItem(ATTR_PROTECTION) != &pPat2->GetItem(ATTR_PROTECTION) )
-				return FALSE;
+				return sal_False;
 		}
 	}
 	else
 	{
 		for ( nX=nX1; nX<=nX2; nX++ )
 			if ( rFirst.pCellInfo[nX+1].pBackground != rOther.pCellInfo[nX+1].pBackground )
-				return FALSE;
+				return sal_False;
 	}
 
 	if ( rFirst.nRotMaxCol != SC_ROTMAX_NONE || rOther.nRotMaxCol != SC_ROTMAX_NONE )
 		for ( nX=nX1; nX<=nX2; nX++ )
 			if ( rFirst.pCellInfo[nX+1].nRotateDir != rOther.pCellInfo[nX+1].nRotateDir )
-				return FALSE;
+				return sal_False;
 
 	if ( bPagebreakMode )
 		for ( nX=nX1; nX<=nX2; nX++ )
 			if ( rFirst.pCellInfo[nX+1].bPrinted != rOther.pCellInfo[nX+1].bPrinted )
-				return FALSE;
+				return sal_False;
 
-	return TRUE;
+	return sal_True;
 }
-
-#ifdef USE_sc-cellbackground-over-gridlines_PATCH
-void ScOutputData::DrawDocumentBackground()
-{
-    if ( !bSolidBackground )
-        return;
-
-    Size aOnePixel = pDev->PixelToLogic(Size(1,1));
-    long nOneX = aOnePixel.Width();
-    long nOneY = aOnePixel.Height();
-    Rectangle aRect(nScrX - nOneX, nScrY - nOneY, nScrX + nScrW, nScrY + nScrH);
-    Color aBgColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
-    pDev->SetFillColor(aBgColor);
-    pDev->DrawRect(aRect);
-}
-#endif	// USE_sc-cellbackground-over-gridlines_PATCH
 
 void ScOutputData::DrawBackground()
 {
 	FindRotated();				//! von aussen ?
 
-#ifndef USE_sc-cellbackground-over-gridlines_PATCH
 	ScModule* pScMod = SC_MOD();
 
 	// used only if bSolidBackground is set (only for ScGridWindow):
     Color aBgColor( pScMod->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
-#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 
 #ifdef USE_JAVA
-    Color aNativeHighlightColor( COL_TRANSPARENT );
-    PolyPolygon aNativeHighlightPolyPoly;
+	Color aNativeHighlightColor( COL_TRANSPARENT );
+	PolyPolygon aNativeHighlightPolyPoly;
 	if ( mpGridWindow )
 	{
     	aNativeHighlightColor = mpGridWindow->GetSettings().GetStyleSettings().GetHighlightColor();
@@ -848,11 +822,11 @@ void ScOutputData::DrawBackground()
 
 	pDev->SetLineColor();
 
-	BOOL bShowProt = bSyntaxMode && pDoc->IsTabProtected(nTab);
-	BOOL bDoAll = bShowProt || bPagebreakMode || bSolidBackground;
+	sal_Bool bShowProt = bSyntaxMode && pDoc->IsTabProtected(nTab);
+	sal_Bool bDoAll = bShowProt || bPagebreakMode || bSolidBackground;
 
-	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed TRUE)
-	BOOL bCellContrast = bUseStyleColor &&
+	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed sal_True)
+	sal_Bool bCellContrast = bUseStyleColor &&
 			Application::GetSettings().GetStyleSettings().GetHighContrastMode();
 
 	long nPosY = nScrY;
@@ -882,11 +856,7 @@ void ScOutputData::DrawBackground()
 				long nPosX = nScrX;
 				if ( bLayoutRTL )
 					nPosX += nMirrorW - nOneX;
-#ifndef USE_sc-cellbackground-over-gridlines_PATCH
 				aRect = Rectangle( nPosX,nPosY, nPosX,nPosY+nRowHeight-nOneY );
-#else	// !USE_sc-cellbackground-over-gridlines_PATCH
-				aRect = Rectangle( nPosX, nPosY-nOneY, nPosX, nPosY+nRowHeight-nOneY );
-#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 
 				const SvxBrushItem* pOldBackground = NULL;
 				const SvxBrushItem* pBackground;
@@ -934,10 +904,8 @@ void ScOutputData::DrawBackground()
 						if (pOldBackground)				// ==0 if hidden
 						{
 							Color aBackCol = pOldBackground->GetColor();
-#ifndef USE_sc-cellbackground-over-gridlines_PATCH
 							if ( bSolidBackground && aBackCol.GetTransparency() )
 								aBackCol = aBgColor;
-#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 							if ( !aBackCol.GetTransparency() )		//! partial transparency?
 							{
 								pDev->SetFillColor( aBackCol );
@@ -962,11 +930,7 @@ void ScOutputData::DrawBackground()
 							}
 #endif	// USE_JAVA
 						}
-#ifndef USE_sc-cellbackground-over-gridlines_PATCH
 						aRect.Left() = nPosX;
-#else	// !USE_sc-cellbackground-over-gridlines_PATCH
-						aRect.Left() = nPosX - nSignedOneX;
-#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 						pOldBackground = pBackground;
 					}
 					nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
@@ -975,10 +939,8 @@ void ScOutputData::DrawBackground()
 				if (pOldBackground)
 				{
 					Color aBackCol = pOldBackground->GetColor();
-#ifndef USE_sc-cellbackground-over-gridlines_PATCH
 					if ( bSolidBackground && aBackCol.GetTransparency() )
 						aBackCol = aBgColor;
-#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 					if ( !aBackCol.GetTransparency() )		//! partial transparency?
 					{
 						pDev->SetFillColor( aBackCol );
@@ -1012,16 +974,16 @@ void ScOutputData::DrawBackground()
 
 void ScOutputData::DrawShadow()
 {
-	DrawExtraShadow( FALSE, FALSE, FALSE, FALSE );
+	DrawExtraShadow( sal_False, sal_False, sal_False, sal_False );
 }
 
-void ScOutputData::DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBottom)
+void ScOutputData::DrawExtraShadow(sal_Bool bLeft, sal_Bool bTop, sal_Bool bRight, sal_Bool bBottom)
 {
 	pDev->SetLineColor();
 
 	const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed TRUE)
-	BOOL bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
+	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed sal_True)
+	sal_Bool bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
 	Color aAutoTextColor;
 	if ( bCellContrast )
         aAutoTextColor.SetColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::FONTCOLOR).nColor );
@@ -1038,8 +1000,8 @@ void ScOutputData::DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBot
 	long nPosY = nScrY - pRowInfo[0].nHeight;
 	for (SCSIZE nArrY=0; nArrY<nArrCount; nArrY++)
 	{
-		BOOL bCornerY = ( nArrY == 0 ) || ( nArrY+1 == nArrCount );
-		BOOL bSkipY = ( nArrY==0 && !bTop ) || ( nArrY+1 == nArrCount && !bBottom );
+		sal_Bool bCornerY = ( nArrY == 0 ) || ( nArrY+1 == nArrCount );
+		sal_Bool bSkipY = ( nArrY==0 && !bTop ) || ( nArrY+1 == nArrCount && !bBottom );
 
 		RowInfo* pThisRowInfo = &pRowInfo[nArrY];
 		long nRowHeight = pThisRowInfo->nHeight;
@@ -1049,10 +1011,10 @@ void ScOutputData::DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBot
 			long nPosX = nInitPosX - pRowInfo[0].pCellInfo[nX1].nWidth * nLayoutSign;
 			for (SCCOL nArrX=nX1; nArrX<=nX2+2; nArrX++)
 			{
-				BOOL bCornerX = ( nArrX==nX1 || nArrX==nX2+2 );
-				BOOL bSkipX = ( nArrX==nX1 && !bLeft ) || ( nArrX==nX2+2 && !bRight );
+				sal_Bool bCornerX = ( nArrX==nX1 || nArrX==nX2+2 );
+				sal_Bool bSkipX = ( nArrX==nX1 && !bLeft ) || ( nArrX==nX2+2 && !bRight );
 
-				for (USHORT nPass=0; nPass<2; nPass++)			// horizontal / vertikal
+				for (sal_uInt16 nPass=0; nPass<2; nPass++)			// horizontal / vertikal
 				{
 					const SvxShadowItem* pAttr = nPass ?
 							pThisRowInfo->pCellInfo[nArrX].pVShadowOrigin :
@@ -1063,10 +1025,10 @@ void ScOutputData::DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBot
 								pThisRowInfo->pCellInfo[nArrX].eVShadowPart :
 								pThisRowInfo->pCellInfo[nArrX].eHShadowPart;
 
-						BOOL bDo = TRUE;
+						sal_Bool bDo = sal_True;
 						if ( (nPass==0 && bCornerX) || (nPass==1 && bCornerY) )
 							if ( ePart != SC_SHADOW_CORNER )
-								bDo = FALSE;
+								bDo = sal_False;
 
 						if (bDo)
 						{
@@ -1223,20 +1185,20 @@ long lclGetSnappedY( OutputDevice& rDev, long nPosY, bool bSnapPixel )
     return (bSnapPixel && nPosY) ? rDev.PixelToLogic( rDev.LogicToPixel( Size( 0, nPosY ) ) ).Height() : nPosY;
 }
 
-size_t lclGetArrayColFromCellInfoX( USHORT nCellInfoX, USHORT nCellInfoFirstX, USHORT nCellInfoLastX, bool bRTL )
+size_t lclGetArrayColFromCellInfoX( sal_uInt16 nCellInfoX, sal_uInt16 nCellInfoFirstX, sal_uInt16 nCellInfoLastX, bool bRTL )
 {
     return static_cast< size_t >( bRTL ? (nCellInfoLastX + 2 - nCellInfoX) : (nCellInfoX - nCellInfoFirstX) );
 }
 
 void ScOutputData::DrawFrame()
 {
-	ULONG nOldDrawMode = pDev->GetDrawMode();
+	sal_uLong nOldDrawMode = pDev->GetDrawMode();
 
 	Color aSingleColor;
-	BOOL bUseSingleColor = FALSE;
+	sal_Bool bUseSingleColor = sal_False;
 	const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed TRUE)
-	BOOL bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
+	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed sal_True)
+	sal_Bool bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
 
 	//	#107519# if a Calc OLE object is embedded in Draw/Impress, the VCL DrawMode is used
 	//	for display mode / B&W printing. The VCL DrawMode handling doesn't work for lines
@@ -1247,18 +1209,18 @@ void ScOutputData::DrawFrame()
 	{
 		pDev->SetDrawMode( nOldDrawMode & (~DRAWMODE_WHITEFILL) );
 		aSingleColor.SetColor( COL_BLACK );
-		bUseSingleColor = TRUE;
+		bUseSingleColor = sal_True;
 	}
 	else if ( ( nOldDrawMode & DRAWMODE_SETTINGSFILL ) && ( nOldDrawMode & DRAWMODE_SETTINGSLINE ) )
 	{
 		pDev->SetDrawMode( nOldDrawMode & (~DRAWMODE_SETTINGSFILL) );
 		aSingleColor = rStyleSettings.GetWindowTextColor();		// same as used in VCL for DRAWMODE_SETTINGSLINE
-		bUseSingleColor = TRUE;
+		bUseSingleColor = sal_True;
 	}
 	else if ( bCellContrast )
 	{
 		aSingleColor.SetColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::FONTCOLOR).nColor );
-		bUseSingleColor = TRUE;
+		bUseSingleColor = sal_True;
 	}
 
     const Color* pForceColor = bUseSingleColor ? &aSingleColor : 0;
@@ -1307,7 +1269,7 @@ void ScOutputData::DrawFrame()
     // set X offset for left-to-right sheets; for right-to-left sheets this is done after for() loop
     if( !bLayoutRTL )
         rArray.SetXOffset( nOldSnapX );
-    for( USHORT nInfoIdx = nX1; nInfoIdx <= nX2 + 2; ++nInfoIdx )
+    for( sal_uInt16 nInfoIdx = nX1; nInfoIdx <= nX2 + 2; ++nInfoIdx )
     {
         size_t nCol = lclGetArrayColFromCellInfoX( nInfoIdx, nX1, nX2, bLayoutRTL );
         long nNewPosX = nOldPosX + pRowInfo[ 0 ].pCellInfo[ nInfoIdx ].nWidth * nLayoutSign;
@@ -1351,13 +1313,13 @@ void ScOutputData::DrawFrame()
 //	Linie unter der Zelle
 
 const SvxBorderLine* lcl_FindHorLine( ScDocument* pDoc,
-						SCCOL nCol, SCROW nRow, SCTAB nTab, USHORT nRotDir,
-						BOOL bTopLine )
+						SCCOL nCol, SCROW nRow, SCTAB nTab, sal_uInt16 nRotDir,
+						sal_Bool bTopLine )
 {
 	if ( nRotDir != SC_ROTDIR_LEFT && nRotDir != SC_ROTDIR_RIGHT )
 		return NULL;
 
-	BOOL bFound = FALSE;
+	sal_Bool bFound = sal_False;
 	while (!bFound)
 	{
 		if ( nRotDir == SC_ROTDIR_LEFT )
@@ -1381,7 +1343,7 @@ const SvxBorderLine* lcl_FindHorLine( ScDocument* pDoc,
 		if ( !pPattern->GetRotateVal( pCondSet ) ||
 				((const SvxRotateModeItem&)pPattern->GetItem(
 					ATTR_ROTATE_MODE, pCondSet)).GetValue() == SVX_ROTATE_MODE_STANDARD )
-			bFound = TRUE;
+			bFound = sal_True;
 	}
 
 	if (bTopLine)
@@ -1499,8 +1461,8 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 	const SfxItemSet*	 pCondSet;
 
 	const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed TRUE)
-	BOOL bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
+	//	#105733# SvtAccessibilityOptions::GetIsForBorders is no longer used (always assumed sal_True)
+	sal_Bool bCellContrast = bUseStyleColor && rStyleSettings.GetHighContrastMode();
 
 	//	color (pForceColor) is determined externally, including DrawMode changes
 
@@ -1548,7 +1510,7 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 			{
 				if (nX==nX1) nPosX = nInitPosX;		// calculated individually for preceding positions
 
-                USHORT nArrX = nX + 1;
+                sal_uInt16 nArrX = nX + 1;
 
                 CellInfo* pInfo = &rThisRowInfo.pCellInfo[nArrX];
                 long nColWidth = pRowInfo[0].pCellInfo[nArrX].nWidth;
@@ -1706,7 +1668,7 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 			nX = nX1 > 0 ? (nX1-1) : static_cast<SCCOL>(0);
 			for (; nX<=nX2+1; nX++)			// sichtbarer Teil +- 1
 			{
-                USHORT nArrX = nX + 1;
+                sal_uInt16 nArrX = nX + 1;
                 CellInfo& rInfo = rThisRowInfo.pCellInfo[nArrX];
                 if ( rInfo.nRotateDir > SC_ROTDIR_STANDARD &&
                         !rInfo.bHOverlapped && !rInfo.bVOverlapped )
@@ -1720,17 +1682,17 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 
 					//	horizontal: angrenzende Linie verlaengern
 					//	(nur, wenn die gedrehte Zelle eine Umrandung hat)
-                    USHORT nDir = rInfo.nRotateDir;
+                    sal_uInt16 nDir = rInfo.nRotateDir;
                     if ( rArray.GetCellStyleTop( nCol, nRow ).Prim() && eRotMode != SVX_ROTATE_MODE_TOP )
                     {
-                        svx::frame::Style aStyle( lcl_FindHorLine( pDoc, nX, nY, nTab, nDir, TRUE ), nPPTY );
+                        svx::frame::Style aStyle( lcl_FindHorLine( pDoc, nX, nY, nTab, nDir, sal_True ), nPPTY );
                         rArray.SetCellStyleTop( nCol, nRow, aStyle );
                         if( nRow > 0 )
                             rArray.SetCellStyleBottom( nCol, nRow - 1, aStyle );
                     }
                     if ( rArray.GetCellStyleBottom( nCol, nRow ).Prim() && eRotMode != SVX_ROTATE_MODE_BOTTOM )
                     {
-                        svx::frame::Style aStyle( lcl_FindHorLine( pDoc, nX, nY, nTab, nDir, FALSE ), nPPTY );
+                        svx::frame::Style aStyle( lcl_FindHorLine( pDoc, nX, nY, nTab, nDir, sal_False ), nPPTY );
                         rArray.SetCellStyleBottom( nCol, nRow, aStyle );
                         if( nRow + 1 < rArray.GetRowCount() )
                             rArray.SetCellStyleTop( nCol, nRow + 1, aStyle );
@@ -1767,45 +1729,49 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 
 //	Drucker
 
-PolyPolygon ScOutputData::GetChangedArea()
+Region ScOutputData::GetChangedAreaRegion()
 {
-	PolyPolygon aPoly;
+    Region aRegion;
+    Rectangle aDrawingRect;
+    bool bHad(false);
+    long nPosY = nScrY;
+    SCSIZE nArrY;
 
-	Rectangle aDrawingRect;
-	aDrawingRect.Left() = nScrX;
-	aDrawingRect.Right() = nScrX+nScrW-1;
+    aDrawingRect.Left() = nScrX;
+    aDrawingRect.Right() = nScrX+nScrW-1;
 
-	BOOL	bHad	= FALSE;
-	long	nPosY	= nScrY;
-	SCSIZE	nArrY;
-	for (nArrY=1; nArrY+1<nArrCount; nArrY++)
-	{
-		RowInfo* pThisRowInfo = &pRowInfo[nArrY];
+    for(nArrY=1; nArrY+1<nArrCount; nArrY++)
+    {
+        RowInfo* pThisRowInfo = &pRowInfo[nArrY];
 
-		if ( pThisRowInfo->bChanged )
-		{
-			if (!bHad)
-			{
-				aDrawingRect.Top() = nPosY;
-				bHad = TRUE;
-			}
-			aDrawingRect.Bottom() = nPosY + pRowInfo[nArrY].nHeight - 1;
-		}
-		else if (bHad)
-		{
-			aPoly.Insert( Polygon( pDev->PixelToLogic(aDrawingRect) ) );
-			bHad = FALSE;
-		}
-		nPosY += pRowInfo[nArrY].nHeight;
-	}
+        if(pThisRowInfo->bChanged)
+        {
+            if(!bHad)
+            {
+                aDrawingRect.Top() = nPosY;
+                bHad = true;
+            }
 
-	if (bHad)
-		aPoly.Insert( Polygon( pDev->PixelToLogic(aDrawingRect) ) );
+            aDrawingRect.Bottom() = nPosY + pRowInfo[nArrY].nHeight - 1;
+        }
+        else if(bHad)
+        {
+            aRegion.Union(pDev->PixelToLogic(aDrawingRect));
+            bHad = false;
+        }
 
-    return aPoly;
+        nPosY += pRowInfo[nArrY].nHeight;
+    }
+
+    if(bHad)
+    {
+        aRegion.Union(pDev->PixelToLogic(aDrawingRect));
+    }
+
+    return aRegion;
 }
 
-BOOL ScOutputData::SetChangedClip()
+sal_Bool ScOutputData::SetChangedClip()
 {
 	PolyPolygon aPoly;
 
@@ -1813,7 +1779,7 @@ BOOL ScOutputData::SetChangedClip()
 	aDrawingRect.Left() = nScrX;
 	aDrawingRect.Right() = nScrX+nScrW-1;
 
-	BOOL	bHad	= FALSE;
+	sal_Bool	bHad	= sal_False;
 	long	nPosY	= nScrY;
 	SCSIZE	nArrY;
 	for (nArrY=1; nArrY+1<nArrCount; nArrY++)
@@ -1825,14 +1791,14 @@ BOOL ScOutputData::SetChangedClip()
 			if (!bHad)
 			{
 				aDrawingRect.Top() = nPosY;
-				bHad = TRUE;
+				bHad = sal_True;
 			}
 			aDrawingRect.Bottom() = nPosY + pRowInfo[nArrY].nHeight - 1;
 		}
 		else if (bHad)
 		{
 			aPoly.Insert( Polygon( pDev->PixelToLogic(aDrawingRect) ) );
-			bHad = FALSE;
+			bHad = sal_False;
 		}
 		nPosY += pRowInfo[nArrY].nHeight;
 	}
@@ -1840,7 +1806,7 @@ BOOL ScOutputData::SetChangedClip()
 	if (bHad)
 		aPoly.Insert( Polygon( pDev->PixelToLogic(aDrawingRect) ) );
 
-	BOOL bRet = (aPoly.Count() != 0);
+	sal_Bool bRet = (aPoly.Count() != 0);
 	if (bRet)
 		pDev->SetClipRegion(Region(aPoly));
 	return bRet;
@@ -1851,12 +1817,12 @@ void ScOutputData::FindChanged()
 	SCCOL	nX;
 	SCSIZE	nArrY;
 
-	BOOL bWasIdleDisabled = pDoc->IsIdleDisabled();
-	pDoc->DisableIdle( TRUE );
+	sal_Bool bWasIdleDisabled = pDoc->IsIdleDisabled();
+	pDoc->DisableIdle( sal_True );
 	for (nArrY=0; nArrY<nArrCount; nArrY++)
-		pRowInfo[nArrY].bChanged = FALSE;
+		pRowInfo[nArrY].bChanged = sal_False;
 
-	BOOL bProgress = FALSE;
+	sal_Bool bProgress = sal_False;
 	for (nArrY=0; nArrY<nArrCount; nArrY++)
 	{
 		RowInfo* pThisRowInfo = &pRowInfo[nArrY];
@@ -1869,22 +1835,22 @@ void ScOutputData::FindChanged()
 					ScFormulaCell* pFCell = (ScFormulaCell*)pCell;
 					if ( !bProgress && pFCell->GetDirty() )
 					{
-						ScProgress::CreateInterpretProgress( pDoc, TRUE );
-						bProgress = TRUE;
+						ScProgress::CreateInterpretProgress( pDoc, sal_True );
+						bProgress = sal_True;
 					}
 					if (!pFCell->IsRunning())
 					{
                         (void)pFCell->GetValue();
 						if (pFCell->IsChanged())
 						{
-							pThisRowInfo->bChanged = TRUE;
+							pThisRowInfo->bChanged = sal_True;
 							if ( pThisRowInfo->pCellInfo[nX+1].bMerged )
 							{
 								SCSIZE nOverY = nArrY + 1;
 								while ( nOverY<nArrCount &&
 										pRowInfo[nOverY].pCellInfo[nX+1].bVOverlapped )
 								{
-									pRowInfo[nOverY].bChanged = TRUE;
+									pRowInfo[nOverY].bChanged = sal_True;
 									++nOverY;
 								}
 							}
@@ -1898,65 +1864,67 @@ void ScOutputData::FindChanged()
 	pDoc->DisableIdle( bWasIdleDisabled );
 }
 
+#ifdef OLD_SELECTION_PAINT
 void ScOutputData::DrawMark( Window* pWin )
 {
-	Rectangle aRect;
-	ScInvertMerger aInvert( pWin );
-	//!	additional method AddLineRect for ScInvertMerger?
+    Rectangle aRect;
+    ScInvertMerger aInvert( pWin );
+    //!	additional method AddLineRect for ScInvertMerger?
 
-	long nPosY = nScrY;
-	for (SCSIZE nArrY=1; nArrY+1<nArrCount; nArrY++)
-	{
-		RowInfo* pThisRowInfo = &pRowInfo[nArrY];
-		if ( pThisRowInfo->bChanged )
-		{
-			long nPosX = nScrX;
-			if ( bLayoutRTL )
-				nPosX += nMirrorW - 1;		// always in pixels
+    long nPosY = nScrY;
+    for (SCSIZE nArrY=1; nArrY+1<nArrCount; nArrY++)
+    {
+        RowInfo* pThisRowInfo = &pRowInfo[nArrY];
+        if (pThisRowInfo->bChanged)
+        {
+            long nPosX = nScrX;
+            if (bLayoutRTL)
+                nPosX += nMirrorW - 1;      // always in pixels
 
-			aRect = Rectangle( Point( nPosX,nPosY ), Size(1, pThisRowInfo->nHeight) );
-			if ( bLayoutRTL )
-				aRect.Left() = aRect.Right() + 1;
-			else
-				aRect.Right() = aRect.Left() - 1;
+            aRect = Rectangle( Point( nPosX,nPosY ), Size(1, pThisRowInfo->nHeight) );
+            if (bLayoutRTL)
+                aRect.Left() = aRect.Right() + 1;
+            else
+                aRect.Right() = aRect.Left() - 1;
 
-			BOOL bOldMarked = FALSE;
-			for (SCCOL nX=nX1; nX<=nX2; nX++)
-			{
-				if ( pThisRowInfo->pCellInfo[nX+1].bMarked != bOldMarked )
-				{
-					if (bOldMarked && aRect.Right() >= aRect.Left())
-						aInvert.AddRect( aRect );
+            sal_Bool bOldMarked = sal_False;
+            for (SCCOL nX=nX1; nX<=nX2; nX++)
+            {
+                if (pThisRowInfo->pCellInfo[nX+1].bMarked != bOldMarked)
+                {
+                    if (bOldMarked && aRect.Right() >= aRect.Left())
+                        aInvert.AddRect( aRect );
 
-					if ( bLayoutRTL )
-						aRect.Right() = nPosX;
-					else
-						aRect.Left() = nPosX;
+                    if (bLayoutRTL)
+                        aRect.Right() = nPosX;
+                    else
+                        aRect.Left() = nPosX;
 
-					bOldMarked = pThisRowInfo->pCellInfo[nX+1].bMarked;
-				}
+                    bOldMarked = pThisRowInfo->pCellInfo[nX+1].bMarked;
+                }
 
-				if ( bLayoutRTL )
-				{
-					nPosX -= pRowInfo[0].pCellInfo[nX+1].nWidth;
-					aRect.Left() = nPosX+1;
-				}
-				else
-				{
-					nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth;
-					aRect.Right() = nPosX-1;
-				}
-			}
-			if (bOldMarked && aRect.Right() >= aRect.Left())
-				aInvert.AddRect( aRect );
-		}
-		nPosY += pThisRowInfo->nHeight;
-	}
+                if (bLayoutRTL)
+                {
+                    nPosX -= pRowInfo[0].pCellInfo[nX+1].nWidth;
+                    aRect.Left() = nPosX+1;
+                }
+                else
+                {
+                    nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth;
+                    aRect.Right() = nPosX-1;
+                }
+            }
+            if (bOldMarked && aRect.Right() >= aRect.Left())
+                aInvert.AddRect( aRect );
+        }
+        nPosY += pThisRowInfo->nHeight;
+    }
 }
+#endif
 
 void ScOutputData::DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 								SCCOL nRefEndX, SCROW nRefEndY,
-								const Color& rColor, BOOL bHandle )
+								const Color& rColor, sal_Bool bHandle )
 {
 	PutInOrder( nRefStartX, nRefEndX );
 	PutInOrder( nRefStartY, nRefEndY );
@@ -1979,14 +1947,14 @@ void ScOutputData::DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 		}
 		long nLayoutSign = bLayoutRTL ? -1 : 1;
 
-		BOOL bTop    = FALSE;
-		BOOL bBottom = FALSE;
-		BOOL bLeft   = FALSE;
-		BOOL bRight	 = FALSE;
+		sal_Bool bTop    = sal_False;
+		sal_Bool bBottom = sal_False;
+		sal_Bool bLeft   = sal_False;
+		sal_Bool bRight	 = sal_False;
 
 		long nPosY = nScrY;
-		BOOL bNoStartY = ( nY1 < nRefStartY );
-		BOOL bNoEndY   = FALSE;
+		sal_Bool bNoStartY = ( nY1 < nRefStartY );
+		sal_Bool bNoEndY   = sal_False;
 		for (SCSIZE nArrY=1; nArrY<nArrCount; nArrY++)		// loop to end for bNoEndY check
 		{
 			SCROW nY = pRowInfo[nArrY].nRowNo;
@@ -1994,17 +1962,17 @@ void ScOutputData::DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 			if ( nY==nRefStartY || (nY>nRefStartY && bNoStartY) )
 			{
 				nMinY = nPosY;
-				bTop = TRUE;
+				bTop = sal_True;
 			}
 			if ( nY==nRefEndY )
 			{
 				nMaxY = nPosY + pRowInfo[nArrY].nHeight - 2;
-				bBottom = TRUE;
+				bBottom = sal_True;
 			}
 			if ( nY>nRefEndY && bNoEndY )
 			{
 				nMaxY = nPosY-2;
-				bBottom = TRUE;
+				bBottom = sal_True;
 			}
 			bNoStartY = ( nY < nRefStartY );
 			bNoEndY   = ( nY < nRefEndY );
@@ -2020,12 +1988,12 @@ void ScOutputData::DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 			if ( nX==nRefStartX )
 			{
 				nMinX = nPosX;
-				bLeft = TRUE;
+				bLeft = sal_True;
 			}
 			if ( nX==nRefEndX )
 			{
 				nMaxX = nPosX + ( pRowInfo[0].pCellInfo[nX+1].nWidth - 2 ) * nLayoutSign;
-				bRight = TRUE;
+				bRight = sal_True;
 			}
 			nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
 		}
@@ -2062,7 +2030,7 @@ void ScOutputData::DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
 
 void ScOutputData::DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 								SCCOL nRefEndX, SCROW nRefEndY,
-								const Color& rColor, USHORT nType )
+								const Color& rColor, sal_uInt16 nType )
 {
 	PutInOrder( nRefStartX, nRefEndX );
 	PutInOrder( nRefStartY, nRefEndY );
@@ -2085,14 +2053,14 @@ void ScOutputData::DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 		}
 		long nLayoutSign = bLayoutRTL ? -1 : 1;
 
-		BOOL bTop    = FALSE;
-		BOOL bBottom = FALSE;
-		BOOL bLeft   = FALSE;
-		BOOL bRight	 = FALSE;
+		sal_Bool bTop    = sal_False;
+		sal_Bool bBottom = sal_False;
+		sal_Bool bLeft   = sal_False;
+		sal_Bool bRight	 = sal_False;
 
 		long nPosY = nScrY;
-		BOOL bNoStartY = ( nY1 < nRefStartY );
-		BOOL bNoEndY   = FALSE;
+		sal_Bool bNoStartY = ( nY1 < nRefStartY );
+		sal_Bool bNoEndY   = sal_False;
 		for (SCSIZE nArrY=1; nArrY<nArrCount; nArrY++)		// loop to end for bNoEndY check
 		{
 			SCROW nY = pRowInfo[nArrY].nRowNo;
@@ -2100,17 +2068,17 @@ void ScOutputData::DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 			if ( nY==nRefStartY || (nY>nRefStartY && bNoStartY) )
 			{
 				nMinY = nPosY - 1;
-				bTop = TRUE;
+				bTop = sal_True;
 			}
 			if ( nY==nRefEndY )
 			{
 				nMaxY = nPosY + pRowInfo[nArrY].nHeight - 1;
-				bBottom = TRUE;
+				bBottom = sal_True;
 			}
 			if ( nY>nRefEndY && bNoEndY )
 			{
 				nMaxY = nPosY - 1;
-				bBottom = TRUE;
+				bBottom = sal_True;
 			}
 			bNoStartY = ( nY < nRefStartY );
 			bNoEndY   = ( nY < nRefEndY );
@@ -2126,12 +2094,12 @@ void ScOutputData::DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 			if ( nX==nRefStartX )
 			{
 				nMinX = nPosX - nLayoutSign;
-				bLeft = TRUE;
+				bLeft = sal_True;
 			}
 			if ( nX==nRefEndX )
 			{
 				nMaxX = nPosX + ( pRowInfo[0].pCellInfo[nX+1].nWidth - 1 ) * nLayoutSign;
-				bRight = TRUE;
+				bRight = sal_True;
 			}
 			nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
 		}
@@ -2140,9 +2108,9 @@ void ScOutputData::DrawOneChange( SCCOL nRefStartX, SCROW nRefStartY,
 			 nMaxY >= nMinY )
 		{
 			if ( nType == SC_CAT_DELETE_ROWS )
-				bLeft = bRight = bBottom = FALSE;		//! dicke Linie ???
+				bLeft = bRight = bBottom = sal_False;		//! dicke Linie ???
 			else if ( nType == SC_CAT_DELETE_COLS )
-				bTop = bBottom = bRight = FALSE;		//! dicke Linie ???
+				bTop = bBottom = bRight = sal_False;		//! dicke Linie ???
 
 			pDev->SetLineColor( rColor );
 			if (bTop && bBottom && bLeft && bRight)
@@ -2219,7 +2187,7 @@ void ScOutputData::DrawChangeTrack()
 					aColorChanger.Update( *pAction );
 					Color aColor( aColorChanger.GetColor() );
 					DrawOneChange( aRange.aStart.Col(), aRange.aStart.Row(),
-                                    aRange.aEnd.Col(), aRange.aEnd.Row(), aColor, sal::static_int_cast<USHORT>(eActionType) );
+                                    aRange.aEnd.Col(), aRange.aEnd.Row(), aColor, sal::static_int_cast<sal_uInt16>(eActionType) );
 
 				}
 			}
@@ -2235,7 +2203,7 @@ void ScOutputData::DrawChangeTrack()
 					aColorChanger.Update( *pAction );
 					Color aColor( aColorChanger.GetColor() );
 					DrawOneChange( aRange.aStart.Col(), aRange.aStart.Row(),
-                                    aRange.aEnd.Col(), aRange.aEnd.Row(), aColor, sal::static_int_cast<USHORT>(eActionType) );
+                                    aRange.aEnd.Col(), aRange.aEnd.Row(), aColor, sal::static_int_cast<sal_uInt16>(eActionType) );
 				}
 			}
 		}
@@ -2246,7 +2214,7 @@ void ScOutputData::DrawChangeTrack()
 
 void ScOutputData::DrawNoteMarks()
 {
-	BOOL bFirst = TRUE;
+	sal_Bool bFirst = sal_True;
 
 	long nInitPosX = nScrX;
 	if ( bLayoutRTL )
@@ -2264,12 +2232,12 @@ void ScOutputData::DrawNoteMarks()
 			{
 				CellInfo* pInfo = &pThisRowInfo->pCellInfo[nX+1];
 				ScBaseCell* pCell = pInfo->pCell;
-				BOOL bIsMerged = FALSE;
+				sal_Bool bIsMerged = sal_False;
 
 				if ( nX==nX1 && pInfo->bHOverlapped && !pInfo->bVOverlapped )
 				{
 					// find start of merged cell
-					bIsMerged = TRUE;
+					bIsMerged = sal_True;
 					SCROW nY = pRowInfo[nArrY].nRowNo;
 					SCCOL nMergeX = nX;
 					SCROW nMergeY = nY;
@@ -2291,7 +2259,7 @@ void ScOutputData::DrawNoteMarks()
 						else
 							pDev->SetFillColor(COL_LIGHTRED);
 
-						bFirst = FALSE;
+						bFirst = sal_False;
 					}
 
 					long nMarkX = nPosX + ( pRowInfo[0].pCellInfo[nX+1].nWidth - 4 ) * nLayoutSign;
@@ -2342,7 +2310,7 @@ void ScOutputData::AddPDFNotes()
             {
                 CellInfo* pInfo = &pThisRowInfo->pCellInfo[nX+1];
                 ScBaseCell* pCell = pInfo->pCell;
-                BOOL bIsMerged = FALSE;
+                sal_Bool bIsMerged = sal_False;
                 SCROW nY = pRowInfo[nArrY].nRowNo;
                 SCCOL nMergeX = nX;
                 SCROW nMergeY = nY;
@@ -2350,7 +2318,7 @@ void ScOutputData::AddPDFNotes()
                 if ( nX==nX1 && pInfo->bHOverlapped && !pInfo->bVOverlapped )
                 {
                     // find start of merged cell
-                    bIsMerged = TRUE;
+                    bIsMerged = sal_True;
                     pDoc->ExtendOverlapped( nMergeX, nMergeY, nX, nY, nTab );
                     pCell = pDoc->GetCell( ScAddress(nMergeX,nMergeY,nTab) );
                     // use origin's pCell for NotePtr test below
@@ -2410,7 +2378,7 @@ void ScOutputData::DrawClipMarks()
 
 	Color aArrowFillCol( COL_LIGHTRED );
 
-	ULONG nOldDrawMode = pDev->GetDrawMode();
+	sal_uLong nOldDrawMode = pDev->GetDrawMode();
 	const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
 	if ( bUseStyleColor && rStyleSettings.GetHighContrastMode() )
 	{
@@ -2523,7 +2491,7 @@ void ScOutputData::DrawClipMarks()
 						pDev->DrawRect(aMarkRect);
 						//!	Test
 #endif
-						SvxFont::DrawArrow( *pDev, aMarkRect, aMarkSize, aArrowFillCol, TRUE );
+						SvxFont::DrawArrow( *pDev, aMarkRect, aMarkSize, aArrowFillCol, sal_True );
 					}
 					if ( pInfo->nClipMark & ( bLayoutRTL ? SC_CLIPMARK_LEFT : SC_CLIPMARK_RIGHT ) )
 					{
@@ -2536,7 +2504,7 @@ void ScOutputData::DrawClipMarks()
 						pDev->DrawRect(aMarkRect);
 						//!	Test
 #endif
-						SvxFont::DrawArrow( *pDev, aMarkRect, aMarkSize, aArrowFillCol, FALSE );
+						SvxFont::DrawArrow( *pDev, aMarkRect, aMarkSize, aArrowFillCol, sal_False );
 					}
 				}
 				nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;

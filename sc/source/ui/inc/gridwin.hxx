@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef SC_GRIDWIN_HXX
 #define SC_GRIDWIN_HXX
@@ -36,6 +39,8 @@
 #include "viewdata.hxx"
 #include "cbutton.hxx"
 #include <svx/sdr/overlay/overlayobject.hxx>
+#include <com/sun/star/sheet/DataPilotFieldOrientation.hpp>
+#include <basegfx/matrix/b2dhommatrix.hxx>
 
 #include <vector>
 #include <memory>
@@ -45,11 +50,9 @@
 
 struct ScTableInfo;
 class ScViewSelectionEngine;
-#if OLD_PIVOT_IMPLEMENTATION
-class ScPivot;
-#endif
 class ScDPObject;
 class ScDPFieldPopupWindow;
+class ScDPFieldButton;
 class ScOutputData;
 class ScFilterListBox;
 class AutoFilterPopup;
@@ -99,43 +102,7 @@ public:
 
 // ---------------------------------------------------------------------------
 // predefines
-class ScGridWindow;
-
-enum ScOverlayType { SC_OVERLAY_INVERT, SC_OVERLAY_SOLID, SC_OVERLAY_BORDER_TRANSPARENT };
-
-// #114409#
-namespace sdr
-{
-	namespace overlay
-	{
-		// predefines
-		class OverlayObjectList;
-
-        // OverlayObjectCell - used for cell cursor, selection and AutoFill handle
-
-        class OverlayObjectCell : public OverlayObject
-        {
-        public:
-            typedef ::std::vector< basegfx::B2DRange > RangeVector;
-
-        private:
-            ScOverlayType   mePaintType;
-            RangeVector     maRectangles;
-
-            virtual void drawGeometry(OutputDevice& rOutputDevice);
-            virtual void createBaseRange(OutputDevice& rOutputDevice);
-
-        public:
-            OverlayObjectCell( ScOverlayType eType, const Color& rColor, const RangeVector& rRects);
-            virtual ~OverlayObjectCell();
-
-            virtual void transform(const basegfx::B2DHomMatrix& rMatrix);
-        };
-
-	} // end of namespace overlay
-} // end of namespace sdr
-
-// ---------------------------------------------------------------------------
+namespace sdr { namespace overlay { class OverlayObjectList; }}
 
 class ScGridWindow : public Window, public DropTargetHelper, public DragSourceHelper
 {
@@ -146,7 +113,6 @@ private:
 	// #114409#
 	::sdr::overlay::OverlayObjectList*				mpOOCursors;
     ::sdr::overlay::OverlayObjectList*              mpOOSelection;
-    ::sdr::overlay::OverlayObjectList*              mpOOSelectionBorder;
     ::sdr::overlay::OverlayObjectList*              mpOOAutoFill;
     ::sdr::overlay::OverlayObjectList*              mpOODragRect;
     ::sdr::overlay::OverlayObjectList*              mpOOHeader;
@@ -182,70 +148,63 @@ private:
 	ScFilterListBox*		pFilterBox;
 	FloatingWindow*			pFilterFloat;
     ::std::auto_ptr<ScDPFieldPopupWindow> mpDPFieldPopup;
+    ::std::auto_ptr<ScDPFieldButton>      mpFilterButton;
 
-	USHORT					nCursorHideCount;
+	sal_uInt16					nCursorHideCount;
 
-	BOOL					bMarking;
+	sal_Bool					bMarking;
 
-	USHORT					nButtonDown;
-	BOOL					bEEMouse;				// Edit-Engine hat Maus
-	BYTE					nMouseStatus;
-    BYTE                    nNestedButtonState;     // track nested button up/down calls
+	sal_uInt16					nButtonDown;
+	sal_Bool					bEEMouse;				// Edit-Engine hat Maus
+	sal_uInt8					nMouseStatus;
+    sal_uInt8                    nNestedButtonState;     // track nested button up/down calls
 
-#if OLD_PIVOT_IMPLEMENTATION
-	BOOL					bPivotMouse;			// Pivot-D&D (alte Pivottabellen)
-	ScPivot*				pDragPivot;
-	BOOL					bPivotColField;
-	SCCOL					nPivotCol;
-	SCCOL					nPivotField;
-#endif
-
-	BOOL					bDPMouse;				// DataPilot-D&D (neue Pivottabellen)
+	sal_Bool					bDPMouse;				// DataPilot-D&D (neue Pivottabellen)
 	long					nDPField;
 	ScDPObject*				pDragDPObj;	//! name?
 
-	BOOL					bRFMouse;				// RangeFinder-Drag
-	BOOL					bRFSize;
-	USHORT					nRFIndex;
+	sal_Bool					bRFMouse;				// RangeFinder-Drag
+	sal_Bool					bRFSize;
+	sal_uInt16					nRFIndex;
 	SCsCOL					nRFAddX;
 	SCsROW					nRFAddY;
 
-	USHORT					nPagebreakMouse;		// Pagebreak-Modus Drag
+	sal_uInt16					nPagebreakMouse;		// Pagebreak-Modus Drag
 	SCCOLROW				nPagebreakBreak;
 	SCCOLROW				nPagebreakPrev;
 	ScRange					aPagebreakSource;
 	ScRange					aPagebreakDrag;
-	BOOL					bPagebreakDrawn;
+	sal_Bool					bPagebreakDrawn;
 
-	BYTE					nPageScript;
+	sal_uInt8					nPageScript;
 
 	long					nLastClickX;
 	long					nLastClickY;
 
-	BOOL					bDragRect;
+	sal_Bool					bDragRect;
 	SCCOL					nDragStartX;
 	SCROW					nDragStartY;
 	SCCOL					nDragEndX;
 	SCROW					nDragEndY;
     InsCellCmd              meDragInsertMode;
 
-	USHORT					nCurrentPointer;
+	sal_uInt16					nCurrentPointer;
 
-	BOOL					bIsInScroll;
-	BOOL					bIsInPaint;
+	sal_Bool					bIsInScroll;
+	sal_Bool					bIsInPaint;
 
 	ScDDComboBoxButton		aComboButton;
 
 	Point					aCurMousePos;
 
-	USHORT					nPaintCount;
+	sal_uInt16					nPaintCount;
 	Rectangle				aRepaintPixel;
-	BOOL					bNeedsRepaint;
+	sal_Bool					bNeedsRepaint;
 
-	BOOL					bAutoMarkVisible;
+	sal_Bool					bAutoMarkVisible;
 	ScAddress				aAutoMarkPos;
 
-	BOOL					bListValButton;
+	sal_Bool					bListValButton;
 	ScAddress				aListValPos;
 
 	Rectangle				aInvertRect;
@@ -256,20 +215,15 @@ private:
 	DECL_LINK( PopupModeEndHdl, FloatingWindow* );
     DECL_LINK( PopupSpellingHdl, SpellCallbackInfo* );
 
-	BOOL			TestMouse( const MouseEvent& rMEvt, BOOL bAction );
+	sal_Bool			TestMouse( const MouseEvent& rMEvt, sal_Bool bAction );
 
-	BOOL			DoPageFieldSelection( SCCOL nCol, SCROW nRow );
+	sal_Bool			DoPageFieldSelection( SCCOL nCol, SCROW nRow );
+    bool            DoAutoFilterButton( SCCOL nCol, SCROW nRow, const MouseEvent& rMEvt );
 	void			DoPushButton( SCCOL nCol, SCROW nRow, const MouseEvent& rMEvt );
-#if OLD_PIVOT_IMPLEMENTATION
-	void			PivotMouseMove( const MouseEvent& rMEvt );
-	void			PivotMouseButtonUp( const MouseEvent& rMEvt );
-	BOOL			PivotTestMouse( const MouseEvent& rMEvt, BOOL bMove );
-	void			DoPivotDrop( BOOL bDelete, BOOL bToCols, SCSIZE nDestPos );
-#endif
 
 	void			DPMouseMove( const MouseEvent& rMEvt );
 	void			DPMouseButtonUp( const MouseEvent& rMEvt );
-	void			DPTestMouse( const MouseEvent& rMEvt, BOOL bMove );
+	void			DPTestMouse( const MouseEvent& rMEvt, sal_Bool bMove );
 
     /** 
      * Check if the mouse click is on a field popup button. 
@@ -279,26 +233,26 @@ private:
      */
     bool            DPTestFieldPopupArrow(const MouseEvent& rMEvt, const ScAddress& rPos, ScDPObject* pDPObj);
     void            DPLaunchFieldPopupMenu(
-        const Point& rSrcPos, const Size& rSrcSize, const ScAddress& rPos, ScDPObject* pDPObj);
+        const Point& rScrPos, const Size& rScrSize, const ScAddress& rPos, ScDPObject* pDPObj);
 
-	void			RFMouseMove( const MouseEvent& rMEvt, BOOL bUp );
+	void			RFMouseMove( const MouseEvent& rMEvt, sal_Bool bUp );
 
-	void			PagebreakMove( const MouseEvent& rMEvt, BOOL bUp );
+	void			PagebreakMove( const MouseEvent& rMEvt, sal_Bool bUp );
 
-	void			UpdateDragRect( BOOL bShowRange, const Rectangle& rPosRect );
+	void			UpdateDragRect( sal_Bool bShowRange, const Rectangle& rPosRect );
 
-	BOOL 			IsAutoFilterActive( SCCOL nCol, SCROW nRow, SCTAB nTab );
-	void			ExecFilter( ULONG nSel, SCCOL nCol, SCROW nRow,
+	sal_Bool 			IsAutoFilterActive( SCCOL nCol, SCROW nRow, SCTAB nTab );
+	void			ExecFilter( sal_uLong nSel, SCCOL nCol, SCROW nRow,
                                 const String& aValue, bool bCheckForDates );
-	void			FilterSelect( ULONG nSel );
+	void			FilterSelect( sal_uLong nSel );
 
 	void			ExecDataSelect( SCCOL nCol, SCROW nRow, const String& rStr );
 
-	void			ExecPageFieldSelect( SCCOL nCol, SCROW nRow, BOOL bHasSelection, const String& rStr );
+	void			ExecPageFieldSelect( SCCOL nCol, SCROW nRow, sal_Bool bHasSelection, const String& rStr );
 
-	BOOL			HasScenarioButton( const Point& rPosPixel, ScRange& rScenRange );
-
-	BOOL			DropScroll( const Point& rMousePos );
+	sal_Bool			HasScenarioButton( const Point& rPosPixel, ScRange& rScenRange );
+	sal_Bool			HasScenarioRange( sal_uInt16 nCol, sal_Int32 nRow, ScRange& rScenRange ); 
+	sal_Bool			DropScroll( const Point& rMousePos );
 
 	sal_Int8		AcceptPrivateDrop( const AcceptDropEvent& rEvt );
 	sal_Int8		ExecutePrivateDrop( const ExecuteDropEvent& rEvt );
@@ -307,57 +261,49 @@ private:
 
     void            HandleMouseButtonDown( const MouseEvent& rMEvt );
 
-	BOOL			DrawMouseButtonDown(const MouseEvent& rMEvt);
-	BOOL			DrawMouseButtonUp(const MouseEvent& rMEvt);
-	BOOL			DrawMouseMove(const MouseEvent& rMEvt);
-	BOOL			DrawKeyInput(const KeyEvent& rKEvt);
-	BOOL			DrawCommand(const CommandEvent& rCEvt);
-	BOOL			DrawHasMarkedObj();
+	sal_Bool			DrawMouseButtonDown(const MouseEvent& rMEvt);
+	sal_Bool			DrawMouseButtonUp(const MouseEvent& rMEvt);
+	sal_Bool			DrawMouseMove(const MouseEvent& rMEvt);
+	sal_Bool			DrawKeyInput(const KeyEvent& rKEvt);
+	sal_Bool			DrawCommand(const CommandEvent& rCEvt);
+	sal_Bool			DrawHasMarkedObj();
 	void			DrawEndAction();
 	void			DrawMarkDropObj( SdrObject* pObj );
 	SdrObject*		GetEditObject();
-	BOOL			IsMyModel(SdrEditView* pSdrView);
+	sal_Bool			IsMyModel(SdrEditView* pSdrView);
 	//void			DrawStartTimer();
 
-	void			DrawRedraw( ScOutputData& rOutputData, ScUpdateMode eMode, ULONG nLayer );
+	void			DrawRedraw( ScOutputData& rOutputData, ScUpdateMode eMode, sal_uLong nLayer );
     void            DrawSdrGrid( const Rectangle& rDrawingRect, OutputDevice* pContentDev );
-	//BOOL			DrawBeforeScroll();
-	void			DrawAfterScroll(/*BOOL bVal*/);
+	//sal_Bool			DrawBeforeScroll();
+	void			DrawAfterScroll(/*sal_Bool bVal*/);
 	//void			DrawMarks();
-	//BOOL			NeedDrawMarks();
+	//sal_Bool			NeedDrawMarks();
 	void 			DrawComboButton( const Point&	rCellPos,
 									 long			nCellSizeX,
 									 long			nCellSizeY,
-                                     BOOL           bArrowState,
-									 BOOL			bBtnIn  = FALSE );
+                                     sal_Bool           bArrowState,
+									 sal_Bool			bBtnIn  = sal_False );
 	Rectangle		GetListValButtonRect( const ScAddress& rButtonPos );
 
     void            DrawPagePreview( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, OutputDevice* pContentDev );
 
-	BOOL			GetEditUrl( const Point& rPos,
+	sal_Bool			GetEditUrl( const Point& rPos,
 								String* pName=0, String* pUrl=0, String* pTarget=0 );
-	BOOL			GetEditUrlOrError( BOOL bSpellErr, const Point& rPos,
+	sal_Bool			GetEditUrlOrError( sal_Bool bSpellErr, const Point& rPos,
 								String* pName=0, String* pUrl=0, String* pTarget=0 );
 
-	BOOL			HitRangeFinder( const Point& rMouse, BOOL& rCorner, USHORT* pIndex = NULL,
+	sal_Bool			HitRangeFinder( const Point& rMouse, sal_Bool& rCorner, sal_uInt16* pIndex = NULL,
 										SCsCOL* pAddX = NULL, SCsROW* pAddY = NULL );
 
-	USHORT			HitPageBreak( const Point& rMouse, ScRange* pSource = NULL,
+	sal_uInt16			HitPageBreak( const Point& rMouse, ScRange* pSource = NULL,
 									SCCOLROW* pBreak = NULL, SCCOLROW* pPrev = NULL );
 
 	void			PasteSelection( const Point& rPosPixel );
 
-	void			SelectForContextMenu( const Point& rPosPixel );
+    void			SelectForContextMenu( const Point& rPosPixel, SCsCOL nCellX, SCsROW nCellY );
 
     void            GetSelectionRects( ::std::vector< Rectangle >& rPixelRects );
-    struct RectangleConverter {
-        virtual Rectangle Convert (const Rectangle& r) const = 0;
-    };
-    void            ConvertPixelRectsToRangeVector( 
-                        const ::std::vector< Rectangle >& rPixelRects, 
-                        sdr::overlay::OverlayObjectCell::RangeVector* pRanges,
-                        const MapMode& rDrawMode,
-                        const RectangleConverter *pConverter = NULL);
 
 protected:
     using Window::Resize;
@@ -409,11 +355,13 @@ public:
 
 	void			UpdateFormulas();
 
-	void			DoAutoFilterMenue( SCCOL nCol, SCROW nRow, BOOL bDataSelect );
+	void			DoAutoFilterMenue( SCCOL nCol, SCROW nRow, sal_Bool bDataSelect );
 	void			DoScenarioMenue( const ScRange& rScenRange );
-	void			DoPageFieldMenue( SCCOL nCol, SCROW nRow );
 
-    BOOL            HasPageFieldData( SCCOL nCol, SCROW nRow ) const;
+    void            LaunchPageFieldMenu( SCCOL nCol, SCROW nRow );
+    void            LaunchDPFieldMenu( SCCOL nCol, SCROW nRow );
+
+    ::com::sun::star::sheet::DataPilotFieldOrientation GetDPFieldOrientation( SCCOL nCol, SCROW nRow ) const;
 
 	void			DrawButtons( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2,
                                     ScTableInfo& rTabInfo, OutputDevice* pContentDev );
@@ -423,7 +371,7 @@ public:
 						ScUpdateMode eMode = SC_UPDATE_ALL );
 
 	void			InvertSimple( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2,
-									BOOL bTestMerge = FALSE, BOOL bRepeat = FALSE );
+									sal_Bool bTestMerge = sal_False, sal_Bool bRepeat = sal_False );
 
 //UNUSED2008-05  void			DrawDragRect( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2 );
 
@@ -433,34 +381,35 @@ public:
 	void			ShowCursor();
 	void 			DrawCursor();
 	void			DrawAutoFillMark();
-	void			UpdateAutoFillMark(BOOL bMarked, const ScRange& rMarkRange);
+	void			UpdateAutoFillMark(sal_Bool bMarked, const ScRange& rMarkRange);
 
-	void			UpdateListValPos( BOOL bVisible, const ScAddress& rPos );
+	void			UpdateListValPos( sal_Bool bVisible, const ScAddress& rPos );
 
-	BOOL			ShowNoteMarker( SCsCOL nPosX, SCsROW nPosY, BOOL bKeyboard );
+	sal_Bool			ShowNoteMarker( SCsCOL nPosX, SCsROW nPosY, sal_Bool bKeyboard );
 	void			HideNoteMarker();
 
-	MapMode			GetDrawMapMode( BOOL bForce = FALSE );
+	MapMode			GetDrawMapMode( sal_Bool bForce = sal_False );
 
 	void			ContinueDrag();
 
 	void			StopMarking();
 	void			UpdateInputContext();
 
-	void			CheckInverted()		{ if (nPaintCount) bNeedsRepaint = TRUE; }
+	void			CheckInverted()		{ if (nPaintCount) bNeedsRepaint = sal_True; }
 
 	void			DoInvertRect( const Rectangle& rPixel );
 
 	void			CheckNeedsRepaint();
+	virtual void SwitchView();
 
     void            UpdateDPFromFieldPopupMenu();
+
+    void            UpdateVisibleRange();
 
 	// #114409#
 	void CursorChanged();
 	void DrawLayerCreated();
 
-    void            DeleteCopySourceOverlay();
-    void            UpdateCopySourceOverlay();
     void            DeleteCursorOverlay();
     void            UpdateCursorOverlay();
     void            DeleteSelectionOverlay();
