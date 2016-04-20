@@ -2275,7 +2275,7 @@ void ScXMLImport::SetConfigurationSettings(const uno::Sequence<beans::PropertyVa
                     aFilteredProps[nFilteredPropsLen++] = aConfigProps[i];
                 }
 #endif	// !NO_LIBO_LINKUPDATEMODE_FIX
-           }
+            }
 #ifndef NO_LIBO_LINKUPDATEMODE_FIX
             aFilteredProps.realloc(nFilteredPropsLen);
 #endif	// !NO_LIBO_LINKUPDATEMODE_FIX
