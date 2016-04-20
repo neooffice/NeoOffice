@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified April 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified September 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_unotools.hxx"
@@ -76,10 +79,14 @@ namespace
 {
     struct BrandName
         : public rtl::Static< ::rtl::OUString, BrandName > {};
+    struct FullProductname
+        : public rtl::Static< ::rtl::OUString, FullProductname > {};
     struct ProductVersion
         : public rtl::Static< ::rtl::OUString, ProductVersion > {};
     struct AboutBoxProductVersion
         : public rtl::Static< ::rtl::OUString, AboutBoxProductVersion > {};
+    struct OOOVendor
+        : public rtl::Static< ::rtl::OUString, OOOVendor > {};
     struct ProductExtension
         : public rtl::Static< ::rtl::OUString, ProductExtension > {};
     struct XMLFileFormatName
@@ -429,6 +436,13 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
         return aRet;
     }
 
+    ::rtl::OUString& rFullProductname = FullProductname::get();
+    if ( eProp == FULLPRODUCTNAME && rFullProductname.getLength() )
+    {
+        aRet <<= rFullProductname;
+        return aRet;
+    }
+
     rtl::OUString &rProductVersion = ProductVersion::get();
     if ( eProp == PRODUCTVERSION && rProductVersion.getLength() )
     {
@@ -442,6 +456,14 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
         aRet <<= rAboutBoxProductVersion;
         return aRet;
     }
+
+    rtl::OUString &rOOOVendor = OOOVendor::get();
+    if ( eProp == OOOVENDOR && rOOOVendor.getLength() )
+    {
+        aRet <<= rOOOVendor;
+        return aRet;
+    }
+
 
     rtl::OUString &rProductExtension = ProductExtension::get();
     if ( eProp == PRODUCTEXTENSION && rProductExtension.getLength() )
@@ -482,7 +504,7 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
         rtl::OUString name(
             rtl::OUString(
                 RTL_CONSTASCII_USTRINGPARAM(
-                    "${BRAND_BASE_DIR}/program/edition/edition.ini")));
+                    "${OOO_BASE_DIR}/program/edition/edition.ini")));
         rtl::Bootstrap::expandMacros(name);
         if (rtl::Bootstrap(name).getFrom(
                 rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("EDITIONNAME")),
@@ -498,11 +520,13 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
 		case LOCALE:						sPath += C2U("Setup/L10N"); break;
 
         case PRODUCTNAME:
+        case FULLPRODUCTNAME:
         case PRODUCTVERSION:
         case PRODUCTEXTENSION:
         case PRODUCTXMLFILEFORMATNAME :
 		case PRODUCTXMLFILEFORMATVERSION:
         case OPENSOURCECONTEXT:
+        case OOOVENDOR:
         case ABOUTBOXPRODUCTVERSION:        sPath += C2U("Setup/Product"); break;
 
 		case DEFAULTCURRENCY:				sPath += C2U("Setup/L10N"); break;
@@ -534,8 +558,10 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
 		{
 			case LOCALE:							sProperty = C2U("ooLocale"); break;
             case PRODUCTNAME:						sProperty = C2U("ooName"); break;
+            case FULLPRODUCTNAME:					sProperty = C2U("ooFullname"); break;
             case PRODUCTVERSION:					sProperty = C2U("ooSetupVersion"); break;
             case ABOUTBOXPRODUCTVERSION: 			sProperty = C2U("ooSetupVersionAboutBox"); break;
+            case OOOVENDOR:                         sProperty = C2U("ooVendor"); break;
             case PRODUCTEXTENSION:					sProperty = C2U("ooSetupExtension"); break;
             case PRODUCTXMLFILEFORMATNAME:          sProperty = C2U("ooXMLFileFormatName"); break;
             case PRODUCTXMLFILEFORMATVERSION:       sProperty = C2U("ooXMLFileFormatVersion"); break;
@@ -564,25 +590,28 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
 	}
 
     if ( eProp == PRODUCTNAME )
-        aRet >>= rBrandName;
-
 #if defined USE_JAVA && defined MACOSX
-    // Use CFBundleName for product name if it exists
-    CFBundleRef aBundle = CFBundleGetMainBundle();
-    if ( aBundle )
     {
-        CFDictionaryRef aDict = CFBundleGetInfoDictionary( aBundle );
-        if ( aDict )
+#endif	// USE_JAVA && MACOSX
+        aRet >>= rBrandName;
+#if defined USE_JAVA && defined MACOSX
+        // Use CFBundleName for product name if it exists
+        CFBundleRef aBundle = CFBundleGetMainBundle();
+        if ( aBundle )
         {
-            CFStringRef aValue = (CFStringRef)CFDictionaryGetValue( aDict, CFSTR( "CFBundleName" ) );
-            if ( aValue && CFGetTypeID( aValue ) == CFStringGetTypeID() )
+            CFDictionaryRef aDict = CFBundleGetInfoDictionary( aBundle );
+            if ( aDict )
             {
-                CFIndex nValueLen = CFStringGetLength( aValue );
-                CFRange aValueRange = CFRangeMake( 0, nValueLen );
-                sal_Unicode pValueBuffer[ nValueLen + 1 ];
-                CFStringGetCharacters( aValue, aValueRange, pValueBuffer );
-                pValueBuffer[ nValueLen ] = 0;
-                rBrandName = OUString( pValueBuffer );
+                CFStringRef aValue = (CFStringRef)CFDictionaryGetValue( aDict, CFSTR( "CFBundleName" ) );
+                if ( aValue && CFGetTypeID( aValue ) == CFStringGetTypeID() )
+                {
+                    CFIndex nValueLen = CFStringGetLength( aValue );
+                    CFRange aValueRange = CFRangeMake( 0, nValueLen );
+                    sal_Unicode pValueBuffer[ nValueLen + 1 ];
+                    CFStringGetCharacters( aValue, aValueRange, pValueBuffer );
+                    pValueBuffer[ nValueLen ] = 0;
+                    rBrandName = OUString( pValueBuffer );
+                }
             }
         }
     }
@@ -596,6 +625,9 @@ Any ConfigManager::GetDirectConfigProperty(ConfigProperty eProp)
 
     if ( eProp == PRODUCTVERSION )
         aRet >>= rProductVersion;
+
+    if( eProp == OOOVENDOR )
+        aRet >>= rOOOVendor;
 
     if ( eProp == ABOUTBOXPRODUCTVERSION )
     {
