@@ -333,9 +333,8 @@ build.neo_patches: \
 	build.neo_unoxml_patch \
 	build.neo_uui_patch \
 	build.neo_vos_patch \
-	build.neo_libwpd_patch build.neo_writerperfect_patch \
-	build.neo_xmloff_patch \
-	build.neo_writerfilter_patch
+	build.neo_writerfilter_patch \
+	build.neo_xmloff_patch
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
