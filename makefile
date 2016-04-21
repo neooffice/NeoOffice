@@ -237,6 +237,7 @@ build.oo_checkout: build.oo_src_checkout build.ant_checkout build.jfreereport_ch
 build.oo_patches: \
 	build.oo_configure.in_patch \
 	build.oo_framework_patch \
+	build.oo_instsetoo_native_patch \
 	build.oo_jfreereport_patch \
 	build.oo_reportbuilder_patch \
 	build.oo_sal_patch \
