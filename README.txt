@@ -26,7 +26,7 @@ At this time, NeoOffice will only build on Mac OS X 10.9 Mavericks.
    sudo /opt/local/bin/port install wget -x11
    sudo /opt/local/bin/port install gnutar -x11
    sudo /opt/local/bin/port install poppler -x11
-   sudo /opt/local/bin/port install libwpd -x11
+   sudo /opt/local/bin/port install libwpd@0.9.9 -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can find the "autoconf" and other commands.
 
