@@ -288,7 +288,6 @@ build.neo_configure: build.oo_all neo_configure.mk
 	touch "$@"
 
 build.neo_patches: \
-	build.remotecontrol_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
 	build.neo_avmedia_patch \
@@ -338,6 +337,7 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
+build.neo_remotecontrol_component: build.remotecontrol_patches
 build.neo_sc_patch: build.neo_unotools_patch
 
 build.neo_%_patch: % build.neo_configure
