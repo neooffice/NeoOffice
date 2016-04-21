@@ -261,7 +261,7 @@ endif
 
 build.oo_configure: build.oo_patches
 ifeq ("$(OS_TYPE)","MacOSX")
-	cd "$(OO_BUILD_HOME)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; unsetenv DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-stlport --with-dmake-url="file://$(PWD)/$(APACHE_PATCHES_HOME)/$(DMAKE_SOURCE_FILENAME)" --with-epm-url="file://$(PWD)/$(MSWEET_PATCHES_HOME)/$(EPM_SOURCE_FILENAME)" --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --without-junit --disable-cairo --disable-cups --disable-gtk --disable-odk --with-gnu-cp=/opt/local/bin/gcp --with-system-curl --with-system-odbc --with-lang="$(OO_LANGUAGES)" --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-crashdump=no --enable-category-b --enable-bundled-dictionaries --enable-pdfimport --with-system-poppler --enable-report-builder
+	cd "$(OO_BUILD_HOME)" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:/opt/local/bin" ; unsetenv DYLD_LIBRARY_PATH ; autoconf ; ./configure --without-stlport --with-dmake-url="file://$(PWD)/$(APACHE_PATCHES_HOME)/$(DMAKE_SOURCE_FILENAME)" --with-epm-url="file://$(PWD)/$(MSWEET_PATCHES_HOME)/$(EPM_SOURCE_FILENAME)" --with-jdk-home="$(JDK_HOME)" --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --without-junit --disable-cairo --disable-cups --disable-gtk --disable-odk --with-gnu-cp=/opt/local/bin/gcp --with-system-curl --with-system-odbc --with-lang="$(OO_LANGUAGES)" --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-crashdump=no --enable-category-b --enable-bundled-dictionaries --enable-pdfimport --with-system-poppler --with-system-libwpd --enable-report-builder
 else
 ifndef JDK_HOME
 	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
@@ -287,7 +287,7 @@ build.neo_configure: build.oo_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
-build.neo_patches:
+build.neo_patches: \
 	build.remotecontrol_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \

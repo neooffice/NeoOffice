@@ -1,5 +1,14 @@
 --- configure.in	2015-10-09 00:11:14.000000000 -0700
 +++ configure.in	2015-11-03 18:43:15.000000000 -0800
+@@ -3779,7 +3779,7 @@
+         test "$with_system_libwpd" != "no"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_LIBWPD=YES
+-    PKG_CHECK_MODULES( LIBWPD, libwpd-0.8 )
++    PKG_CHECK_MODULES( LIBWPD, libwpd-0.9 )
+ else
+     AC_MSG_RESULT([no])
+     SYSTEM_LIBWPD=
 @@ -3924,20 +3924,20 @@
  
  

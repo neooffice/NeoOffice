@@ -18,14 +18,15 @@ At this time, NeoOffice will only build on Mac OS X 10.9 Mavericks.
 
 3. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the latest MacPorts Mountain Lion package to install MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
-   sudo /opt/local/bin/port install coreutils
-   sudo /opt/local/bin/port install pkgconfig
-   sudo /opt/local/bin/port install libIDL
-   sudo /opt/local/bin/port install gperf
-   sudo /opt/local/bin/port install flex
-   sudo /opt/local/bin/port install wget
-   sudo /opt/local/bin/port install gnutar
-   sudo /opt/local/bin/port install poppler
+   sudo /opt/local/bin/port install coreutils -x11
+   sudo /opt/local/bin/port install pkgconfig -x11
+   sudo /opt/local/bin/port install libIDL -x11
+   sudo /opt/local/bin/port install gperf -x11
+   sudo /opt/local/bin/port install flex -x11
+   sudo /opt/local/bin/port install wget -x11
+   sudo /opt/local/bin/port install gnutar -x11
+   sudo /opt/local/bin/port install poppler -x11
+   sudo /opt/local/bin/port install libwpd -x11
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can find the "autoconf" and other commands.
 
