@@ -91,7 +91,7 @@ ModalDialog RID_DEFAULTABOUT
 		Pos = MAP_APPFONT ( 54 , 25 ) ;
 		Size = MAP_APPFONT ( 168 , 51 ) ;
 // #ifdef USE_JAVA
- 		Text = "© Planamesa Inc.\n\n%PRODUCTNAME includes the following open source software:\n" NEOOFFICE_ITEM "- OpenOffice.org and Apache OpenOffice\n- LibreOffice\n- Akua icons\n- NeoOffice icons and images\n- Minizip\n- Mac remote control";
+ 		Text = "© Planamesa Inc.\n\n%PRODUCTNAME includes the following open source software:\n" NEOOFFICE_ITEM "- OpenOffice.org and Apache OpenOffice\n- LibreOffice\n- Akua icons\n- NeoOffice icons and images\n- Minizip\n- libwpd\n - Mac remote control";
 // #endif	// USE_JAVA
 		WordBreak = TRUE ;
 	};

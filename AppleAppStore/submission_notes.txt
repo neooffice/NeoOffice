@@ -45,12 +45,15 @@ In case Apple reviewers need to review any of the third-party source code licens
 
 GNU Lesser General Public License (LGPL) version 3:
 - OpenOffice.org source code copyright by The Apache Software Foundation - http://www.openoffice.org/license.html
-- LibreOffice source code copyright by LibreOffice contributors - http://www.libreoffice.org/download/license/
 - NeoOffice icons and images copyright by Armando Nava, Daniel Pimley, and Oscar Van Vliet - http://dl.dropbox.com/u/15165882/Akua_2012_Release.zip
 
 GNU Lesser General Public License (LGPL) version 2:
 - NeoOffice icons and images copyright by Smokey Ardisson - http://www.ardisson.org/smokey/neo/neo2toolbarv101.zip
 - NeoOffice icons and images copyright by Daniel Pimley - http://www.pimley.net/projects/downloads/NeoOfficeAquaElements.zip
+- libwpd source code copyright by libwpd contributors - http://libwpd.sourceforge.net/authors_licensing.html
+
+Mozilla Public License version 2.0:
+- LibreOffice source code copyright by LibreOffice contributors - http://www.libreoffice.org/download/license/
 
 MIT-style license:
 - Minizip source code copyright by Gilles Vollant - http://www.winimage.com/zLibDll/minizip.html
