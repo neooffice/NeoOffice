@@ -242,7 +242,8 @@ build.oo_patches: \
 	build.oo_reportbuilder_patch \
 	build.oo_sal_patch \
 	build.oo_sdext_patch \
-	build.oo_solenv_patch
+	build.oo_solenv_patch \
+	build.oo_writerperfect_patch
 	touch "$@"
 
 build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.oo_checkout

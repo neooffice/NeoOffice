@@ -1,0 +1,143 @@
+--- ./source/filter/DocumentCollector.cxx	2014-02-25 00:24:06.000000000 -0800
++++ ./source/filter/DocumentCollector.cxx	2016-04-21 10:22:58.000000000 -0700
+@@ -418,16 +418,16 @@
+ void DocumentCollector::openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+ {
+         int iNumColumns = columns.count();
+-	float fSectionMarginLeft = 0.0f;
+-	float fSectionMarginRight = 0.0f;
++	double fSectionMarginLeft = 0.0f;
++	double fSectionMarginRight = 0.0f;
+ 	if (propList["fo:margin-left"])
+-		fSectionMarginLeft = propList["fo:margin-left"]->getFloat();
++		fSectionMarginLeft = propList["fo:margin-left"]->getDouble();
+ 	if (propList["fo:margin-right"])
+-		fSectionMarginRight = propList["fo:margin-right"]->getFloat();
++		fSectionMarginRight = propList["fo:margin-right"]->getDouble();
+ 
+ 	if (iNumColumns > 1 || fSectionMarginLeft != 0 || fSectionMarginRight != 0)
+ 	{
+-		mfSectionSpaceAfter = propList["fo:margin-bottom"]->getFloat();
++		mfSectionSpaceAfter = propList["fo:margin-bottom"]->getDouble();
+ 		WPXString sSectionName;
+ 		sSectionName.sprintf("Section%i", mSectionStyles.size());
+ 		
+--- ./source/filter/DocumentCollector.hxx	2014-02-25 00:24:06.000000000 -0800
++++ ./source/filter/DocumentCollector.hxx	2016-04-21 10:23:40.000000000 -0700
+@@ -79,7 +79,7 @@
+   }
+ };
+ 
+-class DocumentCollector : public WPXHLListenerImpl
++class DocumentCollector : public WPXDocumentInterface
+ {
+ public:
+ 	DocumentCollector(WPXInputStream *pInput, DocumentHandler *pHandler);
+@@ -90,9 +90,11 @@
+ 	virtual void startDocument() {}
+ 	virtual void endDocument() {}
+ 
++	virtual void definePageStyle(const WPXPropertyList &propList) {}
+ 	virtual void openPageSpan(const WPXPropertyList &propList);
+ 	virtual void closePageSpan() {}
+ 
++	virtual void defineSectionStyle(const WPXPropertyList &propList, const WPXPropertyListVector &columns) {}
+ 	virtual void openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns);
+ 	virtual void closeSection();
+ 
+@@ -101,16 +103,20 @@
+ 	virtual void openFooter(const WPXPropertyList &propList);
+ 	virtual void closeFooter();
+ 
++	virtual void defineParagraphStyle(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops) {}
+ 	virtual void openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops);
+ 	virtual void closeParagraph();
+ 
++	virtual void defineCharacterStyle(const WPXPropertyList &propList) {}
+ 	virtual void openSpan(const WPXPropertyList &propList);
+ 	virtual void closeSpan();
+ 
+ 
+ 	virtual void insertTab();
++	virtual void insertSpace() {}
+ 	virtual void insertText(const WPXString &text);
+  	virtual void insertLineBreak();
++ 	virtual void insertField(const WPXString &type, const WPXPropertyList &propList) {}
+ 
+ 	virtual void defineOrderedListLevel(const WPXPropertyList &propList);
+ 	virtual void defineUnorderedListLevel(const WPXPropertyList &propList);
+@@ -125,6 +131,10 @@
+ 	virtual void closeFootnote();
+ 	virtual void openEndnote(const WPXPropertyList &propList);
+ 	virtual void closeEndnote();
++	virtual void openComment(const WPXPropertyList &propList) {}
++	virtual void closeComment() {}
++	virtual void openTextBox(const WPXPropertyList &propList) {}
++	virtual void closeTextBox() {}
+ 
+  	virtual void openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns);
+  	virtual void openTableRow(const WPXPropertyList &propList);
+@@ -133,6 +143,10 @@
+ 	virtual void closeTableCell();
+ 	virtual void insertCoveredTableCell(const WPXPropertyList &propList);
+  	virtual void closeTable();
++	virtual void openFrame(const WPXPropertyList &propList) {}
++	virtual void closeFrame() {}
++	virtual void insertBinaryObject(const WPXPropertyList &propList, const WPXBinaryData &data) {}
++	virtual void insertEquation(const WPXPropertyList &propList, const WPXString &data) {}
+ 	virtual bool parseSourceDocument(WPXInputStream &input) = 0;
+ 
+ protected:
+@@ -164,7 +178,7 @@
+ 
+ 	// section styles
+ 	std::vector<SectionStyle *> mSectionStyles;
+-	float mfSectionSpaceAfter;
++	double mfSectionSpaceAfter;
+ 
+ 	// table styles
+ 	std::vector<TableStyle *> mTableStyles;
+--- ./source/stream/WPXSvStream.cxx	2014-02-25 00:24:06.000000000 -0800
++++ ./source/stream/WPXSvStream.cxx	2016-04-21 09:25:00.000000000 -0700
+@@ -9,7 +9,7 @@
+ using namespace ::com::sun::star::io;
+ 
+ WPXSvInputStream::WPXSvInputStream( Reference< XInputStream > xStream ) :
+-		WPXInputStream(true),
++		WPXInputStream(),
+ 		mxChildStorage(),
+ 		mxChildStream(),
+ 		mxStream(xStream),
+--- ./source/stream/WPXSvStream.h	2014-02-25 00:24:06.000000000 -0800
++++ ./source/stream/WPXSvStream.h	2016-04-21 09:21:11.000000000 -0700
+@@ -12,7 +12,7 @@
+ #if defined _MSC_VER
+ #pragma warning( push, 1 )
+ #endif
+-#include <libwpd/WPXStream.h>
++#include <libwpd-stream/WPXStream.h>
+ #if defined _MSC_VER
+ #pragma warning( pop )
+ #endif
+--- ./source/wpdimp/WordPerfectCollector.cxx	2014-02-25 00:24:06.000000000 -0800
++++ ./source/wpdimp/WordPerfectCollector.cxx	2016-04-21 09:42:08.000000000 -0700
+@@ -45,7 +45,7 @@
+ 
+ bool WordPerfectCollector::parseSourceDocument(WPXInputStream &input)
+ {
+-        WPDResult result = WPDocument::parse(&input, static_cast<WPXHLListenerImpl *>(this));
++        WPDResult result = WPDocument::parse(&input, static_cast<WPXDocumentInterface *>(this), NULL);
+         if (result != WPD_OK)
+                 return false;
+ 
+--- ./source/wpdimp/WordPerfectImportFilter.cxx	2014-02-25 00:24:06.000000000 -0800
++++ ./source/wpdimp/WordPerfectImportFilter.cxx	2016-04-21 10:20:29.000000000 -0700
+@@ -201,7 +201,7 @@
+ 	if (input.atEOS())
+         return ::rtl::OUString();
+ 
+-	confidence = WPDocument::isFileFormatSupported(&input, false);
++	confidence = WPDocument::isFileFormatSupported(&input);
+ 
+ 	if (confidence == WPD_CONFIDENCE_EXCELLENT)
+ 		sTypeName = OUString( RTL_CONSTASCII_USTRINGPARAM ( "writer_WordPerfect_Document" ) );
