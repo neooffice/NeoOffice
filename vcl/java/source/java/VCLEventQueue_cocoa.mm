@@ -2671,9 +2671,16 @@ static CFDataRef aRTFSelection = nil;
 
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
+	{
+		// Fix hanging when dragging a pivot table onto a chart by releasing
+		// the native drag lock so that the OOo code can display any dialogs
+		// in the drop event
+		if ( [pSender draggingSource] )
+			VCLInstance_setDragLock( NO );
 		return [pDelegate performDragOperation:pSender];
-	else
-		return NO;
+	}
+
+	return NO;
 }
 
 - (MacOSBOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
