@@ -309,7 +309,23 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 			// otherwise it will never get released by its controllers
 			SFXDocument *pOldDoc = [pFrameDict objectForKey:pKey];
 			if ( pOldDoc )
+			{
+				// Fix unexpected closing of the old document's window when
+				// dragging an existing spreadsheet's icon from the titlebar
+				// into the spreadsheet's content area by remove all window
+				// controllers before closing the old document
+				NSArray *pOldWinControllers = [pOldDoc windowControllers];
+				while ( pOldWinControllers && [pOldWinControllers count] )
+				{
+					NSWindowController *pOldWinController = (NSWindowController *)[pOldWinControllers objectAtIndex:0];
+					if ( pOldWinController )
+						[pOldDoc removeWindowController:pOldWinController];
+
+					pOldWinControllers = [pOldDoc windowControllers];
+				}
+
 				[pOldDoc close];
+			}
 
 			if ( pDoc )
 				[pFrameDict setObject:pDoc forKey:pKey];
