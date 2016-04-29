@@ -26,7 +26,8 @@ What's New in this Version:
 Before you buy NeoOffice, please click on the »Support til NeoOffice« link and read the installation notes.
 
 This version of NeoOffice fixes the following bug:
-• When opening OpenOffice or LibreOffice documents, NeoOffice would display the wrong fonts for light and semi-bold text. For light text, NeoOffice would use the correct font but with the font's regular variant. For semi-bold text, NeoOffice would also use the correct font but with the font's bold variant.
+• NeoOffice would hang when dragging a pivot table onto a chart
+• NeoOffice would crash when double-clicking on a cell in a pivot table
 
 
 Keywords:
