@@ -25,7 +25,7 @@ Seitdem haben die NeoOffice-Ingenieure immer wieder Verbesserungen zu NeoOffice 
 What's New in this Version:
 Bevor Sie NeoOffice kaufen, klicken Sie bitte auf den „NeoOffice Support” Link und lesen die Installationshinweise.
 
-This version of NeoOffice fixes the following bug:
+This version of NeoOffice fixes the following bugs:
 • NeoOffice would hang when dragging a pivot table onto a chart
 • NeoOffice would crash when double-clicking on a cell in a pivot table
 
