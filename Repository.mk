@@ -38,6 +38,7 @@ include $(SRC_ROOT)/Repository.mk
 ifeq ($(strip $(GUIBASE)),java)
 
 gb_Library_PLAINLIBS_NONE += \
+	CoreFoundation \
 	Quartz
 
 endif
