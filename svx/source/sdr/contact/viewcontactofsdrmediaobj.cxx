@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
@@ -156,7 +159,9 @@ namespace sdr
 			// create range using the model data directly. This is in SdrTextObj::aRect which i will access using
             // GetGeoRect() to not trigger any calculations. It's the unrotated geometry which is okay for MediaObjects ATM.
 			const Rectangle& rRectangle(GetSdrMediaObj().GetGeoRect());
-			const basegfx::B2DRange aRange(rRectangle.Left(), rRectangle.Top(), rRectangle.Right(), rRectangle.Bottom());
+			const basegfx::B2DRange aRange(
+                rRectangle.Left(), rRectangle.Top(), 
+                rRectangle.Right(), rRectangle.Bottom());
 
 			// create object transform
 			basegfx::B2DHomMatrix aTransform;
@@ -165,7 +170,9 @@ namespace sdr
 			aTransform.set(0, 2, aRange.getMinX());
 			aTransform.set(1, 2, aRange.getMinY());
 
-			// create media primitive
+			// create media primitive. Always create primitives to allow the 
+			// decomposition of MediaPrimitive2D to create needed invisible elements for HitTest
+			// and/or BoundRect
 #if defined USE_JAVA && defined MACOSX
 			const basegfx::BColor aBackgroundColor(1.0f, 1.0f, 1.0f);
 #else	// USE_JAVA && MACOSX
@@ -173,8 +180,9 @@ namespace sdr
 #endif	// USE_JAVA && MACOSX
 			const rtl::OUString& rURL(GetSdrMediaObj().getURL());
 			const sal_uInt32 nPixelBorder(4L);
-			const drawinglayer::primitive2d::Primitive2DReference xRetval(new drawinglayer::primitive2d::MediaPrimitive2D(
-				aTransform, rURL, aBackgroundColor, nPixelBorder));
+			const drawinglayer::primitive2d::Primitive2DReference xRetval(
+                new drawinglayer::primitive2d::MediaPrimitive2D(
+				    aTransform, rURL, aBackgroundColor, nPixelBorder));
 
 			return drawinglayer::primitive2d::Primitive2DSequence(&xRetval, 1);
 		}

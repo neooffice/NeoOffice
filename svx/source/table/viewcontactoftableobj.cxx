@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
@@ -36,27 +39,31 @@
 #include <basegfx/polygon/b2dpolygontools.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
-#include <drawinglayer/attribute/sdrattribute.hxx>
 #include <svx/sdr/primitive2d/sdrattributecreator.hxx>
 #include <drawinglayer/primitive2d/groupprimitive2d.hxx>
 #include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
-#include <drawinglayer/attribute/sdrattribute.hxx>
 #include <svx/sdr/primitive2d/sdrattributecreator.hxx>
-#include <drawinglayer/attribute/fillattribute.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <svx/sdr/attribute/sdrtextattribute.hxx>
-#include <svx/sdr/attribute/sdrallattribute.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
-#include <svx/borderline.hxx>
+#include <editeng/borderline.hxx>
 #include <drawinglayer/primitive2d/borderlineprimitive2d.hxx>
+#include <svx/sdr/attribute/sdrfilltextattribute.hxx>
+#include <drawinglayer/attribute/sdrlineattribute.hxx>
+#include <drawinglayer/attribute/sdrshadowattribute.hxx>
+#include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
+#include <basegfx/matrix/b2dhommatrixtools.hxx>
 
 #include "cell.hxx"
 #include "tablelayouter.hxx"
 
 #ifdef USE_JAVA
 
+#include <drawinglayer/attribute/fillhatchattribute.hxx>
+#include <drawinglayer/attribute/fillgradientattribute.hxx>
+#include <drawinglayer/attribute/sdrfillgraphicattribute.hxx>
+#include <svx/sdr/table/tablecontroller.hxx>
 #include <vcl/svapp.hxx>
-#include "tablecontroller.hxx"
 
 #endif	// USE_JAVA
 
@@ -70,7 +77,7 @@ namespace drawinglayer
 {
 	namespace primitive2d
 	{
-		class SdrCellPrimitive2D : public BasePrimitive2D
+		class SdrCellPrimitive2D : public BufferedDecompositionPrimitive2D
 		{
 		private:
 			basegfx::B2DHomMatrix						maTransform;
@@ -81,7 +88,7 @@ namespace drawinglayer
 
 		protected:
 			// local decomposition.
-			virtual Primitive2DSequence createLocalDecomposition(const geometry::ViewInformation2D& aViewInformation) const;
+			virtual Primitive2DSequence create2DDecomposition(const geometry::ViewInformation2D& aViewInformation) const;
 
 		public:
 			SdrCellPrimitive2D(
@@ -91,7 +98,7 @@ namespace drawinglayer
 #else	// USE_JAVA
 				const attribute::SdrFillTextAttribute& rSdrFTAttribute)
 #endif	// USE_JAVA
-			:	BasePrimitive2D(),
+			:	BufferedDecompositionPrimitive2D(),
 				maTransform(rTransform),
 				maSdrFTAttribute(rSdrFTAttribute)
 #ifdef USE_JAVA
@@ -115,49 +122,60 @@ namespace drawinglayer
 			DeclPrimitrive2DIDBlock()
 		};
 
-		Primitive2DSequence SdrCellPrimitive2D::createLocalDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
+		Primitive2DSequence SdrCellPrimitive2D::create2DDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
 		{
+			// prepare unit polygon
 			Primitive2DSequence aRetval;
+			const basegfx::B2DPolyPolygon aUnitPolyPolygon(basegfx::tools::createUnitPolygon());
 
-			if(getSdrFTAttribute().getFill() || getSdrFTAttribute().getText())
+			// add fill
+			if(!getSdrFTAttribute().getFill().isDefault())
 			{
-				// prepare unit polygon
-				const basegfx::B2DRange aUnitRange(0.0, 0.0, 1.0, 1.0);
-				const basegfx::B2DPolyPolygon aUnitPolyPolygon(basegfx::tools::createPolygonFromRect(aUnitRange));
-
-				// add fill
-				if(getSdrFTAttribute().getFill())
-				{
-					appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, createPolyPolygonFillPrimitive(
+				appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, 
+					createPolyPolygonFillPrimitive(
 						aUnitPolyPolygon, 
 						getTransform(), 
-						*getSdrFTAttribute().getFill(), 
+						getSdrFTAttribute().getFill(), 
 						getSdrFTAttribute().getFillFloatTransGradient()));
-				}
+			}
+            else
+            {
+                // if no fill create one for HitTest and BoundRect fallback
+                appendPrimitive2DReferenceToPrimitive2DSequence(aRetval,
+                    createHiddenGeometryPrimitives2D(
+                        true,
+                        aUnitPolyPolygon,
+                        getTransform()));
+            }
 
 #ifdef USE_JAVA
-				// Add native highlighting
-				if(UseNativeHighlighting())
-				{
-					attribute::SdrFillAttribute aNativeHighlightFillAttr(0.25, Application::GetSettings().GetStyleSettings().GetHighlightColor().getBColor());
-					appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, createPolyPolygonFillPrimitive(
-						aUnitPolyPolygon, 
-						getTransform(), 
-						aNativeHighlightFillAttr,
-						NULL));
-				}
+			// Add native highlighting
+			if(UseNativeHighlighting())
+			{
+				attribute::FillGradientAttribute aGradient;
+				attribute::FillHatchAttribute aHatch;
+				attribute::SdrFillGraphicAttribute aFillGraphic;
+				attribute::SdrFillAttribute aNativeHighlightFillAttr(0.25, Application::GetSettings().GetStyleSettings().GetHighlightColor().getBColor(), aGradient, aHatch, aFillGraphic);
+				appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, createPolyPolygonFillPrimitive(
+					aUnitPolyPolygon, 
+					getTransform(), 
+					aNativeHighlightFillAttr,
+					aGradient));
+			}
 #endif	// USE_JAVA
 
-				// add text
-				if(getSdrFTAttribute().getText())
-				{
-					appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, createTextPrimitive(
+			// add text
+			if(!getSdrFTAttribute().getText().isDefault())
+			{
+				appendPrimitive2DReferenceToPrimitive2DSequence(aRetval, 
+					createTextPrimitive(
 						aUnitPolyPolygon, 
 						getTransform(), 
-						*getSdrFTAttribute().getText(),
-						0,
-						true, false));
-				}
+						getSdrFTAttribute().getText(),
+						attribute::SdrLineAttribute(),
+						true, 
+						false, 
+						false));
 			}
 
 			return aRetval;
@@ -165,7 +183,7 @@ namespace drawinglayer
 
 		bool SdrCellPrimitive2D::operator==(const BasePrimitive2D& rPrimitive) const
 		{
-			if(BasePrimitive2D::operator==(rPrimitive))
+			if(BufferedDecompositionPrimitive2D::operator==(rPrimitive))
 			{
 				const SdrCellPrimitive2D& rCompare = (SdrCellPrimitive2D&)rPrimitive;
 				
@@ -191,7 +209,7 @@ namespace drawinglayer
 {
 	namespace primitive2d
 	{
-		class SdrBorderlinePrimitive2D : public BasePrimitive2D
+		class SdrBorderlinePrimitive2D : public BufferedDecompositionPrimitive2D
 		{
 		private:
 			basegfx::B2DHomMatrix						maTransform;
@@ -209,7 +227,7 @@ namespace drawinglayer
 
 		protected:
 			// local decomposition.
-			virtual Primitive2DSequence createLocalDecomposition(const geometry::ViewInformation2D& aViewInformation) const;
+			virtual Primitive2DSequence create2DDecomposition(const geometry::ViewInformation2D& aViewInformation) const;
 
 		public:
 			SdrBorderlinePrimitive2D(
@@ -223,7 +241,7 @@ namespace drawinglayer
 				bool bRightIsOutside,
 				bool bTopIsOutside,
 				bool bInTwips)
-			:	BasePrimitive2D(),
+			:	BufferedDecompositionPrimitive2D(),
 				maTransform(rTransform),
 				maLeftLine(rLeftLine),
 				maBottomLine(rBottomLine),
@@ -318,7 +336,7 @@ namespace drawinglayer
 			return (double)nValue;
 		}
 
-		Primitive2DSequence SdrBorderlinePrimitive2D::createLocalDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
+		Primitive2DSequence SdrBorderlinePrimitive2D::create2DDecomposition(const geometry::ViewInformation2D& /*aViewInformation*/) const
 		{
 			Primitive2DSequence xRetval(4);
 			sal_uInt32 nInsert(0);
@@ -498,7 +516,7 @@ namespace drawinglayer
 
 		bool SdrBorderlinePrimitive2D::operator==(const BasePrimitive2D& rPrimitive) const
 		{
-			if(BasePrimitive2D::operator==(rPrimitive))
+			if(BufferedDecompositionPrimitive2D::operator==(rPrimitive))
 			{
 				const SdrBorderlinePrimitive2D& rCompare = (SdrBorderlinePrimitive2D&)rPrimitive;
 				
@@ -575,14 +593,13 @@ namespace sdr
 
 		drawinglayer::primitive2d::Primitive2DSequence ViewContactOfTableObj::createViewIndependentPrimitive2DSequence() const
         {
-            drawinglayer::primitive2d::Primitive2DSequence xRetval;
 			const sdr::table::SdrTableObj& rTableObj = GetTableObj();
             const uno::Reference< com::sun::star::table::XTable > xTable = rTableObj.getTable();
-           	const SfxItemSet& rObjectItemSet = rTableObj.GetMergedItemSet();
 
             if(xTable.is())
             {
                 // create primitive representation for table
+	            drawinglayer::primitive2d::Primitive2DSequence xRetval;
                 const sal_Int32 nRowCount(xTable->getRowCount());
                 const sal_Int32 nColCount(xTable->getColumnCount());
                 const sal_Int32 nAllCount(nRowCount * nColCount);
@@ -635,25 +652,44 @@ namespace sdr
 									const SfxItemSet& rCellItemSet = xCurrentCell->GetItemSet();
 									const sal_uInt32 nTextIndex(nColCount * aCellPos.mnRow + aCellPos.mnCol);
 									const SdrText* pSdrText = rTableObj.getText(nTextIndex);
-									drawinglayer::attribute::SdrFillTextAttribute* pAttribute = drawinglayer::primitive2d::createNewSdrFillTextAttribute(rCellItemSet, pSdrText);
-
-									if(pAttribute)
+									drawinglayer::attribute::SdrFillTextAttribute aAttribute;
+									
+									if(pSdrText)
 									{
-										if(pAttribute->isVisible())
-										{
-#ifdef USE_JAVA
-											sdr::table::SvxTableController *pTableController = sdr::table::SvxTableController::GetTableController(&rTableObj);
-#endif	// USE_JAVA
-											const drawinglayer::primitive2d::Primitive2DReference xCellReference(new drawinglayer::primitive2d::SdrCellPrimitive2D(
-#ifdef USE_JAVA
-												aCellMatrix, *pAttribute, pTableController ? pTableController->IsNativeHighlightColorCellPos(sdr::table::CellPos(aCellPos)) : false));
-#else	// USE_JAVA
-												aCellMatrix, *pAttribute));
-#endif	// USE_JAVA
-											xCellSequence[nCellInsert++] = xCellReference;
-										}
+										// #i101508# take cell's local text frame distances into account
+										const sal_Int32 nLeft(xCurrentCell->GetTextLeftDistance());
+										const sal_Int32 nRight(xCurrentCell->GetTextRightDistance());
+										const sal_Int32 nUpper(xCurrentCell->GetTextUpperDistance());
+										const sal_Int32 nLower(xCurrentCell->GetTextLowerDistance());
 
-										delete pAttribute;
+										aAttribute = drawinglayer::primitive2d::createNewSdrFillTextAttribute(
+											rCellItemSet, 
+											pSdrText,
+											&nLeft,
+											&nUpper,
+											&nRight,
+											&nLower);
+									}
+									else
+									{
+										aAttribute = drawinglayer::primitive2d::createNewSdrFillTextAttribute(
+											rCellItemSet, 
+											pSdrText);
+									}
+
+                                    // always create cell primitives for BoundRect and HitTest
+									{
+#ifdef USE_JAVA
+										sdr::table::SvxTableController *pTableController = sdr::table::SvxTableController::GetTableController(&rTableObj);
+#endif	// USE_JAVA
+										const drawinglayer::primitive2d::Primitive2DReference xCellReference(
+											new drawinglayer::primitive2d::SdrCellPrimitive2D(
+#ifdef USE_JAVA
+												aCellMatrix, aAttribute, pTableController ? pTableController->IsNativeHighlightColorCellPos(sdr::table::CellPos(aCellPos)) : false));
+#else	// USE_JAVA
+												aCellMatrix, aAttribute));
+#endif	// USE_JAVA
+										xCellSequence[nCellInsert++] = xCellReference;
 									}
 
 									// handle cell borders
@@ -698,31 +734,46 @@ namespace sdr
 					xRetval = xCellSequence;
 					drawinglayer::primitive2d::appendPrimitive2DSequenceToPrimitive2DSequence(xRetval, xBorderSequence);
 				}
+
+				if(xRetval.hasElements())
+				{
+					// check and create evtl. shadow for created content
+	           		const SfxItemSet& rObjectItemSet = rTableObj.GetMergedItemSet();
+					const drawinglayer::attribute::SdrShadowAttribute aNewShadowAttribute(
+						drawinglayer::primitive2d::createNewSdrShadowAttribute(rObjectItemSet));
+
+					if(!aNewShadowAttribute.isDefault())
+					{
+						xRetval = drawinglayer::primitive2d::createEmbeddedShadowPrimitive(xRetval, aNewShadowAttribute);
+					}
+				}
+
+				return xRetval;
 			}
+			else
+			{
+				// take unrotated snap rect (direct model data) for position and size
+				const Rectangle& rRectangle = rTableObj.GetGeoRect();
+				const basegfx::B2DRange aObjectRange(
+					rRectangle.Left(), rRectangle.Top(), 
+					rRectangle.Right(), rRectangle.Bottom());
 
-            if(xRetval.hasElements())
-            {
-                // check and create evtl. shadow for created content
-                drawinglayer::attribute::SdrShadowAttribute* pNewShadowAttribute = drawinglayer::primitive2d::createNewSdrShadowAttribute(rObjectItemSet);
+				// create object matrix
+				const GeoStat& rGeoStat(rTableObj.GetGeoStat());
+				const double fShearX(rGeoStat.nShearWink ? tan((36000 - rGeoStat.nShearWink) * F_PI18000) : 0.0);
+				const double fRotate(rGeoStat.nDrehWink ? (36000 - rGeoStat.nDrehWink) * F_PI18000 : 0.0);
+				const basegfx::B2DHomMatrix aObjectMatrix(basegfx::tools::createScaleShearXRotateTranslateB2DHomMatrix(
+					aObjectRange.getWidth(), aObjectRange.getHeight(), fShearX, fRotate,
+					aObjectRange.getMinX(), aObjectRange.getMinY()));
 
-                if(pNewShadowAttribute)
-                {
-			        // attention: shadow is added BEFORE object stuff to render it BEHIND object (!)
-			        const drawinglayer::primitive2d::Primitive2DReference xShadow(drawinglayer::primitive2d::createShadowPrimitive(xRetval, *pNewShadowAttribute));
+				// credate an invisible outline for the cases where no visible content exists
+	            const drawinglayer::primitive2d::Primitive2DReference xReference(
+					drawinglayer::primitive2d::createHiddenGeometryPrimitives2D(
+						false, 
+						aObjectMatrix));
 
-			        if(xShadow.is())
-			        {
-				        drawinglayer::primitive2d::Primitive2DSequence xContentWithShadow(2);
-				        xContentWithShadow[0] = xShadow;
-				        xContentWithShadow[1] = drawinglayer::primitive2d::Primitive2DReference(new drawinglayer::primitive2d::GroupPrimitive2D(xRetval));
-				        xRetval = xContentWithShadow;
-			        }
-                    
-                    delete pNewShadowAttribute;
-                }
-            }
-
-			return xRetval;
+				return drawinglayer::primitive2d::Primitive2DSequence(&xReference, 1);
+			}
         }
 
 		ViewContactOfTableObj::ViewContactOfTableObj(::sdr::table::SdrTableObj& rTableObj)

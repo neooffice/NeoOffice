@@ -1,36 +1,41 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
-#include "dialcontrol.hxx"
-
+#include "svx/dialcontrol.hxx"
+#include "bmpmask.hrc"
+#include <svx/dialmgr.hxx>
+#include <tools/rcid.h>
 #include <math.h>
 #include <vcl/virdev.hxx>
 #include <vcl/svapp.hxx>
@@ -46,41 +51,15 @@ const long DIAL_OUTER_WIDTH = 8;
 
 // ============================================================================
 
-class DialControlBmp : public VirtualDevice
-{
-public:
-    explicit            DialControlBmp( Window& rParent );
-
-    void                InitBitmap( const Size& rSize, const Font& rFont );
-    void                CopyBackground( const DialControlBmp& rSrc );
-    void                DrawBackground( const Size& rSize, bool bEnabled );
-    void                DrawElements( const String& rText, sal_Int32 nAngle );
-
-private:
-    const Color&        GetBackgroundColor() const;
-    const Color&        GetTextColor() const;
-    const Color&        GetScaleLineColor() const;
-    const Color&        GetButtonLineColor() const;
-    const Color&        GetButtonFillColor( bool bMain ) const;
-
-    void                Init( const Size& rSize );
-    void                DrawBackground();
-
-    Window&             mrParent;
-    Rectangle           maRect;
-    long                mnCenterX;
-    long                mnCenterY;
-    bool                mbEnabled;
-};
 
 // ----------------------------------------------------------------------------
 
 DialControlBmp::DialControlBmp( Window& rParent ) :
     VirtualDevice( rParent, 0, 0 ),
-    mrParent( rParent ),
-    mbEnabled( true )
+    mbEnabled( true ),
+    mrParent( rParent )
 {
-    EnableRTL( FALSE );
+    EnableRTL( sal_False );
 }
 
 void DialControlBmp::InitBitmap( const Size& rSize, const Font& rFont )
@@ -193,7 +172,7 @@ void DialControlBmp::DrawBackground()
     SetFillColor();
     Erase();
 
-    EnableRTL( TRUE ); // #107807# draw 3D effect in correct direction
+    EnableRTL( sal_True ); // #107807# draw 3D effect in correct direction
 
     sal_uInt8 nDiff = mbEnabled ? 0x18 : 0x10;
     Color aColor;
@@ -220,7 +199,7 @@ void DialControlBmp::DrawBackground()
     SetFillColor( aColor );
     DrawPie( maRect, maRect.TopLeft(), maRect.LeftCenter() );
 
-    EnableRTL( FALSE );
+    EnableRTL( sal_False );
 
     // *** calibration ***
 
@@ -246,40 +225,23 @@ void DialControlBmp::DrawBackground()
         maRect.Right() - DIAL_OUTER_WIDTH, maRect.Bottom() - DIAL_OUTER_WIDTH ) );
 }
 
-// ============================================================================
 
-struct DialControl_Impl
-{
-    DialControlBmp      maBmpEnabled;
-    DialControlBmp      maBmpDisabled;
-    DialControlBmp      maBmpBuffered;
-    Link                maModifyHdl;
-    NumericField*       mpLinkField;
-    Size                maWinSize;
-    Font                maWinFont;
-    sal_Int32           mnAngle;
-    sal_Int32           mnOldAngle;
-    long                mnCenterX;
-    long                mnCenterY;
-    bool                mbNoRot;
 
-    explicit            DialControl_Impl( Window& rParent );
-    void                Init( const Size& rWinSize, const Font& rWinFont );
-};
 
 // ----------------------------------------------------------------------------
 
-DialControl_Impl::DialControl_Impl( Window& rParent ) :
-    maBmpEnabled( rParent ),
-    maBmpDisabled( rParent ),
-    maBmpBuffered( rParent ),
+DialControl::DialControl_Impl::DialControl_Impl (
+    Window& rParent ) :
+    mpBmpEnabled(new DialControlBmp(rParent)),
+    mpBmpDisabled(new DialControlBmp(rParent)),
+    mpBmpBuffered(new DialControlBmp(rParent)),
     mpLinkField( 0 ),
     mnAngle( 0 ),
     mbNoRot( false )
 {
 }
 
-void DialControl_Impl::Init( const Size& rWinSize, const Font& rWinFont )
+void DialControl::DialControl_Impl::Init( const Size& rWinSize, const Font& rWinFont )
 {
     // "(x - 1) | 1" creates odd value <= x, to have a well-defined center pixel position
     maWinSize = Size( (rWinSize.Width() - 1) | 1, (rWinSize.Height() - 1) | 1 );
@@ -287,11 +249,11 @@ void DialControl_Impl::Init( const Size& rWinSize, const Font& rWinFont )
 
     mnCenterX = maWinSize.Width() / 2;
     mnCenterY = maWinSize.Height() / 2;
-    maWinFont.SetTransparent( TRUE );
+    maWinFont.SetTransparent( sal_True );
 
-    maBmpEnabled.DrawBackground( maWinSize, true );
-    maBmpDisabled.DrawBackground( maWinSize, false );
-    maBmpBuffered.InitBitmap( maWinSize, maWinFont );
+    mpBmpEnabled->DrawBackground( maWinSize, true );
+    mpBmpDisabled->DrawBackground( maWinSize, false );
+    mpBmpBuffered->InitBitmap( maWinSize, maWinFont );
 }
 
 // ============================================================================
@@ -327,7 +289,7 @@ DialControl::~DialControl()
 void DialControl::Paint( const Rectangle&  )
 {
     Point aPos;
-    DrawBitmapEx( aPos, mpImpl->maBmpBuffered.GetBitmapEx( aPos, mpImpl->maWinSize ) );
+    DrawBitmapEx( aPos, mpImpl->mpBmpBuffered->GetBitmapEx( aPos, mpImpl->maWinSize ) );
 }
 
 void DialControl::StateChanged( StateChangedType nStateChange )
@@ -428,7 +390,7 @@ sal_Int32 DialControl::GetRotation() const
 
 void DialControl::SetRotation( sal_Int32 nAngle )
 {
-    ImplSetRotation( nAngle, false );
+    SetRotation( nAngle, false );
 }
 
 void DialControl::SetLinkedField( NumericField* pField )
@@ -461,7 +423,7 @@ const Link& DialControl::GetModifyHdl() const
 void DialControl::Init( const Size& rWinSize, const Font& rWinFont )
 {
     mpImpl->Init( rWinSize, rWinFont );
-    EnableRTL( FALSE ); // #107807# don't mirror mouse handling
+    EnableRTL( sal_False ); // #107807# don't mirror mouse handling
     SetOutputSizePixel( mpImpl->maWinSize );
     SetBackground();
 }
@@ -475,13 +437,13 @@ void DialControl::Init( const Size& rWinSize )
 
 void DialControl::InvalidateControl()
 {
-    mpImpl->maBmpBuffered.CopyBackground( IsEnabled() ? mpImpl->maBmpEnabled : mpImpl->maBmpDisabled );
+    mpImpl->mpBmpBuffered->CopyBackground( IsEnabled() ? *mpImpl->mpBmpEnabled : *mpImpl->mpBmpDisabled );
     if( !mpImpl->mbNoRot )
-        mpImpl->maBmpBuffered.DrawElements( GetText(), mpImpl->mnAngle );
+        mpImpl->mpBmpBuffered->DrawElements( GetText(), mpImpl->mnAngle );
     Invalidate();
 }
 
-void DialControl::ImplSetRotation( sal_Int32 nAngle, bool bBroadcast )
+void DialControl::SetRotation( sal_Int32 nAngle, bool bBroadcast )
 {
     bool bOldSel = mpImpl->mbNoRot;
     mpImpl->mbNoRot = false;
@@ -526,7 +488,7 @@ void DialControl::HandleMouseEvent( const Point& rPos, bool bInitial )
             nAngle = 36000 - nAngle;
         if( bInitial )  // round to entire 15 degrees
             nAngle = ((nAngle + 750) / 1500) * 1500;
-        ImplSetRotation( nAngle, true );
+        SetRotation( nAngle, true );
     }
 }
 
@@ -535,7 +497,7 @@ void DialControl::HandleEscapeEvent()
     if( IsMouseCaptured() )
     {
         ReleaseMouse();
-        ImplSetRotation( mpImpl->mnOldAngle, true );
+        SetRotation( mpImpl->mnOldAngle, true );
         if( mpImpl->mpLinkField )
             mpImpl->mpLinkField->GrabFocus();
     }
@@ -544,7 +506,7 @@ void DialControl::HandleEscapeEvent()
 IMPL_LINK( DialControl, LinkedFieldModifyHdl, NumericField*, pField )
 {
     if( pField )
-        ImplSetRotation( static_cast< sal_Int32 >( pField->GetValue() * 100 ), false );
+        SetRotation( static_cast< sal_Int32 >( pField->GetValue() * 100 ), false );
     return 0;
 }
 

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #ifndef _SVX_TABLECONTROLLER_HXX_
 #define _SVX_TABLECONTROLLER_HXX_
@@ -38,12 +41,15 @@
 #include <svx/selectioncontroller.hxx>
 #include <svx/svdotable.hxx>
 #include <svx/svdview.hxx>
-#include <tablemodel.hxx>
+//#include <tablemodel.hxx>
 
 class SdrObjEditView;
 class SdrObject;
+class SfxItemSet;
 
 namespace sdr { namespace table {
+
+class TableModel;
 
 const sal_Int16 SELTYPE_NONE = 0;
 const sal_Int16 SELTYPE_MOUSE = 1;
@@ -55,6 +61,7 @@ public:
     SVX_DLLPRIVATE SvxTableController( SdrObjEditView* pView, const SdrObject* pObj );
     SVX_DLLPRIVATE virtual ~SvxTableController();
 
+    // from sdr::SelectionController
     SVX_DLLPRIVATE virtual bool onKeyInput(const KeyEvent& rKEvt, Window* pWin);
     SVX_DLLPRIVATE virtual bool onMouseButtonDown(const MouseEvent& rMEvt, Window* pWin);
     SVX_DLLPRIVATE virtual bool onMouseButtonUp(const MouseEvent& rMEvt, Window* pWin);
@@ -70,8 +77,11 @@ public:
     SVX_DLLPRIVATE virtual bool GetStyleSheet( SfxStyleSheet* &rpStyleSheet ) const;
     SVX_DLLPRIVATE virtual bool SetStyleSheet( SfxStyleSheet* pStyleSheet, bool bDontRemoveHardAttr );
 
+	SVX_DLLPRIVATE virtual bool TakeFormatPaintBrush( boost::shared_ptr< SfxItemSet >& rFormatSet  );
+	SVX_DLLPRIVATE virtual bool ApplyFormatPaintBrush( SfxItemSet& rFormatSet, bool bNoCharacterFormats, bool bNoParagraphFormats );	
+
 	// slots
-    SVX_DLLPRIVATE void onInsert( sal_uInt16 nSId );
+    SVX_DLLPRIVATE void onInsert( sal_uInt16 nSId, const SfxItemSet* pArgs = 0 );
     SVX_DLLPRIVATE void onDelete( sal_uInt16 nSId );
     SVX_DLLPRIVATE void onSelect( sal_uInt16 nSId );
     SVX_DLLPRIVATE void onFormatTable( SfxRequest& rReq );
@@ -100,6 +110,19 @@ public:
 	void selectAll();
 
     SVX_DLLPRIVATE void onTableModified();
+
+	sal_Bool selectRow( sal_Int32 row );
+	sal_Bool selectColumn( sal_Int32 column );
+	sal_Bool deselectRow( sal_Int32 row );
+	sal_Bool deselectColumn( sal_Int32 column );
+	sal_Bool isRowSelected( sal_Int32 nRow );
+	sal_Bool isColumnSelected( sal_Int32 nColumn );
+	sal_Bool isRowHeader();
+	sal_Bool isColumnHeader();
+	::sdr::table::SdrTableObj* GetTableObj() { return dynamic_cast< ::sdr::table::SdrTableObj* >( mxTableObj.get() ); }
+	//declare event notification method
+	void NotifySelection( const CellPos& firstPos, const CellPos& lastPos, const CellPos& newPos );
+
 #ifdef USE_JAVA
 	static SvxTableController *GetTableController( const SdrTableObj *pObj );
 	Rectangle GetNativeHighlightColorRect();
@@ -148,7 +171,8 @@ private:
 
 	DECL_LINK( UpdateHdl, void * );
 
-	TableModelRef mxTable;
+	//TableModelRef mxTable;
+	rtl::Reference< TableModel > mxTable;
 
 	CellPos maCursorFirstPos;
 	CellPos maCursorLastPos;
@@ -163,10 +187,7 @@ private:
 
 	::com::sun::star::uno::Reference< ::com::sun::star::util::XModifyListener > mxModifyListener;
 
-	ULONG mnUpdateEvent;
-#ifdef USE_JAVA
-	static ::std::map< SvxTableController*, SdrTableObj* > maTableControllerMap;
-#endif	// USE_JAVA
+	sal_uLong mnUpdateEvent;
 };
 
 } }

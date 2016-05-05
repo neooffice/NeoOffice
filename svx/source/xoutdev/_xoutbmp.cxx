@@ -1,31 +1,32 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
@@ -37,12 +38,13 @@
 #include <tools/poly.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/wrkwin.hxx>
-#include <svtools/solar.hrc>
+#include <svl/solar.hrc>
 #include <sfx2/docfile.hxx>
 #include <sfx2/app.hxx>
-#include "impgrf.hxx"
-#include "xoutbmp.hxx"
+#include "svx/xoutbmp.hxx"
 #include <svtools/FilterConfigItem.hxx>
+#include <svtools/filter.hxx>
+#include <vcl/dibtools.hxx>
 
 // -----------
 // - Defines -
@@ -59,196 +61,16 @@
 
 GraphicFilter* XOutBitmap::pGrfFilter = NULL;
 
-// -----------------------------------------------------------------------------
-
-BitmapEx XOutBitmap::CreateQuickDrawBitmapEx( const Graphic& rGraphic, const OutputDevice& rCompDev,
-											  const MapMode& rMapMode, const Size& rLogSize,
-											  const Point& rPoint, const Size& rSize )
-{
-	BitmapEx aRetBmp;
-
-	if( rGraphic.IsAlpha() )
-		aRetBmp = rGraphic.GetBitmapEx();
-	else
-	{
-		VirtualDevice	aVDev( rCompDev );
-		MapMode			aMap( rMapMode );
-
-		aMap.SetOrigin( Point() );
-		aVDev.SetMapMode( aMap );
-
-		Point	aPoint( aVDev.LogicToPixel( rPoint ) );
-		Size	aOldSize( aVDev.LogicToPixel( rSize ) );
-		Size	aAbsSize( aOldSize );
-		Size	aQSizePix( aVDev.LogicToPixel( rLogSize ) );
-
-		aVDev.SetMapMode( MapMode() );
-
-		if( aOldSize.Width() < 0 )
-			aAbsSize.Width() = -aAbsSize.Width();
-
-		if( aOldSize.Height() < 0 )
-			aAbsSize.Height() = -aAbsSize.Height();
-
-		if( aVDev.SetOutputSizePixel( aAbsSize ) )
-		{
-			Point		aNewOrg( -aPoint.X(), -aPoint.Y() );
-			const Point	aNullPoint;
-
-			// horizontale Spiegelung ggf. beruecksichtigen
-			if( aOldSize.Width() < 0 )
-			{
-				aNewOrg.X() -= aOldSize.Width();
-
-				// und jetzt noch einen abziehen
-				aNewOrg.X()--;
-			}
-
-			// vertikale Spiegelung ggf. beruecksichtigen
-			if( rSize.Height() < 0 )
-			{
-				aNewOrg.Y() -= aOldSize.Height();
-
-				// und jetzt noch einen abziehen
-				aNewOrg.Y()--;
-			}
-
-			if( rGraphic.GetType() != GRAPHIC_BITMAP )
-			{
-				rGraphic.Draw( &aVDev, aNewOrg, aQSizePix );
-
-				const Bitmap	aBmp( aVDev.GetBitmap( aNullPoint, aAbsSize ) );
-				Bitmap			aMask;
-
-				Graphic( rGraphic.GetGDIMetaFile().GetMonochromeMtf( COL_BLACK ) ).Draw( &aVDev, aNewOrg, aQSizePix );
-				aMask = aVDev.GetBitmap( aNullPoint, aAbsSize );
-				aRetBmp = BitmapEx( aBmp, aMask );
-			}
-			else
-			{
-				Bitmap	aBmp( rGraphic.GetBitmap() );
-
-// UNX has got problems with 1x1 bitmaps which are transparent (KA 02.11.1998)
-#ifdef UNX
-				const Size	aBmpSize( aBmp.GetSizePixel() );
-				BOOL		bFullTrans = FALSE;
-
-				if( aBmpSize.Width() == 1 && aBmpSize.Height() == 1 && rGraphic.IsTransparent() )
-				{
-					Bitmap				aTrans( rGraphic.GetBitmapEx().GetMask() );
-					BitmapReadAccess*	pMAcc = aBmp.AcquireReadAccess();
-
-					if( pMAcc )
-					{
-						if( pMAcc->GetColor( 0, 0 ) == BitmapColor( Color( COL_WHITE ) ) )
-							bFullTrans = TRUE;
-
-						aTrans.ReleaseAccess( pMAcc );
-					}
-				}
-
-				if( !bFullTrans )
-#endif // UNX
-
-				{
-					DitherBitmap( aBmp );
-					aVDev.DrawBitmap( aNewOrg, aQSizePix, aBmp );
-					aBmp = aVDev.GetBitmap( aNullPoint, aAbsSize );
-
-					if( !rGraphic.IsTransparent() )
-						aRetBmp = BitmapEx( aBmp );
-					else
-					{
-						Bitmap	aTrans( rGraphic.GetBitmapEx().GetMask() );
-
-						if( !aTrans )
-							aRetBmp = BitmapEx( aBmp, rGraphic.GetBitmapEx().GetTransparentColor() );
-						else
-						{
-							aVDev.DrawBitmap( aNewOrg, aQSizePix, aTrans );
-							aRetBmp = BitmapEx( aBmp, aVDev.GetBitmap( Point(), aAbsSize ) );
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return aRetBmp;
-}
-
 // ------------------------------------------------------------------------
 
-void XOutBitmap::DrawQuickDrawBitmapEx( OutputDevice* pOutDev, const Point& rPt,
-										const Size& rSize, const BitmapEx& rBmpEx )
-{
-	const Size		aBmpSizePix( rBmpEx.GetSizePixel() );
-	const Size		aSizePix( pOutDev->LogicToPixel( rSize ) );
-
-	if ( ( aSizePix.Width() - aBmpSizePix.Width() ) || ( aSizePix.Height() - aBmpSizePix.Height() ) )
-		rBmpEx.Draw( pOutDev, rPt, rSize );
-	else
-		rBmpEx.Draw( pOutDev, rPt );
-}
-
-// ------------------------------------------------------------------------
-
-void XOutBitmap::DrawTiledBitmapEx( OutputDevice* pOutDev,
-									const Point& rStartPt, const Size& rGrfSize,
-									const Rectangle& rTileRect, const BitmapEx& rBmpEx )
-{
-	Rectangle		aClipRect( pOutDev->LogicToPixel( pOutDev->GetClipRegion().GetBoundRect() ) );
-	Rectangle		aPixRect( pOutDev->LogicToPixel( rTileRect ) );
-	const Size		aPixSize( pOutDev->LogicToPixel( rGrfSize ) );
-	const Point		aPixPoint( pOutDev->LogicToPixel( rStartPt ) );
-	Point  			aOrg;
-	const long		nWidth = aPixSize.Width();
-	const long 		nHeight = aPixSize.Height();
-	long			nXPos = aPixPoint.X() + ( ( aPixRect.Left() - aPixPoint.X() ) / nWidth ) * nWidth;
-	long			nYPos = aPixPoint.Y() + ( ( aPixRect.Top() - aPixPoint.Y() ) / nHeight ) * nHeight;
-	const long		nBottom = aPixRect.Bottom();
-	const long		nRight = aPixRect.Right();
-	const long		nLeft = nXPos;
-	const BOOL		bNoSize = ( aPixSize == rBmpEx.GetSizePixel() );
-
-	pOutDev->Push();
-	pOutDev->SetMapMode( MapMode() );
-
-	// ggf. neue ClipRegion berechnen und setzen
-	if ( pOutDev->IsClipRegion() )
-		aPixRect.Intersection( aClipRect );
-
-	pOutDev->SetClipRegion( aPixRect );
-
-	while( nYPos <= nBottom )
-	{
-		while( nXPos <= nRight )
-		{
-			if ( bNoSize )
-				rBmpEx.Draw( pOutDev, Point( nXPos, nYPos ) );
-			else
-				rBmpEx.Draw( pOutDev, Point( nXPos, nYPos ), aPixSize );
-
-			nXPos += nWidth;
-		}
-
-		nXPos = nLeft;
-		nYPos += nHeight;
-	}
-
-	pOutDev->Pop();
-}
-
-// ------------------------------------------------------------------------
-
-Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, BOOL bHMirr, BOOL bVMirr )
+Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, sal_Bool bHMirr, sal_Bool bVMirr )
 {
 	Animation aNewAnim( rAnimation );
 
 	if( bHMirr || bVMirr )
 	{
 		const Size&	rGlobalSize = aNewAnim.GetDisplaySizePixel();
-		ULONG		nMirrorFlags = 0L;
+		sal_uIntPtr		nMirrorFlags = 0L;
 
 		if( bHMirr )
 			nMirrorFlags |= BMP_MIRROR_HORZ;
@@ -256,7 +78,7 @@ Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, BOOL bHMirr,
 		if( bVMirr )
 			nMirrorFlags |= BMP_MIRROR_VERT;
 
-		for( USHORT i = 0, nCount = aNewAnim.Count(); i < nCount; i++ )
+		for( sal_uInt16 i = 0, nCount = aNewAnim.Count(); i < nCount; i++ )
 		{
 			AnimationBitmap	aAnimBmp( aNewAnim.Get( i ) );
 
@@ -282,7 +104,7 @@ Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, BOOL bHMirr,
 
 // ------------------------------------------------------------------------
 
-Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const ULONG nMirrorFlags )
+Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const sal_uIntPtr nMirrorFlags )
 {
 	Graphic	aRetGraphic;
 
@@ -320,8 +142,8 @@ Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const ULONG nMirrorF
 
 // ------------------------------------------------------------------------
 
-USHORT XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
-								 const String& rFilterName, const ULONG nFlags,
+sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
+								 const String& rFilterName, const sal_uIntPtr nFlags,
 								 const Size* pMtfSize_100TH_MM )
 {
 	if( rGraphic.GetType() != GRAPHIC_NONE )
@@ -329,9 +151,9 @@ USHORT XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
 		INetURLObject	aURL( rFileName );
 		Graphic			aGraphic;
 		String			aExt;
-		GraphicFilter*	pFilter = GetGrfFilter();
-		USHORT			nErr = GRFILTER_FILTERERROR, nFilter = GRFILTER_FORMAT_NOTFOUND;
-		BOOL			bTransparent = rGraphic.IsTransparent(), bAnimated = rGraphic.IsAnimated();
+		GraphicFilter*	pFilter = GraphicFilter::GetGraphicFilter();
+		sal_uInt16			nErr = GRFILTER_FILTERERROR, nFilter = GRFILTER_FORMAT_NOTFOUND;
+		sal_Bool			bTransparent = rGraphic.IsTransparent(), bAnimated = rGraphic.IsAnimated();
 
 		DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "XOutBitmap::WriteGraphic(...): invalid URL" );
 
@@ -349,47 +171,83 @@ USHORT XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
             aURL.setBase( aName );
 		}
 
-		if( ( nFlags & XOUTBMP_USE_NATIVE_IF_POSSIBLE ) &&
-			!( nFlags & XOUTBMP_MIRROR_HORZ ) &&
-			!( nFlags & XOUTBMP_MIRROR_VERT ) &&
-			( rGraphic.GetType() != GRAPHIC_GDIMETAFILE ) && rGraphic.IsLink() )
+        // #121128# use shortcut to write SVG data in original form (if possible)
+        const SvgDataPtr aSvgDataPtr(rGraphic.getSvgData());
+
+        if(aSvgDataPtr.get() 
+            && aSvgDataPtr->getSvgDataArrayLength()
+            && rFilterName.EqualsIgnoreCaseAscii("svg"))
+        {
+            if(!(nFlags & XOUTBMP_DONT_ADD_EXTENSION))
+            {
+                aURL.setExtension(rFilterName);
+            }
+
+            rFileName = aURL.GetMainURL(INetURLObject::NO_DECODE);
+            SfxMedium aMedium(aURL.GetMainURL(INetURLObject::NO_DECODE), STREAM_WRITE|STREAM_SHARE_DENYNONE|STREAM_TRUNC, true);
+            SvStream* pOStm = aMedium.GetOutStream();
+
+            if(pOStm)
+            {
+                pOStm->Write(aSvgDataPtr->getSvgDataArray().get(), aSvgDataPtr->getSvgDataArrayLength());
+                aMedium.Commit();
+
+                if(!aMedium.GetError())
+                {
+                    nErr = GRFILTER_OK;
+                }
+            }
+        }
+
+		if( GRFILTER_OK != nErr )
 		{
-			// try to write native link
-			const GfxLink aGfxLink( ( (Graphic&) rGraphic ).GetLink() );
+		    if( ( nFlags & XOUTBMP_USE_NATIVE_IF_POSSIBLE ) &&
+			    !( nFlags & XOUTBMP_MIRROR_HORZ ) &&
+			    !( nFlags & XOUTBMP_MIRROR_VERT ) &&
+			    ( rGraphic.GetType() != GRAPHIC_GDIMETAFILE ) && rGraphic.IsLink() )
+		    {
+			    // try to write native link
+			    const GfxLink aGfxLink( ( (Graphic&) rGraphic ).GetLink() );
 
-			switch( aGfxLink.GetType() )
-			{
-				case( GFX_LINK_TYPE_NATIVE_GIF ): aExt = FORMAT_GIF; break;
-				case( GFX_LINK_TYPE_NATIVE_JPG ): aExt = FORMAT_JPG; break;
-				case( GFX_LINK_TYPE_NATIVE_PNG ): aExt = FORMAT_PNG; break;
+			    switch( aGfxLink.GetType() )
+			    {
+				    case( GFX_LINK_TYPE_NATIVE_GIF ): aExt = FORMAT_GIF; break;
 
-				default:
-				break;
-			}
+                    // #15508# added BMP type for better exports (no call/trigger found, prob used in HTML export)
+                    case( GFX_LINK_TYPE_NATIVE_BMP ): aExt = FORMAT_BMP; break;
 
-			if( aExt.Len() )
-			{
-				aURL.setExtension( aExt );
-				rFileName = aURL.GetMainURL( INetURLObject::NO_DECODE );
+				    case( GFX_LINK_TYPE_NATIVE_JPG ): aExt = FORMAT_JPG; break;
+				    case( GFX_LINK_TYPE_NATIVE_PNG ): aExt = FORMAT_PNG; break;
 
-				SfxMedium	aMedium( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC, TRUE );
-				SvStream*	pOStm = aMedium.GetOutStream();
+				    default:
+				    break;
+			    }
 
-				if( pOStm && aGfxLink.GetDataSize() && aGfxLink.GetData() )
-				{
-					pOStm->Write( aGfxLink.GetData(), aGfxLink.GetDataSize() );
-					aMedium.Commit();
+			    if( aExt.Len() )
+			    {
+                    if( 0 == (nFlags & XOUTBMP_DONT_ADD_EXTENSION))
+                        aURL.setExtension( aExt );
+				    rFileName = aURL.GetMainURL( INetURLObject::NO_DECODE );
 
-					if( !aMedium.GetError() )
-						nErr = GRFILTER_OK;
-				}
-			}
-		}
+				    SfxMedium	aMedium( aURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC, sal_True );
+				    SvStream*	pOStm = aMedium.GetOutStream();
+
+				    if( pOStm && aGfxLink.GetDataSize() && aGfxLink.GetData() )
+				    {
+					    pOStm->Write( aGfxLink.GetData(), aGfxLink.GetDataSize() );
+					    aMedium.Commit();
+
+					    if( !aMedium.GetError() )
+						    nErr = GRFILTER_OK;
+				    }
+			    }
+		    }
+        }
 
 		if( GRFILTER_OK != nErr )
 		{
 			String	aFilter( rFilterName );
-			BOOL	bWriteTransGrf = ( aFilter.EqualsIgnoreCaseAscii( "transgrf" ) ) ||
+			sal_Bool	bWriteTransGrf = ( aFilter.EqualsIgnoreCaseAscii( "transgrf" ) ) ||
 									 ( aFilter.EqualsIgnoreCaseAscii( "gif" ) ) ||
 									 ( nFlags & XOUTBMP_USE_GIF_IF_POSSIBLE ) ||
 									 ( ( nFlags & XOUTBMP_USE_GIF_IF_SENSIBLE ) && ( bAnimated || bTransparent ) );
@@ -474,7 +332,8 @@ USHORT XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
 
 				if( ( GRFILTER_FORMAT_NOTFOUND != nFilter ) && ( aGraphic.GetType() != GRAPHIC_NONE ) )
 				{
-					aURL.setExtension( aExt );
+                    if( 0 == (nFlags & XOUTBMP_DONT_ADD_EXTENSION))
+                        aURL.setExtension( aExt );
 					rFileName = aURL.GetMainURL( INetURLObject::NO_DECODE );
 					nErr = ExportGraphic( aGraphic, aURL, *pFilter, nFilter, NULL );
 				}
@@ -495,15 +354,15 @@ USHORT XOutBitmap::WriteGraphic( const Graphic& rGraphic, String& rFileName,
 #pragma optimize ( "", off )
 #endif
 
-USHORT XOutBitmap::ExportGraphic( const Graphic& rGraphic, const INetURLObject& rURL,
-								  GraphicFilter& rFilter, const USHORT nFormat,
+sal_uInt16 XOutBitmap::ExportGraphic( const Graphic& rGraphic, const INetURLObject& rURL,
+								  GraphicFilter& rFilter, const sal_uInt16 nFormat,
 								  const com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >* pFilterData )
 {
 	DBG_ASSERT( rURL.GetProtocol() != INET_PROT_NOT_VALID, "XOutBitmap::ExportGraphic(...): invalid URL" );
 
-	SfxMedium	aMedium( rURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC, TRUE );
+	SfxMedium	aMedium( rURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC, sal_True );
 	SvStream*	pOStm = aMedium.GetOutStream();
-	USHORT		nRet = GRFILTER_IOERROR;
+	sal_uInt16		nRet = GRFILTER_IOERROR;
 
 	if( pOStm )
 	{
@@ -527,11 +386,11 @@ USHORT XOutBitmap::ExportGraphic( const Graphic& rGraphic, const INetURLObject& 
 
 // ------------------------------------------------------------------------
 
-Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
+Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const sal_uInt8 cThreshold )
 {
 	const Size	aSize( rBmp.GetSizePixel() );
 	Bitmap		aRetBmp;
-	BOOL		bRet = FALSE;
+	sal_Bool		bRet = sal_False;
 
 	if( ( aSize.Width() > 2L ) && ( aSize.Height() > 2L ) )
 	{
@@ -597,13 +456,13 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 #else	// USE_JAVA
 				const long			nHeight2 = nHeight - 2L;
 				const long			lThres2 = (long) cThreshold * cThreshold;
-				const BitmapColor	aWhite = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_WHITE ) );
-				const BitmapColor	aBlack = (BYTE) pWriteAcc->GetBestMatchingColor( Color( COL_BLACK ) );
+				const sal_uInt8 nWhitePalIdx(static_cast< sal_uInt8 >(pWriteAcc->GetBestPaletteIndex(Color(COL_WHITE))));
+				const sal_uInt8 nBlackPalIdx(static_cast< sal_uInt8 >(pWriteAcc->GetBestPaletteIndex(Color(COL_BLACK))));
 				long				nSum1;
 				long				nSum2;
 				long				lGray;
 
-				// Rand mit Weiss init.
+				// initialize border with white pixels
 				pWriteAcc->SetLineColor( Color( COL_WHITE) );
 				pWriteAcc->DrawLine( Point(), Point( nWidth - 1L, 0L ) );
 				pWriteAcc->DrawLine( Point( nWidth - 1L, 0L ), Point( nWidth - 1L, nHeight - 1L ) );
@@ -616,29 +475,29 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 					{
 						nXTmp = nX;
 
-						nSum1 = -( nSum2 = lGray = (BYTE) pReadAcc->GetPixel( nY, nXTmp++ ) );
-						nSum2 += ( (long) (BYTE) pReadAcc->GetPixel( nY, nXTmp++ ) ) << 1;
-						nSum1 += ( lGray = pReadAcc->GetPixel( nY, nXTmp ) );
+						nSum1 = -( nSum2 = lGray = pReadAcc->GetPixelIndex( nY, nXTmp++ ) );
+						nSum2 += ( (long) pReadAcc->GetPixelIndex( nY, nXTmp++ ) ) << 1;
+						nSum1 += ( lGray = pReadAcc->GetPixelIndex( nY, nXTmp ) );
 						nSum2 += lGray;
 
-						nSum1 += ( (long) (BYTE) pReadAcc->GetPixel( nY1, nXTmp ) ) << 1;
-						nSum1 -= ( (long) (BYTE) pReadAcc->GetPixel( nY1, nXTmp -= 2 ) ) << 1;
+						nSum1 += ( (long) pReadAcc->GetPixelIndex( nY1, nXTmp ) ) << 1;
+						nSum1 -= ( (long) pReadAcc->GetPixelIndex( nY1, nXTmp -= 2 ) ) << 1;
 
-						nSum1 += ( lGray = -(long) (BYTE) pReadAcc->GetPixel( nY2, nXTmp++ ) );
+						nSum1 += ( lGray = -(long) pReadAcc->GetPixelIndex( nY2, nXTmp++ ) );
 						nSum2 += lGray;
-						nSum2 -= ( (long) (BYTE) pReadAcc->GetPixel( nY2, nXTmp++ ) ) << 1;
-						nSum1 += ( lGray = (long) (BYTE) pReadAcc->GetPixel( nY2, nXTmp ) );
+						nSum2 -= ( (long) pReadAcc->GetPixelIndex( nY2, nXTmp++ ) ) << 1;
+						nSum1 += ( lGray = (long) pReadAcc->GetPixelIndex( nY2, nXTmp ) );
 						nSum2 -= lGray;
 
 						if( ( nSum1 * nSum1 + nSum2 * nSum2 ) < lThres2 )
-							pWriteAcc->SetPixel( nY1, nXDst, aWhite );
+							pWriteAcc->SetPixelIndex( nY1, nXDst, nWhitePalIdx );
 						else
-							pWriteAcc->SetPixel( nY1, nXDst, aBlack );
+							pWriteAcc->SetPixelIndex( nY1, nXDst, nBlackPalIdx );
 					}
 				}
 #endif	// USE_JAVA
 
-				bRet = TRUE;
+				bRet = sal_True;
 			}
 
 			aWorkBmp.ReleaseAccess( pReadAcc );
@@ -662,8 +521,8 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const BYTE cThreshold )
 
 // ------------------------------------------------------------------------
 
-Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
-								 const BYTE cEdgeDetectThreshold, const Rectangle* pWorkRectPixel )
+Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const sal_uIntPtr nFlags,
+								 const sal_uInt8 cEdgeDetectThreshold, const Rectangle* pWorkRectPixel )
 {
 	Bitmap		aWorkBmp;
 	Polygon		aRetPoly;
@@ -703,7 +562,7 @@ Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
 			Point*				pPoints1 = NULL;
 			Point*				pPoints2 = NULL;
 			long				nX, nY;
-			USHORT				nPolyPos = 0;
+			sal_uInt16				nPolyPos = 0;
 			const BitmapColor	aBlack = pAcc->GetBestMatchingColor( Color( COL_BLACK ) );
 
 			if( nFlags & XOUTBMP_CONTOUR_VERT )
@@ -724,7 +583,7 @@ Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
 							nY = nStartY2;
 
 							// diese Schleife wird immer gebreaked da hier ja min. ein Pixel ist
-							while( TRUE )
+							while( sal_True )
 							{
 								if( aBlack == pAcc->GetPixel( nY, nX ) )
 								{
@@ -761,7 +620,7 @@ Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
 							nX = nStartX2;
 
 							// diese Schleife wird immer gebreaked da hier ja min. ein Pixel ist
-							while( TRUE )
+							while( sal_True )
 							{
 								if( aBlack == pAcc->GetPixel( nY, nX ) )
 								{
@@ -781,13 +640,13 @@ Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
 				}
 			}
 
-			const USHORT nNewSize1 = nPolyPos << 1;
+			const sal_uInt16 nNewSize1 = nPolyPos << 1;
 
 			aRetPoly = Polygon( nPolyPos, pPoints1 );
 			aRetPoly.SetSize( nNewSize1 + 1 );
 			aRetPoly[ nNewSize1 ] = aRetPoly[ 0 ];
 
-			for( USHORT j = nPolyPos; nPolyPos < nNewSize1; )
+			for( sal_uInt16 j = nPolyPos; nPolyPos < nNewSize1; )
 				aRetPoly[ nPolyPos++ ] = pPoints2[ --j ];
 
 			if( ( fFactorX != 0. ) && ( fFactorY != 0. ) )
@@ -805,14 +664,14 @@ Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const ULONG nFlags,
 // - DitherBitmap -
 // ----------------
 
-BOOL DitherBitmap( Bitmap& rBitmap )
+sal_Bool DitherBitmap( Bitmap& rBitmap )
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 
 	if( ( rBitmap.GetBitCount() >= 8 ) && ( Application::GetDefaultDevice()->GetColorCount() < 257 ) )
 		bRet = rBitmap.Dither( BMP_DITHER_FLOYD );
 	else
-		bRet = FALSE;
+		bRet = sal_False;
 
 	return bRet;
 }
