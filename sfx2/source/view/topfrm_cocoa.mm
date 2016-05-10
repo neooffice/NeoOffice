@@ -37,6 +37,7 @@
 #import <pwd.h>
 
 #include <com/sun/star/embed/ElementModes.hpp>
+#include <osl/file.h>
 #include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/viewfrm.hxx>
@@ -55,7 +56,6 @@
 typedef sal_Bool osl_setLockedFilesLock_Type( const char *pOrigPath, sal_Bool bLock );
 typedef void Application_cacheSecurityScopedURL_Type( id pURL );
 
-static osl_setLockedFilesLock_Type *pSetLockedFilesLock = NULL;
 static Application_cacheSecurityScopedURL_Type *pApplication_cacheSecurityScopedURL = NULL;
 static NSString *pNoTranslationValue = @" ";
 
@@ -594,68 +594,63 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	id pFileID = nil;
 	NSURL *pURL = [self fileURL];
 
-	if ( !pSetLockedFilesLock )
-		pSetLockedFilesLock = (osl_setLockedFilesLock_Type *)dlsym( RTLD_DEFAULT, "osl_setLockedFilesLock" );
-	if ( pSetLockedFilesLock )
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+
+	if ( !Application::IsShutDown() )
 	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
+		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+		if ( pDoc == self )
 		{
-			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-			if ( pDoc == self )
+			pObjSh = mpFrame->GetObjectShell();
+			while ( pObjSh && !pObjSh->IsLoadingFinished() )
 			{
-				pObjSh = mpFrame->GetObjectShell();
-				while ( pObjSh && !pObjSh->IsLoadingFinished() )
-				{
-					sal_uLong nCount = Application::ReleaseSolarMutex();
-					OThread::yield();
-					Application::AcquireSolarMutex( nCount );
+				sal_uLong nCount = Application::ReleaseSolarMutex();
+				OThread::yield();
+				Application::AcquireSolarMutex( nCount );
 
-					pDoc = GetDocumentForFrame( mpFrame );
-					if ( pDoc == self )
-						pObjSh = mpFrame->GetObjectShell();
-					else
-						pObjSh = NULL;
-				}
+				pDoc = GetDocumentForFrame( mpFrame );
+				if ( pDoc == self )
+					pObjSh = mpFrame->GetObjectShell();
+				else
+					pObjSh = NULL;
+			}
 
-				// Block editing and saving
-				if ( pObjSh && !Application::IsShutDown() )
-				{
-					bOldEnableSetModified = pObjSh->IsEnableSetModified();
-					pObjSh->EnableSetModified( sal_False );
-				}
+			// Block editing and saving
+			if ( pObjSh && !Application::IsShutDown() )
+			{
+				bOldEnableSetModified = pObjSh->IsEnableSetModified();
+				pObjSh->EnableSetModified( sal_False );
 			}
 		}
+	}
 
-		pURL = [self fileURL];
+	pURL = [self fileURL];
+	if ( pURL )
+	{
+		pURL = [pURL URLByStandardizingPath];
 		if ( pURL )
 		{
-			pURL = [pURL URLByStandardizingPath];
+			pURL = [pURL URLByResolvingSymlinksInPath];
 			if ( pURL )
 			{
-				pURL = [pURL URLByResolvingSymlinksInPath];
-				if ( pURL )
+				if ( [pURL checkResourceIsReachableAndReturnError:nil] )
 				{
-					if ( [pURL checkResourceIsReachableAndReturnError:nil] )
-					{
-						[pURL getResourceValue:&pModDate forKey:NSURLContentModificationDateKey error:nil];
-						[pURL getResourceValue:&pFileID forKey:NSURLFileResourceIdentifierKey error:nil];
-					}
+					[pURL getResourceValue:&pModDate forKey:NSURLContentModificationDateKey error:nil];
+					[pURL getResourceValue:&pFileID forKey:NSURLFileResourceIdentifierKey error:nil];
+				}
 
-					if ( bWriter )
-					{
-						NSString *pURLPath = [pURL path];
-						if ( pURLPath )
-							pSetLockedFilesLock( [pURLPath UTF8String], sal_False );
-					}
+				if ( bWriter )
+				{
+					NSString *pURLPath = [pURL path];
+					if ( pURLPath )
+						osl_setLockedFilesLock( [pURLPath UTF8String], sal_False );
 				}
 			}
 		}
-
-		rSolarMutex.release();
 	}
+
+	rSolarMutex.release();
 
 	aReacquirer(^{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -673,12 +668,9 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				pNewURL = [pNewURL URLByResolvingSymlinksInPath];
 				if ( pNewURL )
 				{
-					if ( pSetLockedFilesLock )
-					{
-						NSString *pNewURLPath = [pNewURL path];
-						if ( pNewURLPath )
-							bRelocked = pSetLockedFilesLock( [pNewURLPath UTF8String], sal_True );
-					}
+					NSString *pNewURLPath = [pNewURL path];
+					if ( pNewURLPath )
+						bRelocked = osl_setLockedFilesLock( [pNewURLPath UTF8String], sal_True );
 
 					if ( [pNewURL checkResourceIsReachableAndReturnError:nil] )
 					{
