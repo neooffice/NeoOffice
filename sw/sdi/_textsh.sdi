@@ -1652,7 +1652,7 @@ interface BaseText
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";  // e.g. disable for read-only documents
     ]
 
-    // #ifdef USE_JAVA
+// #ifdef USE_JAVA
     FN_LOOKUP_IN_MACOSX_DICTIONARY
     [
         ExecMethod = Execute ;
