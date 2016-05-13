@@ -1,31 +1,22 @@
-/*************************************************************************
- *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+/**************************************************************
  * 
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * OpenOffice.org is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
- *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
  * This file incorporates work covered by the following license notice:
  *
  *   Portions of this file are part of the LibreOffice project.
@@ -34,10 +25,13 @@
  *   License, v. 2.0. If a copy of the MPL was not distributed with this
  *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- ************************************************************************/
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
+
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/text/XTextRange.hpp>
 #include <com/sun/star/drawing/XDrawPage.hpp>
@@ -46,19 +40,17 @@
 #include <xmloff/xmlnmspe.hxx>
 #include <xmloff/xmltkmap.hxx>
 #include <xmloff/xmlictxt.hxx>
-#ifndef _XMLOFF_TXTIMP_HXX
 #include <xmloff/txtimp.hxx>
-#endif
 #include <xmloff/nmspmap.hxx>
-#ifndef _XMLOFF_XMLTEXTSHAPEIMPORTHELPER_HXX_
 #include <xmloff/XMLTextShapeImportHelper.hxx>
-#endif
 #include <xmloff/XMLFontStylesContext.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include <com/sun/star/i18n/XForbiddenCharacters.hpp>
 #include <com/sun/star/document/PrinterIndependentLayout.hpp>
 #include <doc.hxx>
-#include <unoobj.hxx>
+#include <TextCursorHelper.hxx>
+#include <unotext.hxx>
+#include <unotextrange.hxx>
 #include "unocrsr.hxx"
 #include <poolfmt.hxx>
 #include <ndtxt.hxx>
@@ -66,14 +58,14 @@
 #include "xmlimp.hxx"
 #include <xmloff/DocumentSettingsContext.hxx>
 #include <docsh.hxx>
-#include <svx/unolingu.hxx>
+#include <editeng/unolingu.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/xmlgrhlp.hxx>
 #include <svx/xmleohlp.hxx>
 #include <sfx2/printer.hxx>
 #include <ForbiddenCharactersEnum.hxx>
 #include <xmloff/xmluconv.hxx>
-#include <svtools/saveopt.hxx>
+#include <unotools/saveopt.hxx>
 #include <tools/diagnose_ex.h>
 #include <hash_set>
 #include <stringhash.hxx>
@@ -187,7 +179,7 @@ SvXMLImportContext *SwXMLBodyContext_Impl::CreateChildContext(
 // --> OD 2006-10-11 #i69629#
 // enhance class <SwXMLDocContext_Impl> in order to be able to create subclasses
 // NB: virtually inherit so we can multiply inherit properly
-//     in SwXMLOfficeDocContext_Impl 
+//     in SwXMLOfficeDocContext_Impl
 class SwXMLDocContext_Impl : public virtual SvXMLImportContext
 {
 // --> OD 2006-10-11 #i69629#
@@ -393,7 +385,7 @@ void SwXMLDocStylesContext_Impl::EndElement()
     // assign paragraph styles to list levels of outline style after all styles
     // are imported and finished.
     SwXMLImport& rSwImport = dynamic_cast<SwXMLImport&>( GetImport());
-    GetImport().GetTextImport()->SetOutlineStyles( 
+    GetImport().GetTextImport()->SetOutlineStyles(
             (rSwImport.GetStyleFamilyMask() & SFX_STYLE_FAMILY_PARA ) ? sal_True : sal_False);
     // <--
 }
@@ -431,23 +423,23 @@ SvXMLImportContext *SwXMLImport::CreateContext(
         pContext = CreateMetaContext(rLocalName);
     }
     else if ( XML_NAMESPACE_OFFICE==nPrefix &&
+              IsXMLToken( rLocalName, XML_DOCUMENT_STYLES ) )
+    {
+        pContext = new SwXMLDocStylesContext_Impl( *this, nPrefix, rLocalName,
+                                                   xAttrList );
+    }
+    else if ( XML_NAMESPACE_OFFICE==nPrefix &&
               IsXMLToken( rLocalName, XML_DOCUMENT ) )
     {
         uno::Reference<xml::sax::XDocumentHandler> xDocBuilder(
             mxServiceFactory->createInstance(::rtl::OUString::createFromAscii(
                 "com.sun.star.xml.dom.SAXDocumentBuilder")),
                 uno::UNO_QUERY_THROW);
-        uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
-            GetModel(), UNO_QUERY_THROW);
+        uno::Reference<document::XDocumentProperties> const xDocProps(
+            GetDocumentProperties());
         // flat OpenDocument file format
         pContext = new SwXMLOfficeDocContext_Impl( *this, nPrefix, rLocalName,
-                        xAttrList, xDPS->getDocumentProperties(), xDocBuilder);
-    }
-    else if ( XML_NAMESPACE_OFFICE==nPrefix &&
-              IsXMLToken( rLocalName, XML_DOCUMENT_STYLES ) )
-    {
-        pContext = new SwXMLDocStylesContext_Impl( *this, nPrefix, rLocalName,
-                                                   xAttrList );
+                        xAttrList, xDocProps, xDocBuilder);
     }
     // <--
 	else
@@ -722,9 +714,9 @@ void SwXMLImport::startDocument( void )
 		}
 		if( pCrsrSh )
 		{
-			Reference<XTextRange> xInsertTextRange(
-				SwXTextRange::CreateTextRangeFromPosition(
-								pDoc, *pCrsrSh->GetCrsr()->GetPoint(), 0 ) );
+            const uno::Reference<text::XTextRange> xInsertTextRange(
+                SwXTextRange::CreateXTextRange(
+                    *pDoc, *pCrsrSh->GetCrsr()->GetPoint(), 0 ) );
 			setTextInsertMode( xInsertTextRange );
 			xTextCursor = GetTextImport()->GetCursor();
 			pTxtCrsr = 0;
@@ -850,7 +842,7 @@ void SwXMLImport::endDocument( void )
 											pTxtNode->GetTxt().Len() );
 				}
 
-#ifndef PRODUCT
+#ifdef DBG_UTIL
 				// !!! This should be impossible !!!!
 				ASSERT( pSttNdIdx->GetIndex()+1 !=
 										pPaM->GetBound( sal_True ).nNode.GetIndex(),
@@ -893,7 +885,7 @@ void SwXMLImport::endDocument( void )
 		if( !pPos->nContent.GetIndex() )
 		{
 			SwTxtNode* pCurrNd;
-			ULONG nNodeIdx = pPos->nNode.GetIndex();
+			sal_uLong nNodeIdx = pPos->nNode.GetIndex();
 			pDoc = pPaM->GetDoc();
 
 			DBG_ASSERT( pPos->nNode.GetNode().IsCntntNode(),
@@ -973,9 +965,9 @@ void SwXMLImport::endDocument( void )
 		// Notify math objects. If we are in the package filter this will
 		// be done by the filter object itself
 		if( IsInsertMode() )
-			pDoc->PrtOLENotify( FALSE );
+			pDoc->PrtOLENotify( sal_False );
 		else if ( pDoc->IsOLEPrtNotifyPending() )
-			pDoc->PrtOLENotify( TRUE );
+			pDoc->PrtOLENotify( sal_True );
 	}
 
 	// SJ: #i49801# -> now permitting repaints
@@ -1180,21 +1172,20 @@ void SwXMLImport::SetViewSettings(const Sequence < PropertyValue > & aViewProps)
 void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aConfigProps)
 {
     // this method will modify the document directly -> lock SolarMutex
-	vos::OGuard aGuard(Application::GetSolarMutex());
+    vos::OGuard aGuard(Application::GetSolarMutex());
 
-	Reference< lang::XMultiServiceFactory > xFac( GetModel(), UNO_QUERY );
-	if( !xFac.is() )
-		return;
+    Reference< lang::XMultiServiceFactory > xFac( GetModel(), UNO_QUERY );
+    if( !xFac.is() )
+        return;
 
-	Reference< XPropertySet > xProps( xFac->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.Settings" ) ) ), UNO_QUERY );
-	if( !xProps.is() )
-		return;
+    Reference< XPropertySet > xProps( xFac->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.document.Settings" ) ) ), UNO_QUERY );
+    if( !xProps.is() )
+        return;
 
-	Reference< XPropertySetInfo > xInfo( xProps->getPropertySetInfo() );
-	if( !xInfo.is() )
-		return;
+    Reference< XPropertySetInfo > xInfo( xProps->getPropertySetInfo() );
+    if( !xInfo.is() )
+        return;
 
-    // #111955#
 #ifndef NO_LIBO_LINKUPDATEMODE_FIX
     hash_set< String, StringHashRef, StringEqRef > aExcludeAlways;
     aExcludeAlways.insert(String("LinkUpdateMode", RTL_TEXTENCODING_ASCII_US));
@@ -1224,17 +1215,15 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
     aSet.insert(String("PrintSingleJobs", RTL_TEXTENCODING_ASCII_US));
     aSet.insert(String("UpdateFromTemplate", RTL_TEXTENCODING_ASCII_US));
     aSet.insert(String("PrinterIndependentLayout", RTL_TEXTENCODING_ASCII_US));
-    // --> FME 2005-12-13 #b6354161#
     aSet.insert(String("PrintEmptyPages", RTL_TEXTENCODING_ASCII_US));
-    // <--
 
-	sal_Int32 nCount = aConfigProps.getLength();
-	const PropertyValue* pValues = aConfigProps.getConstArray();
+    sal_Int32 nCount = aConfigProps.getLength();
+    const PropertyValue* pValues = aConfigProps.getConstArray();
 
-	SvtSaveOptions aSaveOpt;
+    SvtSaveOptions aSaveOpt;
 #ifdef NO_LIBO_LINKUPDATEMODE_FIX
-	BOOL bIsUserSetting = aSaveOpt.IsLoadUserSettings(),
-		 bSet = bIsUserSetting;
+    sal_Bool bIsUserSetting = aSaveOpt.IsLoadUserSettings();
+    sal_Bool bSet = bIsUserSetting;
 #else	// NO_LIBO_LINKUPDATEMODE_FIX
     bool bIsUserSetting = aSaveOpt.IsLoadUserSettings();
 #endif	// NO_LIBO_LINKUPDATEMODE_FIX
@@ -1260,47 +1249,70 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
     bool bUnixForceZeroExtLeading = false;
     bool bUseOldPrinterMetrics = false;
 
-	OUString sRedlineProtectionKey( RTL_CONSTASCII_USTRINGPARAM( "RedlineProtectionKey" ) );
+    static const OUString sRedlineProtectionKey( RTL_CONSTASCII_USTRINGPARAM( "RedlineProtectionKey" ) );
+
+    // Set current database properties in certain order
+    // Thus, keep these properties during loop and set them afterwards in valid order
+    static const OUString sCurrentDatabaseDataSource( RTL_CONSTASCII_USTRINGPARAM( "CurrentDatabaseDataSource" ) );
+    uno::Any aCurrentDatabaseDataSource;
+    static const OUString sCurrentDatabaseCommand( RTL_CONSTASCII_USTRINGPARAM( "CurrentDatabaseCommand" ) );
+    uno::Any aCurrentDatabaseCommand;
+    static const OUString sCurrentDatabaseCommandType( RTL_CONSTASCII_USTRINGPARAM( "CurrentDatabaseCommandType" ) );
+    uno::Any aCurrentDatabaseCommandType;
 
     while( nCount-- )
-	{
+    {
 #ifdef NO_LIBO_LINKUPDATEMODE_FIX
-		if( !bIsUserSetting )
+        if( !bIsUserSetting )
 #else	// NO_LIBO_LINKUPDATEMODE_FIX
         bool bSet = aExcludeAlways.find(pValues->Name) == aExcludeAlways.end();
         if( bSet && !bIsUserSetting
             && (aSet.find(pValues->Name)
                 != aSet.end()) )
 #endif	// NO_LIBO_LINKUPDATEMODE_FIX
-		{
+        {
 #ifdef NO_LIBO_LINKUPDATEMODE_FIX
-			// test over the hash value if the entry is in the table.
+            // test over the hash value if the entry is in the table.
             String aStr(pValues->Name);
 
             bSet = aSet.find(aStr) == aSet.end();
 #else	// NO_LIBO_LINKUPDATEMODE_FIX
             bSet = false;
 #endif	// NO_LIBO_LINKUPDATEMODE_FIX
-		}
+        }
 
-		if( bSet )
-		{
-			try
-			{
-				if( xInfo->hasPropertyByName( pValues->Name ) )
-				{
-					if( pValues->Name.equals( sRedlineProtectionKey ) )
-					{
-						Sequence<sal_Int8> aKey;
-						pValues->Value >>= aKey;
-						GetTextImport()->SetChangesProtectionKey( aKey );
-					}
-					else
-					{
-						xProps->setPropertyValue( pValues->Name,
-												  pValues->Value );
-					}
-				}
+        if( bSet )
+        {
+            try
+            {
+                if( xInfo->hasPropertyByName( pValues->Name ) )
+                {
+                    if( pValues->Name.equals( sRedlineProtectionKey ) )
+                    {
+                        Sequence<sal_Int8> aKey;
+                        pValues->Value >>= aKey;
+                        GetTextImport()->SetChangesProtectionKey( aKey );
+                    }
+                    else if ( !aCurrentDatabaseDataSource.hasValue()
+                              && pValues->Name.equals( sCurrentDatabaseDataSource ) )
+                    {
+                        aCurrentDatabaseDataSource = pValues->Value;
+                    }
+                    else if ( !aCurrentDatabaseCommand.hasValue()
+                              && pValues->Name.equals( sCurrentDatabaseCommand ) )
+                    {
+                        aCurrentDatabaseCommand = pValues->Value;
+                    }
+                    else if ( !aCurrentDatabaseCommandType.hasValue()
+                              && pValues->Name.equals( sCurrentDatabaseCommandType ) )
+                    {
+                        aCurrentDatabaseCommandType = pValues->Value;
+                    }
+                    else
+                    {
+                        xProps->setPropertyValue( pValues->Name, pValues->Value );
+                    }
+                }
 
                 // did we find any of the non-default cases?
                 if( pValues->Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("PrinterIndependentLayout")) )
@@ -1338,19 +1350,34 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
                 else if( pValues->Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM("UseOldPrinterMetrics")) )
                     bUseOldPrinterMetrics = true;
             }
-			catch( Exception& )
-			{
-				DBG_ERROR( "SwXMLImport::SetConfigurationSettings: Exception!" );
-			}
-		}
-		pValues++;
-	}
+            catch( Exception& )
+            {
+                DBG_ERROR( "SwXMLImport::SetConfigurationSettings: Exception!" );
+            }
+        }
+        pValues++;
+    }
+
+    // apply current database properties
+    {
+        if ( aCurrentDatabaseDataSource.hasValue() )
+        {
+            xProps->setPropertyValue( sCurrentDatabaseDataSource, aCurrentDatabaseDataSource );
+        }
+        if ( aCurrentDatabaseCommand.hasValue() )
+        {
+            xProps->setPropertyValue( sCurrentDatabaseCommand, aCurrentDatabaseCommand );
+        }
+        if ( aCurrentDatabaseCommandType.hasValue() )
+        {
+            xProps->setPropertyValue( sCurrentDatabaseCommandType, aCurrentDatabaseCommandType );
+        }
+    }
 
     // finally, treat the non-default cases
-    // --> OD 2006-04-18 #b6402800#
+
     // introduce boolean, that indicates a document, written by version prior SO8.
     const bool bDocumentPriorSO8 = !bConsiderWrapOnObjPos;
-    // <--
 
     if( ! bPrinterIndependentLayout )
     {
@@ -1380,14 +1407,12 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
             OUString( RTL_CONSTASCII_USTRINGPARAM("UseFormerObjectPositioning")), makeAny( true ) );
     }
 
-    if( !bUseOldNumbering ) // #111955#
+    if( !bUseOldNumbering )
     {
         Any aAny;
         sal_Bool bOldNum = true;
         aAny.setValue(&bOldNum, ::getBooleanCppuType());
-        xProps->setPropertyValue
-            (OUString( RTL_CONSTASCII_USTRINGPARAM("UseOldNumbering")),
-                       aAny );
+        xProps->setPropertyValue( OUString( RTL_CONSTASCII_USTRINGPARAM("UseOldNumbering")), aAny );
     }
 
     if( !bOutlineLevelYieldsOutlineRule )
@@ -1453,8 +1478,7 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
 
     if ( !bLoadReadonly )
     {
-        xProps->setPropertyValue(
-			OUString( RTL_CONSTASCII_USTRINGPARAM("LoadReadonly") ), makeAny( false ) );
+        xProps->setPropertyValue( OUString( RTL_CONSTASCII_USTRINGPARAM("LoadReadonly") ), makeAny( false ) );
     }
 
     // This flag has to be set for all documents < SO8
@@ -1485,27 +1509,27 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
     // <--
 
     Reference < XTextDocument > xTextDoc( GetModel(), UNO_QUERY );
-	Reference < XText > xText = xTextDoc->getText();
-	Reference<XUnoTunnel> xTextTunnel( xText, UNO_QUERY);
-	ASSERT( xTextTunnel.is(), "missing XUnoTunnel for Cursor" );
-	if( xTextTunnel.is() )
-	{
-		SwXText *pText = reinterpret_cast< SwXText *>(
-				sal::static_int_cast< sal_IntPtr >( xTextTunnel->getSomething( SwXText::getUnoTunnelId() )));
-		ASSERT( pText, "SwXText missing" );
-		if( pText )
-		{
-			SwDoc *pDoc = pText->GetDoc();
-			if( pDoc )
-			{
+    Reference < XText > xText = xTextDoc->getText();
+    Reference<XUnoTunnel> xTextTunnel( xText, UNO_QUERY);
+    ASSERT( xTextTunnel.is(), "missing XUnoTunnel for Cursor" );
+    if( xTextTunnel.is() )
+    {
+        SwXText *pText = reinterpret_cast< SwXText *>(
+            sal::static_int_cast< sal_IntPtr >( xTextTunnel->getSomething( SwXText::getUnoTunnelId() )));
+        ASSERT( pText, "SwXText missing" );
+        if( pText )
+        {
+            SwDoc *pDoc = pText->GetDoc();
+            if( pDoc )
+            {
                 SfxPrinter *pPrinter = pDoc->getPrinter( false );
-				if( pPrinter )
+                if( pPrinter )
                 {
-    				// If the printer is known, then the OLE objects will
-	    			// already have correct sizes, and we don't have to call
-		    		// PrtOLENotify again. Otherwise we have to call it.
-			    	// The flag might be set from setting the printer, so it
-				    // it is required to clear it.
+                    // If the printer is known, then the OLE objects will
+                    // already have correct sizes, and we don't have to call
+                    // PrtOLENotify again. Otherwise we have to call it.
+                    // The flag might be set from setting the printer, so it
+                    // it is required to clear it.
                     pDoc->SetOLEPrtNotifyPending( !pPrinter->IsKnown() );
 
                     // FME 2007-05-14 #147385# old printer metrics compatibility
@@ -1516,9 +1540,9 @@ void SwXMLImport::SetConfigurationSettings(const Sequence < PropertyValue > & aC
                         pDoc->GetDocShell()->UpdateFontList();
                     }
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 }
 
 

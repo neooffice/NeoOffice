@@ -1,40 +1,41 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
 
 #include <com/sun/star/text/NotePrintMode.hpp>
 
-#if STLPORT_VERSION>=321
 #include <cstdarg>
-#endif
 
 #ifndef _CMDID_H
 #include <cmdid.h>
@@ -42,26 +43,27 @@
 
 #ifndef _SVSTDARR_HXX
 #define _SVSTDARR_STRINGSDTOR
-#include <svtools/svstdarr.hxx>
+#include <svl/svstdarr.hxx>
 #endif
 #include <sfx2/request.hxx>
 
+#include <sfx2/progress.hxx>
 #include <sfx2/app.hxx>
-#include <svtools/flagitem.hxx>
+#include <svl/flagitem.hxx>
 #include <vcl/msgbox.hxx>
-#include <svtools/printdlg.hxx>
+#include <vcl/oldprintadaptor.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/prnmon.hxx>
-#include <svx/paperinf.hxx>
+#include <editeng/paperinf.hxx>
 #include <sfx2/dispatch.hxx>
-#include <svtools/misccfg.hxx>
+#include <unotools/misccfg.hxx>
 #include <svx/prtqry.hxx>
 #include <svx/svdview.hxx>
-#include <svtools/eitem.hxx>
-#include <svtools/stritem.hxx>
-#include <svtools/intitem.hxx>
-#include <svtools/flagitem.hxx>
-#include <svx/linkmgr.hxx>
+#include <svl/eitem.hxx>
+#include <svl/stritem.hxx>
+#include <svl/intitem.hxx>
+#include <svl/flagitem.hxx>
+#include <sfx2/linkmgr.hxx>
 
 #include <modcfg.hxx>
 #include <edtwin.hxx>
@@ -70,7 +72,6 @@
 #include <docsh.hxx>
 #include <viewopt.hxx>
 #include <prtopt.hxx>
-#include <swprtopt.hxx>
 #include <fontcfg.hxx>
 #include <cfgitems.hxx>
 #include <dbmgr.hxx>
@@ -84,10 +85,10 @@
 #include <globals.hrc>
 #include <view.hrc>
 #include <app.hrc>
-#include <svtools/eitem.hxx>
+#include <svl/eitem.hxx>
 #include <swwrtshitem.hxx>
 #include "swabstdlg.hxx"
-#include <svtools/slstitm.hxx>
+#include <svl/slstitm.hxx>
 
 #include <unomid.h>
 
@@ -99,14 +100,14 @@ using namespace ::com::sun::star;
  --------------------------------------------------------------------*/
 
 
-SfxPrinter* __EXPORT SwView::GetPrinter( BOOL bCreate )
+SfxPrinter* __EXPORT SwView::GetPrinter( sal_Bool bCreate )
 {
     const IDocumentDeviceAccess* pIDDA = GetWrtShell().getIDocumentDeviceAccess();
     SfxPrinter *pOld = pIDDA->getPrinter( false );
     SfxPrinter *pPrt = pIDDA->getPrinter( bCreate );
 	if ( pOld != pPrt )
 	{
-		BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
+		sal_Bool bWeb = 0 != PTR_CAST(SwWebView, this);
 		::SetAppPrintOptions( &GetWrtShell(), bWeb );
 	}
 	return pPrt;
@@ -116,7 +117,7 @@ SfxPrinter* __EXPORT SwView::GetPrinter( BOOL bCreate )
 	Beschreibung:	Druckerwechsel weitermelden
  --------------------------------------------------------------------*/
 
-void SetPrinter( IDocumentDeviceAccess* pIDDA, SfxPrinter* pNew, BOOL bWeb )
+void SetPrinter( IDocumentDeviceAccess* pIDDA, SfxPrinter* pNew, sal_Bool bWeb )
 {
 	SwPrintOptions* pOpt = SW_MOD()->GetPrtOptions(bWeb);
 	if( !pOpt)
@@ -126,7 +127,7 @@ void SetPrinter( IDocumentDeviceAccess* pIDDA, SfxPrinter* pNew, BOOL bWeb )
 	const SfxItemSet& rSet = pNew->GetOptions();
 
 	const SwAddPrinterItem* pAddPrinterAttr;
-	if( SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER, FALSE,
+	if( SFX_ITEM_SET == rSet.GetItemState( FN_PARAM_ADDPRINTER, sal_False,
 		(const SfxPoolItem**)&pAddPrinterAttr ) )
 	{
         if( pIDDA )
@@ -137,26 +138,30 @@ void SetPrinter( IDocumentDeviceAccess* pIDDA, SfxPrinter* pNew, BOOL bWeb )
 }
 
 
-USHORT __EXPORT SwView::SetPrinter(SfxPrinter* pNew, USHORT nDiffFlags, bool  )
+sal_uInt16 __EXPORT SwView::SetPrinter(SfxPrinter* pNew, sal_uInt16 nDiffFlags, bool  )
 {
 	SwWrtShell &rSh = GetWrtShell();
+    SfxPrinter* pOld = rSh.getIDocumentDeviceAccess()->getPrinter( false );
+    if ( pOld && pOld->IsPrinting() )
+        return SFX_PRINTERROR_BUSY;
+
 	if ( (SFX_PRINTER_JOBSETUP | SFX_PRINTER_PRINTER) & nDiffFlags )
 	{
         rSh.getIDocumentDeviceAccess()->setPrinter( pNew, true, true );
         if ( nDiffFlags & SFX_PRINTER_PRINTER )
 			rSh.SetModified();
 	}
-	BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
+	sal_Bool bWeb = 0 != PTR_CAST(SwWebView, this);
 	if ( nDiffFlags & SFX_PRINTER_OPTIONS )
 		::SetPrinter( rSh.getIDocumentDeviceAccess(), pNew, bWeb );
 
-	const BOOL bChgOri = nDiffFlags & SFX_PRINTER_CHG_ORIENTATION ? TRUE : FALSE;
-	const BOOL bChgSize= nDiffFlags & SFX_PRINTER_CHG_SIZE ? TRUE : FALSE;
+	const sal_Bool bChgOri = nDiffFlags & SFX_PRINTER_CHG_ORIENTATION ? sal_True : sal_False;
+	const sal_Bool bChgSize= nDiffFlags & SFX_PRINTER_CHG_SIZE ? sal_True : sal_False;
 	if ( bChgOri || bChgSize )
 	{
 		rSh.StartAllAction();
 		if ( bChgOri )
-			rSh.ChgAllPageOrientation( USHORT(pNew->GetOrientation()) );
+			rSh.ChgAllPageOrientation( sal_uInt16(pNew->GetOrientation()) );
 		if ( bChgSize )
 		{
 			Size aSz( SvxPaperInfo::GetPaperSize( pNew ) );
@@ -170,274 +175,6 @@ USHORT __EXPORT SwView::SetPrinter(SfxPrinter* pNew, USHORT nDiffFlags, bool  )
 }
 
 /*--------------------------------------------------------------------
-	Beschreibung:
- --------------------------------------------------------------------*/
-
-ErrCode SwView::DoPrint( SfxPrinter *pPrinter, PrintDialog *pDlg, BOOL bSilent, BOOL bIsAPI )
-{
-	// First test
-	SwWrtShell* pSh = &GetWrtShell();
-	SwNewDBMgr* pMgr = pSh->GetNewDBMgr();
-
-	int bPrintSelection = -1;
-    USHORT nMergeType = pMgr->GetMergeType();
-    if( DBMGR_MERGE_MAILMERGE != nMergeType &&
-        DBMGR_MERGE_DOCUMENTS != nMergeType &&
-            !pDlg &&
-            !bIsAPI && ( pSh->IsSelection() || pSh->IsFrmSelected() ||
-		pSh->IsObjSelected() ) )
-	{
-		short nBtn = SvxPrtQryBox(&GetEditWin()).Execute();
-		if( RET_CANCEL == nBtn )
-			return ERRCODE_IO_ABORT;
-
-		if( RET_OK == nBtn )
-			bPrintSelection = 1;
-		else
-			bPrintSelection = 0;
-	}
-
-// 	Der PrintProgress stellt Handler am Printer der ViewShell ein.
-//	Das kann natuerlich erste nach dem evtl. Umschalten des Druckers korrekt
-//	funktionieren. #55210#
-//	SfxPrintProgress *pProgress = new SfxPrintProgress( this, !bSilent );
-	SfxPrintProgress *pProgress = 0;
-	SfxPrinter *pDocPrinter = GetPrinter(TRUE);
-	if ( !pPrinter )
-		pPrinter = pDocPrinter;
-	else if ( pDocPrinter != pPrinter )
-	{
-		//Da der Doc-Drucker beim SetPrinter geloescht wird,
-		// muss man ihn vorher clonen
-		SfxPrinter* pClone = pDocPrinter->Clone();
-		SetPrinter( pPrinter, SFX_PRINTER_PRINTER );
-		pProgress = new SfxPrintProgress( this, !bSilent );
-		pProgress->RestoreOnEndPrint( pClone );
-	}
-	if(!pProgress)
-		pProgress = new SfxPrintProgress( this, !bSilent );
-	pProgress->SetWaitMode(FALSE);
-
-    BOOL bStartJob = pPrinter->InitJob( &GetEditWin(),
-            !bIsAPI && pSh->HasDrawView() && pSh->GetDrawView()->GetModel()->HasTransparentObjects());
-	if( bStartJob )
-	{
-		// Drucker starten
-		PreparePrint( pDlg );
-		SfxObjectShell *pObjShell = GetViewFrame()->GetObjectShell();
-		//#i82625# GetTitle( 0 ) doesn't work for 'embedded' documents like forms or reports
-        String sDocumentTitle( pObjShell->GetTitle(SFX_TITLE_APINAME));
-        SwPrtOptions aOpts( sDocumentTitle );
-		BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
-        nMergeType = pMgr->GetMergeType();
-        
-        BOOL bPrtPros;
-        BOOL bPrtPros_RTL;
-        SwView::MakeOptions( pDlg, aOpts, &bPrtPros, &bPrtPros_RTL, bWeb, GetPrinter(),
-                        pSh->getIDocumentDeviceAccess()->getPrintData() );
-        
-        //set the appropriate view options to print
-        //on silent mode the field commands have to be switched off always
-        //on default print the user is asked what to do
-        const SwViewOption* pCurrentViewOptions = pSh->GetViewOptions();
-        bool bSwitchOff_IsFldName = pCurrentViewOptions->IsFldName() && pSh->IsAnyFieldInDoc();
-
-        if(!bSilent && bSwitchOff_IsFldName)
-        {
-            QueryBox aBox( &GetEditWin(), SW_RES( DLG_PRT_FIELDNAME ) );
-            USHORT nRet = aBox.Execute();
-            if( RET_CANCEL == nRet)
-                return ERRCODE_IO_ABORT;
-            // disable field commands
-            if( RET_NO != nRet )
-            {
-                bSwitchOff_IsFldName = false;
-            }
-        }
-        bool bApplyViewOptions = bSwitchOff_IsFldName;
-        //switch off display of hidden characters if on and hidden characters are in use
-        const sal_Bool bOldShowHiddenChar = pCurrentViewOptions->IsShowHiddenChar();
-        const sal_Bool bOldMetaChars = pCurrentViewOptions->IsViewMetaChars();
-        if( bOldShowHiddenChar != aOpts.IsPrintHiddenText() 
-            && pSh->GetDoc()->ContainsHiddenChars())
-            bApplyViewOptions |= true;
-        //switch off display of hidden paragraphs if on and hidden paragraphs are in use
-        const sal_Bool bOldShowHiddenPara = pCurrentViewOptions->IsShowHiddenPara();
-        if( aOpts.IsPrintHiddenText() != bOldShowHiddenPara )
-        {
-            const SwFieldType* pFldType = pSh->GetDoc()->GetSysFldType(RES_HIDDENPARAFLD);
-            if( pFldType && pFldType->GetDepends())
-                bApplyViewOptions |= true;
-        }
-        const sal_Bool bOldShowHiddenField = pCurrentViewOptions->IsShowHiddenField();
-        if( aOpts.IsPrintHiddenText() != bOldShowHiddenField )
-        {
-            const SwFieldType* pFldType = pSh->GetDoc()->GetSysFldType(RES_HIDDENTXTFLD);
-            if( pFldType || pFldType->GetDepends())
-                bApplyViewOptions |= true;
-        }
-
-        SwViewOption* pOrgViewOption = 0;
-        bApplyViewOptions |= !aOpts.IsPrintTextPlaceholder();
-        if(bApplyViewOptions)
-        {
-            pOrgViewOption = new SwViewOption(*pSh->GetViewOptions());
-            if(bSwitchOff_IsFldName)
-                pOrgViewOption->SetFldName(aOpts.IsPrintHiddenText());
-
-            pOrgViewOption->SetShowHiddenChar(aOpts.IsPrintHiddenText());
-            pOrgViewOption->SetViewMetaChars(sal_True);
-            pOrgViewOption->SetShowHiddenPara(aOpts.IsPrintHiddenText());
-            pOrgViewOption->SetShowHiddenField(aOpts.IsPrintHiddenText());
-            pOrgViewOption->SetShowPlaceHolderFields( aOpts.bPrintTextPlaceholder );
-
-            SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
-        }
-        
-        if( nMergeType == DBMGR_MERGE_MAILMERGE ||
-                DBMGR_MERGE_DOCUMENTS == nMergeType )
-		{
-            if(DBMGR_MERGE_DOCUMENTS == nMergeType)
-                bStartJob = pMgr->MergePrintDocuments( *this, aOpts, *pProgress, bIsAPI );
-            else
-                bStartJob = pMgr->MergePrint( *this, aOpts, *pProgress, bIsAPI );
-		}
-		else
-		{
-            const BOOL bLockedView = pSh->IsViewLocked();
-            pSh->LockView( TRUE );
-
-			//BrowseView abschalten und die View gegen alle Paints locken.
-			BOOL bBrowse = pSh->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE);
-			SfxAllItemSet aSet( SFX_APP()->GetPool() );
-			SfxBoolItem aBrowse( SID_BROWSER_MODE, FALSE );
-			if ( bBrowse )
-			{
-				if ( pSh->GetWin() )
-					pSh->GetWin()->Update();
-				pSh->LockPaint();
-				aSet.Put( aBrowse, aBrowse.Which() );
-				SfxRequest aReq( SID_BROWSER_MODE, 0, aSet );
-				GetDocShell()->Execute( aReq );
-			}
-
-			// die Felder aktualisieren
-			BOOL bIsModified = pSh->IsModified();
-			pSh->StartAllAction();
-			SwDocStat aDocStat;
-			pSh->UpdateDocStat( aDocStat );
-			pSh->EndAllTblBoxEdit();
-			pSh->ViewShell::UpdateFlds(TRUE);
-			if( pSh->IsCrsrInTbl() )
-			{
-				pSh->ClearTblBoxCntnt();
-				pSh->SaveTblBoxCntnt();
-			}
-			pSh->EndAllAction();
-
-			if( !bIsModified )
-				pSh->ResetModified();
-
-			if( -1 != bPrintSelection )
-				aOpts.bPrintSelection = 0 != bPrintSelection;
-
-            uno::Sequence< beans::PropertyValue> aViewProperties(18);
-            beans::PropertyValue* pViewProperties =  aViewProperties.getArray();
-		    pViewProperties[1].Name = C2U("PrintGraphics");
-		    pViewProperties[1].Value <<= (sal_Bool)aOpts.IsPrintGraphic();
-		    pViewProperties[2].Name = C2U("PrintTables");
-		    pViewProperties[2].Value <<= (sal_Bool)aOpts.IsPrintTable();
-		    pViewProperties[3].Name = C2U("PrintDrawings");
-		    pViewProperties[3].Value <<= (sal_Bool)aOpts.IsPrintDraw();
-		    pViewProperties[4].Name = C2U("PrintLeftPages");
-		    pViewProperties[4].Value <<= (sal_Bool)aOpts.IsPrintLeftPage();
-		    pViewProperties[5].Name = C2U("PrintRightPages");
-		    pViewProperties[5].Value <<= (sal_Bool)aOpts.IsPrintRightPage();
-		    pViewProperties[6].Name = C2U("PrintControls");
-		    pViewProperties[6].Value <<= (sal_Bool)aOpts.IsPrintControl();
-		    pViewProperties[7].Name = C2U("PrintReversed");
-		    pViewProperties[7].Value <<= (sal_Bool)aOpts.IsPrintReverse();
-		    pViewProperties[8].Name = C2U("PrintPaperFromSetup");
-		    pViewProperties[8].Value <<= (sal_Bool)aOpts.IsPaperFromSetup();
-		    pViewProperties[9].Name = C2U("PrintFaxName");
-		    pViewProperties[9].Value <<= aOpts.GetFaxName();
-		    pViewProperties[10].Name = C2U("PrintAnnotationMode");
-            pViewProperties[10].Value <<= (text::NotePrintMode) aOpts.GetPrintPostIts();
-		    pViewProperties[11].Name = C2U("PrintProspect");
-		    pViewProperties[11].Value <<= (sal_Bool)aOpts.IsPrintProspect();
-		    pViewProperties[12].Name = C2U("PrintPageBackground");
-		    pViewProperties[12].Value <<= (sal_Bool)aOpts.IsPrintPageBackground();
-		    pViewProperties[13].Name = C2U("PrintBlackFonts");
-		    pViewProperties[13].Value <<= (sal_Bool)aOpts.IsPrintBlackFont();
-		    pViewProperties[0].Name = C2U("IsSinglePrintJob");
-		    pViewProperties[0].Value <<= (sal_Bool)aOpts.IsPrintSingleJobs();
-            pViewProperties[14].Name = C2U("Selection");
-            pViewProperties[14].Value <<= (sal_Bool)aOpts.bPrintSelection;
-            pViewProperties[15].Name = C2U("PrintEmptyPages");
-            pViewProperties[15].Value <<= (sal_Bool)aOpts.bPrintEmptyPages;
-            pViewProperties[16].Name = C2U("PrintHiddenText");
-            pViewProperties[16].Value <<= (sal_Bool)aOpts.bPrintHiddenText;
-            pViewProperties[17].Name = C2U("PrintTextPlaceholder");
-            pViewProperties[17].Value <<= (sal_Bool)aOpts.bPrintTextPlaceholder;
-            SetAdditionalPrintOptions(aViewProperties);
-
-            SfxViewShell::Print(*pProgress, bIsAPI );
-			if ( !pProgress->IsAborted() )
-			{
-				if( bPrtPros )
-				{
-					bStartJob = pPrinter->StartJob( aOpts.GetJobName() );
-					if( bStartJob )
-						pSh->PrintProspect( aOpts, *pProgress, bPrtPros_RTL );
-				}
-				else
-                    bStartJob = pSh->Prt( aOpts, pProgress );
-
-				if ( bBrowse )
-				{
-					aBrowse.SetValue( TRUE );
-					aSet.Put( aBrowse, aBrowse.Which() );
-					SfxRequest aReq( SID_BROWSER_MODE, 0, aSet );
-					GetDocShell()->Execute( aReq );
-					pSh->UnlockPaint();
-				}
-			}
-			else
-				bStartJob = FALSE;
-
-            pSh->LockView( bLockedView );
-		}
-        if(pOrgViewOption)
-        {
-            if(bSwitchOff_IsFldName)
-                pOrgViewOption->SetFldName(TRUE);
-            pOrgViewOption->SetShowHiddenChar(bOldShowHiddenChar);
-            pOrgViewOption->SetViewMetaChars(bOldMetaChars);
-            pOrgViewOption->SetShowHiddenField(bOldShowHiddenField);
-            pOrgViewOption->SetShowHiddenPara(bOldShowHiddenPara);
-            //must to be set to sal_True anyway
-            pOrgViewOption->SetShowPlaceHolderFields( sal_True );
-            SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
-            delete pOrgViewOption;
-        }
-	}
-
-	if( !bStartJob )
-	{
-		// Printer konnte nicht gestartet werden
-		delete pProgress;
-        return pPrinter->GetError();
-	}
-
-	pProgress->Stop();
-	pProgress->DeleteOnEndPrint();
-	pPrinter->EndJob();
-	return pPrinter->GetError();
-}
-
-
-
-/*--------------------------------------------------------------------
 	Beschreibung:	TabPage fuer applikationsspezifische Druckoptionen
  --------------------------------------------------------------------*/
 
@@ -447,60 +184,24 @@ SfxTabPage* __EXPORT SwView::CreatePrintOptionsPage(Window* pParent,
 #ifdef USE_JAVA
 	// Fix bug 3636 by fetching the actual attributes that the printer options
 	// page uses
-	BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
+	sal_Bool bWeb = 0 != PTR_CAST(SwWebView, this);
 	::SetAppPrintOptions( &GetWrtShell(), bWeb );
-    const IDocumentDeviceAccess* pIDDA = ((ViewShell*)&GetWrtShell())->getIDocumentDeviceAccess();
+	const IDocumentDeviceAccess* pIDDA = ((ViewShell*)&GetWrtShell())->getIDocumentDeviceAccess();
 	SfxPrinter *pPrinter = pIDDA->getPrinter( false );
 	if ( pPrinter )
 	{
 		const SwAddPrinterItem* pAddPrinterAttr;
-		if( SFX_ITEM_SET == pPrinter->GetOptions().GetItemState( FN_PARAM_ADDPRINTER, FALSE,
+		if( SFX_ITEM_SET == pPrinter->GetOptions().GetItemState( FN_PARAM_ADDPRINTER, sal_False,
 			(const SfxPoolItem**)&pAddPrinterAttr ) )
 		{
     		SfxItemSet aSet( rSet );
     		aSet.Put( *pAddPrinterAttr );
-			return ::CreatePrintOptionsPage( pParent, aSet, FALSE );
+			return ::CreatePrintOptionsPage( pParent, aSet, sal_False );
 		}
 	}
 #endif	 // USE_JAVA
 
-	return ::CreatePrintOptionsPage( pParent, rSet, FALSE );
-}
-
-/*--------------------------------------------------------------------
-	Beschreibung:	Druckerdialog
- --------------------------------------------------------------------*/
-
-PrintDialog* CreatePrintDialog( Window* pParent, USHORT nPg, SwWrtShell* pSh )
-{
-    PrintDialog *pDlg = new PrintDialog( pParent, false );
-//	pDlg->ChangeFirstPage( 1 );
-
-	if ( !nPg )
-		nPg = 1;
-//	pDlg->ChangeLastPage( nPg );
-//	pDlg->ChangeMaxPage( 9999 );
-	pDlg->EnableRange( PRINTDIALOG_FROMTO );
-
-	if (pSh && (pSh->IsSelection() || pSh->IsFrmSelected() || pSh->IsObjSelected()))
-		pDlg->EnableRange( PRINTDIALOG_SELECTION );
-
-	pDlg->SetRangeText( String::CreateFromInt32(nPg) );
-	pDlg->EnableRange( PRINTDIALOG_RANGE );
-	pDlg->EnableCollate();
-	return pDlg;
-}
-
-/*--------------------------------------------------------------------
-	Beschreibung:
- --------------------------------------------------------------------*/
-
-PrintDialog* __EXPORT SwView::CreatePrintDialog( Window* pParent )
-{
-	// AMA: Hier sollte vielleicht die virtuelle Seitennummer angezeigt werden,
-	// 		aber nur, wenn das Drucken virtuelle Seitennummern und nicht wie
-	//		bisher (auch beim SWG 2.0) physikalische beachtet werden.
-	return ::CreatePrintDialog( pParent, GetWrtShell().GetPhyPageNum(), &GetWrtShell() );
+	return ::CreatePrintOptionsPage( pParent, rSet, sal_False );
 }
 
 /*--------------------------------------------------------------------
@@ -509,7 +210,7 @@ PrintDialog* __EXPORT SwView::CreatePrintDialog( Window* pParent )
 
 void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 {
-	BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
+	sal_Bool bWeb = 0 != PTR_CAST(SwWebView, this);
 	::SetAppPrintOptions( &GetWrtShell(), bWeb );
 	switch (rReq.GetSlot())
 	{
@@ -520,7 +221,7 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 			if (sFaxName.Len())
 			{
 				SfxStringItem aPrinterName(SID_PRINTER_NAME, sFaxName);
-				SfxBoolItem aSilent( SID_SILENT, TRUE );
+				SfxBoolItem aSilent( SID_SILENT, sal_True );
 				GetViewFrame()->GetDispatcher()->Execute( SID_PRINTDOC,
 							SFX_CALLMODE_SYNCHRON|SFX_CALLMODE_RECORD,
 							&aPrinterName, &aSilent, 0L );
@@ -529,7 +230,7 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 			{
 				InfoBox aInfoBox(&GetEditWin(), SW_RES(MSG_ERR_NO_FAX));
 				String sMsg = aInfoBox.GetMessText();
-				USHORT nResNo = bWeb ? STR_WEBOPTIONS : STR_TEXTOPTIONS;
+				sal_uInt16 nResNo = bWeb ? STR_WEBOPTIONS : STR_TEXTOPTIONS;
 				sMsg.SearchAndReplace(String::CreateFromAscii("%1"), String(SW_RES(nResNo)));
 				aInfoBox.SetMessText(sMsg);
 				aInfoBox.Execute();
@@ -544,20 +245,14 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 		case SID_PRINTDOCDIRECT:
 		{
 			SwWrtShell* pSh = &GetWrtShell();
-            SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
-            BOOL bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
-            SFX_REQUEST_ARG(rReq, pPrintFromMergeItem, SfxBoolItem, FN_QRY_MERGE, FALSE);
-#ifdef MACOSX
-            // Fix bug 206 by retrieving the value before removing it as once
-            // it is removed, it will sometimes be set by the compiler to FALSE
-            BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
-#endif	// MACOSX
+            SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, sal_False);
+            sal_Bool bSilent = pSilentItem ? pSilentItem->GetValue() : sal_False;
+            SFX_REQUEST_ARG(rReq, pPrintFromMergeItem, SfxBoolItem, FN_QRY_MERGE, sal_False);
 			if(pPrintFromMergeItem)
 				rReq.RemoveItem(FN_QRY_MERGE);
-#ifndef MACOSX
-            BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
-#endif	// !MACOSX
+            sal_Bool bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : sal_False;
             SwMiscConfig aMiscConfig;
+            bool bPrintSelection = false;
             if(!bSilent && !bFromMerge &&
                     SW_MOD()->GetModuleConfig()->IsAskForMailMerge() && pSh->IsAnyDatabaseFieldInDoc())
             {
@@ -565,19 +260,36 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
                 short nRet = aBox.Execute();
                 if(RET_YES == nRet)
                 {
-                    SfxBoolItem aBool(FN_QRY_MERGE, TRUE);
+                    SfxBoolItem aBool(FN_QRY_MERGE, sal_True);
                     GetViewFrame()->GetDispatcher()->Execute(
                                 FN_QRY_MERGE, SFX_CALLMODE_ASYNCHRON, &aBool, 0L);
                     rReq.Ignore();
 					return;
                 }
             }
+            else if( rReq.GetSlot() == SID_PRINTDOCDIRECT && ! bSilent )
+            {
+                if( /*!bIsAPI && */
+                   ( pSh->IsSelection() || pSh->IsFrmSelected() || pSh->IsObjSelected() ) )
+                {
+                    short nBtn = SvxPrtQryBox(&GetEditWin()).Execute();
+                    if( RET_CANCEL == nBtn )
+                        return;;
+                    
+                    if( RET_OK == nBtn )
+                        bPrintSelection = true;
+                }
+            }
+
             //#i61455# if master documentes are printed silently without loaded links then update the links now
             if( bSilent && pSh->IsGlobalDoc() && !pSh->IsGlblDocSaveLinks() )
             {
                 pSh->GetLinkManager().UpdateAllLinks( sal_False, sal_False, sal_False, 0 );
             }
-			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
+            SfxRequest aReq( rReq );
+            SfxBoolItem aBool(SID_SELECTION, bPrintSelection);
+            aReq.AppendItem( aBool );
+			SfxViewShell::ExecuteSlot( aReq, SfxViewShell::GetInterface() );
 			return;
 		}
 		default:
@@ -592,7 +304,7 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
  --------------------------------------------------------------------*/
 
 SfxTabPage* CreatePrintOptionsPage( Window *pParent,
-								const SfxItemSet &rOptions, BOOL bPreview )
+								const SfxItemSet &rOptions, sal_Bool bPreview )
 {
 	SfxTabPage* pPage = NULL;
 	SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
@@ -610,14 +322,10 @@ SfxTabPage* CreatePrintOptionsPage( Window *pParent,
 }
 
 
-void SetAppPrintOptions( ViewShell* pSh, BOOL bWeb )
+void SetAppPrintOptions( ViewShell* pSh, sal_Bool bWeb )
 {
-    SwPrintData aPrtData = *SW_MOD()->GetPrtOptions(bWeb);
     const IDocumentDeviceAccess* pIDDA = pSh->getIDocumentDeviceAccess();
-    SwPrintData* pShellPrintData = pIDDA->getPrintData();
-
-    if(pShellPrintData)
-        aPrtData = *pShellPrintData;
+    SwPrintData aPrtData = pIDDA->getPrintData();
 
     if( pIDDA->getPrinter( false ) )
 	{
@@ -630,20 +338,19 @@ void SetAppPrintOptions( ViewShell* pSh, BOOL bWeb )
 					SID_PRINTER_CHANGESTODOC, 	SID_PRINTER_CHANGESTODOC,
 					0 );
 
-            SfxMiscCfg* pMisc = SFX_APP()->GetMiscConfig();
+        utl::MiscCfg aMisc;
 
 		if(bWeb)
 			aSet.Put(SfxUInt16Item(SID_HTML_MODE,
 					::GetHtmlMode(((SwWrtShell*)pSh)->GetView().GetDocShell())));
 		aSet.Put(SfxBoolItem(SID_PRINTER_NOTFOUND_WARN,
-						pMisc->IsNotFoundWarning() ));
+						aMisc.IsNotFoundWarning() ));
 		aSet.Put(aAddPrinterItem);
 		aSet.Put( SfxFlagItem( SID_PRINTER_CHANGESTODOC,
-			(pMisc->IsPaperSizeWarning() ? SFX_PRINTER_CHG_SIZE : 0)   |
-            (pMisc->IsPaperOrientationWarning()  ? SFX_PRINTER_CHG_ORIENTATION : 0 )));
+			(aMisc.IsPaperSizeWarning() ? SFX_PRINTER_CHG_SIZE : 0)   |
+            (aMisc.IsPaperOrientationWarning()  ? SFX_PRINTER_CHG_ORIENTATION : 0 )));
 
         pIDDA->getPrinter( true )->SetOptions( aSet );
 	}
 
 }
-

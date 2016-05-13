@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -35,21 +38,20 @@
 #include <sfx2/request.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/childwin.hxx>
-#include <svtools/useroptions.hxx>
+#include <unotools/useroptions.hxx>
 #include <cppuhelper/weak.hxx>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 #include <cppuhelper/implbase1.hxx>	// helper for implementations
 #include <svx/dataaccessdescriptor.hxx>
-#include <svx/wghtitem.hxx>
-#include <svx/postitem.hxx>
-#include <svx/udlnitem.hxx>
-#include <svx/crsditem.hxx>
-#include <svx/cmapitem.hxx>
-#include <svx/colritem.hxx>
-#include <svx/brshitem.hxx>
+#include <editeng/wghtitem.hxx>
+#include <editeng/postitem.hxx>
+#include <editeng/udlnitem.hxx>
+#include <editeng/crsditem.hxx>
+#include <editeng/cmapitem.hxx>
+#include <editeng/colritem.hxx>
+#include <editeng/brshitem.hxx>
 #include <vcl/msgbox.hxx>
-#include <svtools/cjkoptions.hxx>
 #include <swmodule.hxx>
 #include <swtypes.hxx>
 #include <usrpref.hxx>
@@ -86,6 +88,7 @@ public:
 	virtual					~SwPrintOptionsReset() {};
 
 	virtual void			Commit();
+	virtual void			Notify( const ::com::sun::star::uno::Sequence< rtl::OUString >& aPropertyNames ) {}
 	sal_Bool				IsPrintOptionsReset() const { return mbPrintOptionsReset; }
 	sal_Bool				IsWebPrintOptionsReset() const { return mbWebPrintOptionsReset; }
     void					SetPrintOptionsReset(sal_Bool b) { mbPrintOptionsReset = b; }
@@ -124,7 +127,7 @@ void lcl_SetUIPrefs(const SwViewOption* pPref, SwView* pView, ViewShell* pSh )
 	}
 	if(bHScrollChanged)
 	{
-        pView->ShowHScrollbar( pNewPref->IsViewHScrollBar() || pSh->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE));
+        pView->ShowHScrollbar( pNewPref->IsViewHScrollBar() || pNewPref->getBrowseMode() );
 	}
     //if only the position of the vertical ruler has been changed initiate an update
     if(bVAlignChanged && !bHScrollChanged && !bVScrollChanged)
@@ -185,7 +188,7 @@ SwView* SwModule::GetNextView(SwView* pView)
 {
 	DBG_ASSERT(PTR_CAST(SwView, pView),"keine SwView uebergeben");
 	const TypeId aTypeId = TYPE(SwView);
-    SwView* pNView = (SwView*)SfxViewShell::GetNext(*pView, &aTypeId, TRUE);
+    SwView* pNView = (SwView*)SfxViewShell::GetNext(*pView, &aTypeId, sal_True);
 	return pNView;
 }
 
@@ -234,7 +237,12 @@ void SwModule::ApplyUsrPref(const SwViewOption &rUsrPref, SwView* pActView,
 		return;
 
 	// Weitergabe an die CORE
-    const sal_Bool bReadonly = pCurrView->GetDocShell()->IsReadOnly();
+    sal_Bool bReadonly;
+    const SwDocShell* pDocSh = pCurrView->GetDocShell();
+    if (pDocSh)
+        bReadonly = pDocSh->IsReadOnly();
+    else //Use existing option if DocShell missing
+        bReadonly = pSh->GetViewOptions()->IsReadonly();
 	SwViewOption* pViewOpt;
 	if(!bViewOnly)
 		pViewOpt = new SwViewOption( *pPref );
@@ -257,11 +265,13 @@ void SwModule::ApplyUsrPref(const SwViewOption &rUsrPref, SwView* pActView,
     // zum Schluss wird das Idle-Flag wieder gesetzt
 	// #42510#
 	pPref->SetIdle(sal_True);
+
+    delete pViewOpt;
 }
 /* -----------------------------28.09.00 12:36--------------------------------
 
  ---------------------------------------------------------------------------*/
-void SwModule::ApplyUserMetric( FieldUnit eMetric, BOOL bWeb )
+void SwModule::ApplyUserMetric( FieldUnit eMetric, sal_Bool bWeb )
 {
 		SwMasterUsrPref* pPref;
 		if(bWeb)
@@ -299,7 +309,7 @@ void SwModule::ApplyUserMetric( FieldUnit eMetric, BOOL bWeb )
 /*-- 12.11.2008 14:47:58---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-void SwModule::ApplyRulerMetric( FieldUnit eMetric, BOOL bHorizontal, BOOL bWeb )
+void SwModule::ApplyRulerMetric( FieldUnit eMetric, sal_Bool bHorizontal, sal_Bool bWeb )
 {
     SwMasterUsrPref* pPref;
     if(bWeb)
@@ -316,7 +326,7 @@ void SwModule::ApplyRulerMetric( FieldUnit eMetric, BOOL bHorizontal, BOOL bWeb 
     }
     if( bHorizontal )
         pPref->SetHScrollMetric(eMetric);
-    else 
+    else
         pPref->SetVScrollMetric(eMetric);
 
     SwView* pTmpView = SwModule::GetFirstView();
@@ -333,70 +343,6 @@ void SwModule::ApplyRulerMetric( FieldUnit eMetric, BOOL bHorizontal, BOOL bWeb 
         pTmpView = SwModule::GetNextView(pTmpView);
     }
 }
-
-/*-------------------------------------------------
-set the usrpref 's char unit attribute and set ruler
-'s unit as char if the "apply char unit" is checked
---------------------------------------------------*/
-void SwModule::ApplyUserCharUnit(BOOL bApplyChar, BOOL bWeb)
-{
-	SwMasterUsrPref* pPref;
-	if(bWeb)
-	{
-		if(!pWebUsrPref)
-		GetUsrPref(sal_True);
-		pPref = pWebUsrPref;
-	}
-	else
-	{
-		if(!pUsrPref)
-		GetUsrPref(sal_False);
-		pPref = pUsrPref;
-	}
-	BOOL  bOldApplyCharUnit = pPref->IsApplyCharUnit();
-	BOOL    bHasChanged = FALSE;
-	if(bOldApplyCharUnit != bApplyChar)
-	{
-		pPref->SetApplyCharUnit(bApplyChar);
-		bHasChanged = TRUE;
-	}
-
-	if( !bHasChanged )
-		return;
-
-	FieldUnit eHScrollMetric = pPref->IsHScrollMetric() ? pPref->GetHScrollMetric() : pPref->GetMetric();
-	FieldUnit eVScrollMetric = pPref->IsVScrollMetric() ? pPref->GetVScrollMetric() : pPref->GetMetric();
-	if(bApplyChar)
-	{
-		eHScrollMetric = FUNIT_CHAR;
-		eVScrollMetric = FUNIT_LINE;
-	}
-	else
-	{
-		SvtCJKOptions aCJKOptions;
-		if ( !aCJKOptions.IsAsianTypographyEnabled() && ( eHScrollMetric == FUNIT_CHAR ))
-			eHScrollMetric = FUNIT_INCH;
-		else if ( eHScrollMetric == FUNIT_CHAR )
-			eHScrollMetric = FUNIT_CM;
-		if ( !aCJKOptions.IsAsianTypographyEnabled() && ( eVScrollMetric == FUNIT_LINE ))
-			eVScrollMetric = FUNIT_INCH;
-		else if ( eVScrollMetric == FUNIT_LINE )
-			eVScrollMetric = FUNIT_CM;
-	}
-	SwView* pTmpView = SwModule::GetFirstView();
-	// fuer alle MDI-Fenster das Lineal umschalten
-	while(pTmpView)
-	{
-		if(bWeb == (0 != PTR_CAST(SwWebView, pTmpView)))
-		{
-			pTmpView->ChangeVLinealMetric(eVScrollMetric);
-			pTmpView->ChangeTabMetric(eHScrollMetric);
-		}
-
-		pTmpView = SwModule::GetNextView(pTmpView);
-	}
-}
-
 /*-----------------13.11.96 11.57-------------------
 
 --------------------------------------------------*/
@@ -428,7 +374,7 @@ SwPrintOptions* 	SwModule::GetPrtOptions(sal_Bool bWeb)
 
 	if(bWeb && !pWebPrtOpt)
 	{
-		pWebPrtOpt = new SwPrintOptions(TRUE);
+		pWebPrtOpt = new SwPrintOptions(sal_True);
 
 #ifdef USE_JAVA
 		if (pWebPrtOpt && pReset && !pReset->IsWebPrintOptionsReset())
@@ -447,7 +393,7 @@ SwPrintOptions* 	SwModule::GetPrtOptions(sal_Bool bWeb)
 	}
 	else if(!bWeb && !pPrtOpt)
 	{
-		pPrtOpt = new SwPrintOptions(FALSE);
+		pPrtOpt = new SwPrintOptions(sal_False);
 
 #ifdef USE_JAVA
 		if (pPrtOpt && pReset && !pReset->IsPrintOptionsReset())
@@ -485,9 +431,9 @@ SwChapterNumRules*	SwModule::GetChapterNumRules()
 	Beschreibung:
  --------------------------------------------------------------------*/
 
-void SwModule::ShowDBObj(SwView& rView, const SwDBData& rData, BOOL /*bOnlyIfAvailable*/)
+void SwModule::ShowDBObj(SwView& rView, const SwDBData& rData, sal_Bool /*bOnlyIfAvailable*/)
 {
-    Reference<XFrame> xFrame = rView.GetViewFrame()->GetFrame()->GetFrameInterface();
+    Reference<XFrame> xFrame = rView.GetViewFrame()->GetFrame().GetFrameInterface();
     Reference<XDispatchProvider> xDP(xFrame, uno::UNO_QUERY);
 
     uno::Reference<frame::XFrame> xBeamerFrame = xFrame->findFrame(
@@ -566,7 +512,7 @@ sal_uInt16 SwModule::InsertRedlineAuthor(const String& rAuthor)
 void lcl_FillAuthorAttr( sal_uInt16 nAuthor, SfxItemSet &rSet,
 						const AuthorCharAttr &rAttr )
 {
-	Color aCol( (ColorData)rAttr.nColor );
+	Color aCol( rAttr.nColor );
 
 	if( COL_TRANSPARENT == rAttr.nColor )
 	{
@@ -785,7 +731,7 @@ void SwModule::CheckSpellChanges( sal_Bool bOnlineSpelling,
 			 pDocSh = (SwDocShell*)SfxObjectShell::GetNext( *pDocSh, &aType ) )
 		{
 			SwDoc* pTmp = pDocSh->GetDoc();
-			if ( pTmp->GetRootFrm() )
+			if ( pTmp->GetCurrentViewShell() )	//swmod 071108//swmod 071225
             {
 				pTmp->SpellItAgainSam( bInvalid, bOnlyWrong, bSmartTags );
                 ViewShell* pViewShell = 0;
@@ -857,7 +803,7 @@ void SwPrintOptionsReset::Commit()
 	Any* pValues = aValues.getArray();
 
 	const Type& rType = ::getBooleanCppuType();
-	BOOL bVal;
+	sal_Bool bVal;
 	for(int nProp = 0; nProp < aNames.getLength(); nProp++)
 	{
 		switch(nProp)

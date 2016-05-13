@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified June 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -34,9 +37,8 @@
 #include <sfx2/printer.hxx>
 #include <rtl/logfile.hxx>
 #include <doc.hxx>
-#ifndef _DOCSH_HXX
+#include <IDocumentUndoRedo.hxx>
 #include <docsh.hxx>
-#endif
 #include <viewsh.hxx>
 #include <rootfrm.hxx>
 #include <viewimp.hxx>
@@ -50,21 +52,18 @@
 #include <ndgrf.hxx>
 #include <ndindex.hxx>
 #include <accessibilityoptions.hxx>
-
+#include <switerator.hxx>
 
 /*************************************************************************
 |*
 |*	ViewShell::Init()
-|*
-|*	Letzte Aenderung	MA 14. Jun. 96
-|*
 |*************************************************************************/
 
 void ViewShell::Init( const SwViewOption *pNewOpt )
 {
 	RTL_LOGFILE_CONTEXT_AUTHOR( aLog, "SW", "JP93722",  "ViewShell::Init" );
 
-	bDocSizeChgd = FALSE;
+	bDocSizeChgd = sal_False;
 
 	// Wir gehen auf Nummer sicher:
 	// Wir muessen die alten Fontinformationen wegschmeissen,
@@ -101,7 +100,7 @@ void ViewShell::Init( const SwViewOption *pNewOpt )
 	//				bevor das Layout angelegt wird. Ansonsten muesste man
 	//				nochmals durchformatieren!!
 	if( pDShell && pDShell->IsReadOnly() )
-		pOpt->SetReadonly( TRUE );
+		pOpt->SetReadonly( sal_True );
 
 	RTL_LOGFILE_CONTEXT_TRACE( aLog, "View::Init - before InitPrt" );
 
@@ -113,13 +112,9 @@ void ViewShell::Init( const SwViewOption *pNewOpt )
 
     // --> FME 2005-01-21 #i41075#
     // Only setup the printer if we need one:
-    const IDocumentSettingAccess* pIDSA = getIDocumentSettingAccess();
-    const bool bBrowseMode = pIDSA->get(IDocumentSettingAccess::BROWSE_MODE);
-    const bool bCreatePrinter = !bBrowseMode &&
-                                !pIDSA->get(IDocumentSettingAccess::USE_VIRTUAL_DEVICE);
-    SfxPrinter* pPrinter = getIDocumentDeviceAccess()->getPrinter( bCreatePrinter );
-    if( pPrinter )
-        InitPrt( pPrinter, pPDFOut );
+    const bool bBrowseMode = pOpt->getBrowseMode();
+    if( pPDFOut )
+        InitPrt( pPDFOut );
     // <--
 
     // --> FME 2005-03-16 #i44963# Good occasion to check if page sizes in
@@ -140,12 +135,35 @@ void ViewShell::Init( const SwViewOption *pNewOpt )
 		GetWin()->SetLineColor();
 	}
 
-	//Layout erzeugen wenn es noch nicht vorhanden ist.
-	SwRootFrm* pRoot = GetDoc()->GetRootFrm();
-	if( !pRoot )
-		GetDoc()->SetRootFrm( pRoot = new SwRootFrm( pDoc->GetDfltFrmFmt(), this ) );
+    // Create a new layout, if there is no one available
+	if( !pLayout )
+    {
+        // Here's the code which disables the usage of "multiple" layouts at the moment
+        // If the problems with controls and groups objects are solved,
+        // this code can be removed...
+        ViewShell *pCurrShell = GetDoc()->GetCurrentViewShell();
+        if( pCurrShell )
+            pLayout = pCurrShell->pLayout;
+        // end of "disable multiple layouts"
+        if( !pLayout )
+		{
+			// switched to two step construction because creating the layout in SwRootFrm needs a valid pLayout set
+            pLayout = SwRootFrmPtr(new SwRootFrm( pDoc->GetDfltFrmFmt(), this ));//swmod081016
+            pLayout->Init( pDoc->GetDfltFrmFmt() );
 
-    SizeChgNotify();
+			// mba: the layout refactoring overlooked an important detail
+			// prior to that change, the layout always was destroyed in the dtor of swdoc
+			// it is necessary to suppress notifications in the layout when the layout is discarded in its dtor
+			// unfortunately this was done by asking whether the doc is in dtor - though the correct question should
+			// have been if the rootfrm is in dtor (or even better: discard the layout before the SwRootFrm is destroyed!)
+			// SwDoc::IsInDtor() is used at several places all over the code that need to be checked whether 
+			// "pDoc->IsInDtor()" means what is says or in fact should check for "pRootFrm->IsInDtor()". As this will take some time, I decided
+			// to postpone that investigations and the changes it will bring to the 3.5 release and for 3.4 make sure 
+			// that the layout still gets destroyed in the doc dtor. This is done by sharing "the" layout (that we still have) with the doc.
+			GetDoc()->ShareLayout( pLayout );
+        }
+    }
+	SizeChgNotify();	//swmod 071108
 
     // --> #i31958#
     // XForms mode: initialize XForms mode, based on design mode (draw view)
@@ -162,9 +180,6 @@ void ViewShell::Init( const SwViewOption *pNewOpt )
 /*************************************************************************
 |*
 |*	ViewShell::ViewShell()	CTor fuer die erste Shell.
-|*
-|*	Letzte Aenderung	MA 29. Aug. 95
-|*
 |*************************************************************************/
 
 ViewShell::ViewShell( SwDoc& rDocument, Window *pWindow,
@@ -196,13 +211,13 @@ ViewShell::ViewShell( SwDoc& rDocument, Window *pWindow,
     // <SwDrawContact::Changed> during contruction of <ViewShell> instance
     mbInConstructor = true;
 #ifdef USE_JAVA
-	mbThumbnail = false;
-	mbInCalcLayout = false;
+    mbThumbnail = false;
+    mbInCalcLayout = false;
 #endif	// USE_JAVA
 
 	bPaintInProgress = bViewLocked = bInEndAction = bFrameView =
-	bEndActionByVirDev = FALSE;
-	bPaintWorks = bEnableSmooth = TRUE;
+	bEndActionByVirDev = sal_False;
+	bPaintWorks = bEnableSmooth = sal_True;
 	bPreView = 0 !=( VSHELLFLAG_ISPREVIEW & nFlags );
 
     // --> OD 2005-02-11 #i38810# - Do not reset modified state of document,
@@ -229,7 +244,8 @@ ViewShell::ViewShell( SwDoc& rDocument, Window *pWindow,
 
 	//In Init wird ein Standard-FrmFmt angelegt.
     // --> OD 2005-02-11 #i38810#
-    if ( !pDoc->IsUndoNoResetModified() && !bIsDocModified )
+    if (   !pDoc->GetIDocumentUndoRedo().IsUndoNoResetModified()
+        && !bIsDocModified )
     // <--
     {
 		pDoc->ResetModified();
@@ -248,9 +264,6 @@ ViewShell::ViewShell( SwDoc& rDocument, Window *pWindow,
 /*************************************************************************
 |*
 |*	ViewShell::ViewShell()	CTor fuer weitere Shells auf ein Dokument.
-|*
-|*	Letzte Aenderung	MA 29. Aug. 95
-|*
 |*************************************************************************/
 
 ViewShell::ViewShell( ViewShell& rShell, Window *pWindow,
@@ -281,33 +294,38 @@ ViewShell::ViewShell( ViewShell& rShell, Window *pWindow,
     // <SwDrawContact::Changed> during contruction of <ViewShell> instance
     mbInConstructor = true;
 #ifdef USE_JAVA
-	mbThumbnail = false;
-	mbInCalcLayout = false;
+    mbThumbnail = false;
+    mbInCalcLayout = false;
 #endif	// USE_JAVA
 
-    bPaintWorks = bEnableSmooth = TRUE;
+    bPaintWorks = bEnableSmooth = sal_True;
 	bPaintInProgress = bViewLocked = bInEndAction = bFrameView =
-	bEndActionByVirDev = FALSE;
+	bEndActionByVirDev = sal_False;
 	bPreView = 0 !=( VSHELLFLAG_ISPREVIEW & nFlags );
-    // OD 12.12.2002 #103492#
-    if ( bPreView )
-        pImp->InitPagePreviewLayout();
+	if( nFlags & VSHELLFLAG_SHARELAYOUT ) //swmod 080125
+		pLayout = rShell.pLayout;//swmod 080125
 
 	SET_CURR_SHELL( this );
 
 	pDoc->acquire();
-	BOOL bModified = pDoc->IsModified();
+	sal_Bool bModified = pDoc->IsModified();
 
 	pOutput = pOut;
 	Init( rShell.GetViewOptions() );	//verstellt ggf. das Outdev (InitPrt())
 	pOut = pOutput;
 
+    // OD 12.12.2002 #103492#
+    if ( bPreView )
+        pImp->InitPagePreviewLayout();
+
 	((SwHiddenTxtFieldType*)pDoc->GetSysFldType( RES_HIDDENTXTFLD ))->
             SetHiddenFlag( !pOpt->IsShowHiddenField() );
 
 	// in Init wird ein Standard-FrmFmt angelegt
-	if( !bModified && !pDoc->IsUndoNoResetModified() )
+    if( !bModified && !pDoc->GetIDocumentUndoRedo().IsUndoNoResetModified() )
+    {
 		pDoc->ResetModified();
+    }
 
 	//Format-Cache erweitern.
 	if ( SwTxtFrm::GetTxtCache()->GetCurMax() < 2550 )
@@ -324,16 +342,13 @@ ViewShell::ViewShell( ViewShell& rShell, Window *pWindow,
 |*
 |*	ViewShell::~ViewShell()
 |*
-|*	Ersterstellung		MA ??
-|*	Letzte Aenderung	MA 10. May. 95
-|*
 ******************************************************************************/
 
 ViewShell::~ViewShell()
 {
 	{
 		SET_CURR_SHELL( this );
-		bPaintWorks = FALSE;
+		bPaintWorks = sal_False;
 
         // FME 2004-06-21 #i9684# Stopping the animated graphics is not
         // necessary during printing or pdf export, because the animation
@@ -352,9 +367,8 @@ ViewShell::~ViewShell()
 				{
 					if( pGNd->IsAnimated() )
 					{
-						SwClientIter aIter( *pGNd );
-						for( SwFrm* pFrm = (SwFrm*)aIter.First( TYPE(SwFrm) );
-							pFrm; pFrm = (SwFrm*)aIter.Next() )
+						SwIterator<SwFrm,SwGrfNode> aIter( *pGNd );
+						for( SwFrm* pFrm = aIter.First(); pFrm; pFrm = aIter.Next() )
 						{
 							ASSERT( pFrm->IsNoTxtFrm(), "GraphicNode with Text?" );
 							((SwNoTxtFrm*)pFrm)->StopAnimation( pOut );
@@ -375,8 +389,8 @@ ViewShell::~ViewShell()
 			if( !pDoc->release() )
 				delete pDoc, pDoc = 0;
 			else
-				pDoc->GetRootFrm()->ResetNewLayout();
-		}
+				GetLayout()->ResetNewLayout();
+		}//swmod 080317
 
 		delete pOpt;
 
@@ -391,15 +405,20 @@ ViewShell::~ViewShell()
 	}
 
 	if ( pDoc )
+	{
 		GetLayout()->DeRegisterShell( this );
+		if(pDoc->GetCurrentViewShell()==this)
+			pDoc->SetCurrentViewShell( this->GetNext()!=this ? 
+			(ViewShell*)this->GetNext() : NULL );
+	}
 
     delete mpTmpRef;
     delete pAccOptions;
 }
 
-BOOL ViewShell::HasDrawView() const
+sal_Bool ViewShell::HasDrawView() const
 {
-	return Imp()->HasDrawView();
+	return Imp() ? Imp()->HasDrawView() : 0;
 }
 
 void ViewShell::MakeDrawView()

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2014 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 #include "docxattributeoutput.hxx"
 #include "docxexport.hxx"
@@ -34,7 +37,7 @@
 #include "wrtww8.hxx"
 #include "ww8par.hxx"
 
-#include <oox/core/tokens.hxx>
+#include <oox/token/tokens.hxx>
 #include <oox/export/drawingml.hxx>
 #include <oox/export/utils.hxx>
 #include <oox/export/vmlexport.hxx>
@@ -43,47 +46,47 @@
 
 #include <hintids.hxx>
 
-#include <svtools/poolitem.hxx>
+#include <svl/poolitem.hxx>
 
-#include <svx/fontitem.hxx>
-#include <svx/tstpitem.hxx>
-#include <svx/adjitem.hxx>
-#include <svx/spltitem.hxx>
-#include <svx/widwitem.hxx>
-#include <svx/lspcitem.hxx>
-#include <svx/keepitem.hxx>
-#include <svx/shaditem.hxx>
-#include <svx/brshitem.hxx>
-#include <svx/postitem.hxx>
-#include <svx/wghtitem.hxx>
-#include <svx/kernitem.hxx>
-#include <svx/crsditem.hxx>
-#include <svx/cmapitem.hxx>
-#include <svx/wrlmitem.hxx>
-#include <svx/udlnitem.hxx>
-#include <svx/langitem.hxx>
-#include <svx/escpitem.hxx>
-#include <svx/fhgtitem.hxx>
-#include <svx/colritem.hxx>
-#include <svx/hyznitem.hxx>
-#include <svx/brkitem.hxx>
-#include <svx/lrspitem.hxx>
-#include <svx/ulspitem.hxx>
-#include <svx/boxitem.hxx>
-#include <svx/cntritem.hxx>
-#include <svx/shdditem.hxx>
-#include <svx/akrnitem.hxx>
-#include <svx/pbinitem.hxx>
-#include <svx/emphitem.hxx>
-#include <svx/twolinesitem.hxx>
-#include <svx/charscaleitem.hxx>
-#include <svx/charrotateitem.hxx>
-#include <svx/charreliefitem.hxx>
-#include <svx/paravertalignitem.hxx>
-#include <svx/pgrditem.hxx>
-#include <svx/frmdiritem.hxx>
-#include <svx/blnkitem.hxx>
-#include <svx/charhiddenitem.hxx>
+#include <editeng/fontitem.hxx>
+#include <editeng/tstpitem.hxx>
+#include <editeng/adjitem.hxx>
+#include <editeng/spltitem.hxx>
+#include <editeng/widwitem.hxx>
+#include <editeng/lspcitem.hxx>
+#include <editeng/keepitem.hxx>
+#include <editeng/shaditem.hxx>
+#include <editeng/brshitem.hxx>
+#include <editeng/postitem.hxx>
+#include <editeng/wghtitem.hxx>
+#include <editeng/kernitem.hxx>
+#include <editeng/crsditem.hxx>
+#include <editeng/cmapitem.hxx>
+#include <editeng/wrlmitem.hxx>
+#include <editeng/udlnitem.hxx>
+#include <editeng/langitem.hxx>
+#include <editeng/escpitem.hxx>
+#include <editeng/fhgtitem.hxx>
+#include <editeng/colritem.hxx>
+#include <editeng/hyznitem.hxx>
+#include <editeng/brkitem.hxx>
+#include <editeng/lrspitem.hxx>
+#include <editeng/ulspitem.hxx>
+#include <editeng/boxitem.hxx>
+#include <editeng/cntritem.hxx>
+#include <editeng/shdditem.hxx>
+#include <editeng/akrnitem.hxx>
+#include <editeng/pbinitem.hxx>
+#include <editeng/emphitem.hxx>
+#include <editeng/twolinesitem.hxx>
+#include <editeng/charscaleitem.hxx>
+#include <editeng/charrotateitem.hxx>
+#include <editeng/charreliefitem.hxx>
+#include <editeng/paravertalignitem.hxx>
+#include <editeng/pgrditem.hxx>
+#include <editeng/frmdiritem.hxx>
+#include <editeng/blnkitem.hxx>
+#include <editeng/charhiddenitem.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/svdobj.hxx>
 
@@ -130,6 +133,7 @@ using rtl::OUString;
 using rtl::OUStringBuffer;
 using rtl::OUStringToOString;
 
+using namespace oox;
 using namespace docx;
 using namespace sax_fastparser;
 using namespace nsSwDocInfoSubType;
@@ -142,7 +146,7 @@ void DocxAttributeOutput::RTLAndCJKState( bool bIsRTL, sal_uInt16 /*nScript*/ )
         m_pSerializer->singleElementNS( XML_w, XML_rtl, FSNS( XML_w, XML_val ), "true", FSEND );
 }
 
-void DocxAttributeOutput::StartParagraph( const SwTxtNode& /*rNode*/, ww8::WW8TableNodeInfo::Pointer_t pTextNodeInfo )
+void DocxAttributeOutput::StartParagraph( ww8::WW8TableNodeInfo::Pointer_t pTextNodeInfo )
 {
     if ( m_nColBreakStatus == COLBRK_POSTPONE )
         m_nColBreakStatus = COLBRK_WRITE;
@@ -195,6 +199,8 @@ void DocxAttributeOutput::StartParagraph( const SwTxtNode& /*rNode*/, ww8::WW8Ta
 
     // no section break in this paragraph yet; can be set in SectionBreak()
 #ifdef USE_JAVA
+    // Fix crashing when saving the document in testing/docxbugs_emails/20140929
+    // as .docx by making a copy of the section pointer
     delete m_pSectionInfo;
 #endif	// USE_JAVA
     m_pSectionInfo = NULL;
@@ -223,7 +229,7 @@ void DocxAttributeOutput::FinishTableRowCell( ww8::WW8TableNodeInfoInner::Pointe
 
         const SwTable *pTable = pInner->getTable( );
         const SwTableLines& rLines = pTable->GetTabLines( );
-        USHORT nLinesCount = rLines.Count( );
+        sal_uInt16 nLinesCount = rLines.Count( );
 
         if ( pInner->isEndOfCell() )
         {
@@ -389,6 +395,7 @@ void DocxAttributeOutput::EndRun()
     }
    
     DoWriteBookmarks( );
+    WriteCommentRanges();
 
     m_pSerializer->startElementNS( XML_w, XML_r, FSEND );
     m_pSerializer->mergeTopMarks( sax_fastparser::MERGE_MARKS_PREPEND ); // merges with "postponed run start", see above
@@ -415,40 +422,69 @@ void DocxAttributeOutput::EndRun()
     EndRedline();
 }
 
-void DocxAttributeOutput::DoWriteBookmarks(  )
+void DocxAttributeOutput::WriteCommentRanges()
+{
+    if (m_bPostitStart)
+    {
+        m_bPostitStart = false;
+        OString idstr = OString::valueOf( sal_Int32( m_postitFieldsMaxId ));
+        m_pSerializer->singleElementNS( XML_w, XML_commentRangeStart, FSNS( XML_w, XML_id ), idstr.getStr(), FSEND );
+    }
+    if (m_bPostitEnd)
+    {
+        m_bPostitEnd = false;
+        OString idstr = OString::valueOf( sal_Int32( m_postitFieldsMaxId ));
+        m_pSerializer->singleElementNS( XML_w, XML_commentRangeEnd, FSNS( XML_w, XML_id ), idstr.getStr(), FSEND );
+    }
+}
+
+void DocxAttributeOutput::WritePostitFieldStart()
+{
+    m_bPostitStart = true;
+}
+
+void DocxAttributeOutput::WritePostitFieldEnd()
+{
+    m_bPostitEnd = true;
+}
+
+
+void DocxAttributeOutput::DoWriteBookmarks()
 {
     // Write the start bookmarks
-    while ( m_rBkmksStart.size(  ) > 0 )
+    for ( std::vector< OString >::const_iterator it = m_rMarksStart.begin(), end = m_rMarksStart.end();
+          it < end; ++it )
     {
-        OString rName = m_rBkmksStart.front(  );
-        m_rBkmksStart.erase( m_rBkmksStart.begin(  ) );
+        const OString& rName = *it;
 
         // Output the bookmark
-        USHORT nId = m_nNextBkmkId++;
-        m_rOpenedBkmksIds[rName] = nId;
+        sal_uInt16 nId = m_nNextMarkId++;
+        m_rOpenedMarksIds[rName] = nId;
         m_pSerializer->singleElementNS( XML_w, XML_bookmarkStart,
             FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( nId ) ).getStr(  ),
-            FSNS( XML_w, XML_name ), rName.getStr(  ), 
+            FSNS( XML_w, XML_name ), rName.getStr(), 
             FSEND );
     }
+    m_rMarksStart.clear();
 
     // export the end bookmarks 
-    while ( m_rBkmksEnd.size(  ) > 0 )
+    for ( std::vector< OString >::const_iterator it = m_rMarksEnd.begin(), end = m_rMarksEnd.end();
+          it < end; ++it )
     {
-        OString rName = m_rBkmksEnd.front(  );
-        m_rBkmksEnd.erase( m_rBkmksEnd.begin(  ) );
+        const OString& rName = *it;
 
         // Get the id of the bookmark
-        std::map< OString, USHORT >::iterator pPos = m_rOpenedBkmksIds.find( rName );
-        if ( pPos != m_rOpenedBkmksIds.end(  ) )
+        std::map< OString, sal_uInt16 >::iterator pPos = m_rOpenedMarksIds.find( rName );
+        if ( pPos != m_rOpenedMarksIds.end(  ) )
         {
-            USHORT nId = ( *pPos ).second;
+            sal_uInt16 nId = ( *pPos ).second;
             m_pSerializer->singleElementNS( XML_w, XML_bookmarkEnd,
                 FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( nId ) ).getStr(  ), 
                 FSEND );
-            m_rOpenedBkmksIds.erase( rName );
+            m_rOpenedMarksIds.erase( rName );
         }
     }
+    m_rMarksEnd.clear();
 }
 
 void DocxAttributeOutput::StartField_Impl( FieldInfos& rInfos, sal_Bool bWriteRun )
@@ -550,7 +586,7 @@ void DocxAttributeOutput::EndField_Impl( FieldInfos& rInfos )
     if ( aBkmName.getLength( ) > 0 )
     {
         m_pSerializer->singleElementNS( XML_w, XML_bookmarkStart,
-               FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( m_nNextBkmkId ) ).getStr( ),
+               FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( m_nNextMarkId ) ).getStr( ),
                FSNS( XML_w, XML_name ), OUStringToOString( aBkmName, RTL_TEXTENCODING_UTF8 ).getStr( ),
                FSEND );
     }
@@ -569,10 +605,10 @@ void DocxAttributeOutput::EndField_Impl( FieldInfos& rInfos )
     if ( aBkmName.getLength( ) > 0 )
     {
         m_pSerializer->singleElementNS( XML_w, XML_bookmarkEnd,
-               FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( m_nNextBkmkId ) ).getStr( ),
+               FSNS( XML_w, XML_id ), OString::valueOf( sal_Int32( m_nNextMarkId ) ).getStr( ),
                FSEND );
 
-        m_nNextBkmkId++;
+        m_nNextMarkId++;
     }
 
     // Write the Field end
@@ -587,7 +623,7 @@ void DocxAttributeOutput::EndField_Impl( FieldInfos& rInfos )
     // should be visible
     if ( rInfos.pField )
     {
-        USHORT nSubType = rInfos.pField->GetSubType( );
+        sal_uInt16 nSubType = rInfos.pField->GetSubType( );
         bool bIsSetField = rInfos.pField->GetTyp( )->Which( ) == RES_SETEXPFLD;
         bool bShowRef = ( !bIsSetField || ( nSubType & nsSwExtendedSubType::SUB_INVISIBLE ) ) ? false : true;
     
@@ -734,9 +770,7 @@ void DocxAttributeOutput::RunText( const String& rText, rtl_TextEncoding /*eChar
                 if ( *pIt < 0x0020 ) // filter out the control codes
                 {
                     impl_WriteRunText( m_pSerializer, nTextToken, pBegin, pIt );
-#if OSL_DEBUG_LEVEL > 0
-                    fprintf( stderr, "Ignored control code %x in a text run.", *pIt );
-#endif
+                    OSL_TRACE( "Ignored control code %x in a text run.", *pIt );
                 }
                 break;
         }
@@ -747,23 +781,17 @@ void DocxAttributeOutput::RunText( const String& rText, rtl_TextEncoding /*eChar
 
 void DocxAttributeOutput::RawText( const String& /*rText*/, bool /*bForceUnicode*/, rtl_TextEncoding /*eCharSet*/ )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::RawText( const String& rText, bool bForceUnicode, rtl_TextEncoding eCharSet )\n" );
-#endif
+    OSL_TRACE("TODO DocxAttributeOutput::RawText( const String& rText, bool bForceUnicode, rtl_TextEncoding eCharSet )\n" );
 }
 
 void DocxAttributeOutput::StartRuby( const SwTxtNode& /*rNode*/, const SwFmtRuby& /*rRuby*/ )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::StartRuby( const SwTxtNode& rNode, const SwFmtRuby& rRuby )\n" );
-#endif
+    OSL_TRACE("TODO DocxAttributeOutput::StartRuby( const SwTxtNode& rNode, const SwFmtRuby& rRuby )\n" );
 }
 
 void DocxAttributeOutput::EndRuby()
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::EndRuby()\n" );
-#endif
+    OSL_TRACE( "TODO DocxAttributeOutput::EndRuby()\n" );
 }
 
 bool DocxAttributeOutput::AnalyzeURL( const String& rUrl, const String& rTarget, String* pLinkURL, String* pMark )
@@ -800,7 +828,7 @@ bool DocxAttributeOutput::AnalyzeURL( const String& rUrl, const String& rTarget,
     return bBookMarkOnly;
 }
 
-void DocxAttributeOutput::StartURL( const String& rUrl, const String& rTarget )
+bool DocxAttributeOutput::StartURL( const String& rUrl, const String& rTarget )
 {
     String sMark;
     String sUrl;
@@ -836,10 +864,13 @@ void DocxAttributeOutput::StartURL( const String& rUrl, const String& rTarget )
             m_pHyperlinkAttrList->add(FSNS( XML_w, XML_tgtFrame ), soTarget.getStr());
         }
     }
+
+    return true;
 }
 
-void DocxAttributeOutput::EndURL()
+bool DocxAttributeOutput::EndURL()
 {
+    return true;
 }
 
 void DocxAttributeOutput::FieldVanish( const String& rTxt, ww::eField eType )
@@ -849,9 +880,7 @@ void DocxAttributeOutput::FieldVanish( const String& rTxt, ww::eField eType )
 
 void DocxAttributeOutput::Redline( const SwRedlineData* /*pRedline*/ )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::Redline( const SwRedlineData* pRedline )\n" );
-#endif
+    OSL_TRACE( "TODO DocxAttributeOutput::Redline( const SwRedlineData* pRedline )\n" );
 }
 
 /// Append the number as 2-digit when less than 10.
@@ -936,9 +965,7 @@ void DocxAttributeOutput::StartRedline( const SwRedlineData* pRedlineData )
             break;
 
         case nsRedlineType_t::REDLINE_FORMAT:
-#if OSL_DEBUG_LEVEL > 0
-            fprintf( stderr, "TODO DocxAttributeOutput::StartRedline()\n" );
-#endif
+            OSL_TRACE( "TODO DocxAttributeOutput::StartRedline()\n" );
         default:
             break;
     }
@@ -960,9 +987,7 @@ void DocxAttributeOutput::EndRedline()
             break;
 
         case nsRedlineType_t::REDLINE_FORMAT:
-#if OSL_DEBUG_LEVEL > 0
-            fprintf( stderr, "TODO DocxAttributeOutput::EndRedline()\n" );
-#endif
+            OSL_TRACE( "TODO DocxAttributeOutput::EndRedline()\n" );
             break;
         default:
             break;
@@ -971,14 +996,12 @@ void DocxAttributeOutput::EndRedline()
     m_pRedlineData = NULL;
 }
 
-void DocxAttributeOutput::FormatDrop( const SwTxtNode& /*rNode*/, const SwFmtDrop& /*rSwFmtDrop*/, USHORT /*nStyle*/, ww8::WW8TableNodeInfo::Pointer_t /*pTextNodeInfo*/, ww8::WW8TableNodeInfoInner::Pointer_t )
+void DocxAttributeOutput::FormatDrop( const SwTxtNode& /*rNode*/, const SwFmtDrop& /*rSwFmtDrop*/, sal_uInt16 /*nStyle*/, ww8::WW8TableNodeInfo::Pointer_t /*pTextNodeInfo*/, ww8::WW8TableNodeInfoInner::Pointer_t )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatDrop( const SwTxtNode& rNode, const SwFmtDrop& rSwFmtDrop, USHORT nStyle )\n" );
-#endif
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatDrop( const SwTxtNode& rNode, const SwFmtDrop& rSwFmtDrop, sal_uInt16 nStyle )\n" );
 }
 
-void DocxAttributeOutput::ParagraphStyle( USHORT nStyle )
+void DocxAttributeOutput::ParagraphStyle( sal_uInt16 nStyle )
 {
     OString aStyleId( "style" );
     aStyleId += OString::valueOf( sal_Int32( nStyle ) );
@@ -990,7 +1013,7 @@ void DocxAttributeOutput::ParagraphStyle( USHORT nStyle )
 void DocxAttributeOutput::InTable()
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::InTable()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::InTable()\n" );
 #endif
 }
 
@@ -998,7 +1021,7 @@ void DocxAttributeOutput::InTable()
 void DocxAttributeOutput::TableRowProperties( bool /*bHeader*/, long /*nCellHeight*/, bool /*bCannotSplit*/, bool /*bRightToLeft*/ )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::TableRowProperties()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::TableRowProperties()\n" );
 #endif
 }
 #endif
@@ -1023,13 +1046,13 @@ static OString impl_ConvertColor( const Color &rColor )
     return color;
 }
 
-static void impl_borderLine( FSHelperPtr pSerializer, sal_Int32 elementToken, const SvxBorderLine* pBorderLine, USHORT nDist )
+static void impl_borderLine( FSHelperPtr pSerializer, sal_Int32 elementToken, const SvxBorderLine* pBorderLine, sal_uInt16 nDist )
 {
     FastAttributeList* pAttr = pSerializer->createAttrList();
 
-    USHORT inW = pBorderLine->GetInWidth();
-    USHORT outW = pBorderLine->GetOutWidth();
-    USHORT nWidth  = inW + outW;
+    sal_uInt16 inW = pBorderLine->GetInWidth();
+    sal_uInt16 outW = pBorderLine->GetOutWidth();
+    sal_uInt16 nWidth  = inW + outW;
 
     // Compute val attribute value
     // Can be one of:
@@ -1059,8 +1082,8 @@ static void impl_borderLine( FSHelperPtr pSerializer, sal_Int32 elementToken, co
 
     // The unit is the 8th of point
     nWidth = sal_Int32( nWidth / 2.5 );
-    USHORT nMinWidth = 2;
-    USHORT nMaxWidth = 96;
+    sal_uInt16 nMinWidth = 2;
+    sal_uInt16 nMaxWidth = 96;
 
     if ( nWidth > nMaxWidth )
         nWidth = nMaxWidth;
@@ -1082,16 +1105,16 @@ static void impl_borderLine( FSHelperPtr pSerializer, sal_Int32 elementToken, co
 
 static void impl_pageBorders( FSHelperPtr pSerializer, const SvxBoxItem& rBox )
 {
-    static const USHORT aBorders[] =
+    static const sal_uInt16 aBorders[] =
     {
         BOX_LINE_TOP, BOX_LINE_LEFT, BOX_LINE_BOTTOM, BOX_LINE_RIGHT
     };
 
-    static const USHORT aXmlElements[] = 
+    static const sal_uInt16 aXmlElements[] = 
     {
         XML_top, XML_left, XML_bottom, XML_right
     };
-    const USHORT* pBrd = aBorders;
+    const sal_uInt16* pBrd = aBorders;
     for( int i = 0; i < 4; ++i, ++pBrd )
     {
         const SvxBorderLine* pLn = rBox.GetLine( *pBrd );
@@ -1132,7 +1155,7 @@ void DocxAttributeOutput::TableCellProperties( ww8::WW8TableNodeInfoInner::Point
     SwWriteTableRow *pRow = aRows[ pTableTextNodeInfoInner->getRow( ) ];
     SwWriteTableCell *pCell = pRow->GetCells( )[ pTableTextNodeInfoInner->getCell( ) ];
 
-    USHORT nColSpan = pCell->GetColSpan();
+    sal_uInt16 nColSpan = pCell->GetColSpan();
     if ( nColSpan > 1 )
         m_pSerializer->singleElementNS( XML_w, XML_gridSpan,
                 FSNS( XML_w, XML_val ), OString::valueOf( sal_Int32( nColSpan ) ).getStr(),
@@ -1150,16 +1173,16 @@ void DocxAttributeOutput::TableCellProperties( ww8::WW8TableNodeInfoInner::Point
     // Cell margins
     m_pSerializer->startElementNS( XML_w, XML_tcMar, FSEND );
     const SvxBoxItem& rBox = pFmt->GetBox( );
-    static const USHORT aBorders[] =
+    static const sal_uInt16 aBorders[] =
     {
         BOX_LINE_TOP, BOX_LINE_LEFT, BOX_LINE_BOTTOM, BOX_LINE_RIGHT
     };
 
-    static const USHORT aXmlElements[] = 
+    static const sal_uInt16 aXmlElements[] = 
     {
         XML_top, XML_left, XML_bottom, XML_right
     };
-    const USHORT* pBrd = aBorders;
+    const sal_uInt16* pBrd = aBorders;
     for( int i = 0; i < 4; ++i, ++pBrd )
     {
         sal_Int32 nDist = sal_Int32( rBox.GetDistance( *pBrd ) );
@@ -1192,8 +1215,8 @@ void DocxAttributeOutput::InitTableHelper( ww8::WW8TableNodeInfoInner::Pointer_t
     if( pLayout && pLayout->IsExportable() )
         m_pTableWrt = new SwWriteTable( pLayout );
     else
-        m_pTableWrt = new SwWriteTable( pTable->GetTabLines(), (USHORT)nPageSize, 
-                (USHORT)nTblSz, false);
+        m_pTableWrt = new SwWriteTable( pTable->GetTabLines(), (sal_uInt16)nPageSize, 
+                (sal_uInt16)nTblSz, false);
 }
 
 void DocxAttributeOutput::StartTable( ww8::WW8TableNodeInfoInner::Pointer_t pTableTextNodeInfoInner )
@@ -1439,9 +1462,7 @@ void DocxAttributeOutput::TableVerticalCell( ww8::WW8TableNodeInfoInner::Pointer
 
 void DocxAttributeOutput::TableNodeInfo( ww8::WW8TableNodeInfo::Pointer_t /*pNodeInfo*/ )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO: DocxAttributeOutput::TableNodeInfo( ww8::WW8TableNodeInfo::Pointer_t pNodeInfo )\n" );
-#endif
+    OSL_TRACE( "TODO: DocxAttributeOutput::TableNodeInfo( ww8::WW8TableNodeInfo::Pointer_t pNodeInfo )\n" );
 }
 
 void DocxAttributeOutput::TableNodeInfoInner( ww8::WW8TableNodeInfoInner::Pointer_t pNodeInfoInner )
@@ -1455,16 +1476,19 @@ void DocxAttributeOutput::TableNodeInfoInner( ww8::WW8TableNodeInfoInner::Pointe
 
 void DocxAttributeOutput::TableOrientation( ww8::WW8TableNodeInfoInner::Pointer_t /*pTableTextNodeInfoInner*/ )
 {
+    OSL_TRACE( "TODO: DocxAttributeOutput::TableOrientation( ww8::WW8TableNodeInfoInner::Pointer_t pTableTextNodeInfoInner )\n" );
+}
+
+void DocxAttributeOutput::TableSpacing( ww8::WW8TableNodeInfoInner::Pointer_t /*pTableTextNodeInfoInner*/ )
+{
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO: DocxAttributeOutput::TableOrientation( ww8::WW8TableNodeInfoInner::Pointer_t pTableTextNodeInfoInner )\n" );
+    fprintf( stderr, "TODO: DocxAttributeOutput::TableSpacing( ww8::WW8TableNodeInfoInner::Pointer_t pTableTextNodeInfoInner )\n" );
 #endif
 }
 
 void DocxAttributeOutput::TableRowEnd( sal_uInt32 /*nDepth*/ )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO: DocxAttributeOutput::TableRowEnd( sal_uInt32 nDepth = 1 )\n" );
-#endif
+    OSL_TRACE( "TODO: DocxAttributeOutput::TableRowEnd( sal_uInt32 nDepth = 1 )\n" );
 }
 
 void DocxAttributeOutput::StartStyles()
@@ -1474,16 +1498,16 @@ void DocxAttributeOutput::StartStyles()
             FSEND );
 }
 
-void DocxAttributeOutput::EndStyles( USHORT /*nNumberOfStyles*/ )
+void DocxAttributeOutput::EndStyles( sal_uInt16 /*nNumberOfStyles*/ )
 {
     m_pSerializer->endElementNS( XML_w, XML_styles );
 }
 
-void DocxAttributeOutput::DefaultStyle( USHORT nStyle )
+void DocxAttributeOutput::DefaultStyle( sal_uInt16 nStyle )
 {
     // are these the values of enum ww::sti (see ../inc/wwstyles.hxx)?
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::DefaultStyle( USHORT nStyle )- %d\n", nStyle );
+    OSL_TRACE( "TODO DocxAttributeOutput::DefaultStyle( sal_uInt16 nStyle )- %d\n", nStyle );
 #else
     (void) nStyle; // to quiet the warning
 #endif
@@ -1492,7 +1516,7 @@ void DocxAttributeOutput::DefaultStyle( USHORT nStyle )
 void DocxAttributeOutput::FlyFrameGraphic( const SwGrfNode& rGrfNode, const Size& rSize )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FlyFrameGraphic( const SwGrfNode& rGrfNode, const Size& rSize ) - some stuff still missing\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FlyFrameGraphic( const SwGrfNode& rGrfNode, const Size& rSize ) - some stuff still missing\n" );
 #endif
     // create the relation ID
     OString aRelId;
@@ -1710,7 +1734,7 @@ void DocxAttributeOutput::OutputFlyFrame_Impl( const sw::Frame &rFrame, const Po
             break;
         default:
 #if OSL_DEBUG_LEVEL > 0
-            fprintf( stderr, "TODO DocxAttributeOutput::OutputFlyFrame_Impl( const sw::Frame& rFrame, const Point& rNdTopLeft ) - frame type '%s'\n",
+            OSL_TRACE( "TODO DocxAttributeOutput::OutputFlyFrame_Impl( const sw::Frame& rFrame, const Point& rNdTopLeft ) - frame type '%s'\n",
                     rFrame.GetWriterType() == sw::Frame::eTxtBox? "eTxtBox":
                     ( rFrame.GetWriterType() == sw::Frame::eOle? "eOle":
                       ( rFrame.GetWriterType() == sw::Frame::eFormControl? "eFormControl": "???" ) ) );
@@ -1722,7 +1746,7 @@ void DocxAttributeOutput::OutputFlyFrame_Impl( const sw::Frame &rFrame, const Po
 }
 
 void DocxAttributeOutput::StartStyle( const String& rName, bool bPapFmt,
-        USHORT nBase, USHORT nNext, USHORT /*nWwId*/, USHORT nId )
+        sal_uInt16 nBase, sal_uInt16 nNext, sal_uInt16 /*nWwId*/, sal_uInt16 nId )
 {
     OString aStyle( "style" );
 
@@ -1752,7 +1776,7 @@ void DocxAttributeOutput::EndStyle()
     m_pSerializer->endElementNS( XML_w, XML_style );
 }
 
-void DocxAttributeOutput::StartStyleProperties( bool bParProp, USHORT /*nStyle*/ )
+void DocxAttributeOutput::StartStyleProperties( bool bParProp, sal_uInt16 /*nStyle*/ )
 {
     if ( bParProp )
     {
@@ -1780,7 +1804,7 @@ void DocxAttributeOutput::EndStyleProperties( bool bParProp )
     }
 }
 
-void DocxAttributeOutput::OutlineNumbering( BYTE nLvl, const SwNumFmt& /*rNFmt*/, const SwFmt& /*rFmt*/ )
+void DocxAttributeOutput::OutlineNumbering( sal_uInt8 nLvl, const SwNumFmt& /*rNFmt*/, const SwFmt& /*rFmt*/ )
 {
     if ( nLvl >= WW8ListManager::nMaxLevel )
         nLvl = WW8ListManager::nMaxLevel - 1;
@@ -1800,7 +1824,7 @@ void DocxAttributeOutput::PageBreakBefore( bool bBreak )
                 FSEND );
 }
 
-void DocxAttributeOutput::SectionBreak( BYTE nC, const WW8_SepInfo* pSectionInfo )
+void DocxAttributeOutput::SectionBreak( sal_uInt8 nC, const WW8_SepInfo* pSectionInfo )
 {
     switch ( nC )
     {
@@ -1827,7 +1851,13 @@ void DocxAttributeOutput::SectionBreak( BYTE nC, const WW8_SepInfo* pSectionInfo
                     // postpone the output of this; it has to be done inside the
                     // paragraph properties, so remember it until then
 #ifdef USE_JAVA
+                    // Fix crashing when saving the document in
+                    // testing/docxbugs_emails/20140929 as .docx by making a
+                    // copy of the section pointer
+                    WW8_SepInfo *pOldSectionInfo = m_pSectionInfo;
                     m_pSectionInfo = new WW8_SepInfo( pSectionInfo->pPageDesc, pSectionInfo->pSectionFmt, pSectionInfo->nLnNumRestartNo, pSectionInfo->nPgRestartNo, pSectionInfo->pPDNd );
+                    if ( pOldSectionInfo )
+                        delete pOldSectionInfo;
 #else	// USE_JAVA
                     m_pSectionInfo = pSectionInfo;
 #endif	// USE_JAVA
@@ -1843,7 +1873,7 @@ void DocxAttributeOutput::SectionBreak( BYTE nC, const WW8_SepInfo* pSectionInfo
             break;
         default:
 #if OSL_DEBUG_LEVEL > 0
-            fprintf( stderr, "Unknown section break to write: %d\n", nC );
+            OSL_TRACE( "Unknown section break to write: %d\n", nC );
 #endif
             break;
     }
@@ -1879,11 +1909,11 @@ void DocxAttributeOutput::SectionFormProtection( bool bProtected )
                 FSNS( XML_w, XML_val ), "off", FSEND );
 }
 
-void DocxAttributeOutput::SectionLineNumbering( ULONG /*nRestartNo*/, const SwLineNumberInfo& /*rLnNumInfo*/ )
+void DocxAttributeOutput::SectionLineNumbering( sal_uLong /*nRestartNo*/, const SwLineNumberInfo& /*rLnNumInfo*/ )
 {
     // see 2.6.8 lnNumType (Line Numbering Settings)
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::SectionLineNumbering()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::SectionLineNumbering()\n" );
 #endif
 }
 
@@ -1925,7 +1955,7 @@ void DocxAttributeOutput::SectionBiDi( bool bBiDi )
         m_pSerializer->singleElementNS( XML_w, XML_bidi, FSEND );
 }
 
-static OString impl_NumberingType( USHORT nNumberingType )
+static OString impl_NumberingType( sal_uInt16 nNumberingType )
 {
     OString aType;
 
@@ -1949,7 +1979,7 @@ static OString impl_NumberingType( USHORT nNumberingType )
     return aType;
 }
 
-void DocxAttributeOutput::SectionPageNumbering( USHORT nNumType, USHORT nPageRestartNumber )
+void DocxAttributeOutput::SectionPageNumbering( sal_uInt16 nNumType, sal_uInt16 nPageRestartNumber )
 {
     // FIXME Not called properly with page styles like "First Page"
 
@@ -1969,11 +1999,11 @@ void DocxAttributeOutput::SectionPageNumbering( USHORT nNumType, USHORT nPageRes
 
     // see 2.6.12 pgNumType (Page Numbering Settings)
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::SectionPageNumbering()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::SectionPageNumbering()\n" );
 #endif
 }
 
-void DocxAttributeOutput::SectionType( BYTE nBreakCode )
+void DocxAttributeOutput::SectionType( sal_uInt8 nBreakCode )
 {
     /*  break code:   0 No break, 1 New column
         2 New page, 3 Even page, 4 Odd page
@@ -2059,7 +2089,7 @@ void DocxAttributeOutput::FontPitchType( FontPitch ePitch ) const
                 FSEND );
 }
 
-void DocxAttributeOutput::NumberingDefinition( USHORT nId, const SwNumRule &rRule )
+void DocxAttributeOutput::NumberingDefinition( sal_uInt16 nId, const SwNumRule &rRule )
 {
     // nId is the same both for abstract numbering definition as well as the
     // numbering definition itself
@@ -2077,7 +2107,7 @@ void DocxAttributeOutput::NumberingDefinition( USHORT nId, const SwNumRule &rRul
 #if OSL_DEBUG_LEVEL > 0
     // TODO ww8 version writes this, anything to do about it here?
     if ( rRule.IsContinusNum() )
-        fprintf( stderr, "TODO DocxAttributeOutput::NumberingDefinition()\n" );
+        OSL_TRACE( "TODO DocxAttributeOutput::NumberingDefinition()\n" );
 #else
     (void) rRule; // to quiet the warning...
 #endif
@@ -2085,7 +2115,7 @@ void DocxAttributeOutput::NumberingDefinition( USHORT nId, const SwNumRule &rRul
     m_pSerializer->endElementNS( XML_w, XML_num );
 }
 
-void DocxAttributeOutput::StartAbstractNumbering( USHORT nId )
+void DocxAttributeOutput::StartAbstractNumbering( sal_uInt16 nId )
 {
     m_pSerializer->startElementNS( XML_w, XML_abstractNum,
             FSNS( XML_w, XML_abstractNumId ), OString::valueOf( sal_Int32( nId ) ).getStr(),
@@ -2097,12 +2127,12 @@ void DocxAttributeOutput::EndAbstractNumbering()
     m_pSerializer->endElementNS( XML_w, XML_abstractNum );
 }
 
-void DocxAttributeOutput::NumberingLevel( BYTE nLevel,
-        USHORT nStart,
-        USHORT nNumberingType,
+void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
+        sal_uInt16 nStart,
+        sal_uInt16 nNumberingType,
         SvxAdjust eAdjust,
-        const BYTE * /*pNumLvlPos*/,
-        BYTE nFollow,
+        const sal_uInt8 * /*pNumLvlPos*/,
+        sal_uInt8 nFollow,
         const wwFont *pFont,
         const SfxItemSet *pOutSet,
         sal_Int16 nIndentAt,
@@ -2269,7 +2299,7 @@ void DocxAttributeOutput::CharCrossedOut( const SvxCrossedOutItem& rCrossedOut )
 void DocxAttributeOutput::CharEscapement( const SvxEscapementItem& /*rEscapement*/ )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::CharEscapement()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::CharEscapement()\n" );
 #endif
 }
 
@@ -2386,7 +2416,7 @@ void DocxAttributeOutput::CharWeight( const SvxWeightItem& rWeight )
 void DocxAttributeOutput::CharAutoKern( const SvxAutoKernItem& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::CharAutoKern()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::CharAutoKern()\n" );
 #endif
 }
 
@@ -2558,13 +2588,13 @@ void DocxAttributeOutput::TextINetFormat( const SwFmtINetFmt& rLink )
 void DocxAttributeOutput::TextCharFormat( const SwFmtCharFmt& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::TextCharFormat()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::TextCharFormat()\n" );
 #endif
 }
 
 void DocxAttributeOutput::RefField( const SwField&  rFld, const String& rRef )
 {
-    USHORT nType = rFld.GetTyp( )->Which( );
+    sal_uInt16 nType = rFld.GetTyp( )->Which( );
     if ( nType == RES_GETEXPFLD )
     {
         String sCmd = FieldString( ww::eREF );
@@ -2581,14 +2611,14 @@ void DocxAttributeOutput::RefField( const SwField&  rFld, const String& rRef )
 void DocxAttributeOutput::HiddenField( const SwField& /*rFld*/ )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::HiddenField()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::HiddenField()\n" );
 #endif
 }
 
 void DocxAttributeOutput::PostitField( const SwField* /* pFld*/ )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::PostitField()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::PostitField()\n" );
 #endif
 }
 
@@ -2616,7 +2646,7 @@ void DocxAttributeOutput::WriteExpand( const SwField* pFld )
     m_rExport.OutputField( pFld, ww::eUNKNOWN, sCmd );
 }
 
-void DocxAttributeOutput::WriteField_Impl( const SwField* pFld, ww::eField eType, const String& rFldCmd, BYTE nMode )
+void DocxAttributeOutput::WriteField_Impl( const SwField* pFld, ww::eField eType, const String& rFldCmd, sal_uInt8 nMode )
 {
     struct FieldInfos infos;
     infos.pField = pFld;
@@ -2629,8 +2659,8 @@ void DocxAttributeOutput::WriteField_Impl( const SwField* pFld, ww::eField eType
 
     if ( pFld )
     {
-        USHORT nType = pFld->GetTyp( )->Which( );
-        USHORT nSubType = pFld->GetSubType();
+        sal_uInt16 nType = pFld->GetTyp( )->Which( );
+        sal_uInt16 nSubType = pFld->GetSubType();
     
         // TODO Any other field types here ?
         if ( ( nType == RES_SETEXPFLD ) && ( nSubType & nsSwGetSetExpType::GSE_STRING ) )
@@ -2646,28 +2676,22 @@ void DocxAttributeOutput::WriteField_Impl( const SwField* pFld, ww::eField eType
     }
 }
 
-void DocxAttributeOutput::WriteBookmarks_Impl( std::vector<const String*> rStarts, 
-        std::vector<const String*> rEnds )
+void DocxAttributeOutput::WriteBookmarks_Impl( std::vector< OUString >& rStarts, 
+        std::vector< OUString >& rEnds )
 {
-    while ( rStarts.size( ) > 0 )
+    for ( std::vector< OUString >::const_iterator it = rStarts.begin(), end = rStarts.end(); it < end; ++it )
     {
-        const String* pName = rStarts.front( );
-        OString rName = OUStringToOString( OUString( *pName ),
-               RTL_TEXTENCODING_UTF8 ).getStr( );
-
-        m_rBkmksStart.push_back( rName );
-        rStarts.erase( rStarts.begin( ) );
+        OString rName = OUStringToOString( *it, RTL_TEXTENCODING_UTF8 ).getStr( );
+        m_rMarksStart.push_back( rName );
     }
+    rStarts.clear();
     
-    while ( rEnds.size( ) > 0 )
+    for ( std::vector< OUString >::const_iterator it = rEnds.begin(), end = rEnds.end(); it < end; ++it )
     {
-        const String* pName = rEnds.front( );
-        OString rName = OUStringToOString( OUString( *pName ),
-               RTL_TEXTENCODING_UTF8 ).getStr( );
-
-        m_rBkmksEnd.push_back( rName );
-        rEnds.erase( rEnds.begin( ) );
+        OString rName = OUStringToOString( *it, RTL_TEXTENCODING_UTF8 ).getStr( );
+        m_rMarksEnd.push_back( rName );
     }
+    rEnds.clear();
 }
 
 void DocxAttributeOutput::TextFootnote_Impl( const SwFmtFtn& rFootnote )
@@ -2781,13 +2805,6 @@ void DocxAttributeOutput::FootnotesEndnotes( bool bFootnotes )
 
     m_pSerializer->endElementNS( XML_w, nBody );
 
-}
-
-void DocxAttributeOutput::TextHardBlank( const SwFmtHardBlank& )
-{
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::TextHardBlank()\n" );
-#endif
 }
 
 void DocxAttributeOutput::ParaLineSpacing_Impl( short nSpace, short /*nMulti*/ )
@@ -2925,7 +2942,7 @@ void DocxAttributeOutput::ParaNumRule_Impl( const SwTxtNode* /*pTxtNd*/, sal_Int
 
 void DocxAttributeOutput::ParaScriptSpace( const SfxBoolItem& rScriptSpace )
 {
-    USHORT nXmlElement = 0;
+    sal_uInt16 nXmlElement = 0;
 
     switch ( rScriptSpace.Which( ) )
     {
@@ -2987,7 +3004,7 @@ void DocxAttributeOutput::FormatFrameSize( const SwFmtFrmSize& rSize )
     if ( m_rExport.bOutFlyFrmAttrs )
     {
  #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatFrameSize() - Fly frames\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatFrameSize() - Fly frames\n" );
  #endif
     }
     else if ( m_rExport.bOutPageDescs ) 
@@ -3010,7 +3027,7 @@ void DocxAttributeOutput::FormatFrameSize( const SwFmtFrmSize& rSize )
 void DocxAttributeOutput::FormatPaperBin( const SvxPaperBinItem& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatPaperBin()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatPaperBin()\n" );
 #endif
 }
 
@@ -3019,7 +3036,7 @@ void DocxAttributeOutput::FormatLRSpace( const SvxLRSpaceItem& rLRSpace )
     if ( m_rExport.bOutFlyFrmAttrs )
     {
 #if OSL_DEBUG_LEVEL > 0
-        fprintf( stderr, "DocxAttributeOutput::FormatLRSpace() - Fly frames\n" );
+        OSL_TRACE( "DocxAttributeOutput::FormatLRSpace() - Fly frames\n" );
 #endif
     }
     else if ( m_rExport.bOutPageDescs ) 
@@ -3028,7 +3045,7 @@ void DocxAttributeOutput::FormatLRSpace( const SvxLRSpaceItem& rLRSpace )
             m_pSpacingAttrList = m_pSerializer->createAttrList();
 
 
-        USHORT nLDist, nRDist;
+        sal_uInt16 nLDist, nRDist;
         const SfxPoolItem* pItem = m_rExport.HasItem( RES_BOX );
         if ( pItem )
         {
@@ -3037,8 +3054,8 @@ void DocxAttributeOutput::FormatLRSpace( const SvxLRSpaceItem& rLRSpace )
         }
         else
             nLDist = nRDist = 0;
-        nLDist = nLDist + (USHORT)rLRSpace.GetLeft();
-        nRDist = nRDist + (USHORT)rLRSpace.GetRight();
+        nLDist = nLDist + (sal_uInt16)rLRSpace.GetLeft();
+        nRDist = nRDist + (sal_uInt16)rLRSpace.GetRight();
 
         m_pSpacingAttrList->add( FSNS( XML_w, XML_left ), OString::valueOf( sal_Int32( nLDist ) ) );
         m_pSpacingAttrList->add( FSNS( XML_w, XML_right ), OString::valueOf( sal_Int32( nRDist ) ) );
@@ -3110,28 +3127,28 @@ void DocxAttributeOutput::FormatULSpace( const SvxULSpaceItem& rULSpace )
 void DocxAttributeOutput::FormatSurround( const SwFmtSurround& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatSurround()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatSurround()\n" );
 #endif
 }
 
 void DocxAttributeOutput::FormatVertOrientation( const SwFmtVertOrient& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatVertOrientation()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatVertOrientation()\n" );
 #endif
 }
 
 void DocxAttributeOutput::FormatHorizOrientation( const SwFmtHoriOrient& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatHorizOrientation()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatHorizOrientation()\n" );
 #endif
 }
 
 void DocxAttributeOutput::FormatAnchor( const SwFmtAnchor& )
 {
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatAnchor()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatAnchor()\n" );
 #endif
 }
 
@@ -3146,7 +3163,7 @@ void DocxAttributeOutput::FormatBackground( const SvxBrushItem& rBrush )
     }
 
 #if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatBackground()\n" );
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatBackground()\n" );
 #endif
 }
 
@@ -3174,7 +3191,7 @@ void DocxAttributeOutput::FormatBox( const SvxBoxItem& rBox )
     }
 }
 
-void DocxAttributeOutput::FormatColumns_Impl( USHORT nCols, const SwFmtCol& rCol, bool bEven, SwTwips nPageSize )
+void DocxAttributeOutput::FormatColumns_Impl( sal_uInt16 nCols, const SwFmtCol& rCol, bool bEven, SwTwips nPageSize )
 {
     // Get the columns attributes
     FastAttributeList *pColsAttrList = m_pSerializer->createAttrList();
@@ -3185,7 +3202,7 @@ void DocxAttributeOutput::FormatColumns_Impl( USHORT nCols, const SwFmtCol& rCol
     const char* pEquals = "false";
     if ( bEven )
     {
-        USHORT nWidth = rCol.GetGutterWidth( true );
+        sal_uInt16 nWidth = rCol.GetGutterWidth( true );
         pColsAttrList->add( FSNS( XML_w, XML_space ),
                OString::valueOf( sal_Int32( nWidth ) ).getStr( ) );
 
@@ -3204,16 +3221,16 @@ void DocxAttributeOutput::FormatColumns_Impl( USHORT nCols, const SwFmtCol& rCol
     const SwColumns & rColumns = rCol.GetColumns(  );
     if ( !bEven )
     {
-        for ( USHORT n = 0; n < nCols; ++n )
+        for ( sal_uInt16 n = 0; n < nCols; ++n )
         {
             FastAttributeList *pColAttrList = m_pSerializer->createAttrList();
-            USHORT nWidth = rCol.CalcPrtColWidth( n, ( USHORT ) nPageSize );
+            sal_uInt16 nWidth = rCol.CalcPrtColWidth( n, ( sal_uInt16 ) nPageSize );
             pColAttrList->add( FSNS( XML_w, XML_w ),
                     OString::valueOf( sal_Int32( nWidth ) ).getStr( ) );
 
             if ( n + 1 != nCols )
             {
-                USHORT nSpacing = rColumns[n]->GetRight( ) + rColumns[n + 1]->GetLeft( );
+                sal_uInt16 nSpacing = rColumns[n]->GetRight( ) + rColumns[n + 1]->GetLeft( );
                 pColAttrList->add( FSNS( XML_w, XML_space ),
                     OString::valueOf( sal_Int32( nSpacing ) ).getStr( ) );
             }
@@ -3232,9 +3249,7 @@ void DocxAttributeOutput::FormatKeep( const SvxFmtKeepItem& )
 
 void DocxAttributeOutput::FormatTextGrid( const SwTextGridItem& )
 {
-#if OSL_DEBUG_LEVEL > 0
-    fprintf( stderr, "TODO DocxAttributeOutput::FormatTextGrid()\n" );
-#endif
+    OSL_TRACE( "TODO DocxAttributeOutput::FormatTextGrid()\n" );
 }
 
 void DocxAttributeOutput::FormatLineNumbering( const SwFmtLineNumber& rNumbering )
@@ -3299,7 +3314,9 @@ DocxAttributeOutput::DocxAttributeOutput( DocxExport &rExport, FSHelperPtr pSeri
       m_nRedlineId( 0 ),
       m_bOpenedSectPr( false ),
       m_sFieldBkm( ),
-      m_nNextBkmkId( 0 ),
+      m_nNextMarkId( 0 ),
+      m_bPostitStart(false),
+      m_bPostitEnd(false),
       m_pTableWrt( NULL ),
       m_bTableCellOpen( false ),
       m_nTableDepth( 0 ),
@@ -3321,6 +3338,8 @@ DocxAttributeOutput::~DocxAttributeOutput()
 
     delete m_pTableWrt, m_pTableWrt = NULL;
 #ifdef USE_JAVA
+    // Fix crashing when saving the document in testing/docxbugs_emails/20140929
+    // as .docx by making a copy of the section pointer
     delete m_pSectionInfo, m_pSectionInfo = NULL;
 #endif	// USE_JAVA
 }

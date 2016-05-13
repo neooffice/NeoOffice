@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified November 2007 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -33,19 +36,19 @@
 
 #include "cmdid.h"
 #include "hintids.hxx"
-#include <svx/sizeitem.hxx>
-#include <svx/brshitem.hxx>
+#include <editeng/sizeitem.hxx>
+#include <editeng/brshitem.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/request.hxx>
 #include <sfx2/objface.hxx>
 #include <sfx2/bindings.hxx>
-#include <svtools/stritem.hxx>
-#include <svtools/eitem.hxx>
+#include <svl/stritem.hxx>
+#include <svl/eitem.hxx>
 #include <tools/urlobj.hxx>
-#include <svtools/whiter.hxx>
-#include <svtools/intitem.hxx>
+#include <svl/whiter.hxx>
+#include <svl/intitem.hxx>
 #include <tools/shl.hxx>
-#include <svx/srchitem.hxx>
+#include <svl/srchitem.hxx>
 
 // --> FME 2005-01-04 #i35572#
 #include <numrule.hxx>
@@ -64,7 +67,7 @@
 #include "edtwin.hxx"
 
 #define SwListShell
-#include "itemdef.hxx"
+#include <sfx2/msg.hxx>
 #include "swslots.hxx"
 
 #include <IDocumentOutlineNodes.hxx>
@@ -87,7 +90,7 @@ void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bUp )
     if ( nActPos < USHRT_MAX && rSh.IsOutlineMovable( nActPos ) )
     {
         rSh.Push();
-        rSh.MakeOutlineSel( nActPos, nActPos, TRUE );
+        rSh.MakeOutlineSel( nActPos, nActPos, sal_True );
 
         if ( bMove )
         {
@@ -151,7 +154,7 @@ void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bUp )
 void SwListShell::Execute(SfxRequest &rReq)
 {
 	const SfxItemSet* pArgs = rReq.GetArgs();
-	USHORT nSlot = rReq.GetSlot();
+	sal_uInt16 nSlot = rReq.GetSlot();
 	SwWrtShell& rSh = GetShell();
 
     // --> FME 2005-01-04 #i35572#
@@ -165,17 +168,17 @@ void SwListShell::Execute(SfxRequest &rReq)
 		case FN_NUM_BULLET_DOWN:
         case FN_NUM_BULLET_UP:
 #ifdef USE_JAVA
-			// Fix bug 2741 by detecting the strange case where GetView()
-			// returns NULL
-			if ( (const SwView *)&GetView() )
+            // Fix bug 2741 by detecting the strange case where GetView()
+            // returns NULL
+            if ( (const SwView *)&GetView() )
 #endif	// USE_JAVA
             {
                 SfxViewFrame * pFrame = GetView().GetViewFrame();
 
                 rReq.Done();
                 rSh.NumUpDown( ( nSlot == FN_NUM_BULLET_DOWN )
-                               ? TRUE
-                               : FALSE );
+                               ? sal_True
+                               : sal_False );
                 pFrame->GetBindings().Invalidate( SID_TABLE_CELL );	// StatusZeile updaten!
             }
 			break;
@@ -194,7 +197,7 @@ void SwListShell::Execute(SfxRequest &rReq)
         {
             rReq.Ignore();
             SfxRequest aReq( GetView().GetViewFrame(), FN_NUM_BULLET_ON );
-            aReq.AppendItem( SfxBoolItem( FN_PARAM_1, FALSE ) );
+            aReq.AppendItem( SfxBoolItem( FN_PARAM_1, sal_False ) );
             aReq.Done();
 			rSh.DelNumRules();
 			break;
@@ -204,7 +207,7 @@ void SwListShell::Execute(SfxRequest &rReq)
             if ( bOutline )
                 lcl_OutlineUpDownWithSubPoints( rSh, false, false );
             else
-                rSh.MoveNumParas(FALSE, FALSE);
+                rSh.MoveNumParas(sal_False, sal_False);
             rReq.Done();
 			break;
 
@@ -212,7 +215,7 @@ void SwListShell::Execute(SfxRequest &rReq)
             if ( bOutline )
                 lcl_OutlineUpDownWithSubPoints( rSh, true, false );
             else
-                rSh.MoveNumParas(TRUE, FALSE);
+                rSh.MoveNumParas(sal_True, sal_False);
             rReq.Done();
 			break;
 
@@ -220,7 +223,7 @@ void SwListShell::Execute(SfxRequest &rReq)
             if ( bOutline )
                 lcl_OutlineUpDownWithSubPoints( rSh, true, true );
             else
-                rSh.MoveNumParas(TRUE, TRUE);
+                rSh.MoveNumParas(sal_True, sal_True);
             rReq.Done();
 			break;
 
@@ -228,7 +231,7 @@ void SwListShell::Execute(SfxRequest &rReq)
             if ( bOutline )
                 lcl_OutlineUpDownWithSubPoints( rSh, false, true );
             else
-                rSh.MoveNumParas(FALSE, TRUE);
+                rSh.MoveNumParas(sal_False, sal_True);
             rReq.Done();
 			break;
 
@@ -239,8 +242,8 @@ void SwListShell::Execute(SfxRequest &rReq)
 
 		case FN_NUM_OR_NONUM:
 		{
-			BOOL bApi = rReq.IsAPI();
-			BOOL bDelete = !rSh.IsNoNum(!bApi);
+			sal_Bool bApi = rReq.IsAPI();
+			sal_Bool bDelete = !rSh.IsNoNum(!bApi);
 			if(pArgs )
 				bDelete = ((SfxBoolItem &)pArgs->Get(rReq.GetSlot())).GetValue();
 			rSh.NumOrNoNum( bDelete, !bApi );
@@ -258,15 +261,15 @@ void SwListShell::Execute(SfxRequest &rReq)
 void SwListShell::GetState(SfxItemSet &rSet)
 {
 	SfxWhichIter aIter( rSet );
-	USHORT nWhich = aIter.FirstWhich();
+	sal_uInt16 nWhich = aIter.FirstWhich();
     SwWrtShell& rSh = GetShell();
-    BYTE nCurrentNumLevel = rSh.GetNumLevel();
+    sal_uInt8 nCurrentNumLevel = rSh.GetNumLevel();
 	while ( nWhich )
 	{
 		switch( nWhich )
 		{
 			case FN_NUM_OR_NONUM:
-				rSet.Put(SfxBoolItem(nWhich, GetShell().IsNoNum(FALSE)));
+				rSet.Put(SfxBoolItem(nWhich, GetShell().IsNoNum(sal_False)));
 			break;
             case FN_NUM_BULLET_OUTLINE_UP:
             case FN_NUM_BULLET_UP:
@@ -286,6 +289,13 @@ void SwListShell::GetState(SfxItemSet &rSet)
                 if(nCurrentNumLevel == (MAXLEVEL - 1))
                     rSet.DisableItem(nWhich);
             break;
+
+            case FN_NUM_BULLET_NONUM:
+                if ( rSh.CrsrInsideInputFld() )
+                {
+                    rSet.DisableItem(nWhich);
+                }
+                break;
         }
 		nWhich = aIter.NextWhich();
 	}

@@ -7,11 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "wordcountctrl.hxx"
-#if SUPD == 310
-#include <svtools/stritem.hxx>
-#else	// SUPD == 310
 #include <svl/stritem.hxx>
-#endif	// SUPD == 310
 
 SFX_IMPL_STATUSBAR_CONTROL(SwWordCountStatusBarControl, SfxStringItem);
 

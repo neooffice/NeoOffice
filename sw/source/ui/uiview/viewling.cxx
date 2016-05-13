@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified April 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -35,7 +38,7 @@
 
 #ifndef _SVSTDARR_HXX
 #define _SVSTDARR_STRINGSDTOR
-#include <svtools/svstdarr.hxx>
+#include <svl/svstdarr.hxx>
 #endif
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/linguistic2/XThesaurus.hpp>
@@ -46,30 +49,24 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/msgbox.hxx>
 #include <svtools/ehdl.hxx>
-#include <svtools/stritem.hxx>
+#include <svl/stritem.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/request.hxx>
 #include <svx/dlgutil.hxx>
 #include <svx/dialmgr.hxx>
-#include <svx/langitem.hxx>
+#include <editeng/langitem.hxx>
 #include <svx/svxerr.hxx>
-#include <svx/unolingu.hxx>
-#include <svx/thesdlg.hxx>
-#include <svx/SpellPortions.hxx>
+#include <editeng/unolingu.hxx>
+#include <svx/svxdlg.hxx>
+#include <editeng/SpellPortions.hxx>
 #include <swmodule.hxx>
 #include <swwait.hxx>
 #include <initui.hxx>				// fuer SpellPointer
 #include <uitool.hxx>
-#ifndef _VIEW_HXX
 #include <view.hxx>
-#endif
 #include <wrtsh.hxx>
-#ifndef _BASESH_HXX
 #include <basesh.hxx>
-#endif
-#ifndef _DOCSH_HXX
 #include <docsh.hxx>				// CheckSpellChanges
-#endif
 #include <viewopt.hxx>				// Viewoptions
 #include <swundo.hxx>               // fuer Undo-Ids
 #include <hyp.hxx>                  // Trennung
@@ -78,19 +75,11 @@
 #include <edtwin.hxx>
 #include <crsskip.hxx>
 #include <ndtxt.hxx>
-
-#ifndef _CMDID_H
+#include <vcl/lstbox.hxx>
 #include <cmdid.h>
-#endif
-#ifndef _GLOBALS_HRC
 #include <globals.hrc>
-#endif
-#ifndef _COMCORE_HRC
 #include <comcore.hrc>				// STR_MULT_INTERACT_SPELL_WARN
-#endif
-#ifndef _VIEW_HRC
 #include <view.hrc>
-#endif
 #include <hhcwrp.hxx>
 #include <com/sun/star/frame/XStorable.hpp>
 
@@ -111,13 +100,15 @@
 #include <cppuhelper/bootstrap.hxx>
 #include "stmenu.hxx"              // PopupMenu for smarttags
 #include <svx/dialogs.hrc>
-
+#include <svtools/langtab.hxx>
 #include <unomid.h>
-#include <bookmrk.hxx>
-#include <ecmaflds.hxx>
+#include <IMark.hxx>
+#include <xmloff/odffields.hxx>
 
 #include <memory>
+#include <editeng/editerr.hxx>
 
+using namespace sw::mark;
 using ::rtl::OUString;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -134,7 +125,7 @@ void SwView::ExecLingu(SfxRequest &rReq)
 {
 	switch(rReq.GetSlot())
 	{
-		case FN_THESAURUS_DLG:
+        case SID_THESAURUS:
 			StartThesaurus();
             rReq.Ignore();
 			break;
@@ -266,64 +257,31 @@ void SwView::StartTextConversion(
     // do not do text conversion if it is active elsewhere
     if (GetWrtShell().HasConvIter())
     {
-//        MessBox( 0, WB_OK, String( SW_RES( STR_SPELL_TITLE ) ),
-//                String( SW_RES( STR_MULT_INTERACT_SPELL_WARN ) ) ).Execute();
         return;
     }
-/*
-    SfxErrorContext aContext( ERRCTX_SVX_LINGU_SPELLING, aEmptyStr, pEditWin,
-         RID_SVXERRCTX, DIALOG_MGR() );
-
-    Reference< XSpellChecker1 >  xSpell = ::GetSpellChecker();
-    if(!xSpell.is())
-    {   // keine Arme keine Kekse
-        ErrorHandler::HandleError( ERRCODE_SVX_LINGU_LINGUNOTEXISTS );
-        return;
-    }
-*/
+    
     SpellKontext(sal_True);
 
-    SwViewOption* pVOpt = (SwViewOption*)pWrtShell->GetViewOptions();
-    sal_Bool bOldIdle = pVOpt->IsIdle();
+    const SwViewOption* pVOpt = pWrtShell->GetViewOptions();
+    const sal_Bool bOldIdle = pVOpt->IsIdle();
     pVOpt->SetIdle( sal_False );
 
     sal_Bool bOldIns = pWrtShell->IsInsMode();
     pWrtShell->SetInsMode( sal_True );
 
+    sal_Bool bSelection = ((SwCrsrShell*)pWrtShell)->HasSelection() ||
+        pWrtShell->GetCrsr() != pWrtShell->GetCrsr()->GetNext();
+
+    sal_Bool    bStart = bSelection || pWrtShell->IsStartOfDoc();
+    sal_Bool    bOther = !bSelection && !(pWrtShell->GetFrmType(0,sal_True) & FRMTYPE_BODY);
 
     {
-        sal_Bool bSelection = ((SwCrsrShell*)pWrtShell)->HasSelection() ||
-            pWrtShell->GetCrsr() != pWrtShell->GetCrsr()->GetNext();
-
-//        sal_Bool bIsSpellSpecial = sal_True;
-
-        sal_Bool    bStart = bSelection || pWrtShell->IsStartOfDoc();
-        sal_Bool    bOther = !bSelection && !(pWrtShell->GetFrmType(0,sal_True) & FRMTYPE_BODY);
-
-/*
-        if( bOther && !bIsSpellSpecial )
-        // kein Sonderbereich eingeschaltet
-        {
-            // Ich will auch in Sonderbereichen trennen
-            QueryBox aBox( &GetEditWin(), SW_RES( DLG_SPECIAL_FORCED ) );
-            if( aBox.Execute() == RET_YES  &&  xProp.is())
-            {
-                sal_Bool bTrue = sal_True;
-                Any aTmp(&bTrue, ::getBooleanCppuType());
-                xProp->setPropertyValue( C2U(UPN_IS_SPELL_SPECIAL), aTmp );
-            }
-            else
-                return; // Nein Es wird nicht gespellt
-        }
-*/
-        {
-            const uno::Reference< lang::XMultiServiceFactory > xMgr(
-                        comphelper::getProcessServiceFactory() );
-            SwHHCWrapper aWrap( this, xMgr, nSourceLang, nTargetLang, pTargetFont,
-                                nOptions, bIsInteractive,
-                                bStart, bOther, bSelection );
-            aWrap.Convert();
-        }
+        const uno::Reference< lang::XMultiServiceFactory > xMgr(
+                    comphelper::getProcessServiceFactory() );
+        SwHHCWrapper aWrap( this, xMgr, nSourceLang, nTargetLang, pTargetFont,
+                            nOptions, bIsInteractive,
+                            bStart, bOther, bSelection );
+        aWrap.Convert();
     }
 
     pWrtShell->SetInsMode( bOldIns );
@@ -419,7 +377,7 @@ IMPL_LINK( SwView, SpellError, LanguageType *, pLang )
 		while( pWrtShell->ActionPend() );
 	}
 	LanguageType eLang = pLang ? *pLang : LANGUAGE_NONE;
-	String aErr(::GetLanguageString( eLang ) );
+	String aErr(SvtLanguageTable::GetLanguageString( eLang ) );
 
 	SwEditWin &rEditWin = GetEditWin();
 #if OSL_DEBUG_LEVEL > 1
@@ -571,17 +529,78 @@ void SwView::HyphenateDocument()
 }
 
 /*--------------------------------------------------------------------
+ --------------------------------------------------------------------*/
+
+bool SwView::IsValidSelectionForThesaurus() const
+{
+    // must not be a multi-selection, and if it is a selection it needs
+    // to be within a single paragraph
+    
+    const bool bMultiSel = pWrtShell->GetCrsr() != pWrtShell->GetCrsr()->GetNext();
+    const sal_Bool bSelection = ((SwCrsrShell*)pWrtShell)->HasSelection();
+    return !bMultiSel && (!bSelection || pWrtShell->IsSelOnePara() );
+}    
+
+
+String SwView::GetThesaurusLookUpText( bool bSelection ) const
+{
+    return bSelection ? pWrtShell->GetSelTxt() : pWrtShell->GetCurWord();
+}
+
+
+void SwView::InsertThesaurusSynonym( const String &rSynonmText, const String &rLookUpText, bool bSelection )
+{
+    sal_Bool bOldIns = pWrtShell->IsInsMode();
+    pWrtShell->SetInsMode( sal_True );
+
+    pWrtShell->StartAllAction();
+    pWrtShell->StartUndo(UNDO_DELETE);
+
+    if( !bSelection )
+    {
+        if(pWrtShell->IsEndWrd())
+            pWrtShell->Left(CRSR_SKIP_CELLS, sal_False, 1, sal_False );
+
+        pWrtShell->SelWrd();
+
+        // make sure the selection build later from the
+        // data below does not include footnotes and other
+        // "in word" character to the left and right in order
+        // to preserve those. Therefore count those "in words"
+        // in order to modify the selection accordingly.
+        const sal_Unicode* pChar = rLookUpText.GetBuffer();
+        xub_StrLen nLeft = 0;
+        while (pChar && *pChar++ == CH_TXTATR_INWORD)
+            ++nLeft;
+        pChar = rLookUpText.Len() ? rLookUpText.GetBuffer() + rLookUpText.Len() - 1 : 0;
+        xub_StrLen nRight = 0;
+        while (pChar && *pChar-- == CH_TXTATR_INWORD)
+            ++nRight;
+
+        // adjust existing selection
+        SwPaM *pCrsr = pWrtShell->GetCrsr();
+        pCrsr->GetPoint()->nContent/*.nIndex*/ -= nRight;
+        pCrsr->GetMark()->nContent/*.nIndex*/ += nLeft;
+    }
+
+    pWrtShell->Insert( rSynonmText );
+
+    pWrtShell->EndUndo(UNDO_DELETE);
+    pWrtShell->EndAllAction();
+
+    pWrtShell->SetInsMode( bOldIns );
+}    
+
+
+/*--------------------------------------------------------------------
 	Beschreibung:	Thesaurus starten
  --------------------------------------------------------------------*/
 
 
 void SwView::StartThesaurus()
 {
-	if(	pWrtShell->GetCrsr() != pWrtShell->GetCrsr()->GetNext() )
-		return;
-	sal_Bool bSelection = ((SwCrsrShell*)pWrtShell)->HasSelection();
-	if( bSelection && !pWrtShell->IsSelOnePara() )
-		return;
+    if (!IsValidSelectionForThesaurus())
+        return;
 
 	SfxErrorContext aContext( ERRCTX_SVX_LINGU_THESAURUS, aEmptyStr, pEditWin,
 		 RID_SVXERRCTX, &DIALOG_MGR() );
@@ -603,113 +622,32 @@ void SwView::StartThesaurus()
 	sal_Bool bOldIdle = pVOpt->IsIdle();
 	pVOpt->SetIdle( sal_False );
 
-#ifdef TL_NEVER
-//!!! hier mu� noch was getan werden... (Umsetzung der Funktionalitaet)
-	// ErrorLink setzen, alten merken
-	Link aOldLnk = pSpell->ChgErrorLink(LINK(this, SwView, SpellError));
-#endif
-
-
 	// get initial LookUp text
-	String aTmp = bSelection ?
-		pWrtShell->GetSelTxt() : pWrtShell->GetCurWord();
+    const sal_Bool bSelection = ((SwCrsrShell*)pWrtShell)->HasSelection();
+    String aTmp = GetThesaurusLookUpText( bSelection );
 
 	Reference< XThesaurus >  xThes( ::GetThesaurus() );
-	SvxThesaurusDialog *pDlg = NULL;
+	AbstractThesaurusDialog *pDlg = NULL;
 
 	if ( !xThes.is() || !xThes->hasLocale( SvxCreateLocale( eLang ) ) )
-	{
 		SpellError( &eLang );
-	}
 	else
 	{
 		// create dialog
 		{	//Scope for SwWait-Object
-			SwWait aWait( *GetDocShell(), sal_True );
-			pDlg = new SvxThesaurusDialog( &GetEditWin(),
-									   	xThes, aTmp, eLang );
-		}
-
-		{
-			// Hier wird der Thesaurus-Dialog im Applikationsfenster zentriert,
-			// und zwar oberhalb oder unterhalb der Cursorposition, je nachdem,
-			// wo mehr Platz ist.
-
-			// Current Word:
-			SwRect aRect( pWrtShell->GetCharRect() );
-			Point aTopPos = aRect.Pos();
-			Point aBtmPos( aTopPos.X(), aRect.Bottom() );
-			aTopPos = GetEditWin().LogicToPixel( aTopPos );
-			aTopPos = GetEditWin().OutputToScreenPixel( aTopPos );
-			aBtmPos = GetEditWin().LogicToPixel( aBtmPos );
-			aBtmPos = GetEditWin().OutputToScreenPixel( aBtmPos );
-			// ::frame::Desktop:
-			Rectangle aRct = GetEditWin().GetDesktopRectPixel();
-			Point aWinTop( aRct.TopLeft() );
-			Point aWinBtm( aRct.BottomRight() );
-			if ( aTopPos.Y() - aWinTop.Y() > aWinBtm.Y() - aBtmPos.Y() )
-				aWinBtm.Y() = aTopPos.Y();
-			else
-				aWinTop.Y() = aBtmPos.Y();
-
-			Size aSz = pDlg->GetSizePixel();
-			if ( aWinBtm.Y() - aWinTop.Y() > aSz.Height() )
-			{
-				aWinTop.X() = ( aWinTop.X() + aWinBtm.X() - aSz.Width() ) / 2;
-				aWinTop.Y() = ( aWinTop.Y() + aWinBtm.Y() - aSz.Height() ) / 2;
-				pDlg->SetPosPixel( aWinTop );
-			}
+			SwWait aWait( *GetDocShell(), true );
+			// load library with dialog only on demand ... 
+			SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
+			pDlg = pFact->CreateThesaurusDialog( &GetEditWin(), xThes, aTmp, eLang );
 		}
 
 		if ( pDlg->Execute()== RET_OK )
-		{
-			sal_Bool bOldIns = pWrtShell->IsInsMode();
-			pWrtShell->SetInsMode( sal_True );
-
-			pWrtShell->StartAllAction();
-			pWrtShell->StartUndo(UNDO_DELETE);
-
-			if( !bSelection )
-			{
-				if(pWrtShell->IsEndWrd())
-					pWrtShell->Left(CRSR_SKIP_CELLS, FALSE, 1, FALSE );
-
-				pWrtShell->SelWrd();
-
-				// make sure the selection build later from the
-				// data below does not include footnotes and other
-				// "in word" character to the left and right in order
-				// to preserve those. Therefore count those "in words"
-				// in order to modify the selection accordingly.
-				const sal_Unicode* pChar = aTmp.GetBuffer();
-				xub_StrLen nLeft = 0;
-				while (pChar && *pChar++ == CH_TXTATR_INWORD)
-					++nLeft;
-				pChar = aTmp.Len() ? aTmp.GetBuffer() + aTmp.Len() - 1 : 0;
-				xub_StrLen nRight = 0;
-				while (pChar && *pChar-- == CH_TXTATR_INWORD)
-					++nRight;
-
-				// adjust existing selection
-				SwPaM *pCrsr = pWrtShell->GetCrsr();
-				pCrsr->GetPoint()->nContent/*.nIndex*/ -= nRight;
-				pCrsr->GetMark()->nContent/*.nIndex*/ += nLeft;
-			}
-
-			pWrtShell->Insert( pDlg->GetWord() );
-
-			pWrtShell->EndUndo(UNDO_DELETE);
-			pWrtShell->EndAllAction();
-
-			pWrtShell->SetInsMode( bOldIns );
-
-		}
+            InsertThesaurusSynonym( pDlg->GetWord(), aTmp, bSelection );
 	}
 
 	delete pDlg;
 
 	pVOpt->SetIdle( bOldIdle );
-
 }
 
 /*--------------------------------------------------------------------
@@ -833,7 +771,7 @@ sal_Bool SwView::ExecSpellPopup(const Point& rPt)
                     if ( pMenu )
                     {
                         OUString aSlotURL( RTL_CONSTASCII_USTRINGPARAM( "slot:" ));
-                        USHORT nId = ((PopupMenu*)pMenu)->Execute(pEditWin, aPixPos);
+                        sal_uInt16 nId = ((PopupMenu*)pMenu)->Execute(pEditWin, aPixPos);
                         OUString aCommand = ((PopupMenu*)pMenu)->GetItemCommand(nId);
                         if (aCommand.getLength() == 0 )
                         {
@@ -843,10 +781,9 @@ sal_Bool SwView::ExecSpellPopup(const Point& rPt)
                         else
                         {
                             SfxViewFrame *pSfxViewFrame = GetViewFrame();
-                            SfxFrame *pSfxFrame = pSfxViewFrame? pSfxViewFrame->GetFrame() : 0;
                             uno::Reference< frame::XFrame > xFrame;
-                            if (pSfxFrame)
-                                xFrame = pSfxFrame->GetFrameInterface();
+                            if ( pSfxViewFrame )
+                                xFrame = pSfxViewFrame->GetFrame().GetFrameInterface();
                             com::sun::star::util::URL aURL;
                             uno::Reference< frame::XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
                             uno::Reference< lang::XMultiServiceFactory > xMgr( utl::getProcessServiceFactory(), uno::UNO_QUERY );
@@ -978,19 +915,25 @@ public:
 #ifdef USE_JAVA
     // Fix bug 3452 by ensuring that a modal dialog is not a floating window so
     // that it can receive focus
-    SwFieldDialog(Window* parent, SwFieldBookmark *fieldBM) : Dialog(parent), aListBox(this), aText(this, WB_RIGHT | WB_READONLY), selection(-1) {
+    SwFieldDialog(Window* parent, IFieldmark *fieldBM) : Dialog(parent), aListBox(this), aText(this, WB_RIGHT | WB_READONLY), selection(-1) {
 #else	// USE_JAVA
-    SwFieldDialog(Window* parent, SwFieldBookmark *fieldBM) : Dialog(parent, WB_BORDER | WB_SYSTEMWINDOW | WB_NOSHADOW ), aListBox(this), aText(this, WB_RIGHT | WB_READONLY), selection(-1) {
+    SwFieldDialog(Window* parent, IFieldmark *fieldBM) : Dialog(parent, WB_BORDER | WB_SYSTEMWINDOW | WB_NOSHADOW ), aListBox(this), aText(this, WB_RIGHT | WB_READONLY), selection(-1) {
 #endif	// USE_JAVA
 
 	assert(fieldBM!=NULL);
 	if (fieldBM!=NULL) {
-	    int items=fieldBM->getNumOfParams();	    
-	    for(int i=0;i<items;i++) {
-		SwFieldBookmark::ParamPair_t p=fieldBM->getParam(i);
-		if (p.first.compareToAscii(ECMA_FORMDROPDOWN_LISTENTRY)==0) {
-		    aListBox.InsertEntry(p.second);
-		}
+        const IFieldmark::parameter_map_t* const pParameters = fieldBM->GetParameters();
+        IFieldmark::parameter_map_t::const_iterator pListEntries = pParameters->find(::rtl::OUString::createFromAscii(ODF_FORMDROPDOWN_LISTENTRY));
+        if(pListEntries != pParameters->end())
+        {
+            Sequence< ::rtl::OUString> vListEntries;
+            pListEntries->second >>= vListEntries;
+            for( ::rtl::OUString* pCurrent = vListEntries.getArray();
+                pCurrent != vListEntries.getArray() + vListEntries.getLength();
+                ++pCurrent)
+            {
+                aListBox.InsertEntry(*pCurrent);
+		    }
 	    }
 	}
 	Size lbSize=aListBox.GetOptimalSize(WINDOWSIZE_PREFERRED);
@@ -1055,26 +998,24 @@ IMPL_LINK( SwFieldDialog, MyListBoxHandler, ListBox *, pBox )
 }
 
 
-BOOL SwView::ExecFieldPopup( const Point& rPt, SwFieldBookmark *fieldBM )
+sal_Bool SwView::ExecFieldPopup( const Point& rPt, IFieldmark *fieldBM )
 {
     sal_Bool bRet = sal_False;
     const sal_Bool bOldViewLock = pWrtShell->IsViewLocked();
     pWrtShell->LockView( sal_True );
     pWrtShell->Push();
 
-    {
 	bRet=sal_True;
 	const Point aPixPos = GetEditWin().LogicToPixel( rPt );
 
 	SwFieldDialog aFldDlg(pEditWin, fieldBM);
 	aFldDlg.SetPosPixel(pEditWin->OutputToScreenPixel(aPixPos));
 
-	short ret=aFldDlg.Execute();
-	int selection=aFldDlg.getSelection();
+	/*short ret=*/aFldDlg.Execute();
+	sal_Int32 selection=aFldDlg.getSelection();
 	if (selection>=0) {
-	    fieldBM->addParam(ECMA_FORMDROPDOWN_RESULT, selection);
+        (*fieldBM->GetParameters())[::rtl::OUString::createFromAscii(ODF_FORMDROPDOWN_RESULT)] = makeAny(selection);
 	}
-    }
 
     pWrtShell->Pop( sal_False );
     pWrtShell->LockView( bOldViewLock );

@@ -1,31 +1,40 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *   Portions of this file are part of the LibreOffice project.
  *
- * $RCSfile$
- * $Revision$
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
+
+
 
 /******************************************************************************
 Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
@@ -70,6 +79,7 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_EXTRA2		        (SID_SW_START + 2200)
 #define FN_PARAM2				(SID_SW_START + 2400)
 #define FN_NOTES				(SID_SW_START + 2500)
+#define FN_SIDEBAR              (SID_SW_START + 2550)
 
  /* More accurately, this range should be from FN_EXTRA2 to FN_PARAM2-1, but
  * FN_NUMBER_NEWSTART comes from FN_FORMAT2, and FN_PARAM_LINK_DISPLAY_NAME
@@ -152,9 +162,7 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_GOTO 				(FN_EDIT + 11)	  /* Gehe zu */
 
 #define FN_PASTE				(FN_EDIT + 13)	  /* Einfuegen */
-#define FN_PASTESPECIAL 		(FN_EDIT + 14)	  /* Verknuepfung einfuegen */
 #define FN_PASTESPECIAL_DLG 	(FN_EDIT + 15)	  /* Verknuepfung einfuegen */
-
 #define FN_NUMBER_BULLETS		(FN_EDIT + 21)	  /* Bullets */
 #define FN_REPEAT				(FN_EDIT + 22)	  /* Letzten Befehl wiederholen */
 #define FN_EDIT_IDX_ENTRY_DLG	(FN_EDIT + 23)	  /* Index-Entry bearbeiten */
@@ -324,7 +332,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_GLOBAL_OPEN          (FN_VIEW + 47)  /* oeffnen */
 #define FN_GLOBAL_SAVE_CONTENT  (FN_VIEW + 48)  /* Inhalt der Verknuepfung mitspeichern */
 #define FN_CREATE_NAVIGATION    (FN_VIEW + 49)  /* Navigations-Controller erzeugen */
-#define FN_PREVIEW_PRINT_OPTIONS (FN_VIEW + 50)  /* Optionsdialog Preview drucken */
 #define FN_PREVIEW_ZOOM          (FN_VIEW + 51)  /* der Tabellencontroller fuer den Zoom */
 
 #define FN_SET_MODOPT_TBLNUMFMT	 (FN_VIEW + 52)	/* Zahlenerkennung in Tabellen */
@@ -475,8 +482,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_INDENT_TO_TABSTOP	(FN_FORMAT + 17) /* Einrueckung auf die naechste Tabpostion */
 //schon in svxids.hrc
 //#define FN_SET_JUSTIFY_PARA 	(FN_FORMAT + 21) /* Ausrichtung Absatz */
-#define FN_FLIP_HORZ_GRAFIC 	(FN_FORMAT + 25) /* Spiegeln horizontal */
-#define FN_FLIP_VERT_GRAFIC 	(FN_FORMAT + 26) /* Spiegeln vertikal */
 #define FN_SET_LINE_SPACE		(FN_FORMAT + 27) /* Zeilenabstand parametrisiert */
 #define FN_SET_ADJUST			(FN_FORMAT + 28) /* Ausrichtung parametrisiert */
 #define FN_SET_LRMARGIN 		(FN_FORMAT + 29) /* linker/rechter Rand */
@@ -489,7 +494,7 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_SET_WIDOW			(FN_FORMAT + 36) /* Widows */
 #define FN_SET_ORPHAN			(FN_FORMAT + 37) /* Orphans */
 
-
+#define FN_FORMAT_PAGE_SETTING_DLG	(FN_FORMAT + 42)  /*  */
 #define FN_REGISTER_COLLECTION	(FN_FORMAT + 43)  /* Referenzvorlage an der Seite */
 #define FN_REGISTER_MODE		(FN_FORMAT + 44)  /* Registermodus an/aus */
 #define FN_NUM_FORMAT_TABLE_DLG 	(FN_FORMAT + 45)  /* Zahlenformat in Tabelle */
@@ -647,10 +652,9 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_FRAME_WRAP_CONTOUR		(FN_FORMAT + 184)  /* Rahmen Kunturumlauf */
 
-#define FN_TABLE_VERT_NONE			(FN_FORMAT + 185)  /* vertikale Ausrichtung in Tabellenzellen */
-#define FN_TABLE_VERT_CENTER		(FN_FORMAT + 186)  /*  	-"-  */
-#define FN_TABLE_VERT_BOTTOM		(FN_FORMAT + 187)  /*  -"-  */
-#define FN_TABLE_SET_VERT_ALIGN		(FN_FORMAT + 188)  /*  -"-  */
+// +185..+187 removed in favor of corresponding globally available slot
+
+#define FN_TABLE_SET_VERT_ALIGN		(FN_FORMAT + 188)  /* vertical alignment in Writer table cells */
 #define FN_TABLE_MODE_FIX           (FN_FORMAT + 189)  /* Tabellenmodus */
 #define FN_TABLE_MODE_FIX_PROP      (FN_FORMAT + 190)  /*  -"-  */
 #define FN_TABLE_MODE_VARIABLE		(FN_FORMAT + 191)  /*  -"-  */
@@ -722,7 +726,6 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
  --------------------------------------------------------------------*/
 
 #define FN_LINE_NUMBERING_DLG   	(FN_EXTRA + 2 )   /* Zeilennumerierung */
-#define FN_THESAURUS_DLG			(FN_EXTRA + 3 )   /* Thesaurus */
 #define FN_HYPHENATE_OPT_DLG		(FN_EXTRA + 5 )   /* Silbentrennung */
 #define FN_ADD_UNKNOWN				(FN_EXTRA + 6 )   /* Woerter lernen */
 #define FN_DICTIONARY_DLG			(FN_EXTRA + 8 )   /* Woerterbuecher */
@@ -910,9 +913,20 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_UNO_PARA_CONT_PREV_SUBTREE       (FN_EXTRA2 + 109)
 #define FN_UNO_PARA_NUM_STRING              (FN_EXTRA2 + 110)
+#define FN_UNO_TABLE_NAME                   (FN_EXTRA2 + 111)
+#define FN_UNO_META                         (FN_EXTRA2 + 112)
+#define FN_UNO_NESTED_TEXT_CONTENT          (FN_EXTRA2 + 113)
+
+// #i972: bool items to be passed to SwFrmPage for evaluation
+#define FN_OLE_IS_MATH                      (FN_EXTRA2 + 114)
+#define FN_MATH_BASELINE_ALIGNMENT          (FN_EXTRA2 + 115)
+
+#define FN_EMBEDDED_OBJECT                  (FN_EXTRA2 + 116)
+
+#define FN_UNO_REPLACEMENT_GRAPHIC_U_R_L    (FN_EXTRA2 + 117)
 
 #ifdef USE_JAVA
-#define FN_LOOKUP_IN_MACOSX_DICTIONARY      (FN_EXTRA2 + 199)
+#define FN_LOOKUP_IN_MACOSX_DICTIONARY      (FN_EXTRA2 + 118)
 #endif	// USE_JAVA
 
 /*--------------------------------------------------------------------
@@ -1065,7 +1079,7 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_ENVELOP					(FN_ENVELP	  )
 
-#define FN_DELETE_NOTE				(FN_NOTES+0)
+
 #define FN_DELETE_NOTE_AUTHOR		(FN_NOTES+1)
 #define FN_DELETE_ALL_NOTES			(FN_NOTES+2)
 #define FN_HIDE_NOTE				(FN_NOTES+3)
@@ -1171,7 +1185,7 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 
 #define FN_PARAM_SHADOWCURSOR   		(FN_PARAM2+8) /* Fuer ShadowCursor Optionen */
 
-#define FN_PARAM_ACT_NUMLEVEL   		(FN_PARAM2+9) /* BYTE-Item mit aktuellen NumLevel */
+#define FN_PARAM_ACT_NUMLEVEL   		(FN_PARAM2+9) /* sal_uInt8-Item mit aktuellen NumLevel */
 
 #define FN_PARAM_9 						(FN_PARAM2+10)
 #define FN_PARAM_10                     (FN_PARAM2+11)
@@ -1264,9 +1278,13 @@ Achtung: Ab sofort sind in diesem File keine C++-Kommentare (//) mehr
 #define FN_IID_COLRIGHT                 (FN_FRAME + 17)
 
 #define FN_SET_FRM_ALT_NAME             (FN_FRAME + 18)
+#define FN_UNO_TITLE                    (FN_FRAME + 19)
+#define FN_UNO_DESCRIPTION              (FN_FRAME + 20)
 
-#define FN_INPLACE_OLE                  (FN_FRAME + 19)
-#define FN_OUTPLACE_OLE                 (FN_FRAME + 20)
+#define SID_ATTR_PAGE_COLUMN            (FN_SIDEBAR + 0)
+#define SID_ATTR_PAGE_ULSPACE           (FN_SIDEBAR + 1)
+#define SID_ATTR_PAGE_LRSPACE           (FN_SIDEBAR + 2)
+
 
 //Member-Ids fuer Fill/SetVariable an Items
 #define 		MID_STYLE	    0xe0

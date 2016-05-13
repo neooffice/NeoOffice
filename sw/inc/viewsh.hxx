@@ -1,43 +1,49 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified June 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
-#ifndef _VIEWSH_HXX
-#define _VIEWSH_HXX
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
+#ifndef SW_VIEWSH_HXX
+#define SW_VIEWSH_HXX
+
 #include <com/sun/star/embed/XClassifiedObject.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <tools/rtti.hxx>
-#include <svtools/svarray.hxx>
+#include <svl/svarray.hxx>
 #include "swdllapi.h"
 #include <swtypes.hxx>
 #include <ring.hxx>
 #include <swrect.hxx>
 #include <errhdl.hxx>
+#include <boost/shared_ptr.hpp>// swmod 080115
 #include <vcl/mapmod.hxx>
+#include <vcl/print.hxx>
 
 namespace com { namespace sun { namespace star { namespace accessibility {
 	   	class XAccessible; } } } }
@@ -46,7 +52,7 @@ class SfxObjectShellRef;
 class SwDoc;
 class IDocumentSettingAccess;
 class IDocumentDeviceAccess;
-class IDocumentBookmarkAccess;
+class IDocumentMarkAccess;
 class IDocumentDrawModelAccess;
 class IDocumentRedlineAccess;
 class IDocumentLayoutAccess;
@@ -68,7 +74,7 @@ class SfxItemPool;
 class SfxViewShell;
 class SwViewOption;
 class SwViewImp;
-class SwPrtOptions;
+class SwPrintData;
 class SwPagePreViewPrtData;
 class Window;
 class OutputDevice;
@@ -77,25 +83,29 @@ struct ShellResource;
 class SwRegionRects;
 class SwFrm;
 class SvtAccessibilityOptions;
-// OD 12.12.2002 #103492#
 class SwPagePreviewLayout;
-// --> OD 2005-12-01 #i27138#
 class SwTxtFrm;
-// <--
 class BitmapEx;
 
 struct SwAccessibilityOptions;
 class Region;
 class SwPostItMgr;
-
-// #i74769#
 class SdrPaintWindow;
+class SwAccessibleMap;
+
+namespace vcl
+{
+    class OldStylePrintAdaptor;
+}
+
 
 //JP 19.07.98: - Bug 52312
 // define fuer Flags, die im CTOR oder den darunter liegenden Schichten
 // benoetigt werden.
 // Zur Zeit wird fuer die DrawPage das PreView Flag benoetigt
 #define VSHELLFLAG_ISPREVIEW 			((long)0x1)
+#define VSHELLFLAG_SHARELAYOUT 			((long)0x2)//swmod 080125 flag
+typedef boost::shared_ptr<SwRootFrm> SwRootFrmPtr;
 
 class SW_DLLPUBLIC ViewShell : public Ring
 {
@@ -109,9 +119,8 @@ class SW_DLLPUBLIC ViewShell : public Ring
     // OD 12.12.2002 #103492# - for setting visible area for page preview paint
     friend class SwPagePreviewLayout;
 
-    //Umsetzen der SwVisArea, damit vor dem Drucken sauber formatiert
-	//werden kann.
-    friend void SetSwVisArea( ViewShell *pSh, const SwRect &, BOOL bPDFExport = FALSE );
+    // setting the SwVisArea is used to get a clean formatting before printing
+    friend void SetSwVisArea( ViewShell*, const SwRect& /*, sal_Bool bPDFExport = sal_False */ );
 
     // --> PB 2007-05-30 #146850#
     static BitmapEx*    pReplaceBmp;    // replaced display of still loaded images
@@ -171,6 +180,8 @@ class SW_DLLPUBLIC ViewShell : public Ring
 	SdrPaintWindow*			mpTargetPaintWindow;
 	OutputDevice*			mpBufferedOut;
 
+	SwRootFrmPtr			pLayout;			//swmod 080116
+
 	//Initialisierung, wird von den verschiedenen Konstruktoren gerufen.
 	SW_DLLPRIVATE void Init( const SwViewOption *pNewOpt );
 
@@ -186,10 +197,7 @@ class SW_DLLPUBLIC ViewShell : public Ring
 	SW_DLLPRIVATE sal_Bool CheckInvalidForPaint( const SwRect & );//Direkt Paint oder lieber
 												//eine Aktion ausloesen.
 
-	SW_DLLPRIVATE void Scroll();	//Scrollen wenn sich aus der LayAction Scrollmoeglichkeiten
-					//ergaben.
-
-    SW_DLLPRIVATE void PrepareForPrint( const SwPrtOptions &rOptions );
+    SW_DLLPRIVATE void PrepareForPrint( const SwPrintData &rOptions );
 
 	SW_DLLPRIVATE void ImplApplyViewOptions( const SwViewOption &rOpt );
 
@@ -212,8 +220,7 @@ public:
 	const SwNodes& GetNodes() const;
 
     //Nach Druckerwechsel, vom Doc
-    //pPDFOut != NULL is used for PDF export.
-    void            InitPrt( SfxPrinter * , OutputDevice *pPDFOut = NULL );
+    void            InitPrt( OutputDevice *pOutDev );
 
     //Klammerung von zusammengehoerenden Aktionen.
 	inline void StartAction();
@@ -236,11 +243,7 @@ public:
     void ChgHyphenation() { Reformat(); }
     void ChgNumberDigits();
 
-	//Methoden fuer Paint- und Scrollrects, die auf allen Shells im
-	//Ring arbeiten.
 	sal_Bool AddPaintRect( const SwRect &rRect );
-	void AddScrollRect( const SwFrm *pFrm, const SwRect &rRect, long nOffs );
-	void SetNoNextScroll();
 
 	void InvalidateWindows( const SwRect &rRect );
 
@@ -269,8 +272,8 @@ public:
 	sal_Bool SmoothScroll( long lXDiff, long lYDiff, const Rectangle* );//Browser
 	void EnableSmooth( sal_Bool b ) { bEnableSmooth = b; }
 
-	const SwRect &VisArea() const { return aVisArea; }
-		//Es wird, wenn notwendig, soweit gescrollt, dass das
+    const SwRect& VisArea() const { return aVisArea; }
+        //Es wird, wenn notwendig, soweit gescrollt, dass das
 		//uebergebene Rect im sichtbaren Ausschnitt liegt.
 	void MakeVisible( const SwRect & );
 
@@ -281,18 +284,22 @@ public:
 	Point GetPagePos( sal_uInt16 nPageNum ) const;
 
 	sal_uInt16 GetNumPages();	//Anzahl der aktuellen Seiten Layout erfragen.
-    sal_Bool   IsDummyPage( USHORT nPageNum ) const;  // An empty page?
+    sal_Bool   IsDummyPage( sal_uInt16 nPageNum ) const;  // An empty page?
 
 	//Invalidierung der ersten Sichtbaren Seite fuer alle Shells im Ring.
 	void SetFirstVisPageInvalid();
 
-	SwRootFrm	*GetLayout() const;
+	SwRootFrm	*GetLayout() const;//swmod 080116
 	sal_Bool		 IsNewLayout() const; //Wurde das Layout geladen oder neu
 									  //erzeugt?
 
  	Size GetDocSize() const;// erfrage die Groesse des Dokuments
 
 	void CalcLayout();	//Durchformatierung des Layouts erzwingen.
+
+    sal_uInt16 GetPageCount() const;
+
+    const Size GetPageSize( sal_uInt16 nPageNum, bool bSkipEmptyPages ) const;
 
 	inline SwDoc *GetDoc()	const { return pDoc; }	//niemals 0.
 
@@ -308,8 +315,8 @@ public:
 
     /** Provides access to the document bookmark interface
      */
-    const IDocumentBookmarkAccess* getIDocumentBookmarkAccess() const;
-          IDocumentBookmarkAccess* getIDocumentBookmarkAccess();
+    const IDocumentMarkAccess* getIDocumentMarkAccess() const;
+          IDocumentMarkAccess* getIDocumentMarkAccess();
 
     /** Provides access to the document draw model interface
      */
@@ -344,7 +351,8 @@ public:
 
     /** Provides access to the document undo/redo interface
      */
-    IDocumentUndoRedo* getIDocumentUndoRedoAccess();
+    IDocumentUndoRedo const& GetIDocumentUndoRedo() const;
+    IDocumentUndoRedo      & GetIDocumentUndoRedo();
 
     // --> OD 2007-11-14 #i83479#
     const IDocumentListItems* getIDocumentListItemsAccess() const;
@@ -357,29 +365,32 @@ public:
     OutputDevice& GetRefDev() const;
     inline Window* GetWin()    const { return pWin; }
     inline OutputDevice* GetOut()     const { return pOut; }
-
+    void SetWin(Window* win) { pWin = win; }
 	static inline sal_Bool IsLstEndAction() { return ViewShell::bLstAct; }
 
     //Andern alle PageDescriptoren
 	void   ChgAllPageOrientation( sal_uInt16 eOri );
 	void   ChgAllPageSize( Size &rSz );
 
-	//Druckauftrag abwickeln.
-    // pPDFOut != Null is: do PDF Export (no printing!)
-    sal_Bool Prt( SwPrtOptions& rOptions, SfxProgress* pProgress,
-                  OutputDevice* pPDFOut = NULL );
+    // printing of one page.
+    // bIsPDFExport == true is: do PDF Export (no printing!)
+    sal_Bool PrintOrPDFExport( OutputDevice *pOutDev,
+            SwPrintData const& rPrintData,
+            sal_Int32 nRenderer /* offset in vector of pages to print */ );
 
-	//"Drucken" fuer OLE 2.0
-    static void PrtOle2( SwDoc *pDoc, const SwViewOption *pOpt, SwPrtOptions& rOptions,
+    // printing of one brochure page
+    void PrintProspect( OutputDevice *pOutDev, const SwPrintData &rPrintData,
+            sal_Int32 nRenderer /* offset in vector of page pairs for prospect printing */ );
+
+    // printing for OLE 2.0
+    static void PrtOle2( SwDoc *pDoc, const SwViewOption *pOpt, const SwPrintData& rOptions,
 						 OutputDevice* pOleOut, const Rectangle& rRect );
 
-    // creates temporary doc with selected text for PDF export
-    SwDoc * CreatePrtDoc( SfxPrinter* pPrt, SfxObjectShellRef& );
+    /// fill temporary doc with selected text for Print or PDF export
     SwDoc * FillPrtDoc( SwDoc* pPrtDoc, const SfxPrinter* pPrt );
 
 	//Wird intern fuer die Shell gerufen die Druckt. Formatiert die Seiten.
-	void CalcPagesForPrint( sal_uInt16 nMax, SfxProgress* pProgress = 0,
-		const String* pStr = NULL, ULONG nMergeAct = 0, ULONG nMergeCnt = 0 );
+    void CalcPagesForPrint( sal_uInt16 nMax );
 
 	//All about fields.
 	void UpdateFlds(sal_Bool bCloseDB = sal_False);
@@ -400,9 +411,6 @@ public:
 
     // compatible behaviour of tabs
     void SetTabCompat( bool bNew );
-
-    //#i24363# tab stops relative to indent
-    void SetTabsRelativeToIndent( bool bNew );
 
     // font metric attribute "External Leading" should be considered
     void SetAddExtLeading( bool bNew );
@@ -439,7 +447,7 @@ public:
 	void LayoutIdle();
 
 	inline const SwViewOption *GetViewOptions() const { return pOpt; }
-		   void  ApplyViewOptions( const SwViewOption &rOpt );
+    virtual void  ApplyViewOptions( const SwViewOption &rOpt );
 		   void  SetUIOptions( const SwViewOption &rOpt );
 		   void  SetReadonlyOption(sal_Bool bSet);   // Readonly-Bit d. ViewOptions setzen
            void  SetPDFExportOption(sal_Bool bSet);   // set/reset PDF export mode
@@ -476,15 +484,7 @@ public:
         input parameter - constant reference to print options, to which the
         view option will be adjusted.
     */
-    void AdjustOptionsForPagePreview( const SwPrtOptions &_rPrintOptions );
-
-    // print page/print preview
-    void PrintPreViewPage( SwPrtOptions& rOptions, sal_uInt16 nRowCol,
-                           SfxProgress& rProgress,
-                           const SwPagePreViewPrtData* = 0 );
-
-    // Prospekt-Format drucken
-	void PrintProspect( SwPrtOptions&, SfxProgress& , BOOL bRTL);
+    void AdjustOptionsForPagePreview( SwPrintData const& rPrintOptions );
 
 	sal_Bool IsViewLocked() const { return bViewLocked; }
 	void LockView( sal_Bool b )	  { bViewLocked = b;	}
@@ -520,7 +520,7 @@ public:
 	//wenn sich der BrowdseModus aendert, bBrowseChgd == sal_True
 	//oder, im BrowseModus, wenn sich die Groessenverhaeltnisse
 	//aendern (bBrowseChgd == sal_False)
-	void CheckBrowseView( BOOL bBrowseChgd );
+	void CheckBrowseView( sal_Bool bBrowseChgd );
 
     const Size& GetBrowseBorder() const;
 	sal_Int32 GetBrowseWidth() const;
@@ -566,6 +566,21 @@ public:
         @author OD
     */
     void InvalidateAccessibleParaTextSelection();
+
+    /** invalidate attributes for paragraphs and paragraph's characters
+
+        OD 2009-01-06 #i88069#
+        OD 2010-02-16 #i104008# - usage also for changes of the attributes of
+        paragraph's characters.
+
+        @author OD
+
+        @param rTxtFrm
+        input parameter - paragraph frame, whose attributes have changed
+    */
+    void InvalidateAccessibleParaAttrs( const SwTxtFrm& rTxtFrm );
+
+    SwAccessibleMap* GetAccessibleMap();
 
     ViewShell( ViewShell&, Window *pWin = 0, OutputDevice *pOut = 0,
 				long nFlags = 0 );
@@ -639,4 +654,4 @@ inline const SfxItemPool& ViewShell::GetAttrPool() const
 
 
 
-#endif //_VIEWSH_HXX
+#endif // SW_VIEWSH_HXX

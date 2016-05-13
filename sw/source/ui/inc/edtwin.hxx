@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified December 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 #ifndef _EDTWIN_HXX
 #define _EDTWIN_HXX
 
@@ -37,7 +40,7 @@
 #include <swevent.hxx>
 
 #define _SVSTDARR_STRINGSISORTDTOR
-#include <svtools/svstdarr.hxx>
+#include <svl/svstdarr.hxx>
 
 class	SwWrtShell;
 class 	SwView;
@@ -62,23 +65,23 @@ class SwEditWin: public Window,
 				public DropTargetHelper, public DragSourceHelper
 {
 friend void 	ScrollMDI(ViewShell* pVwSh, const SwRect&,
-						  USHORT nRangeX, USHORT nRangeY);
-friend BOOL 	IsScrollMDI(ViewShell* pVwSh, const SwRect&);
+						  sal_uInt16 nRangeX, sal_uInt16 nRangeY);
+friend sal_Bool 	IsScrollMDI(ViewShell* pVwSh, const SwRect&);
 
 friend void 	SizeNotify(ViewShell* pVwSh, const Size &);
 
 friend void 	PageNumNotify( 	ViewShell* pVwSh,
-								USHORT nPhyNum,
-								USHORT nVirtNum,
+								sal_uInt16 nPhyNum,
+								sal_uInt16 nVirtNum,
 								const String& rPg );
 
 	static  QuickHelpData* pQuickHlpData;
 
-	static	BOOL	bReplaceQuote;
+	static	sal_Bool	bReplaceQuote;
 	static	long 	nDDStartPosX, nDDStartPosY;
 
 	static 	Color	aTextColor; 	//Textfarbe, fuer die Giesskanne
-	static 	BOOL	bTransparentBackColor; // Hintergrund transparent
+	static 	sal_Bool	bTransparentBackColor; // Hintergrund transparent
 	static 	Color	aTextBackColor; //Texthintergrundfarbe, fuer die Giesskanne
 
 	/*
@@ -115,14 +118,14 @@ friend void 	PageNumNotify( 	ViewShell* pVwSh,
 
 	int		 		aActHitType;	// aktueller Mauspointer
 
-    ULONG           m_nDropFormat;   //Format aus dem letzten QueryDrop
-    USHORT          m_nDropAction;   //Action aus dem letzten QueryDrop
-    USHORT          m_nDropDestination;  //Ziel aus dem letzten QueryDrop
+    sal_uLong           m_nDropFormat;   //Format aus dem letzten QueryDrop
+    sal_uInt16          m_nDropAction;   //Action aus dem letzten QueryDrop
+    sal_uInt16          m_nDropDestination;  //Ziel aus dem letzten QueryDrop
 
-	UINT16			eBezierMode;
-	UINT16			nInsFrmColCount; //Spaltenzahl fuer interaktiven Rahmen
+	sal_uInt16			eBezierMode;
+	sal_uInt16			nInsFrmColCount; //Spaltenzahl fuer interaktiven Rahmen
 	SdrObjKind		eDrawMode;
-	BOOL			bLinkRemoved	: 1,
+	sal_Bool			bLinkRemoved	: 1,
 					bMBPressed		: 1,
 					bInsDraw 		: 1,
 					bInsFrm 		: 1,
@@ -144,8 +147,8 @@ friend void 	PageNumNotify( 	ViewShell* pVwSh,
 					bObjectSelect	: 1;
 
 
-    USHORT          nKS_NUMDOWN_Count; // #i23725#
-    USHORT          nKS_NUMINDENTINC_Count;
+    sal_uInt16          nKS_NUMDOWN_Count; // #i23725#
+    sal_uInt16          nKS_NUMINDENTINC_Count;
 
 	void			LeaveArea(const Point &);
 	void			JustifyAreaTimer();
@@ -153,19 +156,19 @@ friend void 	PageNumNotify( 	ViewShell* pVwSh,
 
 	void			RstMBDownFlags();
 
-	void			ChangeFly( BYTE nDir, BOOL bWeb = FALSE );
-    void            ChangeDrawing( BYTE nDir );
+	void			ChangeFly( sal_uInt8 nDir, sal_Bool bWeb = sal_False );
+    void            ChangeDrawing( sal_uInt8 nDir );
 
-	BOOL			EnterDrawMode(const MouseEvent& rMEvt, const Point& aDocPos);
-    BOOL            RulerColumnDrag( const MouseEvent& rMEvt, BOOL bVerticalMode);
+	sal_Bool			EnterDrawMode(const MouseEvent& rMEvt, const Point& aDocPos);
+    sal_Bool            RulerColumnDrag( const MouseEvent& rMEvt, sal_Bool bVerticalMode);
 
 	//Hilfsfunktionen fuer D&D
 	void			DropCleanup();
 	void			CleanupDropUserMarker();
-	USHORT			GetDropDestination( const Point& rPixPnt,
+	sal_uInt16			GetDropDestination( const Point& rPixPnt,
 										SdrObject ** ppObj = 0 );
     //select the object/cursor at the mouse position of the context menu request
-    BOOL            SelectMenuPosition(SwWrtShell& rSh, const Point& rMousePos );
+    sal_Bool            SelectMenuPosition(SwWrtShell& rSh, const Point& rMousePos );
 
 	/*
 	 * Handler fuer das Weiterscrollen, wenn der Mauspointer innerhalb eines
@@ -219,45 +222,45 @@ protected:
                                 SvxAutoCorrect* pACorr, sal_Bool bFromIME = sal_False );
 public:
 
-	void			UpdatePointer(const Point &, USHORT nButtons = 0);
+	void			UpdatePointer(const Point &, sal_uInt16 nButtons = 0);
 
-	BOOL			IsDrawSelMode();
-	BOOL			IsDrawAction() 					{ return (bInsDraw); }
-	void			SetDrawAction(BOOL bFlag) 		{ bInsDraw = bFlag; }
+	sal_Bool			IsDrawSelMode();
+	sal_Bool			IsDrawAction() 					{ return (bInsDraw); }
+	void			SetDrawAction(sal_Bool bFlag) 		{ bInsDraw = bFlag; }
 
-	void			SetObjectSelect( BOOL bVal )	{ bObjectSelect = bVal; }
-	BOOL			IsObjectSelect() const			{ return bObjectSelect; }
+	void			SetObjectSelect( sal_Bool bVal )	{ bObjectSelect = bVal; }
+	sal_Bool			IsObjectSelect() const			{ return bObjectSelect; }
 
-	inline SdrObjKind	GetSdrDrawMode(/*BOOL bBuf = FALSE*/) const { return eDrawMode; }
-	inline void			SetSdrDrawMode( SdrObjKind eSdrObjectKind )	{ eDrawMode = eSdrObjectKind; SetObjectSelect( FALSE ); }
-	void				StdDrawMode( SdrObjKind eSdrObjectKind, BOOL bObjSelect );
+	inline SdrObjKind	GetSdrDrawMode(/*sal_Bool bBuf = sal_False*/) const { return eDrawMode; }
+	inline void			SetSdrDrawMode( SdrObjKind eSdrObjectKind )	{ eDrawMode = eSdrObjectKind; SetObjectSelect( sal_False ); }
+	void				StdDrawMode( SdrObjKind eSdrObjectKind, sal_Bool bObjSelect );
 
-	BOOL			IsFrmAction() 					{ return (bInsFrm); }
-	inline UINT16	GetBezierMode() 				{ return eBezierMode; }
-	void			SetBezierMode(UINT16 eBezMode)	{ eBezierMode = eBezMode; }
+	sal_Bool			IsFrmAction() 					{ return (bInsFrm); }
+	inline sal_uInt16	GetBezierMode() 				{ return eBezierMode; }
+	void			SetBezierMode(sal_uInt16 eBezMode)	{ eBezierMode = eBezMode; }
 	void			EnterDrawTextMode(const Point& aDocPos); // DrawTextEditMode einschalten
-	void			InsFrm(USHORT nCols);
+	void			InsFrm(sal_uInt16 nCols);
 	void 			StopInsFrm();
-	UINT16			GetFrmColCount() const {return nInsFrmColCount;} //Spaltenzahl fuer interaktiven Rahmen
+	sal_uInt16			GetFrmColCount() const {return nInsFrmColCount;} //Spaltenzahl fuer interaktiven Rahmen
 
 
-	void			SetChainMode( BOOL bOn );
-	BOOL			IsChainMode() const				{ return bChainMode; }
+	void			SetChainMode( sal_Bool bOn );
+	sal_Bool			IsChainMode() const				{ return bChainMode; }
 
     void            FlushInBuffer();
-    BOOL            IsInputSequenceCheckingRequired( const String &rText, const SwPaM& rCrsr ) const;
+    sal_Bool            IsInputSequenceCheckingRequired( const String &rText, const SwPaM& rCrsr ) const;
 
 
-	static	void 	SetReplaceQuote(BOOL bOn = TRUE) { bReplaceQuote = bOn; }
-	static	BOOL 	IsReplaceQuote() { return bReplaceQuote; }
+	static	void 	SetReplaceQuote(sal_Bool bOn = sal_True) { bReplaceQuote = bOn; }
+	static	sal_Bool 	IsReplaceQuote() { return bReplaceQuote; }
 
 	void 			 SetApplyTemplate(const SwApplyTemplate &);
 	SwApplyTemplate* GetApplyTemplate() const { return pApplyTempl; }
 
 	void			StartExecuteDrag();
 	void			DragFinished();
-    USHORT          GetDropAction() const { return m_nDropAction; }
-    ULONG           GetDropFormat() const { return m_nDropFormat; }
+    sal_uInt16          GetDropAction() const { return m_nDropAction; }
+    sal_uLong           GetDropFormat() const { return m_nDropFormat; }
 
 	Color 			GetTextColor() { return aTextColor; }
 
@@ -267,11 +270,11 @@ public:
 											{ return aTextBackColor; }
 	void 			SetTextBackColor(const Color& rCol )
 											{ aTextBackColor = rCol; }
-	void			SetTextBackColorTransparent(BOOL bSet)
+	void			SetTextBackColorTransparent(sal_Bool bSet)
 									{ bTransparentBackColor = bSet; }
-	BOOL			IsTextBackColorTransparent()
+	sal_Bool			IsTextBackColorTransparent()
 									{ return bTransparentBackColor; }
-	void			LockKeyInput(BOOL bSet){bLockInput = bSet;}
+	void			LockKeyInput(sal_Bool bSet){bLockInput = bSet;}
 
 	const SwView &GetView() const { return rView; }
 		  SwView &GetView() 	  { return rView; }
@@ -291,7 +294,7 @@ public:
     void StopQuickHelp();
 
     // --> OD 2005-02-18 #i42921# - add parameter <bVerticalMode>
-    BOOL RulerMarginDrag( const MouseEvent& rMEvt,
+    sal_Bool RulerMarginDrag( const MouseEvent& rMEvt,
                                      const bool bVerticalMode );
     // <--
 
@@ -303,6 +306,7 @@ public:
 
     SwEditWin(Window *pParent, SwView &);
 	virtual ~SwEditWin();
+	virtual void SwitchView();
 
 #ifdef USE_JAVA
 	DECL_LINK( ApplicationEventListener, VclSimpleEvent* );

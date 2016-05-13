@@ -1,3 +1,39 @@
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *   Portions of this file are part of the LibreOffice project.
+ *
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ *************************************************************/
+
 //--------------------------------------------------------------------------
 SfxVoidItem CreateSWDrawView SID_CREATE_SW_DRAWVIEW
 ()
@@ -708,87 +744,6 @@ SfxVoidItem CalculateSel FN_CALCULATE
 ]
 
 //--------------------------------------------------------------------------
-SfxBoolItem CellVertBottom FN_TABLE_VERT_BOTTOM
-
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = FALSE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	Readonly = FALSE,
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_TABLE;
-]
-
-//--------------------------------------------------------------------------
-SfxBoolItem CellVertCenter FN_TABLE_VERT_CENTER
-
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = FALSE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	Readonly = FALSE,
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_TABLE;
-]
-
-//--------------------------------------------------------------------------
-SfxBoolItem CellVertTop FN_TABLE_VERT_NONE
-
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = FALSE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	Readonly = FALSE,
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_TABLE;
-]
-
-//--------------------------------------------------------------------------
 SfxBoolItem ChainFrames FN_FRAME_CHAIN
 
 [
@@ -821,7 +776,7 @@ SfxVoidItem ChangeDatabaseField FN_CHANGE_DBFIELD
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = TRUE,
@@ -1759,7 +1714,7 @@ SfxVoidItem ExecuteMacroField FN_EXECUTE_MACROFIELD
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -1809,7 +1764,7 @@ SfxVoidItem FieldDialog FN_EDIT_FIELD
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = TRUE,
@@ -1880,56 +1835,6 @@ SfxBoolItem Fields FN_VIEW_FIELDS
 	StatusBarConfig = FALSE,
 	ToolBoxConfig = TRUE,
 	GroupId = GID_VIEW;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem FlipHorizontal FN_FLIP_HORZ_GRAFIC
-()
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = FALSE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_FORMAT;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem FlipVertical FN_FLIP_VERT_GRAFIC
-()
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = FALSE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_FORMAT;
 ]
 
 //--------------------------------------------------------------------------
@@ -2063,56 +1968,6 @@ SwFmtDrop FormatDropcap FN_FORMAT_DROPCAPS
 
 //--------------------------------------------------------------------------
 SfxVoidItem FrameDialog FN_FORMAT_FRAME_DLG
-()
-[
-	/* flags: */
-	AutoUpdate = FALSE,
-	Cachable = Cachable,
-	FastCall = TRUE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerItem;
-	Asynchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_FRAME;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem InplaceOle FN_INPLACE_OLE
-()
-[
-	/* flags: */
-	AutoUpdate = FALSE,
-	Cachable = Cachable,
-	FastCall = TRUE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerItem;
-	Asynchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_FRAME;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem OutplaceOle FN_OUTPLACE_OLE
 ()
 [
 	/* flags: */
@@ -4420,7 +4275,7 @@ SfxVoidItem InsertMultiIndex FN_INSERT_MULTI_TOX
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = TRUE,
@@ -4777,31 +4632,6 @@ SfxVoidItem InsertRows FN_TABLE_INSERT_ROW
 //--------------------------------------------------------------------------
 SfxVoidItem InsertScript FN_JAVAEDIT
 (SfxStringItem Text FN_JAVAEDIT,SfxBoolItem IsURL FN_PARAM_1,SfxStringItem Type FN_PARAM_2)
-[
-	/* flags: */
-	AutoUpdate = FALSE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Asynchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_INSERT;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem InsertSymbol FN_INSERT_SYMBOL
-(SfxStringItem Symbols FN_INSERT_SYMBOL,SfxStringItem FontName FN_PARAM_1)
 [
 	/* flags: */
 	AutoUpdate = FALSE,
@@ -6403,6 +6233,30 @@ SfxVoidItem PageDialog FN_FORMAT_PAGE_DLG
 	GroupId = GID_FORMAT;
 ]
 
+SfxVoidItem PageSettingDialog FN_FORMAT_PAGE_SETTING_DLG
+()
+[
+	/* flags: */
+	AutoUpdate = FALSE,
+	Cachable = Cachable,
+	FastCall = FALSE,
+	HasCoreId = FALSE,
+	HasDialog = TRUE,
+	ReadOnlyDoc = FALSE,
+	Toggle = FALSE,
+	Container = FALSE,
+	RecordAbsolute = FALSE,
+	RecordPerItem;
+	Asynchron;
+
+	/* config: */
+	AccelConfig = FALSE,
+	MenuConfig = FALSE,
+	StatusBarConfig = FALSE,
+	ToolBoxConfig = FALSE,
+	GroupId = GID_FORMAT;
+]
+
 //--------------------------------------------------------------------------
 SfxVoidItem PageDown FN_PAGEDOWN
 ()
@@ -6584,56 +6438,6 @@ SfxVoidItem PageUpSel FN_PAGEUP_SEL
 ]
 
 //--------------------------------------------------------------------------
-SfxInt16Item PasteSpecial FN_PASTESPECIAL
-()
-[
-	/* flags: */
-	AutoUpdate = FALSE,
-	Cachable = Volatile,
-	FastCall = TRUE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Asynchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_EDIT;
-]
-
-//--------------------------------------------------------------------------
-SfxVoidItem PreviewPrintOptions FN_PREVIEW_PRINT_OPTIONS
-()
-[
-	/* flags: */
-	AutoUpdate = TRUE,
-	Cachable = Cachable,
-	FastCall = TRUE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Synchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_DOC;
-]
-
-//--------------------------------------------------------------------------
 SfxVoidItem PreviewZoom FN_PREVIEW_ZOOM
 ( SfxUInt16Item PreviewZoom FN_PREVIEW_ZOOM )
 [
@@ -6667,7 +6471,7 @@ SfxBoolItem PrintLayout FN_PRINT_LAYOUT
 [
 	/* flags: */
 	AutoUpdate = TRUE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -6748,7 +6552,7 @@ SfxBoolItem ProtectTraceChangeMode FN_REDLINE_PROTECT
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
-	ReadOnlyDoc = TRUE,
+    ReadOnlyDoc = FALSE,
 	Toggle = FALSE,
 	Container = FALSE,
 	RecordAbsolute = FALSE,
@@ -6948,7 +6752,7 @@ SfxBoolItem Ruler FN_RULER
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+    Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -7127,7 +6931,7 @@ SfxUInt16Item SelectionMode FN_STAT_SELMODE
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -7494,7 +7298,7 @@ SfxVoidItem SetOptimalColumnWidth FN_TABLE_ADJUST_CELLS
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = TRUE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -8005,7 +7809,7 @@ SfxStringItem StatePageNumber FN_STAT_PAGE
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -8444,31 +8248,6 @@ SfxVoidItem TextWrap FN_DRAW_WRAP_DLG
 ]
 
 //--------------------------------------------------------------------------
-SfxVoidItem ThesaurusDialog FN_THESAURUS_DLG
-()
-[
-	/* flags: */
-	AutoUpdate = FALSE,
-	Cachable = Cachable,
-	FastCall = FALSE,
-	HasCoreId = FALSE,
-	HasDialog = TRUE,
-	ReadOnlyDoc = FALSE,
-	Toggle = FALSE,
-	Container = FALSE,
-	RecordAbsolute = FALSE,
-	RecordPerSet;
-	Asynchron;
-
-	/* config: */
-	AccelConfig = TRUE,
-	MenuConfig = TRUE,
-	StatusBarConfig = FALSE,
-	ToolBoxConfig = TRUE,
-	GroupId = GID_OPTIONS;
-]
-
-//--------------------------------------------------------------------------
 SfxVoidItem ToggleAnchorType FN_TOOL_ANKER
 ()
 [
@@ -8783,7 +8562,7 @@ SfxBoolItem ViewBounds FN_VIEW_BOUNDS
 [
 	/* flags: */
 	AutoUpdate = FALSE,
-	Cachable = Volatile,
+	Cachable = Cachable,
 	FastCall = FALSE,
 	HasCoreId = FALSE,
 	HasDialog = FALSE,
@@ -10066,32 +9845,7 @@ SfxBoolItem SelectionModeDefault FN_SELECTION_MODE_DEFAULT
     GroupId = GID_EDIT;
 ]
 
-//--------------------------------------------------------------------------
-SfxVoidItem DeleteNote FN_DELETE_NOTE
-()
-[
-    /* flags: */
-    AutoUpdate = FALSE,
-    Cachable = Cachable,
-    FastCall = FALSE,
-    HasCoreId = FALSE,
-    HasDialog = FALSE,
-    ReadOnlyDoc = FALSE,
-    Toggle = FALSE,
-    Container = FALSE,
-    RecordAbsolute = FALSE,
-    RecordPerSet;
-    Synchron;
-
-    /* config: */
-    AccelConfig = TRUE,
-    MenuConfig = TRUE,
-    StatusBarConfig = FALSE,
-    ToolBoxConfig = TRUE,
-    GroupId = GID_EDIT;
-]
-
-SfxVoidItem ReplyNote FN_REPLY
+SfxVoidItem ReplyComment FN_REPLY
 ()
 [
     /* flags: */
@@ -10442,9 +10196,87 @@ SfxVoidItem CopyHyperlinkLocation FN_COPY_HYPERLINK_LOCATION
     GroupId = GID_EDIT;
 ]
 
+
+SfxInt16Item PageColumnType SID_ATTR_PAGE_COLUMN
+
+[
+    /* flags: */
+    AutoUpdate = FALSE,
+    Cachable = Cachable,
+    FastCall = FALSE,
+    HasCoreId = FALSE,
+    HasDialog = FALSE,
+    ReadOnlyDoc = TRUE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+    Synchron;
+
+    Readonly = TRUE,
+
+    /* config: */
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    StatusBarConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = GID_FORMAT;
+]
+
+SvxLongULSpaceItem SwPageULMargin SID_ATTR_PAGE_ULSPACE
+
+[
+	/* flags: */
+	AutoUpdate = FALSE,
+	Cachable = Cachable,
+	FastCall = FALSE,
+	HasCoreId = FALSE,
+	HasDialog = FALSE,
+	ReadOnlyDoc = FALSE,
+	Toggle = FALSE,
+	Container = FALSE,
+	RecordAbsolute = FALSE,
+	RecordPerSet;
+	Synchron;
+
+	Readonly = FALSE,
+
+	/* config: */
+	AccelConfig = FALSE,
+	MenuConfig = FALSE,
+	StatusBarConfig = FALSE,
+	ToolBoxConfig = FALSE,
+	GroupId = GID_FORMAT;
+]
+
+SvxLongLRSpaceItem SwPageLRMargin SID_ATTR_PAGE_LRSPACE
+
+[
+	/* flags: */
+	AutoUpdate = FALSE,
+	Cachable = Cachable,
+	FastCall = FALSE,
+	HasCoreId = FALSE,
+	HasDialog = FALSE,
+	ReadOnlyDoc = FALSE,
+	Toggle = FALSE,
+	Container = FALSE,
+	RecordAbsolute = FALSE,
+	RecordPerSet;
+	Synchron;
+
+	Readonly = FALSE,
+
+	/* config: */
+	AccelConfig = FALSE,
+	MenuConfig = FALSE,
+	StatusBarConfig = FALSE,
+	ToolBoxConfig = FALSE,
+	GroupId = GID_FORMAT;
+]
+
 // #ifdef USE_JAVA
 
-//--------------------------------------------------------------------------
 SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 ()
 [
@@ -10469,7 +10301,6 @@ SfxVoidItem LookupInMacDictAttributes FN_LOOKUP_IN_MACOSX_DICTIONARY
 	GroupId = GID_FORMAT;
 ]
 
-//--------------------------------------------------------------------------
 SvxColorItem FillColor SID_ATTR_CHAR_FILLCOLOR
 
 [
@@ -10497,9 +10328,9 @@ SvxColorItem FillColor SID_ATTR_CHAR_FILLCOLOR
 ]
 
 // #endif	// USE_JAVA
+
 // #ifndef NO_STATUSBAR_WORDCOUNT
 
-//--------------------------------------------------------------------------
 SfxStringItem StateWordCount FN_STAT_WORDCOUNT
 ()
 [

@@ -1,82 +1,77 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified January 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
+
 #include <hintids.hxx>
 #include <i18npool/lang.h>
-#include <svtools/slstitm.hxx>
-#include <svtools/cjkoptions.hxx>
-#include <svx/fontitem.hxx>
-#include <svx/langitem.hxx>
+#include <svl/slstitm.hxx>
+#include <svl/cjkoptions.hxx>
+#include <editeng/fontitem.hxx>
+#include <editeng/langitem.hxx>
 #include <svx/svdview.hxx>
 #include <vcl/msgbox.hxx>
-#include <svx/charmap.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/objface.hxx>
 #include <svx/svdotext.hxx>
-#include <svx/xftsfit.hxx>
-#include <svx/editeng.hxx>
-#include <svx/editview.hxx>
-#include <svx/eeitem.hxx>
-#include <svx/scripttypeitem.hxx>
+#include <editeng/editeng.hxx>
+#include <editeng/editview.hxx>
+#include <editeng/eeitem.hxx>
+#include <editeng/scripttypeitem.hxx>
 #include <sfx2/bindings.hxx>
 #include <svx/fontwork.hxx>
 #include <sfx2/request.hxx>
-#include <svtools/whiter.hxx>
-#include <svx/outliner.hxx>
-#include <svx/editstat.hxx>
+#include <sfx2/sidebar/EnumContext.hxx>
+#include <svl/whiter.hxx>
+#include <editeng/outliner.hxx>
+#include <editeng/editstat.hxx>
 #include <svx/svdoutl.hxx>
-#include <unoobj.hxx>
 #include <com/sun/star/i18n/TransliterationModules.hpp>
+#include <com/sun/star/i18n/TransliterationModulesExtra.hpp>
 #include <com/sun/star/i18n/TextConversionOption.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <swtypes.hxx>
-#ifndef _VIEW_HXX
 #include <view.hxx>
-#endif
 #include <wrtsh.hxx>
 #include <viewopt.hxx>
 #include <initui.hxx>               // fuer SpellPointer
-#ifndef _DRWTXTSH_HXX
 #include <drwtxtsh.hxx>
-#endif
 #include <swundo.hxx>
 #include <breakit.hxx>
 
-#ifndef _CMDID_H
 #include <cmdid.h>
-#endif
-#ifndef _HELPID_H
 #include <helpid.h>
-#endif
 #ifndef _GLOBALS_HRC
 #include <globals.hrc>
 #endif
@@ -85,30 +80,21 @@
 #endif
 
 #define SwDrawTextShell
-#ifndef _ITEMDEF_HXX
-#include <itemdef.hxx>
-#endif
-#ifndef _SWSLOTS_HXX
+#include <sfx2/msg.hxx>
 #include <swslots.hxx>
-#endif
 #ifndef _POPUP_HRC
 #include <popup.hrc>
 #endif
 #include <uitool.hxx>
-#ifndef _WVIEW_HXX
 #include <wview.hxx>
-#endif
 #include <swmodule.hxx>
-
 #include <svx/xtable.hxx>
 #include <svx/svxdlg.hxx>
 #include <svx/dialogs.hrc>
-
 #include <svx/svxdlg.hxx>
 #include <svx/dialogs.hrc>
-
+#include <svx/svdoashp.hxx>
 #include <cppuhelper/bootstrap.hxx>
-
 #include "swabstdlg.hxx" //CHINA001
 #include "misc.hrc"
 
@@ -143,8 +129,11 @@ void SwDrawTextShell::Init()
 	SwWrtShell &rSh = GetShell();
 	pSdrView = rSh.GetDrawView();
     SdrOutliner * pOutliner = pSdrView->GetTextEditOutliner();
+    //#97471# mouse click _and_ key input at the same time 
+    if( !pOutliner ) 
+        return ;
     OutlinerView* pOLV = pSdrView->GetTextEditOutlinerView();
-	ULONG nCtrl = pOutliner->GetControlWord();
+	sal_uLong nCtrl = pOutliner->GetControlWord();
 	nCtrl |= EE_CNTRL_AUTOCORRECT;
 
 	SetUndoManager(&pOutliner->GetUndoManager());
@@ -177,9 +166,10 @@ SwDrawTextShell::SwDrawTextShell(SwView &rV) :
 
 	Init();
 
-	rSh.NoEdit(TRUE);
+	rSh.NoEdit(sal_True);
 	SetName(String::CreateFromAscii("ObjectText"));
 	SetHelpId(SW_DRWTXTSHELL);
+    SfxShell::SetContextName(sfx2::sidebar::EnumContext::GetContextName(sfx2::sidebar::EnumContext::Context_DrawText));
 }
 
 /*--------------------------------------------------------------------
@@ -191,19 +181,7 @@ SwDrawTextShell::SwDrawTextShell(SwView &rV) :
 __EXPORT SwDrawTextShell::~SwDrawTextShell()
 {
     if ( GetView().GetCurShell() == this )
-		rView.ResetSubShell();
-
-	//MA 13. Nov. 96: Das kommt durchaus vor #33141#:
-	//(doppel-)Klick von einem Texteditmode in ein anderes Objekt, zwischendurch
-	//wird eine andere (Draw-)Shell gepusht, die alte aber noch nicht deletet.
-	//Dann wird vor dem Flush wieder ein DrawTextShell gepusht und der Mode ist
-	//eingeschaltet. In diesem Moment wird der Dispatcher geflusht und die alte
-	//DrawTextShell zerstoert.
-//	ASSERT( !pSdrView->IsTextEdit(), "TextEdit in DTor DrwTxtSh?" );
-//    if (pSdrView->IsTextEdit())
-//		GetShell().EndTextEdit();	// Danebengeklickt, Ende mit Edit
-
-//    GetShell().Edit();
+        rView.ResetSubShell();
 }
 
 SwWrtShell& SwDrawTextShell::GetShell()
@@ -219,7 +197,7 @@ SwWrtShell& SwDrawTextShell::GetShell()
 void SwDrawTextShell::StateDisableItems( SfxItemSet &rSet )
 {
 	SfxWhichIter aIter(rSet);
-	USHORT nWhich = aIter.FirstWhich();
+	sal_uInt16 nWhich = aIter.FirstWhich();
 
 	while (nWhich)
 	{
@@ -256,7 +234,7 @@ void SwDrawTextShell::SetAttrToMarked(const SfxItemSet& rAttr)
 
 
 
-BOOL SwDrawTextShell::IsTextEdit()
+sal_Bool SwDrawTextShell::IsTextEdit()
 {
     return pSdrView->IsTextEdit();
 }
@@ -271,7 +249,7 @@ void SwDrawTextShell::ExecFontWork(SfxRequest& rReq)
 {
     SwWrtShell &rSh = GetShell();
     FieldUnit eMetric = ::GetDfltMetric(0 != PTR_CAST(SwWebView, &rSh.GetView()));
-    SW_MOD()->PutItem(SfxUInt16Item(SID_ATTR_METRIC, static_cast< UINT16 >(eMetric)) );
+    SW_MOD()->PutItem(SfxUInt16Item(SID_ATTR_METRIC, static_cast< sal_uInt16 >(eMetric)) );
     SfxViewFrame* pVFrame = GetView().GetViewFrame();
 	if ( rReq.GetArgs() )
 	{
@@ -293,7 +271,7 @@ void SwDrawTextShell::ExecFontWork(SfxRequest& rReq)
 
 void SwDrawTextShell::StateFontWork(SfxItemSet& rSet)
 {
-	const USHORT nId = SvxFontWorkChildWindow::GetChildWindowId();
+	const sal_uInt16 nId = SvxFontWorkChildWindow::GetChildWindowId();
 	rSet.Put(SfxBoolItem(SID_FONTWORK, GetView().GetViewFrame()->HasChildWindow(nId)));
 }
 
@@ -315,10 +293,9 @@ void SwDrawTextShell::ExecFormText(SfxRequest& rReq)
 	if ( rMarkList.GetMarkCount() == 1 && rReq.GetArgs() )
 	{
 		const SfxItemSet& rSet = *rReq.GetArgs();
-		const SfxPoolItem* pItem;
 
         //ask for the ViewFrame here - "this" may not be valid any longer!
-        SfxViewFrame* pVFrame = GetView().GetViewFrame();
+	// SfxViewFrame* pVFrame = GetView().GetViewFrame();
         if ( pDrView->IsTextEdit() )
 		{
             //#111733# Sometimes SdrEndTextEdit() initiates the change in selection and
@@ -329,22 +306,7 @@ void SwDrawTextShell::ExecFormText(SfxRequest& rReq)
             rTempView.AttrChangedNotify(&rSh);
 		}
 
-		if ( rSet.GetItemState(XATTR_FORMTXTSTDFORM, TRUE, &pItem) ==
-			 SFX_ITEM_SET &&
-			((const XFormTextStdFormItem*) pItem)->GetValue() != XFTFORM_NONE )
-		{
-
-			const USHORT nId = SvxFontWorkChildWindow::GetChildWindowId();
-            SvxFontWorkDialog* pDlg = (SvxFontWorkDialog*)(
-                    pVFrame->GetChildWindow(nId)->GetWindow());
-
-			pDlg->CreateStdFormObj(*pDrView, *pDrView->GetSdrPageView(),
-									rSet, *rMarkList.GetMark(0)->GetMarkedSdrObj(),
-								   ((const XFormTextStdFormItem*) pItem)->
-								   GetValue());
-		}
-		else
-			pDrView->SetAttributes(rSet);
+		pDrView->SetAttributes(rSet);
 	}
 
 }
@@ -365,7 +327,7 @@ void SwDrawTextShell::GetFormTextState(SfxItemSet& rSet)
 	const SdrObject* pObj = NULL;
 	SvxFontWorkDialog* pDlg = NULL;
 
-	const USHORT nId = SvxFontWorkChildWindow::GetChildWindowId();
+	const sal_uInt16 nId = SvxFontWorkChildWindow::GetChildWindowId();
 
 	SfxViewFrame* pVFrame = GetView().GetViewFrame();
 	if ( pVFrame->HasChildWindow(nId) )
@@ -374,23 +336,31 @@ void SwDrawTextShell::GetFormTextState(SfxItemSet& rSet)
 	if ( rMarkList.GetMarkCount() == 1 )
 		pObj = rMarkList.GetMark(0)->GetMarkedSdrObj();
 
-	if ( pObj == NULL || !pObj->ISA(SdrTextObj) ||
-		!((SdrTextObj*) pObj)->HasText() )
+    const SdrTextObj* pTextObj = dynamic_cast< const SdrTextObj* >(pObj);
+    const bool bDeactivate(
+        !pObj ||
+        !pTextObj ||
+        !pTextObj->HasText() ||
+        dynamic_cast< const SdrObjCustomShape* >(pObj)); // #121538# no FontWork for CustomShapes
+
+    if (bDeactivate)
 	{
-#define	XATTR_ANZ 12
-		static const USHORT nXAttr[ XATTR_ANZ ] =
-		{ 	XATTR_FORMTXTSTYLE, XATTR_FORMTXTADJUST, XATTR_FORMTXTDISTANCE,
-			XATTR_FORMTXTSTART, XATTR_FORMTXTMIRROR, XATTR_FORMTXTSTDFORM,
-			XATTR_FORMTXTHIDEFORM, XATTR_FORMTXTOUTLINE, XATTR_FORMTXTSHADOW,
-			XATTR_FORMTXTSHDWCOLOR, XATTR_FORMTXTSHDWXVAL, XATTR_FORMTXTSHDWYVAL
-		};
-		for( USHORT i = 0; i < XATTR_ANZ; )
-			rSet.DisableItem( nXAttr[ i++ ] );
+        rSet.DisableItem(XATTR_FORMTXTSTYLE);
+        rSet.DisableItem(XATTR_FORMTXTADJUST);
+        rSet.DisableItem(XATTR_FORMTXTDISTANCE);
+        rSet.DisableItem(XATTR_FORMTXTSTART);
+        rSet.DisableItem(XATTR_FORMTXTMIRROR);
+        rSet.DisableItem(XATTR_FORMTXTHIDEFORM);
+        rSet.DisableItem(XATTR_FORMTXTOUTLINE);
+        rSet.DisableItem(XATTR_FORMTXTSHADOW);
+        rSet.DisableItem(XATTR_FORMTXTSHDWCOLOR);
+        rSet.DisableItem(XATTR_FORMTXTSHDWXVAL);
+        rSet.DisableItem(XATTR_FORMTXTSHDWYVAL);
 	}
 	else
 	{
 		if ( pDlg )
-			pDlg->SetColorTable(XColorTable::GetStdColorTable());
+			pDlg->SetColorTable(XColorList::GetStdColorList());
 
 		pDrView->GetAttributes( rSet );
 	}
@@ -410,7 +380,7 @@ void SwDrawTextShell::ExecDrawLingu(SfxRequest &rReq)
 	{
         switch(rReq.GetSlot())
 		{
-		case FN_THESAURUS_DLG:
+        case SID_THESAURUS:
             pOLV->StartThesaurus();
 			break;
 
@@ -525,11 +495,11 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
                 case SID_INSERT_ZWSP : cIns = CHAR_ZWSP ; break;
                 case SID_INSERT_ZWNBSP: cIns = CHAR_ZWNBSP; break;
             }
-            pOLV->InsertText( String(cIns), TRUE );
+            pOLV->InsertText( String(cIns));
             rReq.Done();
         }
         break;
-        case FN_INSERT_SYMBOL:
+        case SID_CHARMAP:
 	{  // Sonderzeichen einfuegen
             InsertSymbol(rReq);
 			break;
@@ -541,7 +511,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 			const SfxPoolItem* pItem = 0;
                         if(pNewAttrs)
 			{
-                                pNewAttrs->GetItemState(nSlot, FALSE, &pItem );
+                                pNewAttrs->GetItemState(nSlot, sal_False, &pItem );
                          	pOLV->InsertText(((const SfxStringItem *)pItem)->GetValue());
 			}
                         break;
@@ -552,9 +522,9 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
             SdrOutliner * pOutliner = pSdrView->GetTextEditOutliner();
             if(pOutliner)
             {
-                ULONG nParaCount = pOutliner->GetParagraphCount();
+                sal_uLong nParaCount = pOutliner->GetParagraphCount();
                 if (nParaCount > 0)
-                    pOLV->SelectRange(0L, USHORT(nParaCount) );
+                    pOLV->SelectRange(0L, sal_uInt16(nParaCount) );
             }
 		}
 		break;
@@ -562,24 +532,23 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 		case FN_FORMAT_RESET:	// delete hard text attributes
 		{
             pOLV->RemoveAttribsKeepLanguages( true );
-            pOLV->GetEditView().GetEditEngine()->RemoveFields(TRUE);
+            pOLV->GetEditView().GetEditEngine()->RemoveFields(sal_True);
 			rReq.Done();
 		}
 		break;
 
-		case FN_ESCAPE:
-			if (pSdrView->IsTextEdit())
-			{
-				// Shellwechsel!
-				rSh.EndTextEdit();
+        case FN_ESCAPE:
+            if (pSdrView->IsTextEdit())
+            {
+                // Shellwechsel!
+                rSh.EndTextEdit();
                 SwView& rTempView = rSh.GetView();
                 rTempView.ExitDraw();
-				rSh.Edit();
-                rTempView.AttrChangedNotify(&rSh);
-				return;
-			}
-			break;
-		case FN_DRAWTEXT_ATTR_DLG:
+                rSh.Edit();
+                return;
+            }
+            break;
+        case FN_DRAWTEXT_ATTR_DLG:
 			{
 				SfxItemSet aNewAttr( pSdrView->GetModel()->GetItemPool() );
 				pSdrView->GetAttributes( aNewAttr );
@@ -588,8 +557,8 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 				{
 					SfxAbstractTabDialog *pDlg = pFact->CreateTextTabDialog(
 								&(GetView().GetViewFrame()->GetWindow()),
-								&aNewAttr, RID_SVXDLG_TEXT, pSdrView );
-					USHORT nResult = pDlg->Execute();
+								&aNewAttr, pSdrView );
+					sal_uInt16 nResult = pDlg->Execute();
 
 					if (nResult == RET_OK)
 					{
@@ -602,6 +571,28 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 
 					delete( pDlg );
 				}
+			}
+			break;
+		case SID_TABLE_VERT_NONE:
+		case SID_TABLE_VERT_CENTER:
+		case SID_TABLE_VERT_BOTTOM:
+			{
+				sal_uInt16 nSId = rReq.GetSlot();
+				if (pSdrView->AreObjectsMarked())
+				{
+					SdrTextVertAdjust eTVA = SDRTEXTVERTADJUST_TOP;
+					if (nSId == SID_TABLE_VERT_CENTER)
+						eTVA = SDRTEXTVERTADJUST_CENTER;
+					else if (nSId == SID_TABLE_VERT_BOTTOM)
+						eTVA = SDRTEXTVERTADJUST_BOTTOM;
+
+					SfxItemSet aNewAttr( pSdrView->GetModel()->GetItemPool() );
+					pSdrView->GetAttributes( aNewAttr );
+					aNewAttr.Put(SdrTextVertAdjustItem(eTVA));
+					pSdrView->SetAttributes(aNewAttr);
+					rReq.Done();
+				}
+	                    
 			}
 			break;
 
@@ -631,7 +622,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 			return;
 	}
 
-	GetView().GetViewFrame()->GetBindings().InvalidateAll(FALSE);
+	GetView().GetViewFrame()->GetBindings().InvalidateAll(sal_False);
 
 	if (IsTextEdit() && pOLV->GetOutliner()->IsModified())
 		rSh.SetModified();
@@ -647,31 +638,32 @@ void SwDrawTextShell::ExecUndo(SfxRequest &rReq)
 {
 	if( IsTextEdit() )
 	{
-		BOOL bCallBase = TRUE;
+		sal_Bool bCallBase = sal_True;
 		const SfxItemSet* pArgs = rReq.GetArgs();
 		if( pArgs )
 		{
-			USHORT nId = rReq.GetSlot(), nCnt = 1;
+			sal_uInt16 nId = rReq.GetSlot(), nCnt = 1;
 			const SfxPoolItem* pItem;
 			switch( nId )
 			{
 			case SID_UNDO:
 			case SID_REDO:
-				if( SFX_ITEM_SET == pArgs->GetItemState( nId, FALSE, &pItem ) &&
+				if( SFX_ITEM_SET == pArgs->GetItemState( nId, sal_False, &pItem ) &&
 					1 < (nCnt = ((SfxUInt16Item*)pItem)->GetValue()) )
 				{
 					// then we make by ourself.
-                    SfxUndoManager* pUndoManager = GetUndoManager();
+                    ::svl::IUndoManager* pUndoManager = GetUndoManager();
                     if( pUndoManager )
 					{
 						if( SID_UNDO == nId )
 							while( nCnt-- )
-                                pUndoManager->Undo(0);
+                                pUndoManager->Undo();
 						else
 							while( nCnt-- )
-                                pUndoManager->Redo(0);
+                                pUndoManager->Redo();
 					}
-					bCallBase = FALSE;
+					bCallBase = sal_False;
+					GetView().GetViewFrame()->GetBindings().InvalidateAll(sal_False);
 				}
 				break;
 			}
@@ -697,7 +689,7 @@ void SwDrawTextShell::StateUndo(SfxItemSet &rSet)
 
 	SfxViewFrame *pSfxViewFrame = GetView().GetViewFrame();
 	SfxWhichIter aIter(rSet);
-	USHORT nWhich = aIter.FirstWhich();
+	sal_uInt16 nWhich = aIter.FirstWhich();
 	while( nWhich )
 	{
 		switch ( nWhich )
@@ -705,27 +697,27 @@ void SwDrawTextShell::StateUndo(SfxItemSet &rSet)
 		case SID_GETUNDOSTRINGS:
 		case SID_GETREDOSTRINGS:
 			{
-                SfxUndoManager* pUndoManager = GetUndoManager();
+                ::svl::IUndoManager* pUndoManager = GetUndoManager();
                 if( pUndoManager )
 				{
-					UniString (SfxUndoManager:: *fnGetComment)( USHORT ) const;
+					UniString (::svl::IUndoManager:: *fnGetComment)( size_t, bool const ) const;
 
 					sal_uInt16 nCount;
 					if( SID_GETUNDOSTRINGS == nWhich )
 					{
                         nCount = pUndoManager->GetUndoActionCount();
-						fnGetComment = &SfxUndoManager::GetUndoActionComment;
+						fnGetComment = &::svl::IUndoManager::GetUndoActionComment;
 					}
 					else
 					{
                         nCount = pUndoManager->GetRedoActionCount();
-						fnGetComment = &SfxUndoManager::GetRedoActionComment;
+						fnGetComment = &::svl::IUndoManager::GetRedoActionComment;
 					}
 					if( nCount )
 					{
 						String sList;
 						for( sal_uInt16 n = 0; n < nCount; ++n )
-                            ( sList += (pUndoManager->*fnGetComment)( n ) )
+                            ( sList += (pUndoManager->*fnGetComment)( n, ::svl::IUndoManager::TopLevel ) )
 									+= '\n';
 
 						SfxStringListItem aItem( nWhich );
@@ -755,6 +747,15 @@ void SwDrawTextShell::ExecTransliteration( SfxRequest & rReq )
 
 		switch( rReq.GetSlot() )
 		{
+        case SID_TRANSLITERATE_SENTENCE_CASE:
+            nMode = TransliterationModulesExtra::SENTENCE_CASE;
+            break;
+        case SID_TRANSLITERATE_TITLE_CASE:
+            nMode = TransliterationModulesExtra::TITLE_CASE;
+            break;
+        case SID_TRANSLITERATE_TOGGLE_CASE:
+            nMode = TransliterationModulesExtra::TOGGLE_CASE;
+            break;
 		case SID_TRANSLITERATE_UPPER:
 			nMode = TransliterationModules_LOWERCASE_UPPERCASE;
 			break;
@@ -800,7 +801,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
     const SfxItemSet *pArgs = rReq.GetArgs();
     const SfxPoolItem* pItem = 0;
     if( pArgs )
-        pArgs->GetItemState(GetPool().GetWhich(FN_INSERT_SYMBOL), FALSE, &pItem);
+        pArgs->GetItemState(GetPool().GetWhich(SID_CHARMAP), sal_False, &pItem);
 
     String sSym;
     String sFontName;
@@ -808,55 +809,68 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
     {
         sSym = ((const SfxStringItem*)pItem)->GetValue();
         const SfxPoolItem* pFtItem = NULL;
-        pArgs->GetItemState( GetPool().GetWhich(FN_PARAM_1), FALSE, &pFtItem);
+		pArgs->GetItemState( GetPool().GetWhich(SID_ATTR_SPECIALCHAR), sal_False, &pFtItem);
         const SfxStringItem* pFontItem = PTR_CAST( SfxStringItem, pFtItem );
         if ( pFontItem )
             sFontName = pFontItem->GetValue();
     }
 
     SfxItemSet aSet(pOLV->GetAttribs());
-    USHORT nScript = pOLV->GetSelectedScriptType();
+    sal_uInt16 nScript = pOLV->GetSelectedScriptType();
     SvxFontItem aSetDlgFont( RES_CHRATR_FONT );
     {
         SvxScriptSetItem aSetItem( SID_ATTR_CHAR_FONT, *aSet.GetPool() );
-        aSetItem.GetItemSet().Put( aSet, FALSE );
+        aSetItem.GetItemSet().Put( aSet, sal_False );
         const SfxPoolItem* pI = aSetItem.GetItemOfScript( nScript );
         if( pI )
             aSetDlgFont = *(SvxFontItem*)pI;
         else
             aSetDlgFont = (SvxFontItem&)aSet.Get( GetWhichOfScript(
                         SID_ATTR_CHAR_FONT,
-                        GetI18NScriptTypeOfLanguage( (USHORT)GetAppLanguage() ) ));
+                        GetI18NScriptTypeOfLanguage( (sal_uInt16)GetAppLanguage() ) ));
+		if (!sFontName.Len())
+			sFontName = aSetDlgFont.GetFamilyName();
     }
-
 
     Font aFont(sFontName, Size(1,1));
     if(!sSym.Len())
     {
-		SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
-        DBG_ASSERT(pFact, "Dialogdiet fail!");
-        AbstractSvxCharacterMap* pDlg = pFact->CreateSvxCharacterMap( NULL, RID_SVXDLG_CHARMAP, FALSE );
-        DBG_ASSERT(pDlg, "Dialogdiet fail!");
+        SfxAllItemSet aAllSet( GetPool() );
+        aAllSet.Put( SfxBoolItem( FN_PARAM_1, sal_False ) );
 
-		Font aDlgFont( pDlg->GetCharFont() );
-        SwViewOption aOpt(*GetShell().GetViewOptions());
+        SwViewOption aOpt(*rView.GetWrtShell().GetViewOptions());
         String sSymbolFont = aOpt.GetSymbolFont();
-        if(sSymbolFont.Len())
-            aDlgFont.SetName(sSymbolFont);
+        if( sSymbolFont.Len() )
+            aAllSet.Put( SfxStringItem( SID_FONT_NAME, sSymbolFont ) );
         else
-            aDlgFont.SetName( aSetDlgFont.GetFamilyName() );
+            aAllSet.Put( SfxStringItem( SID_FONT_NAME, aSetDlgFont.GetFamilyName() ) );
 
         // Wenn Zeichen selektiert ist kann es angezeigt werden
-        pDlg->SetFont( aDlgFont );
-        USHORT nResult = pDlg->Execute();
+		SvxAbstractDialogFactory* pFact = SvxAbstractDialogFactory::Create();
+        SfxAbstractDialog* pDlg = pFact->CreateSfxDialog( rView.GetWindow(), aAllSet,
+			rView.GetViewFrame()->GetFrame().GetFrameInterface(), RID_SVXDLG_CHARMAP );
+        sal_uInt16 nResult = pDlg->Execute();
         if( nResult == RET_OK )
         {
-            aFont = pDlg->GetCharFont();
-            sSym  = pDlg->GetCharacters();
-            aOpt.SetSymbolFont(aFont.GetName());
-            SW_MOD()->ApplyUsrPref(aOpt, &GetView());
+            SFX_ITEMSET_ARG( pDlg->GetOutputItemSet(), pCItem, SfxStringItem, SID_CHARMAP, sal_False );
+			SFX_ITEMSET_ARG( pDlg->GetOutputItemSet(), pFontItem, SvxFontItem, SID_ATTR_CHAR_FONT, sal_False );
+			if ( pFontItem )
+			{
+				aFont.SetName( pFontItem->GetFamilyName() );
+				aFont.SetStyleName( pFontItem->GetStyleName() );
+				aFont.SetCharSet( pFontItem->GetCharSet() );
+				aFont.SetPitch( pFontItem->GetPitch() );
+			}
+
+            if ( pCItem )
+			{
+                sSym  = pCItem->GetValue();
+				aOpt.SetSymbolFont(aFont.GetName());
+				SW_MOD()->ApplyUsrPref(aOpt, &rView);
+			}
         }
-        delete( pDlg );
+
+		delete( pDlg );
     }
 
     if( sSym.Len() )
@@ -864,7 +878,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
 		// nicht flackern
 		pOLV->HideCursor();
         SdrOutliner * pOutliner = pSdrView->GetTextEditOutliner();
-        pOutliner->SetUpdateMode(FALSE);
+        pOutliner->SetUpdateMode(sal_False);
 
 		SfxItemSet aOldSet( pOLV->GetAttribs() );
 		SfxItemSet aFontSet( *aOldSet.GetPool(),
@@ -875,7 +889,7 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
 		aFontSet.Set( aOldSet );
 
 		// String einfuegen
-        pOLV->InsertText( sSym, TRUE );
+        pOLV->InsertText( sSym );
 
 		// attributieren (Font setzen)
         SfxItemSet aFontAttribSet( *aFontSet.GetPool(), aFontSet.GetRanges() );
@@ -902,19 +916,19 @@ void SwDrawTextShell::InsertSymbol(SfxRequest& rReq)
 		pOLV->SetAttribs( aFontSet );
 
 		// ab jetzt wieder anzeigen
-		pOutliner->SetUpdateMode(TRUE);
+		pOutliner->SetUpdateMode(sal_True);
 		pOLV->ShowCursor();
 
-        rReq.AppendItem( SfxStringItem( GetPool().GetWhich(FN_INSERT_SYMBOL), sSym ) );
+		rReq.AppendItem( SfxStringItem( GetPool().GetWhich(SID_CHARMAP), sSym ) );
         if(aFont.GetName().Len())
-            rReq.AppendItem( SfxStringItem( FN_PARAM_1, aFont.GetName() ) );
+			rReq.AppendItem( SfxStringItem( SID_ATTR_SPECIALCHAR, aFont.GetName() ) );
         rReq.Done();
     }
 }
 /*-- 22.10.2003 14:26:32---------------------------------------------------
 
   -----------------------------------------------------------------------*/
-SfxUndoManager* SwDrawTextShell::GetUndoManager()
+::svl::IUndoManager* SwDrawTextShell::GetUndoManager()
 {
     SwWrtShell &rSh = GetShell();
     pSdrView = rSh.GetDrawView();
@@ -923,5 +937,53 @@ SfxUndoManager* SwDrawTextShell::GetUndoManager()
     return &pOutliner->GetUndoManager();
 }
 
+void SwDrawTextShell::GetStatePropPanelAttr(SfxItemSet &rSet)
+{
+	SfxWhichIter	aIter( rSet );
+	sal_uInt16 nWhich = aIter.FirstWhich();
+	
+	SwWrtShell &rSh = GetShell();
+	pSdrView = rSh.GetDrawView();
 
+	SfxItemSet aAttrs( pSdrView->GetModel()->GetItemPool() );
+	pSdrView->GetAttributes( aAttrs );
+	
+	while ( nWhich )
+	{
+		sal_uInt16 nSlotId = SfxItemPool::IsWhich(nWhich)
+			? GetPool().GetSlotId(nWhich)
+			: nWhich; 
+		switch ( nSlotId )
+		{
+			case SID_TABLE_VERT_NONE:
+			case SID_TABLE_VERT_CENTER:
+			case SID_TABLE_VERT_BOTTOM:
+				sal_Bool bContour = sal_False;
+				SfxItemState eConState = aAttrs.GetItemState( SDRATTR_TEXT_CONTOURFRAME );
+				if( eConState != SFX_ITEM_DONTCARE )
+				{
+					bContour = ( ( const SdrTextContourFrameItem& )aAttrs.Get( SDRATTR_TEXT_CONTOURFRAME ) ).GetValue();
+				}
+				if (bContour) break;
 
+				SfxItemState eVState = aAttrs.GetItemState( SDRATTR_TEXT_VERTADJUST );
+				//SfxItemState eHState = aAttrs.GetItemState( SDRATTR_TEXT_HORZADJUST );
+
+				//if(SFX_ITEM_DONTCARE != eVState && SFX_ITEM_DONTCARE != eHState)
+				if(SFX_ITEM_DONTCARE != eVState)
+				{					
+					SdrTextVertAdjust eTVA = (SdrTextVertAdjust)((const SdrTextVertAdjustItem&)aAttrs.Get(SDRATTR_TEXT_VERTADJUST)).GetValue();
+					sal_Bool bSet = nSlotId == SID_TABLE_VERT_NONE && eTVA == SDRTEXTVERTADJUST_TOP||
+                            nSlotId == SID_TABLE_VERT_CENTER && eTVA == SDRTEXTVERTADJUST_CENTER ||
+                            nSlotId == SID_TABLE_VERT_BOTTOM && eTVA == SDRTEXTVERTADJUST_BOTTOM;
+					rSet.Put(SfxBoolItem(nSlotId, bSet));
+				}
+				else 
+				{
+					rSet.Put(SfxBoolItem(nSlotId, sal_False));
+				}
+				break;	
+		}
+		nWhich = aIter.NextWhich();
+	}	
+}

@@ -1,159 +1,109 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Portions of this file are part of the LibreOffice project.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified June 2015 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
+
+ 
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
 
 
 #include <string> // HACK: prevent conflict between STLPORT and Workshop headers
-
 #include <stdlib.h>
 #include <hintids.hxx>
 #include <rtl/logfile.hxx>
 #include <vcl/graph.hxx>
 #include <vcl/inputctx.hxx>
 #include <basic/sbxobj.hxx>
-#include <svtools/eitem.hxx>
-#include <svtools/undoopt.hxx>
-#include <svtools/lingucfg.hxx>
-#include <svtools/printdlg.hxx>
-#include <svtools/useroptions.hxx>
+#include <svl/eitem.hxx>
+#include <unotools/undoopt.hxx>
+#include <unotools/lingucfg.hxx>
+#include <unotools/useroptions.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/request.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/app.hxx>
 #include <svx/ruler.hxx>
-#include <svx/protitem.hxx>
+#include <editeng/protitem.hxx>
 #include <svx/fmshell.hxx>
 #include <svx/extrusionbar.hxx>
 #include <svx/fontworkbar.hxx>
 #include <unotxvw.hxx>
-#ifndef _CMDID_H
 #include <cmdid.h>
-#endif
-#ifndef _SWHINTS_HXX
 #include <swhints.hxx>
-#endif
 #include <swmodule.hxx>
 #include <inputwin.hxx>
 #include <chartins.hxx>
 #include <uivwimp.hxx>
 #include <uitool.hxx>
 #include <edtwin.hxx>
-#ifndef _TEXTSH_HXX
 #include <textsh.hxx>
-#endif
-#ifndef _LISTSH_HXX
 #include <listsh.hxx>
-#endif
-#ifndef _TABSH_HXX
 #include <tabsh.hxx>
-#endif
-#ifndef _GRFSH_HXX
 #include <grfsh.hxx>
-#endif
-#ifndef _MEDIASH_HXX
 #include <mediash.hxx>
-#endif
-#ifndef _DOCSH_HXX
 #include <docsh.hxx>
-#endif
 #include <frmsh.hxx>
-#ifndef _OLESH_HXX
 #include <olesh.hxx>
-#endif
-#ifndef _DRAWSH_HXX
 #include <drawsh.hxx>
-#endif
-#ifndef _DRAWBASE_HXX
 #include <drawbase.hxx>
-#endif
-#ifndef _DRFORMSH_HXX
 #include <drformsh.hxx>
-#endif
-#ifndef _DRWTXTSH_HXX
 #include <drwtxtsh.hxx>
-#endif
-#ifndef _BEZIERSH_HXX
 #include <beziersh.hxx>
-#endif
-#ifndef _GLOBDOC_HXX
 #include <globdoc.hxx>
-#endif
 #include <scroll.hxx>
-#ifndef _GLOBDOC_HXX
-#include <globdoc.hxx>
-#endif
 #include <navipi.hxx>
 #include <gloshdl.hxx>
 #include <usrpref.hxx>
-#ifndef _SRCVIEW_HXX
 #include <srcview.hxx>
-#endif
 #include <doc.hxx>
-#ifndef _WDOCSH_HXX
+#include <IDocumentUndoRedo.hxx>
+#include <drawdoc.hxx>
 #include <wdocsh.hxx>
-#endif
-#ifndef _WVIEW_HXX
 #include <wview.hxx>
-#endif
 #include <workctrl.hxx>
 #include <wrtsh.hxx>
-#ifndef _BARCFG_HXX
 #include <barcfg.hxx>
-#endif
-#ifndef _PVIEW_HXX
 #include <pview.hxx>
-#endif
 #include <swdtflvr.hxx>
-#ifndef _VIEW_HRC
 #include <view.hrc>
-#endif
-#ifndef _GLOBDOC_HRC
 #include <globdoc.hrc>
-#endif
-#ifndef _FRMUI_HRC
 #include <frmui.hrc>
-#endif
 #include <cfgitems.hxx>
 #include <prtopt.hxx>
-#include <swprtopt.hxx>
 #include <linguistic/lngprops.hxx>
-#include <svx/unolingu.hxx>
+#include <editeng/unolingu.hxx>
 //#include <sfx2/app.hxx>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
 #include <com/sun/star/scanner/ScannerContext.hpp>
 #include <com/sun/star/scanner/XScannerManager.hpp>
-#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
-#endif
 #include <rtl/ustrbuf.hxx>
 #include <xmloff/xmluconv.hxx>
 
@@ -167,10 +117,6 @@
 
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
-
-#ifndef _SVTOOLS_CJKOPTIONS_HXX
-#include <svtools/cjkoptions.hxx>
-#endif
 
 #ifndef NO_LIBO_4_4_CALC_LAYOUT_FIX
 #include "docary.hxx"
@@ -188,13 +134,8 @@ using ::rtl::OUStringBuffer;
 
 extern sal_Bool bNoInterrupt;		// in mainwn.cxx
 
-#define SWVIEWFLAGS ( SFX_VIEW_MAXIMIZE_FIRST|			\
-					  SFX_VIEW_OBJECTSIZE_EMBEDDED| 	\
-					  SFX_VIEW_CAN_PRINT| 				\
+#define SWVIEWFLAGS ( SFX_VIEW_CAN_PRINT| 				\
 					  SFX_VIEW_HAS_PRINTOPTIONS)
-
-//MA 06. Nov. 95: Each raus in Absprache mit MI wg. Bug 21523
-//					  SFX_VIEW_OPTIMIZE_EACH|
 
 /*--------------------------------------------------------------------
 	Beschreibung:	Statics
@@ -235,7 +176,7 @@ inline SfxDispatcher &SwView::GetDispatcher()
 void SwView::ImpSetVerb( int nSelType )
 {
 	sal_Bool bResetVerbs = bVerbsActive;
-    if ( !GetViewFrame()->GetFrame()->IsInPlace() &&
+    if ( !GetViewFrame()->GetFrame().IsInPlace() &&
 		 (nsSelectionType::SEL_OLE|nsSelectionType::SEL_GRF) & nSelType )
 	{
 		if ( !pWrtShell->IsSelObjProtected(FLYPROTECT_CONTENT) )
@@ -250,7 +191,7 @@ void SwView::ImpSetVerb( int nSelType )
 	}
 	if ( bResetVerbs )
 	{
-		SetVerbs( 0 );
+		SetVerbs( Sequence< embed::VerbDescriptor >() );
 		bVerbsActive = sal_False;
 	}
 }
@@ -278,10 +219,17 @@ void SwView::GotFocus() const
 		SwAnnotationShell* pAsAnnotationShell = PTR_CAST( SwAnnotationShell, pTopShell );
 		if ( pAsAnnotationShell )
 		{
-			mpPostItMgr->SetActivePostIt(0);
+            mpPostItMgr->SetActiveSidebarWin(0);
 			const_cast< SwView* >( this )->AttrChangedNotify( pWrtShell );
 		}
 	}
+    if( GetWrtShellPtr() )
+    {
+        SwWrtShell& rWrtShell = GetWrtShell();
+        rWrtShell.GetDoc()->SetCurrentViewShell( GetWrtShellPtr() );
+        rWrtShell.GetDoc()->set( IDocumentSettingAccess::BROWSE_MODE,
+                                 rWrtShell.GetViewOptions()->getBrowseMode() );
+    }
 }
 
 /*--------------------------------------------------------------------
@@ -357,7 +305,7 @@ void SwView::SelectShell()
 			rDispatcher.Flush();		// alle gecachten Shells wirklich loeschen
 
 			//Zur alten Selektion merken welche Toolbar sichtbar war
-            USHORT nId = static_cast< USHORT >( rDispatcher.GetObjectBarId( SFX_OBJECTBAR_OBJECT ));
+            sal_uInt16 nId = static_cast< sal_uInt16 >( rDispatcher.GetObjectBarId( SFX_OBJECTBAR_OBJECT ));
 			if ( nId )
 				pBarCfg->SetTopToolbar( nSelectionType, nId );
 
@@ -383,7 +331,7 @@ void SwView::SelectShell()
 			}
 		}
 
-		BOOL bInitFormShell = sal_False;
+		sal_Bool bInitFormShell = sal_False;
 		if (!pFormShell)
 		{
 			bInitFormShell = sal_True;
@@ -392,7 +340,7 @@ void SwView::SelectShell()
 			StartListening(*pFormShell);
 		}
 
-		BOOL bSetExtInpCntxt = sal_False;
+		sal_Bool bSetExtInpCntxt = sal_False;
 		nSelectionType = nNewSelectionType;
 		ShellModes eShellMode;
 
@@ -602,30 +550,13 @@ IMPL_LINK( SwView, AttrChangedNotify, SwWrtShell *, EMPTYARG )
 
 	}
 
-	//#i6193#, change ui if cursor is at a SwPostItField
-	if (mpPostItMgr)
-	{
-        // --> OD 2008-06-19 #i90516#
-        // only perform the code that is needed to determine, if at the
-        // actual cursor position is a post-it field
-//        SwRect aFldRect;
-//        SwContentAtPos aCntntAtPos( SwContentAtPos::SW_FIELD);
-//        if( pWrtShell->GetContentAtPos( pWrtShell->GetCrsrDocPos(), aCntntAtPos, FALSE, &aFldRect ) )
-//        {
-//            const SwField* pFld = aCntntAtPos.aFnd.pFld;
-//            if (pFld->Which()== RES_POSTITFLD)
-//            {
-//                mpPostItMgr->SetShadowState(reinterpret_cast<const SwPostItField*>(pFld));
-//            }
-//            else
-//                mpPostItMgr->SetShadowState(0);
-//        }
-//        else
-//            mpPostItMgr->SetShadowState(0);
+    //#i6193#, change ui if cursor is at a SwPostItField
+    if (mpPostItMgr)
+    {
         mpPostItMgr->SetShadowState( pWrtShell->GetPostItFieldAtCursor() );
-	}
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -650,8 +581,8 @@ IMPL_LINK( SwView, TimeoutHdl, Timer *, EMPTYARG )
 	_CheckReadonlyState();
 	_CheckReadonlySelection();
 
-    BOOL bOldUndo = pWrtShell->DoesUndo();
-    pWrtShell->DoUndo( FALSE );
+    sal_Bool bOldUndo = pWrtShell->DoesUndo();
+    pWrtShell->DoUndo( sal_False );
 	SelectShell();
     pWrtShell->DoUndo( bOldUndo );
 	bAttrChgNotified = sal_False;
@@ -680,9 +611,10 @@ void SwView::_CheckReadonlyState()
 			SID_DELETE, 				FN_BACKSPACE,				FN_SHIFT_BACKSPACE,
 			SID_UNDO,
 			SID_REDO,					SID_REPEAT,					SID_PASTE,
-			FN_PASTESPECIAL,			SID_SBA_BRW_INSERT,
+            SID_PASTE_UNFORMATTED,
+            SID_PASTE_SPECIAL,            SID_SBA_BRW_INSERT,
 			SID_BACKGROUND_COLOR,       FN_INSERT_BOOKMARK,
-			FN_INSERT_SYMBOL,			FN_INSERT_SOFT_HYPHEN,
+			SID_CHARMAP,				FN_INSERT_SOFT_HYPHEN,
 			FN_INSERT_HARDHYPHEN,		FN_INSERT_HARD_SPACE,		FN_INSERT_BREAK,
 			FN_INSERT_LINEBREAK,		FN_INSERT_COLUMN_BREAK,		FN_INSERT_BREAK_DLG,
 			FN_DELETE_SENT,				FN_DELETE_BACK_SENT,		FN_DELETE_WORD,
@@ -806,9 +738,9 @@ void SwView::_CheckReadonlySelection()
 
 SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	: SfxViewShell( _pFrame, SWVIEWFLAGS ),
-
 	aPageStr( SW_RES( STR_PAGE )),
     nNewPage(USHRT_MAX),
+	nOldPageNum(0),
     pNumRuleNodeFromDoc(0), // #i23726#
 	pEditWin( new SwEditWin( &_pFrame->GetWindow(), *this ) ),
 	pWrtShell(0),
@@ -816,7 +748,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	pFormShell(0),
 	pHScrollbar(0),
 	pVScrollbar(0),
-    pScrollFill(new ScrollBarBox( &_pFrame->GetWindow(), _pFrame->GetFrame()->GetParentFrame() ? 0 : WB_SIZEABLE )),
+    pScrollFill(new ScrollBarBox( &_pFrame->GetWindow(), _pFrame->GetFrame().GetParentFrame() ? 0 : WB_SIZEABLE )),
     pHRuler( new SvxRuler(&GetViewFrame()->GetWindow(), pEditWin,
 					SVXRULER_SUPPORT_TABS |
 					SVXRULER_SUPPORT_PARAGRAPH_MARGINS |
@@ -846,9 +778,10 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
     nLastPasteDestination( 0xFFFF ),
     nLeftBorderDistance( 0 ),
     nRightBorderDistance( 0 ),
-    bInMailMerge(FALSE),
-    bInDtor(FALSE),
-    bOldShellWasPagePreView(FALSE)
+    bInMailMerge(sal_False),
+    bInDtor(sal_False),
+    bOldShellWasPagePreView(sal_False),
+    bIsPreviewDoubleClick(sal_False)
 {
     // OD 18.12.2002 #103492# - According to discussion with MBA and further
     // investigations, no old SfxViewShell will be set as parameter <pOldSh>,
@@ -866,8 +799,8 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 
 	bShowAtResize = bDrawSelMode = bDocSzUpdated = sal_True;
 
-    _CreateScrollbar( TRUE );
-    _CreateScrollbar( FALSE );
+    _CreateScrollbar( sal_True );
+    _CreateScrollbar( sal_False );
 
 	pViewImpl = new SwView_Impl(this);
 	SetName(C2S("View"));
@@ -876,7 +809,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	aTimer.SetTimeout( 120 );
 
 	SwDocShell* pDocSh = PTR_CAST( SwDocShell, _pFrame->GetObjectShell() );
-	BOOL bOldModifyFlag = pDocSh->IsEnableSetModified();
+	sal_Bool bOldModifyFlag = pDocSh->IsEnableSetModified();
     if(bOldModifyFlag)
         pDocSh->EnableSetModified( sal_False );
 	ASSERT( pDocSh, "View ohne DocShell." );
@@ -887,57 +820,52 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 
     //! get lingu options without loading lingu DLL
     SvtLinguOptions aLinguOpt;
-
     SvtLinguConfig().GetOptions( aLinguOpt );
-
     aUsrPref.SetOnlineSpell( aLinguOpt.bIsSpellAuto );
 
-	sal_Bool bOldShellWasSrcView = FALSE;
+	sal_Bool bOldShellWasSrcView = sal_False;
 
     // OD 18.12.2002 #103492# - determine, if there is an existing view for
     // document
     SfxViewShell* pExistingSh = 0;
     if ( pOldSh )
+    {
         pExistingSh = pOldSh;
-    else
-    {
-        SfxViewFrame *pF = SfxViewFrame::GetFirst( pDocSh );
-        if( pF == _pFrame )
-            pF = SfxViewFrame::GetNext( *pF, pDocSh );
-        if( pF )
-            pExistingSh = pF->GetViewShell();
+        // determine type of existing view
+        if( pExistingSh->IsA( TYPE( SwPagePreView ) ) )
+        {
+            sSwViewData = ((SwPagePreView*)pExistingSh)->GetPrevSwViewData();
+            sNewCrsrPos = ((SwPagePreView*)pExistingSh)->GetNewCrsrPos();
+            nNewPage = ((SwPagePreView*)pExistingSh)->GetNewPage();
+            bOldShellWasPagePreView = sal_True;
+            bIsPreviewDoubleClick = sNewCrsrPos.Len() > 0 || nNewPage != USHRT_MAX;
+        }
+        else if( pExistingSh->IsA( TYPE( SwSrcView ) ) )
+            bOldShellWasSrcView = sal_True;
     }
-
-    // determine type of existing view
-    if( pExistingSh &&
-        pExistingSh->IsA( TYPE( SwPagePreView ) ) )
-    {
-        sSwViewData = ((SwPagePreView*)pExistingSh)->GetPrevSwViewData();
-        sNewCrsrPos = ((SwPagePreView*)pExistingSh)->GetNewCrsrPos();
-        nNewPage = ((SwPagePreView*)pExistingSh)->GetNewPage();
-        bOldShellWasPagePreView = TRUE;
-    }
-    else if( pExistingSh &&
-             pExistingSh->IsA( TYPE( SwSrcView ) ) )
-        bOldShellWasSrcView = TRUE;
 
 	RTL_LOGFILE_CONTEXT_TRACE( aLog, "before create WrtShell" );
     if(PTR_CAST( SwView, pExistingSh))
 	{
         pWrtShell = new SwWrtShell( *((SwView*)pExistingSh)->pWrtShell,
 									pEditWin, *this);
-//MA: Das kann doch nur zu einem GPF fuehren!
-//		nSelectionType = ((SwView*)pOldSh)->nSelectionType;
+	}
+	else if( dynamic_cast<SwWrtShell*>( pDocSh->GetDoc()->GetCurrentViewShell() ) )
+	{
+		pWrtShell = new SwWrtShell( *(SwWrtShell*)pDocSh->GetDoc()->GetCurrentViewShell(),
+									pEditWin, *this);
 	}
 	else
 	{
 		SwDoc& rDoc = *((SwDocShell*)pDocSh)->GetDoc();
 
         if( !bOldShellWasSrcView && pWebDShell && !bOldShellWasPagePreView )
-			rDoc.set(IDocumentSettingAccess::BROWSE_MODE, true);
+			aUsrPref.setBrowseMode( sal_True );
+        else if( rDoc.IsLoaded() )
+            aUsrPref.setBrowseMode( rDoc.get(IDocumentSettingAccess::BROWSE_MODE) );
 
 		//Fuer den BrowseMode wollen wir keinen Factor uebernehmen.
-		if( rDoc.get(IDocumentSettingAccess::BROWSE_MODE) && aUsrPref.GetZoomType() != SVX_ZOOM_PERCENT )
+		if( aUsrPref.getBrowseMode() && aUsrPref.GetZoomType() != SVX_ZOOM_PERCENT )
 		{
 			aUsrPref.SetZoomType( SVX_ZOOM_PERCENT );
 			aUsrPref.SetZoom( 100 );
@@ -988,10 +916,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	if( SFX_CREATE_MODE_EMBEDDED != pDocSh->GetCreateMode() )
 		aBrwsBorder = GetMargin();
 
-	if( _pFrame->GetFrameType() & SFXFRAME_INTERNAL )
-		pWrtShell->SetFrameView( aBrwsBorder );
-	else
-		pWrtShell->SetBrowseBorder( aBrwsBorder );
+	pWrtShell->SetBrowseBorder( aBrwsBorder );
 
 	// Im CTOR duerfen keine Shell wechsel erfolgen, die muessen ueber
 	// den Timer "zwischen gespeichert" werden. Sonst raeumt der SFX
@@ -1003,14 +928,14 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
     pVRuler->SetActive( sal_True );
 
 	SfxViewFrame* pViewFrame = GetViewFrame();
-	if( pViewFrame->GetFrame()->GetParentFrame())
+	if( pViewFrame->GetFrame().GetParentFrame())
 	{
         aUsrPref.SetViewHRuler(sal_False);
         aUsrPref.SetViewVRuler(sal_False);
 	}
 
-    StartListening( *pViewFrame, TRUE );
-    StartListening( *pDocSh, TRUE );
+    StartListening( *pViewFrame, sal_True );
+    StartListening( *pDocSh, sal_True );
 
 	// Vom HLineal den ZOOM-Faktor einstellen
     Fraction aZoomFract( aUsrPref.GetZoom(), 100 );
@@ -1018,46 +943,9 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
     pVRuler->SetZoom( aZoomFract );
     pHRuler->SetDoubleClickHdl(LINK( this, SwView, ExecRulerClick ));
     FieldUnit eMetric = pUsrPref->GetHScrollMetric();
-
-    BOOL bApplyCharUnit = pUsrPref->IsApplyCharUnit();
-    SvtCJKOptions aCJKOptions;
-    if ( aCJKOptions.IsAsianTypographyEnabled() )
-    {
-        if ( bApplyCharUnit )
-            eMetric = FUNIT_CHAR;
-        else
-        {
-            if ( eMetric == FUNIT_CHAR )
-                eMetric = FUNIT_CM;
-        }
-    }
-    else
-    {
-        if ( eMetric == FUNIT_CHAR )
-            eMetric = FUNIT_INCH;
-    }
     pHRuler->SetUnit( eMetric );
-
     eMetric = pUsrPref->GetVScrollMetric();
-    if ( aCJKOptions.IsAsianTypographyEnabled() )
-    {
-        if ( bApplyCharUnit )
-            eMetric = FUNIT_LINE;
-        else
-        {
-            if ( eMetric == FUNIT_LINE )
-                eMetric = FUNIT_CM;
-        }
-    }
-    else
-    {
-        if ( eMetric == FUNIT_LINE )
-            eMetric = FUNIT_INCH;
-    }
     pVRuler->SetUnit( eMetric );
-
-        pHRuler->SetCharWidth( 371 );  // default character width
-        pVRuler->SetLineHeight( 551 );  // default line height
 
 	// DocShell setzen
 	pDocSh->SetView( this );
@@ -1080,12 +968,12 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
         !pDocSh->GetVisArea(ASPECT_CONTENT).IsEmpty() )
         SetVisArea( pDocSh->GetVisArea(ASPECT_CONTENT),sal_False);
 
-    SwEditShell::SetUndoActionCount(
-		static_cast< USHORT >( SW_MOD()->GetUndoOptions().GetUndoCount() ) );
-	pWrtShell->DoUndo( 0 != SwEditShell::GetUndoActionCount() );
+    pWrtShell->DoUndo( 0 != SW_MOD()->GetUndoOptions().GetUndoCount() );
 
-    const BOOL bBrowse = pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE);
+    const sal_Bool bBrowse = pWrtShell->GetViewOptions()->getBrowseMode();
+    // Disable "multiple window"
 	SetNewWindowAllowed(!bBrowse);
+    // End of disabled multiple window
 
     ShowVScrollbar(aUsrPref.IsViewVScrollBar());
     ShowHScrollbar(aUsrPref.IsViewHScrollBar());
@@ -1099,18 +987,11 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	pWrtShell->SetReadOnlyAvailable( aUsrPref.IsCursorInProtectedArea() );
     pWrtShell->ApplyAccessiblityOptions(SW_MOD()->GetAccessibilityOptions());
 
-	if( UseObjectSize() )
-	{
-        //Damit der Sfx _rechtzeitig weiss_, wie gross die sheet::Border sind.
-		SvBorder aTmp;
-		CalcAndSetBorderPixel( aTmp, sal_True );
-	}
-
 	if( pWrtShell->GetDoc()->IsUpdateExpFld() )
 	{
 #ifndef NO_LIBO_4_4_CALC_LAYOUT_FIX
         const SwFldTypes *pFldTypes = pWrtShell->GetDoc()->GetFldTypes();
-        for (USHORT i = 0; i < pFldTypes->Count(); ++i)
+        for (sal_uInt16 i = 0; i < pFldTypes->Count(); ++i)
         {
             SwFieldType* pFldType = (*pFldTypes)[i];
             SwClientIter aIter(*pFldType);
@@ -1136,7 +1017,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 		SfxRequest aSfxRequest( FN_UPDATE_TOX, SFX_CALLMODE_SLOT, GetPool() );
 		Execute( aSfxRequest );
 		pWrtShell->GetDoc()->SetUpdateTOX( sal_False );		// wieder zurueck setzen
-		pWrtShell->SttEndDoc(TRUE);
+		pWrtShell->SttEndDoc(sal_True);
 	}
 
 	// kein ResetModified, wenn es schone eine View auf dieses Doc gibt
@@ -1148,7 +1029,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	//				so setze das Modified NICHT zurueck.
     // --> OD 2005-02-11 #i38810# - no reset of modified state, if document
     // was already modified.
-    if ( !pWrtShell->GetDoc()->IsUndoNoResetModified() &&
+    if (!pWrtShell->GetDoc()->GetIDocumentUndoRedo().IsUndoNoResetModified() &&
          ( !pFirst || pFirst == pVFrame ) &&
          !bIsDocModified )
     // <--
@@ -1167,11 +1048,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
 	}
 
 
-    /*uno::Reference< awt::XWindow >  aTmpRef;
-	_pFrame->GetFrame()->GetFrameInterface()->setComponent( aTmpRef,
-                                            pViewImpl->GetUNOObject_Impl());*/
-
-   uno::Reference< frame::XFrame >  xFrame = pVFrame->GetFrame()->GetFrameInterface();
+   uno::Reference< frame::XFrame >  xFrame = pVFrame->GetFrame().GetFrameInterface();
 
     uno::Reference< frame::XFrame >  xBeamerFrame = xFrame->findFrame(
             OUString::createFromAscii("_beamer"), frame::FrameSearchFlag::CHILDREN);
@@ -1194,13 +1071,7 @@ SwView::SwView( SfxViewFrame *_pFrame, SfxViewShell* pOldSh )
     if(bOldModifyFlag)
         pDocSh->EnableSetModified( sal_True );
     InvalidateBorder();
-
 }
-
-/*--------------------------------------------------------------------
-	Beschreibung:
- --------------------------------------------------------------------*/
-
 
 SwView::~SwView()
 {
@@ -1209,7 +1080,7 @@ SwView::~SwView()
     mpPostItMgr = 0;
     // <--
 
-    bInDtor = TRUE;
+    bInDtor = sal_True;
     pEditWin->Hide(); // damit kein Paint Aerger machen kann!
 	// An der SwDocShell den Pointer auf die View ruecksetzen
 	SwDocShell* pDocSh = GetDocShell();
@@ -1248,11 +1119,6 @@ SwView::~SwView()
 	delete pEditWin;
     delete pFormatClipboard;
 }
-
-/*--------------------------------------------------------------------
-	Beschreibung:	DocShell rausgrabbeln ueber das FrameWindow
- --------------------------------------------------------------------*/
-
 
 SwDocShell* SwView::GetDocShell()
 {
@@ -1306,8 +1172,8 @@ bool lcl_IsOwnDocument( SwView& rView )
     String Created = xDocProps->getAuthor();
     String Changed = xDocProps->getModifiedBy();
     String FullName = SW_MOD()->GetUserOptions().GetFullName();
-    return FullName.Len() &&
-            (Changed.Len() && Changed == FullName ) ||
+    return (FullName.Len() &&
+            (Changed.Len() && Changed == FullName )) ||
             (!Changed.Len() && Created.Len() && Created == FullName );
 }
 
@@ -1317,7 +1183,7 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
 	if ( rUserData.GetTokenCount() > 1 &&
 		//Fuer Dokumente ohne Layout nur im OnlineLayout oder beim
 		//Forward/Backward
-		 (!pWrtShell->IsNewLayout() || pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) || bBrowse) )
+		 (!pWrtShell->IsNewLayout() || pWrtShell->GetViewOptions()->getBrowseMode() || bBrowse) )
 	{
         //#i43146# go to the last editing position when opening own files
         bool bIsOwnDocument = lcl_IsOwnDocument( *this );
@@ -1340,7 +1206,7 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
 			 nRight = rUserData.GetToken(0, ';', nPos ).ToInt32(),
 			 nBottom= rUserData.GetToken(0, ';', nPos ).ToInt32();
 
-		const long nAdd = pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) ? DOCUMENTBORDER : DOCUMENTBORDER*2;
+		const long nAdd = pWrtShell->GetViewOptions()->getBrowseMode() ? DOCUMENTBORDER : DOCUMENTBORDER*2;
 		if ( nBottom <= (pWrtShell->GetDocSize().Height()+nAdd) )
 		{
 			pWrtShell->EnableSmooth( sal_False );
@@ -1349,7 +1215,7 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
 
 			sal_uInt16 nOff = 0;
 			SvxZoomType eZoom;
-			if( !pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) )
+			if( !pWrtShell->GetViewOptions()->getBrowseMode() )
 				eZoom = (SvxZoomType) (sal_uInt16)rUserData.GetToken(nOff, ';', nPos ).ToInt32();
 			else
 			{
@@ -1403,7 +1269,7 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
                 Point aCrsrPos2( nXTmp, nYTmp );
                 bSelectObj = pWrtShell->IsObjSelectable( aCrsrPos2 );
 
-                pWrtShell->SwCrsrShell::SetCrsr( aCrsrPos2, FALSE );
+                pWrtShell->SwCrsrShell::SetCrsr( aCrsrPos2, sal_False );
                 if( bSelectObj )
                 {
                     pWrtShell->SelectObj( aCrsrPos2 );
@@ -1414,7 +1280,7 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
 			}
             else if(USHRT_MAX != nNewPage)
             {
-                pWrtShell->GotoPage(nNewPage, TRUE);
+                pWrtShell->GotoPage(nNewPage, sal_True);
                 nNewPage = USHRT_MAX;
             }
 
@@ -1435,12 +1301,12 @@ void SwView::ReadUserData( const String &rUserData, sal_Bool bBrowse )
 
 void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >& rSequence, sal_Bool bBrowse )
 {
-    if(GetDocShell()->IsPreview())
+    if(GetDocShell()->IsPreview()||bIsPreviewDoubleClick)
         return;
     //#i43146# go to the last editing position when opening own files
     bool bIsOwnDocument = lcl_IsOwnDocument( *this );
     sal_Int32 nLength = rSequence.getLength();
-    if (nLength && (!pWrtShell->IsNewLayout() || pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) || bBrowse) )
+    if (nLength && (!pWrtShell->IsNewLayout() || pWrtShell->GetViewOptions()->getBrowseMode() || bBrowse) )
     {
 		SET_CURR_SHELL(pWrtShell);
         const beans::PropertyValue *pValue = rSequence.getConstArray();
@@ -1525,17 +1391,12 @@ void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >
                pValue->Value >>= bSelectedFrame;
                bGotIsSelectedFrame = sal_True;
             }
-            else if (pValue->Name.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "IsSelectedFrame" ) ) )
-            {
-                pValue->Value >>= bSelectedFrame;
-                bGotIsSelectedFrame = sal_True;
-            }           
             pValue++;
         }
 		if (bGotVisibleBottom)
 		{
 			Point aCrsrPos( nX, nY );
-			const long nAdd = pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) ? DOCUMENTBORDER : DOCUMENTBORDER*2;
+			const long nAdd = pWrtShell->GetViewOptions()->getBrowseMode() ? DOCUMENTBORDER : DOCUMENTBORDER*2;
 			if (nBottom <= (pWrtShell->GetDocSize().Height()+nAdd) )
 			{
 				pWrtShell->EnableSmooth( sal_False );
@@ -1543,7 +1404,7 @@ void SwView::ReadUserDataSequence ( const uno::Sequence < beans::PropertyValue >
 
 				sal_uInt16 nOff = 0;
 				SvxZoomType eZoom;
-                if ( !pWrtShell->getIDocumentSettingAccess()->get(IDocumentSettingAccess::BROWSE_MODE) )
+                if ( !pWrtShell->GetViewOptions()->getBrowseMode() )
 					eZoom = static_cast < SvxZoomType > ( nZoomType );
 				else
 				{
@@ -1717,8 +1578,8 @@ void SwView::WriteUserDataSequence ( uno::Sequence < beans::PropertyValue >& rSe
 void SwView::ShowCursor( FASTBOOL bOn )
 {
 	//JP 10.10.2001: Bug 90461 - don't scroll the cursor into the visible area
-	BOOL bUnlockView = !pWrtShell->IsViewLocked();
-	pWrtShell->LockView( TRUE );	//lock visible section
+	sal_Bool bUnlockView = !pWrtShell->IsViewLocked();
+	pWrtShell->LockView( sal_True );	//lock visible section
 
 	if( !bOn )
 		pWrtShell->HideCrsr();
@@ -1726,14 +1587,14 @@ void SwView::ShowCursor( FASTBOOL bOn )
 		pWrtShell->ShowCrsr();
 
 	if( bUnlockView )
-		pWrtShell->LockView( FALSE );
+		pWrtShell->LockView( sal_False );
 }
 
 
 
 ErrCode SwView::DoVerb( long nVerb )
 {
-    if ( !GetViewFrame()->GetFrame()->IsInPlace() )
+    if ( !GetViewFrame()->GetFrame().IsInPlace() )
 	{
 		SwWrtShell &rSh = GetWrtShell();
 		const int nSel = rSh.GetSelectionType();
@@ -1798,7 +1659,7 @@ SwGlossaryHdl* SwView::GetGlosHdl()
 
 void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 {
-	BOOL bCallBase = sal_True;
+	sal_Bool bCallBase = sal_True;
 	if ( rHint.ISA(SfxSimpleHint) )
 	{
 		sal_uInt32 nId = ((SfxSimpleHint&)rHint).GetId();
@@ -1839,8 +1700,19 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                         CreateTab();
 					else
                         KillTab();
-					SfxBoolItem aItem( SID_FM_DESIGN_MODE, !GetDocShell()->IsReadOnly());
-					GetDispatcher().Execute( SID_FM_DESIGN_MODE, SFX_CALLMODE_ASYNCHRON,
+					bool bReadonly = GetDocShell()->IsReadOnly();
+                    //#i76332# if document is to be opened in alive-mode then this has to be regarded while switching from readonly-mode to edit-mode
+                    if( !bReadonly )
+                    {
+                        SwDrawDocument * pDrawDoc = 0;
+                        if ( 0 != ( pDrawDoc = dynamic_cast< SwDrawDocument * > (GetDocShell()->GetDoc()->GetDrawModel() ) ) )
+                        {
+				            if( !pDrawDoc->GetOpenInDesignMode() )
+                                break;// don't touch the design mode
+                        }
+                    }
+                    SfxBoolItem aItem( SID_FM_DESIGN_MODE, !bReadonly);
+                    GetDispatcher().Execute( SID_FM_DESIGN_MODE, SFX_CALLMODE_ASYNCHRON,
 												&aItem, 0L );
 				}
 				break;
@@ -1879,7 +1751,7 @@ void SwView::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
 /*-----------------02.12.96 12:36-------------------
 
 --------------------------------------------------*/
-#if defined WIN || defined WNT || defined UNX
+#if defined WNT || defined UNX
 
 void SwView::ScannerEventHdl( const EventObject& /*rEventObject*/ )
 {
@@ -1955,9 +1827,9 @@ sal_uInt16  SwView::PrepareClose( sal_Bool bUI, sal_Bool bForBrowsing )
 
 	// status methods for clipboard.
 	// Status changes now notified from the clipboard.
-BOOL SwView::IsPasteAllowed()
+sal_Bool SwView::IsPasteAllowed()
 {
-	USHORT nPasteDestination = SwTransferable::GetSotDestination( *pWrtShell );
+	sal_uInt16 nPasteDestination = SwTransferable::GetSotDestination( *pWrtShell );
 	if( nLastPasteDestination != nPasteDestination )
 	{
 		TransferableDataHelper aDataHelper(
@@ -1970,7 +1842,7 @@ BOOL SwView::IsPasteAllowed()
 													*pWrtShell, aDataHelper );
 		}
 		else
-			bPasteState = bPasteSpecialState = FALSE;
+			bPasteState = bPasteSpecialState = sal_False;
 
 		if( 0xFFFF == nLastPasteDestination )  // the init value
 			pViewImpl->AddClipboardListener();
@@ -1979,12 +1851,12 @@ BOOL SwView::IsPasteAllowed()
 	return bPasteState;
 }
 
-BOOL SwView::IsPasteSpecialAllowed()
+sal_Bool SwView::IsPasteSpecialAllowed()
 {
     if ( pFormShell && pFormShell->IsActiveControl() )
-        return FALSE;
+        return sal_False;
 
-	USHORT nPasteDestination = SwTransferable::GetSotDestination( *pWrtShell );
+	sal_uInt16 nPasteDestination = SwTransferable::GetSotDestination( *pWrtShell );
 	if( nLastPasteDestination != nPasteDestination )
 	{
 		TransferableDataHelper aDataHelper(
@@ -1997,7 +1869,7 @@ BOOL SwView::IsPasteSpecialAllowed()
 													*pWrtShell, aDataHelper );
 		}
 		else
-			bPasteState = bPasteSpecialState = FALSE;
+			bPasteState = bPasteSpecialState = sal_False;
 
 		if( 0xFFFF == nLastPasteDestination )  // the init value
 			pViewImpl->AddClipboardListener();
@@ -2016,71 +1888,23 @@ void SwView::NotifyDBChanged()
     Beschreibung:   Drucken
  --------------------------------------------------------------------*/
 
-void SwView::MakeOptions( PrintDialog* pDlg, SwPrtOptions& rOpts,
-         BOOL* pPrtProspect, BOOL* pPrtProspect_RTL, BOOL bWeb, SfxPrinter* pPrt, SwPrintData* pData )
-{
-    SwAddPrinterItem* pAddPrinterAttr;
-    if( pPrt && SFX_ITEM_SET == pPrt->GetOptions().GetItemState(
-        FN_PARAM_ADDPRINTER, FALSE, (const SfxPoolItem**)&pAddPrinterAttr ))
-    {
-        pData = pAddPrinterAttr;
-    }
-    else if(!pData)
-    {
-        pData = SW_MOD()->GetPrtOptions(bWeb);
-    }
-    rOpts = *pData;
-    if( pPrtProspect )
-        *pPrtProspect = pData->bPrintProspect;
-    if( pPrtProspect_RTL )
-        *pPrtProspect_RTL = pData->bPrintProspect_RTL;
-    rOpts.aMulti.SetTotalRange( Range( 0, RANGE_MAX ) );
-    rOpts.aMulti.SelectAll( FALSE );
-    rOpts.nCopyCount = 1;
-    rOpts.bCollate = FALSE;
-    rOpts.bPrintSelection = FALSE;
-    rOpts.bJobStartet = FALSE;
-
-    if ( pDlg )
-    {
-        rOpts.nCopyCount = pDlg->GetCopyCount();
-        rOpts.bCollate = pDlg->IsCollateChecked();
-        if ( pDlg->GetCheckedRange() == PRINTDIALOG_SELECTION )
-        {
-            rOpts.aMulti.SelectAll();
-            rOpts.bPrintSelection = TRUE;
-        }
-        else if ( PRINTDIALOG_ALL == pDlg->GetCheckedRange() )
-            rOpts.aMulti.SelectAll();
-        else
-        {
-            rOpts.aMulti = MultiSelection( pDlg->GetRangeText() );
-            rOpts.aMulti.SetTotalRange( Range( 0, RANGE_MAX ) );
-        }
-    }
-    else
-        rOpts.aMulti.SelectAll();
-    rOpts.aMulti.Select( 0, FALSE );
-}
-
 /* -----------------------------28.10.02 13:25--------------------------------
 
  ---------------------------------------------------------------------------*/
-SfxObjectShellRef & SwView::GetTmpSelectionDoc()
+SfxObjectShellLock & SwView::GetTmpSelectionDoc()
 {
     return GetViewImpl()->GetTmpSelectionDoc();
 }
 /* -----------------------------31.10.02 13:25--------------------------------
 
  ---------------------------------------------------------------------------*/
-SfxObjectShellRef & SwView::GetOrCreateTmpSelectionDoc()
+SfxObjectShellLock & SwView::GetOrCreateTmpSelectionDoc()
 {
-    SfxObjectShellRef &rxTmpDoc = GetViewImpl()->GetTmpSelectionDoc();
+    SfxObjectShellLock &rxTmpDoc = GetViewImpl()->GetTmpSelectionDoc();
     if (!rxTmpDoc.Is())
     {
         SwXTextView *pImpl = GetViewImpl()->GetUNOObject_Impl();
-        rxTmpDoc = pImpl->BuildTmpSelectionDoc(
-                    GetViewImpl()->GetEmbeddedObjRef() );
+        rxTmpDoc = pImpl->BuildTmpSelectionDoc();
     }
     return rxTmpDoc;
 }
@@ -2091,3 +1915,15 @@ void SwView::AddTransferable(SwTransferable& rTransferable)
 {
     GetViewImpl()->AddTransferable(rTransferable);
 }
+
+/* --------------------------------------------------*/
+
+namespace sw {
+
+void InitPrintOptionsFromApplication(SwPrintData & o_rData, bool const bWeb)
+{
+    o_rData = *SW_MOD()->GetPrtOptions(bWeb);
+}
+
+} // namespace sw
+

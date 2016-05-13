@@ -1,40 +1,42 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified Demember 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
-#if STLPORT_VERSION>=321
+
 #include <cstdarg>
-#endif
+#include <cstdio>
 
-#include <stdio.h>
-
+#include <unotxdoc.hxx>
 #include <com/sun/star/text/NotePrintMode.hpp>
 #include <sfx2/app.hxx>
 #include <com/sun/star/sdb/CommandType.hpp>
@@ -42,17 +44,13 @@
 #include <com/sun/star/frame/XComponentLoader.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/lang/XEventListener.hpp>
-#ifndef _COM_SUN_STAR_UTIL_iXNUMBERFORMATTER_HPP_
 #include <com/sun/star/util/XNumberFormatter.hpp>
-#endif
 #include <com/sun/star/sdb/XCompletedConnection.hpp>
 #include <com/sun/star/sdb/XCompletedExecution.hpp>
 #include <com/sun/star/container/XChild.hpp>
-#ifndef _COM_SUN_STAR_TEXT_MAILMERGEEVENT_
 #include <com/sun/star/text/MailMergeEvent.hpp>
-#endif
 #include <com/sun/star/frame/XStorable.hpp>
-#include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
+#include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/XFilePicker.hpp>
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
 #include <com/sun/star/uno/XNamingService.hpp>
@@ -64,60 +62,41 @@
 #include <dbconfig.hxx>
 #include <swdbtoolsclient.hxx>
 #include <pagedesc.hxx>
-#ifndef _LSTBOX_HXX //autogen
 #include <vcl/lstbox.hxx>
-#endif
 #include <unotools/tempfile.hxx>
-#include <svtools/pathoptions.hxx>
-#include <svtools/urihelper.hxx>
-#ifndef _SVSTDARR_HXX
+#include <unotools/pathoptions.hxx>
+#include <svl/urihelper.hxx>
 #define _SVSTDARR_STRINGSDTOR
-#include <svtools/svstdarr.hxx>
-#endif
-#include <svtools/zforlist.hxx>
-#include <svtools/zformat.hxx>
-#include <svtools/stritem.hxx>
-#include <svtools/eitem.hxx>
-#include <sfx2/printer.hxx>
+#include <svl/svstdarr.hxx>
+#include <svl/zforlist.hxx>
+#include <svl/zformat.hxx>
+#include <svl/stritem.hxx>
+#include <svl/eitem.hxx>
+#include <vcl/oldprintadaptor.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/progress.hxx>
 #include <sfx2/dispatch.hxx>
-#include <goodies/mailenum.hxx>
+#include <svl/mailenum.hxx>
 #include <cmdid.h>
 #include <swmodule.hxx>
-#ifndef _VIEW_HXX
 #include <view.hxx>
-#endif
-#ifndef _DOCSH_HXX
 #include <docsh.hxx>
-#endif
 #include <edtwin.hxx>
 #include <wrtsh.hxx>
 #include <fldbas.hxx>
 #include <initui.hxx>
 #include <swundo.hxx>
 #include <flddat.hxx>
-#ifndef _MODCFG_HXX
 #include <modcfg.hxx>
-#endif
-#include <swprtopt.hxx>
 #include <shellio.hxx>
 #include <dbui.hxx>
-#ifndef _DBMGR_HXX
 #include <dbmgr.hxx>
-#endif
 #include <doc.hxx>
 #include <swwait.hxx>
 #include <swunohelper.hxx>
-#ifndef _DBUI_HRC
 #include <dbui.hrc>
-#endif
-#ifndef _GLOBALS_HRC
 #include <globals.hrc>
-#endif
-#ifndef _STATSTR_HRC
 #include <statstr.hrc>
-#endif
 #include <mmconfigitem.hxx>
 #include <sfx2/request.hxx>
 #include <hintids.hxx>
@@ -135,11 +114,11 @@
 #include <comphelper/property.hxx>
 #include <mailmergehelper.hxx>
 #include <maildispatcher.hxx>
-#include <svx/htmlcfg.hxx>
+#include <svtools/htmlcfg.hxx>
 #include <i18npool/mslangid.hxx>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
-#include <svx/langitem.hxx>
-#include <svtools/numuno.hxx>
+#include <editeng/langitem.hxx>
+#include <svl/numuno.hxx>
 
 #include <unomailmerge.hxx>
 #include <sfx2/event.hxx>
@@ -159,6 +138,7 @@
 #include <memory>
 #include <vector>
 #include <unomid.h>
+#include <section.hxx>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -315,9 +295,9 @@ void lcl_InitNumberFormatter(SwDSParam& rParam, uno::Reference<XDataSource> xSou
 /* -----------------------------17.07.00 17:04--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL lcl_MoveAbsolute(SwDSParam* pParam, long nAbsPos)
+sal_Bool lcl_MoveAbsolute(SwDSParam* pParam, long nAbsPos)
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
 	try
 	{
 		if(pParam->bScrollable)
@@ -337,7 +317,7 @@ BOOL lcl_MoveAbsolute(SwDSParam* pParam, long nAbsPos)
 /* -----------------------------17.07.00 17:23--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL lcl_GetColumnCnt(SwDSParam* pParam,
+sal_Bool lcl_GetColumnCnt(SwDSParam* pParam,
 	const String& rColumnName, long nLanguage, String& rResult, double* pNumber)
 {
     uno::Reference< XColumnsSupplier > xColsSupp( pParam->xResultSet, UNO_QUERY );
@@ -350,7 +330,7 @@ BOOL lcl_GetColumnCnt(SwDSParam* pParam,
     {
     }
 	if(!xCols.is() || !xCols->hasByName(rColumnName))
-		return FALSE;
+		return sal_False;
 	Any aCol = xCols->getByName(rColumnName);
     uno::Reference< XPropertySet > xColumnProps;
     aCol >>= xColumnProps;
@@ -368,12 +348,12 @@ BOOL lcl_GetColumnCnt(SwDSParam* pParam,
     MsLangId::convertLanguageToLocale( (LanguageType)nLanguage, aFormatData.aLocale );
 
 	rResult = SwNewDBMgr::GetDBField( xColumnProps, aFormatData, pNumber);
-	return TRUE;
+	return sal_True;
 };
 /*--------------------------------------------------------------------
 	Beschreibung: Daten importieren
  --------------------------------------------------------------------*/
-BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
+sal_Bool SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
 {
     SetMergeType( rMergeDesc.nMergeType );
 
@@ -398,11 +378,11 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
 
     if(!aData.sDataSource.getLength() || !aData.sCommand.getLength() || !xResSet.is())
 	{
-		return FALSE;
+		return sal_False;
 	}
 
     pImpl->pMergeData = new SwDSParam(aData, xResSet, aSelection);
-    SwDSParam*  pTemp = FindDSData(aData, FALSE);
+    SwDSParam*  pTemp = FindDSData(aData, sal_False);
 	if(pTemp)
         *pTemp = *pImpl->pMergeData;
 	else
@@ -412,7 +392,7 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
         //DSData and set the correct CommandType
         SwDBData aTempData(aData);
 		aData.nCommandType = -1;
-		pTemp = FindDSData(aData, FALSE);
+		pTemp = FindDSData(aData, sal_False);
 		if(pTemp)
 			*pTemp = *pImpl->pMergeData;
 		else
@@ -443,7 +423,7 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
             pImpl->pMergeData->bEndOfDB = !pImpl->pMergeData->xResultSet->absolute( nPos );
             pImpl->pMergeData->CheckEndOfDB();
             if(pImpl->pMergeData->nSelectionIndex >= pImpl->pMergeData->aSelection.getLength())
-                pImpl->pMergeData->bEndOfDB = TRUE;
+                pImpl->pMergeData->bEndOfDB = sal_True;
 		}
 		else
 		{
@@ -453,7 +433,7 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
 	}
     catch(Exception&)
 	{
-        pImpl->pMergeData->bEndOfDB = TRUE;
+        pImpl->pMergeData->bEndOfDB = sal_True;
         pImpl->pMergeData->CheckEndOfDB();
 		DBG_ERROR("exception in MergeNew()");
 	}
@@ -463,7 +443,7 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
 	lcl_InitNumberFormatter(*pImpl->pMergeData, xSource);
 
     rMergeDesc.rSh.ChgDBData(aData);
-	bInMerge = TRUE;
+	bInMerge = sal_True;
 
 	if (IsInitDBFields())
 	{
@@ -477,90 +457,17 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
 		sDBName += DB_DELIM;
         sDBName += String::CreateFromInt32(aInsertData.nCommandType);
         rMergeDesc.rSh.ChangeDBFields( aDBNames, sDBName);
-		SetInitDBFields(FALSE);
+		SetInitDBFields(sal_False);
 	}
 
-	BOOL bRet = TRUE;
+	sal_Bool bRet = sal_True;
     switch(rMergeDesc.nMergeType)
 	{
 		case DBMGR_MERGE:
             bRet = Merge(&rMergeDesc.rSh);   // Mischen
 			break;
 
-		case DBMGR_MERGE_MAILMERGE: // Serienbrief
-        {
-            SwView& rView = rMergeDesc.rSh.GetView();
-            SfxDispatcher *pDis = rView.GetViewFrame()->GetDispatcher();
-            SfxItemSet aPrintArgs( rView.GetPool(),
-                    SID_SILENT, SID_SILENT, //5528
-                    SID_ASYNCHRON, SID_ASYNCHRON, //5811
-                    SID_PRINT_FIRST_PAGE, SID_PRINT_FIRST_PAGE,  //   5001
-                    SID_PRINT_LAST_PAGE,  SID_PRINT_LAST_PAGE,   //   5002
-                    SID_PRINT_COPIES,     SID_PRINT_COPIES,      //   5003
-                    SID_PRINTER_NAME,     SID_PRINTER_NAME,     //5322
-                    SID_SELECTION,        SID_SELECTION,        //5346
-                    SID_FILE_NAME,        SID_FILE_NAME,         // 5507
-                    SID_PRINT_PAGES,      SID_PRINT_PAGES,      //6589
-                    SID_PRINT_COLLATE,    SID_PRINT_COLLATE,    //6590
-                    FN_QRY_MERGE, FN_QRY_MERGE,
-                    0 );
-            aPrintArgs.Put(SfxBoolItem(FN_QRY_MERGE, TRUE) );
-
-            // !! Currently (Jan-2003) silent is defined by supplying *any*
-            // !! item!!  (Thus according to OS it would be silent even when
-            // !! other items then SID_SILENT would be supplied!)
-            // !! Therefore it has to be the 0 pointer when not silent.
-            if(IsMergeSilent())
-            {
-                aPrintArgs.Put( SfxBoolItem(SID_SILENT, TRUE) );
-                // #i25686# printing should be done asynchronously to prevent dangling offices
-                // when mail merge is called as command line macro
-                // #i52629# aynchronous printing should only be done in silent mode - otherwise
-                // the printer dialog does not come up
-                aPrintArgs.Put( SfxBoolItem( SID_ASYNCHRON, rMergeDesc.bPrintAsync ));
-            }
-            // convert PropertyValues
-            const beans::PropertyValue* pPrintOptions = rMergeDesc.aPrintOptions.getConstArray();
-            for( sal_Int32 nOption = 0; nOption < rMergeDesc.aPrintOptions.getLength(); ++nOption)
-            {
-                if( pPrintOptions[nOption].Name.equalsAscii( "CopyCount" ))
-                {
-                    sal_Int16 nCopies = 0;
-                    if((pPrintOptions[nOption].Value >>= nCopies) && nCopies > 0)
-                        aPrintArgs.Put( SfxInt16Item( SID_PRINT_COPIES, nCopies ));
-                }
-                else if( pPrintOptions[nOption].Name.equalsAscii( "FileName" ))
-                {
-                    ::rtl::OUString sFileName;
-                    if( (pPrintOptions[nOption].Value >>= sFileName) && sFileName.getLength() > 0)
-                        aPrintArgs.Put( SfxStringItem( SID_FILE_NAME, sFileName ));
-                }
-                else if( pPrintOptions[nOption].Name.equalsAscii( "Collate" ))
-                {
-                    sal_Bool bCollate = sal_False;
-                    if( pPrintOptions[nOption].Value >>= bCollate )
-                        aPrintArgs.Put( SfxBoolItem( SID_PRINT_COLLATE, bCollate ));
-                }
-                else if( pPrintOptions[nOption].Name.equalsAscii( "Pages" ))
-                {
-                    ::rtl::OUString sPages;
-                    if( (pPrintOptions[nOption].Value >>= sPages) && sPages.getLength() )
-                        aPrintArgs.Put( SfxStringItem( SID_PRINT_PAGES, sPages ));
-                }
-                else if( pPrintOptions[nOption].Name.equalsAscii( "Wait" ))
-                {
-                    sal_Bool bWait = sal_False;
-                    if( pPrintOptions[nOption].Value >>= bWait )
-                        aPrintArgs.Put( SfxBoolItem( SID_ASYNCHRON, !bWait ));
-                }
-
-            }
-            pDis->Execute( SID_PRINTDOC,
-                                 SFX_CALLMODE_SYNCHRON|SFX_CALLMODE_RECORD,
-                                 aPrintArgs );
-        }
-        break;
-
+        case DBMGR_MERGE_MAILMERGE: // printing merge from 'old' merge dialog or from UNO-component
 		case DBMGR_MERGE_MAILING:
         case DBMGR_MERGE_MAILFILES:
         case DBMGR_MERGE_SINGLE_FILE:
@@ -584,16 +491,16 @@ BOOL SwNewDBMgr::MergeNew(const SwMergeDescriptor& rMergeDesc )
  --------------------------------------------------------------------*/
 
 
-BOOL SwNewDBMgr::Merge(SwWrtShell* pSh)
+sal_Bool SwNewDBMgr::Merge(SwWrtShell* pSh)
 {
 	pSh->StartAllAction();
 
-	pSh->ViewShell::UpdateFlds(TRUE);
+	pSh->ViewShell::UpdateFlds(sal_True);
 	pSh->SetModified();
 
 	pSh->EndAllAction();
 
-	return TRUE;
+	return sal_True;
 }
 
 /*--------------------------------------------------------------------
@@ -606,8 +513,8 @@ void SwNewDBMgr::ImportFromConnection(	SwWrtShell* pSh )
 		{
 			pSh->StartAllAction();
             pSh->StartUndo(UNDO_EMPTY);
-			BOOL bGroupUndo(pSh->DoesGroupUndo());
-			pSh->DoGroupUndo(FALSE);
+			sal_Bool bGroupUndo(pSh->DoesGroupUndo());
+			pSh->DoGroupUndo(sal_False);
 
 			if( pSh->HasSelection() )
 				pSh->DelRight();
@@ -615,12 +522,12 @@ void SwNewDBMgr::ImportFromConnection(	SwWrtShell* pSh )
 			SwWait *pWait = 0;
 
 			{
-				ULONG i = 0;
+				sal_uLong i = 0;
 				do {
 
 					ImportDBEntry(pSh);
 					if( 10 == ++i )
-						pWait = new SwWait( *pSh->GetView().GetDocShell(), TRUE);
+						pWait = new SwWait( *pSh->GetView().GetDocShell(), true );
 
 				} while(ToNextMergeRecord());
 			}
@@ -636,10 +543,10 @@ void SwNewDBMgr::ImportFromConnection(	SwWrtShell* pSh )
 
 --------------------------------------------------*/
 
-String 	lcl_FindColumn(const String& sFormatStr,USHORT  &nUsedPos, BYTE &nSeparator)
+String 	lcl_FindColumn(const String& sFormatStr,sal_uInt16  &nUsedPos, sal_uInt8 &nSeparator)
 {
 	String sReturn;
-	USHORT nLen = sFormatStr.Len();
+	sal_uInt16 nLen = sFormatStr.Len();
 	nSeparator = 0xff;
 	while(nUsedPos < nLen && nSeparator == 0xff)
 	{
@@ -677,13 +584,13 @@ void SwNewDBMgr::ImportDBEntry(SwWrtShell* pSh)
         uno::Reference< XColumnsSupplier > xColsSupp( pImpl->pMergeData->xResultSet, UNO_QUERY );
         uno::Reference<XNameAccess> xCols = xColsSupp->getColumns();
         String sFormatStr;
-		USHORT nFmtLen = sFormatStr.Len();
+		sal_uInt16 nFmtLen = sFormatStr.Len();
 		if( nFmtLen )
 		{
 			const char cSpace = ' ';
 			const char cTab = '\t';
-			USHORT nUsedPos = 0;
-			BYTE	nSeparator;
+			sal_uInt16 nUsedPos = 0;
+			sal_uInt8	nSeparator;
 			String sColumn = lcl_FindColumn(sFormatStr, nUsedPos, nSeparator);
 			while( sColumn.Len() )
 			{
@@ -734,7 +641,7 @@ void SwNewDBMgr::ImportDBEntry(SwWrtShell* pSh)
 				if (i < nLength - 1)
 					sStr += '\t';
 			}
-			pSh->SwEditShell::Insert(sStr);
+            pSh->SwEditShell::Insert2(sStr);
 			pSh->SwFEShell::SplitNode();	// Zeilenvorschub
 		}
 	}
@@ -742,19 +649,20 @@ void SwNewDBMgr::ImportDBEntry(SwWrtShell* pSh)
 /*--------------------------------------------------------------------
 	Beschreibung: Listbox mit Tabellenliste fuellen
  --------------------------------------------------------------------*/
-BOOL SwNewDBMgr::GetTableNames(ListBox* pListBox, const String& rDBName)
+sal_Bool SwNewDBMgr::GetTableNames(ListBox* pListBox, const String& rDBName)
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
     String sOldTableName(pListBox->GetSelectEntry());
 	pListBox->Clear();
-    SwDSParam* pParam = FindDSConnection(rDBName, FALSE);
+    SwDSParam* pParam = FindDSConnection(rDBName, sal_False);
     uno::Reference< XConnection> xConnection;
     if(pParam && pParam->xConnection.is())
         xConnection = pParam->xConnection;
     else
     {
         rtl::OUString sDBName(rDBName);
-        xConnection = RegisterConnection( sDBName );
+        if ( sDBName.getLength() )
+            xConnection = RegisterConnection( sDBName );
     }
 	if(xConnection.is())
 	{
@@ -766,7 +674,7 @@ BOOL SwNewDBMgr::GetTableNames(ListBox* pListBox, const String& rDBName)
             const rtl::OUString* pTbls = aTbls.getConstArray();
 			for(long i = 0; i < aTbls.getLength(); i++)
             {
-                USHORT nEntry = pListBox->InsertEntry(pTbls[i]);
+                sal_uInt16 nEntry = pListBox->InsertEntry(pTbls[i]);
                 pListBox->SetEntryData(nEntry, (void*)0);
             }
 		}
@@ -778,13 +686,13 @@ BOOL SwNewDBMgr::GetTableNames(ListBox* pListBox, const String& rDBName)
             const rtl::OUString* pQueries = aQueries.getConstArray();
 			for(long i = 0; i < aQueries.getLength(); i++)
             {
-                USHORT nEntry = pListBox->InsertEntry(pQueries[i]);
+                sal_uInt16 nEntry = pListBox->InsertEntry(pQueries[i]);
                 pListBox->SetEntryData(nEntry, (void*)1);
             }
         }
 		if (sOldTableName.Len())
 			pListBox->SelectEntry(sOldTableName);
-		bRet = TRUE;
+		bRet = sal_True;
 	}
 	return bRet;
 }
@@ -792,8 +700,8 @@ BOOL SwNewDBMgr::GetTableNames(ListBox* pListBox, const String& rDBName)
 /*--------------------------------------------------------------------
 	Beschreibung: Listbox mit Spaltennamen einer Datenbank fuellen
  --------------------------------------------------------------------*/
-BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
-			const String& rDBName, const String& rTableName, BOOL bAppend)
+sal_Bool SwNewDBMgr::GetColumnNames(ListBox* pListBox,
+			const String& rDBName, const String& rTableName, sal_Bool bAppend)
 {
 	if (!bAppend)
 		pListBox->Clear();
@@ -801,7 +709,7 @@ BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
     aData.sDataSource = rDBName;
     aData.sCommand = rTableName;
     aData.nCommandType = -1;
-    SwDSParam* pParam = FindDSData(aData, FALSE);
+    SwDSParam* pParam = FindDSData(aData, sal_False);
     uno::Reference< XConnection> xConnection;
     if(pParam && pParam->xConnection.is())
         xConnection = pParam->xConnection;
@@ -822,14 +730,14 @@ BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
 		}
         ::comphelper::disposeComponent( xColsSupp );
     }
-    return(TRUE);
+    return(sal_True);
 }
 /* -----------------------------08.06.01 15:11--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
+sal_Bool SwNewDBMgr::GetColumnNames(ListBox* pListBox,
         uno::Reference< XConnection> xConnection,
-        const String& rTableName, BOOL bAppend)
+        const String& rTableName, sal_Bool bAppend)
 {
 	if (!bAppend)
 		pListBox->Clear();
@@ -845,7 +753,7 @@ BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
 		}
         ::comphelper::disposeComponent( xColsSupp );
     }
-	return(TRUE);
+	return(sal_True);
 }
 
 /*--------------------------------------------------------------------
@@ -854,10 +762,10 @@ BOOL SwNewDBMgr::GetColumnNames(ListBox* pListBox,
 
 SwNewDBMgr::SwNewDBMgr() :
             nMergeType(DBMGR_INSERT),
-            bInitDBFields(FALSE),
-            bInMerge(FALSE),
-            bMergeSilent(FALSE),
-            bMergeLock(FALSE),
+            bInitDBFields(sal_False),
+            bInMerge(sal_False),
+            bMergeSilent(sal_False),
+            bMergeLock(sal_False),
             pImpl(new SwNewDBMgr_Impl(*this)),
             pMergeEvtSrc(NULL)
 {
@@ -867,7 +775,7 @@ SwNewDBMgr::SwNewDBMgr() :
  ---------------------------------------------------------------------------*/
 SwNewDBMgr::~SwNewDBMgr()
 {
-    for(USHORT nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
+    for(sal_uInt16 nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
     {
         SwDSParam* pParam = aDataSourceParams[nPos];
         if(pParam->xConnection.is())
@@ -886,328 +794,11 @@ SwNewDBMgr::~SwNewDBMgr()
     }
     delete pImpl;
 }
-/*--------------------------------------------------------------------
-	Beschreibung:	Serienbrief drucken
- --------------------------------------------------------------------*/
-
-
-BOOL SwNewDBMgr::MergePrint( SwView& rView,
-                             SwPrtOptions& rOpt, SfxProgress& rProgress, BOOL bIsAPI )
-{
-	SwWrtShell* pSh = &rView.GetWrtShell();
-	//check if the doc is synchronized and contains at least one linked section
-	BOOL bSynchronizedDoc = pSh->IsLabelDoc() && pSh->GetSectionFmtCount() > 1;
-	//merge source is already open
-    rOpt.nMergeCnt = 0;
-    //#i56195# no field update while printing mail merge documents
-    rOpt.bUpdateFieldsInPrinting = sal_False;
-    if(pImpl->pMergeData)
-    {
-        if(pImpl->pMergeData->aSelection.getLength())
-            rOpt.nMergeCnt = pImpl->pMergeData->aSelection.getLength();
-        else if(pImpl->pMergeData->xResultSet.is())
-        {
-            sal_Int32 nCount;
-            if( lcl_getCountFromResultSet( nCount, pImpl->pMergeData->xResultSet ) )
-                rOpt.nMergeCnt = (ULONG)nCount;
-        }
-    }
-
-    SwModuleOptions* pModOpt = SW_MOD()->GetModuleConfig();
-    pModOpt->SetSinglePrintJob(rOpt.IsPrintSingleJobs());
-
-    SfxPrinter *pPrt = pSh->getIDocumentDeviceAccess()->getPrinter( false );
-	Link aSfxSaveLnk = pPrt->GetEndPrintHdl();
-    if( rOpt.IsPrintSingleJobs()  )
-		pPrt->SetEndPrintHdl( Link() );
-
-    BOOL bUserBreak = FALSE,
-		 bRet = FALSE;
-    long nStartRow, nEndRow;
-    //calculate number of data sets to be printed
-
-    Sequence<PropertyValue> aViewProperties(16);
-    PropertyValue* pViewProperties =  aViewProperties.getArray();
-    pViewProperties[0].Name = C2U("MailMergeCount");
-    pViewProperties[0].Value <<= (sal_Int32)rOpt.nMergeCnt;
-    pViewProperties[1].Name = C2U("PrintGraphics");
-    pViewProperties[1].Value <<= (sal_Bool)rOpt.IsPrintGraphic();
-    pViewProperties[2].Name = C2U("PrintTables");
-    pViewProperties[2].Value <<= (sal_Bool)rOpt.IsPrintTable();
-    pViewProperties[3].Name = C2U("PrintDrawings");
-    pViewProperties[3].Value <<= (sal_Bool)rOpt.IsPrintDraw();
-    pViewProperties[4].Name = C2U("PrintLeftPages");
-    pViewProperties[4].Value <<= (sal_Bool)rOpt.IsPrintLeftPage();
-    pViewProperties[5].Name = C2U("PrintRightPages");
-    pViewProperties[5].Value <<= (sal_Bool)rOpt.IsPrintRightPage();
-    pViewProperties[6].Name = C2U("PrintControls");
-    pViewProperties[6].Value <<= (sal_Bool)rOpt.IsPrintControl();
-    pViewProperties[7].Name = C2U("PrintReversed");
-    pViewProperties[7].Value <<= (sal_Bool)rOpt.IsPrintReverse();
-    pViewProperties[8].Name = C2U("PrintPaperFromSetup");
-    pViewProperties[8].Value <<= (sal_Bool)rOpt.IsPaperFromSetup();
-    pViewProperties[9].Name = C2U("PrintFaxName");
-    pViewProperties[9].Value <<= rOpt.GetFaxName();
-    pViewProperties[10].Name = C2U("PrintAnnotationMode");
-    pViewProperties[10].Value <<= (text::NotePrintMode) rOpt.GetPrintPostIts();
-    pViewProperties[11].Name = C2U("PrintProspect");
-    pViewProperties[11].Value <<= (sal_Bool)rOpt.IsPrintProspect();
-    pViewProperties[12].Name = C2U("PrintPageBackground");
-    pViewProperties[12].Value <<= (sal_Bool)rOpt.IsPrintPageBackground();
-    pViewProperties[13].Name = C2U("PrintBlackFonts");
-    pViewProperties[13].Value <<= (sal_Bool)rOpt.IsPrintBlackFont();
-    pViewProperties[14].Name = C2U("IsSinglePrintJob");
-    pViewProperties[14].Value <<= (sal_Bool)rOpt.IsPrintSingleJobs();
-    pViewProperties[15].Name = C2U("PrintEmptyPages");
-    pViewProperties[15].Value <<= (sal_Bool)rOpt.IsPrintEmptyPages();
-
-    rView.SetAdditionalPrintOptions(aViewProperties);
-	do {
-        nStartRow = pImpl->pMergeData ? pImpl->pMergeData->xResultSet->getRow() : 0;
-        {
-            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE, pSh->GetView().GetViewFrame()->GetObjectShell()));
-            pSh->ViewShell::UpdateFlds();
-            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE_FINISHED, pSh->GetView().GetViewFrame()->GetObjectShell()));
-            ++rOpt.nMergeAct;
-
-            // launch MailMergeEvent if required
-            const SwXMailMerge *pEvtSrc = GetMailMergeEvtSrc();
-            if (pEvtSrc)
-            {
-                uno::Reference< XInterface > xRef( (XMailMergeBroadcaster *) pEvtSrc );
-                text::MailMergeEvent aEvt( xRef, rView.GetDocShell()->GetModel() );
-                pEvtSrc->LaunchMailMergeEvent( aEvt );
-            }
-
-            rView.SfxViewShell::Print( rProgress, bIsAPI ); // ggf Basic-Macro ausfuehren
-            if( rOpt.IsPrintSingleJobs() && bRet )
-			{
-				//rOpt.bJobStartet = FALSE;
-				bRet = FALSE;
-			}
-
-            bMergeLock = TRUE;
-            if(rOpt.IsPrintProspect())
-			{
-                if( ! pPrt->IsJobActive() )
-                {
-                    pPrt->SetJobValue( String( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) ),
-                                       String( RTL_CONSTASCII_USTRINGPARAM( "true" ) ) );
-                    pPrt->StartJob( rOpt.GetJobName() );
-                }
-                if( pPrt->IsJobActive() )
-                {
-                    pSh->PrintProspect( rOpt, rProgress, rOpt.IsPrintProspect_RTL() );
-                    bRet = TRUE;
-                }
-			}
-            else if( pSh->Prt( rOpt, &rProgress ) )
-				bRet = TRUE;
-            bMergeLock = FALSE;
-
-			if( !pPrt->IsJobActive() )
-			{
-				bUserBreak = TRUE;
-				bRet = FALSE;
-				break;
-			}
-            if( !rOpt.IsPrintSingleJobs() )
-			{
-				String& rJNm = (String&)rOpt.GetJobName();
-				rJNm.Erase();
-			}
-		}
-        nEndRow = pImpl->pMergeData ? pImpl->pMergeData->xResultSet->getRow() : 0;
-    } while( bSynchronizedDoc && (nStartRow != nEndRow)? ExistsNextRecord() : ToNextMergeRecord());
-
-    if( rOpt.IsPrintSingleJobs() )
-	{
-        SfxPrinter* pTmpPrinter = pSh->getIDocumentDeviceAccess()->getPrinter( true );
-        pTmpPrinter->SetEndPrintHdl( aSfxSaveLnk );
-        if ( !bUserBreak && !pTmpPrinter->IsJobActive() )        //Schon zu spaet?
-            aSfxSaveLnk.Call( pTmpPrinter );
-	}
-
-	rOpt.nMergeCnt = 0;
-	rOpt.nMergeAct = 0;
-
-	nMergeType = DBMGR_INSERT;
-
-	SwDocShell* pDocSh = rView.GetDocShell();
-	SfxViewFrame *pTmpFrm = SfxViewFrame::GetFirst(pDocSh);
-
-	while (pTmpFrm)		// Alle Views Invalidieren
-	{
-		SwView *pVw = PTR_CAST(SwView, pTmpFrm->GetViewShell());
-		if (pVw)
-			pVw->GetEditWin().Invalidate();
-		pTmpFrm = pTmpFrm->GetNext(*pTmpFrm, pDocSh);
-	}
-
-	return bRet;
-}
-/*-- 21.06.2004 09:08:16---------------------------------------------------
-
-  -----------------------------------------------------------------------*/
-BOOL SwNewDBMgr::MergePrintDocuments( SwView& rView,
-                                SwPrtOptions& rOpt, SfxProgress& rProgress, BOOL bIsAPI )
-{
-    SwWrtShell* pSh = &rView.GetWrtShell();
-    //check if the doc is synchronized and contains at least one linked section
-    //merge source is already open
-    rOpt.nMergeCnt = 0;
-    rOpt.SetPrintSingleJobs( sal_True );
-
-    SfxPrinter *pPrt = pSh->getIDocumentDeviceAccess()->getPrinter( false );
-    Link aSfxSaveLnk = pPrt->GetEndPrintHdl();
-    if( rOpt.IsPrintSingleJobs()  )
-        pPrt->SetEndPrintHdl( Link() );
-
-    BOOL bUserBreak = FALSE,
-         bRet = FALSE;
-    //calculate number of data sets to be printed
-
-    Sequence<PropertyValue> aViewProperties(16);
-    PropertyValue* pViewProperties =  aViewProperties.getArray();
-    pViewProperties[0].Name = C2U("MailMergeCount");
-    pViewProperties[0].Value <<= (sal_Int32)rOpt.nMergeCnt;
-    pViewProperties[1].Name = C2U("PrintGraphics");
-    pViewProperties[1].Value <<= (sal_Bool)rOpt.IsPrintGraphic();
-    pViewProperties[2].Name = C2U("PrintTables");
-    pViewProperties[2].Value <<= (sal_Bool)rOpt.IsPrintTable();
-    pViewProperties[3].Name = C2U("PrintDrawings");
-    pViewProperties[3].Value <<= (sal_Bool)rOpt.IsPrintDraw();
-    pViewProperties[4].Name = C2U("PrintLeftPages");
-    pViewProperties[4].Value <<= (sal_Bool)rOpt.IsPrintLeftPage();
-    pViewProperties[5].Name = C2U("PrintRightPages");
-    pViewProperties[5].Value <<= (sal_Bool)rOpt.IsPrintRightPage();
-    pViewProperties[6].Name = C2U("PrintControls");
-    pViewProperties[6].Value <<= (sal_Bool)rOpt.IsPrintControl();
-    pViewProperties[7].Name = C2U("PrintReversed");
-    pViewProperties[7].Value <<= (sal_Bool)rOpt.IsPrintReverse();
-    pViewProperties[8].Name = C2U("PrintPaperFromSetup");
-    pViewProperties[8].Value <<= (sal_Bool)rOpt.IsPaperFromSetup();
-    pViewProperties[9].Name = C2U("PrintFaxName");
-    pViewProperties[9].Value <<= rOpt.GetFaxName();
-    pViewProperties[10].Name = C2U("PrintAnnotationMode");
-    pViewProperties[10].Value <<= (text::NotePrintMode) rOpt.GetPrintPostIts();
-    pViewProperties[11].Name = C2U("PrintProspect");
-    pViewProperties[11].Value <<= (sal_Bool)rOpt.IsPrintProspect();
-    pViewProperties[12].Name = C2U("PrintPageBackground");
-    pViewProperties[12].Value <<= (sal_Bool)rOpt.IsPrintPageBackground();
-    pViewProperties[13].Name = C2U("PrintBlackFonts");
-    pViewProperties[13].Value <<= (sal_Bool)rOpt.IsPrintBlackFont();
-    pViewProperties[14].Name = C2U("IsSinglePrintJob");
-    pViewProperties[14].Value <<= (sal_Bool)rOpt.IsPrintSingleJobs();
-    pViewProperties[15].Name = C2U("PrintEmptyPages");
-    pViewProperties[15].Value <<= (sal_Bool)rOpt.IsPrintEmptyPages();
-
-    rView.SetAdditionalPrintOptions(aViewProperties);
-
-    SwMailMergeConfigItem* pConfigItem = rView.GetMailMergeConfigItem();
-    DBG_ASSERT(pConfigItem, "mail merge config item is missing");
-    if(!pConfigItem)
-        return sal_False;
-
-    USHORT nDocStart = pConfigItem->GetPrintRangeStart();
-    USHORT nDocEnd = pConfigItem->GetPrintRangeEnd();
-    DBG_ASSERT(nDocStart < nDocEnd && nDocEnd <= pConfigItem->GetMergedDocumentCount(),
-            "merge print settings are not correct");
-    
-    for( sal_uInt32 nPrintDocument = nDocStart; nPrintDocument < nDocEnd; ++nPrintDocument)
-    {
-        SwDocMergeInfo& rDocInfo = pConfigItem->GetDocumentMergeInfo(nPrintDocument);
-        rOpt.aMulti.SelectAll(FALSE);
-        rOpt.aMulti.Select(Range( rDocInfo.nStartPageInTarget, rDocInfo.nEndPageInTarget ), TRUE );
-
-        ++rOpt.nMergeAct;
-
-        // launch MailMergeEvent if required
-        const SwXMailMerge *pEvtSrc = GetMailMergeEvtSrc();
-        if (pEvtSrc)
-        {
-            uno::Reference< XInterface > xRef( (XMailMergeBroadcaster *) pEvtSrc );
-            text::MailMergeEvent aEvt( xRef, rView.GetDocShell()->GetModel() );
-            pEvtSrc->LaunchMailMergeEvent( aEvt );
-        }
-
-        String aTmp;
-        aTmp += String::CreateFromInt32( rDocInfo.nStartPageInTarget );
-        aTmp += '-';
-        aTmp += String::CreateFromInt32( rDocInfo.nEndPageInTarget );
-
-        Sequence<PropertyValue> aAddViewProperties(1);
-        PropertyValue* pAddViewProperties =  aAddViewProperties.getArray();
-        pAddViewProperties[0].Name = C2U("Pages");
-        pAddViewProperties[0].Value <<= ::rtl::OUString( aTmp );
-        rView.SetAdditionalPrintOptions(aAddViewProperties);
-
-        rView.SfxViewShell::Print( rProgress, bIsAPI ); // ggf Basic-Macro ausfuehren
-        if( rOpt.IsPrintSingleJobs() && bRet )
-        {
-            //rOpt.bJobStartet = FALSE;
-            bRet = FALSE;
-        }
-
-        bMergeLock = TRUE;
-        if(rOpt.IsPrintProspect())
-        {
-            if( pPrt->IsJobActive() || pPrt->StartJob( rOpt.GetJobName() ))
-            {
-                pSh->PrintProspect( rOpt, rProgress,  rOpt.IsPrintProspect_RTL() );
-                bRet = TRUE;
-            }
-        }
-        else if( pSh->Prt( rOpt, &rProgress ) )
-            bRet = TRUE;
-        bMergeLock = FALSE;
-
-        if( !pPrt->IsJobActive() )
-        {
-            bUserBreak = TRUE;
-            bRet = FALSE;
-            break;
-        }
-        if( !rOpt.IsPrintSingleJobs() )
-        {
-            String& rJNm = (String&)rOpt.GetJobName();
-            rJNm.Erase();
-        }
-    }
-
-    if( rOpt.IsPrintSingleJobs() )
-    {
-        SfxPrinter* pTmpPrinter = pSh->getIDocumentDeviceAccess()->getPrinter( true );
-        pTmpPrinter->SetEndPrintHdl( aSfxSaveLnk );
-        if ( !bUserBreak && !pTmpPrinter->IsJobActive() )     //Schon zu spaet?
-            aSfxSaveLnk.Call( pTmpPrinter );
-    }
-
-    rOpt.nMergeCnt = 0;
-    rOpt.nMergeAct = 0;
-
-    nMergeType = DBMGR_INSERT;
-
-    SwDocShell* pDocSh = rView.GetDocShell();
-    SfxViewFrame *pTmpFrm = SfxViewFrame::GetFirst(pDocSh);
-
-    while (pTmpFrm)     // Alle Views Invalidieren
-    {
-        SwView *pVw = PTR_CAST(SwView, pTmpFrm->GetViewShell());
-        if (pVw)
-            pVw->GetEditWin().Invalidate();
-        pTmpFrm = pTmpFrm->GetNext(*pTmpFrm, pDocSh);
-    }
-
-    return bRet;
-}
-
-
 
 /*--------------------------------------------------------------------
 	Beschreibung:	Serienbriefe als einzelne Dokumente speichern
  --------------------------------------------------------------------*/
-String lcl_FindUniqueName(SwWrtShell* pTargetShell, const String& rStartingPageDesc, ULONG nDocNo )
+String lcl_FindUniqueName(SwWrtShell* pTargetShell, const String& rStartingPageDesc, sal_uLong nDocNo )
 {
     do
     {
@@ -1220,7 +811,7 @@ String lcl_FindUniqueName(SwWrtShell* pTargetShell, const String& rStartingPageD
 }
 void lcl_CopyDynamicDefaults( const SwDoc& rSource, SwDoc& rTarget )
 {
-    USHORT __FAR_DATA aRangeOfDefaults[] = {
+    sal_uInt16 __FAR_DATA aRangeOfDefaults[] = {
         RES_FRMATR_BEGIN, RES_FRMATR_END-1,
         RES_CHRATR_BEGIN, RES_CHRATR_END-1,
         RES_PARATR_BEGIN, RES_PARATR_END-1,
@@ -1233,8 +824,8 @@ void lcl_CopyDynamicDefaults( const SwDoc& rSource, SwDoc& rTarget )
 
     SfxItemSet aNewDefaults( rTarget.GetAttrPool(), aRangeOfDefaults );
 
-    USHORT nWhich;
-    USHORT nRange = 0;
+    sal_uInt16 nWhich;
+    sal_uInt16 nRange = 0;
     while( aRangeOfDefaults[nRange] != 0)
     {
         for( nWhich = aRangeOfDefaults[nRange]; nWhich < aRangeOfDefaults[nRange + 1]; ++nWhich )
@@ -1252,7 +843,7 @@ void lcl_CopyFollowPageDesc(
                             SwWrtShell& rTargetShell,
                             const SwPageDesc& rSourcePageDesc,
                             const SwPageDesc& rTargetPageDesc,
-                            const ULONG nDocNo )
+                            const sal_uLong nDocNo )
 {
     //now copy the follow page desc, too
     const SwPageDesc* pFollowPageDesc = rSourcePageDesc.GetFollow();
@@ -1271,13 +862,30 @@ void lcl_CopyFollowPageDesc(
     }
 }
 
-BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
+void lcl_RemoveSectionLinks( SwWrtShell& rWorkShell )
+{
+    //reset all links of the sections of synchronized labels
+    sal_uInt16 nSections = rWorkShell.GetSectionFmtCount();
+    for( sal_uInt16 nSection = 0; nSection < nSections; ++nSection )
+    {
+        SwSectionData aSectionData( *rWorkShell.GetSectionFmt( nSection ).GetSection() );
+        if( aSectionData.GetType() == FILE_LINK_SECTION )
+        {
+            aSectionData.SetType( CONTENT_SECTION );
+            aSectionData.SetLinkFileName( String() );
+            rWorkShell.UpdateSection( nSection, aSectionData );
+        }    
+    }    
+    rWorkShell.SetLabelDoc( sal_False );
+}    
+
+sal_Bool SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
         const SwMergeDescriptor& rMergeDescriptor)
 {
 	//check if the doc is synchronized and contains at least one linked section
-    BOOL bSynchronizedDoc = pSourceShell->IsLabelDoc() && pSourceShell->GetSectionFmtCount() > 1;
-	BOOL bLoop = TRUE;
-    BOOL bEMail = rMergeDescriptor.nMergeType == DBMGR_MERGE_MAILING;
+    sal_Bool bSynchronizedDoc = pSourceShell->IsLabelDoc() && pSourceShell->GetSectionFmtCount() > 1;
+	sal_Bool bLoop = sal_True;
+    sal_Bool bEMail = rMergeDescriptor.nMergeType == DBMGR_MERGE_MAILING;
     const bool bAsSingleFile = rMergeDescriptor.nMergeType == DBMGR_MERGE_SINGLE_FILE;
 
     ::rtl::Reference< MailDispatcher >          xMailDispatcher;
@@ -1302,14 +910,14 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 
     uno::Reference< XPropertySet > xColumnProp;
 	{
-		BOOL bColumnName = sEMailAddrFld.Len() > 0;
+		sal_Bool bColumnName = sEMailAddrFld.Len() > 0;
 
 		if (bColumnName)
 		{
             uno::Reference< XColumnsSupplier > xColsSupp( pImpl->pMergeData->xResultSet, UNO_QUERY );
             uno::Reference<XNameAccess> xCols = xColsSupp->getColumns();
 			if(!xCols->hasByName(sEMailAddrFld))
-				return FALSE;
+				return sal_False;
 			Any aCol = xCols->getByName(sEMailAddrFld);
             aCol >>= xColumnProp;
 		}
@@ -1345,25 +953,29 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                         pStoreToFilterOptions = &rMergeDescriptor.sSaveToFilterOptions;
                 }
             }
-            String sAddress;
-			bCancel = FALSE;
+			bCancel = sal_False;
 
             // in case of creating a single resulting file this has to be created here
             SwWrtShell* pTargetShell = 0;
-            SfxObjectShellRef xTargetDocShell;
+
+            // the shell will be explicitly closed at the end of the method, but it is
+            // still more safe to use SfxObjectShellLock here
+            SfxObjectShellLock xTargetDocShell;
+
+            SwView* pTargetView = 0;
             std::auto_ptr< utl::TempFile > aTempFile;
             String sModifiedStartingPageDesc;
             String sStartingPageDesc;
-            USHORT nStartingPageNo = 0;
+            sal_uInt16 nStartingPageNo = 0;
             bool bPageStylesWithHeaderFooter = false;
             if(bAsSingleFile || rMergeDescriptor.bCreateSingleFile)
             {
                 // create a target docshell to put the merged document into
                 xTargetDocShell = new SwDocShell( SFX_CREATE_MODE_STANDARD );
                 xTargetDocShell->DoInitNew( 0 );
-                SfxViewFrame* pTargetFrame = SfxViewFrame::CreateViewFrame( *xTargetDocShell, 0, TRUE );
+                SfxViewFrame* pTargetFrame = SfxViewFrame::LoadHiddenDocument( *xTargetDocShell, 0 );
 
-                SwView* pTargetView = static_cast<SwView*>( pTargetFrame->GetViewShell() );
+                pTargetView = static_cast<SwView*>( pTargetFrame->GetViewShell() );
 
                 //initiate SelectShell() to create sub shells
                 pTargetView->AttrChangedNotify( &pTargetView->GetWrtShell() );
@@ -1378,7 +990,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                 pTargetView->GetDocShell()->LoadStylesFromFile(
                         sSourceDocumentURL, aOpt, sal_True );
                 //determine the page style and number used at the start of the source document
-                pSourceShell->SttEndDoc(TRUE);
+                pSourceShell->SttEndDoc(sal_True);
                 nStartingPageNo = pSourceShell->GetVirtPageNum();
                 sStartingPageDesc = sModifiedStartingPageDesc = pSourceShell->GetPageDesc(
                                             pSourceShell->GetCurPageDesc()).GetName();
@@ -1408,11 +1020,10 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
             SfxViewFrame* pViewFrm = SfxViewFrame::GetFirst(pSourrceDocSh);
 			while (pViewFrm)
 			{
-				pViewFrm->GetDispatcher()->Lock(TRUE);
+				pViewFrm->GetDispatcher()->Lock(sal_True);
                 pViewFrm = SfxViewFrame::GetNext(*pViewFrm, pSourrceDocSh);
 			}
-			ULONG nDocNo = 1;
-			ULONG nCounter = 0;
+			sal_uLong nDocNo = 1;
 
             long nStartRow, nEndRow;
             // collect temporary files
@@ -1431,6 +1042,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                 {
 					String sPath(sSubject);
 
+                    String sAddress;
                     if( !bEMail && bColumnName )
 					{
 						SwDBFormatData aDBFormat;
@@ -1440,14 +1052,18 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 						if (!sAddress.Len())
 							sAddress = '_';
 						sPath += sAddress;
-						nCounter = 0;
 					}
 
                     // create a new temporary file name - only done once in case of bCreateSingleFile
                     if( 1 == nDocNo || (!rMergeDescriptor.bCreateSingleFile && !bAsSingleFile) )
                     {
                         INetURLObject aEntry(sPath);
-                        String sLeading(aEntry.GetBase());
+                        String sLeading;
+                        //#i97667# if the name is from a database field then it will be used _as is_
+                        if( sAddress.Len() )
+                            sLeading = sAddress;
+                        else
+                            sLeading = aEntry.GetBase();
                         aEntry.removeSegment();
                         sPath = aEntry.GetMainURL( INetURLObject::NO_DECODE );
                         String sExt( pStoreToFilter->GetDefaultExtension() );
@@ -1473,8 +1089,8 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                     if( !aTempFile->IsValid() )
 					{
 						ErrorHandler::HandleError( ERRCODE_IO_NOTSUPPORTED );
-						bLoop = FALSE;
-						bCancel = TRUE;
+						bLoop = sal_False;
+						bCancel = sal_True;
 					}
 					else
 					{
@@ -1486,18 +1102,19 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 						aPrtMonDlg.aPrintInfo.SetText(sStat);
 
 						// Rechenzeit fuer Save-Monitor:
-						for (USHORT i = 0; i < 10; i++)
+						for (sal_uInt16 i = 0; i < 10; i++)
 							Application::Reschedule();
 
-						// Neues Dokument erzeugen und speichern
-                        SfxObjectShellRef xWorkDocSh( new SwDocShell( SFX_CREATE_MODE_INTERNAL ));
-                        SfxMedium* pWorkMed = new SfxMedium( sSourceDocumentURL, STREAM_STD_READ, TRUE );
+						// Create and save new document
+                        // The SfxObjectShell will be closed explicitly later but it is more safe to use SfxObjectShellLock here
+                        SfxObjectShellLock xWorkDocSh( new SwDocShell( SFX_CREATE_MODE_INTERNAL ));
+                        SfxMedium* pWorkMed = new SfxMedium( sSourceDocumentURL, STREAM_STD_READ, sal_True );
                         pWorkMed->SetFilter( pSfxFlt );
 
                         if (xWorkDocSh->DoLoad(pWorkMed))
 						{
                             //create a view frame for the document
-                            SfxViewFrame* pWorkFrame = SfxViewFrame::CreateViewFrame( *xWorkDocSh, 0, TRUE );
+                            SfxViewFrame* pWorkFrame = SfxViewFrame::LoadHiddenDocument( *xWorkDocSh, 0 );
                             //request the layout calculation
                             SwWrtShell& rWorkShell =
                                     static_cast< SwView* >(pWorkFrame->GetViewShell())->GetWrtShell();
@@ -1505,9 +1122,9 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                             SwDoc* pWorkDoc = ((SwDocShell*)(&xWorkDocSh))->GetDoc();
                             SwNewDBMgr* pOldDBMgr = pWorkDoc->GetNewDBMgr();
                             pWorkDoc->SetNewDBMgr( this );
-                            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE, xWorkDocSh));
+                            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE, SwDocShell::GetEventName(STR_SW_EVENT_FIELD_MERGE), xWorkDocSh));
                             pWorkDoc->UpdateFlds(NULL, false);
-                            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE_FINISHED, xWorkDocSh));
+                            SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE_FINISHED, SwDocShell::GetEventName(STR_SW_EVENT_FIELD_MERGE_FINISHED), xWorkDocSh));
 
 							// alle versteckten Felder/Bereiche entfernen
                             pWorkDoc->RemoveInvisibleContent();
@@ -1527,12 +1144,16 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                                 // copy created file into the target document
                                 rWorkShell.ConvertFieldsToText();
                                 rWorkShell.SetNumberingRestart();
+                                if( bSynchronizedDoc )
+                                {
+                                    lcl_RemoveSectionLinks( rWorkShell );
+                                }    
 
                                 // insert the document into the target document
-                                rWorkShell.SttEndDoc(FALSE);
-                                rWorkShell.SttEndDoc(TRUE);
+                                rWorkShell.SttEndDoc(sal_False);
+                                rWorkShell.SttEndDoc(sal_True);
                                 rWorkShell.SelAll();
-                                pTargetShell->SwCrsrShell::SttEndDoc( FALSE );
+                                pTargetShell->SwCrsrShell::SttEndDoc( sal_False );
                                 //#i72517# the headers and footers are still those from the source - update in case of fields inside header/footer
                                 if( !nDocNo && bPageStylesWithHeaderFooter )
                                     pTargetShell->GetView().GetDocShell()->_LoadStyles( *rWorkShell.GetView().GetDocShell(), sal_True );
@@ -1586,7 +1207,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                                 String sFileURL =  aTempFileURL.GetMainURL( INetURLObject::NO_DECODE );
                                 SfxMedium* pDstMed = new SfxMedium(
                                     sFileURL,
-                                    STREAM_STD_READWRITE, TRUE );
+                                    STREAM_STD_READWRITE, sal_True );
                                 pDstMed->SetFilter( pStoreToFilter );
                                 if(pDstMed->GetItemSet())
                                 {
@@ -1606,8 +1227,8 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                                 {
                                     // error message ??
                                     ErrorHandler::HandleError( xWorkDocSh->GetError() );
-                                    bCancel = TRUE;
-                                    bLoop = FALSE;
+                                    bCancel = sal_True;
+                                    bLoop = sal_False;
                                 }
                                 if( bEMail )
                                 {
@@ -1644,7 +1265,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                                         {
                                             {
                                                 //read in the temporary file and use it as mail body
-                                                SfxMedium aMedium( sFileURL, STREAM_READ, TRUE);
+                                                SfxMedium aMedium( sFileURL, STREAM_READ, sal_True);
                                                 SvStream* pInStream = aMedium.GetInStream();
                                                 DBG_ASSERT(pInStream, "no output file created?");
                                                 if(pInStream)
@@ -1697,30 +1318,89 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
                 nEndRow = pImpl->pMergeData ? pImpl->pMergeData->xResultSet->getRow() : 0;
             } while( !bCancel &&
                 (bSynchronizedDoc && (nStartRow != nEndRow)? ExistsNextRecord() : ToNextMergeRecord()));
+            
+            aPrtMonDlg.Show( sal_False );
+            
             // save the single output document
             if(rMergeDescriptor.bCreateSingleFile || bAsSingleFile)
             {
-                DBG_ASSERT( aTempFile.get(), "Temporary file not available" );
-                INetURLObject aTempFileURL(bAsSingleFile ? sSubject : aTempFile->GetURL());
-                SfxMedium* pDstMed = new SfxMedium(
-                    aTempFileURL.GetMainURL( INetURLObject::NO_DECODE ),
-                    STREAM_STD_READWRITE, TRUE );
-                pDstMed->SetFilter( pStoreToFilter );
-                if(pDstMed->GetItemSet())
+                if( rMergeDescriptor.nMergeType != DBMGR_MERGE_MAILMERGE )
                 {
-                    if(pStoreToFilterOptions )
-                        pDstMed->GetItemSet()->Put(SfxStringItem(SID_FILE_FILTEROPTIONS, *pStoreToFilterOptions));
-                    if(rMergeDescriptor.aSaveToFilterData.getLength())
-                        pDstMed->GetItemSet()->Put(SfxUsrAnyItem(SID_FILTER_DATA, makeAny(rMergeDescriptor.aSaveToFilterData)));
-                }
+                    DBG_ASSERT( aTempFile.get(), "Temporary file not available" );
+                    INetURLObject aTempFileURL(bAsSingleFile ? sSubject : aTempFile->GetURL());
+                    SfxMedium* pDstMed = new SfxMedium(
+                        aTempFileURL.GetMainURL( INetURLObject::NO_DECODE ),
+                        STREAM_STD_READWRITE, sal_True );
+                    pDstMed->SetFilter( pStoreToFilter );
+                    if(pDstMed->GetItemSet())
+                    {
+                        if(pStoreToFilterOptions )
+                            pDstMed->GetItemSet()->Put(SfxStringItem(SID_FILE_FILTEROPTIONS, *pStoreToFilterOptions));
+                        if(rMergeDescriptor.aSaveToFilterData.getLength())
+                            pDstMed->GetItemSet()->Put(SfxUsrAnyItem(SID_FILTER_DATA, makeAny(rMergeDescriptor.aSaveToFilterData)));
+                    }
 
-                xTargetDocShell->DoSaveAs(*pDstMed);
-                xTargetDocShell->DoSaveCompleted(pDstMed);
-                if( xTargetDocShell->GetError() )
+                    xTargetDocShell->DoSaveAs(*pDstMed);
+                    xTargetDocShell->DoSaveCompleted(pDstMed);
+                    if( xTargetDocShell->GetError() )
+                    {
+                        // error message ??
+                        ErrorHandler::HandleError( xTargetDocShell->GetError() );
+                        bLoop = sal_False;
+                    }
+                }
+                else if( pTargetView ) // must be available!
                 {
-                    // error message ??
-                    ErrorHandler::HandleError( xTargetDocShell->GetError() );
-                    bLoop = FALSE;
+                    //print the target document
+        #if OSL_DEBUG_LEVEL > 1
+                    sal_Bool  _bVal;
+                    sal_Int16 _nVal;
+                    rtl::OUString  _sVal;
+                    const beans::PropertyValue* pDbgPrintOptions = rMergeDescriptor.aPrintOptions.getConstArray();
+                    for( sal_Int32 nOption = 0; nOption < rMergeDescriptor.aPrintOptions.getLength(); ++nOption)
+                    {
+                        rtl::OUString aName( pDbgPrintOptions[nOption].Name );
+                        uno::Any aVal( pDbgPrintOptions[nOption].Value );
+                        aVal >>= _bVal;
+                        aVal >>= _nVal;
+                        aVal >>= _sVal;
+                    }
+        #endif
+                    // printing should be done synchronously otherwise the document 
+                    // might already become invalid during the process
+                    uno::Sequence< beans::PropertyValue > aOptions( rMergeDescriptor.aPrintOptions );
+                    const sal_Int32 nOpts = aOptions.getLength();
+                    aOptions.realloc( nOpts + 1 );
+                    aOptions[ nOpts ].Name = rtl::OUString::createFromAscii( "Wait" );
+                    aOptions[ nOpts ].Value <<= sal_True ;
+//                    aPrintArgs.Put(SfxBoolItem(FN_QRY_MERGE, sal_True) ); 
+//                    // #i52629# aynchronous printing should only be done in silent mode - otherwise
+//                    // the printer dialog does not come up
+//                    aPrintArgs.Put( SfxBoolItem( SID_ASYNCHRON, rMergeDescriptor.bPrintAsync ));
+                    // move print options 
+                    const beans::PropertyValue* pPrintOptions = rMergeDescriptor.aPrintOptions.getConstArray();
+                    for( sal_Int32 nOption = 0; nOption < rMergeDescriptor.aPrintOptions.getLength(); ++nOption)
+                    {
+                        if( pPrintOptions[nOption].Name.equalsAscii( "CopyCount" )
+                            ||( pPrintOptions[nOption].Name.equalsAscii( "FileName" ))
+                            ||( pPrintOptions[nOption].Name.equalsAscii( "Collate" ))
+                            ||( pPrintOptions[nOption].Name.equalsAscii( "Pages" ))
+                            ||( pPrintOptions[nOption].Name.equalsAscii( "Wait" )))
+                        {
+                            aOptions.realloc( nOpts + 1 );
+                            aOptions[ nOpts ].Name = pPrintOptions[nOption].Name;
+                            aOptions[ nOpts ].Value = pPrintOptions[nOption].Value ;
+                        }
+                    }
+
+//                    const SwModuleOptions * pModOpt = SW_MOD()->GetModuleConfig();
+//                    if (pModOpt->IsSinglePrintJob())
+//                    {
+//                    }    
+//                    else
+//                    {
+                        pTargetView->ExecPrint( aOptions, IsMergeSilent(), rMergeDescriptor.bPrintAsync );
+//                    }    
                 }
                 xTargetDocShell->DoClose();
             }
@@ -1735,7 +1415,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
             pViewFrm = SfxViewFrame::GetFirst(pSourrceDocSh);
 			while (pViewFrm)
 			{
-				pViewFrm->GetDispatcher()->Lock(FALSE);
+				pViewFrm->GetDispatcher()->Lock(sal_False);
                 pViewFrm = SfxViewFrame::GetNext(*pViewFrm, pSourrceDocSh);
 			}
 
@@ -1774,7 +1454,7 @@ BOOL SwNewDBMgr::MergeMailFiles(SwWrtShell* pSourceShell,
 IMPL_LINK_INLINE_START( SwNewDBMgr, PrtCancelHdl, Button *, pButton )
 {
 	pButton->GetParent()->Hide();
-	bCancel = TRUE;
+	bCancel = sal_True;
 	return 0;
 }
 IMPL_LINK_INLINE_END( SwNewDBMgr, PrtCancelHdl, Button *, pButton )
@@ -1785,13 +1465,13 @@ IMPL_LINK_INLINE_END( SwNewDBMgr, PrtCancelHdl, Button *, pButton )
 					den uebergebenen Formatter uebertragen
   --------------------------------------------------------------------*/
 
-ULONG SwNewDBMgr::GetColumnFmt( const String& rDBName,
+sal_uLong SwNewDBMgr::GetColumnFmt( const String& rDBName,
 								const String& rTableName,
 								const String& rColNm,
 								SvNumberFormatter* pNFmtr,
 								long nLanguage )
 {
-	ULONG nRet = 0;
+	sal_uLong nRet = 0;
 	if(pNFmtr)
 	{
         uno::Reference< XDataSource> xSource;
@@ -1813,7 +1493,7 @@ ULONG SwNewDBMgr::GetColumnFmt( const String& rDBName,
             aData.sDataSource = rDBName;
             aData.sCommand = rTableName;
             aData.nCommandType = -1;
-            SwDSParam* pParam = FindDSData(aData, FALSE);
+            SwDSParam* pParam = FindDSData(aData, sal_False);
             if(pParam && pParam->xConnection.is())
             {
                 xConnection = pParam->xConnection;
@@ -1867,19 +1547,20 @@ ULONG SwNewDBMgr::GetColumnFmt( const String& rDBName,
 /* -----------------------------07.06.01 15:43--------------------------------
 
  ---------------------------------------------------------------------------*/
-ULONG SwNewDBMgr::GetColumnFmt( uno::Reference< XDataSource> xSource,
+sal_uLong SwNewDBMgr::GetColumnFmt( uno::Reference< XDataSource> xSource,
                         uno::Reference< XConnection> xConnection,
                         uno::Reference< XPropertySet> xColumn,
 						SvNumberFormatter* pNFmtr,
                         long nLanguage )
 {
 	//JP 12.01.99: ggfs. das NumberFormat im Doc setzen
-	ULONG nRet = 0;
+	sal_uLong nRet = 0;
 
     if(!xSource.is())
     {
         uno::Reference<XChild> xChild(xConnection, UNO_QUERY);
-        xSource = uno::Reference<XDataSource>(xChild->getParent(), UNO_QUERY);
+        if ( xChild.is() )
+            xSource = uno::Reference<XDataSource>(xChild->getParent(), UNO_QUERY);
     }
     if(xSource.is() && xConnection.is() && xColumn.is() && pNFmtr)
 	{
@@ -1960,7 +1641,7 @@ sal_Int32 SwNewDBMgr::GetColumnType( const String& rDBName,
     aData.sDataSource = rDBName;
     aData.sCommand = rTableName;
     aData.nCommandType = -1;
-    SwDSParam* pParam = FindDSData(aData, FALSE);
+    SwDSParam* pParam = FindDSData(aData, sal_False);
     uno::Reference< XConnection> xConnection;
     uno::Reference< XColumnsSupplier > xColsSupp;
     bool bDispose = false;
@@ -2011,7 +1692,7 @@ uno::Reference< sdbc::XConnection> SwNewDBMgr::GetConnection(const String& rData
 		{
 			rxSource.set(xComplConnection,UNO_QUERY);
 			Reference< XInteractionHandler > xHandler(
-					xMgr->createInstance( C2U( "com.sun.star.sdb.InteractionHandler" )), UNO_QUERY);
+					xMgr->createInstance( C2U( "com.sun.star.task.InteractionHandler" )), UNO_QUERY);
 				xConnection = xComplConnection->connectWithCompletion( xHandler );
 		}
 	}
@@ -2024,7 +1705,7 @@ uno::Reference< sdbc::XConnection> SwNewDBMgr::GetConnection(const String& rData
  ---------------------------------------------------------------------------*/
 uno::Reference< sdbcx::XColumnsSupplier> SwNewDBMgr::GetColumnSupplier(uno::Reference<sdbc::XConnection> xConnection,
 									const String& rTableOrQuery,
-									BYTE	eTableOrQuery)
+									sal_uInt8	eTableOrQuery)
 {
     Reference< sdbcx::XColumnsSupplier> xRet;
     try
@@ -2120,7 +1801,7 @@ String SwNewDBMgr::GetDBField(uno::Reference<XPropertySet> xColumnProps,
 			try
 			{
                 SwDbtoolsClient& aClient = SwNewDBMgr::GetDbtoolsClient();
-                sRet = aClient.getValue(
+                sRet = aClient.getFormattedValue(
 					xColumnProps,
 					rDBFormatData.xFormatter,
 					rDBFormatData.aLocale,
@@ -2170,14 +1851,14 @@ String SwNewDBMgr::GetDBField(uno::Reference<XPropertySet> xColumnProps,
 void	SwNewDBMgr::EndMerge()
 {
 	DBG_ASSERT(bInMerge, "merge is not active");
-	bInMerge = FALSE;
+	bInMerge = sal_False;
     delete pImpl->pMergeData;
     pImpl->pMergeData = 0;
 }
 /* -----------------------------06.07.00 14:28--------------------------------
 	checks if a desired data source table or query is open
  ---------------------------------------------------------------------------*/
-BOOL    SwNewDBMgr::IsDataSourceOpen(const String& rDataSource,
+sal_Bool    SwNewDBMgr::IsDataSourceOpen(const String& rDataSource,
             const String& rTableOrQuery, sal_Bool bMergeOnly)
 {
     if(pImpl->pMergeData)
@@ -2195,7 +1876,7 @@ BOOL    SwNewDBMgr::IsDataSourceOpen(const String& rDataSource,
         aData.sDataSource = rDataSource;
         aData.sCommand = rTableOrQuery;
         aData.nCommandType = -1;
-        SwDSParam* pFound = FindDSData(aData, FALSE);
+        SwDSParam* pFound = FindDSData(aData, sal_False);
         return (pFound && pFound->xResultSet.is());
     }
     return sal_False;
@@ -2203,12 +1884,12 @@ BOOL    SwNewDBMgr::IsDataSourceOpen(const String& rDataSource,
 /* -----------------------------17.07.00 16:44--------------------------------
 	read column data a a specified position
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableName,
+sal_Bool SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableName,
 							const String& rColumnName, sal_uInt32 nAbsRecordId,
 							long nLanguage,
 							String& rResult, double* pNumber)
 {
-	BOOL bRet = FALSE;
+	sal_Bool bRet = sal_False;
     SwDSParam* pFound = 0;
     //check if it's the merge data source
     if(pImpl->pMergeData &&
@@ -2223,7 +1904,7 @@ BOOL SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableNam
         aData.sDataSource = rSourceName;
         aData.sCommand = rTableName;
         aData.nCommandType = -1;
-        pFound = FindDSData(aData, FALSE);
+        pFound = FindDSData(aData, sal_False);
     }
     //check validity of supplied record Id
     if(pFound->aSelection.getLength())
@@ -2239,7 +1920,7 @@ BOOL SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableNam
                 bFound = sal_True;
         }
         if(!bFound)
-            return FALSE;
+            return sal_False;
     }
     if(pFound && pFound->xResultSet.is() && !pFound->bAfterSelection)
     {
@@ -2250,10 +1931,10 @@ BOOL SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableNam
         }
         catch(const Exception& )
         {
-			return FALSE;
+			return sal_False;
         }
         //position to the desired index
-        BOOL bMove = TRUE;
+        sal_Bool bMove = sal_True;
         if ( nOldRow != static_cast<sal_Int32>(nAbsRecordId) )
             bMove = lcl_MoveAbsolute(pFound, nAbsRecordId);
         if(bMove)
@@ -2268,22 +1949,22 @@ BOOL SwNewDBMgr::GetColumnCnt(const String& rSourceName, const String& rTableNam
 /* -----------------------------06.07.00 16:47--------------------------------
 	reads the column data at the current position
  ---------------------------------------------------------------------------*/
-BOOL	SwNewDBMgr::GetMergeColumnCnt(const String& rColumnName, USHORT nLanguage,
+sal_Bool	SwNewDBMgr::GetMergeColumnCnt(const String& rColumnName, sal_uInt16 nLanguage,
                                 String &rResult, double *pNumber, sal_uInt32 * /*pFormat*/)
 {
     if(!pImpl->pMergeData || !pImpl->pMergeData->xResultSet.is() || pImpl->pMergeData->bAfterSelection )
 	{
 		rResult.Erase();
-		return FALSE;
+		return sal_False;
 	}
 
-    BOOL bRet = lcl_GetColumnCnt(pImpl->pMergeData, rColumnName, nLanguage, rResult, pNumber);
+    sal_Bool bRet = lcl_GetColumnCnt(pImpl->pMergeData, rColumnName, nLanguage, rResult, pNumber);
 	return bRet;
 }
 /* -----------------------------07.07.00 14:28--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::ToNextMergeRecord()
+sal_Bool SwNewDBMgr::ToNextMergeRecord()
 {
     DBG_ASSERT(pImpl->pMergeData && pImpl->pMergeData->xResultSet.is(), "no data source in merge");
     return ToNextRecord(pImpl->pMergeData);
@@ -2291,7 +1972,7 @@ BOOL SwNewDBMgr::ToNextMergeRecord()
 /* -----------------------------10.07.01 14:28--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::ToNextRecord(
+sal_Bool SwNewDBMgr::ToNextRecord(
     const String& rDataSource, const String& rCommand, sal_Int32 /*nCommandType*/)
 {
     SwDSParam* pFound = 0;
@@ -2305,22 +1986,22 @@ BOOL SwNewDBMgr::ToNextRecord(
         aData.sDataSource = rDataSource;
         aData.sCommand = rCommand;
         aData.nCommandType = -1;
-        pFound = FindDSData(aData, FALSE);
+        pFound = FindDSData(aData, sal_False);
     }
     return ToNextRecord(pFound);
 }
 /* -----------------------------10.07.01 14:38--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::ToNextRecord(SwDSParam* pParam)
+sal_Bool SwNewDBMgr::ToNextRecord(SwDSParam* pParam)
 {
-    BOOL bRet = TRUE;
+    sal_Bool bRet = sal_True;
     if(!pParam || !pParam->xResultSet.is() || pParam->bEndOfDB ||
 			(pParam->aSelection.getLength() && pParam->aSelection.getLength() <= pParam->nSelectionIndex))
 	{
         if(pParam)
             pParam->CheckEndOfDB();
-		return FALSE;
+		return sal_False;
 	}
 	try
 	{
@@ -2332,7 +2013,7 @@ BOOL SwNewDBMgr::ToNextRecord(SwDSParam* pParam)
             pParam->CheckEndOfDB();
             bRet = !pParam->bEndOfDB;
             if(pParam->nSelectionIndex >= pParam->aSelection.getLength())
-                pParam->bEndOfDB = TRUE;
+                pParam->bEndOfDB = sal_True;
 		}
 		else
 		{
@@ -2360,7 +2041,7 @@ BOOL SwNewDBMgr::ToNextRecord(SwDSParam* pParam)
 	to assure that the next page can be created in mail merge
 	the cursor position must be validated
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::ExistsNextRecord() const
+sal_Bool SwNewDBMgr::ExistsNextRecord() const
 {
     return pImpl->pMergeData && !pImpl->pMergeData->bEndOfDB;
 }
@@ -2372,7 +2053,7 @@ sal_uInt32 	SwNewDBMgr::GetSelectedRecordId()
 	sal_uInt32 	nRet = 0;
     DBG_ASSERT(pImpl->pMergeData && pImpl->pMergeData->xResultSet.is(), "no data source in merge");
     if(!pImpl->pMergeData || !pImpl->pMergeData->xResultSet.is())
-		return FALSE;
+		return sal_False;
 	try
 	{
         nRet = pImpl->pMergeData->xResultSet->getRow();
@@ -2389,8 +2070,8 @@ sal_Bool SwNewDBMgr::ToRecordId(sal_Int32 nSet)
 {
     DBG_ASSERT(pImpl->pMergeData && pImpl->pMergeData->xResultSet.is(), "no data source in merge");
     if(!pImpl->pMergeData || !pImpl->pMergeData->xResultSet.is()|| nSet < 0)
-		return FALSE;
-	sal_Bool bRet = FALSE;
+		return sal_False;
+	sal_Bool bRet = sal_False;
     sal_Int32 nAbsPos = nSet;
 
 	if(nAbsPos >= 0)
@@ -2405,7 +2086,7 @@ sal_Bool SwNewDBMgr::ToRecordId(sal_Int32 nSet)
 /* -----------------------------17.07.00 14:17--------------------------------
 
  ---------------------------------------------------------------------------*/
-BOOL SwNewDBMgr::OpenDataSource(const String& rDataSource, const String& rTableOrQuery,
+sal_Bool SwNewDBMgr::OpenDataSource(const String& rDataSource, const String& rTableOrQuery,
             sal_Int32 nCommandType, bool bCreate)
 {
     SwDBData aData;
@@ -2413,11 +2094,11 @@ BOOL SwNewDBMgr::OpenDataSource(const String& rDataSource, const String& rTableO
     aData.sCommand = rTableOrQuery;
     aData.nCommandType = nCommandType;
 
-    SwDSParam* pFound = FindDSData(aData, TRUE);
+    SwDSParam* pFound = FindDSData(aData, sal_True);
     uno::Reference< XDataSource> xSource;
 	if(pFound->xResultSet.is())
-		return TRUE;
-    SwDSParam* pParam = FindDSConnection(rDataSource, FALSE);
+		return sal_True;
+    SwDSParam* pParam = FindDSConnection(rDataSource, sal_False);
     uno::Reference< XConnection> xConnection;
     if(pParam && pParam->xConnection.is())
         pFound->xConnection = pParam->xConnection;
@@ -2439,7 +2120,7 @@ BOOL SwNewDBMgr::OpenDataSource(const String& rDataSource, const String& rTableO
             catch(Exception&)
             {
                 //#98373# DB driver may not be ODBC 3.0 compliant
-                pFound->bScrollable = TRUE;
+                pFound->bScrollable = sal_True;
             }
 			pFound->xStatement = pFound->xConnection->createStatement();
             rtl::OUString aQuoteChar = xMetaData->getIdentifierQuoteString();
@@ -2470,7 +2151,7 @@ BOOL SwNewDBMgr::OpenDataSource(const String& rDataSource, const String& rTableO
  ---------------------------------------------------------------------------*/
 uno::Reference< XConnection> SwNewDBMgr::RegisterConnection(rtl::OUString& rDataSource)
 {
-    SwDSParam* pFound = SwNewDBMgr::FindDSConnection(rDataSource, TRUE);
+    SwDSParam* pFound = SwNewDBMgr::FindDSConnection(rDataSource, sal_True);
     uno::Reference< XDataSource> xSource;
     if(!pFound->xConnection.is())
 	{
@@ -2506,7 +2187,7 @@ sal_uInt32      SwNewDBMgr::GetSelectedRecordId(
         aData.sDataSource = rDataSource;
         aData.sCommand = rTableOrQuery;
         aData.nCommandType = nCommandType;
-        SwDSParam* pFound = FindDSData(aData, FALSE);
+        SwDSParam* pFound = FindDSData(aData, sal_False);
 		if(pFound && pFound->xResultSet.is())
 		{
 			try
@@ -2531,11 +2212,11 @@ sal_uInt32      SwNewDBMgr::GetSelectedRecordId(
 /* -----------------------------17.07.00 14:18--------------------------------
 	close all data sources - after fields were updated
  ---------------------------------------------------------------------------*/
-void	SwNewDBMgr::CloseAll(BOOL bIncludingMerge)
+void	SwNewDBMgr::CloseAll(sal_Bool bIncludingMerge)
 {
     //the only thing done here is to reset the selection index
 	//all connections stay open
-    for(USHORT nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
+    for(sal_uInt16 nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
     {
         SwDSParam* pParam = aDataSourceParams[nPos];
         if(bIncludingMerge || pParam != pImpl->pMergeData)
@@ -2556,7 +2237,7 @@ void	SwNewDBMgr::CloseAll(BOOL bIncludingMerge)
 /* -----------------------------17.07.00 14:54--------------------------------
 
  ---------------------------------------------------------------------------*/
-SwDSParam* SwNewDBMgr::FindDSData(const SwDBData& rData, BOOL bCreate)
+SwDSParam* SwNewDBMgr::FindDSData(const SwDBData& rData, sal_Bool bCreate)
 {
     //prefer merge data if available
     if(pImpl->pMergeData && rData.sDataSource == pImpl->pMergeData->sDataSource &&
@@ -2568,7 +2249,7 @@ SwDSParam* SwNewDBMgr::FindDSData(const SwDBData& rData, BOOL bCreate)
     }
 
     SwDSParam* pFound = 0;
-	for(USHORT nPos = aDataSourceParams.Count(); nPos; nPos--)
+	for(sal_uInt16 nPos = aDataSourceParams.Count(); nPos; nPos--)
 	{
 		SwDSParam* pParam = aDataSourceParams[nPos - 1];
         if(rData.sDataSource == pParam->sDataSource &&
@@ -2608,7 +2289,7 @@ SwDSParam* SwNewDBMgr::FindDSData(const SwDBData& rData, BOOL bCreate)
 
  ---------------------------------------------------------------------------*/
 
-SwDSParam*  SwNewDBMgr::FindDSConnection(const rtl::OUString& rDataSource, BOOL bCreate)
+SwDSParam*  SwNewDBMgr::FindDSConnection(const rtl::OUString& rDataSource, sal_Bool bCreate)
 {
     //prefer merge data if available
     if(pImpl->pMergeData && rDataSource == pImpl->pMergeData->sDataSource )
@@ -2616,7 +2297,7 @@ SwDSParam*  SwNewDBMgr::FindDSConnection(const rtl::OUString& rDataSource, BOOL 
          return pImpl->pMergeData;
     }
 	SwDSParam* pFound = 0;
-	for(USHORT nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
+	for(sal_uInt16 nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
 	{
 		SwDSParam* pParam = aDataSourceParams[nPos];
         if(rDataSource == pParam->sDataSource)
@@ -2826,19 +2507,19 @@ String SwNewDBMgr::LoadAndRegisterDataSource()
 
                 if( bTextConnection )
                 {
-                    uno::Reference < ui::dialogs::XExecutableDialog > xSettingsDlg( 
+                    uno::Reference < ui::dialogs::XExecutableDialog > xSettingsDlg(
                                 xMgr->createInstance( C2U( "com.sun.star.sdb.TextConnectionSettings" ) ), uno::UNO_QUERY);
                     if( xSettingsDlg->execute() )
                     {
                         uno::Any aSettings = xDataProperties->getPropertyValue( C2U( "Settings" ) );
                         uno::Reference < beans::XPropertySet > xDSSettings;
                         aSettings >>= xDSSettings;
-                        ::comphelper::copyProperties( 
-                            uno::Reference < beans::XPropertySet >( xSettingsDlg, uno::UNO_QUERY ), 
+                        ::comphelper::copyProperties(
+                            uno::Reference < beans::XPropertySet >( xSettingsDlg, uno::UNO_QUERY ),
                             xDSSettings );
                         xDSSettings->setPropertyValue( C2U("Extension"), uno::makeAny( ::rtl::OUString( sExt )));
                     }
-                }    
+                }
 
                 Reference<XDocumentDataSource> xDS(xNewInstance, UNO_QUERY_THROW);
                 Reference<XStorable> xStore(xDS->getDatabaseDocument(), UNO_QUERY_THROW);
@@ -2867,7 +2548,7 @@ String SwNewDBMgr::LoadAndRegisterDataSource()
  ---------------------------------------------------------------------------*/
 void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
                         const Sequence<PropertyValue>& rProperties,
-                        BOOL bWithDataSourceBrowser)
+                        sal_Bool bWithDataSourceBrowser)
 {
 	//prevent second call
     if(pImpl->pMergeDialog)
@@ -2875,7 +2556,7 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
     rtl::OUString sDataSource, sDataTableOrQuery;
     Sequence<Any> aSelection;
 
-	sal_Int16 nCmdType = CommandType::TABLE;
+	sal_Int32 nCmdType = CommandType::TABLE;
     uno::Reference< XConnection> xConnection;
 
 	ODataAccessDescriptor aDescriptor(rProperties);
@@ -2899,7 +2580,7 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
     if(!xConnection.is())
     {
         xConnection = SwNewDBMgr::RegisterConnection(sDataSource);
-        pFound = FindDSConnection(sDataSource, TRUE);
+        pFound = FindDSConnection(sDataSource, sal_True);
     }
 	SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
     DBG_ASSERT(pFact, "Dialogdiet fail!");
@@ -2919,8 +2600,9 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
         if(xResSet.is())
 			aDescriptor[daCursor] <<= xResSet;
 
+        // SfxObjectShellRef is ok, since there should be no control over the document lifetime here
         SfxObjectShellRef xDocShell = rSh.GetView().GetViewFrame()->GetObjectShell();
-        SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE, xDocShell));
+        SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE, SwDocShell::GetEventName(STR_SW_EVENT_MAIL_MERGE), xDocShell));
         {
             //copy rSh to aTempFile
             ::rtl::OUString sTempURL;
@@ -2949,8 +2631,10 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
             }
             else
             {
-                SfxObjectShellRef xWorkDocSh( new SwDocShell( SFX_CREATE_MODE_INTERNAL ));
-                SfxMedium* pWorkMed = new SfxMedium( sTempURL, STREAM_STD_READ, TRUE );
+                // the shell will be explicitly closed, but it is more safe to use SfxObjectShellLock here
+                // especially for the case that the loading has failed
+                SfxObjectShellLock xWorkDocSh( new SwDocShell( SFX_CREATE_MODE_INTERNAL ));
+                SfxMedium* pWorkMed = new SfxMedium( sTempURL, STREAM_STD_READ, sal_True );
                 pWorkMed->SetFilter( pSfxFlt );
                 if( xWorkDocSh->DoLoad(pWorkMed) )
                 {
@@ -2958,18 +2642,25 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
                     // Use document title for print job name
                     xWorkDocSh->SetTitle( xDocShell->GetTitle( 0 ) );
 #endif	// USE_JAVA
-                    SfxViewFrame *pFrame = SfxViewFrame::CreateViewFrame( *xWorkDocSh, 0, TRUE );
+                    SfxViewFrame *pFrame = SfxViewFrame::LoadHiddenDocument( *xWorkDocSh, 0 );
                     SwView *pView = (SwView*) pFrame->GetViewShell();
                     pView->AttrChangedNotify( &pView->GetWrtShell() );//Damit SelectShell gerufen wird.
                     //set the current DBMgr
                     SwDoc* pWorkDoc = pView->GetWrtShell().GetDoc();
                     SwNewDBMgr* pWorkDBMgr = pWorkDoc->GetNewDBMgr();
                     pWorkDoc->SetNewDBMgr( this );
-    
+
                     SwMergeDescriptor aMergeDesc( pImpl->pMergeDialog->GetMergeType(), pView->GetWrtShell(), aDescriptor );
                     aMergeDesc.sSaveToFilter = pImpl->pMergeDialog->GetSaveFilter(); 
+                    aMergeDesc.bCreateSingleFile = !pImpl->pMergeDialog->IsSaveIndividualDocs();
+                    if( !aMergeDesc.bCreateSingleFile && pImpl->pMergeDialog->IsGenerateFromDataBase() )
+                    {
+                        aMergeDesc.sAddressFromColumn = pImpl->pMergeDialog->GetColumnName();
+                        aMergeDesc.sSubject = pImpl->pMergeDialog->GetPath();
+                    }
+
                     MergeNew(aMergeDesc);
-                    
+
                     pWorkDoc->SetNewDBMgr( pWorkDBMgr );
                     //close the temporary file
                     uno::Reference< util::XCloseable > xClose( xWorkDocSh->GetModel(), uno::UNO_QUERY );
@@ -2987,10 +2678,10 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
                     }
                 }
             }
-            //remove the temporary file 
+            //remove the temporary file
             SWUnoHelper::UCB_DeleteFile( sTempURL );
         }
-        SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE_END, rSh.GetView().GetViewFrame()->GetObjectShell()));
+        SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_MAIL_MERGE_END, SwDocShell::GetEventName(STR_SW_EVENT_MAIL_MERGE_END), rSh.GetView().GetViewFrame()->GetObjectShell()));
 
 		// reset the cursor inside
 		xResSet = NULL;
@@ -2998,7 +2689,7 @@ void SwNewDBMgr::ExecuteFormLetter(	SwWrtShell& rSh,
 	}
     if(pFound)
     {
-        for(USHORT nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
+        for(sal_uInt16 nPos = 0; nPos < aDataSourceParams.Count(); nPos++)
         {
             SwDSParam* pParam = aDataSourceParams[nPos];
             if(pParam == pFound)
@@ -3030,7 +2721,7 @@ void SwNewDBMgr::InsertText(SwWrtShell& rSh,
     rtl::OUString sDataSource, sDataTableOrQuery;
     uno::Reference<XResultSet>  xResSet;
     Sequence<Any> aSelection;
-	BOOL bHasSelectionProperty = FALSE;
+	sal_Bool bHasSelectionProperty = sal_False;
 	sal_Int32 nSelectionPos = 0;
 	sal_Int16 nCmdType = CommandType::TABLE;
 	const PropertyValue* pValues = rProperties.getConstArray();
@@ -3045,7 +2736,7 @@ void SwNewDBMgr::InsertText(SwWrtShell& rSh,
 			pValues[nPos].Value >>= xResSet;
         else if(pValues[nPos].Name.equalsAsciiL(RTL_CONSTASCII_STRINGPARAM(cSelection)))
 		{
-			bHasSelectionProperty = TRUE;
+			bHasSelectionProperty = sal_True;
 			nSelectionPos = nPos;
 			pValues[nPos].Value >>= aSelection;
 		}
@@ -3166,7 +2857,7 @@ uno::Reference<XResultSet> SwNewDBMgr::createCursor(const ::rtl::OUString& _sDat
 
 				if ( xRowSet.is() )
 				{
-                    uno::Reference< XInteractionHandler > xHandler(xMgr->createInstance(C2U("com.sun.star.sdb.InteractionHandler")), UNO_QUERY);
+                    uno::Reference< XInteractionHandler > xHandler(xMgr->createInstance(C2U("com.sun.star.task.InteractionHandler")), UNO_QUERY);
 					xRowSet->executeWithCompletion(xHandler);
 				}
                 xResultSet = uno::Reference<XResultSet>(xRowSet, UNO_QUERY);
@@ -3191,38 +2882,37 @@ sal_Int32 SwNewDBMgr::MergeDocuments( SwMailMergeConfigItem& rMMConfig,
     uno::Reference< XResultSet> xResultSet = rMMConfig.GetResultSet();
     if(!xResultSet.is())
         return false;
-    bInMerge = TRUE;
+    bInMerge = sal_True;
     sal_Int32 nRet  = 0;
     pImpl->pMergeData = new SwDSParam(
                 rMMConfig.GetCurrentDBData(), xResultSet, rMMConfig.GetSelection());
 
-    SwDSParam* pMergeData = pImpl->pMergeData;
     try{
         //set to start position
-        if(pMergeData->aSelection.getLength())
+        if(pImpl->pMergeData->aSelection.getLength())
         {
             sal_Int32 nPos = 0;
-            pMergeData->aSelection.getConstArray()[ pMergeData->nSelectionIndex++ ] >>= nPos;
-            pMergeData->bEndOfDB = !pMergeData->xResultSet->absolute( nPos );
-            pMergeData->CheckEndOfDB();
-            if(pMergeData->nSelectionIndex >= pMergeData->aSelection.getLength())
-                pMergeData->bEndOfDB = TRUE;
+            pImpl->pMergeData->aSelection.getConstArray()[ pImpl->pMergeData->nSelectionIndex++ ] >>= nPos;
+            pImpl->pMergeData->bEndOfDB = !pImpl->pMergeData->xResultSet->absolute( nPos );
+            pImpl->pMergeData->CheckEndOfDB();
+            if(pImpl->pMergeData->nSelectionIndex >= pImpl->pMergeData->aSelection.getLength())
+                pImpl->pMergeData->bEndOfDB = sal_True;
         }
         else
         {
-            pMergeData->bEndOfDB = !pMergeData->xResultSet->first();
-            pMergeData->CheckEndOfDB();
+            pImpl->pMergeData->bEndOfDB = !pImpl->pMergeData->xResultSet->first();
+            pImpl->pMergeData->CheckEndOfDB();
         }
     }
     catch(Exception&)
     {
-        pMergeData->bEndOfDB = TRUE;
-        pMergeData->CheckEndOfDB();
+        pImpl->pMergeData->bEndOfDB = sal_True;
+        pImpl->pMergeData->CheckEndOfDB();
         DBG_ERROR("exception in MergeNew()");
     }
 
     //bCancel is set from the PrintMonitor
-    bCancel = FALSE;
+    bCancel = sal_False;
 
     CreateMonitor aMonitorDlg(&rSourceView.GetEditWin());
     aMonitorDlg.SetCancelHdl(LINK(this, SwNewDBMgr, PrtCancelHdl));
@@ -3232,49 +2922,32 @@ sal_Int32 SwNewDBMgr::MergeDocuments( SwMailMergeConfigItem& rMMConfig,
         aMonitorDlg.Invalidate();
         aMonitorDlg.Update();
         // the print monitor needs some time to act
-        for( USHORT i = 0; i < 25; i++)
+        for( sal_uInt16 i = 0; i < 25; i++)
             Application::Reschedule();
     }
 
     SwWrtShell& rSourceShell = rSourceView.GetWrtShell();
-    BOOL bSynchronizedDoc = rSourceShell.IsLabelDoc() && rSourceShell.GetSectionFmtCount() > 1;
-    String sSourceDocURL;
+    sal_Bool bSynchronizedDoc = rSourceShell.IsLabelDoc() && rSourceShell.GetSectionFmtCount() > 1;
     //save the settings of the first
-    rSourceShell.SttEndDoc(TRUE);
-    USHORT nStartingPageNo = rSourceShell.GetVirtPageNum();
+    rSourceShell.SttEndDoc(sal_True);
+    sal_uInt16 nStartingPageNo = rSourceShell.GetVirtPageNum();
     String sModifiedStartingPageDesc;
     String sStartingPageDesc = sModifiedStartingPageDesc = rSourceShell.GetPageDesc(
                                 rSourceShell.GetCurPageDesc()).GetName();
 
     try
     {
-        // save the working document into a temporary location
-        sSourceDocURL = URIHelper::SmartRel2Abs(
-            INetURLObject(), utl::TempFile::CreateTempName(),
-            URIHelper::GetMaybeFileHdl());
-        const SfxFilter *pSfxFlt = SwIoSystem::GetFilterOfFormat(
-                String::CreateFromAscii( FILTER_XML ),
-                SwDocShell::Factory().GetFilterContainer() );
-
-        SfxStringItem aFilterName( SID_FILTER_NAME, pSfxFlt->GetFilterName());
-        uno::Sequence< beans::PropertyValue > aValues(1);
-        beans::PropertyValue* pValues = aValues.getArray();
-        pValues[0].Name = C2U("FilterName");
-        pValues[0].Value <<= ::rtl::OUString(pSfxFlt->GetFilterName());
-        uno::Reference< frame::XStorable > xStore( rSourceView.GetDocShell()->GetModel(), uno::UNO_QUERY);
-        xStore->storeToURL( sSourceDocURL, aValues );
-
         // create a target docshell to put the merged document into
         SfxObjectShellRef xTargetDocShell( new SwDocShell( SFX_CREATE_MODE_STANDARD ) );
         xTargetDocShell->DoInitNew( 0 );
-        SfxViewFrame* pTargetFrame = SfxViewFrame::CreateViewFrame( *xTargetDocShell, 0, TRUE );
+        SfxViewFrame* pTargetFrame = SfxViewFrame::LoadHiddenDocument( *xTargetDocShell, 0 );
 
         //the created window has to be located at the same position as the source window
-        Window& rTargetWindow = pTargetFrame->GetFrame()->GetWindow();
-        Window& rSourceWindow = rSourceView.GetViewFrame()->GetFrame()->GetWindow();
+        Window& rTargetWindow = pTargetFrame->GetFrame().GetWindow();
+        Window& rSourceWindow = rSourceView.GetViewFrame()->GetFrame().GetWindow();
         rTargetWindow.SetPosPixel(rSourceWindow.GetPosPixel());
 
-//        pTargetFrame->GetFrame()->Appear();
+//        pTargetFrame->GetFrame().Appear();
         SwView* pTargetView = static_cast<SwView*>( pTargetFrame->GetViewShell() );
         rMMConfig.SetTargetView(pTargetView);
         //initiate SelectShell() to create sub shells
@@ -3294,141 +2967,156 @@ sal_Int32 SwNewDBMgr::MergeDocuments( SwMailMergeConfigItem& rMMConfig,
 
 
         long nStartRow, nEndRow;
-        ULONG nDocNo = 1;
+        sal_uLong nDocNo = 1;
         sal_Int32 nDocCount = 0;
-        if( !IsMergeSilent() && lcl_getCountFromResultSet( nDocCount, pMergeData->xResultSet ) )
+        if( !IsMergeSilent() && lcl_getCountFromResultSet( nDocCount, pImpl->pMergeData->xResultSet ) )
             aMonitorDlg.SetTotalCount( nDocCount );
 
-        // create a new docshell from the temporary document
-        SfxBoolItem aHidden( SID_HIDDEN, TRUE );
-        SfxStringItem aReferer( SID_REFERER, String::CreateFromAscii(URL_PREFIX_PRIV_SOFFICE ));
-        SfxStringItem aTarget( SID_TARGETNAME, String::CreateFromAscii("_blank") );
-        SfxStringItem aURL( SID_FILE_NAME, sSourceDocURL );
-        const SfxPoolItem* pReturnValue =
-          rSourceView.GetViewFrame()->GetDispatcher()->Execute( SID_OPENDOC, SFX_CALLMODE_SYNCHRON,
-                                                                &aURL, &aFilterName, &aHidden, &aReferer, &aTarget, 0L);
-
-        if(pReturnValue)
+        do
         {
-            SfxViewFrameItem* pVItem = (SfxViewFrameItem*)pReturnValue;
-            SwView* pWorkView = (SwView*) pVItem->GetFrame()->GetViewShell();
+            nStartRow = pImpl->pMergeData->xResultSet->getRow();
+            if (!IsMergeSilent())
+            {
+                aMonitorDlg.SetCurrentPosition( nDocNo );
+                aMonitorDlg.Invalidate();
+                aMonitorDlg.Update();
+                // the print monitor needs some time to act
+                for( sal_uInt16 i = 0; i < 25; i++)
+                    Application::Reschedule();
+            }
+
+            // copy the source document
+            // the copy will be closed later, but it is more safe to use SfxObjectShellLock here
+            SfxObjectShellLock xWorkDocSh;
+            if(nDocNo == 1 )
+            {
+                uno::Reference< util::XCloneable > xClone( rSourceView.GetDocShell()->GetModel(), uno::UNO_QUERY);
+                uno::Reference< lang::XUnoTunnel > xWorkDocShell( xClone->createClone(), uno::UNO_QUERY);
+                SwXTextDocument* pWorkModel = reinterpret_cast<SwXTextDocument*>(xWorkDocShell->getSomething(SwXTextDocument::getUnoTunnelId()));
+                xWorkDocSh = pWorkModel->GetDocShell();
+            }
+            else
+            {
+                xWorkDocSh = rSourceView.GetDocShell()->GetDoc()->CreateCopy(true);
+            }
+            //create a ViewFrame
+            SwView* pWorkView = static_cast< SwView* >( SfxViewFrame::LoadHiddenDocument( *xWorkDocSh, 0 )->GetViewShell() );
             SwWrtShell& rWorkShell = pWorkView->GetWrtShell();
             pWorkView->AttrChangedNotify( &rWorkShell );//Damit SelectShell gerufen wird.
 
-            // prepare workind document
-            SwDoc* pWorkDoc = rWorkShell.GetDoc();
-            SwNewDBMgr* pWorkDBMgr = pWorkDoc->GetNewDBMgr();
-            pWorkDoc->SetNewDBMgr( this );
-            pWorkDoc->EmbedAllLinks();
-            if(UNDO_UI_DELETE_INVISIBLECNTNT == rWorkShell.GetUndoIds())
-                rWorkShell.Undo();
-            do
-            {
-                nStartRow = pMergeData->xResultSet->getRow();
-                if (!IsMergeSilent())
+                // merge the data
+                SwDoc* pWorkDoc = rWorkShell.GetDoc();
+                SwNewDBMgr* pWorkDBMgr = pWorkDoc->GetNewDBMgr();
+                pWorkDoc->SetNewDBMgr( this );
+                pWorkDoc->EmbedAllLinks();
+                SwUndoId nLastUndoId(UNDO_EMPTY);
+                if (rWorkShell.GetLastUndoInfo(0, & nLastUndoId))
                 {
-                    aMonitorDlg.SetCurrentPosition( nDocNo );
-                    aMonitorDlg.Update();
+                    if (UNDO_UI_DELETE_INVISIBLECNTNT == nLastUndoId)
+                    {
+                        rWorkShell.Undo();
+                    }
                 }
-
+                // #i69485# lock fields to prevent access to the result set while calculating layout
+	            rWorkShell.LockExpFlds();
                 // create a layout
                 rWorkShell.CalcLayout();
-                SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE, rWorkShell.GetView().GetViewFrame()->GetObjectShell()));
-                rWorkShell.ViewShell::UpdateFlds();
-                SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE_FINISHED, rWorkShell.GetView().GetViewFrame()->GetObjectShell()));
-                // Ensure numbering is correct on target document
-                rWorkShell.RemoveInvisibleContent();
-                rWorkShell.SetNumberingRestart();
+                rWorkShell.UnlockExpFlds();
+                SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE, SwDocShell::GetEventName(STR_SW_EVENT_FIELD_MERGE), rWorkShell.GetView().GetViewFrame()->GetObjectShell()));
+            rWorkShell.ViewShell::UpdateFlds();
+                SFX_APP()->NotifyEvent(SfxEventHint(SW_EVENT_FIELD_MERGE_FINISHED, SwDocShell::GetEventName(STR_SW_EVENT_FIELD_MERGE_FINISHED), rWorkShell.GetView().GetViewFrame()->GetObjectShell()));
 
-                // insert the document into the target document
-                rWorkShell.SttEndDoc(FALSE);
-                rWorkShell.SttEndDoc(TRUE);
-                rWorkShell.SelAll();
-                pTargetShell->SttEndDoc(FALSE);
+            // strip invisible content and convert fields to text
+            rWorkShell.RemoveInvisibleContent();
+            rWorkShell.ConvertFieldsToText();
+            rWorkShell.SetNumberingRestart();
+            if( bSynchronizedDoc )
+            {
+                lcl_RemoveSectionLinks( rWorkShell );
+            }    
 
-                //#i63806# put the styles to the target document
-                //if the source uses headers or footers each new copy need to copy a new page styles
-                if(bPageStylesWithHeaderFooter)
-                {
-                    //create a new pagestyle
-                    //copy the pagedesc from the current document to the new document and change the name of the to-be-applied style
+            // insert the document into the target document
+            rWorkShell.SttEndDoc(sal_False);
+            rWorkShell.SttEndDoc(sal_True);
+            rWorkShell.SelAll();
+            pTargetShell->SttEndDoc(sal_False);
 
-                    SwDoc* pTargetDoc = pTargetShell->GetDoc();
-                    String sNewPageDescName = lcl_FindUniqueName(pTargetShell, sStartingPageDesc, nDocNo );
-                    pTargetShell->GetDoc()->MakePageDesc( sNewPageDescName );
-                    SwPageDesc* pTargetPageDesc = pTargetShell->FindPageDescByName( sNewPageDescName );
-                    if(pSourcePageDesc && pTargetPageDesc)
-                    {
-                        pTargetDoc->CopyPageDesc( *pSourcePageDesc, *pTargetPageDesc, sal_False );
-                        sModifiedStartingPageDesc = sNewPageDescName;
-                        lcl_CopyFollowPageDesc( *pTargetShell, *pSourcePageDesc, *pTargetPageDesc, nDocNo );
-                    }
-                }
-                if(nDocNo == 1 || bPageStylesWithHeaderFooter)
+            //#i63806# put the styles to the target document
+            //if the source uses headers or footers each new copy need to copy a new page styles
+            if(bPageStylesWithHeaderFooter)
+            {
+                //create a new pagestyle
+                //copy the pagedesc from the current document to the new document and change the name of the to-be-applied style
+
+                SwDoc* pTargetDoc = pTargetShell->GetDoc();
+                String sNewPageDescName = lcl_FindUniqueName(pTargetShell, sStartingPageDesc, nDocNo );
+                pTargetShell->GetDoc()->MakePageDesc( sNewPageDescName );
+                SwPageDesc* pTargetPageDesc = pTargetShell->FindPageDescByName( sNewPageDescName );
+                const SwPageDesc* pWorkPageDesc = rWorkShell.FindPageDescByName( sStartingPageDesc );
+
+                if(pWorkPageDesc && pTargetPageDesc)
                 {
-                    pTargetView->GetDocShell()->_LoadStyles( *pWorkView->GetDocShell(), sal_True );
+                    pTargetDoc->CopyPageDesc( *pWorkPageDesc, *pTargetPageDesc, sal_False );
+                    sModifiedStartingPageDesc = sNewPageDescName;
+                    lcl_CopyFollowPageDesc( *pTargetShell, *pWorkPageDesc, *pTargetPageDesc, nDocNo );
                 }
-                if(nDocNo > 1)
+            }
+            if(nDocNo == 1 || bPageStylesWithHeaderFooter)
+            {
+                pTargetView->GetDocShell()->_LoadStyles( *rSourceView.GetDocShell(), sal_True );
+            }
+            if(nDocNo > 1)
+            {
+                pTargetShell->InsertPageBreak( &sModifiedStartingPageDesc, nStartingPageNo );
+            }
+            else
+            {
+                pTargetShell->SetPageStyle(sModifiedStartingPageDesc);
+            }
+            sal_uInt16 nPageCountBefore = pTargetShell->GetPageCnt();
+            DBG_ASSERT(!pTargetShell->GetTableFmt(),"target document ends with a table - paragraph should be appended");
+            //#i51359# add a second paragraph in case there's only one
+            {
+                SwNodeIndex aIdx( pWorkDoc->GetNodes().GetEndOfExtras(), 2 );
+              SwPosition aTestPos( aIdx );
+              SwCursor aTestCrsr(aTestPos,0,false);
+                if(!aTestCrsr.MovePara(fnParaNext, fnParaStart))
                 {
-                    pTargetShell->InsertPageBreak( &sModifiedStartingPageDesc, nStartingPageNo );
+                    //append a paragraph
+                    pWorkDoc->AppendTxtNode( aTestPos );
                 }
-                else
-                {
-                    pTargetShell->SetPageStyle(sModifiedStartingPageDesc);
-                }
-                USHORT nPageCountBefore = pTargetShell->GetPageCnt();
-                DBG_ASSERT(!pTargetShell->GetTableFmt(),"target document ends with a table - paragraph should be appended");
-                //#i51359# add a second paragraph in case there's only one
-                {
-                    SwNodeIndex aIdx( pWorkDoc->GetNodes().GetEndOfExtras(), 2 );
-                  SwPosition aTestPos( aIdx );
-                  SwCursor aTestCrsr(aTestPos,0,false);
-                    if(!aTestCrsr.MovePara(fnParaNext, fnParaStart))
-                    {
-                        //append a paragraph
-                        pWorkDoc->AppendTxtNode( aTestPos );
-                    }
-                }
-                pTargetShell->Paste( rWorkShell.GetDoc(), sal_True );
-                pTargetShell->ConvertFieldsToText();
-                //convert fields in page styles (header/footer - has to be done after the first document has been pasted
-                if(1 == nDocNo)
-                {
-                    pTargetShell->CalcLayout();
-                    pTargetShell->ConvertFieldsToText();
-                }
-                //add the document info to the config item
-                SwDocMergeInfo aMergeInfo;
-                aMergeInfo.nStartPageInTarget = nPageCountBefore;
-                //#i72820# calculate layout to be able to find the correct page index
+            }
+            pTargetShell->Paste( rWorkShell.GetDoc(), sal_True );
+            //convert fields in page styles (header/footer - has to be done after the first document has been pasted
+            if(1 == nDocNo)
+            {
                 pTargetShell->CalcLayout();
-                aMergeInfo.nEndPageInTarget = pTargetShell->GetPageCnt();
-                aMergeInfo.nDBRow = nStartRow;
-                rMMConfig.AddMergedDocument( aMergeInfo );
-                ++nRet;
+                pTargetShell->ConvertFieldsToText();
+            }
+            //add the document info to the config item
+            SwDocMergeInfo aMergeInfo;
+            aMergeInfo.nStartPageInTarget = nPageCountBefore;
+            //#i72820# calculate layout to be able to find the correct page index
+            pTargetShell->CalcLayout();
+            aMergeInfo.nEndPageInTarget = pTargetShell->GetPageCnt();
+            aMergeInfo.nDBRow = nStartRow;
+            rMMConfig.AddMergedDocument( aMergeInfo );
+            ++nRet;
 
-                // Undo everything on current workshell allows to loop for a
-                // merge action within the same document. It saves _loads_
-                // of times : 7 times faster than the previous way.
-                // see i40827 for more information
-                const SwNodes *pUndoNds = pWorkDoc->GetUndoNds();
-                if (pUndoNds)
-                {
-                    for( USHORT j = 0; j < pUndoNds->Count(); j++)
-                        rWorkShell.Undo();
-                }
-                nEndRow = pMergeData->xResultSet->getRow();
-                ++nDocNo;
-            } while( !bCancel &&
-                (bSynchronizedDoc && (nStartRow != nEndRow)? ExistsNextRecord() : ToNextMergeRecord()));
+            // the print monitor needs some time to act
+            for( sal_uInt16 i = 0; i < 25; i++)
+                Application::Reschedule();
 
             //restore the ole DBMgr
             pWorkDoc->SetNewDBMgr( pWorkDBMgr );
-
             //now the temporary document should be closed
             SfxObjectShellRef xDocSh(pWorkView->GetDocShell());
             xDocSh->DoClose();
-        }
+            nEndRow = pImpl->pMergeData->xResultSet->getRow();
+            ++nDocNo;
+        } while( !bCancel &&
+                (bSynchronizedDoc && (nStartRow != nEndRow)? ExistsNextRecord() : ToNextMergeRecord()));
+
         //deselect all, go out of the frame and go to the beginning of the document
         Point aPt(LONG_MIN, LONG_MIN);
         pTargetShell->SelectObj(aPt, SW_LEAVE_FRAME);
@@ -3441,14 +3129,13 @@ sal_Int32 SwNewDBMgr::MergeDocuments( SwMailMergeConfigItem& rMMConfig,
         pTargetShell->SttDoc();
         //
     }
-    catch( Exception& )
+    catch( Exception& rEx)
     {
+        (void)rEx;
         DBG_ERROR("exception caught in SwNewDBMgr::MergeDocuments");
     }
-    if(sSourceDocURL.Len())
-        File::remove( sSourceDocURL );
     DELETEZ(pImpl->pMergeData);
-    bInMerge = FALSE;
+    bInMerge = sal_False;
     return nRet;
 }
 /* -----------------09.12.2002 12:38-----------------
@@ -3470,7 +3157,7 @@ void SwConnectionDisposedListener_Impl::disposing( const EventObject& rSource )
 {
     ::vos::OGuard aGuard(Application::GetSolarMutex());
     uno::Reference<XConnection> xSource(rSource.Source, UNO_QUERY);
-    for(USHORT nPos = rDBMgr.aDataSourceParams.Count(); nPos; nPos--)
+    for(sal_uInt16 nPos = rDBMgr.aDataSourceParams.Count(); nPos; nPos--)
     {
         SwDSParam* pParam = rDBMgr.aDataSourceParams[nPos - 1];
         if(pParam->xConnection.is() &&

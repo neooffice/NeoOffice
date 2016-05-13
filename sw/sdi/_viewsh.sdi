@@ -1,34 +1,36 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Portions of this file are part of the LibreOffice project.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
 
 
-interface BaseTextEditView : View
+
+
+interface BaseTextEditView
 [
 	Automation = FALSE;
 ]
@@ -100,6 +102,16 @@ interface BaseTextEditView : View
 		ExecMethod = ExecDraw ;
 		StateMethod = GetDrawState ;
 	]
+    SID_BROWSER_MODE
+    [
+        ExecMethod = ExecViewOptions ;
+        StateMethod = StateViewOptions ;
+    ]       
+    FN_PRINT_LAYOUT
+    [
+        ExecMethod = ExecViewOptions ;
+        StateMethod = StateViewOptions ;
+    ]
     FN_REDLINE_PROTECT
     [
 		ExecMethod = Execute;
@@ -400,7 +412,32 @@ interface BaseTextEditView : View
 		ExecMethod = Execute ;
 		StateMethod = GetState ;
 	]
-	FN_THESAURUS_DLG // status(final|play)
+
+	SID_ATTR_PARA_ULSPACE
+	[
+		ExecMethod = ExecTabWin ;
+    	StateMethod = StateTabWin ;
+	]
+		
+    SID_ATTR_PAGE_COLUMN
+    [
+        ExecMethod = ExecTabWin ;
+        StateMethod = StateTabWin ;
+    ]
+    SID_ATTR_PAGE_ULSPACE
+    [
+        ExecMethod = ExecTabWin ;
+        StateMethod = StateTabWin ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
+    SID_ATTR_PAGE_LRSPACE
+    [
+        ExecMethod = ExecTabWin ;
+        StateMethod = StateTabWin ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
+
+    SID_THESAURUS // status(final|play)
 	[
 		ExecMethod = ExecLingu ;
 		StateMethod = GetState ;
@@ -612,12 +649,12 @@ interface BaseTextEditView : View
         ExecMethod = Execute ;
         StateMethod = GetState ;
     ]
-        SID_INSERT_GRAPHIC // status(final|play)
-        [
-                ExecMethod = Execute ;
-                StateMethod = NoState ;
-                DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-        ]
+    SID_INSERT_GRAPHIC // status(final|play)
+    [
+        ExecMethod = Execute ;
+        StateMethod = GetState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
     SID_AUTOSPELL_CHECK
     [
         ExecMethod = ExecViewOptions ;

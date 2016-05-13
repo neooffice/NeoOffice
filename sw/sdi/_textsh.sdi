@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 interface BaseText
 [
 	Automation = FALSE;
@@ -42,6 +45,7 @@ interface BaseText
 	FN_INSERT_GLOSSARY // status(final|play|record)
 	[
 		ExecMethod = ExecGlossary ;
+        StateMethod = GetState ;
 	]
 
     FN_TXTATR_INET // status()
@@ -65,6 +69,7 @@ interface BaseText
     SID_ATTR_BRUSH_CHAR // status()
 	[
 		ExecMethod = Execute ;
+		StateMethod = GetTxtCtrlState ; 
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 
@@ -143,7 +148,7 @@ interface BaseText
 	SID_INSERTDOC // status(final|play|rec)
 	[
 		ExecMethod = Execute ;
-		StateMethod = NoState ;
+		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	FN_INSERT_BOOKMARK // status(final|play)
@@ -176,7 +181,7 @@ interface BaseText
 		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
-	FN_INSERT_SYMBOL // status(final|play|rec)
+	SID_CHARMAP // status(final|play|rec)
 	[
 		ExecMethod = Execute ;
 		StateMethod = GetState ;
@@ -244,16 +249,17 @@ interface BaseText
         StateMethod = GetState ;
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
+
     FN_INSERT_BREAK // status(final|play)
-	[
-		ExecMethod = ExecInsert ;
-		StateMethod = NoState ;
-		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-	]
+    [
+        ExecMethod = ExecInsert ;
+        StateMethod = GetState ;
+    ]
+
 	FN_INSERT_PAGEBREAK // status(final|play)
 	[
 		ExecMethod = ExecInsert ;
-		StateMethod = NoState ;
+		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	FN_INSERT_LINEBREAK  // status(final|play)
@@ -265,19 +271,19 @@ interface BaseText
 	FN_INSERT_COLUMN_BREAK // status(final|play)
 	[
 		ExecMethod = ExecInsert ;
-		StateMethod = NoState ;
+		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	FN_INSERT_BREAK_DLG // status(final|play)
 	[
 		ExecMethod = Execute ;
-		StateMethod = NoState ;
+		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	SID_INSERT_AVMEDIA // status(final|play)
 	[
 		ExecMethod = ExecInsert;
-		StateMethod = NoState ;
+		StateMethod = StateInsert ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	FN_INSERT_HRULER // status()
@@ -327,12 +333,6 @@ interface BaseText
 		StateMethod = StateInsert ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
-	SID_INSERT_APPLET  // status(final|play)
-	[
-		ExecMethod = ExecInsert ;
-		StateMethod = StateInsert ;
-		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-	]
 	FN_INSERT_TABLE // status(final|play)
 	[
 		ExecMethod = ExecInsert ;
@@ -351,6 +351,7 @@ interface BaseText
 	FN_INSERT_HYPERLINK // status()
 	[
 		ExecMethod = Execute ;
+		StateMethod = GetState;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	SID_HYPERLINK_DIALOG
@@ -474,6 +475,11 @@ interface BaseText
 	 //
 	 //	Goto - Methoden
 	 //
+	SID_FM_TOGGLECONTROLFOCUS
+	[
+		ExecMethod = ExecMoveMisc ;
+		StateMethod = NoState ;
+	]
 	FN_CNTNT_TO_NEXT_FRAME // status(final|play)
 	[
 		ExecMethod = ExecMoveMisc ;
@@ -739,6 +745,18 @@ interface BaseText
 		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
+	FN_BUL_NUM_RULE_INDEX // status(final|play)
+	[
+		ExecMethod = ExecEnterNum ;
+		StateMethod = GetState ;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
+	FN_NUM_NUM_RULE_INDEX // status(final|play)
+	[
+		ExecMethod = ExecEnterNum ;
+		StateMethod = GetState ;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
 	FN_NUMBER_BULLETS // status(final|play)
 	[
 		ExecMethod = ExecEnterNum ;
@@ -799,6 +817,21 @@ interface BaseText
 	[
 		ExecMethod = ExecMoveMisc ;
 		StateMethod = NoState ;
+	]
+	FN_SVX_SET_NUMBER
+	[
+		ExecMethod = ExecSetNumber;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
+	FN_SVX_SET_BULLET
+	[
+		ExecMethod = ExecSetNumber;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
+	SID_OUTLINE_BULLET // status(final|play)
+	[
+		ExecMethod = ExecEnterNum ;		
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 
 	FN_INSERT_FOOTNOTE_DLG // status(final|play|rec)
@@ -910,6 +943,7 @@ interface BaseText
 	FN_EXPAND_GLOSSARY // status(final|play)
 	[
 		ExecMethod = ExecGlossary ;
+		StateMethod = GetState ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
 	FN_POSTIT // status(final|play)
@@ -917,7 +951,7 @@ interface BaseText
 		ExecMethod = ExecField ;
 		StateMethod = StateField;
 	]
-	FN_DELETE_NOTE
+    FN_DELETE_COMMENT
 	[
 		ExecMethod = ExecField ;
 		StateMethod = StateField;
@@ -1206,6 +1240,11 @@ interface BaseText
 		ExecMethod = Execute ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
+	SID_ATTR_PARA_LRSPACE
+	[
+		ExecMethod = Execute ;
+		StateMethod = GetAttrState;
+	]
 	FN_SELECT_PARA // status(final|play)
 	[
 		ExecMethod = Execute ;
@@ -1453,6 +1492,12 @@ interface BaseText
 		ExecMethod = Execute ;
 		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
 	]
+
+	SID_CHAR_DLG_EFFECT
+	[
+		ExecMethod = Execute ;
+		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+	]
     SID_CHAR_DLG_FOR_PARAGRAPH
     [
         ExecMethod = Execute ;
@@ -1482,6 +1527,24 @@ interface BaseText
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
+    SID_TRANSLITERATE_SENTENCE_CASE
+    [
+        ExecMethod = ExecTransliteration;
+        StateMethod = NoState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
+    SID_TRANSLITERATE_TITLE_CASE
+    [
+        ExecMethod = ExecTransliteration;
+        StateMethod = NoState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
+    SID_TRANSLITERATE_TOGGLE_CASE
+    [
+        ExecMethod = ExecTransliteration;
+        StateMethod = NoState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
 	SID_TRANSLITERATE_UPPER
 	[
 		ExecMethod = ExecTransliteration;
@@ -1582,18 +1645,26 @@ interface BaseText
         DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";  // e.g. disable for read-only documents
     ]
 
-// #ifdef USE_JAVA
-	FN_LOOKUP_IN_MACOSX_DICTIONARY
-	[
-		ExecMethod = Execute ;
-		StateMethod = NoState ;
-		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-	]
-	SID_ATTR_CHAR_FILLCOLOR
-	[
-		StateMethod = GetState ;
-		DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
-	]
+    SID_THES
+    [
+        ExecMethod = Execute ;
+        StateMethod = GetState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";  // e.g. disable for read-only documents
+    ]
+
+    // #ifdef USE_JAVA
+    FN_LOOKUP_IN_MACOSX_DICTIONARY
+    [
+        ExecMethod = Execute ;
+        StateMethod = NoState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
+
+    SID_ATTR_CHAR_FILLCOLOR
+    [
+        StateMethod = GetState ;
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
+    ]
 // #endif	// USE_JAVA
 
 }  //ende interface text

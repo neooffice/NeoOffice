@@ -1,31 +1,33 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Portions of this file are part of the LibreOffice project.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *   This Source Code Form is subject to the terms of the Mozilla Public
+ *   License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified February 2013 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -51,7 +53,6 @@
 #include <svx/fillctrl.hxx>
 #include <svx/tbcontrl.hxx>
 #include <svx/verttexttbxctrl.hxx>
-#include <svx/zoomtbxctrl.hxx>
 #include <svx/formatpaintbrushctrl.hxx>
 #include <svx/contdlg.hxx>
 #include <svx/layctrl.hxx>
@@ -62,13 +63,13 @@
 #include <svx/tbxcolor.hxx>
 #include <svx/clipboardctl.hxx>
 #include <svx/lboxctrl.hxx>
-#include <svx/extrusioncontrols.hxx>
 #include <svx/hyprlink.hxx>
 #include <svx/tbxcustomshapes.hxx>
-#include <svx/fontworkgallery.hxx>
 #include <svx/imapdlg.hxx>
 #include <svx/srchdlg.hxx>
 #include <svx/hyperdlg.hxx>
+#include <svx/extrusioncolorcontrol.hxx>
+#include <svx/fontworkgallery.hxx>
 #include <com/sun/star/scanner/XScannerManager.hpp>
 #include <com/sun/star/container/XSet.hpp>
 #include <comphelper/processfactory.hxx>
@@ -141,6 +142,8 @@
 #include <mailmergechildwindow.hxx>
 #include <modcfg.hxx>
 #include <fontcfg.hxx>
+#include <sfx2/sidebar/SidebarChildWindow.hxx>
+#include <sfx2/taskpane.hxx>
 #include <sfx2/evntconf.hxx>
 #include <sfx2/appuno.hxx>
 #include <swatrset.hxx>
@@ -153,8 +156,8 @@
 // OD 14.02.2003 #107424#
 #include <svtools/colorcfg.hxx>
 
-#include <svx/acorrcfg.hxx>
-#include <svtools/moduleoptions.hxx>
+#include <editeng/acorrcfg.hxx>
+#include <unotools/moduleoptions.hxx>
 
 #ifndef _AVMEDIA_MEDIAPPLAYER_HXX
 #include <avmedia/mediaplayer.hxx>
@@ -213,7 +216,6 @@ SwModule::SwModule( SfxObjectFactory* pWebFact,
     pView(0),
 	bAuthorInitialised(sal_False),
     bEmbeddedLoadSave( sal_False ),
-    pClipboard( 0 ),
     pDragDrop( 0 ),
     pXSelection( 0 )
 {
@@ -225,11 +227,6 @@ SwModule::SwModule( SfxObjectFactory* pWebFact,
 									 ERRCODE_AREA_SW_END,
 									 pSwResMgr );
 
-	SfxEventConfiguration::RegisterEvent(SW_EVENT_MAIL_MERGE, SW_RES(STR_PRINT_MERGE_MACRO), String::CreateFromAscii("OnMailMerge"));
-	SfxEventConfiguration::RegisterEvent(SW_EVENT_MAIL_MERGE_END, SW_RES(STR_PRINT_MERGE_MACRO), String::CreateFromAscii("OnMailMergeFinished"));
-    SfxEventConfiguration::RegisterEvent(SW_EVENT_FIELD_MERGE, String(), String::CreateFromAscii("OnFieldMerge"));
-    SfxEventConfiguration::RegisterEvent(SW_EVENT_FIELD_MERGE_FINISHED, String(), String::CreateFromAscii("OnFieldMergeFinished"));
-	SfxEventConfiguration::RegisterEvent(SW_EVENT_PAGE_COUNT, SW_RES(STR_PAGE_COUNT_MACRO), String::CreateFromAscii("OnPageCountChange"));
 	pModuleConfig = new SwModuleOptions;
 
 	//Die brauchen wie sowieso
@@ -390,15 +387,8 @@ void SwDLL::RegisterControls()
 	SvxTbxCtlCustomShapes::RegisterControl( SID_DRAWTBX_CS_CALLOUT, pMod );
 	SvxTbxCtlCustomShapes::RegisterControl( SID_DRAWTBX_CS_STAR, pMod );
 
-	svx::ExtrusionDepthControl::RegisterControl( SID_EXTRUSION_DEPTH_FLOATER, pMod );
-	svx::ExtrusionDirectionControl::RegisterControl( SID_EXTRUSION_DIRECTION_FLOATER, pMod );
-	svx::ExtrusionLightingControl::RegisterControl( SID_EXTRUSION_LIGHTING_FLOATER, pMod );
-	svx::ExtrusionSurfaceControl::RegisterControl( SID_EXTRUSION_SURFACE_FLOATER, pMod );
 	svx::ExtrusionColorControl::RegisterControl( SID_EXTRUSION_3D_COLOR, pMod );
-
 	svx::FontWorkShapeTypeControl::RegisterControl( SID_FONTWORK_SHAPE_TYPE, pMod );
-	svx::FontWorkAlignmentControl::RegisterControl( SID_FONTWORK_ALIGNMENT_FLOATER, pMod );
-	svx::FontWorkCharacterSpacingControl::RegisterControl( SID_FONTWORK_CHARACTER_SPACING_FLOATER, pMod );
 
 	SvxClipBoardControl::RegisterControl(SID_PASTE, pMod );
 	SvxUndoRedoControl::RegisterControl(SID_UNDO, pMod );
@@ -432,7 +422,6 @@ void SwDLL::RegisterControls()
 	SvxFontSizeMenuControl::RegisterControl(SID_ATTR_CHAR_FONTHEIGHT, pMod );
 
 	SwZoomControl::RegisterControl(SID_ATTR_ZOOM, pMod );
-	SvxZoomToolBoxControl::RegisterControl(SID_ATTR_ZOOM, pMod);
     SwPreviewZoomControl::RegisterControl(FN_PREVIEW_ZOOM, pMod);
 	SvxPosSizeStatusBarControl::RegisterControl(0, pMod );
 	SvxInsertStatusBarControl::RegisterControl(SID_ATTR_INSERT, pMod );
@@ -482,12 +471,6 @@ void SwDLL::RegisterControls()
     SvxCTLTextTbxCtrl::RegisterControl(SID_ATTR_PARA_LEFT_TO_RIGHT, pMod);
     SvxCTLTextTbxCtrl::RegisterControl(SID_ATTR_PARA_RIGHT_TO_LEFT, pMod);
 
-	svx::ExtrusionDepthControl::RegisterControl( SID_EXTRUSION_DEPTH_FLOATER, pMod );
-	svx::ExtrusionDirectionControl::RegisterControl( SID_EXTRUSION_DIRECTION_FLOATER, pMod );
-	svx::ExtrusionLightingControl::RegisterControl( SID_EXTRUSION_LIGHTING_FLOATER, pMod );
-	svx::ExtrusionSurfaceControl::RegisterControl( SID_EXTRUSION_SURFACE_FLOATER, pMod );
-	svx::ExtrusionColorControl::RegisterControl( SID_EXTRUSION_3D_COLOR, pMod );
-
 	GalleryChildWindow::RegisterChildWindow(0, pMod);
 
 	::avmedia::MediaToolBoxControl::RegisterControl(SID_AVMEDIA_TOOLBOX, pMod);
@@ -495,8 +478,10 @@ void SwDLL::RegisterControls()
 
     SvxSmartTagsControl::RegisterControl(SID_OPEN_SMARTTAGMENU, pMod);
 #ifndef NO_STATUSBAR_WORDCOUNT
-	SwWordCountStatusBarControl::RegisterControl(FN_STAT_WORDCOUNT, pMod);
+    SwWordCountStatusBarControl::RegisterControl(FN_STAT_WORDCOUNT, pMod);
 #endif	// !NO_STATUSBAR_WORDCOUNT
+    ::sfx2::sidebar::SidebarChildWindow::RegisterChildWindow(NULL, pMod);
+    ::sfx2::TaskPaneWrapper::RegisterChildWindow(NULL, pMod);
 }
 
 

@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified March 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
@@ -33,7 +36,7 @@
 
 #include <hintids.hxx>
 #include <tools/poly.hxx>
-#include <svtools/stritem.hxx>
+#include <svl/stritem.hxx>
 #include <svx/contdlg.hxx>
 #include <vcl/svapp.hxx>
 #include <docary.hxx>
@@ -47,15 +50,19 @@
 #include <istyleaccess.hxx>
 #include <SwStyleNameMapper.hxx>
 
+// --> OD 2009-07-13 #i73249#
+#include <frmfmt.hxx>
+// <--
+
 SwNoTxtNode::SwNoTxtNode( const SwNodeIndex & rWhere,
-				  const BYTE nNdType,
+				  const sal_uInt8 nNdType,
 				  SwGrfFmtColl *pGrfColl,
 				  SwAttrSet* pAutoAttr ) :
 	SwCntntNode( rWhere, nNdType, pGrfColl ),
     pContour( 0 ),
-    bAutomaticContour( FALSE ),
-	bContourMapModeValid( TRUE ),
-	bPixelContour( FALSE )
+    bAutomaticContour( sal_False ),
+	bContourMapModeValid( sal_True ),
+	bPixelContour( sal_False )
 {
 	// soll eine Harte-Attributierung gesetzt werden?
 	if( pAutoAttr )
@@ -91,19 +98,19 @@ void SwNoTxtNode::NewAttrSet( SwAttrPool& rPool )
 // bei Grafiken und OLE-Objekten
 
 
-BOOL SwNoTxtNode::RestorePersistentData()
+sal_Bool SwNoTxtNode::RestorePersistentData()
 {
-	return TRUE;
+	return sal_True;
 }
 
 
-BOOL SwNoTxtNode::SavePersistentData()
+sal_Bool SwNoTxtNode::SavePersistentData()
 {
-	return TRUE;
+	return sal_True;
 }
 
 
-void SwNoTxtNode::SetContour( const PolyPolygon *pPoly, BOOL bAutomatic )
+void SwNoTxtNode::SetContour( const PolyPolygon *pPoly, sal_Bool bAutomatic )
 {
 	delete pContour;
 	if ( pPoly )
@@ -111,8 +118,8 @@ void SwNoTxtNode::SetContour( const PolyPolygon *pPoly, BOOL bAutomatic )
 	else
 		pContour = 0;
     bAutomaticContour = bAutomatic;
-	bContourMapModeValid = TRUE;
-	bPixelContour = FALSE;
+	bContourMapModeValid = sal_True;
+	bPixelContour = sal_False;
 }
 
 
@@ -120,9 +127,9 @@ void SwNoTxtNode::CreateContour()
 {
 	ASSERT( !pContour, "Contour available." );
     pContour = new PolyPolygon(SvxContourDlg::CreateAutoContour(GetGraphic()));
-    bAutomaticContour = TRUE;
-	bContourMapModeValid = TRUE;
-	bPixelContour = FALSE;
+    bAutomaticContour = sal_True;
+	bContourMapModeValid = sal_True;
+	bPixelContour = sal_False;
 }
 
 const PolyPolygon *SwNoTxtNode::HasContour() const
@@ -133,31 +140,64 @@ const PolyPolygon *SwNoTxtNode::HasContour() const
 #ifdef USE_JAVA
 		// Fix bug 3593 by treating MAP_POINT the same as MAP_PIXEL when
 		// calculating contours
-		BOOL bPixelGrf = ( aGrfMap.GetMapUnit() == MAP_PIXEL || aGrfMap.GetMapUnit() == MAP_POINT );
+		sal_Bool bPixelGrf = ( aGrfMap.GetMapUnit() == MAP_PIXEL || aGrfMap.GetMapUnit() == MAP_POINT );
 #else	// USE_JAVA
-		BOOL bPixelGrf = aGrfMap.GetMapUnit() == MAP_PIXEL;
+		sal_Bool bPixelGrf = aGrfMap.GetMapUnit() == MAP_PIXEL;
 #endif	// USE_JAVA
 		const MapMode aContourMap( bPixelGrf ? MAP_PIXEL : MAP_100TH_MM );
 		if( bPixelGrf ? !bPixelContour : aGrfMap != aContourMap )
 		{
+            // --> OD #i102238#
+            double nGrfDPIx = 0.0;
+            double nGrfDPIy = 0.0;
+            {
+                if ( !bPixelGrf && bPixelContour )
+                {
+                    const Size aGrfPixelSize( GetGraphic().GetSizePixel() );
+                    const Size aGrfPrefMapModeSize( GetGraphic().GetPrefSize() );
+                    if ( aGrfMap.GetMapUnit() == MAP_INCH )
+                    {
+                        nGrfDPIx = aGrfPixelSize.Width() / ( (double)aGrfMap.GetScaleX() * aGrfPrefMapModeSize.Width() );
+                        nGrfDPIy = aGrfPixelSize.Height() / ( (double)aGrfMap.GetScaleY() * aGrfPrefMapModeSize.Height() );
+                    }
+                    else
+                    {
+                        const Size aGrf1000thInchSize =
+                            OutputDevice::LogicToLogic( aGrfPrefMapModeSize,
+                                                        aGrfMap, MAP_1000TH_INCH );
+                        nGrfDPIx = 1000.0 * aGrfPixelSize.Width() / aGrf1000thInchSize.Width();
+                        nGrfDPIy = 1000.0 * aGrfPixelSize.Height() / aGrf1000thInchSize.Height();
+                    }    
+                }
+            }
+            // <--        
 			ASSERT( !bPixelGrf || aGrfMap == aContourMap,
 					"scale factor for pixel unsupported" );
 			OutputDevice* pOutDev =
 				(bPixelGrf || bPixelContour) ? Application::GetDefaultDevice()
 											 : 0;
-			USHORT nPolyCount = pContour->Count();
-			for( USHORT j=0; j<nPolyCount; j++ )
+			sal_uInt16 nPolyCount = pContour->Count();
+			for( sal_uInt16 j=0; j<nPolyCount; j++ )
 			{
 				Polygon& rPoly = (*pContour)[j];
 
-				USHORT nCount = rPoly.GetSize();
-				for( USHORT i=0 ; i<nCount; i++ )
+				sal_uInt16 nCount = rPoly.GetSize();
+				for( sal_uInt16 i=0 ; i<nCount; i++ )
 				{
 					if( bPixelGrf )
 						rPoly[i] = pOutDev->LogicToPixel( rPoly[i],
 														  aContourMap );
 					else if( bPixelContour )
+                    {        
 						rPoly[i] = pOutDev->PixelToLogic( rPoly[i], aGrfMap );
+                        // --> OD #i102238#
+                        if ( nGrfDPIx != 0 && nGrfDPIy != 0 )
+                        {
+                            rPoly[i] = Point( rPoly[i].X() * pOutDev->ImplGetDPIX() / nGrfDPIx,
+                                              rPoly[i].Y() * pOutDev->ImplGetDPIY() / nGrfDPIy );
+                        }
+                        // <--
+                    }
 					else
 						rPoly[i] = OutputDevice::LogicToLogic( rPoly[i],
 														  	   aContourMap,
@@ -165,8 +205,8 @@ const PolyPolygon *SwNoTxtNode::HasContour() const
 				}
 			}
 		}
-		((SwNoTxtNode *)this)->bContourMapModeValid = TRUE;
-		((SwNoTxtNode *)this)->bPixelContour = FALSE;
+		((SwNoTxtNode *)this)->bContourMapModeValid = sal_True;
+		((SwNoTxtNode *)this)->bPixelContour = sal_False;
 	}
 
 	return pContour;
@@ -185,13 +225,13 @@ void SwNoTxtNode::SetContourAPI( const PolyPolygon *pPoly )
 		pContour = new PolyPolygon( *pPoly );
 	else
 		pContour = 0;
-	bContourMapModeValid = FALSE;
+	bContourMapModeValid = sal_False;
 }
 
-BOOL SwNoTxtNode::GetContourAPI( PolyPolygon &rContour ) const
+sal_Bool SwNoTxtNode::GetContourAPI( PolyPolygon &rContour ) const
 {
 	if( !pContour )
-		return FALSE;
+		return sal_False;
 
 	rContour = *pContour;
 	if( bContourMapModeValid )
@@ -204,13 +244,15 @@ BOOL SwNoTxtNode::GetContourAPI( PolyPolygon &rContour ) const
 		if( aGrfMap.GetMapUnit() != MAP_PIXEL &&
 			aGrfMap != aContourMap )
 		{
-			USHORT nPolyCount = rContour.Count();
-			for( USHORT j=0; j<nPolyCount; j++ )
+			sal_uInt16 nPolyCount = rContour.Count();
+			for( sal_uInt16 j=0; j<nPolyCount; j++ )
 			{
-				Polygon& rPoly = (*pContour)[j];
+                // --> OD #i102238# - use the right <PolyPolygon> instance
+                Polygon& rPoly = rContour[j];
+                // <--
 
-				USHORT nCount = rPoly.GetSize();
-				for( USHORT i=0 ; i<nCount; i++ )
+				sal_uInt16 nCount = rPoly.GetSize();
+				for( sal_uInt16 i=0 ; i<nCount; i++ )
 				{
 					rPoly[i] = OutputDevice::LogicToLogic( rPoly[i], aGrfMap,
 														   aContourMap );
@@ -219,12 +261,12 @@ BOOL SwNoTxtNode::GetContourAPI( PolyPolygon &rContour ) const
 		}
 	}
 
-	return TRUE;
+	return sal_True;
 }
 
-BOOL SwNoTxtNode::IsPixelContour() const
+sal_Bool SwNoTxtNode::IsPixelContour() const
 {
-	BOOL bRet;
+	sal_Bool bRet;
 	if( bContourMapModeValid )
 	{
 		const MapMode aGrfMap( GetGraphic().GetPrefMapMode() );
@@ -244,7 +286,7 @@ Graphic SwNoTxtNode::GetGraphic() const
 	Graphic aRet;
 	if ( GetGrfNode() )
 	{
-		((SwGrfNode*)this)->SwapIn( TRUE );
+		((SwGrfNode*)this)->SwapIn( sal_True );
 		aRet = ((SwGrfNode*)this)->GetGrf();
 	}
 	else
@@ -255,19 +297,56 @@ Graphic SwNoTxtNode::GetGraphic() const
 	return aRet;
 }
 
-
-void SwNoTxtNode::SetAlternateText( const String& rTxt, sal_Bool bBroadcast )
+void SwNoTxtNode::SetTitle( const String& rTitle, bool bBroadcast )
 {
-	if( bBroadcast )
-	{
-		SwStringMsgPoolItem aOld( RES_ALT_TEXT_CHANGED, aAlternateText );
-		SwStringMsgPoolItem aNew( RES_ALT_TEXT_CHANGED, rTxt );
-		aAlternateText = rTxt;
-		Modify( &aOld, &aNew );
-	}
-	else
-	{
-		aAlternateText = rTxt;
-	}
+    // Title attribute of <SdrObject> replaces own AlternateText attribute
+    SwFlyFrmFmt* pFlyFmt = dynamic_cast<SwFlyFrmFmt*>(GetFlyFmt());
+    ASSERT( pFlyFmt,
+            "<SwNoTxtNode::SetTitle(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
+    {
+        return;
+    }
+
+    pFlyFmt->SetObjTitle( rTitle, bBroadcast );
 }
 
+const String SwNoTxtNode::GetTitle() const
+{
+    const SwFlyFrmFmt* pFlyFmt = dynamic_cast<const SwFlyFrmFmt*>(GetFlyFmt());
+    ASSERT( pFlyFmt,
+            "<SwNoTxtNode::GetTitle(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
+    {
+        return aEmptyStr;
+    }
+
+    return pFlyFmt->GetObjTitle();
+}
+
+void SwNoTxtNode::SetDescription( const String& rDescription, bool bBroadcast )
+{
+    SwFlyFrmFmt* pFlyFmt = dynamic_cast<SwFlyFrmFmt*>(GetFlyFmt());
+    ASSERT( pFlyFmt,
+            "<SwNoTxtNode::SetDescription(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
+    {
+        return;
+    }
+
+    pFlyFmt->SetObjDescription( rDescription, bBroadcast );
+}
+
+const String SwNoTxtNode::GetDescription() const
+{
+    const SwFlyFrmFmt* pFlyFmt = dynamic_cast<const SwFlyFrmFmt*>(GetFlyFmt());
+    ASSERT( pFlyFmt,
+            "<SwNoTxtNode::GetDescription(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
+    {
+        return aEmptyStr;
+    }
+
+    return pFlyFmt->GetObjDescription();
+}
+// <--
