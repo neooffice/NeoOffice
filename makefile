@@ -341,6 +341,8 @@ build.neo_patches: \
 # Custom modules that need to link directly to other custom modules
 build.neo_remotecontrol_component: build.remotecontrol_patches
 build.neo_sc_patch: build.neo_unotools_patch
+build.neo_sfx2_patch: build.neo_sal_patch
+build.neo_sw_patch: build.neo_unotools_patch
 
 build.neo_%_patch: % build.neo_configure
 	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
