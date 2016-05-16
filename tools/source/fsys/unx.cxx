@@ -1,31 +1,34 @@
-/*************************************************************************
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ * This file incorporates work covered by the following license notice:
+ * 
+ *   Modified May 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 4
+ *   of the Apache License, Version 2.0.
  *
- * Copyright 2008 by Sun Microsystems, Inc.
- *
- * $RCSfile$
- * $Revision$
- *
- * This file is part of NeoOffice.
- *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
- *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
- *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified October 2012 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
- *
- ************************************************************************/
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *************************************************************/
+
+
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_tools.hxx"
@@ -35,7 +38,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <utime.h>
-#if defined HPUX || defined LINUX || defined IRIX
+#if defined HPUX || defined LINUX
 #include <mntent.h>
 #define mnttab mntent
 #elif defined SCO
@@ -103,18 +106,18 @@ struct mymnttab
 
 
 #if defined(NETBSD) || defined(FREEBSD) || defined(MACOSX)
-BOOL GetMountEntry(dev_t /* dev */, struct mymnttab * /* mytab */ )
+sal_Bool GetMountEntry(dev_t /* dev */, struct mymnttab * /* mytab */ )
 {
 	DBG_WARNING( "Sorry, not implemented: GetMountEntry" );
-	return FALSE;
+	return sal_False;
 }
 
 #elif defined AIX
-BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
+sal_Bool GetMountEntry(dev_t dev, struct mymnttab *mytab)
 {
 	int bufsize;
 	if (mntctl (MCTL_QUERY, sizeof bufsize, (char*) &bufsize))
-		return FALSE;
+		return sal_False;
 
 	char* buffer = (char *)malloc( bufsize * sizeof(char) );
 	if (mntctl (MCTL_QUERY, bufsize, buffer) != -1)
@@ -135,40 +138,40 @@ BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
 						+= vmt2dataptr((struct vmount*)vmt, VMT_OBJECT);
 				mytab->mountdevice = dev;
 				free( buffer );
-				return TRUE;
+				return sal_True;
 			}
 		}
 	free( buffer );
-	return FALSE;
+	return sal_False;
 }
 
 #else
 
 
-static BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
+static sal_Bool GetMountEntry(dev_t dev, struct mymnttab *mytab)
 {
 #if defined SOLARIS || defined SINIX
 	FILE *fp = fopen (MNTTAB, "r");
 	if (! fp)
-		return FALSE;
+		return sal_False;
 	struct mnttab mnt[1];
 	while (getmntent (fp, mnt) != -1)
 #elif defined SCO
 	FILE *fp = fopen (MNTTAB, "r");
 	if (! fp)
-		return FALSE;
+		return sal_False;
 	struct mnttab mnt[1];
 	while (fread (&mnt, sizeof mnt, 1, fp) > 0)
 #elif defined DECUNIX || defined AIX
 	FILE *fp = NULL;
 	if (! fp)
-		return FALSE;
+		return sal_False;
 	struct mnttab mnt[1];
 	while ( 0 )
 #else
 	FILE *fp = setmntent (MOUNTED, "r");
 	if (! fp)
-		return FALSE;
+		return sal_False;
 	struct mnttab *mnt;
 	while ((mnt = getmntent (fp)) != NULL)
 #endif
@@ -204,7 +207,7 @@ static BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
 #else
 		mytab->mymnttab_filesystem = "ext2";		//default ist case sensitiv unter unix
 #endif
-		return TRUE;
+		return sal_True;
 	}
 #	ifdef LINUX
 	/* #61624# dito */
@@ -212,7 +215,7 @@ static BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
 #	else
 	fclose (fp);
 #	endif
-	return FALSE;
+	return sal_False;
 }
 
 #endif
@@ -227,13 +230,13 @@ static BOOL GetMountEntry(dev_t dev, struct mymnttab *mytab)
 |*
 *************************************************************************/
 
-BOOL DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
+sal_Bool DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
 {
 
 	if (eFormatter==FSYS_STYLE_HOST)
 	{
 #ifdef NETBSD
-		return TRUE;
+		return sal_True;
 #else
 		struct stat buf;
 		DirEntry aPath(*this);
@@ -243,7 +246,7 @@ BOOL DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
 		{
 			if (aPath.Level() == 1)
 			{
-				return TRUE;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
+				return sal_True;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
 			}
 			aPath = aPath [1];
 		}
@@ -257,17 +260,17 @@ BOOL DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
 		    (fsmnt.mymnttab_filesystem.CompareTo("smb")	==COMPARE_EQUAL) ||
 		    (fsmnt.mymnttab_filesystem.CompareTo("ncpfs")==COMPARE_EQUAL))
 		{
-			return FALSE;
+			return sal_False;
 		}
 		else
 		{
-			return TRUE;
+			return sal_True;
 		}
 #endif
 	}
 	else
 	{
-		BOOL isCaseSensitive = TRUE;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
+		sal_Bool isCaseSensitive = sal_True;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
 		switch ( eFormatter )
 		{
 			case FSYS_STYLE_MAC:
@@ -277,19 +280,19 @@ BOOL DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
 			case FSYS_STYLE_NWFS:
 			case FSYS_STYLE_HPFS:
 				{
-					isCaseSensitive = FALSE;
+					isCaseSensitive = sal_False;
 					break;
 				}
 			case FSYS_STYLE_SYSV:
 			case FSYS_STYLE_BSD:
 			case FSYS_STYLE_DETECT:
 				{
-					isCaseSensitive = TRUE;
+					isCaseSensitive = sal_True;
 					break;
 				}
 			default:
 				{
-					isCaseSensitive = TRUE;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
+					isCaseSensitive = sal_True;	// ich bin unter UNIX, also ist der default im Zweifelsfall case sensitiv
 					break;
 				}
 		}
@@ -307,16 +310,16 @@ BOOL DirEntry::IsCaseSensitive( FSysPathStyle eFormatter ) const
 |*
 *************************************************************************/
 
-BOOL DirEntry::ToAbs()
+sal_Bool DirEntry::ToAbs()
 {
 	if ( FSYS_FLAG_VOLUME == eFlag )
 	{
 		eFlag = FSYS_FLAG_ABSROOT;
-		return TRUE;
+		return sal_True;
 	}
 
 	if ( IsAbs() )
-	  return TRUE;
+	  return sal_True;
 
 	char sBuf[MAXPATHLEN + 1];
 	*this = DirEntry( String( getcwd( sBuf, MAXPATHLEN ), osl_getThreadTextEncoding() ) ) + *this;
@@ -387,7 +390,7 @@ DirEntry DirEntry::GetDevice() const
 |*
 *************************************************************************/
 
-BOOL DirEntry::SetCWD( BOOL bSloppy ) const
+sal_Bool DirEntry::SetCWD( sal_Bool bSloppy ) const
 {
     DBG_CHKTHIS( DirEntry, ImpCheckDirEntry );
 
@@ -395,31 +398,31 @@ BOOL DirEntry::SetCWD( BOOL bSloppy ) const
 	ByteString aPath( GetFull(), osl_getThreadTextEncoding());
 	if ( !chdir( aPath.GetBuffer() ) )
 	{
-		return TRUE;
+		return sal_True;
 	}
 	else
 	{
 		if ( bSloppy && !chdir(aPath.GetBuffer()) )
 		{
-			return TRUE;
+			return sal_True;
 		}
 		else
 		{
-			return FALSE;
+			return sal_False;
 		}
 	}
 }
 
 //-------------------------------------------------------------------------
 
-USHORT DirReader_Impl::Init()
+sal_uInt16 DirReader_Impl::Init()
 {
 	return 0;
 }
 
 //-------------------------------------------------------------------------
 
-USHORT DirReader_Impl::Read()
+sal_uInt16 DirReader_Impl::Read()
 {
 	if (!pDosDir)
 	{
@@ -428,7 +431,7 @@ USHORT DirReader_Impl::Read()
 
 	if (!pDosDir)
 	{
-		bReady = TRUE;
+		bReady = sal_True;
 		return 0;
 	}
 
@@ -445,7 +448,7 @@ USHORT DirReader_Impl::Read()
 				:	FSYS_FLAG_NORMAL;
             DirEntry *pTemp = new DirEntry( ByteString(pDosEntry->d_name), eFlag, FSYS_STYLE_UNX );
             if ( pParent )
-                pTemp->ImpChangeParent( new DirEntry( *pParent ), FALSE);
+                pTemp->ImpChangeParent( new DirEntry( *pParent ), sal_False);
             FileStat aStat( *pTemp );
             if ( ( ( ( pDir->eAttrMask & FSYS_KIND_DIR ) &&
 					 ( aStat.IsKind( FSYS_KIND_DIR ) ) ) ||
@@ -465,7 +468,7 @@ USHORT DirReader_Impl::Read()
         }
 	}
 	else
-		bReady = TRUE;
+		bReady = sal_True;
 	return 0;
 }
 
@@ -498,7 +501,7 @@ FileStat::FileStat( const void *, const void * ):
 |*    Letzte Aenderung  MA 07.11.91
 |*
 *************************************************************************/
-BOOL FileStat::Update( const DirEntry& rDirEntry, BOOL )
+sal_Bool FileStat::Update( const DirEntry& rDirEntry, sal_Bool )
 {
 
 	nSize = 0;
@@ -515,7 +518,7 @@ BOOL FileStat::Update( const DirEntry& rDirEntry, BOOL )
 	if ( !rDirEntry.IsValid() )
 	{
 		nError = FSYS_ERR_NOTEXISTS;
-		return FALSE;
+		return sal_False;
 	}
 
 	// Sonderbehandlung falls es sich um eine Root handelt
@@ -523,7 +526,7 @@ BOOL FileStat::Update( const DirEntry& rDirEntry, BOOL )
 	{
 		nKindFlags = FSYS_KIND_DIR;
 		nError = FSYS_ERR_OK;
-		return TRUE;
+		return sal_True;
 	}
 
 	struct stat aStat;
@@ -544,11 +547,11 @@ BOOL FileStat::Update( const DirEntry& rDirEntry, BOOL )
 		{
 			nKindFlags = FSYS_KIND_WILD;
 			nError = FSYS_ERR_OK;
-			return TRUE;
+			return sal_True;
 		}
 
 		nError = FSYS_ERR_NOTEXISTS;
-		return FALSE;
+		return sal_False;
 	}
 
 	nError = FSYS_ERR_OK;
@@ -570,7 +573,7 @@ BOOL FileStat::Update( const DirEntry& rDirEntry, BOOL )
 	Unx2DateAndTime( aStat.st_mtime, aTimeModified, aDateModified );
 	Unx2DateAndTime( aStat.st_atime, aTimeAccessed, aDateAccessed );
 
-	return TRUE;
+	return sal_True;
 }
 
 //====================================================================
@@ -675,7 +678,7 @@ ErrCode FileStat::QueryDiskSpace( const String &, BigInt &, BigInt & )
 
 //=========================================================================
 
-void FSysEnableSysErrorBox( BOOL )
+void FSysEnableSysErrorBox( sal_Bool )
 {
 }
 
