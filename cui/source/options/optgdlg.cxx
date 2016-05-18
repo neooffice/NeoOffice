@@ -162,7 +162,11 @@ namespace
             #if defined WNT
 			return ::rtl::OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFilePicker" );
             #elif (defined MACOSX && defined QUARTZ)
+            #ifdef USE_JAVA
+			return ::rtl::OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFilePicker" );
+            #else	// USE_JAVA
 			return ::rtl::OUString::createFromAscii( "com.sun.star.ui.dialogs.AquaFilePicker" );
+            #endif	// USE_JAVA
             #else
             return rtl::OUString();
             #endif
