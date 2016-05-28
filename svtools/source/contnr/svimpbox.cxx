@@ -33,11 +33,7 @@
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
 #include <vcl/svapp.hxx>
-#ifdef USE_JAVA
-#include "../../../vcl/inc/vcl/salnativewidgets.hxx"
-#else	// USE_JAVA
 #include <vcl/salnativewidgets.hxx>
-#endif	// USE_JAVA
 #include <vcl/help.hxx>
 #include <svtools/tabbar.hxx>
 
@@ -630,7 +626,7 @@ void SvImpLBox::RecalcFocusRect()
 	}
 
 #ifdef USE_JAVA
-	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+	if( pView->IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL ) )
 	{
 		::std::map< SvImpLBox*, SvImpLBox* >::const_iterator it = aInShowCursorMap.find( this );
 		if ( it == aInShowCursorMap.end() )
@@ -1096,7 +1092,7 @@ void SvImpLBox::DrawNet()
 #ifdef USE_JAVA
 	// don't draw the underlying connections between our tree nodes if we're
 	// performing native rendering of the tree node controls
-	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+	if( pView->IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL ) )
 		return;
 #endif	// USE_JAVA
 

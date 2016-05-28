@@ -154,9 +154,6 @@ typedef sal_uInt32		ControlType;
 
 #ifdef USE_JAVA
 
-// hierarchical tree control expand/collapse handle
-#define CTRL_DISCLOSUREBTN		230
-
 // list view header cell appearing above columns in lists
 #define CTRL_LISTVIEWHEADER		240
 
@@ -492,24 +489,6 @@ public:
 };
 
 #ifdef USE_JAVA
-
-/*	DisclosureBtnValue:
- *
- *	Value container for disclosure buttons used for control of expanding/collapsing
- *	tree views
- */
-class DisclosureBtnValue : public ImplControlValue
-{
-	public:
-    DisclosureBtnValue()
-    : ImplControlValue( CTRL_DISCLOSUREBTN, BUTTONVALUE_DONTKNOW, 0 )
-    , mbOpen( false ), mbLeftAligned( true ), mbHasChildren( true ) {}
-    virtual ~DisclosureBtnValue() {}
-    
-    bool            mbOpen;
-    bool            mbLeftAligned;
-    bool            mbHasChildren;
-};
 
 /* ListViewHeaderSortValue:
  *

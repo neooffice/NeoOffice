@@ -42,10 +42,6 @@ class TabBar;
 
 // #102891# -----------------------
 
-#ifdef USE_JAVA
-#include "../../../vcl/inc/vcl/salnativewidgets.hxx"
-#endif	// USE_JAVA
-
 #include <svtools/svlbox.hxx>
 #include <svtools/svlbitm.hxx>
 #include <svtools/svtreebx.hxx>
@@ -1922,8 +1918,8 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,sal_uInt16 nTabFl
 				if ( GetSettings().GetStyleSettings().GetHighContrastMode() )
 					eBitmapMode = BMP_COLOR_HIGHCONTRAST;
 
-#ifdef USE_JAVA
-				if( IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+#if defined USE_JAVA && defined MACOSX
+				if( IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL ) )
 				{
 					ControlState nState = CTRL_STATE_ENABLED;
 					if ( !IsEnabled() )
@@ -1931,24 +1927,26 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,sal_uInt16 nTabFl
 					if ( HasFocus() )
 						nState |= CTRL_STATE_FOCUSED;
 
-					DisclosureBtnValue aDisclosureValue;
-					aDisclosureValue.mbOpen = IsExpanded( pEntry );
-					aDisclosureValue.mbHasChildren = ( pEntry->HasChilds() || pEntry->HasChildsOnDemand() );
+					ImplControlValue aControlValue;
+					if ( IsExpanded( pEntry ) )
+						aControlValue.setTristateVal( BUTTONVALUE_ON );
+					else
+						aControlValue.setTristateVal( BUTTONVALUE_OFF );
 
 					Rectangle aCtrlRegion( Point( 0, 0 ), Size( nTempEntryHeight, nTempEntryHeight ) );
 					Rectangle aBoundingRgn, aContentRgn;
 
-					GetNativeControlRegion( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aDisclosureValue, rtl::OUString(), aBoundingRgn, aContentRgn );
+					GetNativeControlRegion( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn );
 					if( aBoundingRgn.GetHeight() < nTempEntryHeight )
 						aPos.Y() += ( nTempEntryHeight - aBoundingRgn.GetHeight() ) / 2;
 
 					// Fix bug 1646 by adjusting for the map mode's origin
 					Rectangle aCtrlDrawRegion( Point( aPos.X() + GetMapMode().GetOrigin().X(), aPos.Y() ), aBoundingRgn.GetSize() );
-					DrawNativeControl( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL, aCtrlDrawRegion, nState, aDisclosureValue, rtl::OUString() );
+					DrawNativeControl( CTRL_LISTNODE, PART_ENTIRE_CONTROL, aCtrlDrawRegion, nState, aControlValue, rtl::OUString() );
 				}
 				else
 				{
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 				if( IsExpanded(pEntry) )
 					pImg = &pImp->GetExpandedNodeBmp( eBitmapMode );
 				else
@@ -1996,9 +1994,9 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,sal_uInt16 nTabFl
 				//non native
 					DrawImage( aPos, *pImg ,nStyle);
 				}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 			}
 		}
 	}
